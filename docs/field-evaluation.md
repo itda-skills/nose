@@ -116,22 +116,23 @@ copy-paste run must contain at least one *operation* (flat name/field/literal
 lists are skipped), window-shifted overlapping families are subsumed, and
 `.gitignore` is honored even outside a git checkout.
 
-### Test-awareness -- design note
+### Test-awareness -- landed
 
 Duplication between test and production code is a real smell and should be
 reported. The nuance is duplication among tests: fixtures and arrange/act/assert
 scaffolding are often duplicated on purpose, and test families can bury the
 source-code signal.
 
-Recommended approach:
+This shipped as a ranking-time policy layer (experiments §U):
 
-1. Classify each unit as test or production by path heuristic (`test/`, `tests/`,
-   `*_test.*`, `*.spec.*`, `*.test.*`, `conftest.py`, ...), exposed as a unit tag.
-2. Tag families by composition: all-prod, all-test, or mixed.
-3. Rank/treat them differently, without dropping them: mixed families highest,
-   all-prod next, all-test down-weighted or hidden by default behind an opt-in
-   flag.
-4. Keep it a policy layer on top of detection, configurable in `nose.toml`.
+1. Each family is tagged `scope = prod | test | mixed` by a conservative path +
+   unit-name heuristic (`test/`, `tests/`, `__tests__/`, `*_test.go`, `*.spec.*`,
+   `*.test.*`, `conftest.py`, ...; see `is_test_loc` in `nose-detect/src/report.rs`).
+2. All-`test` families are down-weighted (×0.2); **`mixed` test↔prod is not
+   discounted** — logic that crosses the test boundary is a real smell.
+3. Nothing is dropped: the scope is shown in the report (`· test`, `· test↔prod`)
+   and serialized, so a reviewer can still see test-only duplication.
 
-This keeps genuine test-boundary duplication visible while stopping intentional
-test scaffolding from drowning the report.
+The discount lives on the `scan` ranking path only (the `detect`/`eval` gold path
+is untouched), and can be disabled for A/B with `NOSE_NO_REFACTOR_DISCOUNT=1`. See
+[usage](usage.md) for the scope tags.

@@ -88,11 +88,18 @@ GitHub Release with the archives + checksums, and pushes the `nose` formula to
 `brew install corca-ai/tap/nose` picks up the new version.
 
 ```sh
-# 1. Bump `version` in the root Cargo.toml ([workspace.package]) and land it.
-# 2. Tag the release commit and push the tag:
+# 1. Cut the CHANGELOG: rename `## [Unreleased]` to `## [X.Y.Z] - <date>` and
+#    open a fresh empty `## [Unreleased]` above it.
+# 2. Bump `version` in the root Cargo.toml ([workspace.package]) — the internal
+#    path deps share it — and land both in the release commit.
+# 3. Tag the release commit and push the tag:
 git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
+
+The tag is what triggers CI, so the CHANGELOG and version bump must land **before**
+it — a tag pushed against a stale `[Unreleased]` ships a release the changelog never
+records.
 
 The pipeline lives in `dist-workspace.toml`; the workflow is **generated** from it
 into `.github/workflows/release.yml` — change the config and re-run `dist generate`,

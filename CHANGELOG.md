@@ -6,6 +6,28 @@ break.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-04
+
+### Fixed
+- **`nose scan --top 0` now shows all families**, as `docs/usage.md` and
+  `docs/benchmark.md` document. The code used `.take(top)` with no special case,
+  so `--top 0` silently returned an empty report; `0` is now treated as unlimited,
+  the flag help says so, and a regression test covers it.
+
+### Docs
+- Documented Homebrew / prebuilt-binary install and the cargo-dist release process
+  (`README.md`, `CONTRIBUTING.md`).
+- Added `AGENTS.md` (with `CLAUDE.md` as a symlink) per the Corca convention; the
+  release process now includes the CHANGELOG step that this release recovers.
+
+### Tooling & quality gates
+- **`awiki` docs-wiki connectivity gate** — `awiki lint --root docs` keeps `docs/`
+  a single connected graph (no orphan pages). Wired into `scripts/check-docs.sh`,
+  `scripts/check.sh`, the `.githooks/pre-commit` hook, and the CI `docs` job, using
+  the same skipped-with-notice pattern as the other optional-tool gates.
+
+## [0.1.0] - 2026-06-04
+
 ### Added
 - **Independent soundness oracle** (`nose verify`) — the value-graph contract is
   *fingerprint-equal ⟹ behavior-equal*; a tree-walking interpreter runs every unit on an
