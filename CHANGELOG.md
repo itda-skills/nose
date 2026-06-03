@@ -105,6 +105,23 @@ break.
   raw-token detector behaves; token-detector-superset coverage held at 90.9%.
 
 ### Fixed
+- **Byte-identical output restored across thread counts.** Three latent
+  nondeterminism sources let `scan`/`verify` output vary with `RAYON_NUM_THREADS`
+  (and the per-process hash seed) on some repos, violating the determinism
+  guarantee: (1) the honest shared-line ranking summed `idf` weights over lines in
+  `HashMap` order, so float-add non-associativity perturbed `shared_weight` (and,
+  via sort ties, family order); (2) the RANSAC aligner picked its consensus offset
+  with `max_by_key(votes)`, and a vote-count tie resolved by the reused thread-local
+  map's capacity-dependent iteration order — fixed by breaking ties on the offset
+  value; (3) `nose verify`'s under-merged-clones diagnostic iterated `HashMap`s into
+  its output. A determinism sweep over the 105-repo corpus now reports **0**
+  nondeterministic repos for `scan` and `detect` (was 4 for `scan`). A stronger
+  cross-thread-count regression test (8 families × 5 near-duplicate copies) guards
+  the class.
+- **`--proposal` no longer overstates family-wide overlap.** The skeleton is a
+  pairwise anti-unification of the two largest copies; for families with more copies
+  it now says so (`… of the 2 largest of N copies; the rest may share fewer`), so it
+  no longer silently contradicts the family summary's majority-shared count.
 - Refactoring families collapse overlapping/nested sites (a function and its inner
   block, or near-identical off-by-one spans) into one site — accurate site counts
   and dup-line estimates.
