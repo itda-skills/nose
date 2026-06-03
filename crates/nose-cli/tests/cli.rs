@@ -3,7 +3,7 @@
 
 use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 fn bin() -> &'static str {
     env!("CARGO_BIN_EXE_nose")
@@ -459,6 +459,57 @@ fn diff_shows_the_differing_line() {
 fn version_flag_works() {
     let out = run(&["--version"]);
     assert!(out.starts_with("nose "), "version line: {out}");
+}
+
+#[test]
+fn broken_pipe_exits_cleanly() {
+    // `nose scan … | head` (or quitting a pager) closes the read end of stdout while
+    // nose is still writing. That write then fails with `BrokenPipe`, which `println!`
+    // turns into a panic — the `failed printing to stdout` crash users hit. The Unix
+    // convention is to stop quietly; main()'s panic hook must catch this and exit 0.
+    // We reproduce it by closing the pipe's read end outright, so every write to the
+    // now-readerless pipe gets EPIPE.
+    let dir = std::env::temp_dir().join(format!("nose_pipe_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    // A handful of large, distinct clone families → plenty of `--diff` output, so the
+    // child keeps writing past any buffering and reliably hits the dead pipe.
+    for i in 0..40 {
+        let body = |delta: &str| {
+            let mut s = format!("def fam{i}(xs):\n    acc{i} = 0\n");
+            for k in 0..120 {
+                s.push_str(&format!("    acc{i} = acc{i} + xs[{k}] * {i}\n"));
+            }
+            s.push_str(&format!("    acc{i} = acc{i} {delta}\n    return acc{i}\n"));
+            s
+        };
+        for (sub, delta) in [("a", "+ 1"), ("b", "- 1")] {
+            let d = dir.join(sub);
+            fs::create_dir_all(&d).unwrap();
+            fs::write(d.join(format!("f{i}.py")), body(delta)).unwrap();
+        }
+    }
+
+    let mut child = Command::new(bin())
+        .args(["scan", dir.to_str().unwrap(), "--diff", "--top", "40"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn nose");
+    // Close the read end immediately — the moral equivalent of `| head` exiting early.
+    drop(child.stdout.take());
+    let out = child.wait_with_output().expect("wait for nose");
+    let _ = fs::remove_dir_all(&dir);
+
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        !stderr.contains("panicked") && !stderr.contains("Broken pipe"),
+        "broken pipe must not panic, got stderr:\n{stderr}"
+    );
+    assert!(
+        out.status.success(),
+        "broken pipe should exit cleanly (0), got {:?}\nstderr:\n{stderr}",
+        out.status
+    );
 }
 
 #[test]
