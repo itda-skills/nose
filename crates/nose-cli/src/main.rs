@@ -923,7 +923,12 @@ fn cmd_verify(paths: Vec<PathBuf>, no_cfg_norm: bool, json: bool) -> Result<()> 
         if by_fp2.len() > 1 {
             split_groups += 1;
             // one representative per distinct fingerprint; find the max-vj cross pair.
-            let reps: Vec<&&Rec> = by_fp2.values().map(|v| v[0]).collect();
+            // Sort the reps by location so the chosen pair (and so the printed output) is
+            // deterministic: `by_fp2.values()` iterates a `HashMap` in an unspecified order
+            // that varies across runs/thread counts, which would otherwise pick a different
+            // max-vj pair on ties and break byte-identical output.
+            let mut reps: Vec<&&Rec> = by_fp2.values().map(|v| v[0]).collect();
+            reps.sort_by(|a, b| a.loc.cmp(&b.loc));
             let mut best = (0.0f64, &reps[0], &reps[0]);
             for i in 0..reps.len() {
                 for j in (i + 1)..reps.len() {
@@ -936,10 +941,24 @@ fn cmd_verify(paths: Vec<PathBuf>, no_cfg_norm: bool, json: bool) -> Result<()> 
             if best.0 >= 0.7 {
                 near_groups += 1;
             }
-            misses.push((best.1.loc.clone(), best.2.loc.clone(), best.0));
+            // Canonical orientation (smaller location first) so the pair reads identically
+            // regardless of which rep the scan happened to encounter first.
+            let (a, b) = if best.1.loc <= best.2.loc {
+                (best.1.loc.clone(), best.2.loc.clone())
+            } else {
+                (best.2.loc.clone(), best.1.loc.clone())
+            };
+            misses.push((a, b, best.0));
         }
     }
-    misses.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
+    // Total order: vj desc, then the two locations — `misses` is collected in `HashMap`
+    // iteration order, so ties must break on stable keys for byte-identical output.
+    misses.sort_by(|a, b| {
+        b.2.partial_cmp(&a.2)
+            .unwrap()
+            .then(a.0.cmp(&b.0))
+            .then(a.1.cmp(&b.1))
+    });
     println!("\nCOMPLETENESS — behavior-equal ⟹ fingerprint-equal (non-trivial only):");
     println!(
         "  behavior groups (≥2): {}",
