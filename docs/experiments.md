@@ -2317,3 +2317,41 @@ settled negative).
 
 **Net:** the new system's leverage is in the IL/fingerprint tier (semantic convergence), where
 it landed 3 sound adoptions; the detector/precision tier remains judgment-deep and exhausted.
+
+## AZ. Extractability as the default ranking — the re-rank that *does* generalize
+
+§AU/§AV settled that a uniform anti-unification **abstractness** re-rank does not generalize:
+on v5 it was a Rust-only win (dev 44%→69%) that washed-to-negative elsewhere (overall dev
++1pp, heldout −1pp), so it was not shipped. That left the question open whether *any*
+re-rank could beat raw `value` (removable lines × similarity × spread) on the worthy
+labelset, or whether precision is ranking-invariant.
+
+The `extractability` ranking — now the **default** sort for `nose scan` — answers it. It is
+**not** the rejected re-rank: instead of a bare abstractness multiplier it scores the
+*invariant* (shared) source lines × copies × spread, with three correctives the prototype
+lacked — **tightness** (shared/total, so a 22/384 dispatch skeleton can't outrank a 15/15
+pair), a **parameter penalty** (a 30-hole "helper" is scaffolding), and an **IDF idiom-gate**
+(shared lines pervasive across the corpus — `if err != nil {` — contribute ~0), plus the
+rule that a same-language family sharing **zero** invariant lines scores 0 (the structural-only
+`sim 1.00` pathology), and the type-def/generated discount. Cross-language families, with no
+shared source lines to diff, fall back to the structural estimate.
+
+**Result (`bench/labels/extractability_vs_value.py`, v5, P@10, nose's native order vs
+value-sorted):**
+
+| | dev value | dev extractability | heldout value | heldout extractability |
+|---|---|---|---|---|
+| OVERALL | 61% [56-66] | 61% [56-66] | 53–54% [48-59] | **60% [54-65]** |
+
+Dev is **flat**; the **held-out split — the generalization gate the prototype failed — rises
++6pp** (54%→60%), with no recall cost (reordering only; worthy-recall stays ~99–100% per §AU).
+Per-language the held-out gains are broad, not one-language: Java **42%→71%**, C 24%→35%,
+TS 45%→53%, Go 72%→77%, Rust 50%→55%, Ruby 80%→83% (Python −3pp, within CI). On dev the
+Rust/TS/Python gains (Rust 51%→74%) offset Java/Ruby dips, netting flat. The contrast with
+§AU's prototype is the point: a re-rank built from *what actually extracts* (tight, few-param,
+non-idiom shared lines) generalizes, where one built from raw structural abstractness did not.
+
+This is the first ranking change to move the held-out number, and it moves it the right way —
+so extractability ships as the default, with `--sort value` retained for raw-volume triage.
+(Detection is unchanged: the same families are found and the §AU recall holds; only the order,
+and the honest `N/M shared · Pp` cell, differ.)

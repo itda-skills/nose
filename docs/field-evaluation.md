@@ -94,6 +94,28 @@ Most workflow items above have since landed:
 - `--fail` CI gate;
 - `--cache-dir` incremental cache.
 
+### Ranking reworked -- extractability is the default
+
+A second field pass (six unrelated real projects) found the old `value` ranking
+over-rewarded a big block whose copies share little -- a 384-line family sharing
+22 lines across 14 varying spots topped the list at a misleading `sim 1.00`,
+above a tight `15/15`-shared pair. The default sort is now **extractability** --
+how cleanly a family folds into one helper (invariant lines × copies × spread,
+weighted by tightness and penalized by parameter count), with the report's
+similarity cell replaced by an honest `N/M shared · Pp`. Same-language families
+that share *no* invariant lines (a language idiom, or two unrelated type literals
+of the same shape) now sink instead of topping the list. `--sort value` retains
+the raw-volume ranking. This is not the abstractness re-rank §AU/§AV rejected:
+measured on the v5 labelset it holds dev P@10 (61%) and lifts the **held-out**
+split +6pp (54%→60%) with no recall cost -- it generalizes where the prototype
+did not. See [experiments](experiments.md) §AZ.
+
+The same pass drove four detector fixes (all landed): the contiguous copy-paste
+channel is same-language by construction (no cross-language false merges), a
+copy-paste run must contain at least one *operation* (flat name/field/literal
+lists are skipped), window-shifted overlapping families are subsumed, and
+`.gitignore` is honored even outside a git checkout.
+
 ### Test-awareness -- design note
 
 Duplication between test and production code is a real smell and should be
