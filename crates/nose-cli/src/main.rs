@@ -107,7 +107,7 @@ enum Cmd {
         /// Paths to source files or directories (recursively scanned).
         #[arg(required = true)]
         paths: Vec<PathBuf>,
-        /// How many top families to show. [default: 30]
+        /// How many top families to show (`0` = all). [default: 30]
         #[arg(long)]
         top: Option<usize>,
         /// Only families with at least this many duplicated sites. [default: 2]
@@ -1421,7 +1421,9 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
         families.retain(|f| !known.contains(&baseline::family_key(f)));
     }
 
-    let shown = families.iter().take(top).collect::<Vec<_>>();
+    // `--top 0` means "no limit": show every family (documented in docs/usage.md).
+    let limit = if top == 0 { usize::MAX } else { top };
+    let shown = families.iter().take(limit).collect::<Vec<_>>();
 
     match args.format {
         ReportFormat::Json => {

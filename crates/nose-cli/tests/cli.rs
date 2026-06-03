@@ -676,3 +676,63 @@ fn output_is_byte_identical_across_thread_counts_on_a_rich_project() {
     }
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn top_zero_shows_all_families() {
+    // `--top 0` is documented as "no limit" (docs/usage.md). It must return every
+    // family, not an empty set. Regression: `.take(0)` used to silently drop all.
+    let dir = std::env::temp_dir().join(format!("nose_top0_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    // Build several *structurally distinct* clone families so "all" is clearly more
+    // than "top 1". nose finds semantic (Type-4) clones, so each family must have a
+    // different shape (statement count / control flow) or they collapse into one.
+    let bodies = [
+        "def f0(items):\n    acc = 0\n    for x in items:\n        acc = acc + x\n    return acc\n",
+        "def f1(items):\n    acc = 1\n    for x in items:\n        if x > 0:\n            acc = acc * x\n    return acc\n",
+        "def f2(s):\n    out = []\n    for c in s:\n        out.append(c)\n        out.append(c)\n    return out\n",
+        "def f3(a, b):\n    r = 0\n    while a < b:\n        r = r + a\n        a = a + 1\n    return r\n",
+        "def f4(d):\n    keys = []\n    for k in d:\n        if k is not None:\n            keys.append(k)\n    keys.sort()\n    return keys\n",
+        "def f5(n):\n    total = 0\n    i = 0\n    while i < n:\n        total = total + i * i\n        i = i + 1\n    return total\n",
+    ];
+    for (i, body) in bodies.iter().enumerate() {
+        for sub in ["a", "b"] {
+            let d = dir.join(sub);
+            fs::create_dir_all(&d).unwrap();
+            fs::write(d.join(format!("f{i}.py")), body).unwrap();
+        }
+    }
+    let p = dir.to_str().unwrap();
+    let count = |args: &[&str]| -> usize {
+        let out = run(args);
+        let v: serde_json::Value = serde_json::from_str(&out).expect("valid JSON");
+        v.as_array().expect("JSON array").len()
+    };
+
+    let all = count(&[
+        "scan",
+        p,
+        "--min-tokens",
+        "12",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let one = count(&[
+        "scan",
+        p,
+        "--min-tokens",
+        "12",
+        "--format",
+        "json",
+        "--top",
+        "1",
+    ]);
+    assert!(all > 1, "--top 0 must show all families, got {all}");
+    assert_eq!(one, 1, "--top 1 must still cap at one family, got {one}");
+    assert!(
+        all >= 6,
+        "--top 0 should include every distinct family (expected >=6, got {all})"
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
