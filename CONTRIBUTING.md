@@ -65,3 +65,24 @@ the PR — raise the budget. It is a ratchet, not a fixed wall.
 - **Determinism** — output must be byte-identical across runs and thread counts
   (there are tests for both). Don't introduce iteration over a `HashMap` in a way
   that reaches the output.
+
+## Releasing
+
+Releases are cut by [cargo-dist](https://opensource.axo.dev/cargo-dist/): push a
+`vX.Y.Z` tag matching the workspace version and CI does the rest — it builds the
+macOS (Apple Silicon + Intel) and Linux (x86_64 + arm64) binaries, publishes a
+GitHub Release with the archives + checksums, and pushes the `nose` formula to
+[`corca-ai/homebrew-tap`](https://github.com/corca-ai/homebrew-tap) so
+`brew install corca-ai/tap/nose` picks up the new version.
+
+```sh
+# 1. Bump `version` in the root Cargo.toml ([workspace.package]) and land it.
+# 2. Tag the release commit and push the tag:
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+The pipeline lives in `dist-workspace.toml`; the workflow is **generated** from it
+into `.github/workflows/release.yml` — change the config and re-run `dist generate`,
+don't hand-edit the workflow. Publishing the formula needs the `HOMEBREW_TAP_TOKEN`
+secret (a token with push access to the tap), set on the repo/org.

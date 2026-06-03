@@ -6,14 +6,28 @@ repo see [configuration](configuration.md); for CI use see [continuous-integrati
 
 ## Install
 
-nose is a single self-contained Rust binary:
+nose is a single self-contained binary — no runtime, services, or network; point
+it at source files.
+
+```sh
+# Homebrew (macOS / Linux):
+brew install corca-ai/tap/nose
+
+# Or the install script (downloads a prebuilt binary):
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/corca-ai/nose/releases/latest/download/nose-cli-installer.sh | sh
+```
+
+Prebuilt binaries for macOS (Apple Silicon + Intel) and Linux (x86_64 + arm64) are
+attached to every [release](https://github.com/corca-ai/nose/releases). Both
+methods above put `nose` on your `PATH`; the examples below use `./target/release/nose`
+for a from-source build, but `nose` works the same once installed.
+
+### From source
 
 ```sh
 cargo build --release
 # binary at ./target/release/nose
 ```
-
-It needs no runtime, services, or network — point it at source files.
 
 ## The one command you need: `scan`
 
