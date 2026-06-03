@@ -318,6 +318,51 @@ fn sort_name(s: SortKey) -> &'static str {
     }
 }
 
+/// What `scan` actually looked at: the file count and per-language breakdown, shown as
+/// a one-line header. A repo where `.gitignore`/`--exclude` pruned vendored deps scans
+/// far fewer files than sit on disk; surfacing the count (and which languages) makes
+/// that scope visible instead of a silent gap the reader has to guess at. (The *ignored*
+/// count is deliberately not shown — computing it means descending into the very trees
+/// `.gitignore` exists to skip, slow on exactly the big repos where it matters.)
+struct ScanScope {
+    files: usize,
+    /// `(language name, file count)`, largest first. Empty on the `--cache-dir` path,
+    /// which tracks only the total count.
+    langs: Vec<(&'static str, usize)>,
+}
+
+impl ScanScope {
+    fn from_corpus(corpus: &Corpus) -> Self {
+        let mut counts: std::collections::HashMap<&'static str, usize> =
+            std::collections::HashMap::new();
+        for f in &corpus.files {
+            *counts.entry(f.meta.lang.name()).or_insert(0) += 1;
+        }
+        let mut langs: Vec<(&'static str, usize)> = counts.into_iter().collect();
+        // Largest language first; name as a stable tie-break for deterministic output.
+        langs.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+        ScanScope {
+            files: corpus.files.len(),
+            langs,
+        }
+    }
+
+    /// `scanned 1113 files · typescript 900 · tsx 213` (languages omitted when unknown).
+    fn summary(&self) -> String {
+        let unit = if self.files == 1 { "file" } else { "files" };
+        if self.langs.is_empty() {
+            return format!("scanned {} {unit}", self.files);
+        }
+        let langs = self
+            .langs
+            .iter()
+            .map(|(l, n)| format!("{l} {n}"))
+            .collect::<Vec<_>>()
+            .join(" · ");
+        format!("scanned {} {unit} · {langs}", self.files)
+    }
+}
+
 /// One plain-language line describing a family: how many copies, how much is actually
 /// shared vs varies, how many lines you'd remove, and where the duplication lives. No
 /// internal ranking numbers — those only order the list, they're not for the reader.
@@ -1225,16 +1270,25 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
 
     // With --cache-dir, build units per file through the on-disk cache (skips
     // parse/normalize/extract for unchanged files); otherwise lower the whole corpus.
-    let report = if let Some(dir) = &args.cache_dir {
+    let (report, scope) = if let Some(dir) = &args.cache_dir {
         let (units, files) = time_lower(|| cache::build_units_cached(&refs, &exclude, &opts, dir));
         if files == 0 {
             warn_no_files(&args.paths);
         }
-        nose_detect::detect_from_units(units, files, &opts, &detector).0
+        // The cache path knows only the file count, not a per-language breakdown.
+        let report = nose_detect::detect_from_units(units, files, &opts, &detector).0;
+        (
+            report,
+            ScanScope {
+                files,
+                langs: Vec::new(),
+            },
+        )
     } else {
         let corpus = time_lower(|| nose_frontend::lower_corpus_filtered(&refs, &exclude));
         warn_if_empty(&corpus, &args.paths);
-        nose_detect::detect(&corpus, &opts, &detector)
+        let scope = ScanScope::from_corpus(&corpus);
+        (nose_detect::detect(&corpus, &opts, &detector), scope)
     };
 
     let mut families = nose_detect::rank_families(&report);
@@ -1313,8 +1367,14 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
         ReportFormat::Json => {
             println!("{}", serde_json::to_string_pretty(&shown)?);
         }
-        ReportFormat::Markdown => print_refactor_markdown(&families, &shown),
+        ReportFormat::Markdown => {
+            // Scope line first — tells the reader what was actually scanned (so a small
+            // count from `.gitignore`/`--exclude` pruning is visible, not a silent gap).
+            println!("{}\n", scope.summary());
+            print_refactor_markdown(&families, &shown);
+        }
         ReportFormat::Human => {
+            println!("{}", scope.summary());
             print_refactor_human(&families, &shown, sort, args.diff, args.proposal)
         }
         ReportFormat::Sarif => println!("{}", refactor_sarif(&shown)?),

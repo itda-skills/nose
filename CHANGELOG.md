@@ -48,6 +48,12 @@ break.
   `sim 1.00` that read as "identical" even when two copies shared only a handful of
   literal lines (a dispatch skeleton over divergent bodies). Cross-language families,
   which share no *source* lines, still show structural `sim`.
+- **`scanned N files` scope line** — `scan`'s human/Markdown output now opens with the
+  file count and per-language breakdown (e.g. `scanned 1113 files · typescript 900 · tsx
+  213`). A repo whose `.gitignore`/`--exclude` pruned vendored or generated code scans
+  far fewer files than sit on disk; the count makes that scope explicit instead of a
+  silent gap. JSON/SARIF output is unaffected; the language breakdown is omitted under
+  `--cache-dir` (which tracks only the count).
 - **Refactoring-candidate mode** (`--candidates` on `detect`, default for `scan`):
   gates off + lower threshold, ~99% review-worthy on a refactoring-worthiness rubric.
 - **Rust, Java, C, and Ruby frontends** — 8 base languages (Python, JS, TS, Go,

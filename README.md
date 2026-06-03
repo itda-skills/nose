@@ -101,6 +101,7 @@ cargo build --release
 
 ```
 $ nose scan examples --min-tokens 8
+scanned 3 files · go 1 · python 1 · typescript 1
 2 refactoring candidates, ranked by extractability (cleanest to fold into one helper)  ·  ~26 duplicated lines  (showing 2)
 
 #1  3 copies · same logic in 3 languages (go, python, typescript) · ~14 lines removable

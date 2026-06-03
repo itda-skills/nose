@@ -29,7 +29,8 @@ below to sort by raw volume, copy count, or spread instead.)
 
 ```
 $ nose scan bench/repos/radash
-150 refactoring candidates, ranked by extractability (cleanest to fold into one helper)  ·  ~5840 duplicated lines  (showing 30)
+scanned 23 files · typescript 19 · javascript 4
+148 refactoring candidates, ranked by extractability (cleanest to fold into one helper)  ·  ~5826 duplicated lines  (showing 30)
 
 #1  3 copies · same logic in 2 languages (javascript, typescript) · ~134 lines removable
     → consolidate `series` — 3 copies (cross-language)
@@ -37,6 +38,14 @@ $ nose scan bench/repos/radash
     bench/repos/radash/cdn/radash.esm.js:823-877 series
     bench/repos/radash/cdn/radash.js:826-880     series
 ```
+
+The first line — `scanned N files · <language breakdown>` — reports what was actually
+analyzed. A repo where `.gitignore` or `--exclude` pruned vendored deps, build output,
+or generated code scans far fewer files than sit on disk; the count makes that scope
+explicit instead of a silent gap (compare it to what you expected). The per-language
+breakdown is omitted under `--cache-dir`, which tracks only the total. (The *ignored*
+count is intentionally not shown: tallying it means walking into the very trees
+`.gitignore` exists to skip — slow on exactly the large repos where it matters.)
 
 Each **family** is one refactoring decision (extract a shared helper / base class
 / data table), described in plain language: how many copies, how much is actually

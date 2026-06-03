@@ -529,3 +529,23 @@ fn sort_keys_label_the_ranking_and_reject_garbage() {
     assert!(!bad.status.success(), "unknown --sort value is rejected");
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn scan_reports_what_it_scanned() {
+    let dir = make_project("scope");
+    let p = dir.to_str().unwrap();
+    // The scope line states the file count and per-language breakdown (make_project
+    // writes four Python files), so a `.gitignore`-pruned scope is visible, not silent.
+    let out = run(&["scan", p, "--min-tokens", "12"]);
+    assert!(
+        out.contains("scanned 4 files") && out.contains("python 4"),
+        "header reports scanned count and languages: {out}"
+    );
+    // The scope line must not corrupt machine-readable output.
+    let json = run(&["scan", p, "--min-tokens", "12", "--format", "json"]);
+    assert!(
+        json.trim_start().starts_with('[') && !json.contains("scanned"),
+        "json output stays pure: {json}"
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
