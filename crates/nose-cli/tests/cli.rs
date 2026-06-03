@@ -549,3 +549,69 @@ fn scan_reports_what_it_scanned() {
     );
     let _ = fs::remove_dir_all(&dir);
 }
+
+/// A determinism guard with teeth: the toy `make_project` is too small to exercise the
+/// order-sensitive paths (shared-line IDF summation, RANSAC offset ties, cross-family
+/// ordering) where byte-identical output has actually broken before. Generate a project
+/// with many same-language near-duplicate functions — several clone families whose copies
+/// differ in a few lines — and assert the JSON report is identical across a range of
+/// thread counts (each a distinct process, so this also covers `HashMap` seed variation).
+#[test]
+fn output_is_byte_identical_across_thread_counts_on_a_rich_project() {
+    let dir = std::env::temp_dir().join(format!("nose_determinism_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    // 8 families × 5 near-duplicate copies. Each copy renames variables and tweaks a
+    // couple of lines, so families form, RANSAC alignment runs, and the honest
+    // shared-line counter compares several members.
+    for fam in 0..8 {
+        for copy in 0..5 {
+            let v = format!("v{copy}");
+            let src = format!(
+                "def family{fam}_{copy}(items):\n    \
+                 {v}_total = {copy}\n    \
+                 {v}_seen = []\n    \
+                 for {v}_x in items:\n        \
+                 if {v}_x > {fam}:\n            \
+                 {v}_total = {v}_total + {v}_x * {fam}\n            \
+                 {v}_seen.append({v}_x)\n        \
+                 else:\n            \
+                 {v}_total = {v}_total - {copy}\n    \
+                 return ({v}_total, {v}_seen)\n"
+            );
+            fs::write(dir.join(format!("f{fam}_{copy}.py")), src).unwrap();
+        }
+    }
+    let p = dir.to_str().unwrap();
+    let run_threads = |n: &str| {
+        let out = Command::new(bin())
+            .args([
+                "scan",
+                p,
+                "--min-tokens",
+                "12",
+                "--format",
+                "json",
+                "--top",
+                "1000",
+            ])
+            .env("RAYON_NUM_THREADS", n)
+            .output()
+            .expect("run nose");
+        assert!(out.status.success());
+        String::from_utf8(out.stdout).unwrap()
+    };
+    let baseline = run_threads("1");
+    assert!(
+        baseline.contains("\"members\""),
+        "the fixture forms families: {baseline}"
+    );
+    for n in ["2", "3", "4", "8"] {
+        assert_eq!(
+            run_threads(n),
+            baseline,
+            "{n}-thread output must be byte-identical to the 1-thread run"
+        );
+    }
+    let _ = fs::remove_dir_all(&dir);
+}
