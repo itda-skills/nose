@@ -379,9 +379,24 @@ pub fn rank_families(report: &Report) -> Vec<RefactorFamily> {
             .cmp(&total_span(a))
             .then(b.value.total_cmp(&a.value))
     });
+    // Keep a family unless an already-kept (larger) one subsumes it. `subsumes(k, f)`
+    // requires `k` to have a site in the file of *every* `f` site — so any subsumer must
+    // touch `f`'s first file. Index kept families by the files they touch and test only
+    // those candidates, instead of scanning all kept families (the dedup was O(families²)
+    // — ~0.13s on guava's ~6k families). Same result: every possible subsumer is in the
+    // candidate set, and `subsumes` returns false for the rest.
     let mut kept: Vec<RefactorFamily> = Vec::with_capacity(fams.len());
+    let mut by_file: rustc_hash::FxHashMap<String, Vec<usize>> = rustc_hash::FxHashMap::default();
     for f in fams {
-        if !kept.iter().any(|k| subsumes(k, &f)) {
+        let first_file = f.locations.first().map(|l| l.file.as_str()).unwrap_or("");
+        let subsumed = by_file
+            .get(first_file)
+            .is_some_and(|idxs| idxs.iter().any(|&ki| subsumes(&kept[ki], &f)));
+        if !subsumed {
+            let ki = kept.len();
+            for l in &f.locations {
+                by_file.entry(l.file.clone()).or_default().push(ki);
+            }
             kept.push(f);
         }
     }
