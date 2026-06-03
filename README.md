@@ -79,9 +79,23 @@ clean behavioral (Type-4) clones: it
 turns on behavioral-precision gates (literal/string-value awareness, data-table
 and return-signature gates) and a higher threshold.
 
+## Install
+
+```sh
+# Homebrew (macOS / Linux):
+brew install corca-ai/tap/nose
+
+# Or the install script (downloads a prebuilt binary):
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/corca-ai/nose/releases/latest/download/nose-cli-installer.sh | sh
+```
+
+Prebuilt binaries for macOS (Apple Silicon + Intel) and Linux (x86_64 + arm64)
+are attached to every [release](https://github.com/corca-ai/nose/releases).
+
 ## Quick start
 
 ```sh
+# Build from source (requires the Rust toolchain):
 cargo build --release
 
 # Rank design-level refactoring candidates:
