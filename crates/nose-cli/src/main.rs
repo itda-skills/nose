@@ -1633,7 +1633,7 @@ fn print_refactor_human(
             print_member_diff(&f.locations[0], &f.locations[1]);
         }
         if proposal && f.locations.len() >= 2 {
-            print_member_proposal(&f.locations[0], &f.locations[1]);
+            print_member_proposal(&f.locations[0], &f.locations[1], f.locations.len());
         }
     }
 }
@@ -1663,7 +1663,13 @@ fn print_member_diff(a: &nose_detect::Loc, b: &nose_detect::Loc) {
 /// lines collapses to a `⟨param N⟩` placeholder — i.e. anti-unification at line
 /// granularity. Turns "these are similar" into "extract this, parameterize these N
 /// spots." The varying spots are the candidate parameters.
-fn print_member_proposal(a: &nose_detect::Loc, b: &nose_detect::Loc) {
+///
+/// The skeleton is necessarily *pairwise* (the two largest copies). For a family with
+/// more copies that's an upper bound: a third copy that diverges further shrinks the
+/// truly-shared body and adds parameters, which is why the family's one-line summary —
+/// computed as a *majority* intersection across all members — can report fewer shared
+/// lines. `members` lets us say so rather than letting the two counts silently disagree.
+fn print_member_proposal(a: &nose_detect::Loc, b: &nose_detect::Loc, members: usize) {
     let (Some(la), Some(lb)) = (
         read_lines(&a.file, a.start_line, a.end_line),
         read_lines(&b.file, b.start_line, b.end_line),
@@ -1673,8 +1679,13 @@ fn print_member_proposal(a: &nose_detect::Loc, b: &nose_detect::Loc) {
     let ar: Vec<&str> = la.iter().map(String::as_str).collect();
     let br: Vec<&str> = lb.iter().map(String::as_str).collect();
     let (skeleton, shared, params) = anti_unify(&ar, &br);
+    let scope = if members > 2 {
+        format!(" (of the 2 largest of {members} copies; the rest may share fewer)")
+    } else {
+        String::new()
+    };
     println!(
-        "     proposal  extract a shared helper · {shared} shared lines · {params} parameter(s) vary"
+        "     proposal  extract a shared helper · {shared} shared lines · {params} parameter(s) vary{scope}"
     );
     for line in skeleton.iter().take(40) {
         println!("       │ {line}");
