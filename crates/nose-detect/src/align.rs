@@ -156,4 +156,19 @@ mod tests {
         let _ = ransac_ratio(&big, &big);
         assert_eq!(ransac_ratio(&a, &b), 0.2);
     }
+
+    /// Exercises `lcs_ratio` (the kept-but-unused alternative scorer) so it stays
+    /// compiling and correct rather than silently bit-rotting.
+    #[test]
+    fn lcs_ratio_scores_longest_common_subsequence() {
+        // Identical, disjoint, and both-empty boundary cases.
+        assert_eq!(lcs_ratio(&[1, 2, 3, 4], &[1, 2, 3, 4]), 1.0);
+        assert_eq!(lcs_ratio(&[1, 2, 3, 4], &[9, 8, 7]), 0.0);
+        assert_eq!(lcs_ratio(&[], &[]), 1.0);
+        // LCS of [1,2,3,4] and [1,3,4] is [1,3,4] (len 3); maxlen 4 → 0.75. It's a
+        // subsequence, not a set intersection.
+        assert_eq!(lcs_ratio(&[1, 2, 3, 4], &[1, 3, 4]), 0.75);
+        // Order matters: [1,2,3] vs [3,2,1] share length-1 as a subsequence, not 3.
+        assert_eq!(lcs_ratio(&[1, 2, 3], &[3, 2, 1]), 1.0 / 3.0);
+    }
 }
