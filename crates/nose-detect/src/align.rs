@@ -73,7 +73,15 @@ pub(crate) fn ransac_ratio(a: &[u64], b: &[u64]) -> f64 {
                     }
                 }
             }
-            let off = match votes.iter().max_by_key(|(_, &c)| c).map(|(&o, _)| o) {
+            // Consensus offset = most-voted alignment shift. Break vote-count ties by
+            // the offset value (a unique map key), NOT by `max_by_key`'s "last max
+            // wins" — `votes` is a reused thread-local `FxHashMap` whose capacity (and
+            // thus iteration order on ties) depends on how many prior pairs this worker
+            // handled, which varies with the thread count. Without the tie-break, a tied
+            // offset resolved differently across thread schedules, flipping marginal
+            // pairs' scores and breaking byte-identical output (seen on clap/nushell/
+            // h2database).
+            let off = match votes.iter().max_by_key(|(&o, &c)| (c, o)).map(|(&o, _)| o) {
                 Some(o) => o,
                 None => return 0.0,
             };
@@ -118,4 +126,34 @@ pub(crate) fn lcs_ratio(a: &[u64], b: &[u64]) -> f64 {
         std::mem::swap(&mut prev, &mut cur);
     }
     prev[b.len()] as f64 / maxlen as f64
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Pins the consensus-offset tie-break that keeps `ransac_ratio` deterministic.
+    /// The scorer's reused thread-local vote map is cleared but not shrunk between calls,
+    /// so its capacity — and thus its iteration order on ties — depends on how many prior
+    /// pairs the worker handled, which varies with the thread count. Breaking a vote-count
+    /// tie on the offset value (a unique key) instead of "whichever tied entry iterates
+    /// last" makes the pick independent of that layout. Before this, clap/nushell/
+    /// h2database produced thread-count-dependent output.
+    #[test]
+    fn ransac_ratio_breaks_offset_ties_deterministically() {
+        // Token `5` appears 9× in `b`, but `a[0]` votes for only the first 8 of its
+        // occurrences (the `.take(8)` cap). So the *best* shift — offset 8, which aligns
+        // `a[0]==b[8]` and `a[1]==b[9]` for 2 inliers — gets just 1 vote, tying with the
+        // 1-inlier offsets 0..7. The deterministic tie-break takes the largest offset (8),
+        // giving 2 inliers / maxlen 10 = 0.2. A non-deterministic tie-break could land on
+        // a 1-inlier offset (0.1), so this value also guards the inlier count.
+        let a: Vec<u64> = vec![5, 9];
+        let b: Vec<u64> = vec![5, 5, 5, 5, 5, 5, 5, 5, 5, 9];
+        assert_eq!(ransac_ratio(&a, &b), 0.2);
+        // And the result must not depend on the reused scratch map's capacity: growing it
+        // with an unrelated call must not change the score.
+        let big: Vec<u64> = (0..500u64).flat_map(|x| [x, x ^ 0x5a5a]).collect();
+        let _ = ransac_ratio(&big, &big);
+        assert_eq!(ransac_ratio(&a, &b), 0.2);
+    }
 }
