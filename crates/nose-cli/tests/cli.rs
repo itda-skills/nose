@@ -1352,6 +1352,41 @@ fn scan_mode_semantic_proves_typed_typescript_map_default_lookup() {
         "function f(lookup, other_lookup, key, other_key, fallback, other_default) {\n  return lookup.get(key) ?? fallback;\n}\n",
     )
     .unwrap();
+    fs::write(
+        dir.join("py_dict.py"),
+        "def f(lookup: dict[str, int], other_lookup: dict[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return lookup.get(key, fallback)\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("py_mapping.py"),
+        "from collections.abc import Mapping\n\ndef f(lookup: Mapping[str, int], other_lookup: Mapping[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return lookup.get(key, fallback)\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("py_mutable_mapping.py"),
+        "from collections.abc import MutableMapping\n\ndef f(lookup: MutableMapping[str, int], other_lookup: MutableMapping[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return lookup.get(key, fallback)\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("py_wrong_key.py"),
+        "def f(lookup: dict[str, int], other_lookup: dict[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return lookup.get(other_key, fallback)\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("py_wrong_default.py"),
+        "def f(lookup: dict[str, int], other_lookup: dict[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return lookup.get(key, other_default)\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("py_wrong_map.py"),
+        "def f(lookup: dict[str, int], other_lookup: dict[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return other_lookup.get(key, fallback)\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("py_untyped.py"),
+        "def f(lookup, other_lookup, key, other_key, fallback, other_default):\n    return lookup.get(key, fallback)\n",
+    )
+    .unwrap();
 
     let semantic = run(&[
         "scan",
@@ -1369,16 +1404,32 @@ fn scan_mode_semantic_proves_typed_typescript_map_default_lookup() {
     ]);
     let semantic_json: serde_json::Value =
         serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_text = semantic_json.to_string();
-    for expected in [
+    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let expected = [
         "map_default.go",
         "ts_nullish.ts",
         "ts_has_get.ts",
         "ts_temp_guard.ts",
-    ] {
+        "py_dict.py",
+        "py_mapping.py",
+        "py_mutable_mapping.py",
+    ];
+    let positive_family = semantic_families
+        .iter()
+        .find(|family| {
+            let family_text = family.to_string();
+            expected
+                .iter()
+                .all(|expected| family_text.contains(expected))
+        })
+        .unwrap_or_else(|| {
+            panic!("semantic mode should report one typed map default family: {semantic}")
+        });
+    let positive_text = positive_family.to_string();
+    for expected in expected {
         assert!(
-            semantic_text.contains(expected),
-            "semantic mode should include typed TS Map default lookup {expected}: {semantic}"
+            positive_text.contains(expected),
+            "semantic mode should include typed map default lookup {expected}: {semantic}"
         );
     }
     for unexpected in [
@@ -1386,10 +1437,14 @@ fn scan_mode_semantic_proves_typed_typescript_map_default_lookup() {
         "ts_wrong_default.ts",
         "ts_wrong_map.ts",
         "ts_untyped.ts",
+        "py_wrong_key.py",
+        "py_wrong_default.py",
+        "py_wrong_map.py",
+        "py_untyped.py",
     ] {
         assert!(
-            !semantic_text.contains(unexpected),
-            "semantic mode must preserve typed TS Map default boundaries: {semantic}"
+            !positive_text.contains(unexpected),
+            "semantic mode must preserve typed map default boundaries: {semantic}"
         );
     }
 

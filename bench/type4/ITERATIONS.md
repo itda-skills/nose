@@ -3204,3 +3204,81 @@ generalization is not "all Go map indexes"; it is "homogeneous literal map value
 language zero value can be represented exactly." Composite, pointer, slice, struct, and
 interface-typed zero values remain open until they have their own source-level proof and
 boundaries.
+
+## Typed Python dynamic map defaults: loops 343-348
+
+This batch moves from static literal-map defaults back to the dynamic `map_default_lookup`
+axis. The prioritizer shows Python `.get(default)` as the largest high-precision slice in
+this family, but untyped Python `.get` is not strict evidence that the receiver is a map.
+The strict frontier is therefore typed Python receiver annotations: `dict[str, int]`,
+`Mapping[str, int]`, and `MutableMapping[str, int]`. All three share one proof invariant:
+the receiver parameter carries `ParamSemantic::Map`, and `.get(key, fallback)` has exactly
+the same map/key/default coordinates as Go/Java/Rust/TypeScript dynamic map-default forms.
+
+The batch opens three adjacent positive proposal IDs plus four boundaries:
+
+- `axis_map_fallback_python_dict_get_identity`;
+- `axis_map_fallback_python_mapping_get_identity`;
+- `axis_map_fallback_python_mutable_mapping_get_identity`;
+- `axis_map_fallback_python_wrong_key_boundary`;
+- `axis_map_fallback_python_wrong_default_boundary`;
+- `axis_map_fallback_python_wrong_map_boundary`;
+- `axis_map_fallback_python_untyped_boundary`.
+
+The detector now treats Python `Mapping`/`MutableMapping` annotations as map semantics and
+canonicalizes proven `.get(key, fallback)` calls to `GetOrDefault(map, key, fallback)`.
+The exact-safety gate uses the same annotation-derived `ParamSemantic::Map` fact; it does
+not trust the method name alone. Untyped Python `.get` remains outside strict semantic
+mode.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 343 | batch frontier selection | group typed Python `dict`, `Mapping`, and `MutableMapping` dynamic map defaults under `axis_map_fallback_python_*` | focused corpus: 9 positives, 21 hard negatives |
+| 344 | baseline measurement | open Python `map_default_lookup` to `partial` and scan the focused batch with the previous release detector | baseline: 0/9 positives, 0/21 false merges |
+| 345 | generator adversary | add Go/Java/Rust references against Python right-surface variants plus wrong-key/default/map and untyped boundaries | focused generator emits 30 items |
+| 346 | detector strengthening | recognize `mapping[...]` annotations as map facts and canonicalize proven `.get(key, fallback)` to `GetOrDefault` | candidate focused: 9/9 positives, 0/21 false merges |
+| 347 | strict regression tests | add value-graph and CLI positives plus untyped and wrong-coordinate Python boundaries | targeted and full tests passed |
+| 348 | release focused/core gates | build release and run focused Python map-default, map-default core, and all-cross core gates | focused 9/9, 0/21; map-default core 23/23, 0/54; all-cross 502/502, 0/982 |
+
+Focused release/candidate comparison:
+
+```text
+previous release:  items=30, positive=0/9, false_merges=0/21
+candidate release: items=30, positive=9/9, false_merges=0/21
+delta:             +9 positive hits, +0 false merges
+```
+
+Final release focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_map_fallback_python CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 30
+positive recall: 9/9
+hard-negative false merges: 0/21
+Raw nodes: 0/1330
+```
+
+Final release map-default core gate:
+
+```text
+GATE=core AXIS=map_default_lookup CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 77/90
+positive recall: 23/23
+hard-negative false merges: 0/54
+Raw nodes: 0/3656
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 1484/6322
+positive recall: 502/502
+hard-negative false merges: 0/982
+Raw nodes: 0/55061
+```
+
+Assessment: this is a useful general-language expansion because it closes a high-volume
+Python slice without broadening untyped receiver assumptions. The proof is deliberately
+annotation-gated. Ruby `fetch` and JavaScript `Map.get` defaults remain open unless a
+comparable receiver type fact or construction fact is available.

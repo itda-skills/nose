@@ -823,6 +823,39 @@ impl<'a> Builder<'a> {
         Some(self.mk(ValOp::Bin(Op::In as u32), vec![key, map]))
     }
 
+    fn eval_proven_map_get_default_call(
+        &mut self,
+        kids: &[NodeId],
+        env: &FxHashMap<u32, ValueId>,
+    ) -> Option<ValueId> {
+        if kids.len() != 3 {
+            return None;
+        }
+        let callee = kids[0];
+        if self.il.kind(callee) != NodeKind::Field {
+            return None;
+        }
+        let Payload::Name(name) = self.il.node(callee).payload else {
+            return None;
+        };
+        if self.interner.resolve(name) != "get" {
+            return None;
+        }
+        let receiver = self.il.children(callee).first().copied()?;
+        let receiver_value = self.eval(receiver, env);
+        let map = if self.is_map_param_expr(receiver) {
+            receiver_value
+        } else {
+            self.proven_map_value(receiver_value)?
+        };
+        let key = self.eval(kids[1], env);
+        let default = self.eval(kids[2], env);
+        Some(self.mk(
+            ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+            vec![map, key, default],
+        ))
+    }
+
     fn eval_proven_numeric_method_call(
         &mut self,
         kids: &[NodeId],
@@ -3998,6 +4031,9 @@ impl<'a> Builder<'a> {
                     return r;
                 }
                 if let Some(r) = self.eval_proven_map_key_membership_call(&kids, env) {
+                    return r;
+                }
+                if let Some(r) = self.eval_proven_map_get_default_call(&kids, env) {
                     return r;
                 }
                 if self.is_unproven_membership_like_call(expr, &kids) {

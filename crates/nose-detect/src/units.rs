@@ -4,7 +4,8 @@
 //! tags for alignment, and a **MinHash** signature for candidate generation.
 
 use nose_il::{
-    Builtin, Il, Interner, Lang, LitClass, NodeId, NodeKind, Op, Payload, Symbol, UnitKind,
+    Builtin, Il, Interner, Lang, LitClass, NodeId, NodeKind, Op, ParamSemantic, Payload, Symbol,
+    UnitKind,
 };
 use nose_normalize::node_tag;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -714,6 +715,12 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
         let Some(&receiver) = il.children(callee).first() else {
             return false;
         };
+        if method == "get"
+            && strict_exact_typed_map_param_receiver_safe(il, receiver)
+            && il.children(node).len() == 3
+        {
+            return strict_exact_call_args_safe(il, interner, facts, node);
+        }
         if strict_exact_set_constructor_collection_safe(il, interner, facts, receiver) {
             return strict_exact_call_args_safe(il, interner, facts, node);
         }
@@ -732,6 +739,23 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
     }
     strict_exact_callee_identity(il, facts, callee)
         && strict_exact_call_args_safe(il, interner, facts, node)
+}
+
+fn strict_exact_typed_map_param_receiver_safe(il: &Il, receiver: NodeId) -> bool {
+    if il.kind(receiver) != NodeKind::Var {
+        return false;
+    }
+    let Payload::Cid(receiver_cid) = il.node(receiver).payload else {
+        return false;
+    };
+    il.nodes.iter().any(|node| {
+        node.kind == NodeKind::Param
+            && matches!(node.payload, Payload::Cid(param_cid) if param_cid == receiver_cid)
+            && il
+                .param_type_facts
+                .iter()
+                .any(|fact| fact.span == node.span && matches!(fact.semantic, ParamSemantic::Map))
+    })
 }
 
 fn strict_exact_literal_collection_receiver_safe(

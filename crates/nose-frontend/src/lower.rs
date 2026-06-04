@@ -261,6 +261,8 @@ pub(crate) fn param_semantic_from_text(text: &str) -> Option<ParamSemantic> {
         || t.contains("map<")
         || t.contains("dict[")
         || t.contains("dictionary[")
+        || t.contains("mapping[")
+        || t.contains("mapping<")
         || t.contains("map[")
     {
         return Some(ParamSemantic::Map);

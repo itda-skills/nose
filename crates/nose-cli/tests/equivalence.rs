@@ -2166,6 +2166,9 @@ fn map_default_lookup_converges_cross_language_with_boundaries() {
     let ts_nullish = "function f(lookup: Map<string, number>, other_lookup: Map<string, number>, key: string, other_key: string, fallback: number, other_default: number): number { return lookup.get(key) ?? fallback; }\n";
     let ts_has_get = "function f(lookup: Map<string, number>, other_lookup: Map<string, number>, key: string, other_key: string, fallback: number, other_default: number): number { return lookup.has(key) ? lookup.get(key) : fallback; }\n";
     let ts_temp_guard = "function f(lookup: Map<string, number>, other_lookup: Map<string, number>, key: string, other_key: string, fallback: number, other_default: number): number { const selected = lookup.get(key); return selected === undefined ? fallback : selected; }\n";
+    let py_dict = "def f(lookup: dict[str, int], other_lookup: dict[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return lookup.get(key, fallback)\n";
+    let py_mapping = "from collections.abc import Mapping\n\ndef f(lookup: Mapping[str, int], other_lookup: Mapping[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return lookup.get(key, fallback)\n";
+    let py_mutable_mapping = "from collections.abc import MutableMapping\n\ndef f(lookup: MutableMapping[str, int], other_lookup: MutableMapping[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return lookup.get(key, fallback)\n";
     let wrong_key = "import java.util.Map;\n\nclass C { static int f(Map<String, Integer> lookup, Map<String, Integer> other_lookup, String key, String other_key, int fallback, int other_default) { return lookup.getOrDefault(other_key, fallback); } }\n";
     let wrong_default = "use std::collections::HashMap;\n\npub fn f(lookup: &HashMap<&str, i32>, other_lookup: &HashMap<&str, i32>, key: &str, other_key: &str, fallback: i32, other_default: i32) -> i32 { *lookup.get(key).unwrap_or(&other_default) }\n";
     let wrong_map = "package p\n\nfunc F(lookup map[string]int, otherLookup map[string]int, key string, otherKey string, fallback int, otherDefault int) int { value, ok := otherLookup[key]; if !ok { value = fallback }; return value }\n";
@@ -2173,6 +2176,10 @@ fn map_default_lookup_converges_cross_language_with_boundaries() {
     let ts_wrong_default = "function f(lookup: Map<string, number>, other_lookup: Map<string, number>, key: string, other_key: string, fallback: number, other_default: number): number { return lookup.get(key) ?? other_default; }\n";
     let ts_wrong_map = "function f(lookup: Map<string, number>, other_lookup: Map<string, number>, key: string, other_key: string, fallback: number, other_default: number): number { return other_lookup.get(key) ?? fallback; }\n";
     let ts_untyped = "function f(lookup, other_lookup, key, other_key, fallback, other_default) { return lookup.get(key) ?? fallback; }\n";
+    let py_wrong_key = "def f(lookup: dict[str, int], other_lookup: dict[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return lookup.get(other_key, fallback)\n";
+    let py_wrong_default = "def f(lookup: dict[str, int], other_lookup: dict[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return lookup.get(key, other_default)\n";
+    let py_wrong_map = "def f(lookup: dict[str, int], other_lookup: dict[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return other_lookup.get(key, fallback)\n";
+    let py_untyped = "def f(lookup, other_lookup, key, other_key, fallback, other_default):\n    return lookup.get(key, fallback)\n";
 
     let fp = value_fp(&i, go, Lang::Go);
     assert_eq!(fp, value_fp(&i, java_explicit, Lang::Java));
@@ -2182,6 +2189,9 @@ fn map_default_lookup_converges_cross_language_with_boundaries() {
     assert_eq!(fp, value_fp(&i, ts_nullish, Lang::TypeScript));
     assert_eq!(fp, value_fp(&i, ts_has_get, Lang::TypeScript));
     assert_eq!(fp, value_fp(&i, ts_temp_guard, Lang::TypeScript));
+    assert_eq!(fp, value_fp(&i, py_dict, Lang::Python));
+    assert_eq!(fp, value_fp(&i, py_mapping, Lang::Python));
+    assert_eq!(fp, value_fp(&i, py_mutable_mapping, Lang::Python));
     assert_ne!(fp, value_fp(&i, wrong_key, Lang::Java));
     assert_ne!(fp, value_fp(&i, wrong_default, Lang::Rust));
     assert_ne!(fp, value_fp(&i, wrong_map, Lang::Go));
@@ -2189,6 +2199,10 @@ fn map_default_lookup_converges_cross_language_with_boundaries() {
     assert_ne!(fp, value_fp(&i, ts_wrong_default, Lang::TypeScript));
     assert_ne!(fp, value_fp(&i, ts_wrong_map, Lang::TypeScript));
     assert_ne!(fp, value_fp(&i, ts_untyped, Lang::TypeScript));
+    assert_ne!(fp, value_fp(&i, py_wrong_key, Lang::Python));
+    assert_ne!(fp, value_fp(&i, py_wrong_default, Lang::Python));
+    assert_ne!(fp, value_fp(&i, py_wrong_map, Lang::Python));
+    assert_ne!(fp, value_fp(&i, py_untyped, Lang::Python));
 }
 
 #[test]
