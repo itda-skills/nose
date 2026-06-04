@@ -3911,3 +3911,71 @@ generic safe calls were accepted as membership collections, and top-level functi
 shadowing could leave stale import evidence in the value graph. Fixing that gap
 improved the loop itself, not just the deque case, while preserving all existing core
 frontiers at zero false merges.
+
+## Batch-3 map key-view membership: loops 392-396
+
+This loop moves from collection membership back to the separate `map_key_membership`
+frontier. The batch opens three key-view surfaces under one proof invariant:
+
+- `axis_map_key_python_keys_in_identity`;
+- `axis_map_key_python_keys_contains_identity`;
+- `axis_map_key_ts_array_from_keys_identity`.
+
+The invariant is typed/proven map receiver provenance: `lookup.keys()` is a key-view
+only when `lookup` is a typed map parameter or a proven map value. Membership over
+that key-view is lowered to the existing map-key predicate `key in lookup`. Value-view
+membership (`lookup.values()`), wrong-key, and wrong-map variants remain hard
+boundaries. TypeScript spread keys (`[...lookup.keys()]`) was deliberately excluded
+because the current IL cannot distinguish it from `[lookup.keys()]`.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 392 | batch frontier selection | group Python `key in lookup.keys()`, Python `lookup.keys().__contains__(key)`, and TypeScript `Array.from(lookup.keys()).includes(key)` | focused corpus: 15 positives, 45 hard negatives |
+| 393 | baseline measurement | scan the focused batch with the previous release detector | baseline: 0/15 positives, 0/45 false merges |
+| 394 | detector strengthening | recognize typed/proven map key-views in the value graph and strict gate; lower key-view membership to `In(key, map)` | focused: 15/15 positives |
+| 395 | generator counterattack | focused gate exposed that special identity semantic-mutation negatives did not actually mutate the key; fix generator mutation for the new proposals | focused repaired: 15/15 positives, 0/45 false merges |
+| 396 | release focused/core gates | build release and run focused, map-key core, and all-cross core gates | focused 15/15, 0/45; map-key core 27/27, 0/63; all-cross 603/603, 0/1190 |
+
+Focused release/candidate comparison:
+
+```text
+previous release:  items=60, positive=0/15, false_merges=0/45
+candidate release: items=60, positive=15/15, false_merges=0/45
+delta:             +15 positive hits, +0 false merges
+Raw nodes:         0/1809 in both runs
+```
+
+Final release focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_map_key_python_keys_,axis_map_key_ts_array_from_keys_ CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 60
+positive recall: 15/15
+hard-negative false merges: 0/45
+Raw nodes: 0/1809
+```
+
+Final release map-key core gate:
+
+```text
+GATE=core AXIS=map_key_membership CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 90/165
+positive recall: 27/27
+hard-negative false merges: 0/63
+Raw nodes: 0/2718
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 1793/6647
+positive recall: 603/603
+hard-negative false merges: 0/1190
+Raw nodes: 0/65191
+```
+
+Assessment: this is a real frontier widening and a loop-quality improvement. The
+detector now proves key-view membership without treating value-view membership as
+equivalent, and the generator now mutates special map-key identity proposals correctly
+instead of accidentally producing duplicate positives as hard negatives.

@@ -775,6 +775,42 @@ AXIS_PROPOSALS = {
         "axis": "map_key_membership",
         "why": "Map value membership is not the same predicate as map key membership.",
     },
+    "axis_map_key_python_keys_in_identity": {
+        "axis": "map_key_membership",
+        "why": "Python typed `key in lookup.keys()` should prove the same key-in-map predicate as direct map membership.",
+    },
+    "axis_map_key_python_keys_contains_identity": {
+        "axis": "map_key_membership",
+        "why": "Python typed `lookup.keys().__contains__(key)` should prove the same key-in-map predicate as direct map membership.",
+    },
+    "axis_map_key_python_keys_wrong_key_boundary": {
+        "axis": "map_key_membership",
+        "why": "Python map key-view membership remains tied to a specific key coordinate.",
+    },
+    "axis_map_key_python_keys_wrong_map_boundary": {
+        "axis": "map_key_membership",
+        "why": "Python map key-view membership remains tied to a specific map receiver coordinate.",
+    },
+    "axis_map_key_python_keys_value_boundary": {
+        "axis": "map_key_membership",
+        "why": "Python map value-view membership is not the same predicate as key-view membership.",
+    },
+    "axis_map_key_ts_array_from_keys_identity": {
+        "axis": "map_key_membership",
+        "why": "TypeScript typed `Array.from(lookup.keys()).includes(key)` should prove the same key-in-map predicate as `Map.has`.",
+    },
+    "axis_map_key_ts_array_from_keys_wrong_key_boundary": {
+        "axis": "map_key_membership",
+        "why": "TypeScript `Array.from(lookup.keys()).includes(...)` remains tied to a specific key coordinate.",
+    },
+    "axis_map_key_ts_array_from_keys_wrong_map_boundary": {
+        "axis": "map_key_membership",
+        "why": "TypeScript `Array.from(lookup.keys()).includes(...)` remains tied to a specific map receiver coordinate.",
+    },
+    "axis_map_key_ts_array_from_keys_value_boundary": {
+        "axis": "map_key_membership",
+        "why": "TypeScript `Array.from(lookup.values()).includes(...)` is value membership, not key membership.",
+    },
     "axis_map_default_literal_identity": {
         "axis": "literal_map_default_lookup",
         "why": "Static literal-map lookup with a literal fallback should prove the same key/default behavior across map APIs.",
@@ -3693,6 +3729,10 @@ end
 def map_key_membership_axis_supported(surface: Surface, proposal_id: str) -> bool:
     if not proposal_id.startswith("axis_map_key_"):
         return False
+    if proposal_id.startswith("axis_map_key_python_keys_"):
+        return surface.key == "python"
+    if proposal_id.startswith("axis_map_key_ts_array_from_keys_"):
+        return surface.key == "typescript"
     return surface.key in {"python", "go", "java", "rust", "ruby", "typescript"}
 
 
@@ -3706,7 +3746,40 @@ def map_key_axis_parts(proposal_id: str, negative: bool, right: bool) -> tuple[s
         receiver = "other_lookup"
     if right and proposal_id == "axis_map_key_value_boundary":
         form = "value"
-    if right and negative and proposal_id == "axis_map_key_membership_identity":
+    if right and proposal_id in {
+        "axis_map_key_python_keys_in_identity",
+        "axis_map_key_python_keys_wrong_key_boundary",
+        "axis_map_key_python_keys_wrong_map_boundary",
+    }:
+        form = "python_keys_in"
+    if right and proposal_id == "axis_map_key_python_keys_contains_identity":
+        form = "python_keys_contains"
+    if right and proposal_id == "axis_map_key_python_keys_value_boundary":
+        form = "python_keys_value"
+    if right and proposal_id in {
+        "axis_map_key_ts_array_from_keys_identity",
+        "axis_map_key_ts_array_from_keys_wrong_key_boundary",
+        "axis_map_key_ts_array_from_keys_wrong_map_boundary",
+    }:
+        form = "ts_array_from_keys"
+    if right and proposal_id == "axis_map_key_ts_array_from_keys_value_boundary":
+        form = "ts_array_from_values"
+    if right and proposal_id in {
+        "axis_map_key_python_keys_wrong_key_boundary",
+        "axis_map_key_ts_array_from_keys_wrong_key_boundary",
+    }:
+        key = "other"
+    if right and proposal_id in {
+        "axis_map_key_python_keys_wrong_map_boundary",
+        "axis_map_key_ts_array_from_keys_wrong_map_boundary",
+    }:
+        receiver = "other_lookup"
+    if right and negative and proposal_id in {
+        "axis_map_key_membership_identity",
+        "axis_map_key_python_keys_in_identity",
+        "axis_map_key_python_keys_contains_identity",
+        "axis_map_key_ts_array_from_keys_identity",
+    }:
         key = "other"
     return receiver, key, form
 
@@ -3725,12 +3798,20 @@ def axis_map_key_membership_variant(
     }.get(surface.language, "build_case" if right else "axis_case")
 
     if surface.key == "python":
-        expr = (
-            f"{key} in {receiver}.values()"
-            if form == "value"
-            else (f"{receiver}.__contains__({key})" if right else f"{key} in {receiver}")
-        )
-        src = f"""def {name}(lookup, other_lookup, key, other):
+        if form == "python_keys_in":
+            expr = f"{key} in {receiver}.keys()"
+        elif form == "python_keys_contains":
+            expr = f"{receiver}.keys().__contains__({key})"
+        elif form == "python_keys_value":
+            expr = f"{key} in {receiver}.values()"
+        else:
+            expr = (
+                f"{key} in {receiver}.values()"
+                if form == "value"
+                else (f"{receiver}.__contains__({key})" if right else f"{key} in {receiver}")
+            )
+        typed = ": dict[str, str]" if form.startswith("python_keys_") else ""
+        src = f"""def {name}(lookup{typed}, other_lookup{typed}, key: str, other: str):
     return {expr}
 """
         return Variant("axis", src, name)
@@ -3803,6 +3884,10 @@ end
 
     if surface.key == "typescript":
         if form == "value":
+            expr = f"Array.from({receiver}.values()).includes({key})"
+        elif form == "ts_array_from_keys":
+            expr = f"Array.from({receiver}.keys()).includes({key})"
+        elif form == "ts_array_from_values":
             expr = f"Array.from({receiver}.values()).includes({key})"
         else:
             expr = f"{receiver}.has({key})"
@@ -7560,6 +7645,10 @@ def generate_axis_items(
             ):
                 continue
             if proposal_id.startswith(
+                ("axis_map_key_python_keys_", "axis_map_key_ts_array_from_keys_")
+            ):
+                continue
+            if proposal_id.startswith(
                 (
                     "axis_map_default_js_map_",
                     "axis_map_default_js_object_",
@@ -9204,6 +9293,7 @@ def generate_map_key_membership_cross_items(
         for s in SURFACES
         if map_key_membership_axis_supported(s, "axis_map_key_membership_identity")
     ]
+    surface_by_key = {s.key: s for s in SURFACES}
     items: list[dict] = []
     for left_surface, right_surface in cross_pairs(surfaces, cross_mode):
         if generation_filter.include_proposal("axis_map_key_membership_identity"):
@@ -9249,6 +9339,74 @@ def generate_map_key_membership_cross_items(
                     "map-key-membership-boundary",
                 )
             )
+    special_views = [
+        (
+            surface_by_key["python"],
+            (
+                "axis_map_key_python_keys_in_identity",
+                "axis_map_key_python_keys_contains_identity",
+            ),
+            (
+                "axis_map_key_python_keys_wrong_key_boundary",
+                "axis_map_key_python_keys_wrong_map_boundary",
+                "axis_map_key_python_keys_value_boundary",
+            ),
+        ),
+        (
+            surface_by_key["typescript"],
+            ("axis_map_key_ts_array_from_keys_identity",),
+            (
+                "axis_map_key_ts_array_from_keys_wrong_key_boundary",
+                "axis_map_key_ts_array_from_keys_wrong_map_boundary",
+                "axis_map_key_ts_array_from_keys_value_boundary",
+            ),
+        ),
+    ]
+    for right_surface, positive_proposals, boundary_proposals in special_views:
+        reference_surfaces = [s for s in surfaces if s.key != right_surface.key]
+        for proposal_id in positive_proposals:
+            if not generation_filter.include_proposal(proposal_id):
+                continue
+            for left_surface in reference_surfaces:
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "equivalent",
+                        "heldout",
+                    )
+                )
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "not_equivalent",
+                        "heldout",
+                        "map_key_membership-semantic-mutation",
+                    )
+                )
+        for proposal_id in boundary_proposals:
+            if not generation_filter.include_proposal(proposal_id):
+                continue
+            for left_surface in reference_surfaces:
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "not_equivalent",
+                        "heldout",
+                        "map-key-membership-boundary",
+                    )
+                )
     return items
 
 

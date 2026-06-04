@@ -1023,6 +1023,48 @@ impl<'a> Builder<'a> {
         Some((map, args[1]))
     }
 
+    fn proven_map_key_view_value(&mut self, value: ValueId) -> Option<ValueId> {
+        let node = &self.nodes[value as usize];
+        if !matches!(node.op, ValOp::Call(0)) {
+            return None;
+        }
+        let args = node.args.clone();
+        if args.len() == 1 {
+            let callee = &self.nodes[args[0] as usize];
+            if !matches!(callee.op, ValOp::Field(name) if name == stable_symbol_hash("keys"))
+                || callee.args.len() != 1
+            {
+                return None;
+            }
+            let map = callee.args[0];
+            return if self.is_map_param_value(map) {
+                Some(map)
+            } else {
+                self.proven_map_value(map)
+            };
+        }
+        if args.len() == 2 {
+            let callee = &self.nodes[args[0] as usize];
+            if !matches!(callee.op, ValOp::Field(name) if name == stable_symbol_hash("from"))
+                || callee.args.len() != 1
+                || !self.is_free_name_value(callee.args[0], "Array")
+            {
+                return None;
+            }
+            return self.proven_map_key_view_value(args[1]);
+        }
+        None
+    }
+
+    fn proven_map_key_view_expr(
+        &mut self,
+        expr: NodeId,
+        env: &FxHashMap<u32, ValueId>,
+    ) -> Option<ValueId> {
+        let value = self.eval(expr, env);
+        self.proven_map_key_view_value(value)
+    }
+
     fn eval_proven_collection_membership_call(
         &mut self,
         kids: &[NodeId],
@@ -1046,6 +1088,9 @@ impl<'a> Builder<'a> {
         {
             let receiver = receiver?;
             let element = self.eval(kids[1], env);
+            if let Some(map) = self.proven_map_key_view_expr(receiver, env) {
+                return Some(self.mk(ValOp::Bin(Op::In as u32), vec![element, map]));
+            }
             if self.is_collection_param_expr(receiver) {
                 let collection = self.eval_membership_collection(receiver, env);
                 return Some(self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]));
@@ -4095,6 +4140,9 @@ impl<'a> Builder<'a> {
                         return self
                             .mk(ValOp::Call(JS_PROTOTYPE_IN_CODE), vec![element, collection]);
                     }
+                    if let Some(map) = self.proven_map_key_view_expr(kids[1], env) {
+                        return self.mk(ValOp::Bin(op), vec![element, map]);
+                    }
                     let collection = self.eval_membership_collection(kids[1], env);
                     return self.mk(ValOp::Bin(op), vec![element, collection]);
                 }
@@ -4230,6 +4278,9 @@ impl<'a> Builder<'a> {
                 if let Payload::Builtin(Builtin::Contains) = node.payload {
                     if let [element, collection] = kids.as_slice() {
                         let element = self.eval(*element, env);
+                        if let Some(map) = self.proven_map_key_view_expr(*collection, env) {
+                            return self.mk(ValOp::Bin(Op::In as u32), vec![element, map]);
+                        }
                         let collection = self.eval_membership_collection(*collection, env);
                         return self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]);
                     }

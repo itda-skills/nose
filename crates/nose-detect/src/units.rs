@@ -730,6 +730,7 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
             || strict_exact_rust_vec_macro_collection_safe(il, interner, facts, receiver)
             || strict_exact_rust_std_collection_factory_safe(il, interner, facts, receiver)
             || strict_exact_java_collection_factory_safe(il, interner, facts, receiver)
+            || strict_exact_map_key_view_collection_safe(il, interner, facts, receiver)
         {
             return strict_exact_call_args_safe(il, interner, facts, node);
         }
@@ -781,6 +782,64 @@ fn strict_exact_typed_map_param_receiver_safe(il: &Il, receiver: NodeId) -> bool
     })
 }
 
+fn strict_exact_map_key_view_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    if il.kind(node) != NodeKind::Call {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 1 || il.kind(kids[0]) != NodeKind::Field {
+        return false;
+    }
+    let Payload::Name(method) = il.node(kids[0]).payload else {
+        return false;
+    };
+    if interner.resolve(method) != "keys" {
+        return false;
+    }
+    let Some(&receiver) = il.children(kids[0]).first() else {
+        return false;
+    };
+    strict_exact_typed_map_param_receiver_safe(il, receiver)
+        || strict_exact_map_constructor_entries_safe(il, interner, facts, receiver)
+        || strict_exact_java_map_factory_safe(il, interner, facts, receiver)
+        || strict_exact_rust_std_map_factory_safe(il, interner, facts, receiver)
+}
+
+fn strict_exact_map_key_view_collection_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    if strict_exact_map_key_view_safe(il, interner, facts, node) {
+        return true;
+    }
+    if il.kind(node) != NodeKind::Call {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 || il.kind(kids[0]) != NodeKind::Field {
+        return false;
+    }
+    let Payload::Name(method) = il.node(kids[0]).payload else {
+        return false;
+    };
+    if interner.resolve(method) != "from" {
+        return false;
+    }
+    let Some(&receiver) = il.children(kids[0]).first() else {
+        return false;
+    };
+    strict_exact_callee_name(il, interner, receiver, "Array")
+        && !file_defines_name(il, interner, "Array")
+        && strict_exact_map_key_view_safe(il, interner, facts, kids[1])
+}
+
 fn strict_exact_literal_collection_receiver_safe(
     il: &Il,
     interner: &Interner,
@@ -804,7 +863,8 @@ fn strict_exact_membership_collection_safe(
                 || strict_exact_ruby_set_factory_safe(il, interner, facts, node)
                 || strict_exact_rust_vec_macro_collection_safe(il, interner, facts, node)
                 || strict_exact_rust_std_collection_factory_safe(il, interner, facts, node)
-                || strict_exact_java_collection_factory_safe(il, interner, facts, node);
+                || strict_exact_java_collection_factory_safe(il, interner, facts, node)
+                || strict_exact_map_key_view_collection_safe(il, interner, facts, node);
         }
         return strict_exact_safe_tree(il, interner, facts, node);
     }
