@@ -32,10 +32,10 @@ and whether a frontier is already covered.
    - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 2798
    - next probe: Continue with dynamic collection/set membership only when receiver/key coordinates can be proven by import, construction, immutable binding, or richer type facts beyond the current typed-parameter and literal-`Set` cases; keep substring, regex, map-key, and unproven receiver-overloaded calls as hard boundaries.
 2. `map_default_lookup`
-   - why: Literal Python/Ruby, typed Go/Java/Rust, and explicit typed TypeScript `Map` fallback lookups are covered; JS/TS object-or-Map defaults, absent-key semantics, and mutation/effects remain open when receiver identity is not yet proven.
+   - why: Literal Python/Ruby, JS/TS literal `Map` construction, typed Go/Java/Rust, and explicit typed TypeScript `Map` fallback lookups are covered; JS/TS object defaults, imported/module-level Map construction, absent-key semantics, and mutation/effects remain open when receiver identity is not yet proven.
    - evidence: 4319 raw / 3645.3 weighted matches across 73 repos and 7 languages (go, java, javascript, python, ruby, rust, typescript)
    - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 0
-   - next probe: Continue with JS/TS object-or-Map defaults only when receiver/key/default coordinates can be proven by construction, import, or immutable local binding facts; keep arbitrary `.get`/index receivers as hard boundaries.
+   - next probe: Continue with JS/TS object defaults or imported/module-level Map defaults only when receiver/key/default coordinates can be proven by static construction, import identity, or immutable binding facts beyond the current inline/local `new Map` cases; keep arbitrary `.get`/index receivers as hard boundaries.
 3. `numeric_minmax_abs`
    - why: Scalar min/max/abs expression facts are covered for C, Go, Java, JavaScript/TypeScript, Python, Ruby, and embedded script surfaces; Rust numeric methods remain the next compact strict slice.
    - evidence: 425 raw / 425.0 weighted matches across 15 repos and 1 languages (rust)

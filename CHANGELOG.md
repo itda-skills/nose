@@ -30,6 +30,11 @@ break.
   now converges dict `.get(key, default)` and hash `.fetch(key, default)` only when the
   receiver is a static literal map, preserving wrong-key, wrong-default, and wrong-map
   boundaries.
+- Strict Type-4 proof facts for JavaScript/TypeScript `Map` construction default
+  lookups. Exact semantic mode now converges inline `new Map([...]).get(key) ?? fallback`,
+  immutable local `Map` construction, and proven `has/get` ternaries with literal
+  Python/Ruby map defaults, while preserving wrong-key, wrong-default, wrong-map,
+  untyped-receiver, and shadowed-`Map` boundaries.
 - Strict Type-4 proof facts for null/none/nil/option presence predicates. The detector
   now converges explicit null comparisons with Ruby `nil?` and Rust `is_none`/`is_some`
   method forms plus Rust `if let Some(_)`/`if let None` pattern predicates, while

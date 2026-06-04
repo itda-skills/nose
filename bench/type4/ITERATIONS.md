@@ -1802,3 +1802,73 @@ family and shares hard negatives. It also improved strictness: the Map/Set colli
 by the batch would have been easy to miss in a one-off focused positive test, but the
 combined CLI and compact gates forced the detector to preserve the `Map.has` vs `Set.has`
 semantic boundary.
+
+## JavaScript/TypeScript Map construction defaults: loops 229-234
+
+This loop moves from typed `Map` parameters into construction-proven literal maps for
+JavaScript and TypeScript. It stays in one proof family: a `Map` receiver is strict only
+when it is the built-in constructor applied to exact static entry pairs, or an immutable
+local binding of that construction.
+
+The three positive micro-frontiers were:
+
+- inline `new Map([...]).get(key) ?? fallback`;
+- local immutable `const lookup = new Map([...]); lookup.get(key) ?? fallback`;
+- local immutable `Map.has(key) ? Map.get(key) : fallback`.
+
+The hard-negative siblings cover wrong key, wrong default, wrong entry values, arbitrary
+untyped `.get` receivers, and shadowed `Map` constructors.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 229 | batched frontier selection | group three JS/TS constructed-`Map` default lookup surfaces under `axis_map_default_js_map_*` | focused corpus: 12 positives, 32 hard negatives |
+| 230 | baseline measurement | scan the focused batch with the previous release detector | baseline: 0/12 positives, 0/32 false merges |
+| 231 | detector strengthening | canonicalize exact `new Map` entry arrays to the existing literal-map `Seq(3)` value and fold `get ?? fallback` / `has-get` into `GetOrDefault` | candidate focused: 12/12 positives, 0/32 false merges |
+| 232 | strictness hardening | add exact-safety gates for built-in `Map` construction and `.get/.has` only when the constructor is not shadowed | shadowed constructor and untyped receiver remain hard negatives |
+| 233 | release focused/axis gates | build release and run focused JS/TS Map plus literal-map core gates | focused: 12/12, 0/32; literal-map core: 9/9, 0/24 |
+| 234 | broad compact gate | run `GATE=core CROSS=all` on the release candidate | all-cross core: 360/360 positives, 0/552 false merges |
+
+Focused release/candidate comparison:
+
+```text
+previous release: items=44, positive=0/12, false_merges=0/32
+candidate:        items=44, positive=12/12, false_merges=0/32
+delta:            +12 positive hits, +0 false merges
+```
+
+Final release constructed-Map focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_map_default_js_map CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 44
+positive recall: 12/12
+hard-negative false merges: 0/32
+Raw nodes: 0/2092
+```
+
+Final release literal-map compact gate:
+
+```text
+GATE=core AXIS=literal_map_default_lookup CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 33/59
+positive recall: 9/9
+hard-negative false merges: 0/24
+Raw nodes: 0/1420
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 912/5345
+positive recall: 360/360
+hard-negative false merges: 0/552
+Raw nodes: 0/35053
+```
+
+Assessment: this is a real strict-frontier widening, not benchmark-only expansion. The
+generator first exposed a clean 0/12 baseline gap, and the detector change reuses the
+existing literal-map default primitive instead of inventing a parallel JavaScript-only
+path. The remaining open JS/TS map-default work is object-literal/default access and
+imported or module-level Map construction where receiver identity and mutation boundaries
+need stronger proof facts.

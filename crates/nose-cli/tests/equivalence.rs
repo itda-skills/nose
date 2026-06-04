@@ -1585,6 +1585,38 @@ fn collection_membership_set_construction_converges_with_boundaries() {
 }
 
 #[test]
+fn literal_map_default_lookup_converges_with_js_map_construction_boundaries() {
+    let i = Interner::new();
+    let py_literal = "def f(key, other):\n    return {\"red\": 1, \"blue\": 2}.get(key, 0)\n";
+    let ruby_literal = "def f(key, other)\n  {\"red\" => 1, \"blue\" => 2}.fetch(key, 0)\nend\n";
+    let js_inline =
+        "function f(key, other) { return new Map([[\"red\", 1], [\"blue\", 2]]).get(key) ?? 0; }";
+    let js_local = "function f(key, other) { const lookup = new Map([[\"red\", 1], [\"blue\", 2]]); return lookup.get(key) ?? 0; }";
+    let js_has_get = "function f(key, other) { const lookup = new Map([[\"red\", 1], [\"blue\", 2]]); return lookup.has(key) ? lookup.get(key) : 0; }";
+    let ts_inline = "function f(key: string, other: string): number { return new Map<string, number>([[\"red\", 1], [\"blue\", 2]]).get(key) ?? 0; }";
+    let js_wrong_key =
+        "function f(key, other) { return new Map([[\"red\", 1], [\"blue\", 2]]).get(other) ?? 0; }";
+    let js_wrong_default =
+        "function f(key, other) { return new Map([[\"red\", 1], [\"blue\", 2]]).get(key) ?? 9; }";
+    let js_wrong_map =
+        "function f(key, other) { return new Map([[\"red\", 9], [\"blue\", 2]]).get(key) ?? 0; }";
+    let js_untyped = "function f(lookup, key, other) { return lookup.get(key) ?? 0; }";
+    let js_shadowed_map = "function f(key, other, Map) { return new Map([[\"red\", 1], [\"blue\", 2]]).get(key) ?? 0; }";
+
+    let fp = value_fp(&i, py_literal, Lang::Python);
+    assert_eq!(fp, value_fp(&i, ruby_literal, Lang::Ruby));
+    assert_eq!(fp, value_fp(&i, js_inline, Lang::JavaScript));
+    assert_eq!(fp, value_fp(&i, js_local, Lang::JavaScript));
+    assert_eq!(fp, value_fp(&i, js_has_get, Lang::JavaScript));
+    assert_eq!(fp, value_fp(&i, ts_inline, Lang::TypeScript));
+    assert_ne!(fp, value_fp(&i, js_wrong_key, Lang::JavaScript));
+    assert_ne!(fp, value_fp(&i, js_wrong_default, Lang::JavaScript));
+    assert_ne!(fp, value_fp(&i, js_wrong_map, Lang::JavaScript));
+    assert_ne!(fp, value_fp(&i, js_untyped, Lang::JavaScript));
+    assert_ne!(fp, value_fp(&i, js_shadowed_map, Lang::JavaScript));
+}
+
+#[test]
 fn map_default_lookup_converges_cross_language_with_boundaries() {
     let i = Interner::new();
     let go = "package p\n\nfunc F(lookup map[string]int, otherLookup map[string]int, key string, otherKey string, fallback int, otherDefault int) int { value, ok := lookup[key]; if !ok { value = fallback }; return value }\n";

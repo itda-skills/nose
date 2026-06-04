@@ -948,6 +948,26 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
     )
     .unwrap();
     fs::write(
+        dir.join("map_default_inline.js"),
+        "function lookup(key, other) {\n  return new Map([[\"red\", 1], [\"blue\", 2]]).get(key) ?? 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("map_default_local.js"),
+        "function lookup(key, other) {\n  const values = new Map([[\"red\", 1], [\"blue\", 2]]);\n  return values.get(key) ?? 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("map_default_has_get.js"),
+        "function lookup(key, other) {\n  const values = new Map([[\"red\", 1], [\"blue\", 2]]);\n  return values.has(key) ? values.get(key) : 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("map_default_inline.ts"),
+        "function lookup(key: string, other: string): number {\n  return new Map<string, number>([[\"red\", 1], [\"blue\", 2]]).get(key) ?? 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("wrong_key.py"),
         "def wrong_key(key, other):\n    return {\"red\": 1, \"blue\": 2}.get(other, 0)\n",
     )
@@ -960,6 +980,31 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
     fs::write(
         dir.join("wrong_map.py"),
         "def wrong_map(key, other):\n    return {\"red\": 9, \"blue\": 2}.get(key, 0)\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_js_key.js"),
+        "function wrong_key(key, other) {\n  return new Map([[\"red\", 1], [\"blue\", 2]]).get(other) ?? 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_js_default.js"),
+        "function wrong_default(key, other) {\n  return new Map([[\"red\", 1], [\"blue\", 2]]).get(key) ?? 9;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_js_map.js"),
+        "function wrong_map(key, other) {\n  return new Map([[\"red\", 9], [\"blue\", 2]]).get(key) ?? 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("untyped_receiver.js"),
+        "function untyped_receiver(values, key, other) {\n  return values.get(key) ?? 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("shadowed_map.js"),
+        "function shadowed_map(key, other, Map) {\n  return new Map([[\"red\", 1], [\"blue\", 2]]).get(key) ?? 0;\n}\n",
     )
     .unwrap();
 
@@ -980,21 +1025,44 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
     let semantic_json: serde_json::Value =
         serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
     let semantic_families = semantic_json.as_array().expect("semantic JSON array");
-    assert_eq!(
-        semantic_families.len(),
-        1,
-        "semantic mode should report one literal map-default family: {semantic}"
-    );
-    let semantic_text = semantic_json.to_string();
-    for expected in ["map_default.py", "map_default.rb"] {
+    let expected = [
+        "map_default.py",
+        "map_default.rb",
+        "map_default_inline.js",
+        "map_default_local.js",
+        "map_default_has_get.js",
+        "map_default_inline.ts",
+    ];
+    let positive_family = semantic_families
+        .iter()
+        .find(|family| {
+            let family_text = family.to_string();
+            expected
+                .iter()
+                .all(|expected| family_text.contains(expected))
+        })
+        .unwrap_or_else(|| {
+            panic!("semantic mode should report one literal map-default family: {semantic}")
+        });
+    let positive_text = positive_family.to_string();
+    for expected in expected {
         assert!(
-            semantic_text.contains(expected),
+            positive_text.contains(expected),
             "semantic mode should include {expected}: {semantic}"
         );
     }
-    for unexpected in ["wrong_key.py", "wrong_default.rb", "wrong_map.py"] {
+    for unexpected in [
+        "wrong_key.py",
+        "wrong_default.rb",
+        "wrong_map.py",
+        "wrong_js_key.js",
+        "wrong_js_default.js",
+        "wrong_js_map.js",
+        "untyped_receiver.js",
+        "shadowed_map.js",
+    ] {
         assert!(
-            !semantic_text.contains(unexpected),
+            !positive_text.contains(unexpected),
             "semantic mode must preserve literal map-default boundaries: {semantic}"
         );
     }

@@ -391,6 +391,9 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
     if strict_exact_set_constructor_collection_safe(il, interner, facts, node) {
         return true;
     }
+    if strict_exact_map_constructor_entries_safe(il, interner, facts, node) {
+        return true;
+    }
     let Some(&callee) = il.children(node).first() else {
         return false;
     };
@@ -416,11 +419,14 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
         return strict_exact_field_receiver_name(il, interner, callee, "Array")
             && strict_exact_call_args_safe(il, interner, facts, node);
     }
-    if method == "has" {
+    if matches!(method, "get" | "has") {
         let Some(&receiver) = il.children(callee).first() else {
             return false;
         };
         if strict_exact_set_constructor_collection_safe(il, interner, facts, receiver) {
+            return strict_exact_call_args_safe(il, interner, facts, node);
+        }
+        if strict_exact_map_constructor_entries_safe(il, interner, facts, receiver) {
             return strict_exact_call_args_safe(il, interner, facts, node);
         }
     }
@@ -472,6 +478,47 @@ fn strict_exact_set_constructor_collection_safe(
         return false;
     }
     strict_exact_membership_collection_safe(il, interner, facts, kids[1])
+}
+
+fn strict_exact_map_constructor_entries_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    if il.kind(node) != NodeKind::Call {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 || !strict_exact_callee_name(il, interner, kids[0], "Map") {
+        return false;
+    }
+    strict_exact_map_entries_safe(il, interner, facts, kids[1])
+}
+
+fn strict_exact_map_entries_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    if il.kind(node) != NodeKind::Seq {
+        return false;
+    }
+    let Payload::Name(name) = il.node(node).payload else {
+        return false;
+    };
+    if !matches!(
+        interner.resolve(name),
+        "array" | "list" | "array_expression"
+    ) {
+        return false;
+    }
+    il.children(node).iter().all(|&entry| {
+        il.kind(entry) == NodeKind::Seq
+            && il.children(entry).len() == 2
+            && strict_exact_safe_tree(il, interner, facts, entry)
+    })
 }
 
 fn strict_exact_call_args_safe(

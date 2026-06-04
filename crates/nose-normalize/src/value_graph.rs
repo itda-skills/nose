@@ -432,11 +432,45 @@ impl<'a> Builder<'a> {
         self.proven_set_constructor_collection(value)
     }
 
-    fn proven_map_get_value(&self, value: ValueId) -> Option<(ValueId, ValueId)> {
+    fn proven_map_constructor_entries(&mut self, value: ValueId) -> Option<ValueId> {
         let node = &self.nodes[value as usize];
         if !matches!(node.op, ValOp::Call(0)) || node.args.len() != 2 {
             return None;
         }
+        let args = node.args.clone();
+        if !self.is_free_name_value(args[0], "Map") {
+            return None;
+        }
+        let entries_node = &self.nodes[args[1] as usize];
+        if !matches!(entries_node.op, ValOp::Seq(1)) {
+            return None;
+        }
+        let entries = entries_node.args.clone();
+        let mut canonical_entries = Vec::with_capacity(entries.len());
+        for entry in entries {
+            let entry_node = &self.nodes[entry as usize];
+            if !matches!(entry_node.op, ValOp::Seq(1)) || entry_node.args.len() != 2 {
+                return None;
+            }
+            let kv = entry_node.args.clone();
+            canonical_entries.push(self.mk(ValOp::Seq(4), kv));
+        }
+        Some(self.mk(ValOp::Seq(3), canonical_entries))
+    }
+
+    fn proven_map_value(&mut self, value: ValueId) -> Option<ValueId> {
+        if matches!(self.nodes[value as usize].op, ValOp::Seq(3)) {
+            return Some(value);
+        }
+        self.proven_map_constructor_entries(value)
+    }
+
+    fn proven_map_get_value(&mut self, value: ValueId) -> Option<(ValueId, ValueId)> {
+        let node = &self.nodes[value as usize];
+        if !matches!(node.op, ValOp::Call(0)) || node.args.len() != 2 {
+            return None;
+        }
+        let args = node.args.clone();
         let callee = &self.nodes[node.args[0] as usize];
         if !matches!(callee.op, ValOp::Field(name) if name == stable_symbol_hash("get"))
             || callee.args.len() != 1
@@ -444,10 +478,12 @@ impl<'a> Builder<'a> {
             return None;
         }
         let map = callee.args[0];
-        if !self.is_map_param_value(map) {
-            return None;
-        }
-        Some((map, node.args[1]))
+        let map = if self.is_map_param_value(map) {
+            map
+        } else {
+            self.proven_map_value(map)?
+        };
+        Some((map, args[1]))
     }
 
     fn eval_proven_collection_membership_call(
@@ -518,11 +554,13 @@ impl<'a> Builder<'a> {
             return None;
         }
         let receiver = self.il.children(callee).first().copied()?;
-        if !self.is_map_param_expr(receiver) {
-            return None;
-        }
         let key = self.eval(kids[1], env);
-        let map = self.eval(receiver, env);
+        let receiver_value = self.eval(receiver, env);
+        let map = if self.is_map_param_expr(receiver) {
+            receiver_value
+        } else {
+            self.proven_map_value(receiver_value)?
+        };
         Some(self.mk(ValOp::Bin(Op::In as u32), vec![key, map]))
     }
 
@@ -2702,17 +2740,29 @@ impl<'a> Builder<'a> {
         None
     }
 
-    fn map_lookup_value_matches(&self, value: ValueId, map: ValueId, key: ValueId) -> bool {
+    fn map_lookup_value_matches(&mut self, value: ValueId, map: ValueId, key: ValueId) -> bool {
         let node = &self.nodes[value as usize];
         if matches!(node.op, ValOp::Index) && node.args.as_slice() == [map, key] {
             return true;
         }
-        if !matches!(node.op, ValOp::Call(0)) || node.args.len() != 2 || node.args[1] != key {
+        if !matches!(node.op, ValOp::Call(0)) || node.args.len() != 2 {
             return false;
         }
-        let callee = &self.nodes[node.args[0] as usize];
-        matches!(callee.op, ValOp::Field(name) if name == stable_symbol_hash("get"))
-            && callee.args.as_slice() == [map]
+        let args = node.args.clone();
+        if args[1] != key {
+            return false;
+        }
+        let callee = &self.nodes[args[0] as usize];
+        if !matches!(callee.op, ValOp::Field(name) if name == stable_symbol_hash("get"))
+            || callee.args.len() != 1
+        {
+            return false;
+        }
+        let receiver = callee.args[0];
+        receiver == map
+            || self
+                .proven_map_value(receiver)
+                .is_some_and(|candidate| candidate == map)
     }
 
     fn eval_membership_collection(
