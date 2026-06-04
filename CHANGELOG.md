@@ -41,9 +41,10 @@ break.
   `value.abs` and two-element `[left, right].min/.max`, while preserving signed-identity,
   wrong-value, min/max direction, and shadowed-`Math` boundaries.
 - Strict Type-4 proof facts for map key-membership predicates across Go, Java, Python,
-  Ruby, and Rust. The detector now converges `key in map`, map key APIs, Java
-  `keySet().contains`, Rust `get(key).is_some`, and Go `_, ok := map[key]` while
-  preserving wrong-key, wrong-map, and value-membership boundaries.
+  Ruby, Rust, and typed TypeScript `Map` receivers. The detector now converges
+  `key in map`, map key APIs, Java `keySet().contains`, Rust `get(key).is_some`,
+  TypeScript `Map.has`, and Go `_, ok := map[key]` while preserving wrong-key,
+  wrong-map, and value-membership boundaries.
 - Strict Type-4 proof facts for typed map lookup with fallback across Go, Java, and
   Rust. The detector now converges Go lookup-ok fallback assignments, Java
   `containsKey/get` and `getOrDefault`, and Rust `contains_key`/index and

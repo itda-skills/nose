@@ -1615,3 +1615,51 @@ The previous release already handled Python/Go shapes but missed Java, Rust, and
 TypeScript after the unproven-call hardening. The new path recovers those positives only
 through explicit source-level receiver facts, while typed string and wrong-element
 adversaries remain separate.
+
+## Typed TypeScript map-key membership: loops 212-216
+
+This loop reuses the `ParamTypeFact` proof channel for the separate `map_key_membership`
+axis. It opens only TypeScript `Map<K,V>.has(key)` when the receiver parameter is explicitly
+typed as a `Map`; untyped JavaScript `has`, `Set.has`, value-membership, wrong-key, and
+wrong-map cases remain hard boundaries.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 212 | frontier reuse | `ParamSemantic::Map` existed but was not consumed by the value graph | choose TypeScript typed `Map.has` as the next low-cost strict map-key slice |
+| 213 | generator adversary | add TypeScript to `axis_map_key_*` with identity, wrong-key, wrong-map, and value-membership boundaries | focused all-cross corpus: 21 positives, 84 hard negatives |
+| 214 | baseline measurement | run the focused corpus with the previous release | baseline: 15/21 positives, 0/84 false merges; all misses involved TypeScript |
+| 215 | detector strengthening | lower `receiver.has(key)` to `Op::In` only when the receiver parameter has `ParamSemantic::Map` | candidate focused: 21/21 positives, 0/84 false merges |
+| 216 | release validation | run release focused all-cross and compact all-cross | focused: 21/21, 0/84; compact all-cross: 334/334, 0/491 |
+
+Focused release/candidate comparison:
+
+```text
+previous release: items=105, positive=15/21, false_merges=0/84
+candidate:        items=105, positive=21/21, false_merges=0/84
+delta:            +6 positive hits, +0 false merges
+```
+
+Final release typed map-key focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_map_key CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 105
+positive recall: 21/21
+hard-negative false merges: 0/84
+Raw nodes: 0/3210
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 825/5193
+positive recall: 334/334
+hard-negative false merges: 0/491
+Raw nodes: 0/31582
+```
+
+Assessment: this is a clean proof-fact reuse. It broadens the map-key frontier into
+TypeScript without trusting `has` by name. The next related frontier is not untyped
+JavaScript `Map.has`; it needs construction or import/binding facts that prove the receiver
+is a `Map` rather than a `Set` or arbitrary object.

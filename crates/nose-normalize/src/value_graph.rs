@@ -363,6 +363,10 @@ impl<'a> Builder<'a> {
         )
     }
 
+    fn is_map_param_expr(&self, expr: NodeId) -> bool {
+        matches!(self.param_semantic_of_expr(expr), Some(ParamSemantic::Map))
+    }
+
     fn eval_proven_collection_membership_call(
         &mut self,
         kids: &[NodeId],
@@ -406,6 +410,33 @@ impl<'a> Builder<'a> {
         let element = self.eval(element_node, env);
         let collection = self.eval(collection_node, env);
         Some(self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]))
+    }
+
+    fn eval_proven_map_key_membership_call(
+        &mut self,
+        kids: &[NodeId],
+        env: &FxHashMap<u32, ValueId>,
+    ) -> Option<ValueId> {
+        if kids.len() != 2 {
+            return None;
+        }
+        let callee = kids[0];
+        if self.il.kind(callee) != NodeKind::Field {
+            return None;
+        }
+        let Payload::Name(name) = self.il.node(callee).payload else {
+            return None;
+        };
+        if self.interner.resolve(name) != "has" {
+            return None;
+        }
+        let receiver = self.il.children(callee).first().copied()?;
+        if !self.is_map_param_expr(receiver) {
+            return None;
+        }
+        let key = self.eval(kids[1], env);
+        let map = self.eval(receiver, env);
+        Some(self.mk(ValOp::Bin(Op::In as u32), vec![key, map]))
     }
 
     /// Push an effect sink, tagged with the current path condition — so a *conditional*
@@ -3100,6 +3131,9 @@ impl<'a> Builder<'a> {
                     }
                 }
                 if let Some(r) = self.eval_proven_collection_membership_call(&kids, env) {
+                    return r;
+                }
+                if let Some(r) = self.eval_proven_map_key_membership_call(&kids, env) {
                     return r;
                 }
                 if self.is_unproven_membership_like_call(expr, &kids) {

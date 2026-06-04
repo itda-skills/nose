@@ -283,6 +283,34 @@ rerun positives, hard negatives, docs gate, and verifier checks
 record the result and generate the next adversarial sibling
 ```
 
+For speed, the inner loop should normally batch about three adjacent frontier candidates
+before running the expensive gates. A batch still has to preserve candidate-level
+attribution: each candidate needs its own proposal id, focused generated positives,
+hard-negative siblings, and before/after result. The detector patch may be shared when the
+three candidates lower to the same proof fact or value-graph primitive. The acceptance gate,
+however, is run once per batch:
+
+```text
+choose about three frontier candidates with a shared proof mechanism
+        ↓
+generate focused positives and hard negatives for each candidate
+        ↓
+measure the current detector on the combined focused batch
+        ↓
+patch the frontend/lowering/value graph once
+        ↓
+rerun the combined focused batch
+        ↓
+run one compact interaction gate for the batch
+        ↓
+record per-candidate deltas and batch-level regression evidence
+```
+
+Do not use batching for unrelated soundness-risk changes. A batch is valid only when the
+failure modes share a proof channel and the combined hard negatives still make each
+candidate's boundary explicit. If one candidate regresses or needs a different semantic
+contract, split it out before accepting the batch.
+
 This is enforced as a Definition of Done in
 [`bench/type4/README.md`](../bench/type4/README.md). A loop that adds only proposal cards
 or generated examples is a coverage-expansion loop, not a detector co-evolution loop.

@@ -1972,7 +1972,7 @@ end
 def map_key_membership_axis_supported(surface: Surface, proposal_id: str) -> bool:
     if not proposal_id.startswith("axis_map_key_"):
         return False
-    return surface.key in {"python", "go", "java", "rust", "ruby"}
+    return surface.key in {"python", "go", "java", "rust", "ruby", "typescript"}
 
 
 def map_key_axis_parts(proposal_id: str, negative: bool, right: bool) -> tuple[str, str, str]:
@@ -2000,6 +2000,7 @@ def axis_map_key_membership_variant(
     name = {
         "go": "BuildCase" if right else "AxisCase",
         "java": "buildCase" if right else "axisCase",
+        "typescript": "buildCase" if right else "axisCase",
     }.get(surface.language, "build_case" if right else "axis_case")
 
     if surface.key == "python":
@@ -2076,6 +2077,17 @@ pub fn {name}(lookup: &HashMap<String, String>, other_lookup: &HashMap<String, S
         src = f"""def {name}(lookup, other_lookup, key, other)
   {expr}
 end
+"""
+        return Variant("axis", src, name)
+
+    if surface.key == "typescript":
+        if form == "value":
+            expr = f"Array.from({receiver}.values()).includes({key})"
+        else:
+            expr = f"{receiver}.has({key})"
+        src = f"""function {name}(lookup: Map<string, string>, other_lookup: Map<string, string>, key: string, other: string): boolean {{
+  return {expr};
+}}
 """
         return Variant("axis", src, name)
 

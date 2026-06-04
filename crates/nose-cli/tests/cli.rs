@@ -684,6 +684,70 @@ fn scan_mode_semantic_proves_typed_dynamic_collection_membership() {
 }
 
 #[test]
+fn scan_mode_semantic_proves_typed_typescript_map_key_membership() {
+    let dir = std::env::temp_dir().join(format!("nose_typed_ts_map_key_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("map_key.py"),
+        "def f(lookup, other_lookup, key, other):\n    return key in lookup\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("map_key.java"),
+        "import java.util.Map;\n\nclass C { static boolean f(Map<String, String> lookup, Map<String, String> other_lookup, String key, String other) { return lookup.containsKey(key); } }\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("map_key.ts"),
+        "function f(lookup: Map<string, string>, other_lookup: Map<string, string>, key: string, other: string): boolean {\n  return lookup.has(key);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_key.ts"),
+        "function f(lookup: Map<string, string>, other_lookup: Map<string, string>, key: string, other: string): boolean {\n  return lookup.has(other);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("set_negative.ts"),
+        "function f(lookup: Set<string>, other_lookup: Set<string>, key: string, other: string): boolean {\n  return lookup.has(key);\n}\n",
+    )
+    .unwrap();
+
+    let semantic = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "1",
+        "--min-tokens",
+        "1",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let semantic_json: serde_json::Value =
+        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
+    let semantic_text = semantic_json.to_string();
+    for expected in ["map_key.py", "map_key.java", "map_key.ts"] {
+        assert!(
+            semantic_text.contains(expected),
+            "semantic mode should include typed TS Map.has map-key membership {expected}: {semantic}"
+        );
+    }
+    for unexpected in ["wrong_key.ts", "set_negative.ts"] {
+        assert!(
+            !semantic_text.contains(unexpected),
+            "semantic mode must preserve typed TS Map.has boundaries: {semantic}"
+        );
+    }
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn scan_mode_semantic_proves_literal_map_default_lookup() {
     let dir = std::env::temp_dir().join(format!("nose_map_default_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
