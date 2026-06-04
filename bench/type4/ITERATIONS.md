@@ -3771,3 +3771,74 @@ process fixes matter for future accelerated loops: keep auxiliary boundary param
 after the original coordinate parameters so wrong-coordinate tests stay meaningful, and
 assert CLI negatives against the positive family rather than against every unrelated
 opaque negative family that may exact-clone with another negative.
+
+## Batch-3 Ruby stdlib Set membership: loops 382-386
+
+This loop continues the batch-3 cadence on `literal_collection_membership`, now on the
+Ruby side of the broad membership frontier. The batch opens:
+
+- `axis_membership_ruby_set_new_include_identity`;
+- `axis_membership_ruby_set_new_member_identity`;
+- `axis_membership_ruby_set_local_identity`.
+
+The shared proof invariant is explicit stdlib provenance plus immutable construction:
+a top-level `require "set"` proves the standard Ruby `Set` constant, provided the file
+does not define or shadow `Set`; then `Set.new([literal...])` denotes the same static
+collection coordinate as literal collection membership. `member?` is accepted only as
+a membership alias under the same proven-collection receiver rules. Missing `require`,
+shadowed `Set`, mutated local Set bindings, wrong elements, and wrong collections stay
+hard boundaries.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 382 | batch frontier selection | group Ruby `Set.new(...).include?`, `Set.new(...).member?`, and local `Set.new` binding membership under `axis_membership_ruby_set_*` | focused corpus: 6 positives, 16 hard negatives |
+| 383 | baseline measurement | scan the focused batch with the previous release detector | baseline: 0/6 positives, 0/16 false merges |
+| 384 | detector strengthening | prove Ruby `Set.new([literal...])` only with top-level `require "set"` and no local `Set` definition; add `member?` as a proven collection membership alias | focused: 6/6 positives, 0/16 false merges |
+| 385 | strict regression tests | add value-graph and CLI positives plus missing-require, shadowed-Set, mutation, wrong-element, and wrong-collection boundaries | targeted and full CLI/equivalence tests passed |
+| 386 | release focused/core gates | build release and run focused, membership core, and all-cross core gates | focused 6/6, 0/16; membership core 161/161, 0/389; all-cross 578/578, 0/1113 |
+
+Focused release/candidate comparison:
+
+```text
+previous release:  items=22, positive=0/6, false_merges=0/16
+candidate release: items=22, positive=6/6, false_merges=0/16
+delta:             +6 positive hits, +0 false merges
+Raw nodes:         0/719 in both runs
+```
+
+Final release focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_membership_ruby_set_ CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 22
+positive recall: 6/6
+hard-negative false merges: 0/16
+Raw nodes: 0/719
+```
+
+Final release membership core gate:
+
+```text
+GATE=core AXIS=literal_collection_membership CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 550/1174
+positive recall: 161/161
+hard-negative false merges: 0/389
+Raw nodes: 0/16424
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 1691/6543
+positive recall: 578/578
+hard-negative false merges: 0/1113
+Raw nodes: 0/61859
+```
+
+Assessment: this is a useful strict-frontier widening because the proof is not just a
+method-name heuristic. The detector now requires an explicit stdlib import fact, rejects
+local `Set` definitions, rejects mutated bindings, and still keeps wrong-coordinate
+boundaries separate. The CLI test was also tightened to check negative boundaries
+against the positive family, because independently valid negative families can exact-
+clone each other without being false positives against the target frontier.

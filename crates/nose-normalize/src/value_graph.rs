@@ -493,6 +493,28 @@ impl<'a> Builder<'a> {
         Some(collection)
     }
 
+    fn proven_ruby_set_factory_value(&self, value: ValueId) -> Option<ValueId> {
+        if self.il.meta.lang != Lang::Ruby
+            || !self.ruby_file_requires_module("set")
+            || self.file_defines_name("Set")
+        {
+            return None;
+        }
+        let node = &self.nodes[value as usize];
+        if !matches!(node.op, ValOp::Call(0)) || node.args.len() != 2 {
+            return None;
+        }
+        let args = node.args.clone();
+        let callee = &self.nodes[args[0] as usize];
+        if !matches!(callee.op, ValOp::Field(method) if method == stable_symbol_hash("new"))
+            || callee.args.len() != 1
+            || !self.is_free_name_value(callee.args[0], "Set")
+        {
+            return None;
+        }
+        matches!(self.nodes[args[1] as usize].op, ValOp::Seq(1)).then_some(args[1])
+    }
+
     fn proven_rust_vec_macro_collection_value(&mut self, value: ValueId) -> Option<ValueId> {
         if self.il.meta.lang != Lang::Rust {
             return None;
@@ -604,6 +626,37 @@ impl<'a> Builder<'a> {
         })
     }
 
+    fn ruby_file_requires_module(&self, module: &str) -> bool {
+        if self.il.meta.lang != Lang::Ruby {
+            return false;
+        }
+        let expected = stable_symbol_hash(module);
+        self.top_level_statements().iter().any(|&stmt| {
+            let expr = if self.il.kind(stmt) == NodeKind::ExprStmt {
+                self.il.children(stmt).first().copied()
+            } else {
+                Some(stmt)
+            };
+            let Some(call) = expr else {
+                return false;
+            };
+            if self.il.kind(call) != NodeKind::Call {
+                return false;
+            }
+            let kids = self.il.children(call);
+            if kids.len() != 2 || self.il.kind(kids[0]) != NodeKind::Var {
+                return false;
+            }
+            let Payload::Name(callee) = self.il.node(kids[0]).payload else {
+                return false;
+            };
+            if self.interner.resolve(callee) != "require" {
+                return false;
+            }
+            matches!(self.il.node(kids[1]).payload, Payload::LitStr(hash) if hash == expected)
+        })
+    }
+
     fn proven_collection_value(&mut self, value: ValueId) -> Option<ValueId> {
         if matches!(self.nodes[value as usize].op, ValOp::Seq(1)) {
             return Some(value);
@@ -611,6 +664,7 @@ impl<'a> Builder<'a> {
         self.proven_set_constructor_collection(value)
             .or_else(|| self.proven_java_collection_factory_value(value))
             .or_else(|| self.proven_python_collection_factory_value(value))
+            .or_else(|| self.proven_ruby_set_factory_value(value))
             .or_else(|| self.proven_rust_vec_macro_collection_value(value))
             .or_else(|| self.proven_rust_std_collection_factory_value(value))
     }
@@ -972,7 +1026,7 @@ impl<'a> Builder<'a> {
 
         if matches!(
             method,
-            "contains" | "includes" | "include?" | "__contains__" | "has"
+            "contains" | "includes" | "include?" | "member?" | "__contains__" | "has"
         ) && kids.len() == 2
         {
             let receiver = receiver?;

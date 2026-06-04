@@ -695,6 +695,38 @@ AXIS_PROPOSALS = {
         "axis": "literal_collection_membership",
         "why": "A Rust std collection factory binding mutated after construction is not the original static collection.",
     },
+    "axis_membership_ruby_set_new_include_identity": {
+        "axis": "literal_collection_membership",
+        "why": "A Ruby `Set.new([...]).include?(value)` with a proven `require \"set\"` should prove the same static membership predicate.",
+    },
+    "axis_membership_ruby_set_new_member_identity": {
+        "axis": "literal_collection_membership",
+        "why": "A Ruby `Set.new([...]).member?(value)` with a proven `require \"set\"` should prove the same static membership predicate.",
+    },
+    "axis_membership_ruby_set_local_identity": {
+        "axis": "literal_collection_membership",
+        "why": "A local Ruby `Set.new([...])` binding consumed by `.include?` should prove the same static membership predicate when unmutated.",
+    },
+    "axis_membership_ruby_set_wrong_element_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Ruby Set membership remains tied to a specific element coordinate.",
+    },
+    "axis_membership_ruby_set_wrong_collection_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Ruby Set membership over a different static collection changes behavior.",
+    },
+    "axis_membership_ruby_set_missing_require_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Ruby `Set.new` is not strict stdlib Set evidence without a proven `require \"set\"`.",
+    },
+    "axis_membership_ruby_set_shadowed_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "A locally defined Ruby `Set` constant is not proof of the standard Set factory.",
+    },
+    "axis_membership_ruby_set_mutated_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "A Ruby Set binding mutated after construction no longer proves the original static collection membership predicate.",
+    },
     "axis_map_key_membership_identity": {
         "axis": "map_key_membership",
         "why": "Map key-presence APIs should prove the same key-in-map predicate when receiver and key coordinates are fixed.",
@@ -2564,6 +2596,8 @@ def literal_membership_axis_supported(surface: Surface, proposal_id: str) -> boo
         return surface.key in {"python", "ruby", "rust"}
     if proposal_id.startswith("axis_membership_rust_std_"):
         return surface.key in {"python", "ruby", "rust"}
+    if proposal_id.startswith("axis_membership_ruby_set_"):
+        return surface.key == "ruby"
     return surface.key in {
         "python",
         "javascript",
@@ -2760,6 +2794,23 @@ def membership_axis_parts(
         form = "rust_std_hashset" if right else "membership"
     if proposal_id == "axis_membership_rust_std_mutated_boundary":
         form = "rust_std_hashset_mutated" if right else "membership"
+    if proposal_id == "axis_membership_ruby_set_new_include_identity":
+        form = "ruby_set_new_include" if right else "membership"
+    if proposal_id == "axis_membership_ruby_set_new_member_identity":
+        form = "ruby_set_new_member" if right else "membership"
+    if proposal_id == "axis_membership_ruby_set_local_identity":
+        form = "ruby_set_local" if right else "membership"
+    if proposal_id in {
+        "axis_membership_ruby_set_wrong_element_boundary",
+        "axis_membership_ruby_set_wrong_collection_boundary",
+    }:
+        form = "ruby_set_new_include" if right else "membership"
+    if proposal_id == "axis_membership_ruby_set_missing_require_boundary":
+        form = "ruby_set_missing_require" if right else "membership"
+    if proposal_id == "axis_membership_ruby_set_shadowed_boundary":
+        form = "ruby_set_shadowed" if right else "membership"
+    if proposal_id == "axis_membership_ruby_set_mutated_boundary":
+        form = "ruby_set_mutated" if right else "membership"
     if right and negative and proposal_id in {
         "axis_membership_set_param_identity",
         "axis_membership_set_inline_identity",
@@ -2785,6 +2836,9 @@ def membership_axis_parts(
         "axis_membership_rust_std_hashset_identity",
         "axis_membership_rust_std_btreeset_identity",
         "axis_membership_rust_std_vecdeque_identity",
+        "axis_membership_ruby_set_new_include_identity",
+        "axis_membership_ruby_set_new_member_identity",
+        "axis_membership_ruby_set_local_identity",
         "axis_membership_typefact_python_tuple_identity",
         "axis_membership_python_alias_sequence_identity",
         "axis_membership_python_alias_container_identity",
@@ -2807,7 +2861,11 @@ def membership_axis_parts(
         element = "other"
     if right and proposal_id.endswith("_wrong_collection_boundary"):
         items = ("green", "blue")
-    if right and proposal_id.endswith("_shadowed_boundary") and not form.startswith("python_"):
+    if (
+        right
+        and proposal_id.endswith("_shadowed_boundary")
+        and not form.startswith(("python_", "ruby_"))
+    ):
         form = f"{form}_shadowed"
     return element, items, form
 
@@ -2826,6 +2884,8 @@ def axis_membership_literal_variant(
     if form == "rust_vecdeque_param" and surface.key != "rust":
         form = "typed_membership"
     if form.startswith("python_") and surface.key != "python":
+        form = "membership"
+    if form.startswith("ruby_") and surface.key != "ruby":
         form = "membership"
     if form == "local_constructed":
         form = {
@@ -3479,6 +3539,51 @@ class C {{ static boolean {name}(List<String> values, String value, String other
         return Variant("axis", src, name)
 
     if surface.key == "ruby":
+        if form.startswith("ruby_set_"):
+            require = "" if form == "ruby_set_missing_require" else 'require "set"\n\n'
+            if form == "ruby_set_new_member":
+                method = "member?"
+                body = f'Set.new(["{left}", "{right_item}"]).{method}({element})'
+            elif form == "ruby_set_local":
+                src = f"""{require}def {name}(value, other)
+  values = Set.new(["{left}", "{right_item}"])
+  values.include?({element})
+end
+"""
+                return Variant("axis", src, name)
+            elif form == "ruby_set_mutated":
+                src = f"""{require}def {name}(value, other)
+  values = Set.new(["{left}", "{right_item}"])
+  values.add("green")
+  values.include?(value)
+end
+"""
+                return Variant("axis", src, name)
+            elif form == "ruby_set_shadowed":
+                src = f"""{require}class Set
+  def self.new(_values)
+    Box.new
+  end
+end
+
+class Box
+  def include?(_value)
+    false
+  end
+end
+
+def {name}(value, other)
+  Set.new(["{left}", "{right_item}"]).include?({element})
+end
+"""
+                return Variant("axis", src, name)
+            else:
+                body = f'Set.new(["{left}", "{right_item}"]).include?({element})'
+            src = f"""{require}def {name}(value, other)
+  {body}
+end
+"""
+            return Variant("axis", src, name)
         if form == "membership_absence":
             expr = f'!["{left}", "{right_item}"].include?({element})'
         elif form == "substring":
@@ -7331,6 +7436,8 @@ def generate_axis_items(
                 continue
             if proposal_id.startswith("axis_membership_python_alias_"):
                 continue
+            if proposal_id.startswith("axis_membership_ruby_set_"):
+                continue
             if proposal_id.startswith("axis_membership_set_"):
                 continue
             if proposal_id.startswith("axis_membership_array_some_"):
@@ -8792,6 +8899,60 @@ def generate_literal_membership_cross_items(
                     proposal_id,
                     left_surface,
                     rust_local_right,
+                    "not_equivalent",
+                    "heldout",
+                    "literal-membership-boundary",
+                )
+            )
+    ruby_set_right = surface_by_key["ruby"]
+    for proposal_id in (
+        "axis_membership_ruby_set_new_include_identity",
+        "axis_membership_ruby_set_new_member_identity",
+        "axis_membership_ruby_set_local_identity",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for left_surface in module_reference_surfaces:
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    proposal_id,
+                    left_surface,
+                    ruby_set_right,
+                    "equivalent",
+                    "heldout",
+                )
+            )
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    proposal_id,
+                    left_surface,
+                    ruby_set_right,
+                    "not_equivalent",
+                    "heldout",
+                    "literal_collection_membership-semantic-mutation",
+                )
+            )
+    for proposal_id in (
+        "axis_membership_ruby_set_wrong_element_boundary",
+        "axis_membership_ruby_set_wrong_collection_boundary",
+        "axis_membership_ruby_set_missing_require_boundary",
+        "axis_membership_ruby_set_shadowed_boundary",
+        "axis_membership_ruby_set_mutated_boundary",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for left_surface in module_reference_surfaces:
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    proposal_id,
+                    left_surface,
+                    ruby_set_right,
                     "not_equivalent",
                     "heldout",
                     "literal-membership-boundary",

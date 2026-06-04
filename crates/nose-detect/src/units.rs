@@ -357,6 +357,7 @@ fn strict_exact_module_container_binding_safe(
         || strict_exact_java_map_factory_safe(il, interner, facts, node)
         || strict_exact_rust_std_map_factory_safe(il, interner, facts, node)
         || strict_exact_python_collection_factory_safe(il, interner, facts, node)
+        || strict_exact_ruby_set_factory_safe(il, interner, facts, node)
         || strict_exact_rust_vec_macro_collection_safe(il, interner, facts, node)
         || strict_exact_rust_std_collection_factory_safe(il, interner, facts, node)
         || strict_exact_set_constructor_collection_safe(il, interner, facts, node)
@@ -670,6 +671,9 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
     if strict_exact_python_collection_factory_safe(il, interner, facts, node) {
         return true;
     }
+    if strict_exact_ruby_set_factory_safe(il, interner, facts, node) {
+        return true;
+    }
     if strict_exact_rust_vec_macro_collection_safe(il, interner, facts, node) {
         return true;
     }
@@ -715,13 +719,14 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
     }
     if matches!(
         method,
-        "contains" | "__contains__" | "include?" | "includes"
+        "contains" | "__contains__" | "include?" | "member?" | "includes"
     ) {
         let Some(&receiver) = il.children(callee).first() else {
             return false;
         };
         if strict_exact_literal_collection_receiver_safe(il, interner, facts, receiver)
             || strict_exact_python_collection_factory_safe(il, interner, facts, receiver)
+            || strict_exact_ruby_set_factory_safe(il, interner, facts, receiver)
             || strict_exact_rust_vec_macro_collection_safe(il, interner, facts, receiver)
             || strict_exact_rust_std_collection_factory_safe(il, interner, facts, receiver)
             || strict_exact_java_collection_factory_safe(il, interner, facts, receiver)
@@ -846,6 +851,67 @@ fn strict_exact_python_collection_factory_safe(
     matches!(name, "list" | "set" | "frozenset" | "tuple")
         && !file_defines_name(il, interner, name)
         && strict_exact_membership_collection_safe(il, interner, facts, kids[1])
+}
+
+fn strict_exact_ruby_set_factory_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    if il.meta.lang != Lang::Ruby
+        || il.kind(node) != NodeKind::Call
+        || !ruby_file_requires_module(il, interner, "set")
+        || file_defines_name(il, interner, "Set")
+    {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 || il.kind(kids[0]) != NodeKind::Field {
+        return false;
+    }
+    let Payload::Name(method) = il.node(kids[0]).payload else {
+        return false;
+    };
+    if interner.resolve(method) != "new" {
+        return false;
+    }
+    let Some(&receiver) = il.children(kids[0]).first() else {
+        return false;
+    };
+    strict_exact_callee_name(il, interner, receiver, "Set")
+        && strict_exact_membership_collection_safe(il, interner, facts, kids[1])
+}
+
+fn ruby_file_requires_module(il: &Il, interner: &Interner, module: &str) -> bool {
+    if il.meta.lang != Lang::Ruby {
+        return false;
+    }
+    let expected = stable_symbol_hash(module);
+    top_level_statements(il).iter().any(|&stmt| {
+        let expr = if il.kind(stmt) == NodeKind::ExprStmt {
+            il.children(stmt).first().copied()
+        } else {
+            Some(stmt)
+        };
+        let Some(call) = expr else {
+            return false;
+        };
+        if il.kind(call) != NodeKind::Call {
+            return false;
+        }
+        let kids = il.children(call);
+        if kids.len() != 2 || il.kind(kids[0]) != NodeKind::Var {
+            return false;
+        }
+        let Payload::Name(callee) = il.node(kids[0]).payload else {
+            return false;
+        };
+        if interner.resolve(callee) != "require" {
+            return false;
+        }
+        matches!(il.node(kids[1]).payload, Payload::LitStr(hash) if hash == expected)
+    })
 }
 
 fn strict_exact_rust_vec_macro_collection_safe(
@@ -1215,6 +1281,15 @@ fn strict_exact_callee_name(il: &Il, interner: &Interner, callee: NodeId, expect
         return false;
     };
     interner.resolve(name) == expected
+}
+
+fn stable_symbol_hash(name: &str) -> u64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in name.bytes() {
+        h ^= b as u64;
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    h
 }
 
 fn strict_exact_callee_identity(il: &Il, facts: &StrictFacts, callee: NodeId) -> bool {

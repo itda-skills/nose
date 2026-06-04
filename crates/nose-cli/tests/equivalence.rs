@@ -1635,6 +1635,12 @@ fn collection_membership_set_construction_converges_with_boundaries() {
     let js_array_filter_length_absence_lt = "function f(value, other) { return [\"red\", \"blue\"].filter((item) => item === value).length < 1; }";
     let js_array_filter_length_absence_reversed = "function f(value, other) { return 1 > [\"red\", \"blue\"].filter((item) => item === value).length; }";
     let java_module_list = "import java.util.List;\n\nclass C { static final List<String> VALUES = List.of(\"red\", \"blue\"); static boolean f(String value, String other) { return VALUES.contains(value); } }";
+    let ruby_member = "def f(value, other)\n  [\"red\", \"blue\"].member?(value)\nend\n";
+    let ruby_set_new_include =
+        "require \"set\"\n\ndef f(value, other)\n  Set.new([\"red\", \"blue\"]).include?(value)\nend\n";
+    let ruby_set_new_member =
+        "require \"set\"\n\ndef f(value, other)\n  Set.new([\"red\", \"blue\"]).member?(value)\nend\n";
+    let ruby_set_local = "require \"set\"\n\ndef f(value, other)\n  values = Set.new([\"red\", \"blue\"])\n  values.include?(value)\nend\n";
     let js_wrong_element =
         "function f(value, other) { return new Set([\"red\", \"blue\"]).has(other); }";
     let js_wrong_collection =
@@ -1723,6 +1729,14 @@ fn collection_membership_set_construction_converges_with_boundaries() {
     let rust_std_wrong_element = "pub fn f(value: &str, other: &str) -> bool {\n    let values = std::collections::HashSet::from([\"red\", \"blue\"]);\n    values.contains(&other)\n}\n";
     let rust_std_wrong_collection = "pub fn f(value: &str, other: &str) -> bool {\n    let values = std::collections::BTreeSet::from([\"green\", \"blue\"]);\n    values.contains(&value)\n}\n";
     let rust_std_mutated = "pub fn f(value: &str, other: &str) -> bool {\n    let mut values = std::collections::HashSet::from([\"red\", \"blue\"]);\n    values.insert(\"green\");\n    values.contains(&value)\n}\n";
+    let ruby_set_wrong_element =
+        "require \"set\"\n\ndef f(value, other)\n  Set.new([\"red\", \"blue\"]).include?(other)\nend\n";
+    let ruby_set_wrong_collection =
+        "require \"set\"\n\ndef f(value, other)\n  Set.new([\"green\", \"blue\"]).include?(value)\nend\n";
+    let ruby_set_missing_require =
+        "def f(value, other)\n  Set.new([\"red\", \"blue\"]).include?(value)\nend\n";
+    let ruby_set_shadowed = "require \"set\"\n\nclass Set\n  def self.new(_values)\n    Box.new\n  end\nend\n\nclass Box\n  def include?(_value)\n    false\n  end\nend\n\ndef f(value, other)\n  Set.new([\"red\", \"blue\"]).include?(value)\nend\n";
+    let ruby_set_mutated = "require \"set\"\n\ndef f(value, other)\n  values = Set.new([\"red\", \"blue\"])\n  values.add(\"green\")\n  values.include?(value)\nend\n";
 
     let literal_fp = value_fp(&i, py_literal, Lang::Python);
     assert_eq!(literal_fp, value_fp(&i, py_set_factory, Lang::Python));
@@ -1798,6 +1812,10 @@ fn collection_membership_set_construction_converges_with_boundaries() {
     assert_eq!(literal_fp, value_fp(&i, rust_std_hashset, Lang::Rust));
     assert_eq!(literal_fp, value_fp(&i, rust_std_btreeset, Lang::Rust));
     assert_eq!(literal_fp, value_fp(&i, rust_std_vecdeque, Lang::Rust));
+    assert_eq!(literal_fp, value_fp(&i, ruby_member, Lang::Ruby));
+    assert_eq!(literal_fp, value_fp(&i, ruby_set_new_include, Lang::Ruby));
+    assert_eq!(literal_fp, value_fp(&i, ruby_set_new_member, Lang::Ruby));
+    assert_eq!(literal_fp, value_fp(&i, ruby_set_local, Lang::Ruby));
     assert_ne!(literal_fp, value_fp(&i, js_wrong_element, Lang::JavaScript));
     assert_ne!(
         literal_fp,
@@ -1991,6 +2009,17 @@ fn collection_membership_set_construction_converges_with_boundaries() {
         value_fp(&i, rust_std_wrong_collection, Lang::Rust)
     );
     assert_ne!(literal_fp, value_fp(&i, rust_std_mutated, Lang::Rust));
+    assert_ne!(literal_fp, value_fp(&i, ruby_set_wrong_element, Lang::Ruby));
+    assert_ne!(
+        literal_fp,
+        value_fp(&i, ruby_set_wrong_collection, Lang::Ruby)
+    );
+    assert_ne!(
+        literal_fp,
+        value_fp(&i, ruby_set_missing_require, Lang::Ruby)
+    );
+    assert_ne!(literal_fp, value_fp(&i, ruby_set_shadowed, Lang::Ruby));
+    assert_ne!(literal_fp, value_fp(&i, ruby_set_mutated, Lang::Ruby));
 
     let ts_array = "function f(values: string[], value: string, other: string): boolean { return values.includes(value); }";
     let ts_set = "function f(values: Set<string>, value: string, other: string): boolean { return values.has(value); }";

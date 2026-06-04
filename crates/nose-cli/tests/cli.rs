@@ -614,6 +614,26 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
     )
     .unwrap();
     fs::write(
+        dir.join("ruby_member.rb"),
+        "def ruby_member(value, other)\n  [\"red\", \"blue\"].member?(value)\nend\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("ruby_set_new_include.rb"),
+        "require \"set\"\n\ndef ruby_set_new_include(value, other)\n  Set.new([\"red\", \"blue\"]).include?(value)\nend\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("ruby_set_new_member.rb"),
+        "require \"set\"\n\ndef ruby_set_new_member(value, other)\n  Set.new([\"red\", \"blue\"]).member?(value)\nend\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("ruby_set_local.rb"),
+        "require \"set\"\n\ndef ruby_set_local(value, other)\n  values = Set.new([\"red\", \"blue\"])\n  values.include?(value)\nend\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("module_set.js"),
         "const VALUES = new Set([\"red\", \"blue\"]);\n\nfunction moduleSet(value, other) {\n  return VALUES.has(value);\n}\n",
     )
@@ -913,6 +933,31 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "pub fn rust_std_mutated(value: &str, other: &str) -> bool {\n    let mut values = std::collections::HashSet::from([\"red\", \"blue\"]);\n    values.insert(\"green\");\n    values.contains(&value)\n}\n",
     )
     .unwrap();
+    fs::write(
+        dir.join("ruby_set_wrong_element.rb"),
+        "require \"set\"\n\ndef ruby_set_wrong_element(value, other)\n  Set.new([\"red\", \"blue\"]).include?(other)\nend\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("ruby_set_wrong_collection.rb"),
+        "require \"set\"\n\ndef ruby_set_wrong_collection(value, other)\n  Set.new([\"green\", \"blue\"]).include?(value)\nend\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("ruby_set_missing_require.rb"),
+        "def ruby_set_missing_require(value, other)\n  Set.new([\"red\", \"blue\"]).include?(value)\nend\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("ruby_set_shadowed.rb"),
+        "require \"set\"\n\nclass Set\n  def self.new(_values)\n    Box.new\n  end\nend\n\nclass Box\n  def include?(_value)\n    false\n  end\nend\n\ndef ruby_set_shadowed(value, other)\n  Set.new([\"red\", \"blue\"]).include?(value)\nend\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("ruby_set_mutated.rb"),
+        "require \"set\"\n\ndef ruby_set_mutated(value, other)\n  values = Set.new([\"red\", \"blue\"])\n  values.add(\"green\")\n  values.include?(value)\nend\n",
+    )
+    .unwrap();
 
     let semantic = run(&[
         "scan",
@@ -936,6 +981,25 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "semantic mode should report literal membership families: {semantic}"
     );
     let semantic_text = semantic_json.to_string();
+    let positive_family = semantic_families
+        .iter()
+        .map(serde_json::Value::to_string)
+        .find(|family| {
+            [
+                "membership.py",
+                "membership.rb",
+                "python_set_factory.py",
+                "ruby_set_new_include.rb",
+                "ruby_set_new_member.rb",
+                "ruby_set_local.rb",
+                "rust_std_hashset.rs",
+            ]
+            .iter()
+            .all(|expected| family.contains(expected))
+        })
+        .unwrap_or_else(|| {
+            panic!("semantic mode should include positive literal membership family: {semantic}")
+        });
     for expected in [
         "membership.py",
         "membership.js",
@@ -943,6 +1007,10 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "membership.go",
         "membership.rs",
         "membership.rb",
+        "ruby_member.rb",
+        "ruby_set_new_include.rb",
+        "ruby_set_new_member.rb",
+        "ruby_set_local.rb",
         "python_set_factory.py",
         "python_tuple_factory.py",
         "python_frozenset_factory.py",
@@ -1013,9 +1081,14 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "rust_std_wrong_element.rs",
         "rust_std_wrong_collection.rs",
         "rust_std_mutated.rs",
+        "ruby_set_wrong_element.rb",
+        "ruby_set_wrong_collection.rb",
+        "ruby_set_missing_require.rb",
+        "ruby_set_shadowed.rb",
+        "ruby_set_mutated.rb",
     ] {
         assert!(
-            !semantic_text.contains(unexpected),
+            !positive_family.contains(unexpected),
             "semantic mode must preserve literal membership boundaries: {semantic}"
         );
     }
