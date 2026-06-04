@@ -2741,3 +2741,77 @@ strictness. The generator made the wrong-element and wrong-collection attacks ex
 and the detector rule stayed anchored to the same literal-source guard as `array.some`.
 The result extends the exact Type-4 frontier for absence predicates while keeping
 membership, non-membership, and JavaScript `NaN` behavior separated.
+
+## Static array indexOf membership: loops 307-312
+
+This macro-loop keeps the accelerated batch-3 cadence on the same membership frontier,
+but targets index-producing APIs only when their result is consumed as a membership
+predicate. A static literal JS-like array comparison such as
+`["red", "blue"].indexOf(value) !== -1`, `>= 0`, or `> -1` is exact-equivalent to
+`value in ["red", "blue"]` only when the receiver is a direct non-float literal sequence.
+
+The batch opens three adjacent proposal IDs:
+
+- `axis_membership_array_indexof_identity`;
+- `axis_membership_array_indexof_wrong_element_boundary`;
+- `axis_membership_array_indexof_wrong_collection_boundary`.
+
+The proof is deliberately at the comparison level, not the call level. The detector does
+not rewrite `indexOf(value)` itself; it rewrites only proven membership comparisons over
+the call result to `In(value, collection)`. The strict safety gate mirrors the same source
+proof, so a generic `indexOf` call remains outside exact semantic mode. This preserves
+dynamic receivers, raw index-valued uses, and JavaScript `NaN` behavior.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 307 | batch frontier selection | group static JS-like `.indexOf(...)` membership comparisons plus wrong-element/wrong-collection boundaries under `axis_membership_array_indexof_*` | focused corpus: 18 positives, 54 hard negatives |
+| 308 | baseline measurement | scan the focused batch with the previous release detector | baseline: 0/18 positives, 0/54 false merges |
+| 309 | generator adversary | add cross-surface Python/Ruby/JS/TS references against JS/TS/Vue/Svelte/HTML `indexOf` comparison forms | `!== -1`, `>= 0`, and `> -1` spellings represented |
+| 310 | detector strengthening | canonicalize source-gated static `indexOf` membership comparisons to `In(element, collection)` and mark the same proof exact-safe | candidate focused: 18/18 positives, 0/54 false merges |
+| 311 | strict regression tests | extend value-graph and CLI membership tests with spelling, reversed-comparison, raw-index, wrong-coordinate, and `NaN` boundaries | targeted tests passed |
+| 312 | release focused/core gates | build release and run focused indexOf, membership core, and all-cross core gates | focused 18/18, 0/54; membership core 87/87, 0/252; all-cross 469/469, 0/903 |
+
+Focused release/candidate comparison:
+
+```text
+previous release:  items=72, positive=0/18, false_merges=0/54
+candidate release: items=72, positive=18/18, false_merges=0/54
+delta:             +18 positive hits, +0 false merges
+```
+
+Final release focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_membership_array_indexof CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 72
+positive recall: 18/18
+hard-negative false merges: 0/54
+Raw nodes: 0/1880
+```
+
+Final release literal-membership core gate:
+
+```text
+GATE=core AXIS=literal_collection_membership CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 339/782
+positive recall: 87/87
+hard-negative false merges: 0/252
+Raw nodes: 0/9983
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 1372/6042
+positive recall: 469/469
+hard-negative false merges: 0/903
+Raw nodes: 0/50964
+```
+
+Assessment: this batch widened the strict frontier without turning `indexOf` into a loose
+membership-like name heuristic. The important refinement was updating both value
+canonicalization and exact-safety gating: the return value fingerprint converged first,
+but semantic mode still correctly rejected the unit until the same proof was reflected in
+the safety walker. That coupling should remain a checklist item for future strict
+frontier loops.

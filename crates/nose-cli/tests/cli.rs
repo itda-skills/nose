@@ -619,6 +619,16 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
     )
     .unwrap();
     fs::write(
+        dir.join("array_indexof.js"),
+        "function arrayIndexOf(value, other) {\n  return [\"red\", \"blue\"].indexOf(value) !== -1;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("array_indexof.ts"),
+        "function arrayIndexOf(value: string, other: string): boolean {\n  return [\"red\", \"blue\"].indexOf(value) >= 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("not_membership.py"),
         "def not_membership(value, other):\n    return value not in [\"red\", \"blue\"]\n",
     )
@@ -691,6 +701,21 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
     fs::write(
         dir.join("array_some_wrong_collection.ts"),
         "function arraySomeWrongCollection(value: string, other: string): boolean {\n  return [\"purple\", \"orange\"].some((item: string) => item === value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("array_indexof_wrong_element.js"),
+        "function arrayIndexOfWrongElement(value, other, third) {\n  return [\"red\", \"blue\"].indexOf(value + third) !== -1;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("array_indexof_wrong_collection.ts"),
+        "function arrayIndexOfWrongCollection(value: string, other: string): boolean {\n  return [\"yellow\", \"orange\"].indexOf(value) >= 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("array_indexof_value.js"),
+        "function arrayIndexOfValue(value, other) {\n  return [\"red\", \"blue\"].indexOf(value);\n}\n",
     )
     .unwrap();
     fs::write(
@@ -777,6 +802,8 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "module_set.ts",
         "array_some.js",
         "array_some.ts",
+        "array_indexof.js",
+        "array_indexof.ts",
         "not_membership.py",
         "not_includes.js",
         "array_every.js",
@@ -799,6 +826,9 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "wrong_collection.js",
         "array_some_wrong_element.js",
         "array_some_wrong_collection.ts",
+        "array_indexof_wrong_element.js",
+        "array_indexof_wrong_collection.ts",
+        "array_indexof_value.js",
         "array_every_wrong_element.js",
         "array_every_wrong_collection.ts",
         "substring.rs",

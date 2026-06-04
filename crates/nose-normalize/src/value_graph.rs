@@ -2948,6 +2948,83 @@ impl<'a> Builder<'a> {
         }
     }
 
+    fn eval_static_indexof_membership_comparison(
+        &mut self,
+        op: u32,
+        kids: &[NodeId],
+        env: &FxHashMap<u32, ValueId>,
+    ) -> Option<ValueId> {
+        if kids.len() != 2 {
+            return None;
+        }
+        if let Some((element, collection)) = self.static_indexof_call_parts(kids[0]) {
+            if self.is_indexof_membership_threshold(op, false, kids[1]) {
+                let element = self.eval(element, env);
+                let collection = self.eval_membership_collection(collection, env);
+                return Some(self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]));
+            }
+        }
+        if let Some((element, collection)) = self.static_indexof_call_parts(kids[1]) {
+            if self.is_indexof_membership_threshold(op, true, kids[0]) {
+                let element = self.eval(element, env);
+                let collection = self.eval_membership_collection(collection, env);
+                return Some(self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]));
+            }
+        }
+        None
+    }
+
+    fn static_indexof_call_parts(&self, node: NodeId) -> Option<(NodeId, NodeId)> {
+        if self.il.kind(node) != NodeKind::Call {
+            return None;
+        }
+        let kids = self.il.children(node);
+        if kids.len() != 2 || self.il.kind(kids[0]) != NodeKind::Field {
+            return None;
+        }
+        let Payload::Name(method) = self.il.node(kids[0]).payload else {
+            return None;
+        };
+        if self.interner.resolve(method) != "indexOf" {
+            return None;
+        }
+        let receiver = *self.il.children(kids[0]).first()?;
+        self.is_static_non_float_collection_expr(receiver)
+            .then_some((kids[1], receiver))
+    }
+
+    fn is_indexof_membership_threshold(
+        &self,
+        op: u32,
+        indexof_on_right: bool,
+        threshold: NodeId,
+    ) -> bool {
+        if self.is_minus_one_literal(threshold) {
+            return op == Op::Ne as u32
+                || (!indexof_on_right && op == Op::Gt as u32)
+                || (indexof_on_right && op == Op::Lt as u32);
+        }
+        if self.is_zero_literal(threshold) {
+            return (!indexof_on_right && op == Op::Ge as u32)
+                || (indexof_on_right && op == Op::Le as u32);
+        }
+        false
+    }
+
+    fn is_minus_one_literal(&self, node: NodeId) -> bool {
+        if matches!(self.il.node(node).payload, Payload::LitInt(-1)) {
+            return true;
+        }
+        if self.il.kind(node) != NodeKind::UnOp {
+            return false;
+        }
+        if op_code(self.il.node(node).payload) != Op::Neg as u32 {
+            return false;
+        }
+        let kids = self.il.children(node);
+        kids.len() == 1 && matches!(self.il.node(kids[0]).payload, Payload::LitInt(1))
+    }
+
     fn is_empty_value(&mut self, coll: ValueId) -> ValueId {
         let len = self.mk(ValOp::Call(Builtin::Len as u32 + 1), vec![coll]);
         let zero = self.int_const(0);
@@ -3525,6 +3602,9 @@ impl<'a> Builder<'a> {
                     return self.mk(ValOp::Bin(op), vec![element, collection]);
                 }
                 if let Some(v) = self.eval_len_zero_comparison(op, &kids, env) {
+                    return v;
+                }
+                if let Some(v) = self.eval_static_indexof_membership_comparison(op, &kids, env) {
                     return v;
                 }
                 // Canonicalize subtraction to addition-of-negation: `a - b ≡ a + (-b)`

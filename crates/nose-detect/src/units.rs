@@ -3,7 +3,9 @@
 //! tag combined with its children's tags), a pre-order **linearization** of node
 //! tags for alignment, and a **MinHash** signature for candidate generation.
 
-use nose_il::{Builtin, Il, Interner, Lang, LitClass, NodeId, NodeKind, Payload, Symbol, UnitKind};
+use nose_il::{
+    Builtin, Il, Interner, Lang, LitClass, NodeId, NodeKind, Op, Payload, Symbol, UnitKind,
+};
 use nose_normalize::node_tag;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -423,6 +425,11 @@ fn strict_exact_safe_tree(il: &Il, interner: &Interner, facts: &StrictFacts, nod
                     .all(|&c| strict_exact_safe_tree(il, interner, facts, c))
         }
         NodeKind::Call => strict_exact_safe_call(il, interner, facts, node),
+        NodeKind::BinOp
+            if strict_exact_static_indexof_membership_safe(il, interner, facts, node) =>
+        {
+            true
+        }
         NodeKind::Lit => exact_literal_safe(il, node),
         NodeKind::Var => strict_exact_safe_var(il, facts, node),
         _ => il
@@ -441,6 +448,101 @@ fn exact_literal_safe(il: &Il, node: NodeId) -> bool {
             | Payload::LitFloat(_)
             | Payload::Lit(LitClass::Null)
     )
+}
+
+fn strict_exact_static_indexof_membership_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    let Payload::Op(op) = il.node(node).payload else {
+        return false;
+    };
+    let kids = il.children(node);
+    if kids.len() != 2 {
+        return false;
+    }
+    if let Some((element, collection)) = strict_exact_static_indexof_parts(il, interner, kids[0]) {
+        if strict_exact_indexof_membership_threshold(il, op, false, kids[1]) {
+            return strict_exact_safe_tree(il, interner, facts, element)
+                && strict_exact_static_non_float_collection(il, collection);
+        }
+    }
+    if let Some((element, collection)) = strict_exact_static_indexof_parts(il, interner, kids[1]) {
+        if strict_exact_indexof_membership_threshold(il, op, true, kids[0]) {
+            return strict_exact_safe_tree(il, interner, facts, element)
+                && strict_exact_static_non_float_collection(il, collection);
+        }
+    }
+    false
+}
+
+fn strict_exact_static_indexof_parts(
+    il: &Il,
+    interner: &Interner,
+    node: NodeId,
+) -> Option<(NodeId, NodeId)> {
+    if il.kind(node) != NodeKind::Call {
+        return None;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 || il.kind(kids[0]) != NodeKind::Field {
+        return None;
+    }
+    let Payload::Name(method) = il.node(kids[0]).payload else {
+        return None;
+    };
+    if interner.resolve(method) != "indexOf" {
+        return None;
+    }
+    let receiver = *il.children(kids[0]).first()?;
+    strict_exact_static_non_float_collection(il, receiver).then_some((kids[1], receiver))
+}
+
+fn strict_exact_indexof_membership_threshold(
+    il: &Il,
+    op: Op,
+    indexof_on_right: bool,
+    threshold: NodeId,
+) -> bool {
+    if strict_exact_minus_one_literal(il, threshold) {
+        return op == Op::Ne
+            || (!indexof_on_right && op == Op::Gt)
+            || (indexof_on_right && op == Op::Lt);
+    }
+    if matches!(il.node(threshold).payload, Payload::LitInt(0)) {
+        return (!indexof_on_right && op == Op::Ge) || (indexof_on_right && op == Op::Le);
+    }
+    false
+}
+
+fn strict_exact_minus_one_literal(il: &Il, node: NodeId) -> bool {
+    if matches!(il.node(node).payload, Payload::LitInt(-1)) {
+        return true;
+    }
+    if il.kind(node) != NodeKind::UnOp || !matches!(il.node(node).payload, Payload::Op(Op::Neg)) {
+        return false;
+    }
+    let kids = il.children(node);
+    kids.len() == 1 && matches!(il.node(kids[0]).payload, Payload::LitInt(1))
+}
+
+fn strict_exact_static_non_float_collection(il: &Il, node: NodeId) -> bool {
+    if il.kind(node) != NodeKind::Seq {
+        return false;
+    }
+    let kids = il.children(node);
+    !kids.is_empty()
+        && kids.iter().all(|&kid| {
+            matches!(
+                il.node(kid).payload,
+                Payload::LitInt(_)
+                    | Payload::LitBool(_)
+                    | Payload::LitStr(_)
+                    | Payload::Lit(LitClass::Null)
+            )
+        })
 }
 
 fn strict_exact_safe_var(il: &Il, facts: &StrictFacts, node: NodeId) -> bool {
