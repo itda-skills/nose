@@ -591,3 +591,58 @@ Real-repo audit (`../craken-agents`) again left the visible strict semantic fami
 unchanged: 32 before, 32 after. Assessment: this was still a worthwhile frontier expansion
 because it closed a strict-mode soundness bug (`??` vs `||`) and added an adversarial
 boundary that should prevent future regressions.
+
+## Adversarial record-shape-guard coevolution: loops 84-93
+
+This run targeted a narrow but common JavaScript-family proof obligation: a value is a
+plain record only when the source proves all three facts at once:
+
+- `typeof value === "object"`;
+- `value` is not null, either by explicit null comparison or a conservative truthy check;
+- `!Array.isArray(value)`.
+
+The detector must not treat partial object checks as exact Type-4 clones of full
+record-shape guards.
+
+| loop | generator move | current-detector result | detector / loop change | result |
+|---|---|---:|---|---:|
+| 84 | add `record_shape_guard` capability axis with clause-order and truthy-null-check positives plus missing-null/missing-array boundaries | record positives 0/5, false merges 0/5 | no detector change yet; this established the under-merge frontier | failure recorded |
+| 85 | focus reordered three-clause guard | equivalent guards lowered as ordinary boolean chains | add conservative JS/TS recognition for exactly three same-identifier clauses and emit `record_guard` | single-case IL converged |
+| 86 | exact-value size counterattack | `record_guard(value)` was too small for the strict value-family floor | include fact literals (`object`, `non_null`, `not_array`) and mark `record_guard` strict-safe in the value graph | single-case scan reported the family |
+| 87 | generator hard-negative audit | three reported false merges were caused by generated negatives that were accidentally equivalent | mutate identity-proposal negatives to an unrelated property predicate | focused compact: 96/96 positives, 0/167 false merges |
+| 88 | focused CLI regression | synthetic smoke covered it, but a smaller invariant was needed | add `scan_mode_semantic_proves_js_record_shape_guards` with missing-null and missing-array negatives | CLI test passed |
+| 89 | full same-surface manifest | compact selector was not enough for a new proof axis | no detector change | 529/529 positives, 0/828 false merges |
+| 90 | dense all-cross validation | aggregate/import/projection/nullish frontiers stayed closed | no detector change | 491/3447 selected, 210/210 positives, 0/281 false merges |
+| 91 | default ring validation | full ring corpus needed current README numbers | no detector change | 1775 items, 738/738 positives, 0/1037 false merges |
+| 92 | real repo audit on `../craken-agents` | strict semantic families 32→32 | no detector change; this repo already had same-form `isRecord` helpers but no newly exposed reordered/truthy variants | 0 added, 0 removed |
+| 93 | process assessment | synthetic frontier expanded but real-repo family yield was neutral | keep full-manifest counterchecks for new proof axes and mine real corpora for the next guard-family variants | gate retained |
+
+Final full same-surface manifest check:
+
+```text
+items: 1357
+positive recall: 529/529
+hard-negative false merges: 0/828
+
+by semantic axis:
+  record_shape_guard: positive 10/10, false merges 0/20
+```
+
+Final dense compact smoke:
+
+```text
+scripts/type4-smoke.sh SUITE=core CROSS=all
+selected items: 491/3447
+positive recall: 210/210
+hard-negative false merges: 0/281
+Raw nodes: 0/22287
+```
+
+Real-repo audit (`../craken-agents`) left the visible strict semantic family set unchanged:
+32 before, 32 after. The current result already contains a useful seven-member
+`isRecord`/`isPlainObject` family, so this loop did not create a new refactoring candidate
+there. Assessment: this was still a strict-frontier expansion because reordered full
+guards and conservative truthy-null checks now converge, while missing-null, missing-array,
+and property-predicate siblings remain outside exact semantic mode. The next similar loop
+should start from real-corpus guard variants, especially property-presence and typed-field
+checks, before adding another synthetic guard axis.

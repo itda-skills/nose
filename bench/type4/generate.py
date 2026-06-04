@@ -127,6 +127,22 @@ AXIS_PROPOSALS = {
         "axis": "projection_identity",
         "why": "Dynamic property keys do not prove a fixed projected coordinate for strict exact reporting.",
     },
+    "axis_record_guard_order_identity": {
+        "axis": "record_shape_guard",
+        "why": "A complete record-shape guard should be order-insensitive across its static clauses.",
+    },
+    "axis_record_guard_truthy_identity": {
+        "axis": "record_shape_guard",
+        "why": "A truthiness guard is equivalent to a non-null guard when paired with a static typeof-object clause.",
+    },
+    "axis_record_guard_array_boundary": {
+        "axis": "record_shape_guard",
+        "why": "A non-null object guard without the array exclusion is not a strict record guard.",
+    },
+    "axis_record_guard_null_boundary": {
+        "axis": "record_shape_guard",
+        "why": "A typeof-object and non-array guard without a null exclusion still accepts null.",
+    },
     "axis_table_access": {
         "axis": "table_access",
         "why": "Literal table access must preserve key/index identity and reject neighboring table values.",
@@ -600,6 +616,63 @@ def axis_nullish_variant(surface: Surface, proposal_id: str, negative: bool, rig
         return Variant("axis", src, name)
 
     raise ValueError(f"unsupported surface for nullish axis: {surface.key}")
+
+
+def record_guard_axis_supported(surface: Surface, proposal_id: str) -> bool:
+    return proposal_id.startswith("axis_record_guard_") and surface.key in JS_LIKE_SURFACES
+
+
+def axis_record_guard_variant(
+    surface: Surface,
+    proposal_id: str,
+    negative: bool,
+    right: bool,
+) -> Variant:
+    name = "buildCase" if right else "axisCase"
+    if (
+        right
+        and negative
+        and proposal_id
+        not in {"axis_record_guard_array_boundary", "axis_record_guard_null_boundary"}
+    ):
+        body = f"""function {name}(value) {{
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && value.ready === true;
+}}
+"""
+    elif right and proposal_id == "axis_record_guard_truthy_identity":
+        body = f"""function {name}(value) {{
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}}
+"""
+    elif right and proposal_id == "axis_record_guard_order_identity":
+        body = f"""function {name}(input) {{
+  return !Array.isArray(input) && input !== null && typeof input === 'object';
+}}
+"""
+    elif right and proposal_id == "axis_record_guard_array_boundary":
+        body = f"""function {name}(value) {{
+  return typeof value === 'object' && value !== null;
+}}
+"""
+    elif right and proposal_id == "axis_record_guard_null_boundary":
+        body = f"""function {name}(value) {{
+  return typeof value === 'object' && !Array.isArray(value);
+}}
+"""
+    else:
+        body = f"""function {name}(value) {{
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}}
+"""
+    if surface.language == "javascript":
+        return js_axis_source(surface, body, name)
+
+    if surface.key == "typescript":
+        typed = body.replace(f"function {name}(value)", f"function {name}(value: unknown): boolean")
+        typed = typed.replace(f"function {name}(input)", f"function {name}(input: unknown): boolean")
+        return Variant("axis", typed, name)
+
+    raise ValueError(f"unsupported surface for record guard axis: {surface.key}")
 
 
 def projection_axis_supported(surface: Surface, proposal_id: str) -> bool:
@@ -2587,6 +2660,11 @@ def axis_variants(
             axis_nullish_variant(surface, proposal_id, False, False),
             axis_nullish_variant(surface, proposal_id, negative, True),
         )
+    if axis == "record_shape_guard":
+        return (
+            axis_record_guard_variant(surface, proposal_id, False, False),
+            axis_record_guard_variant(surface, proposal_id, negative, True),
+        )
     if axis == "immutable_binding":
         return (
             axis_immutable_binding_variant(surface, False, False),
@@ -2720,6 +2798,26 @@ def generate_axis_items(out_dir: Path, capabilities: dict) -> list[dict]:
             if proposal_id.startswith("axis_nullish_") and not nullish_axis_supported(
                 surface, proposal_id
             ):
+                continue
+            if proposal_id.startswith("axis_record_guard_") and not record_guard_axis_supported(
+                surface, proposal_id
+            ):
+                continue
+            if proposal_id in {
+                "axis_record_guard_array_boundary",
+                "axis_record_guard_null_boundary",
+            }:
+                items.append(
+                    make_axis_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        surface,
+                        "not_equivalent",
+                        "heldout",
+                        "incomplete-record-guard",
+                    )
+                )
                 continue
             if proposal_id == "axis_nullish_truthy_boundary":
                 items.append(

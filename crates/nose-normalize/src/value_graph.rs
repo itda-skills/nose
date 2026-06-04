@@ -2743,6 +2743,7 @@ impl<'a> Builder<'a> {
                 "pair" => 4,
                 "import_binding" => 5,
                 "import_namespace" => 6,
+                "record_guard" => 7,
                 _ => self.interner.symbol_hash(s),
             },
             _ => 0,

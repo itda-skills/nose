@@ -809,7 +809,9 @@ fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         "regex" => lo.str_lit(lo.text(node), span),
         "call_expression" => lower_call(lo, node),
         "new_expression" => lower_new(lo, node),
-        "binary_expression" => lower_binary(lo, node),
+        "binary_expression" => {
+            lower_record_shape_guard(lo, node).unwrap_or_else(|| lower_binary(lo, node))
+        }
         "unary_expression" => lower_unary(lo, node),
         "update_expression" => lower_update(lo, node),
         "assignment_expression" => crate::lower::assignment(lo, node, lower_expr),
@@ -1090,6 +1092,190 @@ fn lower_binary(lo: &mut Lowering, node: TsNode) -> NodeId {
         return lo.add(NodeKind::If, Payload::None, span, &[cond, fallback, value]);
     }
     crate::lower::binary(lo, node, js_bin_op, lower_expr)
+}
+
+fn lower_record_shape_guard(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
+    let text = compact_js_expr(lo.text(node));
+    let clauses: Vec<String> = text
+        .split("&&")
+        .map(strip_outer_parens_owned)
+        .filter(|s| !s.is_empty())
+        .collect();
+    if clauses.len() != 3 {
+        return None;
+    }
+
+    let mut ident: Option<String> = None;
+    let mut has_typeof_object = false;
+    let mut has_non_null_or_truthy = false;
+    let mut has_not_array = false;
+    for clause in clauses {
+        let (kind, name) = record_guard_clause(&clause)?;
+        if !simple_js_ident(&name) {
+            return None;
+        }
+        match &ident {
+            Some(current) if current != &name => return None,
+            None => ident = Some(name.clone()),
+            _ => {}
+        }
+        match kind {
+            RecordGuardClause::TypeofObject => has_typeof_object = true,
+            RecordGuardClause::NonNullOrTruthy => has_non_null_or_truthy = true,
+            RecordGuardClause::NotArray => has_not_array = true,
+        }
+    }
+
+    if !(has_typeof_object && has_non_null_or_truthy && has_not_array) {
+        return None;
+    }
+    let span = lo.span(node);
+    let value = lo.var(&ident?, span);
+    let object = lo.str_lit("object", span);
+    let non_null = lo.str_lit("non_null", span);
+    let not_array = lo.str_lit("not_array", span);
+    let tag = lo.sym("record_guard");
+    Some(lo.add(
+        NodeKind::Seq,
+        Payload::Name(tag),
+        span,
+        &[value, object, non_null, not_array],
+    ))
+}
+
+#[derive(Clone, Copy)]
+enum RecordGuardClause {
+    TypeofObject,
+    NonNullOrTruthy,
+    NotArray,
+}
+
+fn record_guard_clause(clause: &str) -> Option<(RecordGuardClause, String)> {
+    parse_typeof_object_clause(clause)
+        .map(|name| (RecordGuardClause::TypeofObject, name))
+        .or_else(|| {
+            parse_non_null_clause(clause).map(|name| (RecordGuardClause::NonNullOrTruthy, name))
+        })
+        .or_else(|| {
+            parse_truthy_clause(clause).map(|name| (RecordGuardClause::NonNullOrTruthy, name))
+        })
+        .or_else(|| parse_not_array_clause(clause).map(|name| (RecordGuardClause::NotArray, name)))
+}
+
+fn parse_typeof_object_clause(clause: &str) -> Option<String> {
+    for op in ["===", "=="] {
+        if let Some(rest) = clause.strip_prefix("typeof") {
+            let (name, value) = rest.split_once(op)?;
+            if is_object_literal(value) {
+                return Some(name.to_string());
+            }
+        }
+        for object_lit in ["'object'", "\"object\""] {
+            let prefix = format!("{object_lit}{op}typeof");
+            if let Some(name) = clause.strip_prefix(&prefix) {
+                return Some(name.to_string());
+            }
+        }
+    }
+    None
+}
+
+fn parse_non_null_clause(clause: &str) -> Option<String> {
+    for op in ["!==", "!="] {
+        if let Some((name, "null")) = clause.split_once(op) {
+            return Some(name.to_string());
+        }
+        let prefix = format!("null{op}");
+        if let Some(name) = clause.strip_prefix(&prefix) {
+            return Some(name.to_string());
+        }
+    }
+    None
+}
+
+fn parse_truthy_clause(clause: &str) -> Option<String> {
+    if let Some(name) = clause.strip_prefix("!!") {
+        return Some(name.to_string());
+    }
+    clause
+        .strip_prefix("Boolean(")
+        .and_then(|inner| inner.strip_suffix(')'))
+        .map(str::to_string)
+}
+
+fn parse_not_array_clause(clause: &str) -> Option<String> {
+    clause
+        .strip_prefix("!Array.isArray(")
+        .and_then(|inner| inner.strip_suffix(')'))
+        .map(str::to_string)
+}
+
+fn is_object_literal(value: &str) -> bool {
+    matches!(value, "'object'" | "\"object\"")
+}
+
+fn compact_js_expr(text: &str) -> String {
+    let mut out = String::new();
+    let mut quote = None;
+    let mut escaped = false;
+    for c in text.chars() {
+        if let Some(q) = quote {
+            out.push(c);
+            if escaped {
+                escaped = false;
+            } else if c == '\\' {
+                escaped = true;
+            } else if c == q {
+                quote = None;
+            }
+            continue;
+        }
+        if c == '\'' || c == '"' {
+            quote = Some(c);
+            out.push(c);
+        } else if !c.is_whitespace() {
+            out.push(c);
+        }
+    }
+    out
+}
+
+fn strip_outer_parens_owned(mut text: &str) -> String {
+    loop {
+        let Some(inner) = text.strip_prefix('(').and_then(|s| s.strip_suffix(')')) else {
+            return text.to_string();
+        };
+        if !balanced_parens(inner) {
+            return text.to_string();
+        }
+        text = inner;
+    }
+}
+
+fn balanced_parens(text: &str) -> bool {
+    let mut depth = 0i32;
+    for c in text.chars() {
+        match c {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth < 0 {
+                    return false;
+                }
+            }
+            _ => {}
+        }
+    }
+    depth == 0
+}
+
+fn simple_js_ident(name: &str) -> bool {
+    let mut chars = name.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    (first == '_' || first == '$' || first.is_ascii_alphabetic())
+        && chars.all(|c| c == '_' || c == '$' || c.is_ascii_alphanumeric())
 }
 
 fn lower_unary(lo: &mut Lowering, node: TsNode) -> NodeId {

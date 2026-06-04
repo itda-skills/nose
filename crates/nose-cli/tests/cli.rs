@@ -698,6 +698,85 @@ fn scan_mode_semantic_distinguishes_nullish_from_truthy_defaults() {
 }
 
 #[test]
+fn scan_mode_semantic_proves_js_record_shape_guards() {
+    let dir = std::env::temp_dir().join(format!("nose_record_guard_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("guard_direct.js"),
+        "function direct(value) {\n  return typeof value === \"object\" && value !== null && !Array.isArray(value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("guard_reordered.js"),
+        "function reordered(candidate) {\n  return !Array.isArray(candidate) && candidate !== null && typeof candidate === \"object\";\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("guard_truthy.js"),
+        "function truthy(input) {\n  return Boolean(input) && typeof input === \"object\" && !Array.isArray(input);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("array_allowed_negative.js"),
+        "function arrayAllowed(value) {\n  return typeof value === \"object\" && value !== null;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("null_allowed_negative.js"),
+        "function nullAllowed(value) {\n  return typeof value === \"object\" && !Array.isArray(value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_typeof_literal_negative.js"),
+        "function wrongLiteral(value) {\n  return typeof value === \"ob ject\" && value !== null && !Array.isArray(value);\n}\n",
+    )
+    .unwrap();
+
+    let semantic = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "1",
+        "--min-tokens",
+        "1",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let semantic_json: serde_json::Value =
+        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
+    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    assert_eq!(
+        semantic_families.len(),
+        1,
+        "semantic mode should report one proved record-shape guard family: {semantic}"
+    );
+    let semantic_text = semantic_json.to_string();
+    for expected in ["guard_direct.js", "guard_reordered.js", "guard_truthy.js"] {
+        assert!(
+            semantic_text.contains(expected),
+            "semantic mode should include {expected}: {semantic}"
+        );
+    }
+    for unexpected in [
+        "array_allowed_negative.js",
+        "null_allowed_negative.js",
+        "wrong_typeof_literal_negative.js",
+    ] {
+        assert!(
+            !semantic_text.contains(unexpected),
+            "semantic mode must reject invalid or incomplete record-shape guards: {semantic}"
+        );
+    }
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn scan_mode_semantic_converges_cross_language_list_literals() {
     let dir = std::env::temp_dir().join(format!("nose_list_cross_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);

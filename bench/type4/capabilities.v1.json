@@ -6,6 +6,7 @@
     "nullish_default": "Nullish coalescing and explicit null/undefined guards can prove the same defaulting behavior when the fallback condition is fixed.",
     "projection_identity": "Static field/property projection can prove a value identity when the receiver and projected coordinate are fixed.",
     "proven_callee_identity": "Opaque calls are strict only when the callee identity is local, immutable, or a safe same-file function binding.",
+    "record_shape_guard": "Static JavaScript record guards can prove non-null object and non-array shape checks when all required clauses are present.",
     "table_access": "Literal table construction and static key/index access retain behavior-defining key identity.",
     "unsafe_boundary": "Unproven free globals, repeated assignment, spread/unpack, dynamic import, and reflection boundaries are excluded from exact semantic reporting."
   },
@@ -16,6 +17,7 @@
       "nullish_default": "unsupported",
       "projection_identity": "supported",
       "proven_callee_identity": "supported",
+      "record_shape_guard": "unsupported",
       "table_access": "unsupported",
       "unsafe_boundary": "supported"
     },
@@ -25,6 +27,7 @@
       "nullish_default": "unsupported",
       "projection_identity": "supported",
       "proven_callee_identity": "supported",
+      "record_shape_guard": "unsupported",
       "table_access": "unsupported",
       "unsafe_boundary": "supported"
     },
@@ -34,6 +37,7 @@
       "nullish_default": "supported",
       "projection_identity": "supported",
       "proven_callee_identity": "supported",
+      "record_shape_guard": "supported",
       "table_access": "supported",
       "unsafe_boundary": "supported"
     },
@@ -43,6 +47,7 @@
       "nullish_default": "unsupported",
       "projection_identity": "supported",
       "proven_callee_identity": "supported",
+      "record_shape_guard": "unsupported",
       "table_access": "unsupported",
       "unsafe_boundary": "supported"
     },
@@ -52,6 +57,7 @@
       "nullish_default": "supported",
       "projection_identity": "supported",
       "proven_callee_identity": "supported",
+      "record_shape_guard": "supported",
       "table_access": "supported",
       "unsafe_boundary": "supported"
     },
@@ -61,6 +67,7 @@
       "nullish_default": "unsupported",
       "projection_identity": "supported",
       "proven_callee_identity": "supported",
+      "record_shape_guard": "unsupported",
       "table_access": "supported",
       "unsafe_boundary": "supported"
     },
@@ -70,6 +77,7 @@
       "nullish_default": "unsupported",
       "projection_identity": "supported",
       "proven_callee_identity": "supported",
+      "record_shape_guard": "unsupported",
       "table_access": "supported",
       "unsafe_boundary": "supported"
     },
@@ -79,6 +87,7 @@
       "nullish_default": "unsupported",
       "projection_identity": "supported",
       "proven_callee_identity": "supported",
+      "record_shape_guard": "unsupported",
       "table_access": "unsupported",
       "unsafe_boundary": "supported"
     },
@@ -88,6 +97,7 @@
       "nullish_default": "supported",
       "projection_identity": "supported",
       "proven_callee_identity": "supported",
+      "record_shape_guard": "supported",
       "table_access": "supported",
       "unsafe_boundary": "supported"
     },
@@ -97,6 +107,7 @@
       "nullish_default": "supported",
       "projection_identity": "supported",
       "proven_callee_identity": "supported",
+      "record_shape_guard": "supported",
       "table_access": "supported",
       "unsafe_boundary": "supported"
     },
@@ -106,6 +117,7 @@
       "nullish_default": "supported",
       "projection_identity": "supported",
       "proven_callee_identity": "supported",
+      "record_shape_guard": "supported",
       "table_access": "supported",
       "unsafe_boundary": "supported"
     }
