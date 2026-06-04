@@ -1192,3 +1192,64 @@ created a broad strict frontier, the baseline showed real under-merge, the detec
 new language-specific proof facts, and the shadow boundary forced a soundness correction
 before promotion. The remaining work on this axis should be scalar min/max and typed
 Ruby/Rust abs only after their receiver/builtin identity can be proven.
+
+## Scalar min/max coevolution: loops 161-168
+
+This loop widened `numeric_minmax_abs` from absolute value into strict scalar two-way
+selection. The target equivalence is a conditional choice over the same two numeric
+coordinates and a proven builtin `min`/`max` form. It deliberately excludes dynamic
+receiver methods and keeps JS/TS `Math` calls behind shadowing checks.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 161 | generator adversary | add `axis_scalar_min_*` and `axis_scalar_max_*` proposals: builtin identity, wrong-value boundary, shadowed-`Math` boundary, and min/max direction mutation | focused manifest generated 118 items: 36 positives, 82 negatives |
+| 162 | baseline measurement | compare installed/release baseline with the generated focused corpus | baseline: 0/36 positives, 0/82 false merges |
+| 163 | value graph strengthening | treat 2-arg `Builtin::Min`/`Builtin::Max` as scalar `Bin(MIN/MAX)` choices while preserving 1-arg collection reductions | targeted cross-language min test passed |
+| 164 | language proof facts | canonicalize Python/C bare `min/max` and `fmin/fmax`, Go `math.Min/Max`, JS/TS safe `Math.min/max`, and Java `Math.min/max` | candidate focused: 36/36 positives, 0/82 false merges |
+| 165 | soundness counterattack | keep shadowed JS/TS `Math` as ordinary calls and preserve wrong-value plus min/max direction boundaries | shadowed/wrong/direction negatives: 0 false merges |
+| 166 | focused/core gates | run proposal-focused and numeric core gates on the release binary | focused: 18/18 positives, 0/46 false merges, Raw 0; core selected 69/195, 24/24 and 0/45 |
+| 167 | aggregate validation | run default ring, same-surface, and dense all-cross compact gates | ring 904/904 and 0/1,499; same-surface 626/626 and 0/1,100; dense compact 304/304 and 0/445 |
+| 168 | scope decision | keep Ruby/Rust dynamic `.abs`/`.min`/`.max` method forms out until builtin/receiver identity can be proven | strict scalar min/max slice closed |
+
+Preflight comparison before rebuilding the release binary:
+
+```text
+baseline: items=118 positive=0/36 misses=36 false_merges=0/82
+candidate: items=118 positive=36/36 misses=0 false_merges=0/82
+preflight passed: candidate improves the frontier with zero false merges
+```
+
+Final focused scalar-min/max gate:
+
+```text
+items: 64
+positive recall: 18/18
+hard-negative false merges: 0/46
+Raw nodes: 0/2392
+```
+
+Final default ring smoke:
+
+```text
+items: 2403
+positive recall: 904/904
+hard-negative false merges: 0/1499
+
+by semantic axis:
+  numeric_minmax_abs: positive 54/54, false merges 0/141
+```
+
+Final dense all-cross compact smoke:
+
+```text
+GATE=core CROSS=all OUT_DIR=/tmp/nose-type4-smoke-all-scalar-minmax ./scripts/type4-smoke.sh
+selected items: 749/4896
+positive recall: 304/304
+hard-negative false merges: 0/445
+Raw nodes: 0/28962
+```
+
+Assessment: this was a real detector co-evolution loop, not benchmark-only expansion.
+The generator exposed a broad strict under-merge class, the detector gained shared value
+graph semantics plus language-specific proof facts, and the adversarial negatives
+confirmed that `min`/`max` direction, wrong coordinates, and shadowed `Math` do not merge.

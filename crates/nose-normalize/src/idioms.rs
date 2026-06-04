@@ -74,19 +74,30 @@ pub(crate) fn canon_call(old: &Il, interner: &Interner, call_id: NodeId) -> Call
                             arg_olds: args.to_vec(),
                         }
                     }
-                    // `min(iterable)` / `max(iterable)` — selection reduction. (The
-                    // multi-arg `max(a, b)` form is a 2-way choice, not a fold — left
-                    // as an ordinary call.)
-                    "min" if args.len() == 1 => {
+                    // `min(iterable)` / `max(iterable)` — selection reduction.
+                    // `min(a, b)` / `max(a, b)` — scalar 2-way choice.
+                    "min" if args.len() == 1 || args.len() == 2 => {
                         return CallCanon::Builtin {
                             op: Builtin::Min,
-                            arg_olds: vec![args[0]],
+                            arg_olds: args.to_vec(),
                         }
                     }
-                    "max" if args.len() == 1 => {
+                    "max" if args.len() == 1 || args.len() == 2 => {
                         return CallCanon::Builtin {
                             op: Builtin::Max,
-                            arg_olds: vec![args[0]],
+                            arg_olds: args.to_vec(),
+                        }
+                    }
+                    "fmin" | "fminf" | "fminl" if args.len() == 2 => {
+                        return CallCanon::Builtin {
+                            op: Builtin::Min,
+                            arg_olds: args.to_vec(),
+                        }
+                    }
+                    "fmax" | "fmaxf" | "fmaxl" if args.len() == 2 => {
+                        return CallCanon::Builtin {
+                            op: Builtin::Max,
+                            arg_olds: args.to_vec(),
                         }
                     }
                     "abs" | "fabs" if args.len() == 1 => {
@@ -254,6 +265,17 @@ pub(crate) fn canon_call(old: &Il, interner: &Interner, call_id: NodeId) -> Call
                             op: Builtin::Reduce,
                             arg_olds: args.to_vec(),
                         }
+                    }
+                    "Min" | "Max" if base_name == Some("math") && args.len() == 2 => {
+                        let op = if fname == "Min" {
+                            Builtin::Min
+                        } else {
+                            Builtin::Max
+                        };
+                        return CallCanon::Builtin {
+                            op,
+                            arg_olds: args.to_vec(),
+                        };
                     }
                     // Rust/iterator-style `a.iter().zip(b.iter())` is the same aligned
                     // pair stream as Python `zip(a, b)`. Canonicalize it before outer

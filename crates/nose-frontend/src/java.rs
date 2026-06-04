@@ -611,14 +611,21 @@ fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let name_node = node.child_by_field_name("name");
     let object_node = node.child_by_field_name("object");
-    if name_node.is_some_and(|n| lo.text(n) == "abs")
-        && object_node.is_some_and(|o| lo.text(o) == "Math")
-    {
+    let math_builtin = name_node
+        .and_then(|n| match lo.text(n) {
+            "abs" => Some((Builtin::Abs, 1)),
+            "min" => Some((Builtin::Min, 2)),
+            "max" => Some((Builtin::Max, 2)),
+            _ => None,
+        })
+        .filter(|_| object_node.is_some_and(|o| lo.text(o) == "Math"));
+    if let Some((builtin, arity)) = math_builtin {
         if let Some(args) = node.child_by_field_name("arguments") {
             let args = Lowering::named_children(args);
-            if args.len() == 1 {
-                let arg = lower_expr(lo, args[0]);
-                return lo.add(NodeKind::Call, Payload::Builtin(Builtin::Abs), span, &[arg]);
+            if args.len() == arity {
+                let lowered: Vec<NodeId> =
+                    args.into_iter().map(|arg| lower_expr(lo, arg)).collect();
+                return lo.add(NodeKind::Call, Payload::Builtin(builtin), span, &lowered);
             }
         }
     }

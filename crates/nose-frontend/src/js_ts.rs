@@ -1028,8 +1028,8 @@ fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
     if let Some(guard) = lower_own_property_guard_call(lo, node) {
         return guard;
     }
-    if let Some(math_abs) = lower_math_abs_call(lo, node) {
-        return math_abs;
+    if let Some(math_builtin) = lower_math_call(lo, node) {
+        return math_builtin;
     }
     let span = lo.span(node);
     let mut kids = Vec::new();
@@ -1053,11 +1053,14 @@ fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
     lo.add(NodeKind::Call, Payload::None, span, &kids)
 }
 
-fn lower_math_abs_call(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
+fn lower_math_call(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
     let callee = node.child_by_field_name("function")?;
-    if compact_js_expr(lo.text(callee)) != "Math.abs" {
-        return None;
-    }
+    let (builtin, arity) = match compact_js_expr(lo.text(callee)).as_str() {
+        "Math.abs" => (Builtin::Abs, 1),
+        "Math.min" => (Builtin::Min, 2),
+        "Math.max" => (Builtin::Max, 2),
+        _ => return None,
+    };
     if file_prefix_has_binding_ident(lo, node, "Math")
         || enclosing_function_prefix_has_binding_ident(lo, node, "Math")
     {
@@ -1065,15 +1068,15 @@ fn lower_math_abs_call(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
     }
     let args = node.child_by_field_name("arguments")?;
     let args: Vec<TsNode> = Lowering::named_children(args);
-    if args.len() != 1 || args.iter().any(|arg| arg.kind() == "spread_element") {
+    if args.len() != arity || args.iter().any(|arg| arg.kind() == "spread_element") {
         return None;
     }
-    let arg = lower_expr(lo, args[0]);
+    let lowered: Vec<NodeId> = args.into_iter().map(|arg| lower_expr(lo, arg)).collect();
     Some(lo.add(
         NodeKind::Call,
-        Payload::Builtin(Builtin::Abs),
+        Payload::Builtin(builtin),
         lo.span(node),
-        &[arg],
+        &lowered,
     ))
 }
 

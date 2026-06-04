@@ -2110,11 +2110,16 @@ impl<'a> Builder<'a> {
                 Some(self.mk(ValOp::Reduce(op), args))
             }
             Builtin::Min | Builtin::Max => {
-                let code = if matches!(b, Builtin::Max) {
-                    REDUCE_MAX
+                let (reduce_code, choice_code) = if matches!(b, Builtin::Max) {
+                    (REDUCE_MAX, MAX_CODE)
                 } else {
-                    REDUCE_MIN
+                    (REDUCE_MIN, MIN_CODE)
                 };
+                if kids.len() == 2 {
+                    let left = self.eval(kids[0], env);
+                    let right = self.eval(kids[1], env);
+                    return Some(self.mk(ValOp::Bin(choice_code), vec![left, right]));
+                }
                 let av = self.eval(*kids.first()?, env);
                 // `max(f(x) for x in xs)` → the mapped per-element value; `max(xs)` →
                 // the raw element. No init (selection reductions carry none), so it
@@ -2127,7 +2132,7 @@ impl<'a> Builder<'a> {
                     ValOp::Hof(_) if !args.is_empty() => args[0],
                     _ => self.elem(av),
                 };
-                Some(self.mk(ValOp::Reduce(code), vec![contrib]))
+                Some(self.mk(ValOp::Reduce(reduce_code), vec![contrib]))
             }
             Builtin::Any | Builtin::All => {
                 let code = if matches!(b, Builtin::All) {

@@ -139,6 +139,30 @@ AXIS_PROPOSALS = {
         "axis": "numeric_minmax_abs",
         "why": "Shadowed JavaScript Math bindings are not the built-in absolute-value proof.",
     },
+    "axis_scalar_min_function_identity": {
+        "axis": "numeric_minmax_abs",
+        "why": "Scalar minimum builtins should prove the same two-way selection as the explicit conditional idiom.",
+    },
+    "axis_scalar_max_function_identity": {
+        "axis": "numeric_minmax_abs",
+        "why": "Scalar maximum builtins should prove the same two-way selection as the explicit conditional idiom.",
+    },
+    "axis_scalar_min_wrong_value_boundary": {
+        "axis": "numeric_minmax_abs",
+        "why": "Scalar minimum is a proof over a specific pair of numeric value coordinates.",
+    },
+    "axis_scalar_max_wrong_value_boundary": {
+        "axis": "numeric_minmax_abs",
+        "why": "Scalar maximum is a proof over a specific pair of numeric value coordinates.",
+    },
+    "axis_scalar_min_shadowed_math_boundary": {
+        "axis": "numeric_minmax_abs",
+        "why": "Shadowed JavaScript Math bindings are not the built-in minimum proof.",
+    },
+    "axis_scalar_max_shadowed_math_boundary": {
+        "axis": "numeric_minmax_abs",
+        "why": "Shadowed JavaScript Math bindings are not the built-in maximum proof.",
+    },
     "axis_own_property_hasown_identity": {
         "axis": "own_property_guard",
         "why": "Object.hasOwn and Object.prototype.hasOwnProperty.call prove the same own-property presence check.",
@@ -909,7 +933,11 @@ def axis_null_presence_iflet_variant(
 
 
 def scalar_abs_axis_supported(surface: Surface, proposal_id: str) -> bool:
-    if proposal_id == "axis_scalar_abs_shadowed_math_boundary":
+    if proposal_id in {
+        "axis_scalar_abs_shadowed_math_boundary",
+        "axis_scalar_min_shadowed_math_boundary",
+        "axis_scalar_max_shadowed_math_boundary",
+    }:
         return surface.key in JS_LIKE_SURFACES
     return surface.key in {"python", "javascript", "typescript", "go", "java", "c", "vue", "svelte", "html"}
 
@@ -1048,6 +1076,128 @@ int {snake_name}(int value, int other) {{
         return Variant("axis", src, snake_name)
 
     raise ValueError(f"unsupported surface for scalar abs axis: {surface.key}")
+
+
+def scalar_minmax_op(proposal_id: str) -> str:
+    if "_max_" in proposal_id:
+        return "max"
+    return "min"
+
+
+def axis_scalar_minmax_variant(
+    surface: Surface,
+    proposal_id: str,
+    negative: bool,
+    right: bool,
+) -> Variant:
+    name = "buildCase" if right else "axisCase"
+    snake_name = "build_case" if right else "axis_case"
+    op = scalar_minmax_op(proposal_id)
+    if right and negative and proposal_id in {
+        "axis_scalar_min_function_identity",
+        "axis_scalar_max_function_identity",
+    }:
+        op = "max" if op == "min" else "min"
+    wrong_value = right and proposal_id in {
+        "axis_scalar_min_wrong_value_boundary",
+        "axis_scalar_max_wrong_value_boundary",
+    }
+    shadowed_math = right and proposal_id in {
+        "axis_scalar_min_shadowed_math_boundary",
+        "axis_scalar_max_shadowed_math_boundary",
+    }
+    a = "left"
+    b = "other" if wrong_value else "right"
+    cmp = "<=" if op == "min" else ">="
+
+    if surface.language == "javascript":
+        if shadowed_math:
+            body = f"""function {name}(left, right, other) {{
+  const Math = {{ {op}: function(_left, _right) {{ return 0; }} }};
+  const selected = Math.{op}({a}, {b});
+  return selected + other;
+}}
+"""
+            return js_axis_source(surface, body, name)
+        expr = f"{a} {cmp} {b} ? {a} : {b}" if not right else f"Math.{op}({a}, {b})"
+        body = f"""function {name}(left, right, other) {{
+  const selected = {expr};
+  return selected + other;
+}}
+"""
+        return js_axis_source(surface, body, name)
+
+    if surface.key == "typescript":
+        if shadowed_math:
+            src = f"""function {name}(left: number, right: number, other: number): number {{
+  const Math = {{ {op}: function(_left: number, _right: number): number {{ return 0; }} }};
+  const selected = Math.{op}({a}, {b});
+  return selected + other;
+}}
+"""
+            return Variant("axis", src, name)
+        expr = f"{a} {cmp} {b} ? {a} : {b}" if not right else f"Math.{op}({a}, {b})"
+        src = f"""function {name}(left: number, right: number, other: number): number {{
+  const selected = {expr};
+  return selected + other;
+}}
+"""
+        return Variant("axis", src, name)
+
+    if surface.key == "python":
+        expr = f"{a} if {a} {cmp} {b} else {b}" if not right else f"{op}({a}, {b})"
+        src = f"""def {snake_name}(left, right, other):
+    selected = {expr}
+    return selected + other
+"""
+        return Variant("axis", src, snake_name)
+
+    if surface.key == "go":
+        go_name = "BuildCase" if right else "AxisCase"
+        if right:
+            expr = f"math.{op.capitalize()}({a}, {b})"
+            body = f"""selected := {expr}
+    return selected + other"""
+        else:
+            body = f"""selected := {a}
+    if {b} {cmp} {a} {{
+        selected = {b}
+    }}
+    return selected + other"""
+        src = f"""package p
+
+import "math"
+
+func {go_name}(left float64, right float64, other float64) float64 {{
+    {body}
+}}
+"""
+        return Variant("axis", src, go_name)
+
+    if surface.key == "java":
+        expr = f"{a} {cmp} {b} ? {a} : {b}" if not right else f"Math.{op}({a}, {b})"
+        src = f"""class AxisCase {{
+    static int {name}(int left, int right, int other) {{
+        int selected = {expr};
+        return selected + other;
+    }}
+}}
+"""
+        return Variant("axis", src, name)
+
+    if surface.key == "c":
+        fn = "fmin" if op == "min" else "fmax"
+        expr = f"{a} {cmp} {b} ? {a} : {b}" if not right else f"{fn}({a}, {b})"
+        src = f"""#include <math.h>
+
+double {snake_name}(double left, double right, double other) {{
+    double selected = {expr};
+    return selected + other;
+}}
+"""
+        return Variant("axis", src, snake_name)
+
+    raise ValueError(f"unsupported surface for scalar min/max axis: {surface.key}")
 
 
 def record_guard_axis_supported(surface: Surface, proposal_id: str) -> bool:
@@ -3674,6 +3824,11 @@ def axis_variants(
             axis_null_presence_variant(surface, proposal_id, negative, True),
         )
     if axis == "numeric_minmax_abs":
+        if proposal_id.startswith(("axis_scalar_min_", "axis_scalar_max_")):
+            return (
+                axis_scalar_minmax_variant(surface, proposal_id, False, False),
+                axis_scalar_minmax_variant(surface, proposal_id, negative, True),
+            )
         return (
             axis_scalar_abs_variant(surface, proposal_id, False, False),
             axis_scalar_abs_variant(surface, proposal_id, negative, True),
@@ -3755,14 +3910,24 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
                 "outputs": [],
             }
         if axis == "numeric_minmax_abs":
-            return {
-                "level": "E1",
-                "kind": f"same-spec-{axis}",
-                "property_inputs": [
+            property_inputs = (
+                [
+                    {"left": 2, "right": 5, "other": 1},
+                    {"left": -4, "right": 3, "other": 2},
+                    {"left": 7, "right": 7, "other": -3},
+                ]
+                if proposal_id
+                and proposal_id.startswith(("axis_scalar_min_", "axis_scalar_max_"))
+                else [
                     {"value": -3, "other": 4},
                     {"value": 0, "other": -2},
                     {"value": 5, "other": -7},
-                ],
+                ]
+            )
+            return {
+                "level": "E1",
+                "kind": f"same-spec-{axis}",
+                "property_inputs": property_inputs,
                 "outputs": [],
             }
         if axis == "string_prefix_suffix":
@@ -3860,7 +4025,37 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
             "counterexample": counterexample,
         }
     elif axis == "numeric_minmax_abs":
-        if proposal_id == "axis_scalar_abs_wrong_value_boundary":
+        if proposal_id in {
+            "axis_scalar_min_wrong_value_boundary",
+            "axis_scalar_max_wrong_value_boundary",
+        }:
+            is_min = proposal_id == "axis_scalar_min_wrong_value_boundary"
+            counterexample = {
+                "input": {"left": 2, "right": 5, "other": -1},
+                "left": (2 if is_min else 5) - 1,
+                "right": (-1 if is_min else 2) - 1,
+            }
+        elif proposal_id in {
+            "axis_scalar_min_shadowed_math_boundary",
+            "axis_scalar_max_shadowed_math_boundary",
+        }:
+            is_min = proposal_id == "axis_scalar_min_shadowed_math_boundary"
+            counterexample = {
+                "input": {"left": 2, "right": 5, "other": 1},
+                "left": (2 if is_min else 5) + 1,
+                "right": 1,
+            }
+        elif proposal_id in {
+            "axis_scalar_min_function_identity",
+            "axis_scalar_max_function_identity",
+        }:
+            is_min = proposal_id == "axis_scalar_min_function_identity"
+            counterexample = {
+                "input": {"left": 2, "right": 5, "other": 1},
+                "left": (2 if is_min else 5) + 1,
+                "right": (5 if is_min else 2) + 1,
+            }
+        elif proposal_id == "axis_scalar_abs_wrong_value_boundary":
             counterexample = {
                 "input": {"value": -3, "other": 4},
                 "left": 7,
@@ -3978,9 +4173,7 @@ def generate_axis_items(
                 surface, proposal_id
             ):
                 continue
-            if proposal_id.startswith("axis_scalar_abs_") and not scalar_abs_axis_supported(
-                surface, proposal_id
-            ):
+            if proposal_id.startswith("axis_scalar_") and not scalar_abs_axis_supported(surface, proposal_id):
                 continue
             if proposal_id.startswith("axis_own_property_") and not own_property_axis_supported(
                 surface, proposal_id
@@ -4141,6 +4334,10 @@ def generate_axis_items(
                 "axis_scalar_abs_sign_boundary",
                 "axis_scalar_abs_wrong_value_boundary",
                 "axis_scalar_abs_shadowed_math_boundary",
+                "axis_scalar_min_wrong_value_boundary",
+                "axis_scalar_max_wrong_value_boundary",
+                "axis_scalar_min_shadowed_math_boundary",
+                "axis_scalar_max_shadowed_math_boundary",
             }:
                 items.append(
                     make_axis_item(
@@ -4556,12 +4753,18 @@ def generate_scalar_abs_cross_items(
     ]
     items: list[dict] = []
     for left_surface, right_surface in cross_pairs(surfaces, cross_mode):
-        if generation_filter.include_proposal("axis_scalar_abs_function_identity"):
+        for proposal_id in (
+            "axis_scalar_abs_function_identity",
+            "axis_scalar_min_function_identity",
+            "axis_scalar_max_function_identity",
+        ):
+            if not generation_filter.include_proposal(proposal_id):
+                continue
             items.append(
                 make_axis_cross_item(
                     out_dir,
                     capabilities,
-                    "axis_scalar_abs_function_identity",
+                    proposal_id,
                     left_surface,
                     right_surface,
                     "equivalent",
@@ -4572,7 +4775,7 @@ def generate_scalar_abs_cross_items(
                 make_axis_cross_item(
                     out_dir,
                     capabilities,
-                    "axis_scalar_abs_function_identity",
+                    proposal_id,
                     left_surface,
                     right_surface,
                     "not_equivalent",
@@ -4583,6 +4786,8 @@ def generate_scalar_abs_cross_items(
         for proposal_id in (
             "axis_scalar_abs_sign_boundary",
             "axis_scalar_abs_wrong_value_boundary",
+            "axis_scalar_min_wrong_value_boundary",
+            "axis_scalar_max_wrong_value_boundary",
         ):
             if not generation_filter.include_proposal(proposal_id):
                 continue

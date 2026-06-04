@@ -540,6 +540,34 @@ fn scalar_abs_builtins_converge_cross_language_with_shadow_boundary() {
 }
 
 #[test]
+fn scalar_minmax_builtins_converge_cross_language_with_shadow_boundary() {
+    let i = Interner::new();
+    let py_min = "def f(left, right, other):\n    selected = left if left <= right else right\n    return selected + other\n";
+    let py_min_call =
+        "def f(left, right, other):\n    selected = min(left, right)\n    return selected + other\n";
+    let js_min = "function f(left, right, other) { const selected = Math.min(left, right); return selected + other; }";
+    let ts_min = "function f(left: number, right: number, other: number): number { const selected = Math.min(left, right); return selected + other; }";
+    let go_min = "package p\n\nimport \"math\"\n\nfunc F(left float64, right float64, other float64) float64 { selected := math.Min(left, right); return selected + other }\n";
+    let java_min = "class C { static int f(int left, int right, int other) { int selected = Math.min(left, right); return selected + other; } }\n";
+    let c_min = "#include <math.h>\n\ndouble f(double left, double right, double other) { double selected = fmin(left, right); return selected + other; }\n";
+    let py_max = "def f(left, right, other):\n    selected = left if left >= right else right\n    return selected + other\n";
+    let py_wrong_value =
+        "def f(left, right, other):\n    selected = min(left, other)\n    return selected + other\n";
+    let shadowed_js = "function f(left, right, other) { const Math = { min: function(_left, _right) { return 0; } }; const selected = Math.min(left, right); return selected + other; }";
+
+    let fp = value_fp(&i, py_min, Lang::Python);
+    assert_eq!(fp, value_fp(&i, py_min_call, Lang::Python));
+    assert_eq!(fp, value_fp(&i, js_min, Lang::JavaScript));
+    assert_eq!(fp, value_fp(&i, ts_min, Lang::TypeScript));
+    assert_eq!(fp, value_fp(&i, go_min, Lang::Go));
+    assert_eq!(fp, value_fp(&i, java_min, Lang::Java));
+    assert_eq!(fp, value_fp(&i, c_min, Lang::C));
+    assert_ne!(fp, value_fp(&i, py_max, Lang::Python));
+    assert_ne!(fp, value_fp(&i, py_wrong_value, Lang::Python));
+    assert_ne!(fp, value_fp(&i, shadowed_js, Lang::JavaScript));
+}
+
+#[test]
 fn conditional_abs_reduction_converges_with_aggregate() {
     // A branch in the per-element contribution is still a single reduction:
     // `total += (x < 0 ? -x : x)` must converge with aggregate `sum(abs(x))`.
@@ -1520,8 +1548,9 @@ fn value_graph_distinguishes_boolean_literals() {
 #[test]
 fn value_graph_distinguishes_free_callees() {
     // Calls to DIFFERENT global functions must not collapse: alpha-renaming assigned
-    // free names a positional cid by occurrence, so `foo(x)`/`bar(x)` and
-    // `max(a,b)`/`min(a,b)` (2-arg, not canonical builtins) became identical IL.
+    // free names a positional cid by occurrence, so `foo(x)`/`bar(x)` became
+    // identical IL. `max(a,b)`/`min(a,b)` must also remain distinct after their
+    // scalar-choice builtin canonicalization.
     let i = Interner::new();
     let foo = "def f(x):\n    return foo(x)\n";
     let bar = "def f(x):\n    return bar(x)\n";
