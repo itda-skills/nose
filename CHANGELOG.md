@@ -25,10 +25,11 @@ break.
   method forms plus Rust `if let Some(_)`/`if let None` pattern predicates, while
   preserving non-null direction and wrong-value boundaries.
 - Strict Type-4 proof facts for scalar numeric idioms across C, Go, Java,
-  JavaScript/TypeScript, Python, and embedded script surfaces. The detector now converges
+  JavaScript/TypeScript, Python, Ruby, and embedded script surfaces. The detector now converges
   explicit sign-normalizing conditionals with safe `abs`/`Math.abs`/`math.Abs` forms, and
-  scalar two-way `min`/`max` conditionals with proven builtin forms, while preserving
-  signed-identity, wrong-value, min/max direction, and shadowed-`Math` boundaries.
+  scalar two-way `min`/`max` conditionals with proven builtin forms including Ruby
+  `value.abs` and two-element `[left, right].min/.max`, while preserving signed-identity,
+  wrong-value, min/max direction, and shadowed-`Math` boundaries.
 - Strict Type-4 proof facts for map key-membership predicates across Go, Java, Python,
   Ruby, and Rust. The detector now converges `key in map`, map key APIs, Java
   `keySet().contains`, Rust `get(key).is_some`, and Go `_, ok := map[key]` while

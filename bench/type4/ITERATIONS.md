@@ -1393,3 +1393,55 @@ already handled the Go same-shape case because both sides used the explicit look
 fallback, but it missed Java/Rust API forms. The detector now has a shared strict
 `GetOrDefault(map, key, fallback)` proof fact and keeps all coordinate-changing adversaries
 separate.
+
+## Ruby numeric micro-batch coevolution: loops 185-192
+
+This loop adopts the faster cadence: one co-evolution loop can carry about three
+same-axis micro-frontiers, provided each micro-frontier has its own proposal prefix and the
+batch ends with a shared compact gate. The selected batch is `numeric_minmax_abs` for Ruby:
+`value.abs`, `[left, right].min`, and `[left, right].max`.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 185 | acceleration rule | switch from one frontier per loop to a same-axis micro-batch of roughly three additions | batch target: Ruby scalar `abs`, `min`, `max` |
+| 186 | prioritization correction | reject `property_type_guard` as detector-work for now because focused probing showed current strict positives already converge | next real miss chosen from `numeric_minmax_abs` |
+| 187 | baseline measurement | generate `axis_scalar*` focused corpus after adding Ruby cases, then scan with the previous release binary | baseline: 27/30 positives, 0/85 false merges; all 3 misses were Ruby |
+| 188 | generator expansion | include Ruby in scalar numeric support and emit `value.abs` plus two-element array `.min/.max` adversaries | focused corpus: 115 items, 30 positives, 85 hard negatives |
+| 189 | detector strengthening | canonicalize method-form `abs` to `Abs(value)` and literal two-element `.min/.max` to scalar `Min/Max(left, right)` | candidate focused: 30/30 positives, 0/85 false merges |
+| 190 | regression tests | extend scalar numeric cross-language tests with Ruby `abs`, `[left, right].min`, and `[left, right].max` | full equivalence suite: 114/114 passed |
+| 191 | compact axis gate | run `GATE=core AXIS=numeric_minmax_abs` on the release candidate | selected 73/215; 25/25 positives, 0/48 false merges, Raw 0 |
+| 192 | broad compact gate | run `GATE=core CROSS=all` to catch cross-axis regressions | selected 792/5101; 318/318 positives, 0/474 false merges, Raw 0 |
+
+Focused baseline/candidate comparison:
+
+```text
+baseline focused: items=115, positive=27/30, misses=3, false_merges=0/85
+candidate focused: items=115, positive=30/30, misses=0, false_merges=0/85
+delta: +3 positive hits, +0 false merges
+```
+
+Final release focused numeric gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_scalar NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 115
+positive recall: 30/30
+hard-negative false merges: 0/85
+Raw nodes: 0/4131
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 792/5101
+positive recall: 318/318
+hard-negative false merges: 0/474
+Raw nodes: 0/30656
+```
+
+Assessment: this batch changed the detector, not just the benchmark. The previous release
+missed exactly the three new Ruby numeric positives and already rejected the adversarial
+hard negatives. The candidate closes all three without increasing false merges. The faster
+cadence is viable when the batch stays inside one semantic axis and the end gate is compact
+and cross-axis.

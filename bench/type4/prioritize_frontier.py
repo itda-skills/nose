@@ -216,20 +216,10 @@ CANDIDATES = [
         2,
         2,
         "partially-covered",
-        "Aggregate abs is covered, but scalar min/max/abs expression facts are separate and cheap.",
-        "Generate scalar `abs`, `min`, and `max` positives with sign/order hard negatives.",
+        "Scalar min/max/abs expression facts are covered for C, Go, Java, JavaScript/TypeScript, Python, Ruby, and embedded script surfaces; Rust numeric methods remain the next compact strict slice.",
+        "Generate Rust scalar `.abs()`, `.min()`, and `.max()` positives with sign/order and wrong-value hard negatives.",
         (
-            pat("c_numeric_builtin", "c", r"\b(?:abs|labs|llabs|fabs|fabsf|fabsl|fmin|fmax)\s*\(", "high"),
-            pat("c_minmax_macro", "c", r"\b(?:min|max)\s*\(", "medium"),
-            pat("go_math_minmax_abs", "go", r"\bmath\.(?:Abs|Min|Max)\s*\(", "high"),
-            pat("go_builtin_minmax", "go", r"\b(?:min|max)\s*\(", "medium"),
-            pat("java_math_minmax_abs", "java", r"\bMath\.(?:abs|min|max)\s*\(", "high"),
-            pat("js_math_minmax_abs", "javascript", r"\bMath\.(?:abs|min|max)\s*\(", "high"),
-            pat("py_minmax_abs", "python", r"\b(?:abs|min|max)\s*\(", "high"),
-            pat("ruby_abs", "ruby", r"\.\s*abs\b", "high"),
-            pat("ruby_array_minmax", "ruby", r"\[(?:[^\]]+)\]\.\s*(?:min|max)\b", "medium"),
             pat("rust_numeric_method", "rust", r"\.\s*(?:abs|min|max)\s*\(", "high"),
-            pat("ts_math_minmax_abs", "typescript", r"\bMath\.(?:abs|min|max)\s*\(", "high"),
         ),
     ),
     Candidate(
@@ -238,9 +228,9 @@ CANDIDATES = [
         "language-family",
         2,
         3,
-        "open",
-        "Very frequent in JS-family repos, but the scope is narrow and should wait behind broader axes.",
-        "Generate `typeof obj.field === <type>` variants with dynamic-key and shadowing boundaries.",
+        "covered-current",
+        "Focused probing showed current strict property-type guard positives already converge; retained for real-corpus monitoring rather than ordinary detector work.",
+        "No ordinary loop; only reopen if new dynamic-key, aliasing, or shadowing boundaries expose a strict miss.",
         (
             pat("js_typeof_property", "javascript", r"typeof\s+[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[['\"][^'\"]+['\"]\])\s*={2,3}\s*['\"](?:string|number|boolean|function|object|undefined)['\"]"),
             pat("ts_typeof_property", "typescript", r"typeof\s+[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[['\"][^'\"]+['\"]\])\s*={2,3}\s*['\"](?:string|number|boolean|function|object|undefined)['\"]"),
@@ -312,14 +302,7 @@ PROBES_BY_CANDIDATE = {
         probe("ts_map_get_default_broad", "typescript", r"\.\s*get\s*\([^)]{1,100}\)\s*\?\?"),
     ),
     "numeric_minmax_abs": (
-        probe("c_numeric_broad", "c", r"\b(?:abs|labs|llabs|fabs|fabsf|fabsl|fmin|fmax|min|max)\s*\("),
-        probe("go_numeric_broad", "go", r"\b(?:math\.(?:Abs|Min|Max)|min|max)\s*\("),
-        probe("java_numeric_broad", "java", r"\bMath\.(?:abs|min|max)\s*\("),
-        probe("js_numeric_broad", "javascript", r"\bMath\.(?:abs|min|max)\s*\("),
-        probe("py_numeric_broad", "python", r"\b(?:abs|min|max)\s*\("),
-        probe("ruby_numeric_broad", "ruby", r"\.\s*abs\b|\[(?:[^\]]+)\]\.\s*(?:min|max)\b"),
         probe("rust_numeric_broad", "rust", r"\.\s*(?:abs|min|max)\s*\("),
-        probe("ts_numeric_broad", "typescript", r"\bMath\.(?:abs|min|max)\s*\("),
     ),
     "property_type_guard": (
         probe("js_typeof_property_broad", "javascript", r"typeof\s+[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[['\"][^'\"]+['\"]\])\s*={2,3}\s*['\"](?:string|number|boolean|function|object|undefined)['\"]"),
@@ -779,8 +762,8 @@ def markdown_report(result: dict, top: int) -> str:
             )
         )
     lines.extend(["", "## Recommended Order", ""])
-    open_rows = [row for row in result["ranking"] if row["status"] == "open"]
-    for idx, row in enumerate(open_rows[:top], start=1):
+    recommended_rows = [row for row in result["ranking"] if row["status"] != "covered-current"]
+    for idx, row in enumerate(recommended_rows[:top], start=1):
         langs = ", ".join(row["languages"])
         lines.extend(
             [

@@ -528,6 +528,7 @@ fn scalar_abs_builtins_converge_cross_language_with_shadow_boundary() {
     let ts = "function f(value: number, other: number): number { const magnitude = Math.abs(value); return magnitude + other; }";
     let go = "package p\n\nimport \"math\"\n\nfunc F(value float64, other float64) float64 { magnitude := math.Abs(value); return magnitude + other }\n";
     let java = "class C { static int f(int value, int other) { int magnitude = Math.abs(value); return magnitude + other; } }\n";
+    let ruby_abs = "def f(value, other)\n  magnitude = value.abs\n  magnitude + other\nend\n";
     let shadowed_js = "function f(Math, value, other) { const magnitude = Math.abs(value); return magnitude + other; }";
     let local_shadowed_js = "function f(value, other) { const Math = { abs: function(_value) { return 0; } }; const magnitude = Math.abs(value); return magnitude + other; }";
     let fp = value_fp(&i, py, Lang::Python);
@@ -535,6 +536,7 @@ fn scalar_abs_builtins_converge_cross_language_with_shadow_boundary() {
     assert_eq!(fp, value_fp(&i, ts, Lang::TypeScript));
     assert_eq!(fp, value_fp(&i, go, Lang::Go));
     assert_eq!(fp, value_fp(&i, java, Lang::Java));
+    assert_eq!(fp, value_fp(&i, ruby_abs, Lang::Ruby));
     assert_ne!(fp, value_fp(&i, shadowed_js, Lang::JavaScript));
     assert_ne!(fp, value_fp(&i, local_shadowed_js, Lang::JavaScript));
 }
@@ -550,7 +552,11 @@ fn scalar_minmax_builtins_converge_cross_language_with_shadow_boundary() {
     let go_min = "package p\n\nimport \"math\"\n\nfunc F(left float64, right float64, other float64) float64 { selected := math.Min(left, right); return selected + other }\n";
     let java_min = "class C { static int f(int left, int right, int other) { int selected = Math.min(left, right); return selected + other; } }\n";
     let c_min = "#include <math.h>\n\ndouble f(double left, double right, double other) { double selected = fmin(left, right); return selected + other; }\n";
+    let ruby_min =
+        "def f(left, right, other)\n  selected = [left, right].min\n  selected + other\nend\n";
     let py_max = "def f(left, right, other):\n    selected = left if left >= right else right\n    return selected + other\n";
+    let ruby_max =
+        "def f(left, right, other)\n  selected = [left, right].max\n  selected + other\nend\n";
     let py_wrong_value =
         "def f(left, right, other):\n    selected = min(left, other)\n    return selected + other\n";
     let shadowed_js = "function f(left, right, other) { const Math = { min: function(_left, _right) { return 0; } }; const selected = Math.min(left, right); return selected + other; }";
@@ -562,7 +568,12 @@ fn scalar_minmax_builtins_converge_cross_language_with_shadow_boundary() {
     assert_eq!(fp, value_fp(&i, go_min, Lang::Go));
     assert_eq!(fp, value_fp(&i, java_min, Lang::Java));
     assert_eq!(fp, value_fp(&i, c_min, Lang::C));
+    assert_eq!(fp, value_fp(&i, ruby_min, Lang::Ruby));
     assert_ne!(fp, value_fp(&i, py_max, Lang::Python));
+    assert_eq!(
+        value_fp(&i, py_max, Lang::Python),
+        value_fp(&i, ruby_max, Lang::Ruby)
+    );
     assert_ne!(fp, value_fp(&i, py_wrong_value, Lang::Python));
     assert_ne!(fp, value_fp(&i, shadowed_js, Lang::JavaScript));
 }

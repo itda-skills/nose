@@ -971,7 +971,18 @@ def scalar_abs_axis_supported(surface: Surface, proposal_id: str) -> bool:
         "axis_scalar_max_shadowed_math_boundary",
     }:
         return surface.key in JS_LIKE_SURFACES
-    return surface.key in {"python", "javascript", "typescript", "go", "java", "c", "vue", "svelte", "html"}
+    return surface.key in {
+        "python",
+        "javascript",
+        "typescript",
+        "go",
+        "java",
+        "c",
+        "ruby",
+        "vue",
+        "svelte",
+        "html",
+    }
 
 
 def axis_scalar_abs_variant(
@@ -1048,6 +1059,21 @@ def axis_scalar_abs_variant(
         src = f"""def {snake_name}(value, other):
     magnitude = {expr}
     return magnitude + other
+"""
+        return Variant("axis", src, snake_name)
+
+    if surface.key == "ruby":
+        expr = (
+            f"{target} >= 0 ? {target} : -{target}"
+            if mode == "conditional"
+            else target
+            if mode == "identity"
+            else f"{target}.abs"
+        )
+        src = f"""def {snake_name}(value, other)
+  magnitude = {expr}
+  magnitude + other
+end
 """
         return Variant("axis", src, snake_name)
 
@@ -1181,6 +1207,15 @@ def axis_scalar_minmax_variant(
         src = f"""def {snake_name}(left, right, other):
     selected = {expr}
     return selected + other
+"""
+        return Variant("axis", src, snake_name)
+
+    if surface.key == "ruby":
+        expr = f"{a} {cmp} {b} ? {a} : {b}" if not right else f"[{a}, {b}].{op}"
+        src = f"""def {snake_name}(left, right, other)
+  selected = {expr}
+  selected + other
+end
 """
         return Variant("axis", src, snake_name)
 

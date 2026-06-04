@@ -15,40 +15,39 @@ and whether a frontier is already covered.
 
 | rank | candidate | scope | status | score | raw | weighted | repos | languages | probe coverage | gaps | filtered |
 |---:|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | `numeric_minmax_abs` | all-language | partially-covered | 64.36 | 7037 | 6750.8 | 93 | 8 | 100.0% | 0 | 0 |
-| 2 | `null_option_presence` | all-language | partially-covered | 51.52 | 126057 | 122957.4 | 94 | 7 | 100.0% | 0 | 0 |
-| 3 | `membership_contains` | multi-language | partially-covered | 36.54 | 22979 | 13478.1 | 99 | 7 | 100.0% | 0 | 2798 |
-| 4 | `map_default_lookup` | multi-language | partially-covered | 20.30 | 4319 | 3645.3 | 73 | 7 | 100.0% | 0 | 0 |
-| 5 | `collection_empty_check` | all-language | covered-current | 9.04 | 21562 | 18145.0 | 98 | 8 | 100.0% | 0 | 1 |
-| 6 | `string_prefix_suffix` | all-language | covered-current | 7.20 | 6174 | 6174.0 | 97 | 7 | 100.0% | 0 | 0 |
-| 7 | `property_type_guard` | language-family | open | 5.01 | 435 | 435.0 | 19 | 2 | 100.0% | 0 | 0 |
-| 8 | `own_property_guard` | language-family | covered-current | 0.60 | 764 | 764.0 | 23 | 2 | 100.0% | 0 | 0 |
+| 1 | `null_option_presence` | all-language | partially-covered | 51.52 | 126057 | 122957.4 | 94 | 7 | 100.0% | 0 | 0 |
+| 2 | `membership_contains` | multi-language | partially-covered | 36.54 | 22979 | 13478.1 | 99 | 7 | 100.0% | 0 | 2798 |
+| 3 | `map_default_lookup` | multi-language | partially-covered | 20.30 | 4319 | 3645.3 | 73 | 7 | 100.0% | 0 | 0 |
+| 4 | `collection_empty_check` | all-language | covered-current | 9.04 | 21562 | 18145.0 | 98 | 8 | 100.0% | 0 | 1 |
+| 5 | `string_prefix_suffix` | all-language | covered-current | 7.20 | 6174 | 6174.0 | 97 | 7 | 100.0% | 0 | 0 |
+| 6 | `numeric_minmax_abs` | all-language | partially-covered | 5.14 | 425 | 425.0 | 15 | 1 | 100.0% | 0 | 0 |
+| 7 | `own_property_guard` | language-family | covered-current | 0.60 | 764 | 764.0 | 23 | 2 | 100.0% | 0 | 0 |
+| 8 | `property_type_guard` | language-family | covered-current | 0.40 | 435 | 435.0 | 19 | 2 | 100.0% | 0 | 0 |
 
 ## Recommended Order
 
-1. `property_type_guard`
-   - why: Very frequent in JS-family repos, but the scope is narrow and should wait behind broader axes.
-   - evidence: 435 raw / 435.0 weighted matches across 19 repos and 2 languages (javascript, typescript)
+1. `null_option_presence`
+   - why: Nullish default and null/none/nil/option presence predicates are covered; richer option unwrapping, pointer aliases, and effectful guard bodies remain open.
+   - evidence: 126057 raw / 122957.4 weighted matches across 94 repos and 7 languages (c, go, java, javascript, python, rust, typescript)
    - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 0
-   - next probe: Generate `typeof obj.field === <type>` variants with dynamic-key and shadowing boundaries.
+   - next probe: Continue with option unwrap/default and pointer-alias slices only when absence/presence coordinates are provable; keep truthy/falsy boundaries separate.
+2. `membership_contains`
+   - why: Static literal collection membership is covered; substring contains, map-key membership, dynamic sets, and ambiguous receiver contains must stay distinct.
+   - evidence: 22979 raw / 13478.1 weighted matches across 99 repos and 7 languages (go, java, javascript, python, ruby, rust, typescript)
+   - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 2798
+   - next probe: Continue with map-key and dynamic set membership only when receiver/key coordinates can be proven; keep substring and regex boundaries separate.
+3. `map_default_lookup`
+   - why: Literal Python/Ruby map lookup with fallback is covered; typed maps, object/map APIs, absent-key semantics, and mutation/effects remain open.
+   - evidence: 4319 raw / 3645.3 weighted matches across 73 repos and 7 languages (go, java, javascript, python, ruby, rust, typescript)
+   - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 0
+   - next probe: Continue with JS/TS object-or-Map defaults, then typed Go/Java/Rust maps only when receiver/key/default coordinates are provable.
+4. `numeric_minmax_abs`
+   - why: Scalar min/max/abs expression facts are covered for C, Go, Java, JavaScript/TypeScript, Python, Ruby, and embedded script surfaces; Rust numeric methods remain the next compact strict slice.
+   - evidence: 425 raw / 425.0 weighted matches across 15 repos and 1 languages (rust)
+   - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 0
+   - next probe: Generate Rust scalar `.abs()`, `.min()`, and `.max()` positives with sign/order and wrong-value hard negatives.
 
 ## Pattern Diagnostics
-
-### `numeric_minmax_abs`
-
-| pattern | language | precision | raw | weighted | repos |
-|---|---|---|---:|---:|---:|
-| `py_minmax_abs` | python | high | 2676 | 2676.0 | 23 |
-| `java_math_minmax_abs` | java | high | 2261 | 2261.0 | 15 |
-| `ts_math_minmax_abs` | typescript | high | 482 | 482.0 | 13 |
-| `rust_numeric_method` | rust | high | 425 | 425.0 | 15 |
-| `c_numeric_builtin` | c | high | 296 | 296.0 | 11 |
-| `go_builtin_minmax` | go | medium | 388 | 213.4 | 13 |
-| `js_math_minmax_abs` | javascript | high | 133 | 133.0 | 20 |
-| `go_math_minmax_abs` | go | high | 96 | 96.0 | 8 |
-| `c_minmax_macro` | c | medium | 142 | 78.1 | 10 |
-| `ruby_array_minmax` | ruby | medium | 106 | 58.3 | 12 |
-| `ruby_abs` | ruby | high | 32 | 32.0 | 8 |
 
 ### `null_option_presence`
 
@@ -121,12 +120,11 @@ and whether a frontier is already covered.
 | `rust_prefix_suffix` | rust | high | 559 | 559.0 | 16 |
 | `js_prefix_suffix` | javascript | high | 354 | 354.0 | 18 |
 
-### `property_type_guard`
+### `numeric_minmax_abs`
 
 | pattern | language | precision | raw | weighted | repos |
 |---|---|---|---:|---:|---:|
-| `ts_typeof_property` | typescript | high | 307 | 307.0 | 11 |
-| `js_typeof_property` | javascript | high | 128 | 128.0 | 11 |
+| `rust_numeric_method` | rust | high | 425 | 425.0 | 15 |
 
 ### `own_property_guard`
 
@@ -135,11 +133,15 @@ and whether a frontier is already covered.
 | `ts_own_property` | typescript | high | 450 | 450.0 | 15 |
 | `js_own_property` | javascript | high | 314 | 314.0 | 16 |
 
+### `property_type_guard`
+
+| pattern | language | precision | raw | weighted | repos |
+|---|---|---|---:|---:|---:|
+| `ts_typeof_property` | typescript | high | 307 | 307.0 | 11 |
+| `js_typeof_property` | javascript | high | 128 | 128.0 | 11 |
+
 
 ## Gap Samples
-
-### `numeric_minmax_abs`
-- no uncovered broad-probe samples
 
 ### `null_option_presence`
 - no uncovered broad-probe samples
@@ -156,17 +158,17 @@ and whether a frontier is already covered.
 ### `string_prefix_suffix`
 - no uncovered broad-probe samples
 
-### `property_type_guard`
+### `numeric_minmax_abs`
 - no uncovered broad-probe samples
 
 ### `own_property_guard`
 - no uncovered broad-probe samples
 
+### `property_type_guard`
+- no uncovered broad-probe samples
+
 
 ## Filtered Probe Samples
-
-### `numeric_minmax_abs`
-- no filtered broad-probe samples
 
 ### `null_option_presence`
 - no filtered broad-probe samples
@@ -187,21 +189,17 @@ and whether a frontier is already covered.
 ### `string_prefix_suffix`
 - no filtered broad-probe samples
 
-### `property_type_guard`
+### `numeric_minmax_abs`
 - no filtered broad-probe samples
 
 ### `own_property_guard`
 - no filtered broad-probe samples
 
+### `property_type_guard`
+- no filtered broad-probe samples
+
 
 ## Audit Repo Samples
-
-### `numeric_minmax_abs`
-- `sympy` (heldout, Python; python): 2128 raw / 2128.0 weighted
-- `libgdx` (heldout, Java; c, java): 926 raw / 921.5 weighted
-- `h2database` (heldout, Java; java, javascript): 332 raw / 332.0 weighted
-- `graphhopper` (dev, Java; java, javascript, python): 313 raw / 313.0 weighted
-- `netty` (dev, Java; java, javascript): 285 raw / 285.0 weighted
 
 ### `null_option_presence`
 - `vim` (heldout, C; c, python): 13453 raw / 13453.0 weighted
@@ -238,12 +236,12 @@ and whether a frontier is already covered.
 - `esbuild` (heldout, Go; go, javascript, typescript): 258 raw / 258.0 weighted
 - `nats-server` (dev, Go; go): 244 raw / 244.0 weighted
 
-### `property_type_guard`
-- `jest` (dev, TypeScript; javascript, typescript): 89 raw / 89.0 weighted
-- `drizzle-orm` (dev, TypeScript; typescript): 76 raw / 76.0 weighted
-- `prettier` (dev, TypeScript; javascript): 60 raw / 60.0 weighted
-- `pixijs` (heldout, TypeScript; javascript, typescript): 58 raw / 58.0 weighted
-- `zod` (dev, TypeScript; typescript): 41 raw / 41.0 weighted
+### `numeric_minmax_abs`
+- `nushell` (dev, Rust; rust): 113 raw / 113.0 weighted
+- `image` (dev, Rust; rust): 90 raw / 90.0 weighted
+- `meilisearch` (heldout, Rust; rust): 61 raw / 61.0 weighted
+- `alacritty` (dev, Rust; rust): 44 raw / 44.0 weighted
+- `sled` (heldout, Rust; rust): 42 raw / 42.0 weighted
 
 ### `own_property_guard`
 - `esbuild` (heldout, Go; javascript, typescript): 147 raw / 147.0 weighted
@@ -252,15 +250,15 @@ and whether a frontier is already covered.
 - `trpc` (heldout, TypeScript; typescript): 66 raw / 66.0 weighted
 - `prettier` (dev, TypeScript; javascript, typescript): 54 raw / 54.0 weighted
 
+### `property_type_guard`
+- `jest` (dev, TypeScript; javascript, typescript): 89 raw / 89.0 weighted
+- `drizzle-orm` (dev, TypeScript; typescript): 76 raw / 76.0 weighted
+- `prettier` (dev, TypeScript; javascript): 60 raw / 60.0 weighted
+- `pixijs` (heldout, TypeScript; javascript, typescript): 58 raw / 58.0 weighted
+- `zod` (dev, TypeScript; typescript): 41 raw / 41.0 weighted
+
 
 ## Extraction Samples
-
-### `numeric_minmax_abs`
-- `alacritty/alacritty/src/window_context.rs:271` (rust, rust_numeric_method): if (old_config.cursor.thickness() - self.config.cursor.thickness()).abs() > f32::EPSILON {
-- `alacritty/alacritty/src/event.rs:1747` (rust, rust_numeric_method): let font_delta = (delta.abs() / FONT_SIZE_STEP).floor() * FONT_SIZE_STEP * delta.signum();
-- `alacritty/alacritty/src/renderer/rects.rs:98` (rust, rust_numeric_method): Flags::UNDERCURL => (metrics.descent, metrics.descent.abs(), RectKind::Undercurl),
-- `alacritty/alacritty/src/renderer/rects.rs:104` (rust, rust_numeric_method): (metrics.descent, metrics.descent.abs(), RectKind::DottedUnderline)
-- `alacritty/alacritty/src/renderer/rects.rs:136` (rust, rust_numeric_method): thickness = thickness.max(1.);
 
 ### `null_option_presence`
 - `alacritty/alacritty/build.rs:10` (rust, rust_if_let_some): if let Some(commit_hash) = commit_hash() {
@@ -297,12 +295,12 @@ and whether a frontier is already covered.
 - `alacritty/alacritty/src/config/bindings.rs:736` (rust, rust_prefix_suffix): _ if keycode.starts_with("Dead") => {
 - `alacritty/alacritty/src/display/color.rs:287` (rust, rust_prefix_suffix): let chars = if s.starts_with("0x") && s.len() == 8 {
 
-### `property_type_guard`
-- `axios/tests/smoke/esm/tests/fetch.smoke.test.js:52` (javascript, js_typeof_property): isRequest && typeof input.clone === 'function'
-- `axios/tests/smoke/cjs/tests/fetch.smoke.test.cjs:55` (javascript, js_typeof_property): isRequest && typeof input.clone === 'function'
-- `axios/tests/unit/adapters/http.test.js:730` (javascript, js_typeof_property): const isZstdSupported = typeof zlib.createZstdDecompress === 'function' &&
-- `axios/tests/unit/adapters/http.test.js:731` (javascript, js_typeof_property): typeof zlib.zstdCompress === 'function';
-- `axios/tests/module/cjs/tests/helpers/fixture.cjs:19` (javascript, js_typeof_property): if (typeof fs.rmSync === 'function') {
+### `numeric_minmax_abs`
+- `alacritty/alacritty/src/window_context.rs:271` (rust, rust_numeric_method): if (old_config.cursor.thickness() - self.config.cursor.thickness()).abs() > f32::EPSILON {
+- `alacritty/alacritty/src/event.rs:1747` (rust, rust_numeric_method): let font_delta = (delta.abs() / FONT_SIZE_STEP).floor() * FONT_SIZE_STEP * delta.signum();
+- `alacritty/alacritty/src/renderer/rects.rs:98` (rust, rust_numeric_method): Flags::UNDERCURL => (metrics.descent, metrics.descent.abs(), RectKind::Undercurl),
+- `alacritty/alacritty/src/renderer/rects.rs:104` (rust, rust_numeric_method): (metrics.descent, metrics.descent.abs(), RectKind::DottedUnderline)
+- `alacritty/alacritty/src/renderer/rects.rs:136` (rust, rust_numeric_method): thickness = thickness.max(1.);
 
 ### `own_property_guard`
 - `axios/tests/unit/prototypePollution.test.js:71` (javascript, js_own_property): assert.strictEqual(result.hasOwnProperty('__proto__'), false);
@@ -310,3 +308,10 @@ and whether a frontier is already covered.
 - `axios/tests/unit/prototypePollution.test.js:85` (javascript, js_own_property): assert.strictEqual(result.hasOwnProperty('prototype'), false);
 - `axios/tests/unit/prototypePollution.test.js:101` (javascript, js_own_property): assert.strictEqual(result.headers.hasOwnProperty('__proto__'), false);
 - `axios/tests/unit/prototypePollution.test.js:117` (javascript, js_own_property): assert.strictEqual(result.headers.hasOwnProperty('constructor'), false);
+
+### `property_type_guard`
+- `axios/tests/smoke/esm/tests/fetch.smoke.test.js:52` (javascript, js_typeof_property): isRequest && typeof input.clone === 'function'
+- `axios/tests/smoke/cjs/tests/fetch.smoke.test.cjs:55` (javascript, js_typeof_property): isRequest && typeof input.clone === 'function'
+- `axios/tests/unit/adapters/http.test.js:730` (javascript, js_typeof_property): const isZstdSupported = typeof zlib.createZstdDecompress === 'function' &&
+- `axios/tests/unit/adapters/http.test.js:731` (javascript, js_typeof_property): typeof zlib.zstdCompress === 'function';
+- `axios/tests/module/cjs/tests/helpers/fixture.cjs:19` (javascript, js_typeof_property): if (typeof fs.rmSync === 'function') {
