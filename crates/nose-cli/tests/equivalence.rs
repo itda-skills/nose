@@ -1619,6 +1619,18 @@ fn collection_membership_set_construction_converges_with_boundaries() {
         "function f(value, other) { return [\"green\", \"blue\"].some((item) => item === value); }";
     let js_nan_includes = "function f(value, other) { return [NaN].includes(value); }";
     let js_nan_some = "function f(value, other) { return [NaN].some((item) => item === value); }";
+    let py_absence = "def f(value, other):\n    return value not in [\"red\", \"blue\"]\n";
+    let js_not_includes =
+        "function f(value, other) { return ![\"red\", \"blue\"].includes(value); }";
+    let js_array_every_absence =
+        "function f(value, other) { return [\"red\", \"blue\"].every((item) => item !== value); }";
+    let ts_array_every_absence = "function f(value: string, other: string): boolean { return [\"red\", \"blue\"].every((item: string) => item !== value); }";
+    let js_array_every_wrong_element =
+        "function f(value, other) { return [\"red\", \"blue\"].every((item) => item !== other); }";
+    let js_array_every_wrong_collection =
+        "function f(value, other) { return [\"green\", \"blue\"].every((item) => item !== value); }";
+    let js_nan_not_includes = "function f(value, other) { return ![NaN].includes(value); }";
+    let js_nan_every = "function f(value, other) { return [NaN].every((item) => item !== value); }";
     let js_shadowed_set =
         "function f(Set, value, other) { return new Set([\"red\", \"blue\"]).has(value); }";
     let js_module_set_mutated = "const VALUES = new Set([\"red\", \"blue\"]);\nVALUES.add(\"green\");\nfunction f(value, other) { return VALUES.has(value); }";
@@ -1679,6 +1691,29 @@ fn collection_membership_set_construction_converges_with_boundaries() {
     assert_ne!(
         value_fp(&i, js_nan_includes, Lang::JavaScript),
         value_fp(&i, js_nan_some, Lang::JavaScript)
+    );
+    let absence_fp = value_fp(&i, py_absence, Lang::Python);
+    assert_ne!(literal_fp, absence_fp);
+    assert_eq!(absence_fp, value_fp(&i, js_not_includes, Lang::JavaScript));
+    assert_eq!(
+        absence_fp,
+        value_fp(&i, js_array_every_absence, Lang::JavaScript)
+    );
+    assert_eq!(
+        absence_fp,
+        value_fp(&i, ts_array_every_absence, Lang::TypeScript)
+    );
+    assert_ne!(
+        absence_fp,
+        value_fp(&i, js_array_every_wrong_element, Lang::JavaScript)
+    );
+    assert_ne!(
+        absence_fp,
+        value_fp(&i, js_array_every_wrong_collection, Lang::JavaScript)
+    );
+    assert_ne!(
+        value_fp(&i, js_nan_not_includes, Lang::JavaScript),
+        value_fp(&i, js_nan_every, Lang::JavaScript)
     );
     assert_ne!(literal_fp, value_fp(&i, js_shadowed_set, Lang::JavaScript));
     assert_ne!(

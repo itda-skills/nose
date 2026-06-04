@@ -2865,6 +2865,15 @@ impl<'a> Builder<'a> {
                             );
                         }
                     }
+                    if code == REDUCE_ALL && self.is_static_non_float_collection_expr(kids[0]) {
+                        if let Some((element, collection)) =
+                            self.static_literal_absence_predicate(pred)
+                        {
+                            let membership =
+                                self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]);
+                            return Some(self.mk(ValOp::Un(Op::Not as u32), vec![membership]));
+                        }
+                    }
                     pred
                 } else {
                     let av = self.eval(*kids.first()?, env);
@@ -3061,6 +3070,20 @@ impl<'a> Builder<'a> {
     fn static_literal_membership_predicate(&self, pred: ValueId) -> Option<(ValueId, ValueId)> {
         let node = &self.nodes[pred as usize];
         if !matches!(node.op, ValOp::Bin(o) if o == Op::Eq as u32) || node.args.len() != 2 {
+            return None;
+        }
+        if let Some(collection) = self.static_literal_elem_collection(node.args[0]) {
+            return Some((node.args[1], collection));
+        }
+        if let Some(collection) = self.static_literal_elem_collection(node.args[1]) {
+            return Some((node.args[0], collection));
+        }
+        None
+    }
+
+    fn static_literal_absence_predicate(&self, pred: ValueId) -> Option<(ValueId, ValueId)> {
+        let node = &self.nodes[pred as usize];
+        if !matches!(node.op, ValOp::Bin(o) if o == Op::Ne as u32) || node.args.len() != 2 {
             return None;
         }
         if let Some(collection) = self.static_literal_elem_collection(node.args[0]) {

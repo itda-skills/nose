@@ -2668,3 +2668,76 @@ shared one proof kernel, so the implementation remained small while the focused 
 grew enough to catch over-generalization. The key guard is the source-level literal
 check: without it, JavaScript `includes`/`some` can diverge on `NaN`; with it, static
 string/int/bool/null literal membership remains an exact Type-4 claim.
+
+## Static array absence membership: loops 301-306
+
+This macro-loop keeps the batch-3 cadence on the same high-frequency membership frontier,
+but opens the negated coordinate rather than another positive membership spelling. A
+static literal JS-like array predicate
+`["red", "blue"].every(item => item !== value)` is exact-equivalent to `value not in
+["red", "blue"]` and `!["red", "blue"].includes(value)` when the collection is a direct
+non-float literal sequence.
+
+The batch opens three adjacent proposal IDs:
+
+- `axis_membership_array_every_absence_identity`;
+- `axis_membership_array_every_wrong_element_boundary`;
+- `axis_membership_array_every_wrong_collection_boundary`.
+
+The proof is the dual of the previous `some` rule: source-gated
+`All(Elem(collection) != value)` canonicalizes to `!In(value, collection)`. It is not a
+general `.every` theorem. Dynamic receivers and the JavaScript `NaN` edge stay outside
+strict Type-4 because `includes` uses SameValueZero while `!==` does not.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 301 | batch frontier selection | group static JS-like array `.every` absence plus wrong-element/wrong-collection boundaries under `axis_membership_array_every_*` | focused corpus: 18 positives, 54 hard negatives |
+| 302 | baseline measurement | scan the focused batch with the previous release detector | baseline: 0/18 positives, 0/54 false merges |
+| 303 | generator adversary | add cross-surface Python/Ruby/JS/TS negated-membership references against JS/TS/Vue/Svelte/HTML `.every` forms | semantic mutation and hard boundaries both held out |
+| 304 | detector strengthening | canonicalize source-gated `All(Elem(static literal collection) != value)` to `!In(value, collection)` | candidate focused: 18/18 positives, 0/54 false merges |
+| 305 | strict regression tests | extend value-graph and CLI membership tests with negated-membership family and `NaN` boundary | targeted tests passed |
+| 306 | release focused/core gates | build release and run focused array-every, membership core, and all-cross core gates | focused 18/18, 0/54; membership core 83/83, 0/240; all-cross 466/466, 0/891 |
+
+Focused release/candidate comparison:
+
+```text
+previous release:  items=72, positive=0/18, false_merges=0/54
+candidate release: items=72, positive=18/18, false_merges=0/54
+delta:             +18 positive hits, +0 false merges
+```
+
+Final release focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_membership_array_every CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 72
+positive recall: 18/18
+hard-negative false merges: 0/54
+Raw nodes: 0/2212
+```
+
+Final release literal-membership core gate:
+
+```text
+GATE=core AXIS=literal_collection_membership CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 323/710
+positive recall: 83/83
+hard-negative false merges: 0/240
+Raw nodes: 0/9565
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 1357/5970
+positive recall: 466/466
+hard-negative false merges: 0/891
+Raw nodes: 0/50572
+```
+
+Assessment: this confirms the batch-3 loop can open a semantic dual without loosening
+strictness. The generator made the wrong-element and wrong-collection attacks explicit,
+and the detector rule stayed anchored to the same literal-source guard as `array.some`.
+The result extends the exact Type-4 frontier for absence predicates while keeping
+membership, non-membership, and JavaScript `NaN` behavior separated.

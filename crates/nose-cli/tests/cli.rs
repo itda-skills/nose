@@ -619,6 +619,26 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
     )
     .unwrap();
     fs::write(
+        dir.join("not_membership.py"),
+        "def not_membership(value, other):\n    return value not in [\"red\", \"blue\"]\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("not_includes.js"),
+        "function notIncludes(value, other) {\n  return ![\"red\", \"blue\"].includes(value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("array_every.js"),
+        "function arrayEvery(value, other) {\n  return [\"red\", \"blue\"].every((item) => item !== value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("array_every.ts"),
+        "function arrayEvery(value: string, other: string): boolean {\n  return [\"red\", \"blue\"].every((item: string) => item !== value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("module_list.java"),
         "import java.util.List;\n\nclass ModuleList {\n    static final List<String> VALUES = List.of(\"red\", \"blue\");\n\n    static boolean moduleList(String value, String other) {\n        return VALUES.contains(value);\n    }\n}\n",
     )
@@ -671,6 +691,16 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
     fs::write(
         dir.join("array_some_wrong_collection.ts"),
         "function arraySomeWrongCollection(value: string, other: string): boolean {\n  return [\"purple\", \"orange\"].some((item: string) => item === value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("array_every_wrong_element.js"),
+        "function arrayEveryWrongElement(value, other, third) {\n  return [\"red\", \"blue\"].every((item) => item !== third);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("array_every_wrong_collection.ts"),
+        "function arrayEveryWrongCollection(value: string, other: string): boolean {\n  return [\"purple\", \"orange\"].every((item: string) => item !== value);\n}\n",
     )
     .unwrap();
     fs::write(
@@ -747,6 +777,10 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "module_set.ts",
         "array_some.js",
         "array_some.ts",
+        "not_membership.py",
+        "not_includes.js",
+        "array_every.js",
+        "array_every.ts",
         "module_list.java",
         "go_slices_package.go",
         "go_slices_alias.go",
@@ -765,6 +799,8 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "wrong_collection.js",
         "array_some_wrong_element.js",
         "array_some_wrong_collection.ts",
+        "array_every_wrong_element.js",
+        "array_every_wrong_collection.ts",
         "substring.rs",
         "module_set_mutated.js",
         "module_set_shadowed.ts",
@@ -777,6 +813,28 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         assert!(
             !semantic_text.contains(unexpected),
             "semantic mode must preserve literal membership boundaries: {semantic}"
+        );
+    }
+    let absence_family = semantic_families
+        .iter()
+        .map(serde_json::Value::to_string)
+        .find(|family| family.contains("not_membership.py"))
+        .unwrap_or_else(|| {
+            panic!("semantic mode should include negated membership family: {semantic}")
+        });
+    for expected in ["not_includes.js", "array_every.js", "array_every.ts"] {
+        assert!(
+            absence_family.contains(expected),
+            "semantic mode should include negated membership {expected}: {semantic}"
+        );
+    }
+    for unexpected in [
+        "array_every_wrong_element.js",
+        "array_every_wrong_collection.ts",
+    ] {
+        assert!(
+            !absence_family.contains(unexpected),
+            "semantic mode must preserve negated membership boundaries: {semantic}"
         );
     }
 
