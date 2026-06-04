@@ -493,6 +493,21 @@ impl<'a> Builder<'a> {
         Some(collection)
     }
 
+    fn proven_rust_vec_macro_collection_value(&mut self, value: ValueId) -> Option<ValueId> {
+        if self.il.meta.lang != Lang::Rust {
+            return None;
+        }
+        let node = &self.nodes[value as usize];
+        if !matches!(node.op, ValOp::Call(0)) || node.args.is_empty() {
+            return None;
+        }
+        let args = node.args.clone();
+        if !self.is_free_name_value(args[0], "vec") || self.file_defines_name("vec") {
+            return None;
+        }
+        Some(self.mk(ValOp::Seq(1), args[1..].to_vec()))
+    }
+
     fn is_free_java_std_name(&self, value: ValueId, name: &str) -> bool {
         self.is_free_name_value(value, name) && !self.java_file_defines_type_name(name)
     }
@@ -516,6 +531,37 @@ impl<'a> Builder<'a> {
             self.nodes[node.args[0] as usize].op,
             ValOp::Const(k) if k == stable_string_const_key(module)
         )
+    }
+
+    fn file_imports_namespace(&self, expr: NodeId, module: &str) -> bool {
+        if self.il.meta.lang != Lang::Go {
+            return false;
+        }
+        let Some(alias) = self.node_symbol(expr) else {
+            return false;
+        };
+        self.top_level_statements().iter().any(|&stmt| {
+            if self.assignment_name(stmt) != Some(alias) {
+                return false;
+            }
+            let kids = self.il.children(stmt);
+            if kids.len() != 2 || self.il.kind(kids[1]) != NodeKind::Seq {
+                return false;
+            }
+            let Payload::Name(seq_name) = self.il.node(kids[1]).payload else {
+                return false;
+            };
+            if self.interner.resolve(seq_name) != "import_namespace" {
+                return false;
+            }
+            let Some(&module_node) = self.il.children(kids[1]).first() else {
+                return false;
+            };
+            matches!(
+                self.il.node(module_node).payload,
+                Payload::LitStr(hash) if hash == stable_symbol_hash(module)
+            )
+        })
     }
 
     fn java_file_defines_type_name(&self, name: &str) -> bool {
@@ -547,6 +593,113 @@ impl<'a> Builder<'a> {
         self.proven_set_constructor_collection(value)
             .or_else(|| self.proven_java_collection_factory_value(value))
             .or_else(|| self.proven_python_collection_factory_value(value))
+            .or_else(|| self.proven_rust_vec_macro_collection_value(value))
+    }
+
+    fn proven_collection_expr(
+        &mut self,
+        expr: NodeId,
+        env: &FxHashMap<u32, ValueId>,
+    ) -> Option<ValueId> {
+        let value = self.eval(expr, env);
+        self.proven_collection_value(value)
+            .or_else(|| self.proven_local_collection_binding_value(expr, env))
+    }
+
+    fn proven_local_collection_binding_value(
+        &mut self,
+        expr: NodeId,
+        env: &FxHashMap<u32, ValueId>,
+    ) -> Option<ValueId> {
+        if self.il.kind(expr) != NodeKind::Var {
+            return None;
+        }
+        let Payload::Cid(cid) = self.il.node(expr).payload else {
+            return None;
+        };
+        if self.local_binding_mutated(cid) {
+            return None;
+        }
+        let rhs = self.local_binding_initializer(cid)?;
+        let value = self.eval(rhs, env);
+        self.proven_collection_value(value)
+    }
+
+    fn local_binding_initializer(&self, cid: u32) -> Option<NodeId> {
+        let mut rhs = None;
+        for (idx, node) in self.il.nodes.iter().enumerate() {
+            if node.kind != NodeKind::Assign {
+                continue;
+            }
+            let assign = NodeId(idx as u32);
+            let kids = self.il.children(assign);
+            if kids.len() != 2 {
+                continue;
+            }
+            if self.node_refers_to_cid(kids[0], cid) {
+                if rhs.is_some() {
+                    return None;
+                }
+                rhs = Some(kids[1]);
+            } else if self.node_contains_cid(kids[0], cid) {
+                return None;
+            }
+        }
+        rhs
+    }
+
+    fn local_binding_mutated(&self, cid: u32) -> bool {
+        self.il
+            .nodes
+            .iter()
+            .enumerate()
+            .any(|(idx, node)| match node.kind {
+                NodeKind::Field => self
+                    .field_mutates_cid(NodeId(idx as u32), cid)
+                    .unwrap_or(false),
+                _ => false,
+            })
+    }
+
+    fn field_mutates_cid(&self, field: NodeId, cid: u32) -> Option<bool> {
+        let Payload::Name(method) = self.il.node(field).payload else {
+            return Some(false);
+        };
+        if !Self::mutating_method_name(self.interner.resolve(method)) {
+            return Some(false);
+        }
+        let receiver = self.il.children(field).first().copied()?;
+        Some(self.node_refers_to_cid(receiver, cid))
+    }
+
+    fn mutating_method_name(method: &str) -> bool {
+        matches!(
+            method,
+            "add"
+                | "addAll"
+                | "append"
+                | "delete"
+                | "clear"
+                | "compute"
+                | "computeIfAbsent"
+                | "computeIfPresent"
+                | "merge"
+                | "pop"
+                | "push"
+                | "put"
+                | "putAll"
+                | "remove"
+                | "removeAll"
+                | "removeIf"
+                | "replace"
+                | "replaceAll"
+                | "retainAll"
+                | "shift"
+                | "sort"
+                | "splice"
+                | "unshift"
+                | "set"
+        )
     }
 
     fn proven_map_constructor_entries(&mut self, value: ValueId) -> Option<ValueId> {
@@ -805,21 +958,25 @@ impl<'a> Builder<'a> {
                 return Some(self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]));
             }
             let receiver_value = self.eval(receiver, env);
-            if let Some(collection) = self.proven_collection_value(receiver_value) {
+            if let Some(collection) = self
+                .proven_collection_value(receiver_value)
+                .or_else(|| self.proven_local_collection_binding_value(receiver, env))
+            {
                 return Some(self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]));
             }
             None
         } else if method == "Contains" && kids.len() == 3 {
             let receiver = receiver?;
-            if !self.is_import_namespace_expr(receiver, "slices", env) {
+            if !self.is_import_namespace_expr(receiver, "slices", env)
+                && !self.file_imports_namespace(receiver, "slices")
+            {
                 return None;
             }
             let element = self.eval(kids[2], env);
             let collection = if self.is_collection_param_expr(kids[1]) {
                 self.eval_membership_collection(kids[1], env)
             } else {
-                let value = self.eval(kids[1], env);
-                self.proven_collection_value(value)?
+                self.proven_collection_expr(kids[1], env)?
             };
             Some(self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]))
         } else {
@@ -1448,33 +1605,7 @@ impl<'a> Builder<'a> {
         let Payload::Name(method) = self.il.node(field).payload else {
             return Some(false);
         };
-        if !matches!(
-            self.interner.resolve(method),
-            "add"
-                | "addAll"
-                | "append"
-                | "delete"
-                | "clear"
-                | "compute"
-                | "computeIfAbsent"
-                | "computeIfPresent"
-                | "merge"
-                | "pop"
-                | "push"
-                | "put"
-                | "putAll"
-                | "remove"
-                | "removeAll"
-                | "removeIf"
-                | "replace"
-                | "replaceAll"
-                | "retainAll"
-                | "shift"
-                | "sort"
-                | "splice"
-                | "unshift"
-                | "set"
-        ) {
+        if !Self::mutating_method_name(self.interner.resolve(method)) {
             return Some(false);
         }
         let receiver = self.il.children(field).first().copied()?;
@@ -1482,14 +1613,14 @@ impl<'a> Builder<'a> {
     }
 
     fn node_refers_to_symbol(&self, node: NodeId, name: Symbol) -> bool {
+        self.node_symbol(node).is_some_and(|symbol| symbol == name)
+    }
+
+    fn node_symbol(&self, node: NodeId) -> Option<Symbol> {
         match self.il.node(node).payload {
-            Payload::Name(symbol) => symbol == name,
-            Payload::Cid(cid) => self
-                .il
-                .cid_names
-                .get(cid as usize)
-                .is_some_and(|&symbol| symbol == name),
-            _ => false,
+            Payload::Name(symbol) => Some(symbol),
+            Payload::Cid(cid) => self.il.cid_names.get(cid as usize).copied(),
+            _ => None,
         }
     }
 
@@ -1500,6 +1631,19 @@ impl<'a> Builder<'a> {
                 .children(node)
                 .iter()
                 .any(|&child| self.node_contains_symbol(child, name))
+    }
+
+    fn node_refers_to_cid(&self, node: NodeId, cid: u32) -> bool {
+        matches!(self.il.node(node).payload, Payload::Cid(current) if current == cid)
+    }
+
+    fn node_contains_cid(&self, node: NodeId, cid: u32) -> bool {
+        self.node_refers_to_cid(node, cid)
+            || self
+                .il
+                .children(node)
+                .iter()
+                .any(|&child| self.node_contains_cid(child, cid))
     }
 
     fn immutable_binding_safe(&self, node: NodeId, env: &FxHashMap<u32, ValueId>) -> bool {
@@ -3489,7 +3633,10 @@ impl<'a> Builder<'a> {
         }
         if self.il.kind(collection) != NodeKind::Seq {
             let value = self.eval(collection, env);
-            return self.proven_collection_value(value).unwrap_or(value);
+            return self
+                .proven_collection_value(value)
+                .or_else(|| self.proven_local_collection_binding_value(collection, env))
+                .unwrap_or(value);
         }
         let kids = self.il.children(collection).to_vec();
         let items: Vec<ValueId> = kids.iter().map(|&k| self.eval(k, env)).collect();

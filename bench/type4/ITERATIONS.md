@@ -3417,3 +3417,73 @@ Assessment: this is the right acceleration pattern. Three related positives move
 one implementation batch, but the detector still gained only one narrow proof fact:
 unshadowed Python builtin collection factories over already-proven static collections.
 The batch added coverage without trusting arbitrary dynamic receivers or shadowed names.
+
+## Function-local constructed collection membership: loops 357-361
+
+This loop keeps the batch-3 cadence on `literal_collection_membership`, but moves from
+module/package bindings to function-local constructed bindings. The shared invariant is:
+a local collection binding can be used as the membership collection only when the
+initializer is a proven static collection construction and the binding is not reassigned
+or mutated before the membership predicate. The batch opens:
+
+- `axis_membership_local_go_slice_identity`;
+- `axis_membership_local_java_list_identity`;
+- `axis_membership_local_rust_vec_identity`.
+
+The generator also adds wrong-element, wrong-collection, and local-mutation hard
+boundaries. This matters because the local binding proof is intentionally narrower than
+"any variable used as a receiver": appending/pushing/adding to the local collection
+invalidates the original static coordinate.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 357 | batch frontier selection | group Go local slice, Java local `List.of`, and Rust local `vec!` membership under `axis_membership_local_*` | focused corpus: 12 positives, 21 hard negatives |
+| 358 | baseline measurement | scan the focused batch with the previous release detector | baseline: 4/12 positives, 0/21 false merges; Java local already converged, Go/Rust missed |
+| 359 | detector strengthening | canonicalize import-proven Go `slices.Contains` over local collection args, prove Rust `vec![...]` as a collection construction, and add local single-assignment collection fallback with mutation rejection | focused: 12/12 positives, 0/21 false merges |
+| 360 | strict regression tests | add value-graph and CLI positives plus Go/Java local mutation boundaries | targeted tests passed |
+| 361 | release focused/core gates | build release and run focused, membership core, and all-cross core gates | focused 12/12, 0/21; membership core 140/140, 0/341; all-cross 542/542, 0/1035 |
+
+Focused release/candidate comparison:
+
+```text
+previous release:  items=33, positive=4/12, false_merges=0/21
+candidate release: items=33, positive=12/12, false_merges=0/21
+delta:             +8 positive hits, +0 false merges
+```
+
+Final release focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_membership_local_ CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 33
+positive recall: 12/12
+hard-negative false merges: 0/21
+Raw nodes: 0/1062
+```
+
+Final release membership core gate:
+
+```text
+GATE=core AXIS=literal_collection_membership CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 481/1094
+positive recall: 140/140
+hard-negative false merges: 0/341
+Raw nodes: 0/14355
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 1577/6418
+positive recall: 542/542
+hard-negative false merges: 0/1035
+Raw nodes: 0/57814
+```
+
+Assessment: this is a real detector expansion, not just benchmark growth. Java local
+`List.of` was already handled by existing temporary inlining, but the same focused batch
+exposed two true misses: Go `slices.Contains` over a local slice binding and Rust
+`vec![...]` local membership. The final detector now carries an import-aware Go
+canonicalization and a Rust `vec!` construction fact while keeping local mutation,
+wrong-element, and wrong-collection boundaries closed.

@@ -1691,9 +1691,12 @@ fn collection_membership_set_construction_converges_with_boundaries() {
     let go_slices_package = "package p\n\nimport \"slices\"\n\nvar values = []string{\"red\", \"blue\"}\n\nfunc F(value string, other string) bool { return slices.Contains(values, value) }\n";
     let go_slices_alias = "package p\n\nimport sl \"slices\"\n\nvar values = []string{\"red\", \"blue\"}\n\nfunc F(value string, other string) bool { return sl.Contains(values, value) }\n";
     let go_slices_const = "package p\n\nimport \"slices\"\n\nconst first = \"red\"\nvar values = []string{first, \"blue\"}\n\nfunc F(value string, other string) bool { return slices.Contains(values, value) }\n";
+    let go_slices_local = "package p\n\nimport \"slices\"\n\nfunc F(value string, other string) bool {\n    values := []string{\"red\", \"blue\"}\n    return slices.Contains(values, value)\n}\n";
+    let java_local_list = "import java.util.List;\n\nclass C { static boolean f(String value, String other) { var values = List.of(\"red\", \"blue\"); return values.contains(value); } }";
     let rust_local_array = "pub fn f(value: &str, other: &str) -> bool {\n    let values = [\"red\", \"blue\"];\n    values.contains(&value)\n}\n";
     let rust_local_typed_array = "pub fn f(value: &str, other: &str) -> bool {\n    let values: [&str; 2] = [\"red\", \"blue\"];\n    values.contains(&value)\n}\n";
     let rust_local_slice_ref = "pub fn f(value: &str, other: &str) -> bool {\n    let values: &[&str] = &[\"red\", \"blue\"];\n    values.contains(&value)\n}\n";
+    let rust_local_vec = "pub fn f(value: &str, other: &str) -> bool {\n    let values = vec![\"red\", \"blue\"];\n    values.contains(&value)\n}\n";
     let java_wrong_element = "import java.util.List;\n\nclass C { static boolean f(String value, String other) { return List.of(\"red\", \"blue\").contains(other); } }";
     let java_wrong_collection = "import java.util.Set;\n\nclass C { static boolean f(String value, String other) { return Set.of(\"green\", \"blue\").contains(value); } }";
     let java_shadowed_list = "class C { static boolean f(Object List, String value, String other) { return List.of(\"red\", \"blue\").contains(value); } }";
@@ -1707,7 +1710,9 @@ fn collection_membership_set_construction_converges_with_boundaries() {
     let go_slices_wrong_element = "package p\n\nimport \"slices\"\n\nvar values = []string{\"red\", \"blue\"}\n\nfunc F(value string, other string) bool { return slices.Contains(values, other) }\n";
     let go_slices_wrong_collection = "package p\n\nimport \"slices\"\n\nvar values = []string{\"green\", \"blue\"}\n\nfunc F(value string, other string) bool { return slices.Contains(values, value) }\n";
     let go_slices_mutated = "package p\n\nimport \"slices\"\n\nvar values = append([]string{\"red\", \"blue\"}, \"green\")\n\nfunc F(value string, other string) bool { return slices.Contains(values, value) }\n";
+    let go_slices_local_mutated = "package p\n\nimport \"slices\"\n\nfunc F(value string, other string) bool {\n    values := []string{\"red\", \"blue\"}\n    values = append(values, \"green\")\n    return slices.Contains(values, value)\n}\n";
     let go_slices_unimported = "package p\n\ntype fakeSlices struct{}\nfunc (fakeSlices) Contains(values []string, value string) bool { return false }\nvar slices fakeSlices\nvar values = []string{\"red\", \"blue\"}\n\nfunc F(value string, other string) bool { return slices.Contains(values, value) }\n";
+    let java_local_list_mutated = "import java.util.ArrayList;\nimport java.util.List;\n\nclass C { static boolean f(String value, String other) { var values = new ArrayList<String>(List.of(\"red\", \"blue\")); values.add(\"green\"); return values.contains(value); } }";
     let rust_local_wrong_element = "pub fn f(value: &str, other: &str) -> bool {\n    let values = [\"red\", \"blue\"];\n    values.contains(&other)\n}\n";
     let rust_local_wrong_collection = "pub fn f(value: &str, other: &str) -> bool {\n    let values = [\"green\", \"blue\"];\n    values.contains(&value)\n}\n";
     let rust_local_mutated = "pub fn f(value: &str, other: &str) -> bool {\n    let mut values = vec![\"red\", \"blue\"];\n    values.push(\"green\");\n    values.contains(&value)\n}\n";
@@ -1778,9 +1783,12 @@ fn collection_membership_set_construction_converges_with_boundaries() {
     assert_eq!(literal_fp, value_fp(&i, go_slices_package, Lang::Go));
     assert_eq!(literal_fp, value_fp(&i, go_slices_alias, Lang::Go));
     assert_eq!(literal_fp, value_fp(&i, go_slices_const, Lang::Go));
+    assert_eq!(literal_fp, value_fp(&i, go_slices_local, Lang::Go));
+    assert_eq!(literal_fp, value_fp(&i, java_local_list, Lang::Java));
     assert_eq!(literal_fp, value_fp(&i, rust_local_array, Lang::Rust));
     assert_eq!(literal_fp, value_fp(&i, rust_local_typed_array, Lang::Rust));
     assert_eq!(literal_fp, value_fp(&i, rust_local_slice_ref, Lang::Rust));
+    assert_eq!(literal_fp, value_fp(&i, rust_local_vec, Lang::Rust));
     assert_ne!(literal_fp, value_fp(&i, js_wrong_element, Lang::JavaScript));
     assert_ne!(
         literal_fp,
@@ -1949,7 +1957,12 @@ fn collection_membership_set_construction_converges_with_boundaries() {
         value_fp(&i, go_slices_wrong_collection, Lang::Go)
     );
     assert_ne!(literal_fp, value_fp(&i, go_slices_mutated, Lang::Go));
+    assert_ne!(literal_fp, value_fp(&i, go_slices_local_mutated, Lang::Go));
     assert_ne!(literal_fp, value_fp(&i, go_slices_unimported, Lang::Go));
+    assert_ne!(
+        literal_fp,
+        value_fp(&i, java_local_list_mutated, Lang::Java)
+    );
     assert_ne!(
         literal_fp,
         value_fp(&i, rust_local_wrong_element, Lang::Rust)

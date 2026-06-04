@@ -357,6 +357,7 @@ fn strict_exact_module_container_binding_safe(
         || strict_exact_java_map_factory_safe(il, interner, facts, node)
         || strict_exact_rust_std_map_factory_safe(il, interner, facts, node)
         || strict_exact_python_collection_factory_safe(il, interner, facts, node)
+        || strict_exact_rust_vec_macro_collection_safe(il, interner, facts, node)
         || strict_exact_set_constructor_collection_safe(il, interner, facts, node)
         || strict_exact_java_collection_factory_safe(il, interner, facts, node)
 }
@@ -668,6 +669,9 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
     if strict_exact_python_collection_factory_safe(il, interner, facts, node) {
         return true;
     }
+    if strict_exact_rust_vec_macro_collection_safe(il, interner, facts, node) {
+        return true;
+    }
     if strict_exact_java_collection_factory_safe(il, interner, facts, node) {
         return true;
     }
@@ -714,6 +718,7 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
         };
         if strict_exact_literal_collection_receiver_safe(il, interner, facts, receiver)
             || strict_exact_python_collection_factory_safe(il, interner, facts, receiver)
+            || strict_exact_rust_vec_macro_collection_safe(il, interner, facts, receiver)
             || strict_exact_java_collection_factory_safe(il, interner, facts, receiver)
         {
             return strict_exact_call_args_safe(il, interner, facts, node);
@@ -836,6 +841,27 @@ fn strict_exact_python_collection_factory_safe(
     matches!(name, "list" | "set" | "frozenset" | "tuple")
         && !file_defines_name(il, interner, name)
         && strict_exact_membership_collection_safe(il, interner, facts, kids[1])
+}
+
+fn strict_exact_rust_vec_macro_collection_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    if il.meta.lang != Lang::Rust || il.kind(node) != NodeKind::Call {
+        return false;
+    }
+    let kids = il.children(node);
+    let Some(&callee) = kids.first() else {
+        return false;
+    };
+    strict_exact_callee_name(il, interner, callee, "vec")
+        && !file_defines_name(il, interner, "vec")
+        && kids
+            .iter()
+            .skip(1)
+            .all(|&kid| strict_exact_safe_tree(il, interner, facts, kid))
 }
 
 fn strict_exact_java_collection_factory_safe(

@@ -714,6 +714,16 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
     )
     .unwrap();
     fs::write(
+        dir.join("go_slices_local.go"),
+        "package p\n\nimport \"slices\"\n\nfunc SlicesLocal(value string, other string) bool {\n    values := []string{\"red\", \"blue\"}\n    return slices.Contains(values, value)\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("java_local_list.java"),
+        "import java.util.List;\n\nclass JavaLocalList {\n    static boolean javaLocalList(String value, String other) {\n        var values = List.of(\"red\", \"blue\");\n        return values.contains(value);\n    }\n}\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("rust_local_array.rs"),
         "pub fn rust_local_array(value: &str, other: &str) -> bool {\n    let values = [\"red\", \"blue\"];\n    values.contains(&value)\n}\n",
     )
@@ -726,6 +736,11 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
     fs::write(
         dir.join("rust_local_slice_ref.rs"),
         "pub fn rust_local_slice_ref(value: &str, other: &str) -> bool {\n    let values: &[&str] = &[\"red\", \"blue\"];\n    values.contains(&value)\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("rust_local_vec.rs"),
+        "pub fn rust_local_vec(value: &str, other: &str) -> bool {\n    let values = vec![\"red\", \"blue\"];\n    values.contains(&value)\n}\n",
     )
     .unwrap();
     fs::write(
@@ -844,8 +859,18 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
     )
     .unwrap();
     fs::write(
+        dir.join("go_slices_local_mutated.go"),
+        "package p\n\nimport \"slices\"\n\nfunc SlicesLocalMutated(value string, other string) bool {\n    values := []string{\"red\", \"blue\"}\n    values = append(values, \"green\")\n    return slices.Contains(values, value)\n}\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("go_slices_unimported.go"),
         "package p\n\ntype fakeSlices struct{}\n\nfunc (fakeSlices) Contains(values []string, value string) bool {\n    return false\n}\n\nvar slices fakeSlices\nvar values = []string{\"red\", \"blue\"}\n\nfunc SlicesUnimported(value string, other string) bool {\n    return slices.Contains(values, value)\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("java_local_list_mutated.java"),
+        "import java.util.ArrayList;\nimport java.util.List;\n\nclass JavaLocalListMutated {\n    static boolean javaLocalListMutated(String value, String other) {\n        var values = new ArrayList<String>(List.of(\"red\", \"blue\"));\n        values.add(\"green\");\n        return values.contains(value);\n    }\n}\n",
     )
     .unwrap();
     fs::write(
@@ -911,9 +936,12 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "go_slices_package.go",
         "go_slices_alias.go",
         "go_slices_const.go",
+        "go_slices_local.go",
+        "java_local_list.java",
         "rust_local_array.rs",
         "rust_local_typed_array.rs",
         "rust_local_slice_ref.rs",
+        "rust_local_vec.rs",
     ] {
         assert!(
             semantic_text.contains(expected),
@@ -944,7 +972,9 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "module_list_shadowed.java",
         "python_factory_shadowed.py",
         "go_slices_mutated.go",
+        "go_slices_local_mutated.go",
         "go_slices_unimported.go",
+        "java_local_list_mutated.java",
         "rust_local_mutated.rs",
         "rust_local_custom_receiver.rs",
     ] {

@@ -395,6 +395,30 @@ AXIS_PROPOSALS = {
         "axis": "literal_collection_membership",
         "why": "A shadowed Python collection factory name is not proof of the builtin collection constructor.",
     },
+    "axis_membership_local_go_slice_identity": {
+        "axis": "literal_collection_membership",
+        "why": "A Go function-local slice literal bound once and consumed by `slices.Contains` should prove the same static membership predicate.",
+    },
+    "axis_membership_local_java_list_identity": {
+        "axis": "literal_collection_membership",
+        "why": "A Java function-local `List.of(...)` binding consumed by `.contains` should prove the same static membership predicate.",
+    },
+    "axis_membership_local_rust_vec_identity": {
+        "axis": "literal_collection_membership",
+        "why": "A Rust function-local `vec![...]` binding consumed by `.contains` should prove the same static membership predicate.",
+    },
+    "axis_membership_local_wrong_element_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Function-local constructed collection membership remains tied to a specific element coordinate.",
+    },
+    "axis_membership_local_wrong_collection_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Function-local constructed collection membership over different static items changes the collection coordinate.",
+    },
+    "axis_membership_local_mutated_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "A function-local collection binding that is mutated before membership is not the original static collection.",
+    },
     "axis_membership_set_inline_identity": {
         "axis": "literal_collection_membership",
         "why": "An inline `new Set([...]).has(value)` over a static literal should prove the same membership predicate as literal collection APIs.",
@@ -2420,6 +2444,8 @@ def literal_membership_axis_supported(surface: Surface, proposal_id: str) -> boo
         return surface.key == "rust"
     if proposal_id.startswith("axis_membership_python_"):
         return surface.key == "python"
+    if proposal_id.startswith("axis_membership_local_"):
+        return surface.key in {"go", "java", "rust"}
     if proposal_id.startswith("axis_membership_set_"):
         return surface.key in {"python", "javascript", "typescript", "go", "rust", "ruby"}
     if proposal_id.startswith("axis_membership_array_some_"):
@@ -2499,6 +2525,19 @@ def membership_axis_parts(
         form = "python_set_factory" if right else "membership"
     if proposal_id == "axis_membership_python_factory_shadowed_boundary":
         form = "python_set_factory_shadowed" if right else "membership"
+    if proposal_id == "axis_membership_local_go_slice_identity":
+        form = "go_local_slice" if right else "membership"
+    if proposal_id == "axis_membership_local_java_list_identity":
+        form = "java_local_list" if right else "membership"
+    if proposal_id == "axis_membership_local_rust_vec_identity":
+        form = "rust_local_vec" if right else "membership"
+    if proposal_id in {
+        "axis_membership_local_wrong_element_boundary",
+        "axis_membership_local_wrong_collection_boundary",
+    }:
+        form = "local_constructed" if right else "membership"
+    if proposal_id == "axis_membership_local_mutated_boundary":
+        form = "local_constructed_mutated" if right else "membership"
     if proposal_id in {
         "axis_membership_set_inline_identity",
         "axis_membership_set_wrong_element_boundary",
@@ -2624,6 +2663,9 @@ def membership_axis_parts(
         "axis_membership_python_set_factory_identity",
         "axis_membership_python_tuple_factory_identity",
         "axis_membership_python_frozenset_factory_identity",
+        "axis_membership_local_go_slice_identity",
+        "axis_membership_local_java_list_identity",
+        "axis_membership_local_rust_vec_identity",
     }:
         element = "other"
     if right and proposal_id == "axis_membership_set_wrong_element_boundary":
@@ -2654,6 +2696,18 @@ def axis_membership_literal_variant(
         form = "typed_membership"
     if form.startswith("python_") and surface.key != "python":
         form = "membership"
+    if form == "local_constructed":
+        form = {
+            "go": "go_local_slice",
+            "java": "java_local_list",
+            "rust": "rust_local_vec",
+        }.get(surface.key, "membership")
+    if form == "local_constructed_mutated":
+        form = {
+            "go": "go_local_slice_mutated",
+            "java": "java_local_list_mutated",
+            "rust": "rust_local_vec_mutated",
+        }.get(surface.key, "membership")
     name = {
         "javascript": "buildCase" if right else "axisCase",
         "typescript": "buildCase" if right else "axisCase",
@@ -2938,6 +2992,29 @@ function {name}(value: string, other: string): boolean {{
         return Variant("axis", src, name)
 
     if surface.key == "go":
+        if form == "go_local_slice":
+            src = f"""package p
+
+import "slices"
+
+func {name}(value string, other string) bool {{
+    values := []string{{"{left}", "{right_item}"}}
+    return slices.Contains(values, {element})
+}}
+"""
+            return Variant("axis", src, name)
+        if form == "go_local_slice_mutated":
+            src = f"""package p
+
+import "slices"
+
+func {name}(value string, other string) bool {{
+    values := []string{{"{left}", "{right_item}"}}
+    values = append(values, "green")
+    return slices.Contains(values, value)
+}}
+"""
+            return Variant("axis", src, name)
         if form == "go_slices_package":
             src = f"""package p
 
@@ -3035,6 +3112,21 @@ func {name}(value string, other string) bool {{
         return Variant("axis", src, name)
 
     if surface.key == "rust":
+        if form == "rust_local_vec":
+            src = f"""pub fn {name}(value: &str, other: &str) -> bool {{
+    let values = vec!["{left}", "{right_item}"];
+    values.contains(&{element})
+}}
+"""
+            return Variant("axis", src, name)
+        if form == "rust_local_vec_mutated":
+            src = f"""pub fn {name}(value: &str, other: &str) -> bool {{
+    let mut values = vec!["{left}", "{right_item}"];
+    values.push("green");
+    values.contains(&value)
+}}
+"""
+            return Variant("axis", src, name)
         if form == "rust_vecdeque_param":
             src = f"""use std::collections::VecDeque;
 
@@ -3116,6 +3208,30 @@ pub fn {name}(value: &str, other: &str) -> bool {{
         return Variant("axis", src, name)
 
     if surface.key == "java":
+        if form == "java_local_list":
+            src = f"""import java.util.List;
+
+class C {{
+    static boolean {name}(String value, String other) {{
+        var values = List.of("{left}", "{right_item}");
+        return values.contains({element});
+    }}
+}}
+"""
+            return Variant("axis", src, name)
+        if form == "java_local_list_mutated":
+            src = f"""import java.util.ArrayList;
+import java.util.List;
+
+class C {{
+    static boolean {name}(String value, String other) {{
+        var values = new ArrayList<String>(List.of("{left}", "{right_item}"));
+        values.add("green");
+        return values.contains(value);
+    }}
+}}
+"""
+            return Variant("axis", src, name)
         if form == "java_queue_param":
             src = f"""import java.util.Queue;
 
@@ -6929,6 +7045,8 @@ def generate_axis_items(
                 continue
             if proposal_id.startswith("axis_membership_module_"):
                 continue
+            if proposal_id.startswith("axis_membership_local_"):
+                continue
             if proposal_id.startswith("axis_membership_go_slices_"):
                 continue
             if proposal_id.startswith("axis_membership_rust_local_"):
@@ -7002,6 +7120,9 @@ def generate_axis_items(
                 "axis_membership_python_factory_wrong_element_boundary",
                 "axis_membership_python_factory_wrong_collection_boundary",
                 "axis_membership_python_factory_shadowed_boundary",
+                "axis_membership_local_wrong_element_boundary",
+                "axis_membership_local_wrong_collection_boundary",
+                "axis_membership_local_mutated_boundary",
                 "axis_membership_array_some_wrong_element_boundary",
                 "axis_membership_array_some_wrong_collection_boundary",
                 "axis_membership_array_every_wrong_element_boundary",
@@ -7580,6 +7701,72 @@ def generate_literal_membership_cross_items(
                     "not_equivalent",
                     "heldout",
                     "literal_collection_membership-semantic-mutation",
+                )
+            )
+    local_constructed_reference_surfaces = [
+        surface_by_key["python"],
+        surface_by_key["ruby"],
+        surface_by_key["javascript"],
+        surface_by_key["typescript"],
+    ]
+    if cross_mode == "ring":
+        local_constructed_reference_surfaces = [surface_by_key["python"]]
+    elif cross_mode == "none":
+        local_constructed_reference_surfaces = []
+    local_constructed_right_surface_by_proposal = {
+        "axis_membership_local_go_slice_identity": surface_by_key["go"],
+        "axis_membership_local_java_list_identity": surface_by_key["java"],
+        "axis_membership_local_rust_vec_identity": surface_by_key["rust"],
+    }
+    for proposal_id, right_surface in local_constructed_right_surface_by_proposal.items():
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for left_surface in local_constructed_reference_surfaces:
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    proposal_id,
+                    left_surface,
+                    right_surface,
+                    "equivalent",
+                    "heldout",
+                )
+            )
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    proposal_id,
+                    left_surface,
+                    right_surface,
+                    "not_equivalent",
+                    "heldout",
+                    "literal_collection_membership-semantic-mutation",
+                )
+            )
+    for proposal_id in (
+        "axis_membership_local_wrong_element_boundary",
+        "axis_membership_local_wrong_collection_boundary",
+        "axis_membership_local_mutated_boundary",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for right_surface in (
+            surface_by_key["go"],
+            surface_by_key["java"],
+            surface_by_key["rust"],
+        ):
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    proposal_id,
+                    surface_by_key["python"],
+                    right_surface,
+                    "not_equivalent",
+                    "heldout",
+                    "literal-membership-boundary",
                 )
             )
     set_reference_surfaces = [

@@ -185,9 +185,10 @@ pub(crate) fn canon_call(old: &Il, interner: &Interner, call_id: NodeId) -> Call
                         }
                     }
                     "Contains"
-                        if base_name == Some("slices")
-                            && args.len() == 2
-                            && old.kind(args[0]) == NodeKind::Seq =>
+                        if args.len() == 2
+                            && base.is_some_and(|b| {
+                                import_namespace_expr(old, interner, b, "slices")
+                            }) =>
                     {
                         return CallCanon::Builtin {
                             op: Builtin::Contains,
@@ -530,6 +531,66 @@ fn name_of<'a>(old: &Il, interner: &'a Interner, id: NodeId) -> Option<&'a str> 
     None
 }
 
+fn import_namespace_expr(old: &Il, interner: &Interner, id: NodeId, module: &str) -> bool {
+    let Some(alias) = name_of(old, interner, id) else {
+        return false;
+    };
+    old.children(old.root).iter().any(|&stmt| {
+        import_namespace_assignment(old, interner, stmt, alias, module)
+            || (old.kind(stmt) == NodeKind::Block
+                && old
+                    .children(stmt)
+                    .iter()
+                    .any(|&child| import_namespace_assignment(old, interner, child, alias, module)))
+    })
+}
+
+fn import_namespace_assignment(
+    old: &Il,
+    interner: &Interner,
+    stmt: NodeId,
+    alias: &str,
+    module: &str,
+) -> bool {
+    if old.kind(stmt) != NodeKind::Assign {
+        return false;
+    }
+    let kids = old.children(stmt);
+    if kids.len() != 2 || assignment_alias_name(old, interner, kids[0]) != Some(alias) {
+        return false;
+    }
+    if old.kind(kids[1]) != NodeKind::Seq {
+        return false;
+    }
+    let Payload::Name(seq_name) = old.node(kids[1]).payload else {
+        return false;
+    };
+    if interner.resolve(seq_name) != "import_namespace" {
+        return false;
+    }
+    let Some(&module_node) = old.children(kids[1]).first() else {
+        return false;
+    };
+    matches!(
+        old.node(module_node).payload,
+        Payload::LitStr(hash) if hash == stable_symbol_hash(module)
+    )
+}
+
+fn assignment_alias_name<'a>(old: &Il, interner: &'a Interner, id: NodeId) -> Option<&'a str> {
+    if old.kind(id) != NodeKind::Var {
+        return None;
+    }
+    match old.node(id).payload {
+        Payload::Name(symbol) => Some(interner.resolve(symbol)),
+        Payload::Cid(cid) => old
+            .cid_names
+            .get(cid as usize)
+            .map(|&symbol| interner.resolve(symbol)),
+        _ => None,
+    }
+}
+
 fn map_like_literal(old: &Il, interner: &Interner, id: NodeId) -> bool {
     if old.kind(id) != NodeKind::Seq {
         return false;
@@ -601,4 +662,13 @@ fn identity_lambda(old: &Il, lambda: NodeId) -> bool {
         (Payload::Name(a), Payload::Name(b)) => a == b,
         _ => false,
     }
+}
+
+fn stable_symbol_hash(name: &str) -> u64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in name.bytes() {
+        h ^= b as u64;
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    h
 }
