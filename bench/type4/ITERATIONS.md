@@ -2151,3 +2151,73 @@ parameters but had no proof for literal Java map factory receivers. The final pa
 Java factories into the same canonical literal-map coordinate used by Python/Ruby and
 JS/TS, while the exact-safe gate repeats the same standard-name and shadow checks before
 semantic mode can report a clone.
+
+## Module-level map default bindings: loops 259-264
+
+This loop keeps the batch-3 cadence on `literal_map_default_lookup`, but moves from
+inline/local construction to module-level immutable bindings. The chosen micro-frontiers
+are:
+
+- JavaScript `const LOOKUP = new Map([...])` followed by `LOOKUP.get(key) ?? 0`;
+- TypeScript `const LOOKUP = new Map<string, number>(...)` followed by `LOOKUP.get(key) ?? 0`;
+- Java `static final Map<String, Integer> LOOKUP = Map.of(...)` followed by
+  `LOOKUP.getOrDefault(key, 0)`.
+
+The proof is strict only when the module binding is assigned once, its initializer is a
+proven map construction/factory, and the same file does not use that binding as the
+receiver of mutating map operations such as `set`, `delete`, `clear`, `put`, `remove`,
+`compute`, or `merge`. Hard negatives cover wrong key, wrong fallback, wrong map value,
+post-construction mutation, and shadowed `Map` constructor/type boundaries.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 259 | batched frontier selection | group JS module `Map`, TS module `Map`, and Java static-final `Map.of` under `axis_map_default_module_*` | focused corpus: 6 positives, 34 hard negatives |
+| 260 | baseline measurement | scan the focused batch with the previous release detector | baseline: 0/6 positives, 0/34 false merges, 0 Raw nodes |
+| 261 | generator adversary | add wrong-coordinate, mutation, and shadow boundaries for module-level map bindings | focused generator emits 40 items across Python/Ruby refs and JS/TS/Java targets |
+| 262 | detector strengthening | seed module/global bindings with canonical proven map values when the initializer is a proven map constructor/factory and the binding is not mutated | candidate focused: 6/6 positives |
+| 263 | strict-safe gate alignment | mark the same module map bindings as exact-safe only under the same initializer and mutation-exclusion proof | targeted value-graph and CLI semantic tests passed |
+| 264 | release focused/core gates | build release and run focused module-map, literal-map-default core, and all-cross core gates | focused: 6/6, 0/34; literal core: 27/27, 0/80; all-cross core: 433/433, 0/805 |
+
+Focused release/candidate comparison:
+
+```text
+previous release:  items=40, positive=0/6, false_merges=0/34
+candidate release: items=40, positive=6/6, false_merges=0/34
+delta:             +6 positive hits, +0 false merges
+```
+
+Final release focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_map_default_module CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 40
+positive recall: 6/6
+hard-negative false merges: 0/34
+Raw nodes: 0/1874
+```
+
+Final release literal-map-default compact gate:
+
+```text
+GATE=core AXIS=literal_map_default_lookup CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 107/173
+positive recall: 27/27
+hard-negative false merges: 0/80
+Raw nodes: 0/4637
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 1238/5714
+positive recall: 433/433
+hard-negative false merges: 0/805
+Raw nodes: 0/46710
+```
+
+Assessment: this widens the strict frontier while also strengthening the loop's
+adversary. Opening module-level `Map` construction would be unsound if `const` were
+mistaken for deep immutability, so the detector now requires both a proven map
+initializer and a whole-file exclusion of mutating receiver calls before exposing the
+binding through `global_env` or `exact_safe` facts.

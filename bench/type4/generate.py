@@ -555,6 +555,38 @@ AXIS_PROPOSALS = {
         "axis": "literal_map_default_lookup",
         "why": "A same-file Java class named `Map` is not proof of the standard `java.util.Map` factory.",
     },
+    "axis_map_default_module_js_map_identity": {
+        "axis": "literal_map_default_lookup",
+        "why": "A module-level immutable JavaScript `new Map([...])` binding should prove literal-map default lookup when the binding is not mutated.",
+    },
+    "axis_map_default_module_ts_map_identity": {
+        "axis": "literal_map_default_lookup",
+        "why": "A module-level immutable TypeScript `new Map([...])` binding should prove literal-map default lookup when the binding is not mutated.",
+    },
+    "axis_map_default_module_java_map_identity": {
+        "axis": "literal_map_default_lookup",
+        "why": "A Java static final `Map.of(...)` binding should prove literal-map default lookup through the same map/key/default coordinates.",
+    },
+    "axis_map_default_module_wrong_key_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "Module-level map default lookups over different key parameters are different proof coordinates.",
+    },
+    "axis_map_default_module_wrong_default_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "Module-level map default lookups with different fallbacks change missing-key behavior.",
+    },
+    "axis_map_default_module_wrong_map_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "Module-level map default lookups over different static entries change present-key behavior.",
+    },
+    "axis_map_default_module_mutated_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "A module-level `Map` binding that is mutated after construction is not a strict literal-map proof.",
+    },
+    "axis_map_default_module_shadowed_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "A module-level map factory with a shadowed `Map` constructor/type is not proof of the standard map constructor.",
+    },
     "axis_map_fallback_identity": {
         "axis": "map_default_lookup",
         "why": "Typed map default lookups should prove the same map/key/fallback behavior across contains-get and defaulting API forms.",
@@ -2517,6 +2549,8 @@ def literal_map_default_axis_supported(surface: Surface, proposal_id: str) -> bo
         return surface.key in {"python", "ruby", "javascript", "typescript"}
     if proposal_id.startswith("axis_map_default_java_map_"):
         return surface.key == "java"
+    if proposal_id.startswith("axis_map_default_module_"):
+        return surface.key in {"python", "ruby", "javascript", "typescript", "java"}
     return surface.key in {"python", "ruby"}
 
 
@@ -2713,6 +2747,22 @@ def map_default_axis_parts(
         form = "java_map_shadowed_factory" if right else "literal_api"
     if proposal_id == "axis_map_default_java_map_type_shadow_boundary":
         form = "java_map_type_shadow" if right else "literal_api"
+    if proposal_id == "axis_map_default_module_js_map_identity":
+        form = "js_map_module" if right else "literal_api"
+    if proposal_id == "axis_map_default_module_ts_map_identity":
+        form = "js_map_module" if right else "literal_api"
+    if proposal_id == "axis_map_default_module_java_map_identity":
+        form = "java_map_static" if right else "literal_api"
+    if proposal_id in {
+        "axis_map_default_module_wrong_key_boundary",
+        "axis_map_default_module_wrong_default_boundary",
+        "axis_map_default_module_wrong_map_boundary",
+    }:
+        form = "module_map" if right else "literal_api"
+    if proposal_id == "axis_map_default_module_mutated_boundary":
+        form = "js_map_module_mutated" if right else "literal_api"
+    if proposal_id == "axis_map_default_module_shadowed_boundary":
+        form = "module_map_shadowed" if right else "literal_api"
     if right and proposal_id == "axis_map_default_js_map_wrong_key_boundary":
         key = "other"
     if right and proposal_id == "axis_map_default_js_map_wrong_default_boundary":
@@ -2731,6 +2781,12 @@ def map_default_axis_parts(
         default = 9
     if right and proposal_id == "axis_map_default_java_map_wrong_map_boundary":
         entries = (("red", 9), ("blue", 2))
+    if right and proposal_id == "axis_map_default_module_wrong_key_boundary":
+        key = "other"
+    if right and proposal_id == "axis_map_default_module_wrong_default_boundary":
+        default = 9
+    if right and proposal_id == "axis_map_default_module_wrong_map_boundary":
+        entries = (("red", 9), ("blue", 2))
     if right and negative and proposal_id in {
         "axis_map_default_js_map_inline_identity",
         "axis_map_default_js_map_local_identity",
@@ -2741,6 +2797,9 @@ def map_default_axis_parts(
         "axis_map_default_java_map_of_identity",
         "axis_map_default_java_map_of_entries_identity",
         "axis_map_default_java_map_local_identity",
+        "axis_map_default_module_js_map_identity",
+        "axis_map_default_module_ts_map_identity",
+        "axis_map_default_module_java_map_identity",
     }:
         default = 9
     return key, entries, default, form
@@ -2770,6 +2829,12 @@ def axis_map_default_variant(
         and proposal_id.startswith("axis_map_default_js_object_")
     ):
         form = "js_object_hasown"
+    if (
+        surface.key in {"javascript", "typescript"}
+        and form == "literal_api"
+        and proposal_id.startswith("axis_map_default_module_")
+    ):
+        form = "js_map_module"
 
     if surface.key == "python":
         src = f"""def {name}(key, other):
@@ -2787,6 +2852,10 @@ end
     if surface.key == "java":
         if form == "literal_api":
             form = "java_map_of"
+        if form == "module_map":
+            form = "java_map_static"
+        if form == "module_map_shadowed":
+            form = "java_map_type_shadow"
         method_name = "buildCase" if right else "axisCase"
         map_of = f'Map.of("{k1}", {v1}, "{k2}", {v2})'
         map_entries = f'Map.ofEntries(Map.entry("{k1}", {v1}), Map.entry("{k2}", {v2}))'
@@ -2849,6 +2918,18 @@ class Map {{
 }}
 """
             return Variant("axis", src, method_name)
+        if form == "java_map_static":
+            src = f"""import java.util.Map;
+
+class AxisCase {{
+    static final Map<String, Integer> LOOKUP = {map_of};
+
+    static int {method_name}(String key, String other) {{
+        return LOOKUP.getOrDefault({key}, {default});
+    }}
+}}
+"""
+            return Variant("axis", src, method_name)
 
     if surface.key in {"javascript", "typescript"}:
         typed = surface.key == "typescript"
@@ -2857,6 +2938,10 @@ class Map {{
         return_ty = ": number" if typed else ""
         map_entries = f'[["{k1}", {v1}], ["{k2}", {v2}]]'
         map_expr = f"new Map{type_args}({map_entries})"
+        if form == "module_map":
+            form = "js_map_module"
+        if form == "module_map_shadowed":
+            form = "js_map_module_shadowed"
         if form == "js_map_inline":
             body = f"return {map_expr}.get({key}) ?? {default};"
             src = f"""function {name}({key_sig}){return_ty} {{
@@ -2876,6 +2961,35 @@ class Map {{
             src = f"""function {name}({key_sig}){return_ty} {{
   const lookup = {map_expr};
   return lookup.has({key}) ? {get_expr} : {default};
+}}
+"""
+            return js_axis_source(surface, src, name)
+        if form == "js_map_module":
+            src = f"""const LOOKUP = {map_expr};
+
+function {name}({key_sig}){return_ty} {{
+  return LOOKUP.get({key}) ?? {default};
+}}
+"""
+            return js_axis_source(surface, src, name)
+        if form == "js_map_module_mutated":
+            src = f"""const LOOKUP = {map_expr};
+LOOKUP.set("{k1}", 9);
+
+function {name}({key_sig}){return_ty} {{
+  return LOOKUP.get({key}) ?? {default};
+}}
+"""
+            return js_axis_source(surface, src, name)
+        if form == "js_map_module_shadowed":
+            ts_any = ": any" if typed else ""
+            src = f"""const Map{ts_any} = function(_entries{ts_any}) {{
+  return {{ get: function() {{ return 9; }} }};
+}};
+const LOOKUP = new Map({map_entries});
+
+function {name}({key_sig}){return_ty} {{
+  return LOOKUP.get({key}) ?? {default};
 }}
 """
             return js_axis_source(surface, src, name)
@@ -5222,6 +5336,10 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
             "axis_map_default_java_map_of_entries_identity",
             "axis_map_default_java_map_local_identity",
             "axis_map_default_java_map_wrong_default_boundary",
+            "axis_map_default_module_js_map_identity",
+            "axis_map_default_module_ts_map_identity",
+            "axis_map_default_module_java_map_identity",
+            "axis_map_default_module_wrong_default_boundary",
         }:
             counterexample = {
                 "input": {"key": "green", "other": "red"},
@@ -5233,6 +5351,9 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
             "axis_map_default_js_map_wrong_map_boundary",
             "axis_map_default_js_object_wrong_map_boundary",
             "axis_map_default_java_map_wrong_map_boundary",
+            "axis_map_default_module_wrong_map_boundary",
+            "axis_map_default_module_mutated_boundary",
+            "axis_map_default_module_shadowed_boundary",
         }:
             counterexample = {
                 "input": {"key": "red", "other": "green"},
@@ -5592,6 +5713,7 @@ def generate_axis_items(
                     "axis_map_default_js_map_",
                     "axis_map_default_js_object_",
                     "axis_map_default_java_map_",
+                    "axis_map_default_module_",
                 )
             ):
                 continue
@@ -6526,6 +6648,81 @@ def generate_literal_map_default_cross_items(
                         out_dir,
                         capabilities,
                         proposal_id,
+                        left_surface,
+                        right_surface,
+                        "not_equivalent",
+                        "heldout",
+                        "literal-map-default-boundary",
+                    )
+                )
+    module_right_surfaces_by_proposal = {
+        "axis_map_default_module_js_map_identity": [surface_by_key["javascript"]],
+        "axis_map_default_module_ts_map_identity": [surface_by_key["typescript"]],
+        "axis_map_default_module_java_map_identity": [surface_by_key["java"]],
+    }
+    for proposal_id, module_right_surfaces in module_right_surfaces_by_proposal.items():
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for right_surface in module_right_surfaces:
+            for left_surface in reference_surfaces:
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "equivalent",
+                        "heldout",
+                    )
+                )
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "not_equivalent",
+                        "heldout",
+                        "literal_map_default_lookup-semantic-mutation",
+                    )
+                )
+    module_right_surfaces = [
+        surface_by_key["javascript"],
+        surface_by_key["typescript"],
+        surface_by_key["java"],
+    ]
+    for proposal_id in (
+        "axis_map_default_module_wrong_key_boundary",
+        "axis_map_default_module_wrong_default_boundary",
+        "axis_map_default_module_wrong_map_boundary",
+        "axis_map_default_module_shadowed_boundary",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for right_surface in module_right_surfaces:
+            for left_surface in reference_surfaces:
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "not_equivalent",
+                        "heldout",
+                        "literal-map-default-boundary",
+                    )
+                )
+    if generation_filter.include_proposal("axis_map_default_module_mutated_boundary"):
+        for right_surface in (surface_by_key["javascript"], surface_by_key["typescript"]):
+            for left_surface in reference_surfaces:
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        "axis_map_default_module_mutated_boundary",
                         left_surface,
                         right_surface,
                         "not_equivalent",

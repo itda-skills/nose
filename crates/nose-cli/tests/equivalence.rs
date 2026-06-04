@@ -1676,6 +1676,32 @@ fn literal_map_default_lookup_converges_with_java_map_factory_boundaries() {
 }
 
 #[test]
+fn literal_map_default_lookup_converges_with_module_map_bindings() {
+    let i = Interner::new();
+    let py_literal = "def f(key, other):\n    return {\"red\": 1, \"blue\": 2}.get(key, 0)\n";
+    let js_module = "const LOOKUP = new Map([[\"red\", 1], [\"blue\", 2]]);\nfunction f(key, other) { return LOOKUP.get(key) ?? 0; }\n";
+    let ts_module = "const LOOKUP = new Map<string, number>([[\"red\", 1], [\"blue\", 2]]);\nfunction f(key: string, other: string): number { return LOOKUP.get(key) ?? 0; }\n";
+    let java_static = "import java.util.Map;\n\nclass C { static final Map<String, Integer> LOOKUP = Map.of(\"red\", 1, \"blue\", 2); static int f(String key, String other) { return LOOKUP.getOrDefault(key, 0); } }\n";
+    let js_wrong_key = "const LOOKUP = new Map([[\"red\", 1], [\"blue\", 2]]);\nfunction f(key, other) { return LOOKUP.get(other) ?? 0; }\n";
+    let ts_wrong_default = "const LOOKUP = new Map<string, number>([[\"red\", 1], [\"blue\", 2]]);\nfunction f(key: string, other: string): number { return LOOKUP.get(key) ?? 9; }\n";
+    let java_wrong_map = "import java.util.Map;\n\nclass C { static final Map<String, Integer> LOOKUP = Map.of(\"red\", 9, \"blue\", 2); static int f(String key, String other) { return LOOKUP.getOrDefault(key, 0); } }\n";
+    let js_mutated = "const LOOKUP = new Map([[\"red\", 1], [\"blue\", 2]]);\nLOOKUP.set(\"red\", 9);\nfunction f(key, other) { return LOOKUP.get(key) ?? 0; }\n";
+    let ts_shadowed = "const Map: any = function(_entries: any) { return { get: function() { return 9; } }; };\nconst LOOKUP = new Map([[\"red\", 1], [\"blue\", 2]]);\nfunction f(key: string, other: string): number { return LOOKUP.get(key) ?? 0; }\n";
+    let java_shadowed = "class C { static final Map<String, Integer> LOOKUP = Map.of(\"red\", 1, \"blue\", 2); static int f(String key, String other) { return LOOKUP.getOrDefault(key, 0); } }\nclass Map { static java.util.Map<String, Integer> of(Object... values) { return java.util.Map.of(); } }\n";
+
+    let fp = value_fp(&i, py_literal, Lang::Python);
+    assert_eq!(fp, value_fp(&i, js_module, Lang::JavaScript));
+    assert_eq!(fp, value_fp(&i, ts_module, Lang::TypeScript));
+    assert_eq!(fp, value_fp(&i, java_static, Lang::Java));
+    assert_ne!(fp, value_fp(&i, js_wrong_key, Lang::JavaScript));
+    assert_ne!(fp, value_fp(&i, ts_wrong_default, Lang::TypeScript));
+    assert_ne!(fp, value_fp(&i, java_wrong_map, Lang::Java));
+    assert_ne!(fp, value_fp(&i, js_mutated, Lang::JavaScript));
+    assert_ne!(fp, value_fp(&i, ts_shadowed, Lang::TypeScript));
+    assert_ne!(fp, value_fp(&i, java_shadowed, Lang::Java));
+}
+
+#[test]
 fn literal_map_default_lookup_converges_with_js_object_own_property_boundaries() {
     let i = Interner::new();
     let py_literal = "def f(key, other):\n    return {\"red\": 1, \"blue\": 2}.get(key, 0)\n";

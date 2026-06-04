@@ -181,7 +181,7 @@ struct StrictFacts {
 impl StrictFacts {
     fn collect(il: &Il, interner: &Interner) -> Self {
         let mut facts = StrictFacts::default();
-        facts.collect_immutable_bindings(il);
+        facts.collect_immutable_bindings(il, interner);
         facts.collect_function_bindings(il, interner);
         facts
     }
@@ -190,7 +190,7 @@ impl StrictFacts {
         self.immutable_names.contains(&name) || self.function_names.contains(&name)
     }
 
-    fn collect_immutable_bindings(&mut self, il: &Il) {
+    fn collect_immutable_bindings(&mut self, il: &Il, interner: &Interner) {
         let mut counts: FxHashMap<Symbol, usize> = FxHashMap::default();
         for stmt in top_level_statements(il) {
             let Some(name) = assignment_name(il, stmt) else {
@@ -211,7 +211,10 @@ impl StrictFacts {
             if counts.get(&name).copied().unwrap_or(0) != 1 {
                 continue;
             }
-            if immutable_binding_safe(il, &env, &self.immutable_names, kids[1]) {
+            let safe_literal = immutable_binding_safe(il, &env, &self.immutable_names, kids[1]);
+            let safe_map = !module_binding_mutated(il, interner, name)
+                && strict_exact_module_map_binding_safe(il, interner, self, kids[1]);
+            if safe_literal || safe_map {
                 self.immutable_names.insert(name);
                 if let Payload::Cid(cid) = il.node(kids[0]).payload {
                     env.insert(cid);
@@ -256,6 +259,65 @@ fn assignment_name(il: &Il, stmt: NodeId) -> Option<Symbol> {
         return None;
     };
     il.cid_names.get(cid as usize).copied()
+}
+
+fn module_binding_mutated(il: &Il, interner: &Interner, name: Symbol) -> bool {
+    il.nodes.iter().enumerate().any(|(idx, node)| {
+        il.kind(NodeId(idx as u32)) == NodeKind::Field
+            && field_mutates_binding(il, interner, NodeId(idx as u32), name).unwrap_or(false)
+            && matches!(node.payload, Payload::Name(_))
+    })
+}
+
+fn field_mutates_binding(
+    il: &Il,
+    interner: &Interner,
+    field: NodeId,
+    name: Symbol,
+) -> Option<bool> {
+    let Payload::Name(method) = il.node(field).payload else {
+        return Some(false);
+    };
+    if !matches!(
+        interner.resolve(method),
+        "set"
+            | "delete"
+            | "clear"
+            | "put"
+            | "putAll"
+            | "remove"
+            | "replace"
+            | "replaceAll"
+            | "compute"
+            | "computeIfAbsent"
+            | "computeIfPresent"
+            | "merge"
+    ) {
+        return Some(false);
+    }
+    let receiver = il.children(field).first().copied()?;
+    Some(node_refers_to_symbol(il, receiver, name))
+}
+
+fn node_refers_to_symbol(il: &Il, node: NodeId, name: Symbol) -> bool {
+    match il.node(node).payload {
+        Payload::Name(symbol) => symbol == name,
+        Payload::Cid(cid) => il
+            .cid_names
+            .get(cid as usize)
+            .is_some_and(|&symbol| symbol == name),
+        _ => false,
+    }
+}
+
+fn strict_exact_module_map_binding_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    strict_exact_map_constructor_entries_safe(il, interner, facts, node)
+        || strict_exact_java_map_factory_safe(il, interner, facts, node)
 }
 
 fn immutable_binding_safe(

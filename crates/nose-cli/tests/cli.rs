@@ -1143,6 +1143,21 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
     )
     .unwrap();
     fs::write(
+        dir.join("map_default_module.js"),
+        "const LOOKUP = new Map([[\"red\", 1], [\"blue\", 2]]);\n\nfunction lookup(key, other) {\n  return LOOKUP.get(key) ?? 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("map_default_module.ts"),
+        "const LOOKUP = new Map<string, number>([[\"red\", 1], [\"blue\", 2]]);\n\nfunction lookup(key: string, other: string): number {\n  return LOOKUP.get(key) ?? 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("map_default_module.java"),
+        "import java.util.Map;\n\nclass JavaModuleMap {\n  static final Map<String, Integer> LOOKUP = Map.of(\"red\", 1, \"blue\", 2);\n\n  static int lookup(String key, String other) {\n    return LOOKUP.getOrDefault(key, 0);\n  }\n}\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("object_hasown.js"),
         "function lookup(key, other) {\n  const values = { \"red\": 1, \"blue\": 2 };\n  return Object.hasOwn(values, key) ? values[key] : 0;\n}\n",
     )
@@ -1223,6 +1238,21 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
     )
     .unwrap();
     fs::write(
+        dir.join("module_map_mutated.js"),
+        "const LOOKUP = new Map([[\"red\", 1], [\"blue\", 2]]);\nLOOKUP.set(\"red\", 9);\n\nfunction wrong(key, other) {\n  return LOOKUP.get(key) ?? 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("module_map_shadowed.ts"),
+        "const Map: any = function(_entries: any) {\n  return { get: function() { return 9; } };\n};\nconst LOOKUP = new Map([[\"red\", 1], [\"blue\", 2]]);\n\nfunction wrong(key: string, other: string): number {\n  return LOOKUP.get(key) ?? 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("module_map_shadowed.java"),
+        "class JavaShadowedModuleMap {\n  static final Map<String, Integer> LOOKUP = Map.of(\"red\", 1, \"blue\", 2);\n\n  static int wrong(String key, String other) {\n    return LOOKUP.getOrDefault(key, 0);\n  }\n}\nclass Map {\n  static java.util.Map<String, Integer> of(Object... values) { return java.util.Map.of(); }\n}\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("object_wrong_key.js"),
         "function wrong_key(key, other) {\n  const values = { \"red\": 1, \"blue\": 2 };\n  return Object.hasOwn(values, other) ? values[other] : 0;\n}\n",
     )
@@ -1285,6 +1315,9 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
         "map_default_java_of.java",
         "map_default_java_entries.java",
         "map_default_java_local.java",
+        "map_default_module.js",
+        "map_default_module.ts",
+        "map_default_module.java",
         "object_hasown.js",
         "object_hasown_call.js",
         "object_negated.ts",
@@ -1321,6 +1354,9 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
         "wrong_java_map.java",
         "shadowed_java_map.java",
         "local_java_map_type.java",
+        "module_map_mutated.js",
+        "module_map_shadowed.ts",
+        "module_map_shadowed.java",
         "object_wrong_key.js",
         "object_wrong_default.js",
         "object_wrong_map.js",

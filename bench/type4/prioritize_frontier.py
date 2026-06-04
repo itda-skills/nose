@@ -197,8 +197,8 @@ CANDIDATES = [
         4,
         4,
         "partially-covered",
-        "Literal Python/Ruby map lookup, JS/TS literal Map and object defaults, typed Go/Java/Rust maps, typed TypeScript Map fallbacks, and Java Map.of/Map.ofEntries literal factories are covered; imported/module-level construction, richer receiver facts, absent-key semantics, and mutation/effects remain open.",
-        "Continue with imported/module-level Map or object defaults only when receiver/key/default coordinates can be proven by static construction, import identity, immutable binding, or type facts beyond the current inline/local construction cases.",
+        "Literal Python/Ruby map lookup, JS/TS inline/local/module Map and object defaults, typed Go/Java/Rust maps, typed TypeScript Map fallbacks, Java Map.of/Map.ofEntries literal factories, and Java static-final Map.of bindings are covered; cross-file imports, richer receiver facts, absent-key semantics, and mutation/effects remain open.",
+        "Continue with imported or cross-file Map/object defaults only when receiver/key/default coordinates can be proven by import identity, immutable binding, type facts, and whole-file mutation exclusion beyond the current inline/local/module construction cases.",
         (
             pat("go_map_lookup_ok", "go", r"\b\w+\s*,\s*\w+\s*:=\s*\w+\s*\[[^\]]+\]", "medium"),
             pat("java_get_or_default", "java", r"\.\s*getOrDefault\s*\(", "high"),

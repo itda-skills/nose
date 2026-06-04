@@ -1152,10 +1152,17 @@ impl<'a> Builder<'a> {
             if counts.get(&name).copied().unwrap_or(0) != 1 {
                 continue;
             }
-            if !self.immutable_binding_safe(kids[1], &env) {
-                continue;
-            }
             let value = self.eval(kids[1], &env);
+            let value = if self.immutable_binding_safe(kids[1], &env) {
+                value
+            } else if !self.module_binding_mutated(name) {
+                let Some(map) = self.proven_map_value(value) else {
+                    continue;
+                };
+                map
+            } else {
+                continue;
+            };
             if let Payload::Cid(cid) = self.il.node(kids[0]).payload {
                 env.insert(cid, value);
             }
@@ -1203,6 +1210,56 @@ impl<'a> Builder<'a> {
             return None;
         };
         self.il.cid_names.get(cid as usize).copied()
+    }
+
+    fn module_binding_mutated(&self, name: Symbol) -> bool {
+        self.il
+            .nodes
+            .iter()
+            .enumerate()
+            .any(|(idx, node)| match node.kind {
+                NodeKind::Field => self
+                    .field_mutates_binding(NodeId(idx as u32), name)
+                    .unwrap_or(false),
+                _ => false,
+            })
+    }
+
+    fn field_mutates_binding(&self, field: NodeId, name: Symbol) -> Option<bool> {
+        let Payload::Name(method) = self.il.node(field).payload else {
+            return Some(false);
+        };
+        if !matches!(
+            self.interner.resolve(method),
+            "set"
+                | "delete"
+                | "clear"
+                | "put"
+                | "putAll"
+                | "remove"
+                | "replace"
+                | "replaceAll"
+                | "compute"
+                | "computeIfAbsent"
+                | "computeIfPresent"
+                | "merge"
+        ) {
+            return Some(false);
+        }
+        let receiver = self.il.children(field).first().copied()?;
+        Some(self.node_refers_to_symbol(receiver, name))
+    }
+
+    fn node_refers_to_symbol(&self, node: NodeId, name: Symbol) -> bool {
+        match self.il.node(node).payload {
+            Payload::Name(symbol) => symbol == name,
+            Payload::Cid(cid) => self
+                .il
+                .cid_names
+                .get(cid as usize)
+                .is_some_and(|&symbol| symbol == name),
+            _ => false,
+        }
     }
 
     fn immutable_binding_safe(&self, node: NodeId, env: &FxHashMap<u32, ValueId>) -> bool {
