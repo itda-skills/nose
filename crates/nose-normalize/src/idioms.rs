@@ -289,6 +289,26 @@ pub(crate) fn canon_call(old: &Il, interner: &Interner, call_id: NodeId) -> Call
                                 arg_olds: vec![map, key, args[0]],
                             };
                         }
+                        return CallCanon::Builtin {
+                            op: Builtin::ValueOrDefault,
+                            arg_olds: vec![base.unwrap(), args[0]],
+                        };
+                    }
+                    "unwrap_or_else" if base.is_some() && args.len() == 1 => {
+                        if let Some(fallback) = zero_arg_lambda_body(old, args[0]) {
+                            return CallCanon::Builtin {
+                                op: Builtin::ValueOrDefault,
+                                arg_olds: vec![base.unwrap(), fallback],
+                            };
+                        }
+                    }
+                    "map_or" if base.is_some() && args.len() == 2 => {
+                        if identity_lambda(old, args[1]) {
+                            return CallCanon::Builtin {
+                                op: Builtin::ValueOrDefault,
+                                arg_olds: vec![base.unwrap(), args[0]],
+                            };
+                        }
                     }
                     // `functools.reduce(f, xs[, init])` — here the *base* is the module
                     // `functools`, not the collection, so it is an explicit fold over
@@ -553,4 +573,32 @@ fn key_set_receiver(old: &Il, interner: &Interner, id: NodeId) -> Option<NodeId>
         return None;
     }
     old.children(kids[0]).first().copied()
+}
+
+fn zero_arg_lambda_body(old: &Il, lambda: NodeId) -> Option<NodeId> {
+    if old.kind(lambda) != NodeKind::Lambda {
+        return None;
+    }
+    let kids = old.children(lambda);
+    if kids.len() == 1 {
+        Some(kids[0])
+    } else {
+        None
+    }
+}
+
+fn identity_lambda(old: &Il, lambda: NodeId) -> bool {
+    if old.kind(lambda) != NodeKind::Lambda {
+        return false;
+    }
+    let kids = old.children(lambda);
+    if kids.len() != 2 || old.kind(kids[0]) != NodeKind::Param || old.kind(kids[1]) != NodeKind::Var
+    {
+        return false;
+    }
+    match (old.node(kids[0]).payload, old.node(kids[1]).payload) {
+        (Payload::Cid(a), Payload::Cid(b)) => a == b,
+        (Payload::Name(a), Payload::Name(b)) => a == b,
+        _ => false,
+    }
 }

@@ -1445,3 +1445,56 @@ missed exactly the three new Ruby numeric positives and already rejected the adv
 hard negatives. The candidate closes all three without increasing false merges. The faster
 cadence is viable when the batch stays inside one semantic axis and the end gate is compact
 and cross-axis.
+
+## Rust option-default micro-batch coevolution: loops 193-201
+
+This loop continues the accelerated cadence with three same-axis micro-frontiers under
+`nullish_default`: Rust `Option::unwrap_or`, capture-only `unwrap_or_else(|| fallback)`,
+and identity `map_or(fallback, |inner| inner)`. The detector also preserves the existing
+JS/TS nullish default guarantees by sharing one `ValueOrDefault(value, fallback)` proof
+fact across expression, ternary, guard-return, and option-API forms.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 193 | priority selection | choose `nullish_default` option defaulting from the null/option frontier instead of another benchmark-only slice | release probe on hand-written Rust option defaults returned no semantic clones |
+| 194 | generator adversary | add `axis_option_*` proposals: `unwrap_or`, `unwrap_or_else`, `map_or`, wrong-default, and wrong-value boundaries | focused corpus: 8 items, 3 positives, 5 hard negatives |
+| 195 | baseline measurement | scan the focused corpus with the previous release binary | baseline: 0/3 positives, 0/5 false merges |
+| 196 | detector strengthening | add `ValueOrDefault(value, fallback)`, canonicalize Rust option APIs, and fold nullish/option `Phi` default patterns | candidate focused: 3/3 positives, 0/5 false merges |
+| 197 | regression correction | prevent `ValueOrDefault` from folding path-bottom sentinels and add guarded-return/fallthrough recognition for JS nullish guards | CLI nullish/truthy regression restored |
+| 198 | tests | add cross-language value-fingerprint coverage for JS `??`/guard/ternary and Rust option APIs plus wrong-coordinate boundaries | equivalence: 115/115; CLI: 52/52 |
+| 199 | axis compact gate | run `GATE=core AXIS=nullish_default` on the release candidate | selected 18/33; 8/8 positives, 0/10 false merges, Raw 0 |
+| 200 | broad compact gate | run `GATE=core CROSS=all` to catch cross-axis regressions | selected 800/5109; 321/321 positives, 0/479 false merges, Raw 0 |
+| 201 | reprioritize | mark `null_option_presence` as covered-current for ordinary detector work; alias/effectful variants require new proof facts | next recommended frontier shifts to `membership_contains` / `map_default_lookup` |
+
+Focused baseline/candidate comparison:
+
+```text
+baseline focused: items=8, positive=0/3, misses=3, false_merges=0/5
+candidate focused: items=8, positive=3/3, misses=0, false_merges=0/5
+delta: +3 positive hits, +0 false merges
+```
+
+Final release nullish-default axis gate:
+
+```text
+GATE=core AXIS=nullish_default NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 18/33
+positive recall: 8/8
+hard-negative false merges: 0/10
+Raw nodes: 0/495
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 800/5109
+positive recall: 321/321
+hard-negative false merges: 0/479
+Raw nodes: 0/30914
+```
+
+Assessment: this loop widened a real strict frontier. The previous detector missed all
+three Rust option-default API forms, while the candidate closes them and keeps all
+wrong-value/default and truthy-default adversaries separate. The process also improved the
+loop itself by forcing a regression correction for guard-return nullish defaults.

@@ -523,6 +523,7 @@ impl<'a> Interp<'a> {
             // merge. Their convergence rests on the DistinctEntry-vs-tuple representation.
             Builtin::DictEntry => Ok(Value::Err),
             Builtin::GetOrDefault => Ok(Value::Err),
+            Builtin::ValueOrDefault => Ok(Value::Err),
             Builtin::Reduce | Builtin::Any | Builtin::All => unreachable!(),
         }
     }

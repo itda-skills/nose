@@ -99,6 +99,26 @@ AXIS_PROPOSALS = {
         "axis": "nullish_default",
         "why": "Truthy-or defaulting is not equivalent to nullish defaulting for falsy non-null values.",
     },
+    "axis_option_unwrap_or_identity": {
+        "axis": "nullish_default",
+        "why": "Rust `Option::unwrap_or` should prove the same value-or-fallback behavior as nullish defaulting.",
+    },
+    "axis_option_unwrap_or_else_identity": {
+        "axis": "nullish_default",
+        "why": "A capture-only `Option::unwrap_or_else(|| fallback)` should prove the same value-or-fallback behavior as `unwrap_or`.",
+    },
+    "axis_option_map_or_identity": {
+        "axis": "nullish_default",
+        "why": "Rust `Option::map_or(fallback, |inner| inner)` should prove the same value-or-fallback behavior as `unwrap_or`.",
+    },
+    "axis_option_wrong_default_boundary": {
+        "axis": "nullish_default",
+        "why": "Option defaulting is a proof over a specific fallback coordinate.",
+    },
+    "axis_option_wrong_value_boundary": {
+        "axis": "nullish_default",
+        "why": "Option defaulting is a proof over a specific optional value coordinate.",
+    },
     "axis_null_presence_method_identity": {
         "axis": "null_presence_predicate",
         "why": "Null/none/nil method predicates should prove the same absence check as explicit null comparison.",
@@ -761,11 +781,14 @@ end
 
 
 def nullish_axis_supported(surface: Surface, proposal_id: str) -> bool:
+    if proposal_id.startswith("axis_option_"):
+        return surface.key == "rust"
     return proposal_id.startswith("axis_nullish_") and surface.key in JS_LIKE_SURFACES
 
 
 def axis_nullish_variant(surface: Surface, proposal_id: str, negative: bool, right: bool) -> Variant:
     name = "buildCase" if right else "axisCase"
+    snake_name = "build_case" if right else "axis_case"
     fallback = (
         "fallback + 1"
         if negative and right and proposal_id != "axis_nullish_truthy_boundary"
@@ -822,6 +845,28 @@ def axis_nullish_variant(surface: Surface, proposal_id: str, negative: bool, rig
 }}
 """
         return Variant("axis", src, name)
+
+    if surface.key == "rust":
+        rust_name = snake_name
+        target = "other" if right and proposal_id == "axis_option_wrong_value_boundary" else "value"
+        default = (
+            "other_default"
+            if right and (negative or proposal_id == "axis_option_wrong_default_boundary")
+            else "fallback"
+        )
+        if right and proposal_id == "axis_option_unwrap_or_else_identity":
+            expr = f"{target}.unwrap_or_else(|| {default})"
+        elif right and proposal_id == "axis_option_map_or_identity":
+            expr = f"{target}.map_or({default}, |inner| inner)"
+        elif right:
+            expr = f"{target}.unwrap_or({default})"
+        else:
+            expr = f"if {target}.is_some() {{ {target}.unwrap_or({default}) }} else {{ {default} }}"
+        src = f"""pub fn {rust_name}(value: Option<i32>, fallback: i32, other: Option<i32>, other_default: i32) -> i32 {{
+    {expr}
+}}
+"""
+        return Variant("axis", src, rust_name)
 
     raise ValueError(f"unsupported surface for nullish axis: {surface.key}")
 
@@ -4141,6 +4186,7 @@ def axis_data_shape(axis: str) -> str:
         "literal_map_default_lookup": "map<string,int>+key",
         "map_default_lookup": "map<string,int>+key+fallback",
         "null_presence_predicate": "nullable<T>+alternate",
+        "nullish_default": "nullable<int>+fallback",
         "numeric_minmax_abs": "scalar<int>+alternate",
         "projection_identity": "record<today:int,tomorrow:int>",
         "string_prefix_suffix": "string",
@@ -4224,6 +4270,16 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
                     {"value": None, "other": 1},
                     {"value": 1, "other": None},
                     {"value": 0, "other": None},
+                ],
+                "outputs": [],
+            }
+        if axis == "nullish_default":
+            return {
+                "level": "E1",
+                "kind": f"same-spec-{axis}",
+                "property_inputs": [
+                    {"value": 5, "fallback": 0, "other": 7, "other_default": 9},
+                    {"value": None, "fallback": 0, "other": 7, "other_default": 9},
                 ],
                 "outputs": [],
             }
@@ -4392,6 +4448,34 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
             "kind": f"counterexample-{axis}",
             "counterexample": counterexample,
         }
+    elif axis == "nullish_default":
+        input_values = {"value": None, "fallback": 0, "other": 7, "other_default": 9}
+        if proposal_id == "axis_option_wrong_value_boundary":
+            input_values["value"] = 5
+            counterexample = {
+                "input": input_values,
+                "left": 5,
+                "right": 7,
+            }
+        elif proposal_id == "axis_nullish_truthy_boundary":
+            input_values["value"] = 0
+            input_values["fallback"] = 9
+            counterexample = {
+                "input": input_values,
+                "left": 0,
+                "right": 9,
+            }
+        else:
+            counterexample = {
+                "input": input_values,
+                "left": 0,
+                "right": 9,
+            }
+        return {
+            "level": "E2",
+            "kind": f"counterexample-{axis}",
+            "counterexample": counterexample,
+        }
     elif axis == "numeric_minmax_abs":
         if proposal_id in {
             "axis_scalar_min_wrong_value_boundary",
@@ -4534,6 +4618,10 @@ def generate_axis_items(
             if proposal_id.startswith("axis_import_") and not import_axis_supported(surface, proposal_id):
                 continue
             if proposal_id.startswith("axis_nullish_") and not nullish_axis_supported(
+                surface, proposal_id
+            ):
+                continue
+            if proposal_id.startswith("axis_option_") and not nullish_axis_supported(
                 surface, proposal_id
             ):
                 continue
@@ -4719,6 +4807,22 @@ def generate_axis_items(
                         "not_equivalent",
                         "heldout",
                         "truthy-default-boundary",
+                    )
+                )
+                continue
+            if proposal_id in {
+                "axis_option_wrong_default_boundary",
+                "axis_option_wrong_value_boundary",
+            }:
+                items.append(
+                    make_axis_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        surface,
+                        "not_equivalent",
+                        "heldout",
+                        "option-default-boundary",
                     )
                 )
                 continue

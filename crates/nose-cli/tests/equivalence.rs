@@ -1573,6 +1573,33 @@ fn map_default_lookup_converges_cross_language_with_boundaries() {
 }
 
 #[test]
+fn option_defaulting_converges_with_nullish_default_boundaries() {
+    let i = Interner::new();
+    let js = "function f(value, fallback, other, otherDefault) { return value ?? fallback; }";
+    let js_guard = "function f(value, fallback, other, otherDefault) { if (value == null) { return fallback; } return value; }";
+    let ts_guard = "function f(value: number | null | undefined, fallback: number, other: number | null | undefined, otherDefault: number): number { return value == null ? fallback : value; }";
+    let rust_unwrap = "pub fn f(value: Option<i32>, fallback: i32, other: Option<i32>, other_default: i32) -> i32 { value.unwrap_or(fallback) }\n";
+    let rust_unwrap_else = "pub fn f(value: Option<i32>, fallback: i32, other: Option<i32>, other_default: i32) -> i32 { value.unwrap_or_else(|| fallback) }\n";
+    let rust_map_or = "pub fn f(value: Option<i32>, fallback: i32, other: Option<i32>, other_default: i32) -> i32 { value.map_or(fallback, |inner| inner) }\n";
+    let rust_guard = "pub fn f(value: Option<i32>, fallback: i32, other: Option<i32>, other_default: i32) -> i32 { if value.is_some() { value.unwrap_or(fallback) } else { fallback } }\n";
+    let wrong_default = "pub fn f(value: Option<i32>, fallback: i32, other: Option<i32>, other_default: i32) -> i32 { value.unwrap_or(other_default) }\n";
+    let wrong_value = "pub fn f(value: Option<i32>, fallback: i32, other: Option<i32>, other_default: i32) -> i32 { other.unwrap_or(fallback) }\n";
+    let truthy_or =
+        "function f(value, fallback, other, otherDefault) { return value || fallback; }";
+
+    let fp = value_fp(&i, js, Lang::JavaScript);
+    assert_eq!(fp, value_fp(&i, js_guard, Lang::JavaScript));
+    assert_eq!(fp, value_fp(&i, ts_guard, Lang::TypeScript));
+    assert_eq!(fp, value_fp(&i, rust_unwrap, Lang::Rust));
+    assert_eq!(fp, value_fp(&i, rust_unwrap_else, Lang::Rust));
+    assert_eq!(fp, value_fp(&i, rust_map_or, Lang::Rust));
+    assert_eq!(fp, value_fp(&i, rust_guard, Lang::Rust));
+    assert_ne!(fp, value_fp(&i, wrong_default, Lang::Rust));
+    assert_ne!(fp, value_fp(&i, wrong_value, Lang::Rust));
+    assert_ne!(fp, value_fp(&i, truthy_or, Lang::JavaScript));
+}
+
+#[test]
 fn rust_if_let_option_presence_converges_with_option_predicates() {
     let i = Interner::new();
     let if_some = "pub fn f(value: Option<i32>) -> bool {\n    if let Some(_) = value { true } else { false }\n}\n";

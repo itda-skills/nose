@@ -15,54 +15,34 @@ and whether a frontier is already covered.
 
 | rank | candidate | scope | status | score | raw | weighted | repos | languages | probe coverage | gaps | filtered |
 |---:|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | `null_option_presence` | all-language | partially-covered | 51.52 | 126057 | 122957.4 | 94 | 7 | 100.0% | 0 | 0 |
-| 2 | `membership_contains` | multi-language | partially-covered | 36.54 | 22979 | 13478.1 | 99 | 7 | 100.0% | 0 | 2798 |
-| 3 | `map_default_lookup` | multi-language | partially-covered | 20.30 | 4319 | 3645.3 | 73 | 7 | 100.0% | 0 | 0 |
-| 4 | `collection_empty_check` | all-language | covered-current | 9.04 | 21562 | 18145.0 | 98 | 8 | 100.0% | 0 | 1 |
-| 5 | `string_prefix_suffix` | all-language | covered-current | 7.20 | 6174 | 6174.0 | 97 | 7 | 100.0% | 0 | 0 |
+| 1 | `membership_contains` | multi-language | partially-covered | 36.54 | 22979 | 13478.1 | 99 | 7 | 100.0% | 0 | 2798 |
+| 2 | `map_default_lookup` | multi-language | partially-covered | 20.30 | 4319 | 3645.3 | 73 | 7 | 100.0% | 0 | 0 |
+| 3 | `collection_empty_check` | all-language | covered-current | 9.04 | 21562 | 18145.0 | 98 | 8 | 100.0% | 0 | 1 |
+| 4 | `string_prefix_suffix` | all-language | covered-current | 7.20 | 6174 | 6174.0 | 97 | 7 | 100.0% | 0 | 0 |
+| 5 | `null_option_presence` | all-language | covered-current | 6.34 | 126057 | 122957.4 | 94 | 7 | 100.0% | 0 | 0 |
 | 6 | `numeric_minmax_abs` | all-language | partially-covered | 5.14 | 425 | 425.0 | 15 | 1 | 100.0% | 0 | 0 |
 | 7 | `own_property_guard` | language-family | covered-current | 0.60 | 764 | 764.0 | 23 | 2 | 100.0% | 0 | 0 |
 | 8 | `property_type_guard` | language-family | covered-current | 0.40 | 435 | 435.0 | 19 | 2 | 100.0% | 0 | 0 |
 
 ## Recommended Order
 
-1. `null_option_presence`
-   - why: Nullish default and null/none/nil/option presence predicates are covered; richer option unwrapping, pointer aliases, and effectful guard bodies remain open.
-   - evidence: 126057 raw / 122957.4 weighted matches across 94 repos and 7 languages (c, go, java, javascript, python, rust, typescript)
-   - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 0
-   - next probe: Continue with option unwrap/default and pointer-alias slices only when absence/presence coordinates are provable; keep truthy/falsy boundaries separate.
-2. `membership_contains`
+1. `membership_contains`
    - why: Static literal collection membership is covered; substring contains, map-key membership, dynamic sets, and ambiguous receiver contains must stay distinct.
    - evidence: 22979 raw / 13478.1 weighted matches across 99 repos and 7 languages (go, java, javascript, python, ruby, rust, typescript)
    - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 2798
    - next probe: Continue with map-key and dynamic set membership only when receiver/key coordinates can be proven; keep substring and regex boundaries separate.
-3. `map_default_lookup`
+2. `map_default_lookup`
    - why: Literal Python/Ruby map lookup with fallback is covered; typed maps, object/map APIs, absent-key semantics, and mutation/effects remain open.
    - evidence: 4319 raw / 3645.3 weighted matches across 73 repos and 7 languages (go, java, javascript, python, ruby, rust, typescript)
    - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 0
    - next probe: Continue with JS/TS object-or-Map defaults, then typed Go/Java/Rust maps only when receiver/key/default coordinates are provable.
-4. `numeric_minmax_abs`
+3. `numeric_minmax_abs`
    - why: Scalar min/max/abs expression facts are covered for C, Go, Java, JavaScript/TypeScript, Python, Ruby, and embedded script surfaces; Rust numeric methods remain the next compact strict slice.
    - evidence: 425 raw / 425.0 weighted matches across 15 repos and 1 languages (rust)
    - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 0
    - next probe: Generate Rust scalar `.abs()`, `.min()`, and `.max()` positives with sign/order and wrong-value hard negatives.
 
 ## Pattern Diagnostics
-
-### `null_option_presence`
-
-| pattern | language | precision | raw | weighted | repos |
-|---|---|---|---:|---:|---:|
-| `go_nil_compare` | go | high | 47075 | 47075.0 | 18 |
-| `c_null_compare` | c | high | 28917 | 28917.0 | 22 |
-| `java_null_compare` | java | high | 25129 | 25129.0 | 18 |
-| `py_none_compare` | python | high | 12417 | 12417.0 | 28 |
-| `rust_option_predicate` | rust | high | 2270 | 2270.0 | 16 |
-| `rust_if_let_some` | rust | medium | 3998 | 2198.9 | 16 |
-| `ts_nullish_compare` | typescript | high | 2088 | 2088.0 | 16 |
-| `ts_nullish_default` | typescript | medium | 2484 | 1366.2 | 16 |
-| `js_nullish_compare` | javascript | high | 1273 | 1273.0 | 24 |
-| `js_nullish_default` | javascript | medium | 406 | 223.3 | 15 |
 
 ### `membership_contains`
 
@@ -120,6 +100,21 @@ and whether a frontier is already covered.
 | `rust_prefix_suffix` | rust | high | 559 | 559.0 | 16 |
 | `js_prefix_suffix` | javascript | high | 354 | 354.0 | 18 |
 
+### `null_option_presence`
+
+| pattern | language | precision | raw | weighted | repos |
+|---|---|---|---:|---:|---:|
+| `go_nil_compare` | go | high | 47075 | 47075.0 | 18 |
+| `c_null_compare` | c | high | 28917 | 28917.0 | 22 |
+| `java_null_compare` | java | high | 25129 | 25129.0 | 18 |
+| `py_none_compare` | python | high | 12417 | 12417.0 | 28 |
+| `rust_option_predicate` | rust | high | 2270 | 2270.0 | 16 |
+| `rust_if_let_some` | rust | medium | 3998 | 2198.9 | 16 |
+| `ts_nullish_compare` | typescript | high | 2088 | 2088.0 | 16 |
+| `ts_nullish_default` | typescript | medium | 2484 | 1366.2 | 16 |
+| `js_nullish_compare` | javascript | high | 1273 | 1273.0 | 24 |
+| `js_nullish_default` | javascript | medium | 406 | 223.3 | 15 |
+
 ### `numeric_minmax_abs`
 
 | pattern | language | precision | raw | weighted | repos |
@@ -143,9 +138,6 @@ and whether a frontier is already covered.
 
 ## Gap Samples
 
-### `null_option_presence`
-- no uncovered broad-probe samples
-
 ### `membership_contains`
 - no uncovered broad-probe samples
 
@@ -156,6 +148,9 @@ and whether a frontier is already covered.
 - no uncovered broad-probe samples
 
 ### `string_prefix_suffix`
+- no uncovered broad-probe samples
+
+### `null_option_presence`
 - no uncovered broad-probe samples
 
 ### `numeric_minmax_abs`
@@ -169,9 +164,6 @@ and whether a frontier is already covered.
 
 
 ## Filtered Probe Samples
-
-### `null_option_presence`
-- no filtered broad-probe samples
 
 ### `membership_contains`
 - `antlr4/runtime/Python3/src/antlr4/Parser.py:551` (python, py_membership_broad, python-for-in-iteration): return [ str(dfa) for dfa in self._interp.decisionToDFA]
@@ -189,6 +181,9 @@ and whether a frontier is already covered.
 ### `string_prefix_suffix`
 - no filtered broad-probe samples
 
+### `null_option_presence`
+- no filtered broad-probe samples
+
 ### `numeric_minmax_abs`
 - no filtered broad-probe samples
 
@@ -200,13 +195,6 @@ and whether a frontier is already covered.
 
 
 ## Audit Repo Samples
-
-### `null_option_presence`
-- `vim` (heldout, C; c, python): 13453 raw / 13453.0 weighted
-- `nats-server` (dev, Go; go): 12704 raw / 12704.0 weighted
-- `minio` (heldout, Go; go, python): 10023 raw / 10023.0 weighted
-- `prometheus` (dev, Go; go, javascript, typescript): 5464 raw / 5460.9 weighted
-- `etcd` (heldout, Go; go): 5229 raw / 5229.0 weighted
 
 ### `membership_contains`
 - `guava` (dev, Java; java): 2646 raw / 1746.5 weighted
@@ -236,6 +224,13 @@ and whether a frontier is already covered.
 - `esbuild` (heldout, Go; go, javascript, typescript): 258 raw / 258.0 weighted
 - `nats-server` (dev, Go; go): 244 raw / 244.0 weighted
 
+### `null_option_presence`
+- `vim` (heldout, C; c, python): 13453 raw / 13453.0 weighted
+- `nats-server` (dev, Go; go): 12704 raw / 12704.0 weighted
+- `minio` (heldout, Go; go, python): 10023 raw / 10023.0 weighted
+- `prometheus` (dev, Go; go, javascript, typescript): 5464 raw / 5460.9 weighted
+- `etcd` (heldout, Go; go): 5229 raw / 5229.0 weighted
+
 ### `numeric_minmax_abs`
 - `nushell` (dev, Rust; rust): 113 raw / 113.0 weighted
 - `image` (dev, Rust; rust): 90 raw / 90.0 weighted
@@ -259,13 +254,6 @@ and whether a frontier is already covered.
 
 
 ## Extraction Samples
-
-### `null_option_presence`
-- `alacritty/alacritty/build.rs:10` (rust, rust_if_let_some): if let Some(commit_hash) = commit_hash() {
-- `alacritty/alacritty/src/window_context.rs:138` (rust, rust_option_predicate): let tabbed = options.window_tabbing_id.is_some();
-- `alacritty/alacritty/src/window_context.rs:178` (rust, rust_option_predicate): let preserve_title = options.window_identity.title.is_some();
-- `alacritty/alacritty/src/window_context.rs:427` (rust, rust_option_predicate): let old_is_searching = self.search_state.history_index.is_some();
-- `alacritty/alacritty/src/window_context.rs:550` (rust, rust_option_predicate): let new_is_searching = search_state.history_index.is_some();
 
 ### `membership_contains`
 - `alacritty/alacritty/src/window_context.rs:542` (rust, rust_contains_ambiguous): let origin_at_bottom = if terminal.mode().contains(TermMode::VI) {
@@ -294,6 +282,13 @@ and whether a frontier is already covered.
 - `alacritty/alacritty/src/config/mod.rs:215` (rust, rust_prefix_suffix): if contents.starts_with('\u{FEFF}') {
 - `alacritty/alacritty/src/config/bindings.rs:736` (rust, rust_prefix_suffix): _ if keycode.starts_with("Dead") => {
 - `alacritty/alacritty/src/display/color.rs:287` (rust, rust_prefix_suffix): let chars = if s.starts_with("0x") && s.len() == 8 {
+
+### `null_option_presence`
+- `alacritty/alacritty/build.rs:10` (rust, rust_if_let_some): if let Some(commit_hash) = commit_hash() {
+- `alacritty/alacritty/src/window_context.rs:138` (rust, rust_option_predicate): let tabbed = options.window_tabbing_id.is_some();
+- `alacritty/alacritty/src/window_context.rs:178` (rust, rust_option_predicate): let preserve_title = options.window_identity.title.is_some();
+- `alacritty/alacritty/src/window_context.rs:427` (rust, rust_option_predicate): let old_is_searching = self.search_state.history_index.is_some();
+- `alacritty/alacritty/src/window_context.rs:550` (rust, rust_option_predicate): let new_is_searching = search_state.history_index.is_some();
 
 ### `numeric_minmax_abs`
 - `alacritty/alacritty/src/window_context.rs:271` (rust, rust_numeric_method): if (old_config.cursor.thickness() - self.config.cursor.thickness()).abs() > f32::EPSILON {

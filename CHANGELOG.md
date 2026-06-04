@@ -24,6 +24,11 @@ break.
   now converges explicit null comparisons with Ruby `nil?` and Rust `is_none`/`is_some`
   method forms plus Rust `if let Some(_)`/`if let None` pattern predicates, while
   preserving non-null direction and wrong-value boundaries.
+- Strict Type-4 proof facts for value-or-fallback defaulting across JavaScript/TypeScript
+  nullish forms and Rust `Option` APIs. The detector now converges `??`, explicit
+  nullish ternaries/guard returns, `unwrap_or`, capture-only `unwrap_or_else`, and
+  identity `map_or`, while preserving truthy-or, wrong-fallback, and wrong-value
+  boundaries.
 - Strict Type-4 proof facts for scalar numeric idioms across C, Go, Java,
   JavaScript/TypeScript, Python, Ruby, and embedded script surfaces. The detector now converges
   explicit sign-normalizing conditionals with safe `abs`/`Math.abs`/`math.Abs` forms, and

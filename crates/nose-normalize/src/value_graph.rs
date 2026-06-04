@@ -501,6 +501,9 @@ impl<'a> Builder<'a> {
                 if let Some(v) = self.map_default_pattern(args[0], args[1], args[2]) {
                     return v;
                 }
+                if let Some(v) = self.value_default_pattern(args[0], args[1], args[2]) {
+                    return v;
+                }
             }
         }
         // Full ASSOCIATIVE-COMMUTATIVE canonicalization: flatten a `+`/`*`/`&`/`|`/`^`
@@ -641,6 +644,7 @@ impl<'a> Builder<'a> {
                 if let Some(&body) = kids.last() {
                     self.process_stmt(body, &mut env);
                 }
+                self.recognize_value_default_returns();
                 self.recognize_existence_reduction();
             }
             NodeKind::Module | NodeKind::Block => {
@@ -863,6 +867,103 @@ impl<'a> Builder<'a> {
             self.sinks = vec![(SinkKind::Return, red)];
             return;
         }
+    }
+
+    fn recognize_value_default_returns(&mut self) {
+        if self.sinks.len() != 2
+            || self
+                .sinks
+                .iter()
+                .any(|(kind, _)| !matches!(kind, SinkKind::Return))
+        {
+            return;
+        }
+        if let Some(defaulted) =
+            self.value_default_from_guarded_pair(self.sinks[0].1, self.sinks[1].1)
+        {
+            self.sinks = vec![(SinkKind::Return, defaulted)];
+            return;
+        }
+        if let Some(defaulted) = self
+            .value_default_from_guarded_fallthrough(self.sinks[0].1, self.sinks[1].1)
+            .or_else(|| {
+                self.value_default_from_guarded_fallthrough(self.sinks[1].1, self.sinks[0].1)
+            })
+        {
+            self.sinks = vec![(SinkKind::Return, defaulted)];
+        }
+    }
+
+    fn value_default_from_guarded_pair(
+        &mut self,
+        first: ValueId,
+        second: ValueId,
+    ) -> Option<ValueId> {
+        let (cond_a, ret_a) = self.guarded_return_parts(first)?;
+        let (cond_b, ret_b) = self.guarded_return_parts(second)?;
+        let Some((value_a, present_a)) = self.null_condition(cond_a) else {
+            return None;
+        };
+        let Some((value_b, present_b)) = self.null_condition(cond_b) else {
+            return None;
+        };
+        if value_a != value_b || present_a == present_b {
+            return None;
+        }
+        let (value, default) = if present_a {
+            if ret_a != value_a {
+                return None;
+            }
+            (value_a, ret_b)
+        } else {
+            if ret_b != value_a {
+                return None;
+            }
+            (value_a, ret_a)
+        };
+        Some(self.mk(
+            ValOp::Call(Builtin::ValueOrDefault as u32 + 1),
+            vec![value, default],
+        ))
+    }
+
+    fn value_default_from_guarded_fallthrough(
+        &mut self,
+        guarded: ValueId,
+        fallthrough: ValueId,
+    ) -> Option<ValueId> {
+        let (cond, guarded_ret) = self.guarded_return_parts(guarded)?;
+        let (value, present) = self.null_condition(cond)?;
+        let default = if present {
+            if guarded_ret != value {
+                return None;
+            }
+            fallthrough
+        } else {
+            if fallthrough != value {
+                return None;
+            }
+            guarded_ret
+        };
+        Some(self.mk(
+            ValOp::Call(Builtin::ValueOrDefault as u32 + 1),
+            vec![value, default],
+        ))
+    }
+
+    fn guarded_return_parts(&self, value: ValueId) -> Option<(ValueId, ValueId)> {
+        let node = &self.nodes[value as usize];
+        if !matches!(node.op, ValOp::Phi)
+            || node.args.len() != 3
+            || !self.is_bottom_value(node.args[2])
+        {
+            return None;
+        }
+        Some((node.args[0], node.args[1]))
+    }
+
+    fn is_bottom_value(&self, value: ValueId) -> bool {
+        matches!(self.nodes[value as usize].op, ValOp::Const(k) if k == 0x3000_0000)
     }
 
     /// The conjunction of the current branch path (`c₁ ∧ c₂ ∧ …`), or `None` at top level.
@@ -2254,6 +2355,73 @@ impl<'a> Builder<'a> {
         ))
     }
 
+    fn value_default_pattern(
+        &mut self,
+        cond: ValueId,
+        then_v: ValueId,
+        else_v: ValueId,
+    ) -> Option<ValueId> {
+        if self.is_bottom_value(then_v) || self.is_bottom_value(else_v) {
+            return None;
+        }
+        let (value, present) = self.null_condition(cond)?;
+        let default = if present {
+            let then_default = self.value_default_call(then_v);
+            if then_v != value && then_default.is_none_or(|(v, _)| v != value) {
+                return None;
+            }
+            then_default.map(|(_, default)| default).unwrap_or(else_v)
+        } else {
+            let else_default = self.value_default_call(else_v);
+            if else_v != value && else_default.is_none_or(|(v, _)| v != value) {
+                return None;
+            }
+            else_default.map(|(_, default)| default).unwrap_or(then_v)
+        };
+        Some(self.mk(
+            ValOp::Call(Builtin::ValueOrDefault as u32 + 1),
+            vec![value, default],
+        ))
+    }
+
+    fn value_default_call(&self, value: ValueId) -> Option<(ValueId, ValueId)> {
+        let node = &self.nodes[value as usize];
+        if matches!(node.op, ValOp::Call(tag) if tag == Builtin::ValueOrDefault as u32 + 1)
+            && node.args.len() == 2
+        {
+            Some((node.args[0], node.args[1]))
+        } else {
+            None
+        }
+    }
+
+    fn null_condition(&self, cond: ValueId) -> Option<(ValueId, bool)> {
+        let node = &self.nodes[cond as usize];
+        if node.args.len() == 2 {
+            if matches!(node.op, ValOp::Bin(o) if o == Op::Eq as u32) {
+                if self.is_null_value(node.args[0]) {
+                    return Some((node.args[1], false));
+                }
+                if self.is_null_value(node.args[1]) {
+                    return Some((node.args[0], false));
+                }
+            }
+            if matches!(node.op, ValOp::Bin(o) if o == Op::Ne as u32) {
+                if self.is_null_value(node.args[0]) {
+                    return Some((node.args[1], true));
+                }
+                if self.is_null_value(node.args[1]) {
+                    return Some((node.args[0], true));
+                }
+            }
+        }
+        None
+    }
+
+    fn is_null_value(&self, value: ValueId) -> bool {
+        matches!(self.nodes[value as usize].op, ValOp::Const(k) if k == nose_il::LitClass::Null as u32)
+    }
+
     fn membership_condition(&self, cond: ValueId) -> Option<(ValueId, ValueId, bool)> {
         let node = &self.nodes[cond as usize];
         if matches!(node.op, ValOp::Bin(o) if o == Op::In as u32) && node.args.len() == 2 {
@@ -2729,6 +2897,16 @@ impl<'a> Builder<'a> {
                         return self.mk(
                             ValOp::Call(Builtin::GetOrDefault as u32 + 1),
                             vec![map, key, default],
+                        );
+                    }
+                }
+                if let Payload::Builtin(Builtin::ValueOrDefault) = node.payload {
+                    if let [value, default] = kids.as_slice() {
+                        let value = self.eval(*value, env);
+                        let default = self.eval(*default, env);
+                        return self.mk(
+                            ValOp::Call(Builtin::ValueOrDefault as u32 + 1),
+                            vec![value, default],
                         );
                     }
                 }

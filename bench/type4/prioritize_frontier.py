@@ -173,9 +173,9 @@ CANDIDATES = [
         "all-language",
         3,
         3,
-        "partially-covered",
-        "Nullish default and null/none/nil/option presence predicates are covered; richer option unwrapping, pointer aliases, and effectful guard bodies remain open.",
-        "Continue with option unwrap/default and pointer-alias slices only when absence/presence coordinates are provable; keep truthy/falsy boundaries separate.",
+        "covered-current",
+        "Strict null/none/nil/option presence and value-or-fallback defaulting are covered for the currently modeled coordinates; alias/effectful-guard variants need separate proof facts before ordinary detector work.",
+        "No ordinary loop; reopen only when pointer/reference alias coordinates or effect-free guard-body facts are modeled.",
         (
             pat("c_null_compare", "c", r"(?:==|!=)\s*NULL\b|\bNULL\s*(?:==|!=)", "high"),
             pat("go_nil_compare", "go", r"(?:==|!=)\s*nil\b|\bnil\s*(?:==|!=)", "high"),
