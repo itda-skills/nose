@@ -1700,6 +1700,16 @@ fn scan_mode_semantic_proves_typed_typescript_map_default_lookup() {
     )
     .unwrap();
     fs::write(
+        dir.join("ts_guard_return.ts"),
+        "function f(lookup: Map<string, number>, other_lookup: Map<string, number>, key: string, other_key: string, fallback: number, other_default: number): number {\n  if (lookup.has(key)) {\n    return lookup.get(key)!;\n  }\n  return fallback;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("java_guard_return.java"),
+        "import java.util.Map;\n\nclass C { static int f(Map<String, Integer> lookup, Map<String, Integer> other_lookup, String key, String other_key, int fallback, int other_default) { if (lookup.containsKey(key)) { return lookup.get(key); } return fallback; } }\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("ts_wrong_key.ts"),
         "function f(lookup: Map<string, number>, other_lookup: Map<string, number>, key: string, other_key: string, fallback: number, other_default: number): number {\n  return lookup.get(other_key) ?? fallback;\n}\n",
     )
@@ -1720,8 +1730,23 @@ fn scan_mode_semantic_proves_typed_typescript_map_default_lookup() {
     )
     .unwrap();
     fs::write(
+        dir.join("ts_guard_wrong_key.ts"),
+        "function f(lookup: Map<string, number>, other_lookup: Map<string, number>, key: string, other_key: string, fallback: number, other_default: number): number {\n  if (lookup.has(other_key)) {\n    return lookup.get(other_key)!;\n  }\n  return fallback;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("java_guard_wrong_default.java"),
+        "import java.util.Map;\n\nclass C { static int f(Map<String, Integer> lookup, Map<String, Integer> other_lookup, String key, String other_key, int fallback, int other_default) { if (lookup.containsKey(key)) { return lookup.get(key); } return other_default; } }\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("py_dict.py"),
         "def f(lookup: dict[str, int], other_lookup: dict[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return lookup.get(key, fallback)\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("py_guard_return.py"),
+        "def f(lookup: dict[str, int], other_lookup: dict[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    if key in lookup:\n        return lookup[key]\n    return fallback\n",
     )
     .unwrap();
     fs::write(
@@ -1762,6 +1787,11 @@ fn scan_mode_semantic_proves_typed_typescript_map_default_lookup() {
     fs::write(
         dir.join("py_wrong_map.py"),
         "def f(lookup: dict[str, int], other_lookup: dict[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    return other_lookup.get(key, fallback)\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("py_guard_wrong_map.py"),
+        "def f(lookup: dict[str, int], other_lookup: dict[str, int], key: str, other_key: str, fallback: int, other_default: int) -> int:\n    if key in other_lookup:\n        return other_lookup[key]\n    return fallback\n",
     )
     .unwrap();
     fs::write(
@@ -1817,7 +1847,10 @@ fn scan_mode_semantic_proves_typed_typescript_map_default_lookup() {
         "ts_nullish.ts",
         "ts_has_get.ts",
         "ts_temp_guard.ts",
+        "ts_guard_return.ts",
+        "java_guard_return.java",
         "py_dict.py",
+        "py_guard_return.py",
         "py_mapping.py",
         "py_mutable_mapping.py",
         "py_alias_mapping.py",
@@ -1847,9 +1880,12 @@ fn scan_mode_semantic_proves_typed_typescript_map_default_lookup() {
         "ts_wrong_default.ts",
         "ts_wrong_map.ts",
         "ts_untyped.ts",
+        "ts_guard_wrong_key.ts",
+        "java_guard_wrong_default.java",
         "py_wrong_key.py",
         "py_wrong_default.py",
         "py_wrong_map.py",
+        "py_guard_wrong_map.py",
         "py_untyped.py",
         "py_alias_wrong_key.py",
         "py_alias_wrong_default.py",

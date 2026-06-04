@@ -1063,6 +1063,14 @@ AXIS_PROPOSALS = {
         "axis": "map_default_lookup",
         "why": "A typed TypeScript temp-bound `Map.get` undefined guard should prove the same map/key/fallback behavior as existing map-default forms.",
     },
+    "axis_map_fallback_ts_guard_return_identity": {
+        "axis": "map_default_lookup",
+        "why": "A typed TypeScript early-return `Map.has` guard should prove the same map/key/fallback behavior as existing map-default forms.",
+    },
+    "axis_map_fallback_java_guard_return_identity": {
+        "axis": "map_default_lookup",
+        "why": "A typed Java early-return `containsKey` guard should prove the same map/key/fallback behavior as existing map-default forms.",
+    },
     "axis_map_fallback_wrong_key_boundary": {
         "axis": "map_default_lookup",
         "why": "Map default lookups over different dynamic key parameters are different proof coordinates.",
@@ -1114,6 +1122,10 @@ AXIS_PROPOSALS = {
     "axis_map_fallback_python_alias_dict_identity": {
         "axis": "map_default_lookup",
         "why": "A Python alias import of `typing.Dict` used as a parameter annotation should prove dynamic map-default lookup.",
+    },
+    "axis_map_fallback_python_guard_return_identity": {
+        "axis": "map_default_lookup",
+        "why": "A typed Python `key in dict` early-return guard should prove dynamic map-default lookup.",
     },
     "axis_map_fallback_python_wrong_key_boundary": {
         "axis": "map_default_lookup",
@@ -3923,6 +3935,8 @@ def map_default_lookup_axis_supported(surface: Surface, proposal_id: str) -> boo
         return surface.key in {"go", "java", "rust", "python"}
     if proposal_id.startswith("axis_map_fallback_ts_"):
         return surface.key in {"go", "java", "rust", "typescript"}
+    if proposal_id.startswith("axis_map_fallback_java_"):
+        return surface.key in {"go", "java", "rust"}
     return surface.key in {"go", "java", "rust"}
 
 
@@ -3939,6 +3953,10 @@ def map_default_lookup_axis_parts(
         form = "ts_has_get"
     if proposal_id == "axis_map_fallback_ts_temp_guard_identity":
         form = "ts_temp_guard"
+    if proposal_id == "axis_map_fallback_ts_guard_return_identity":
+        form = "ts_guard_return"
+    if proposal_id == "axis_map_fallback_java_guard_return_identity":
+        form = "java_guard_return"
     if proposal_id.startswith("axis_map_fallback_ts_wrong_"):
         form = "ts_nullish"
     if proposal_id == "axis_map_fallback_ts_untyped_boundary":
@@ -3955,6 +3973,8 @@ def map_default_lookup_axis_parts(
         form = "py_alias_mutable_mapping"
     if proposal_id == "axis_map_fallback_python_alias_dict_identity":
         form = "py_alias_dict"
+    if proposal_id == "axis_map_fallback_python_guard_return_identity":
+        form = "py_guard_return"
     if proposal_id.startswith("axis_map_fallback_python_wrong_"):
         form = "py_dict"
     if proposal_id == "axis_map_fallback_python_untyped_boundary":
@@ -3995,12 +4015,15 @@ def map_default_lookup_axis_parts(
         "axis_map_fallback_ts_nullish_identity",
         "axis_map_fallback_ts_has_get_identity",
         "axis_map_fallback_ts_temp_guard_identity",
+        "axis_map_fallback_ts_guard_return_identity",
+        "axis_map_fallback_java_guard_return_identity",
         "axis_map_fallback_python_dict_get_identity",
         "axis_map_fallback_python_mapping_get_identity",
         "axis_map_fallback_python_mutable_mapping_get_identity",
         "axis_map_fallback_python_alias_mapping_identity",
         "axis_map_fallback_python_alias_mutable_mapping_identity",
         "axis_map_fallback_python_alias_dict_identity",
+        "axis_map_fallback_python_guard_return_identity",
     }:
         key = "other_key"
     return receiver, key, default, form
@@ -4036,15 +4059,22 @@ func {name}(lookup map[string]int, otherLookup map[string]int, key string, other
         return Variant("axis", src, name)
 
     if surface.key == "java":
-        if right:
+        if form == "java_guard_return" and right:
+            body = f"""if ({receiver}.containsKey({key})) {{
+            return {receiver}.get({key});
+        }}
+        return {default};"""
+        elif right:
             expr = f"{receiver}.getOrDefault({key}, {default})"
+            body = f"return {expr};"
         else:
             expr = f"{receiver}.containsKey({key}) ? {receiver}.get({key}) : {default}"
+            body = f"return {expr};"
         src = f"""import java.util.Map;
 
 class AxisCase {{
     static int {name}(Map<String, Integer> lookup, Map<String, Integer> other_lookup, String key, String other_key, int fallback, int other_default) {{
-        return {expr};
+        {body}
     }}
 }}
 """
@@ -4071,6 +4101,11 @@ pub fn {name}(lookup: &HashMap<&str, i32>, other_lookup: &HashMap<&str, i32>, ke
         elif form == "ts_temp_guard":
             body = f"""const selected = {receiver}.get({key});
   return selected === undefined ? {default} : selected;"""
+        elif form == "ts_guard_return":
+            body = f"""if ({receiver}.has({key})) {{
+    return {receiver}.get({key})!;
+  }}
+  return {default};"""
         else:
             expr = f"{receiver}.get({key}) ?? {default}"
             body = f"return {expr};"
@@ -4106,8 +4141,14 @@ pub fn {name}(lookup: &HashMap<&str, i32>, other_lookup: &HashMap<&str, i32>, ke
         elif form == "py_untyped":
             annotation = None
         receiver_annotation = f": {annotation}" if annotation else ""
+        if form == "py_guard_return":
+            body = f"""if {key} in {receiver}:
+        return {receiver}[{key}]
+    return {default}"""
+        else:
+            body = f"return {receiver}.get({key}, {default})"
         src = f"""{import_line}def {name}(lookup{receiver_annotation}, other_lookup{receiver_annotation}, key: str, other_key: str, fallback: int, other_default: int) -> int:
-    return {receiver}.get({key}, {default})
+    {body}
 """
         return Variant("axis", src, name)
 
@@ -7668,7 +7709,13 @@ def generate_axis_items(
                 surface, proposal_id
             ):
                 continue
-            if proposal_id.startswith(("axis_map_fallback_ts_", "axis_map_fallback_python_")):
+            if proposal_id.startswith(
+                (
+                    "axis_map_fallback_ts_",
+                    "axis_map_fallback_python_",
+                    "axis_map_fallback_java_",
+                )
+            ):
                 continue
             if proposal_id in {
                 "axis_collection_threshold_boundary",
@@ -9960,6 +10007,7 @@ def generate_map_default_lookup_cross_items(
         "axis_map_fallback_ts_nullish_identity",
         "axis_map_fallback_ts_has_get_identity",
         "axis_map_fallback_ts_temp_guard_identity",
+        "axis_map_fallback_ts_guard_return_identity",
     ):
         if not generation_filter.include_proposal(proposal_id):
             continue
@@ -9982,6 +10030,32 @@ def generate_map_default_lookup_cross_items(
                     proposal_id,
                     left_surface,
                     ts_surface,
+                    "not_equivalent",
+                    "heldout",
+                    "map_default_lookup-semantic-mutation",
+                )
+            )
+    java_surface = surface_by_key["java"]
+    if generation_filter.include_proposal("axis_map_fallback_java_guard_return_identity"):
+        for left_surface in reference_surfaces:
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    "axis_map_fallback_java_guard_return_identity",
+                    left_surface,
+                    java_surface,
+                    "equivalent",
+                    "heldout",
+                )
+            )
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    "axis_map_fallback_java_guard_return_identity",
+                    left_surface,
+                    java_surface,
                     "not_equivalent",
                     "heldout",
                     "map_default_lookup-semantic-mutation",
@@ -10016,6 +10090,7 @@ def generate_map_default_lookup_cross_items(
         "axis_map_fallback_python_alias_mapping_identity",
         "axis_map_fallback_python_alias_mutable_mapping_identity",
         "axis_map_fallback_python_alias_dict_identity",
+        "axis_map_fallback_python_guard_return_identity",
     ):
         if not generation_filter.include_proposal(proposal_id):
             continue

@@ -3979,3 +3979,74 @@ Assessment: this is a real frontier widening and a loop-quality improvement. The
 detector now proves key-view membership without treating value-view membership as
 equivalent, and the generator now mutates special map-key identity proposals correctly
 instead of accidentally producing duplicate positives as hard negatives.
+
+## Batch-3 map default guard-return: loops 397-401
+
+This loop adopts the accelerated cadence: add about three closely-related frontier
+items in one generator batch, then verify the whole batch with the same focused,
+axis-core, and compact all-cross gates. The batch opens early-return guard forms
+for dynamic map-default lookup:
+
+- `axis_map_fallback_python_guard_return_identity`;
+- `axis_map_fallback_ts_guard_return_identity`;
+- `axis_map_fallback_java_guard_return_identity`.
+
+The invariant is presence-guarded map defaulting: a guard over the same map/key
+followed by a present-key return and an absent-key fallback is the same behavior as
+`GetOrDefault(map, key, fallback)`. The detector now collapses the partial
+`GetOrDefault(map, key, bottom)` produced inside a guarded return with the
+fallthrough fallback return. Map-specific Java key predicates (`containsKey`,
+`contains_key`, `key?`, `has_key?`) are also lowered to map-key membership; ambiguous
+`has` remains typed/proven-map gated.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 397 | batch frontier selection | group Python, TypeScript, and Java early-return guard forms under one map-default proof invariant | focused corpus: 9 positives, 9 hard negatives |
+| 398 | baseline measurement | scan the focused batch with the previous release detector | baseline: 0/9 positives, 0/9 false merges |
+| 399 | detector strengthening | collapse guarded/partial map-default return sinks to `GetOrDefault(map,key,fallback)` and widen Java map-key predicate lowering | targeted equivalence/CLI tests passed |
+| 400 | release focused/core gates | build release and run focused and map-default core gates | focused 9/9, 0/9; map-default core 40/40, 0/86 |
+| 401 | compact all-cross gate | run the full compact all-cross core suite to check cross-frontier regressions | all-cross 611/611, 0/1198 |
+
+Focused release/candidate comparison:
+
+```text
+previous release:  items=18, positive=0/9, false_merges=0/9
+candidate release: items=18, positive=9/9, false_merges=0/9
+delta:             +9 positive hits, +0 false merges
+Raw nodes:         0/906 in both runs
+```
+
+Final release focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_map_fallback_python_guard_return_identity,axis_map_fallback_ts_guard_return_identity,axis_map_fallback_java_guard_return_identity CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 18
+positive recall: 9/9
+hard-negative false merges: 0/9
+Raw nodes: 0/906
+```
+
+Final release map-default core gate:
+
+```text
+GATE=core AXIS=map_default_lookup CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 126/141
+positive recall: 40/40
+hard-negative false merges: 0/86
+Raw nodes: 0/6009
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 1809/6665
+positive recall: 611/611
+hard-negative false merges: 0/1198
+Raw nodes: 0/65988
+```
+
+Assessment: the batch-3 cadence worked here because all three items shared one proof
+invariant. It reduced loop overhead without reducing strictness: the focused batch
+added 9 exact positives, the map-default core kept every existing hard boundary at
+zero false merges, and all-cross core still passed at zero false merges.

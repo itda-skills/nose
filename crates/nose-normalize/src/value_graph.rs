@@ -1137,7 +1137,10 @@ impl<'a> Builder<'a> {
         let Payload::Name(name) = self.il.node(callee).payload else {
             return None;
         };
-        if self.interner.resolve(name) != "has" {
+        let method = self.interner.resolve(name);
+        let map_specific_method =
+            matches!(method, "containsKey" | "contains_key" | "key?" | "has_key?");
+        if !matches!(method, "has" | "__contains__") && !map_specific_method {
             return None;
         }
         let receiver = self.il.children(callee).first().copied()?;
@@ -1146,7 +1149,8 @@ impl<'a> Builder<'a> {
         let map = if self.is_map_param_expr(receiver) {
             receiver_value
         } else {
-            self.proven_map_value(receiver_value)?
+            self.proven_map_value(receiver_value)
+                .or_else(|| map_specific_method.then_some(receiver_value))?
         };
         Some(self.mk(ValOp::Bin(Op::In as u32), vec![key, map]))
     }
@@ -1918,6 +1922,28 @@ impl<'a> Builder<'a> {
         {
             return;
         }
+        if let Some(defaulted) = self
+            .map_default_from_partial_default_pair(self.sinks[0].1, self.sinks[1].1)
+            .or_else(|| {
+                self.map_default_from_partial_default_pair(self.sinks[1].1, self.sinks[0].1)
+            })
+        {
+            self.sinks = vec![(SinkKind::Return, defaulted)];
+            return;
+        }
+        if let Some(defaulted) =
+            self.map_default_from_guarded_pair(self.sinks[0].1, self.sinks[1].1)
+        {
+            self.sinks = vec![(SinkKind::Return, defaulted)];
+            return;
+        }
+        if let Some(defaulted) = self
+            .map_default_from_guarded_fallthrough(self.sinks[0].1, self.sinks[1].1)
+            .or_else(|| self.map_default_from_guarded_fallthrough(self.sinks[1].1, self.sinks[0].1))
+        {
+            self.sinks = vec![(SinkKind::Return, defaulted)];
+            return;
+        }
         if let Some(defaulted) =
             self.value_default_from_guarded_pair(self.sinks[0].1, self.sinks[1].1)
         {
@@ -1932,6 +1958,76 @@ impl<'a> Builder<'a> {
         {
             self.sinks = vec![(SinkKind::Return, defaulted)];
         }
+    }
+
+    fn map_default_from_partial_default_pair(
+        &mut self,
+        partial: ValueId,
+        fallback: ValueId,
+    ) -> Option<ValueId> {
+        let (map, key) = self.map_default_bottom_call(partial)?;
+        let (cond, fallback_ret) = self.guarded_return_parts(fallback)?;
+        let (guard_key, guard_map, present) = self.map_presence_condition(cond)?;
+        if present || guard_key != key || guard_map != map {
+            return None;
+        }
+        Some(self.mk(
+            ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+            vec![map, key, fallback_ret],
+        ))
+    }
+
+    fn map_default_from_guarded_pair(
+        &mut self,
+        first: ValueId,
+        second: ValueId,
+    ) -> Option<ValueId> {
+        let (cond_a, ret_a) = self.guarded_return_parts(first)?;
+        let (cond_b, ret_b) = self.guarded_return_parts(second)?;
+        let (key_a, map_a, present_a) = self.map_presence_condition(cond_a)?;
+        let (key_b, map_b, present_b) = self.map_presence_condition(cond_b)?;
+        if key_a != key_b || map_a != map_b || present_a == present_b {
+            return None;
+        }
+        let default = if present_a {
+            if !self.map_lookup_value_matches(ret_a, map_a, key_a) {
+                return None;
+            }
+            ret_b
+        } else {
+            if !self.map_lookup_value_matches(ret_b, map_a, key_a) {
+                return None;
+            }
+            ret_a
+        };
+        Some(self.mk(
+            ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+            vec![map_a, key_a, default],
+        ))
+    }
+
+    fn map_default_from_guarded_fallthrough(
+        &mut self,
+        guarded: ValueId,
+        fallthrough: ValueId,
+    ) -> Option<ValueId> {
+        let (cond, guarded_ret) = self.guarded_return_parts(guarded)?;
+        let (key, map, present) = self.map_presence_condition(cond)?;
+        let default = if present {
+            if !self.map_lookup_value_matches(guarded_ret, map, key) {
+                return None;
+            }
+            fallthrough
+        } else {
+            if !self.map_lookup_value_matches(fallthrough, map, key) {
+                return None;
+            }
+            guarded_ret
+        };
+        Some(self.mk(
+            ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+            vec![map, key, default],
+        ))
     }
 
     fn value_default_from_guarded_pair(
@@ -2006,6 +2102,17 @@ impl<'a> Builder<'a> {
             return None;
         }
         Some((node.args[0], node.args[1]))
+    }
+
+    fn map_default_bottom_call(&self, value: ValueId) -> Option<(ValueId, ValueId)> {
+        let node = &self.nodes[value as usize];
+        if matches!(node.op, ValOp::Call(tag) if tag == Builtin::GetOrDefault as u32 + 1)
+            && node.args.len() == 3
+            && self.is_bottom_value(node.args[2])
+        {
+            return Some((node.args[0], node.args[1]));
+        }
+        None
     }
 
     fn is_bottom_value(&self, value: ValueId) -> bool {
@@ -3676,6 +3783,13 @@ impl<'a> Builder<'a> {
             }
         }
         None
+    }
+
+    fn map_presence_condition(&self, cond: ValueId) -> Option<(ValueId, ValueId, bool)> {
+        let (key, map, negated) = self
+            .own_property_condition(cond)
+            .or_else(|| self.membership_condition(cond))?;
+        Some((key, map, !negated))
     }
 
     fn static_literal_membership_predicate(&self, pred: ValueId) -> Option<(ValueId, ValueId)> {
