@@ -676,6 +676,13 @@ impl<'a> Builder<'a> {
         if matches!(self.nodes[value as usize].op, ValOp::Seq(1)) {
             return Some(value);
         }
+        if matches!(self.nodes[value as usize].op, ValOp::Seq(2))
+            || (self.il.meta.lang == Lang::Python
+                && matches!(self.nodes[value as usize].op, ValOp::Seq(0)))
+        {
+            let items = self.nodes[value as usize].args.clone();
+            return Some(self.mk(ValOp::Seq(1), items));
+        }
         self.proven_set_constructor_collection(value)
             .or_else(|| self.proven_java_collection_factory_value(value))
             .or_else(|| self.proven_python_collection_factory_value(value))
@@ -742,11 +749,25 @@ impl<'a> Builder<'a> {
             .iter()
             .enumerate()
             .any(|(idx, node)| match node.kind {
+                NodeKind::Call => self
+                    .call_mutates_cid(NodeId(idx as u32), cid)
+                    .unwrap_or(false),
                 NodeKind::Field => self
                     .field_mutates_cid(NodeId(idx as u32), cid)
                     .unwrap_or(false),
                 _ => false,
             })
+    }
+
+    fn call_mutates_cid(&self, call: NodeId, cid: u32) -> Option<bool> {
+        if !matches!(
+            self.il.node(call).payload,
+            Payload::Builtin(Builtin::Append)
+        ) {
+            return Some(false);
+        }
+        let receiver = self.il.children(call).first().copied()?;
+        Some(self.node_refers_to_cid(receiver, cid))
     }
 
     fn field_mutates_cid(&self, field: NodeId, cid: u32) -> Option<bool> {
@@ -1661,10 +1682,13 @@ impl<'a> Builder<'a> {
             if counts.get(&name).copied().unwrap_or(0) != 1 {
                 continue;
             }
+            if self.module_binding_mutated(name) {
+                continue;
+            }
             let value = self.eval(kids[1], &env);
             let value = if self.immutable_binding_safe(kids[1], &env) {
                 value
-            } else if !self.module_binding_mutated(name) {
+            } else {
                 let Some(proven) = self
                     .proven_map_value(value)
                     .or_else(|| self.proven_collection_value(value))
@@ -1672,8 +1696,6 @@ impl<'a> Builder<'a> {
                     continue;
                 };
                 proven
-            } else {
-                continue;
             };
             if let Payload::Cid(cid) = self.il.node(kids[0]).payload {
                 env.insert(cid, value);
@@ -1738,6 +1760,9 @@ impl<'a> Builder<'a> {
             .iter()
             .enumerate()
             .any(|(idx, node)| match node.kind {
+                NodeKind::Call => self
+                    .call_mutates_binding(NodeId(idx as u32), name)
+                    .unwrap_or(false),
                 NodeKind::Field => self
                     .field_mutates_binding(NodeId(idx as u32), name)
                     .unwrap_or(false),
@@ -1751,6 +1776,17 @@ impl<'a> Builder<'a> {
     fn assignment_mutates_binding(&self, assign: NodeId, name: Symbol) -> Option<bool> {
         let lhs = self.il.children(assign).first().copied()?;
         Some(self.node_contains_symbol(lhs, name))
+    }
+
+    fn call_mutates_binding(&self, call: NodeId, name: Symbol) -> Option<bool> {
+        if !matches!(
+            self.il.node(call).payload,
+            Payload::Builtin(Builtin::Append)
+        ) {
+            return Some(false);
+        }
+        let receiver = self.il.children(call).first().copied()?;
+        Some(self.node_refers_to_symbol(receiver, name))
     }
 
     fn field_mutates_binding(&self, field: NodeId, name: Symbol) -> Option<bool> {

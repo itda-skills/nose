@@ -604,6 +604,16 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
     )
     .unwrap();
     fs::write(
+        dir.join("python_module_tuple.py"),
+        "VALUES = (\"red\", \"blue\")\n\n\ndef python_module_tuple(value, other):\n    return value in VALUES\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("python_module_set.py"),
+        "VALUES = {\"red\", \"blue\"}\n\n\ndef python_module_set(value, other):\n    return value in VALUES\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("membership.js"),
         "function membership(value, other) {\n  return [\"red\", \"blue\"].includes(value);\n}\n",
     )
@@ -889,6 +899,11 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
     )
     .unwrap();
     fs::write(
+        dir.join("python_module_mutated.py"),
+        "VALUES = [\"red\", \"blue\"]\nVALUES.append(\"green\")\n\n\ndef python_module_mutated(value, other):\n    return value in VALUES\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("module_set_shadowed.ts"),
         "const Set: any = function(_values: any) {\n  return { has: function() { return false; } };\n};\nconst VALUES = new Set([\"red\", \"blue\"]);\n\nfunction moduleSetShadowed(value: string, other: string): boolean {\n  return VALUES.has(value);\n}\n",
     )
@@ -1060,6 +1075,8 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "python_deque_import.py",
         "python_deque_alias.py",
         "python_deque_namespace.py",
+        "python_module_tuple.py",
+        "python_module_set.py",
         "module_set.js",
         "module_set.ts",
         "array_some.js",
@@ -1115,6 +1132,7 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "array_every_wrong_collection.ts",
         "substring.rs",
         "module_set_mutated.js",
+        "python_module_mutated.py",
         "module_set_shadowed.ts",
         "module_list_shadowed.java",
         "python_factory_shadowed.py",

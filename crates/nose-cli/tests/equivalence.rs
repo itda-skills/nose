@@ -1647,6 +1647,10 @@ fn collection_membership_set_construction_converges_with_boundaries() {
     let py_deque_import = "from collections import deque\n\ndef f(value, other):\n    return deque([\"red\", \"blue\"]).__contains__(value)\n";
     let py_deque_alias = "from collections import deque as Values\n\ndef f(value, other):\n    return Values([\"red\", \"blue\"]).__contains__(value)\n";
     let py_deque_namespace = "import collections\n\ndef f(value, other):\n    return collections.deque([\"red\", \"blue\"]).__contains__(value)\n";
+    let py_module_tuple =
+        "VALUES = (\"red\", \"blue\")\n\ndef f(value, other):\n    return value in VALUES\n";
+    let py_module_set =
+        "VALUES = {\"red\", \"blue\"}\n\ndef f(value, other):\n    return value in VALUES\n";
     let js_set_inline =
         "function f(value, other) { return new Set([\"red\", \"blue\"]).has(value); }";
     let js_set_local = "function f(value, other) { const values = new Set([\"red\", \"blue\"]); return values.has(value); }";
@@ -1764,6 +1768,7 @@ fn collection_membership_set_construction_converges_with_boundaries() {
         "def f(value, other):\n    return deque([\"red\", \"blue\"]).__contains__(value)\n";
     let py_deque_shadowed = "from collections import deque\n\ndef deque(_values):\n    class Box:\n        def __contains__(self, _value):\n            return False\n    return Box()\n\ndef f(value, other):\n    return deque([\"red\", \"blue\"]).__contains__(value)\n";
     let py_deque_mutated = "from collections import deque\n\ndef f(value, other):\n    values = deque([\"red\", \"blue\"])\n    values.append(\"green\")\n    return values.__contains__(value)\n";
+    let py_module_mutated = "VALUES = [\"red\", \"blue\"]\nVALUES.append(\"green\")\n\ndef f(value, other):\n    return value in VALUES\n";
     let go_slices_wrong_element = "package p\n\nimport \"slices\"\n\nvar values = []string{\"red\", \"blue\"}\n\nfunc F(value string, other string) bool { return slices.Contains(values, other) }\n";
     let go_slices_wrong_collection = "package p\n\nimport \"slices\"\n\nvar values = []string{\"green\", \"blue\"}\n\nfunc F(value string, other string) bool { return slices.Contains(values, value) }\n";
     let go_slices_mutated = "package p\n\nimport \"slices\"\n\nvar values = append([]string{\"red\", \"blue\"}, \"green\")\n\nfunc F(value string, other string) bool { return slices.Contains(values, value) }\n";
@@ -1793,6 +1798,8 @@ fn collection_membership_set_construction_converges_with_boundaries() {
     assert_eq!(literal_fp, value_fp(&i, py_deque_import, Lang::Python));
     assert_eq!(literal_fp, value_fp(&i, py_deque_alias, Lang::Python));
     assert_eq!(literal_fp, value_fp(&i, py_deque_namespace, Lang::Python));
+    assert_eq!(literal_fp, value_fp(&i, py_module_tuple, Lang::Python));
+    assert_eq!(literal_fp, value_fp(&i, py_module_set, Lang::Python));
     assert_eq!(literal_fp, value_fp(&i, js_set_inline, Lang::JavaScript));
     assert_eq!(literal_fp, value_fp(&i, js_set_local, Lang::JavaScript));
     assert_eq!(literal_fp, value_fp(&i, js_module_set, Lang::JavaScript));
@@ -2046,6 +2053,7 @@ fn collection_membership_set_construction_converges_with_boundaries() {
         value_fp_named(&i, py_deque_shadowed, Lang::Python, "f")
     );
     assert_ne!(literal_fp, value_fp(&i, py_deque_mutated, Lang::Python));
+    assert_ne!(literal_fp, value_fp(&i, py_module_mutated, Lang::Python));
     assert_ne!(literal_fp, value_fp(&i, go_slices_wrong_element, Lang::Go));
     assert_ne!(
         literal_fp,

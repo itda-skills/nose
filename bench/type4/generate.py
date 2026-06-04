@@ -631,6 +631,18 @@ AXIS_PROPOSALS = {
         "axis": "literal_collection_membership",
         "why": "A Java static final `List.of(...)` binding should prove literal collection membership through the same collection/element coordinates.",
     },
+    "axis_membership_module_python_tuple_identity": {
+        "axis": "literal_collection_membership",
+        "why": "A Python module-level immutable tuple literal binding should prove literal collection membership when the binding is not mutated.",
+    },
+    "axis_membership_module_python_set_identity": {
+        "axis": "literal_collection_membership",
+        "why": "A Python module-level immutable set literal binding should prove literal collection membership when the binding is not mutated.",
+    },
+    "axis_membership_module_python_mutated_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "A Python module-level collection binding mutated after initialization is not a strict literal membership proof.",
+    },
     "axis_membership_module_wrong_element_boundary": {
         "axis": "literal_collection_membership",
         "why": "Module-level collection membership over different element parameters is a different proof coordinate.",
@@ -2839,6 +2851,12 @@ def membership_axis_parts(
         form = "module_set" if right else "membership"
     if proposal_id == "axis_membership_module_java_list_identity":
         form = "java_module_list" if right else "membership"
+    if proposal_id == "axis_membership_module_python_tuple_identity":
+        form = "python_module_tuple" if right else "membership"
+    if proposal_id == "axis_membership_module_python_set_identity":
+        form = "python_module_set" if right else "membership"
+    if proposal_id == "axis_membership_module_python_mutated_boundary":
+        form = "python_module_mutated" if right else "membership"
     if proposal_id in {
         "axis_membership_module_wrong_element_boundary",
         "axis_membership_module_wrong_collection_boundary",
@@ -2924,6 +2942,8 @@ def membership_axis_parts(
         "axis_membership_module_js_set_identity",
         "axis_membership_module_ts_set_identity",
         "axis_membership_module_java_list_identity",
+        "axis_membership_module_python_tuple_identity",
+        "axis_membership_module_python_set_identity",
         "axis_membership_go_slices_package_identity",
         "axis_membership_go_slices_alias_package_identity",
         "axis_membership_go_slices_const_package_identity",
@@ -3235,6 +3255,23 @@ function {name}(value: string, other: string): boolean {{
         return Variant("axis", src, name)
 
     if surface.key == "python":
+        if form in {
+            "python_module_tuple",
+            "python_module_set",
+            "python_module_mutated",
+        }:
+            binding = {
+                "python_module_tuple": f'("{left}", "{right_item}")',
+                "python_module_set": f'{{"{left}", "{right_item}"}}',
+                "python_module_mutated": f'["{left}", "{right_item}"]',
+            }[form]
+            mutation = 'VALUES.append("green")\n' if form == "python_module_mutated" else ""
+            src = f"""VALUES = {binding}
+{mutation}
+def {name}(value, other):
+    return {element} in VALUES
+"""
+            return Variant("axis", src, name)
         if form in {
             "python_set_factory",
             "python_tuple_factory",
@@ -9010,6 +9047,8 @@ def generate_literal_membership_cross_items(
         "axis_membership_module_js_set_identity": [surface_by_key["javascript"]],
         "axis_membership_module_ts_set_identity": [surface_by_key["typescript"]],
         "axis_membership_module_java_list_identity": [surface_by_key["java"]],
+        "axis_membership_module_python_tuple_identity": [surface_by_key["python"]],
+        "axis_membership_module_python_set_identity": [surface_by_key["python"]],
     }
     for proposal_id, module_right_surfaces in module_right_surfaces_by_proposal.items():
         if not generation_filter.include_proposal(proposal_id):
@@ -9080,6 +9119,20 @@ def generate_literal_membership_cross_items(
                         "literal-membership-boundary",
                     )
                 )
+    if generation_filter.include_proposal("axis_membership_module_python_mutated_boundary"):
+        for left_surface in module_reference_surfaces:
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    "axis_membership_module_python_mutated_boundary",
+                    left_surface,
+                    surface_by_key["python"],
+                    "not_equivalent",
+                    "heldout",
+                    "literal-membership-boundary",
+                )
+            )
     go_slices_right = surface_by_key["go"]
     for proposal_id in (
         "axis_membership_go_slices_package_identity",

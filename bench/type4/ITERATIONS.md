@@ -4050,3 +4050,79 @@ Assessment: the batch-3 cadence worked here because all three items shared one p
 invariant. It reduced loop overhead without reducing strictness: the focused batch
 added 9 exact positives, the map-default core kept every existing hard boundary at
 zero false merges, and all-cross core still passed at zero false merges.
+
+## Batch-3 Python module collection membership: loops 402-406
+
+This loop follows the accelerated cadence requested after loop 401: add about three
+closely-related frontier items, then validate them together with one focused gate,
+one axis-core gate, and one compact all-cross gate. The batch stays within
+`literal_collection_membership` and opens:
+
+- `axis_membership_module_python_tuple_identity`;
+- `axis_membership_module_python_set_identity`;
+- `axis_membership_module_python_mutated_boundary`.
+
+The proof invariant is module-level collection membership through a stable binding.
+A Python module tuple literal and a module set literal are exact membership collections
+when the binding is assigned once and never mutated. A module list that is appended
+after initialization is not the same strict proof, even if its original literal items
+match the reference collection.
+
+The detector now canonicalizes tuple and Python set literals to the same strict
+membership collection value as list literals only after the binding has passed the
+module-immutability proof. The mutation scanner was also strengthened to treat the
+normalized `@Append(receiver, value)` builtin as a binding mutation; previously it
+only saw field-method calls, so `VALUES.append(...)` after idiom normalization could
+slip past the strict gate.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 402 | batch frontier selection | group Python module tuple, module set, and mutated module list membership under one stable-binding invariant | focused corpus: 4 positives, 6 hard negatives |
+| 403 | baseline measurement | scan the focused batch with the previous release detector | baseline: 0/4 positives, 2/6 false merges |
+| 404 | detector strengthening | canonicalize tuple/Python set collection values and reject normalized `@Append` mutations for module/local bindings | targeted equivalence/CLI tests passed |
+| 405 | release focused/core gates | build release and run focused and literal-membership core gates | focused 4/4, 0/6; membership core 175/175, 0/424 |
+| 406 | compact all-cross gate | run the full compact all-cross core suite to check cross-frontier regressions | all-cross 613/613, 0/1201 |
+
+Focused release/candidate comparison:
+
+```text
+previous release:  items=10, positive=0/4, false_merges=2/6
+candidate release: items=10, positive=4/4, false_merges=0/6
+delta:             +4 positive hits, -2 false merges
+```
+
+Final release focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_membership_module_python_ CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 10
+positive recall: 4/4
+hard-negative false merges: 0/6
+Raw nodes: 0/265
+```
+
+Final release literal-membership core gate:
+
+```text
+GATE=core AXIS=literal_collection_membership CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 599/1228
+positive recall: 175/175
+hard-negative false merges: 0/424
+Raw nodes: 0/18141
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 1814/6675
+positive recall: 613/613
+hard-negative false merges: 0/1201
+Raw nodes: 0/66123
+```
+
+Assessment: this batch validates the faster loop shape. It expanded strict positives
+and simultaneously removed a previous false merge, so batching did not weaken the
+proof bar. The important constraint is that a batch should still share one invariant:
+here, all three items are about the same stable module binding proof and its mutation
+boundary.

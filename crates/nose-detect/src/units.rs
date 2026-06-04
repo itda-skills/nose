@@ -214,9 +214,12 @@ impl StrictFacts {
             if counts.get(&name).copied().unwrap_or(0) != 1 {
                 continue;
             }
+            if module_binding_mutated(il, interner, name) {
+                continue;
+            }
             let safe_literal = immutable_binding_safe(il, &env, &self.immutable_names, kids[1]);
-            let safe_proven_container = !module_binding_mutated(il, interner, name)
-                && strict_exact_module_container_binding_safe(il, interner, self, kids[1]);
+            let safe_proven_container =
+                strict_exact_module_container_binding_safe(il, interner, self, kids[1]);
             if safe_literal || safe_proven_container {
                 self.immutable_names.insert(name);
                 if let Payload::Cid(cid) = il.node(kids[0]).payload {
@@ -269,6 +272,7 @@ fn module_binding_mutated(il: &Il, interner: &Interner, name: Symbol) -> bool {
     il.nodes.iter().enumerate().any(|(idx, node)| {
         let node_id = NodeId(idx as u32);
         match il.kind(node_id) {
+            NodeKind::Call => call_mutates_binding(il, node_id, name).unwrap_or(false),
             NodeKind::Field => {
                 field_mutates_binding(il, interner, node_id, name).unwrap_or(false)
                     && matches!(node.payload, Payload::Name(_))
@@ -284,6 +288,14 @@ fn module_binding_mutated(il: &Il, interner: &Interner, name: Symbol) -> bool {
 fn assignment_mutates_binding(il: &Il, assign: NodeId, name: Symbol) -> Option<bool> {
     let lhs = il.children(assign).first().copied()?;
     Some(node_contains_symbol(il, lhs, name))
+}
+
+fn call_mutates_binding(il: &Il, call: NodeId, name: Symbol) -> Option<bool> {
+    if !matches!(il.node(call).payload, Payload::Builtin(Builtin::Append)) {
+        return Some(false);
+    }
+    let receiver = il.children(call).first().copied()?;
+    Some(node_refers_to_symbol(il, receiver, name))
 }
 
 fn field_mutates_binding(
