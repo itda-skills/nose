@@ -371,6 +371,54 @@ AXIS_PROPOSALS = {
         "axis": "literal_collection_membership",
         "why": "An arbitrary `.has` receiver is not proof of strict collection-membership semantics.",
     },
+    "axis_membership_java_list_of_identity": {
+        "axis": "literal_collection_membership",
+        "why": "Java `List.of(...).contains(value)` over static literal items should prove the same element-in-collection predicate as other literal collection APIs.",
+    },
+    "axis_membership_java_set_of_identity": {
+        "axis": "literal_collection_membership",
+        "why": "Java `Set.of(...).contains(value)` over static literal items should prove the same element-in-collection predicate as other literal collection APIs.",
+    },
+    "axis_membership_java_arrays_aslist_identity": {
+        "axis": "literal_collection_membership",
+        "why": "Java `Arrays.asList(...).contains(value)` over static literal items should prove the same element-in-collection predicate as other literal collection APIs.",
+    },
+    "axis_membership_java_list_of_wrong_element_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Java `List.of(...).contains(...)` is still a proof over a specific element coordinate.",
+    },
+    "axis_membership_java_set_of_wrong_element_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Java `Set.of(...).contains(...)` is still a proof over a specific element coordinate.",
+    },
+    "axis_membership_java_arrays_aslist_wrong_element_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Java `Arrays.asList(...).contains(...)` is still a proof over a specific element coordinate.",
+    },
+    "axis_membership_java_list_of_wrong_collection_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Java `List.of(...).contains(value)` over different literal items changes membership behavior.",
+    },
+    "axis_membership_java_set_of_wrong_collection_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Java `Set.of(...).contains(value)` over different literal items changes membership behavior.",
+    },
+    "axis_membership_java_arrays_aslist_wrong_collection_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Java `Arrays.asList(...).contains(value)` over different literal items changes membership behavior.",
+    },
+    "axis_membership_java_list_of_shadowed_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "A locally shadowed Java `List` name is not proof of the standard `java.util.List.of` collection factory.",
+    },
+    "axis_membership_java_set_of_shadowed_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "A locally shadowed Java `Set` name is not proof of the standard `java.util.Set.of` collection factory.",
+    },
+    "axis_membership_java_arrays_aslist_shadowed_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "A locally shadowed Java `Arrays` name is not proof of the standard `java.util.Arrays.asList` collection factory.",
+    },
     "axis_map_key_membership_identity": {
         "axis": "map_key_membership",
         "why": "Map key-presence APIs should prove the same key-in-map predicate when receiver and key coordinates are fixed.",
@@ -2002,6 +2050,8 @@ def literal_membership_axis_supported(surface: Surface, proposal_id: str) -> boo
         return surface.key in {"java", "rust", "typescript"}
     if proposal_id.startswith("axis_membership_set_"):
         return surface.key in {"python", "javascript", "typescript", "go", "rust", "ruby"}
+    if proposal_id.startswith("axis_membership_java_"):
+        return surface.key == "java"
     return surface.key in {
         "python",
         "javascript",
@@ -2052,16 +2102,31 @@ def membership_axis_parts(
         form = "set_local" if right else "membership"
     if proposal_id == "axis_membership_set_untyped_receiver_boundary":
         form = "set_untyped" if right else "membership"
+    if proposal_id.startswith("axis_membership_java_"):
+        form = "java_list_of"
+        if "_set_of_" in proposal_id:
+            form = "java_set_of"
+        elif "_arrays_aslist_" in proposal_id:
+            form = "java_arrays_aslist"
     if right and negative and proposal_id in {
         "axis_membership_set_param_identity",
         "axis_membership_set_inline_identity",
         "axis_membership_set_local_identity",
+        "axis_membership_java_list_of_identity",
+        "axis_membership_java_set_of_identity",
+        "axis_membership_java_arrays_aslist_identity",
     }:
         element = "other"
     if right and proposal_id == "axis_membership_set_wrong_element_boundary":
         element = "other"
     if right and proposal_id == "axis_membership_set_wrong_collection_boundary":
         items = ("green", "blue")
+    if right and proposal_id.endswith("_wrong_element_boundary"):
+        element = "other"
+    if right and proposal_id.endswith("_wrong_collection_boundary"):
+        items = ("green", "blue")
+    if right and proposal_id.endswith("_shadowed_boundary"):
+        form = f"{form}_shadowed"
     return element, items, form
 
 
@@ -2237,6 +2302,26 @@ func {name}(value string, other string) bool {{
         return Variant("axis", src, name)
 
     if surface.key == "java":
+        if form.startswith("java_"):
+            ctor_form = form.removesuffix("_shadowed")
+            shadowed = form.endswith("_shadowed")
+            if ctor_form == "java_list_of":
+                import_line = "import java.util.List;\n\n"
+                factory = f'List.of("{left}", "{right_item}")'
+                shadow_param = "Object List, "
+            elif ctor_form == "java_set_of":
+                import_line = "import java.util.Set;\n\n"
+                factory = f'Set.of("{left}", "{right_item}")'
+                shadow_param = "Object Set, "
+            else:
+                import_line = "import java.util.Arrays;\n\n"
+                factory = f'Arrays.asList("{left}", "{right_item}")'
+                shadow_param = "Object Arrays, "
+            params = f"{shadow_param}String value, String other" if shadowed else "String value, String other"
+            imports = "" if shadowed else import_line
+            src = f"""{imports}class C {{ static boolean {name}({params}) {{ return {factory}.contains({element}); }} }}
+"""
+            return Variant("axis", src, name)
         if form in {"typed_membership", "set_param"}:
             src = f"""import java.util.List;
 
@@ -5366,6 +5451,8 @@ def generate_axis_items(
                 continue
             if proposal_id.startswith("axis_membership_set_"):
                 continue
+            if proposal_id.startswith("axis_membership_java_"):
+                continue
             if proposal_id.startswith("axis_map_key_") and not map_key_membership_axis_supported(
                 surface, proposal_id
             ):
@@ -5991,6 +6078,84 @@ def generate_literal_membership_cross_items(
                         "literal-membership-boundary",
                     )
                 )
+    return items
+
+
+def generate_java_factory_membership_cross_items(
+    out_dir: Path,
+    capabilities: dict,
+    cross_mode: str,
+    generation_filter: GenerationFilter,
+) -> list[dict]:
+    if cross_mode == "none" or not generation_filter.include_axis("literal_collection_membership"):
+        return []
+    surface_by_key = {surface.key: surface for surface in SURFACES}
+    java_surface = surface_by_key["java"]
+    reference_surfaces = [
+        s
+        for s in SURFACES
+        if s.key != "java" and literal_membership_axis_supported(s, "axis_membership_literal_identity")
+    ]
+    if cross_mode == "ring":
+        reference_surfaces = reference_surfaces[:1]
+    items: list[dict] = []
+    for proposal_id in (
+        "axis_membership_java_list_of_identity",
+        "axis_membership_java_set_of_identity",
+        "axis_membership_java_arrays_aslist_identity",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for left_surface in reference_surfaces:
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    proposal_id,
+                    left_surface,
+                    java_surface,
+                    "equivalent",
+                    "heldout",
+                )
+            )
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    proposal_id,
+                    left_surface,
+                    java_surface,
+                    "not_equivalent",
+                    "heldout",
+                    "literal_collection_membership-semantic-mutation",
+                )
+            )
+    for proposal_id in (
+        "axis_membership_java_list_of_wrong_element_boundary",
+        "axis_membership_java_set_of_wrong_element_boundary",
+        "axis_membership_java_arrays_aslist_wrong_element_boundary",
+        "axis_membership_java_list_of_wrong_collection_boundary",
+        "axis_membership_java_set_of_wrong_collection_boundary",
+        "axis_membership_java_arrays_aslist_wrong_collection_boundary",
+        "axis_membership_java_list_of_shadowed_boundary",
+        "axis_membership_java_set_of_shadowed_boundary",
+        "axis_membership_java_arrays_aslist_shadowed_boundary",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for left_surface in reference_surfaces:
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    proposal_id,
+                    left_surface,
+                    java_surface,
+                    "not_equivalent",
+                    "heldout",
+                    "literal-membership-boundary",
+                )
+            )
     return items
 
 
@@ -6701,6 +6866,11 @@ def generate(
     )
     items.extend(
         generate_literal_membership_cross_items(
+            out_dir, capabilities, cross_mode, generation_filter
+        )
+    )
+    items.extend(
+        generate_java_factory_membership_cross_items(
             out_dir, capabilities, cross_mode, generation_filter
         )
     )

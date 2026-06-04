@@ -2014,3 +2014,72 @@ baseline already merged Rust `.abs()`, but it missed `.min/.max()` and also acce
 custom `.abs()` method. The final detector requires an explicit numeric receiver fact
 before treating method names as numeric intrinsics, so real Rust scalar methods converge
 without admitting arbitrary user-defined methods with the same spelling.
+
+## Java literal collection factories: loops 247-252
+
+This loop continues the batch-3 cadence on the highest-priority open membership frontier.
+The chosen micro-frontiers are Java literal collection factories whose receiver identity
+can be proven without trusting arbitrary `.contains` calls:
+
+- `List.of("red", "blue").contains(value)`;
+- `Set.of("red", "blue").contains(value)`;
+- `Arrays.asList("red", "blue").contains(value)`.
+
+The proof is strict only when the factory receiver is a standard Java free name and the
+same file does not define a type with that name. Hard-negative siblings cover wrong
+element coordinates, wrong literal item coordinates, local name shadowing, and same-file
+type shadowing.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 247 | batched frontier selection | group three Java literal factory membership surfaces under `axis_membership_java_*` | focused corpus: 27 positives, 108 hard negatives |
+| 248 | baseline measurement | scan the focused batch with the previous release detector | baseline: 0/27 positives, 0/108 false merges |
+| 249 | detector strengthening | treat Java `List.of`, `Set.of`, and `Arrays.asList` calls as proven literal collections when the receiver is an unshadowed standard free name | candidate focused: 27/27 positives |
+| 250 | strict-safe gate alignment | mark the same Java factory calls and their `.contains` uses as exact-safe only under the factory proof conditions | CLI semantic scan now reports Java factories in the literal membership family |
+| 251 | targeted regression tests | add value-graph and CLI tests for the three factories plus wrong-coordinate and shadow boundaries | targeted and full CLI/equivalence tests passed |
+| 252 | release focused/core gates | build release and run focused Java factory, literal-membership core, and all-cross core gates | focused: 27/27, 0/108; literal core: 58/58, 0/170; all-cross core: 421/421, 0/769 |
+
+Focused release/candidate comparison:
+
+```text
+previous release: items=135, positive=0/27, false_merges=0/108
+candidate:        items=135, positive=27/27, false_merges=0/108
+delta:            +27 positive hits, +0 false merges
+```
+
+Final release Java factory focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_membership_java CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 135
+positive recall: 27/27
+hard-negative false merges: 0/108
+Raw nodes: 0/4194
+```
+
+Final release literal-membership compact gate:
+
+```text
+GATE=core AXIS=literal_collection_membership CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 228/492
+positive recall: 58/58
+hard-negative false merges: 0/170
+Raw nodes: 0/6612
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 1190/5652
+positive recall: 421/421
+hard-negative false merges: 0/769
+Raw nodes: 0/44585
+```
+
+Assessment: this is a real strict-frontier widening inside `membership_contains`.
+The previous detector had no recall for Java literal collection factories. The final
+detector maps the factories into the existing literal collection membership value only
+under narrow receiver proof conditions, and exact semantic reporting uses the same proof
+for its `exact_safe` gate. The shadow boundaries keep the change from becoming a broad
+method-name or class-name heuristic.

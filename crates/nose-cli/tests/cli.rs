@@ -819,6 +819,21 @@ fn scan_mode_semantic_proves_set_membership_when_receiver_is_proven() {
     )
     .unwrap();
     fs::write(
+        dir.join("java_list_of.java"),
+        "import java.util.List;\n\nclass JavaListOf { static boolean f(String value, String other) { return List.of(\"red\", \"blue\").contains(value); } }\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("java_set_of.java"),
+        "import java.util.Set;\n\nclass JavaSetOf { static boolean f(String value, String other) { return Set.of(\"red\", \"blue\").contains(value); } }\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("java_arrays_aslist.java"),
+        "import java.util.Arrays;\n\nclass JavaArraysAsList { static boolean f(String value, String other) { return Arrays.asList(\"red\", \"blue\").contains(value); } }\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("wrong_element.js"),
         "function f(value, other) {\n  return new Set([\"red\", \"blue\"]).has(other);\n}\n",
     )
@@ -838,6 +853,21 @@ fn scan_mode_semantic_proves_set_membership_when_receiver_is_proven() {
         "function f(Set, value, other) {\n  return new Set([\"red\", \"blue\"]).has(value);\n}\n",
     )
     .unwrap();
+    fs::write(
+        dir.join("java_wrong_element.java"),
+        "import java.util.List;\n\nclass JavaWrongElement { static boolean f(String value, String other) { return List.of(\"red\", \"blue\").contains(other); } }\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("java_shadowed_list.java"),
+        "class JavaShadowedList { static boolean f(Object List, String value, String other) { return List.of(\"red\", \"blue\").contains(value); } }\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("java_local_list.java"),
+        "class JavaLocalList { static boolean f(String value, String other) { return List.of(\"red\", \"blue\").contains(value); } }\nclass List { static Box of(String a, String b) { return new Box(); } }\nclass Box { boolean contains(String value) { return false; } }\n",
+    )
+    .unwrap();
 
     let semantic = run(&[
         "scan",
@@ -855,28 +885,53 @@ fn scan_mode_semantic_proves_set_membership_when_receiver_is_proven() {
     ]);
     let semantic_json: serde_json::Value =
         serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_text = semantic_json.to_string();
-    for expected in [
+    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let expected_positive = [
         "literal.py",
         "set_inline.js",
         "set_local.js",
-        "typed_array.ts",
-        "typed_set.ts",
-    ] {
-        assert!(
-            semantic_text.contains(expected),
-            "semantic mode should include proven Set membership {expected}: {semantic}"
-        );
-    }
+        "java_list_of.java",
+        "java_set_of.java",
+        "java_arrays_aslist.java",
+    ];
+    let positive_family = semantic_families
+        .iter()
+        .find(|family| {
+            let family_text = family.to_string();
+            expected_positive
+                .iter()
+                .all(|expected| family_text.contains(expected))
+        })
+        .unwrap_or_else(|| {
+            panic!("semantic mode should include proven Set membership family: {semantic}")
+        });
+    let positive_text = positive_family.to_string();
+    let typed_family = semantic_families
+        .iter()
+        .find(|family| {
+            let family_text = family.to_string();
+            family_text.contains("typed_array.ts") && family_text.contains("typed_set.ts")
+        })
+        .unwrap_or_else(|| {
+            panic!("semantic mode should include typed Set membership family: {semantic}")
+        });
+    let typed_text = typed_family.to_string();
     for unexpected in [
         "wrong_element.js",
         "wrong_collection.js",
         "untyped_receiver.ts",
         "shadowed_set.js",
+        "java_wrong_element.java",
+        "java_shadowed_list.java",
+        "java_local_list.java",
     ] {
         assert!(
-            !semantic_text.contains(unexpected),
+            !positive_text.contains(unexpected),
             "semantic mode must preserve Set membership boundaries: {semantic}"
+        );
+        assert!(
+            !typed_text.contains(unexpected),
+            "semantic mode must preserve typed Set membership boundaries: {semantic}"
         );
     }
 

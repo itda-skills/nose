@@ -391,6 +391,9 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
     if strict_exact_set_constructor_collection_safe(il, interner, facts, node) {
         return true;
     }
+    if strict_exact_java_collection_factory_safe(il, interner, facts, node) {
+        return true;
+    }
     if strict_exact_map_constructor_entries_safe(il, interner, facts, node) {
         return true;
     }
@@ -418,6 +421,14 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
     if method == "isArray" {
         return strict_exact_field_receiver_name(il, interner, callee, "Array")
             && strict_exact_call_args_safe(il, interner, facts, node);
+    }
+    if method == "contains" {
+        let Some(&receiver) = il.children(callee).first() else {
+            return false;
+        };
+        if strict_exact_java_collection_factory_safe(il, interner, facts, receiver) {
+            return strict_exact_call_args_safe(il, interner, facts, node);
+        }
     }
     if matches!(method, "get" | "has") {
         let Some(&receiver) = il.children(callee).first() else {
@@ -478,6 +489,58 @@ fn strict_exact_set_constructor_collection_safe(
         return false;
     }
     strict_exact_membership_collection_safe(il, interner, facts, kids[1])
+}
+
+fn strict_exact_java_collection_factory_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    if il.meta.lang != Lang::Java || il.kind(node) != NodeKind::Call {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() < 2 || il.kind(kids[0]) != NodeKind::Field {
+        return false;
+    }
+    let Payload::Name(method) = il.node(kids[0]).payload else {
+        return false;
+    };
+    let Some(&receiver) = il.children(kids[0]).first() else {
+        return false;
+    };
+    if il.kind(receiver) != NodeKind::Var {
+        return false;
+    }
+    let Payload::Name(receiver_name) = il.node(receiver).payload else {
+        return false;
+    };
+    let method = interner.resolve(method);
+    let receiver_name = interner.resolve(receiver_name);
+    let standard_factory = match (receiver_name, method) {
+        ("List" | "Set", "of") => true,
+        ("Arrays", "asList") => true,
+        _ => false,
+    };
+    standard_factory
+        && !java_file_defines_type_name(il, interner, receiver_name)
+        && kids
+            .iter()
+            .skip(1)
+            .all(|&arg| strict_exact_safe_tree(il, interner, facts, arg))
+}
+
+fn java_file_defines_type_name(il: &Il, interner: &Interner, name: &str) -> bool {
+    if il.meta.lang != Lang::Java {
+        return false;
+    }
+    il.units.iter().any(|unit| {
+        unit.kind == UnitKind::Class
+            && unit
+                .name
+                .is_some_and(|symbol| interner.resolve(symbol) == name)
+    })
 }
 
 fn strict_exact_map_constructor_entries_safe(

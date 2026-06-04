@@ -26,6 +26,11 @@ break.
   and immutable local `Set` construction with the corresponding collection-membership
   predicates, while preserving wrong-element, wrong-collection, shadowed-constructor,
   untyped-receiver, and map-key-membership boundaries.
+- Strict Type-4 proof facts for Java literal collection factories. Exact semantic mode
+  now converges `List.of(...).contains(value)`, `Set.of(...).contains(value)`, and
+  `Arrays.asList(...).contains(value)` with static literal collection membership, while
+  preserving wrong-element, wrong-collection, local name shadowing, and same-file type
+  shadowing boundaries.
 - Strict Type-4 proof facts for literal Python/Ruby map lookup with fallback. The detector
   now converges dict `.get(key, default)` and hash `.fetch(key, default)` only when the
   receiver is a static literal map, preserving wrong-key, wrong-default, and wrong-map

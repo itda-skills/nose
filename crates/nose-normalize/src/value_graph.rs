@@ -440,11 +440,59 @@ impl<'a> Builder<'a> {
         Some(collection)
     }
 
-    fn proven_collection_value(&self, value: ValueId) -> Option<ValueId> {
+    fn proven_java_collection_factory_value(&mut self, value: ValueId) -> Option<ValueId> {
+        if self.il.meta.lang != Lang::Java {
+            return None;
+        }
+        let node = &self.nodes[value as usize];
+        if !matches!(node.op, ValOp::Call(0)) || node.args.len() < 2 {
+            return None;
+        }
+        let args = node.args.clone();
+        let callee = &self.nodes[args[0] as usize];
+        let ValOp::Field(method) = callee.op else {
+            return None;
+        };
+        if callee.args.len() != 1 {
+            return None;
+        }
+        let receiver = callee.args[0];
+        let is_standard_factory = if method == stable_symbol_hash("of") {
+            self.is_free_java_std_name(receiver, "List")
+                || self.is_free_java_std_name(receiver, "Set")
+        } else if method == stable_symbol_hash("asList") {
+            self.is_free_java_std_name(receiver, "Arrays")
+        } else {
+            false
+        };
+        if !is_standard_factory {
+            return None;
+        }
+        Some(self.mk(ValOp::Seq(1), args[1..].to_vec()))
+    }
+
+    fn is_free_java_std_name(&self, value: ValueId, name: &str) -> bool {
+        self.is_free_name_value(value, name) && !self.java_file_defines_type_name(name)
+    }
+
+    fn java_file_defines_type_name(&self, name: &str) -> bool {
+        if self.il.meta.lang != Lang::Java {
+            return false;
+        }
+        self.il.units.iter().any(|unit| {
+            unit.kind == UnitKind::Class
+                && unit
+                    .name
+                    .is_some_and(|symbol| self.interner.resolve(symbol) == name)
+        })
+    }
+
+    fn proven_collection_value(&mut self, value: ValueId) -> Option<ValueId> {
         if matches!(self.nodes[value as usize].op, ValOp::Seq(1)) {
             return Some(value);
         }
         self.proven_set_constructor_collection(value)
+            .or_else(|| self.proven_java_collection_factory_value(value))
     }
 
     fn proven_map_constructor_entries(&mut self, value: ValueId) -> Option<ValueId> {

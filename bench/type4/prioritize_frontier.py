@@ -152,8 +152,8 @@ CANDIDATES = [
         3,
         3,
         "partially-covered",
-        "Static literal collection membership is covered; substring contains, map-key membership, dynamic sets, and ambiguous receiver contains must stay distinct.",
-        "Continue with map-key and dynamic set membership only when receiver/key coordinates can be proven; keep substring and regex boundaries separate.",
+        "Static literal collection membership, typed dynamic receiver membership, proven Set construction, and Java literal collection factories are covered; substring contains, map-key membership, untyped dynamic sets, and ambiguous receiver contains must stay distinct.",
+        "Continue with dynamic collection/set membership only when receiver/key coordinates can be proven by import, construction, immutable binding, or richer type facts beyond the current typed-parameter, literal-Set, and Java literal-factory cases; keep substring, regex, map-key, and unproven receiver-overloaded calls as hard boundaries.",
         (
             pat("go_slices_contains", "go", r"\bslices\.Contains\s*\(", "high"),
             pat("go_map_ok", "go", r"\b_,\s*\w+\s*:=\s*\w+\s*\[[^\]]+\]", "high"),
@@ -215,9 +215,9 @@ CANDIDATES = [
         "all-language",
         2,
         2,
-        "partially-covered",
-        "Scalar min/max/abs expression facts are covered for C, Go, Java, JavaScript/TypeScript, Python, Ruby, and embedded script surfaces; Rust numeric methods remain the next compact strict slice.",
-        "Generate Rust scalar `.abs()`, `.min()`, and `.max()` positives with sign/order and wrong-value hard negatives.",
+        "covered-current",
+        "Scalar min/max/abs expression facts are covered for C, Go, Java, JavaScript/TypeScript, Python, Ruby, Rust, and embedded script surfaces, including Rust numeric `.abs()`, `.min()`, and `.max()` when the receiver has an explicit numeric type fact.",
+        "No ordinary detector slice remains open; only revisit if real-repo audit exposes a method-like numeric form that can be proven without accepting custom receiver methods.",
         (
             pat("rust_numeric_method", "rust", r"\.\s*(?:abs|min|max)\s*\(", "high"),
         ),
