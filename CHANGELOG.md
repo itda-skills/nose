@@ -6,6 +6,32 @@ break.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-04
+
+### Added
+- **Exact Type-4 (semantic-clone) convergence pass** — more behaviorally-equivalent
+  code now converges to one value-fingerprint, with each new algebraic law
+  machine-checked in Lean and the soundness contract held (full-corpus `nose verify`
+  stays **0 false merges**, canon-preserved):
+  - **Distribution / factoring** `a*c + b*c ≡ (a+b)*c` (numeric, Lean `distrib_sound`)
+    and full associative-commutative flatten+sort in the value graph itself.
+  - **Filter fusion** `filter q (filter p) ≡ filter (p∧q)` via an element-carrying
+    filter representation (Lean `filter_fusion`) — unifies nested filters, a
+    `.filter().filter()` chain, and the filtered builder loop.
+  - **Reduce-lambda selection** (`reduce(λ. a if a>b else b) ≡ max`), **count-of-filter**
+    (`len([… if p]) ≡ Σ(p?1:0)`, Lean `filter_length_eq_count`), and Rust method-form
+    iterator reductions (`.sum()/.min()/.max()/.count()`).
+  - **Dict-builder loop ≡ dict comprehension** (`d={}; for x: d[k]=v` ≡ `{k: v for x}`)
+    via a `DictEntry`-distinct representation that cannot collide with a list of tuples.
+  - **Stronger IL type inference** — a fixpoint over subexpression result types — gating
+    the numeric rewrites soundly.
+
+### Formal
+- New machine-checked Lean proofs: `Algebra.lean::distrib_sound`,
+  `Functor.lean::{filter_fusion, filter_length_eq_count}`, and a new `Compare.lean`
+  (comparison-direction and negated-comparison canons). A CI `formal` job checks
+  `formal/*.lean` on every push.
+
 ## [0.2.0] - 2026-06-04
 
 ### Changed
