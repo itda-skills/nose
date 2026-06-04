@@ -167,6 +167,16 @@ pub(crate) fn canon_call(old: &Il, interner: &Interner, call_id: NodeId) -> Call
                             arg_olds: args.to_vec(),
                         }
                     }
+                    "Contains"
+                        if base_name == Some("slices")
+                            && args.len() == 2
+                            && old.kind(args[0]) == NodeKind::Seq =>
+                    {
+                        return CallCanon::Builtin {
+                            op: Builtin::Contains,
+                            arg_olds: vec![args[1], args[0]],
+                        }
+                    }
                     "len" | "length" | "size" if base.is_some() && args.is_empty() => {
                         return CallCanon::Builtin {
                             op: Builtin::Len,
@@ -193,6 +203,16 @@ pub(crate) fn canon_call(old: &Il, interner: &Interner, call_id: NodeId) -> Call
                         return CallCanon::Builtin {
                             op: Builtin::EndsWith,
                             arg_olds: vec![base.unwrap(), args[0]],
+                        }
+                    }
+                    "includes" | "include?" | "contains" | "__contains__"
+                        if base.is_some()
+                            && args.len() == 1
+                            && old.kind(base.unwrap()) == NodeKind::Seq =>
+                    {
+                        return CallCanon::Builtin {
+                            op: Builtin::Contains,
+                            arg_olds: vec![args[0], base.unwrap()],
                         }
                     }
                     // `functools.reduce(f, xs[, init])` — here the *base* is the module

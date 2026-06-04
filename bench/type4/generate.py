@@ -195,6 +195,22 @@ AXIS_PROPOSALS = {
         "axis": "string_prefix_suffix",
         "why": "Prefix/suffix checks over different string parameters are different proof coordinates.",
     },
+    "axis_membership_literal_identity": {
+        "axis": "literal_collection_membership",
+        "why": "Static literal collection membership should prove the same element-in-collection predicate when element and literal set coordinates are fixed.",
+    },
+    "axis_membership_wrong_element_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Membership checks over different element parameters are different proof coordinates.",
+    },
+    "axis_membership_wrong_collection_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Different literal collections are different proof coordinates even when their APIs look identical.",
+    },
+    "axis_membership_substring_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Substring contains and static literal collection membership are different semantics and must not merge.",
+    },
     "axis_table_access": {
         "axis": "table_access",
         "why": "Literal table access must preserve key/index identity and reject neighboring table values.",
@@ -1121,6 +1137,134 @@ end
         return Variant("axis", src, name)
 
     raise ValueError(f"unsupported surface for string prefix/suffix axis: {surface.key}")
+
+
+def literal_membership_axis_supported(surface: Surface, proposal_id: str) -> bool:
+    if not proposal_id.startswith("axis_membership_"):
+        return False
+    return surface.key in {
+        "python",
+        "javascript",
+        "typescript",
+        "go",
+        "rust",
+        "ruby",
+        "vue",
+        "svelte",
+        "html",
+    }
+
+
+def membership_axis_parts(
+    proposal_id: str, negative: bool, right: bool
+) -> tuple[str, tuple[str, str], str]:
+    element = "value"
+    items = ("red", "blue")
+    form = "membership"
+
+    if right and proposal_id == "axis_membership_wrong_element_boundary":
+        element = "other"
+    if right and proposal_id == "axis_membership_wrong_collection_boundary":
+        items = ("green", "blue")
+    if right and proposal_id == "axis_membership_substring_boundary":
+        form = "substring"
+    if right and negative and proposal_id == "axis_membership_literal_identity":
+        items = ("green", "blue")
+    return element, items, form
+
+
+def axis_membership_literal_variant(
+    surface: Surface,
+    proposal_id: str,
+    negative: bool,
+    right: bool,
+) -> Variant:
+    element, items, form = membership_axis_parts(proposal_id, negative, right)
+    name = {
+        "javascript": "buildCase" if right else "axisCase",
+        "typescript": "buildCase" if right else "axisCase",
+        "go": "BuildCase" if right else "AxisCase",
+    }.get(surface.language, "build_case" if right else "axis_case")
+    left, right_item = items
+
+    if surface.language == "javascript":
+        if form == "substring":
+            expr = f'{element}.includes("{left}")'
+        else:
+            expr = f'["{left}", "{right_item}"].includes({element})'
+        body = f"""function {name}(value, other) {{
+  return {expr};
+}}
+"""
+        return js_axis_source(surface, body, name)
+
+    if surface.key == "typescript":
+        if form == "substring":
+            expr = f'{element}.includes("{left}")'
+        else:
+            expr = f'["{left}", "{right_item}"].includes({element})'
+        src = f"""function {name}(value: string, other: string): boolean {{
+  return {expr};
+}}
+"""
+        return Variant("axis", src, name)
+
+    if surface.key == "python":
+        if form == "substring":
+            expr = f'"{left}" in {element}'
+        elif right:
+            expr = f'["{left}", "{right_item}"].__contains__({element})'
+        else:
+            expr = f'{element} in ["{left}", "{right_item}"]'
+        src = f"""def {name}(value, other):
+    return {expr}
+"""
+        return Variant("axis", src, name)
+
+    if surface.key == "go":
+        if form == "substring":
+            src = f"""package p
+
+import "strings"
+
+func {name}(value string, other string) bool {{
+    return strings.Contains({element}, "{left}")
+}}
+"""
+        else:
+            src = f"""package p
+
+import "slices"
+
+func {name}(value string, other string) bool {{
+    return slices.Contains([]string{{"{left}", "{right_item}"}}, {element})
+}}
+"""
+        return Variant("axis", src, name)
+
+    if surface.key == "rust":
+        if form == "substring":
+            expr = f'{element}.contains("{left}")'
+        else:
+            expr = f'["{left}", "{right_item}"].contains({element})'
+        src = f"""pub fn {name}(value: &str, other: &str) -> bool {{
+    {expr}
+}}
+"""
+        return Variant("axis", src, name)
+
+    if surface.key == "ruby":
+        if form == "substring":
+            expr = f'{element}.include?("{left}")'
+        else:
+            expr = f'["{left}", "{right_item}"].include?({element})'
+        src = f"""def {name}(value, other)
+  {expr}
+end
+"""
+        return Variant("axis", src, name)
+
+    raise ValueError(f"unsupported surface for literal membership axis: {surface.key}")
 
 
 def projection_axis_supported(surface: Surface, proposal_id: str) -> bool:
@@ -3128,6 +3272,11 @@ def axis_variants(
             axis_string_prefix_variant(surface, proposal_id, False, False),
             axis_string_prefix_variant(surface, proposal_id, negative, True),
         )
+    if axis == "literal_collection_membership":
+        return (
+            axis_membership_literal_variant(surface, proposal_id, False, False),
+            axis_membership_literal_variant(surface, proposal_id, negative, True),
+        )
     if axis == "immutable_binding":
         return (
             axis_immutable_binding_variant(surface, False, False),
@@ -3156,8 +3305,29 @@ def axis_variants(
     raise ValueError(f"unknown axis: {axis}")
 
 
+def axis_data_shape(axis: str) -> str:
+    return {
+        "collection_empty_check": "list<int>",
+        "literal_collection_membership": "set<string>",
+        "projection_identity": "record<today:int,tomorrow:int>",
+        "string_prefix_suffix": "string",
+        "table_access": "map<string,int>",
+    }.get(axis, "scalar<int>")
+
+
 def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | None = None) -> dict:
     if status == "equivalent":
+        if axis == "literal_collection_membership":
+            return {
+                "level": "E1",
+                "kind": f"same-spec-{axis}",
+                "property_inputs": [
+                    {"value": "red", "other": "green"},
+                    {"value": "blue", "other": "green"},
+                    {"value": "green", "other": "red"},
+                ],
+                "outputs": [],
+            }
         if axis == "string_prefix_suffix":
             return {
                 "level": "E1",
@@ -3191,6 +3361,24 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
                 "left": True,
                 "right": False,
             },
+        }
+    elif axis == "literal_collection_membership":
+        if proposal_id == "axis_membership_substring_boundary":
+            counterexample = {
+                "input": {"value": "predator", "other": "green"},
+                "left": False,
+                "right": True,
+            }
+        else:
+            counterexample = {
+                "input": {"value": "red", "other": "green"},
+                "left": True,
+                "right": False,
+            }
+        return {
+            "level": "E2",
+            "kind": f"counterexample-{axis}",
+            "counterexample": counterexample,
         }
     else:
         left_output = 8
@@ -3243,12 +3431,7 @@ def make_axis_item(
         "matrix": {
             "computation": axis,
             "representations": [left.representation, right.representation],
-            "data_shape": {
-                "collection_empty_check": "list<int>",
-                "projection_identity": "record<today:int,tomorrow:int>",
-                "string_prefix_suffix": "string",
-                "table_access": "map<string,int>",
-            }.get(axis, "scalar<int>"),
+            "data_shape": axis_data_shape(axis),
             "language_relation": "same-surface",
             "negative_tag": negative_tag,
             "semantic_axes": [axis],
@@ -3321,6 +3504,10 @@ def generate_axis_items(
                 surface, proposal_id
             ):
                 continue
+            if proposal_id.startswith("axis_membership_") and not literal_membership_axis_supported(
+                surface, proposal_id
+            ):
+                continue
             if proposal_id in {
                 "axis_collection_threshold_boundary",
                 "axis_collection_wrong_receiver_boundary",
@@ -3351,6 +3538,23 @@ def generate_axis_items(
                         "not_equivalent",
                         "heldout",
                         "string-prefix-suffix-boundary",
+                    )
+                )
+                continue
+            if proposal_id in {
+                "axis_membership_wrong_element_boundary",
+                "axis_membership_wrong_collection_boundary",
+                "axis_membership_substring_boundary",
+            }:
+                items.append(
+                    make_axis_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        surface,
+                        "not_equivalent",
+                        "heldout",
+                        "literal-membership-boundary",
                     )
                 )
                 continue
@@ -3504,7 +3708,7 @@ def make_axis_cross_item(
         "matrix": {
             "computation": axis,
             "representations": [left.representation, right.representation],
-            "data_shape": "string",
+            "data_shape": axis_data_shape(axis),
             "language_relation": "cross-surface",
             "negative_tag": negative_tag,
             "semantic_axes": [axis],
@@ -3583,6 +3787,67 @@ def generate_string_prefix_cross_items(
                     "not_equivalent",
                     "heldout",
                     "string-prefix-suffix-boundary",
+                )
+            )
+    return items
+
+
+def generate_literal_membership_cross_items(
+    out_dir: Path,
+    capabilities: dict,
+    cross_mode: str,
+    generation_filter: GenerationFilter,
+) -> list[dict]:
+    if not generation_filter.include_axis("literal_collection_membership"):
+        return []
+    surfaces = [
+        s
+        for s in SURFACES
+        if literal_membership_axis_supported(s, "axis_membership_literal_identity")
+    ]
+    items: list[dict] = []
+    for left_surface, right_surface in cross_pairs(surfaces, cross_mode):
+        if generation_filter.include_proposal("axis_membership_literal_identity"):
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    "axis_membership_literal_identity",
+                    left_surface,
+                    right_surface,
+                    "equivalent",
+                    "heldout",
+                )
+            )
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    "axis_membership_literal_identity",
+                    left_surface,
+                    right_surface,
+                    "not_equivalent",
+                    "heldout",
+                    "literal_collection_membership-semantic-mutation",
+                )
+            )
+        for proposal_id in (
+            "axis_membership_wrong_element_boundary",
+            "axis_membership_wrong_collection_boundary",
+            "axis_membership_substring_boundary",
+        ):
+            if not generation_filter.include_proposal(proposal_id):
+                continue
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    proposal_id,
+                    left_surface,
+                    right_surface,
+                    "not_equivalent",
+                    "heldout",
+                    "literal-membership-boundary",
                 )
             )
     return items
@@ -3723,6 +3988,11 @@ def generate(
     items.extend(generate_axis_items(out_dir, capabilities, generation_filter))
     items.extend(
         generate_string_prefix_cross_items(out_dir, capabilities, cross_mode, generation_filter)
+    )
+    items.extend(
+        generate_literal_membership_cross_items(
+            out_dir, capabilities, cross_mode, generation_filter
+        )
     )
     return {
         "schema_version": "0.1.0",

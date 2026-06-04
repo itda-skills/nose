@@ -194,7 +194,8 @@ pub(crate) fn result_ty(il: &Il, n: NodeId, ev: &FxHashMap<u32, Ty>) -> Ty {
             Payload::Builtin(
                 nose_il::Builtin::IsEmpty
                 | nose_il::Builtin::StartsWith
-                | nose_il::Builtin::EndsWith,
+                | nose_il::Builtin::EndsWith
+                | nose_il::Builtin::Contains,
             ) => Ty::Bool,
             _ => Ty::Unknown,
         },

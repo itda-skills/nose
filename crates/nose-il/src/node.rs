@@ -251,6 +251,8 @@ pub enum Builtin {
     StartsWith,
     /// Case-sensitive string suffix predicate over `(value, suffix)`.
     EndsWith,
+    /// Static literal-collection membership predicate over `(element, collection)`.
+    Contains,
 }
 
 /// Kinds of canonical higher-order operation.

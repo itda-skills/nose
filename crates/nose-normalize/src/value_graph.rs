@@ -193,6 +193,7 @@ impl<'a> Builder<'a> {
                     o,
                     x if x == Op::Lt as u32 || x == Op::Le as u32 || x == Op::Gt as u32
                         || x == Op::Ge as u32 || x == Op::Eq as u32 || x == Op::Ne as u32
+                        || x == Op::In as u32
                 ) {
                     Ty::Bool
                 } else {
@@ -220,6 +221,7 @@ impl<'a> Builder<'a> {
                     x if x == Builtin::IsEmpty as u32 + 1
                         || x == Builtin::StartsWith as u32 + 1
                         || x == Builtin::EndsWith as u32 + 1
+                        || x == Builtin::Contains as u32 + 1
                 ) =>
             {
                 Ty::Bool
@@ -2200,6 +2202,19 @@ impl<'a> Builder<'a> {
         self.mk(ValOp::Bin(Op::Eq as u32), vec![len, zero])
     }
 
+    fn eval_membership_collection(
+        &mut self,
+        collection: NodeId,
+        env: &FxHashMap<u32, ValueId>,
+    ) -> ValueId {
+        if self.il.kind(collection) != NodeKind::Seq {
+            return self.eval(collection, env);
+        }
+        let kids = self.il.children(collection).to_vec();
+        let items: Vec<ValueId> = kids.iter().map(|&k| self.eval(k, env)).collect();
+        self.mk(ValOp::Seq(1), items)
+    }
+
     fn len_call_arg(&self, node: NodeId) -> Option<NodeId> {
         if self.il.kind(node) != NodeKind::Call {
             return None;
@@ -2593,6 +2608,13 @@ impl<'a> Builder<'a> {
                     if let Some(&arg) = kids.first() {
                         let v = self.eval(arg, env);
                         return self.is_empty_value(v);
+                    }
+                }
+                if let Payload::Builtin(Builtin::Contains) = node.payload {
+                    if let [element, collection] = kids.as_slice() {
+                        let element = self.eval(*element, env);
+                        let collection = self.eval_membership_collection(*collection, env);
+                        return self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]);
                     }
                 }
                 if let Payload::Builtin(b) = node.payload {

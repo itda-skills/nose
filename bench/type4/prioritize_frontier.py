@@ -151,9 +151,9 @@ CANDIDATES = [
         "multi-language",
         3,
         3,
-        "open",
-        "Common but semantically overloaded: substring, list membership, map key membership, and set membership must stay distinct.",
-        "Start with static set/list membership only; keep substring, regex, and map-key boundaries separate.",
+        "partially-covered",
+        "Static literal collection membership is covered; substring contains, map-key membership, dynamic sets, and ambiguous receiver contains must stay distinct.",
+        "Continue with map-key and dynamic set membership only when receiver/key coordinates can be proven; keep substring and regex boundaries separate.",
         (
             pat("go_slices_contains", "go", r"\bslices\.Contains\s*\(", "high"),
             pat("go_map_ok", "go", r"\b_,\s*\w+\s*:=\s*\w+\s*\[[^\]]+\]", "high"),

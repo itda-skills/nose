@@ -460,6 +460,12 @@ impl<'a> Interp<'a> {
             },
             Builtin::StartsWith => Ok(string_affix(args.first(), args.get(1), true)),
             Builtin::EndsWith => Ok(string_affix(args.first(), args.get(1), false)),
+            Builtin::Contains => match (args.first(), args.get(1)) {
+                (Some(element), Some(Value::List(items))) => Ok(Value::Bool(
+                    items.iter().any(|candidate| candidate == element),
+                )),
+                _ => Ok(Value::Err),
+            },
             Builtin::Abs => match args.first() {
                 Some(Value::Int(v)) => Ok(Value::Int(v.abs())),
                 _ => Ok(Value::Err),

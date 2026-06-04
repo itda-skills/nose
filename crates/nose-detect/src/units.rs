@@ -3,7 +3,7 @@
 //! tag combined with its children's tags), a pre-order **linearization** of node
 //! tags for alignment, and a **MinHash** signature for candidate generation.
 
-use nose_il::{Il, Interner, Lang, LitClass, NodeId, NodeKind, Payload, Symbol, UnitKind};
+use nose_il::{Builtin, Il, Interner, Lang, LitClass, NodeId, NodeKind, Payload, Symbol, UnitKind};
 use nose_normalize::node_tag;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -376,6 +376,12 @@ fn strict_exact_safe_seq(il: &Il, interner: &Interner, node: NodeId) -> bool {
 }
 
 fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, node: NodeId) -> bool {
+    if matches!(il.node(node).payload, Payload::Builtin(Builtin::Contains)) {
+        let kids = il.children(node);
+        return kids.len() == 2
+            && strict_exact_safe_tree(il, interner, facts, kids[0])
+            && strict_exact_membership_collection_safe(il, interner, facts, kids[1]);
+    }
     if matches!(il.node(node).payload, Payload::Builtin(_)) {
         return il
             .children(node)
@@ -415,6 +421,30 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
     }
     strict_exact_callee_identity(il, facts, callee)
         && strict_exact_call_args_safe(il, interner, facts, node)
+}
+
+fn strict_exact_membership_collection_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    if il.kind(node) != NodeKind::Seq {
+        return strict_exact_safe_tree(il, interner, facts, node);
+    }
+    let tag_safe = match il.node(node).payload {
+        Payload::None => true,
+        Payload::Name(name) => matches!(
+            interner.resolve(name),
+            "array" | "list" | "array_expression" | "composite_literal"
+        ),
+        _ => false,
+    };
+    tag_safe
+        && il
+            .children(node)
+            .iter()
+            .all(|&c| strict_exact_safe_tree(il, interner, facts, c))
 }
 
 fn strict_exact_call_args_safe(

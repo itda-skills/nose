@@ -16,8 +16,8 @@ and whether a frontier is already covered.
 | rank | candidate | scope | status | score | raw | weighted | repos | languages | probe coverage | gaps | filtered |
 |---:|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `numeric_minmax_abs` | all-language | partially-covered | 64.36 | 7037 | 6750.8 | 93 | 8 | 100.0% | 0 | 0 |
-| 2 | `membership_contains` | multi-language | open | 56.22 | 22979 | 13478.1 | 99 | 7 | 100.0% | 0 | 2798 |
-| 3 | `null_option_presence` | all-language | partially-covered | 51.52 | 126057 | 122957.4 | 94 | 7 | 100.0% | 0 | 0 |
+| 2 | `null_option_presence` | all-language | partially-covered | 51.52 | 126057 | 122957.4 | 94 | 7 | 100.0% | 0 | 0 |
+| 3 | `membership_contains` | multi-language | partially-covered | 36.54 | 22979 | 13478.1 | 99 | 7 | 100.0% | 0 | 2798 |
 | 4 | `map_default_lookup` | multi-language | open | 31.23 | 4319 | 3645.3 | 73 | 7 | 100.0% | 0 | 0 |
 | 5 | `collection_empty_check` | all-language | covered-current | 9.04 | 21562 | 18145.0 | 98 | 8 | 100.0% | 0 | 1 |
 | 6 | `string_prefix_suffix` | all-language | covered-current | 7.20 | 6174 | 6174.0 | 97 | 7 | 100.0% | 0 | 0 |
@@ -26,17 +26,12 @@ and whether a frontier is already covered.
 
 ## Recommended Order
 
-1. `membership_contains`
-   - why: Common but semantically overloaded: substring, list membership, map key membership, and set membership must stay distinct.
-   - evidence: 22979 raw / 13478.1 weighted matches across 99 repos and 7 languages (go, java, javascript, python, ruby, rust, typescript)
-   - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 2798
-   - next probe: Start with static set/list membership only; keep substring, regex, and map-key boundaries separate.
-2. `map_default_lookup`
+1. `map_default_lookup`
    - why: Potentially high value, but absent-key semantics and mutation/effects vary heavily.
    - evidence: 4319 raw / 3645.3 weighted matches across 73 repos and 7 languages (go, java, javascript, python, ruby, rust, typescript)
    - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 0
    - next probe: Start with literal immutable maps and static keys; hard-negative missing-key/default-value changes.
-3. `property_type_guard`
+2. `property_type_guard`
    - why: Very frequent in JS-family repos, but the scope is narrow and should wait behind broader axes.
    - evidence: 435 raw / 435.0 weighted matches across 19 repos and 2 languages (javascript, typescript)
    - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 0
@@ -60,21 +55,6 @@ and whether a frontier is already covered.
 | `ruby_array_minmax` | ruby | medium | 106 | 58.3 | 12 |
 | `ruby_abs` | ruby | high | 32 | 32.0 | 8 |
 
-### `membership_contains`
-
-| pattern | language | precision | raw | weighted | repos |
-|---|---|---|---:|---:|---:|
-| `py_in_predicate` | python | medium | 8705 | 4787.8 | 29 |
-| `java_contains_ambiguous` | java | medium | 5867 | 3226.8 | 16 |
-| `ruby_membership` | ruby | medium | 2195 | 1207.2 | 16 |
-| `rust_contains_ambiguous` | rust | medium | 2128 | 1170.4 | 15 |
-| `java_contains_key` | java | high | 1139 | 1139.0 | 13 |
-| `ts_membership_ambiguous` | typescript | medium | 1166 | 641.3 | 17 |
-| `js_membership_ambiguous` | javascript | medium | 1052 | 578.6 | 25 |
-| `go_map_ok` | go | high | 523 | 523.0 | 16 |
-| `go_slices_contains` | go | high | 121 | 121.0 | 9 |
-| `rust_contains_key` | rust | high | 83 | 83.0 | 10 |
-
 ### `null_option_presence`
 
 | pattern | language | precision | raw | weighted | repos |
@@ -89,6 +69,21 @@ and whether a frontier is already covered.
 | `ts_nullish_default` | typescript | medium | 2484 | 1366.2 | 16 |
 | `js_nullish_compare` | javascript | high | 1273 | 1273.0 | 24 |
 | `js_nullish_default` | javascript | medium | 406 | 223.3 | 15 |
+
+### `membership_contains`
+
+| pattern | language | precision | raw | weighted | repos |
+|---|---|---|---:|---:|---:|
+| `py_in_predicate` | python | medium | 8705 | 4787.8 | 29 |
+| `java_contains_ambiguous` | java | medium | 5867 | 3226.8 | 16 |
+| `ruby_membership` | ruby | medium | 2195 | 1207.2 | 16 |
+| `rust_contains_ambiguous` | rust | medium | 2128 | 1170.4 | 15 |
+| `java_contains_key` | java | high | 1139 | 1139.0 | 13 |
+| `ts_membership_ambiguous` | typescript | medium | 1166 | 641.3 | 17 |
+| `js_membership_ambiguous` | javascript | medium | 1052 | 578.6 | 25 |
+| `go_map_ok` | go | high | 523 | 523.0 | 16 |
+| `go_slices_contains` | go | high | 121 | 121.0 | 9 |
+| `rust_contains_key` | rust | high | 83 | 83.0 | 10 |
 
 ### `map_default_lookup`
 
@@ -151,10 +146,10 @@ and whether a frontier is already covered.
 ### `numeric_minmax_abs`
 - no uncovered broad-probe samples
 
-### `membership_contains`
+### `null_option_presence`
 - no uncovered broad-probe samples
 
-### `null_option_presence`
+### `membership_contains`
 - no uncovered broad-probe samples
 
 ### `map_default_lookup`
@@ -178,15 +173,15 @@ and whether a frontier is already covered.
 ### `numeric_minmax_abs`
 - no filtered broad-probe samples
 
+### `null_option_presence`
+- no filtered broad-probe samples
+
 ### `membership_contains`
 - `antlr4/runtime/Python3/src/antlr4/Parser.py:551` (python, py_membership_broad, python-for-in-iteration): return [ str(dfa) for dfa in self._interp.decisionToDFA]
 - `antlr4/runtime/Python3/src/antlr4/LL1Analyzer.py:145` (python, py_membership_broad, python-for-in-iteration): return for t in s.transitions:
 - `antlr4/runtime/Python3/src/antlr4/IntervalSet.py:96` (python, py_membership_broad, python-for-in-iteration): return sum(len(i) for i in self.intervals)
 - `antlr4/runtime/Python3/src/antlr4/tree/Trees.py:64` (python, py_membership_broad, python-for-in-iteration): return [ t.getChild(i) for i in range(0, t.getChildCount()) ]
 - `antlr4/runtime/Python3/src/antlr4/dfa/DFAState.py:89` (python, py_membership_broad, python-for-in-iteration): return set(cfg.alt for cfg in self.configs) or None
-
-### `null_option_presence`
-- no filtered broad-probe samples
 
 ### `map_default_lookup`
 - no filtered broad-probe samples
@@ -213,19 +208,19 @@ and whether a frontier is already covered.
 - `graphhopper` (dev, Java; java, javascript, python): 313 raw / 313.0 weighted
 - `netty` (dev, Java; java, javascript): 285 raw / 285.0 weighted
 
-### `membership_contains`
-- `guava` (dev, Java; java): 2646 raw / 1746.5 weighted
-- `sympy` (heldout, Python; python): 2961 raw / 1628.5 weighted
-- `sqlalchemy` (heldout, Python; python): 2091 raw / 1150.0 weighted
-- `nushell` (dev, Rust; javascript, python, rust): 1359 raw / 763.6 weighted
-- `scrapy` (dev, Python; python): 744 raw / 409.2 weighted
-
 ### `null_option_presence`
 - `vim` (heldout, C; c, python): 13453 raw / 13453.0 weighted
 - `nats-server` (dev, Go; go): 12704 raw / 12704.0 weighted
 - `minio` (heldout, Go; go, python): 10023 raw / 10023.0 weighted
 - `prometheus` (dev, Go; go, javascript, typescript): 5464 raw / 5460.9 weighted
 - `etcd` (heldout, Go; go): 5229 raw / 5229.0 weighted
+
+### `membership_contains`
+- `guava` (dev, Java; java): 2646 raw / 1746.5 weighted
+- `sympy` (heldout, Python; python): 2961 raw / 1628.5 weighted
+- `sqlalchemy` (heldout, Python; python): 2091 raw / 1150.0 weighted
+- `nushell` (dev, Rust; javascript, python, rust): 1359 raw / 763.6 weighted
+- `scrapy` (dev, Python; python): 744 raw / 409.2 weighted
 
 ### `map_default_lookup`
 - `sqlalchemy` (heldout, Python; python): 796 raw / 796.0 weighted
@@ -272,19 +267,19 @@ and whether a frontier is already covered.
 - `alacritty/alacritty/src/renderer/rects.rs:104` (rust, rust_numeric_method): (metrics.descent, metrics.descent.abs(), RectKind::DottedUnderline)
 - `alacritty/alacritty/src/renderer/rects.rs:136` (rust, rust_numeric_method): thickness = thickness.max(1.);
 
-### `membership_contains`
-- `alacritty/alacritty/src/window_context.rs:542` (rust, rust_contains_ambiguous): let origin_at_bottom = if terminal.mode().contains(TermMode::VI) {
-- `alacritty/alacritty/src/message_bar.rs:188` (rust, rust_contains_ambiguous): self.messages.contains(message)
-- `alacritty/alacritty/src/logging.rs:188` (rust, rust_contains_ambiguous): _ => ALLOWED_TARGETS.contains(&target) || extra_log_targets().iter().any(|t| t == target),
-- `alacritty/alacritty/src/event.rs:720` (rust, rust_contains_ambiguous): let vi_mode = self.terminal.mode().contains(TermMode::VI);
-- `alacritty/alacritty/src/event.rs:780` (rust, rust_contains_ambiguous): if self.terminal.mode().contains(TermMode::VI) && !self.search_active() {
-
 ### `null_option_presence`
 - `alacritty/alacritty/build.rs:10` (rust, rust_if_let_some): if let Some(commit_hash) = commit_hash() {
 - `alacritty/alacritty/src/window_context.rs:138` (rust, rust_option_predicate): let tabbed = options.window_tabbing_id.is_some();
 - `alacritty/alacritty/src/window_context.rs:178` (rust, rust_option_predicate): let preserve_title = options.window_identity.title.is_some();
 - `alacritty/alacritty/src/window_context.rs:427` (rust, rust_option_predicate): let old_is_searching = self.search_state.history_index.is_some();
 - `alacritty/alacritty/src/window_context.rs:550` (rust, rust_option_predicate): let new_is_searching = search_state.history_index.is_some();
+
+### `membership_contains`
+- `alacritty/alacritty/src/window_context.rs:542` (rust, rust_contains_ambiguous): let origin_at_bottom = if terminal.mode().contains(TermMode::VI) {
+- `alacritty/alacritty/src/message_bar.rs:188` (rust, rust_contains_ambiguous): self.messages.contains(message)
+- `alacritty/alacritty/src/logging.rs:188` (rust, rust_contains_ambiguous): _ => ALLOWED_TARGETS.contains(&target) || extra_log_targets().iter().any(|t| t == target),
+- `alacritty/alacritty/src/event.rs:720` (rust, rust_contains_ambiguous): let vi_mode = self.terminal.mode().contains(TermMode::VI);
+- `alacritty/alacritty/src/event.rs:780` (rust, rust_contains_ambiguous): if self.terminal.mode().contains(TermMode::VI) && !self.search_active() {
 
 ### `map_default_lookup`
 - `alacritty/alacritty_terminal/src/tty/mod.rs:114` (rust, rust_get_unwrap_default): let first = terminfo.get(..1).unwrap_or_default();

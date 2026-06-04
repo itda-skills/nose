@@ -459,6 +459,102 @@ fn scan_mode_semantic_proves_string_prefix_checks() {
 }
 
 #[test]
+fn scan_mode_semantic_proves_literal_collection_membership() {
+    let dir = std::env::temp_dir().join(format!("nose_literal_membership_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("membership.py"),
+        "def membership(value, other):\n    return value in [\"red\", \"blue\"]\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("membership.js"),
+        "function membership(value, other) {\n  return [\"red\", \"blue\"].includes(value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("membership.ts"),
+        "function membership(value: string, other: string): boolean {\n  return [\"red\", \"blue\"].includes(value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("membership.go"),
+        "package p\n\nimport \"slices\"\n\nfunc Membership(value string, other string) bool {\n    return slices.Contains([]string{\"red\", \"blue\"}, value)\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("membership.rs"),
+        "pub fn membership(value: &str, other: &str) -> bool {\n    [\"red\", \"blue\"].contains(value)\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("membership.rb"),
+        "def membership(value, other)\n  [\"red\", \"blue\"].include?(value)\nend\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_element.py"),
+        "def wrong_element(value, other):\n    return other in [\"red\", \"blue\"]\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_collection.js"),
+        "function wrongCollection(value, other) {\n  return [\"green\", \"blue\"].includes(value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("substring.rs"),
+        "pub fn substring(value: &str, other: &str) -> bool {\n    value.contains(\"red\")\n}\n",
+    )
+    .unwrap();
+
+    let semantic = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "1",
+        "--min-tokens",
+        "1",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let semantic_json: serde_json::Value =
+        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
+    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    assert!(
+        !semantic_families.is_empty(),
+        "semantic mode should report literal membership families: {semantic}"
+    );
+    let semantic_text = semantic_json.to_string();
+    for expected in [
+        "membership.py",
+        "membership.js",
+        "membership.ts",
+        "membership.go",
+        "membership.rs",
+        "membership.rb",
+    ] {
+        assert!(
+            semantic_text.contains(expected),
+            "semantic mode should include {expected}: {semantic}"
+        );
+    }
+    for unexpected in ["wrong_element.py", "wrong_collection.js", "substring.rs"] {
+        assert!(
+            !semantic_text.contains(unexpected),
+            "semantic mode must preserve literal membership boundaries: {semantic}"
+        );
+    }
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn scan_mode_semantic_reports_flattened_guard_span_only() {
     let dir = std::env::temp_dir().join(format!("nose_guard_span_semantic_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);

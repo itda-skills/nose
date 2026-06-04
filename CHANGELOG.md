@@ -11,6 +11,11 @@ break.
   Go, Java, JavaScript/TypeScript, Python, Ruby, Rust, and embedded script surfaces.
   The benchmark now includes same-surface and cross-surface positives plus affix,
   direction, and wrong-receiver hard negatives.
+- Strict Type-4 proof facts for static literal collection membership across Go,
+  JavaScript/TypeScript, Python, Ruby, Rust, and embedded script surfaces. The detector
+  now converges Python `in`, literal receiver `includes/include?/contains`, and Go
+  `slices.Contains` while keeping substring contains and arbitrary receiver contains
+  outside strict semantic reporting.
 - Type-4 focused generation filters (`--axis`, `--proposal-prefix`) and smoke gates
   (`GATE=focused|core|full`) so detector co-evolution loops can run on one frontier
   before periodic compact/full validation.

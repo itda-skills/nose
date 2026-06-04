@@ -865,3 +865,67 @@ adding a new orchestration script.
 The next detector loop should use `GATE=focused` for the new strict sub-axis, `GATE=core`
 after the first detector fix, and full/dense validation only when the focused frontier is
 closed.
+
+## Literal collection membership: loops 123-129
+
+The next `membership_contains` split deliberately avoided the overloaded broad contains
+space. The closed sub-axis is only static literal collection membership: an element
+coordinate checked against a fixed literal collection. Substring contains, map-key
+membership, dynamic set membership, and arbitrary receiver `.contains()` remain outside
+this proof fact.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 123 | `membership_contains` was too broad to open soundly | select `literal_collection_membership` as a strict sub-axis and mark Java/C unsupported for this first slice | focused manifest generated 90 items: 18 positives, 72 negatives |
+| 124 | existing detector did not converge literal membership APIs | baseline `target/release/nose` missed all focused positives | 0/18 positives, 0/72 false merges |
+| 125 | method APIs and Python `in` needed one proof coordinate | add `Builtin::Contains`, lower literal-sequence `includes/include?/contains/__contains__` and Go `slices.Contains`, and map it to `Op::In` in the value graph | first CLI test converged Python/JS/TS/Ruby/Rust |
+| 126 | Go `slices.Contains([]T{...}, x)` still stayed out of exact reports | normalize membership literal collections inside `Contains` and allow Go `composite_literal` only for this builtin's collection safety gate | CLI test converged Go plus Python/JS/TS/Ruby/Rust |
+| 127 | adversarial focused gate | keep wrong-element, wrong-collection, substring, and semantic-mutation negatives | focused: 18/18 positives, 0/72 false merges |
+| 128 | aggregate regression gate | run ring, same-surface, and dense all-cross compact gates | ring 823/823 and 0/1,273; same-surface 585/585 and 0/978; dense compact 260/260 and 0/361 |
+| 129 | top real-repo audit | compare pre-loop `target/release/nose` and modified detector on `guava`, `sympy`, and `sqlalchemy` | visible family sets unchanged: 0 added, 0 removed in all three repos |
+
+Final focused membership gate:
+
+```text
+items: 90
+positive recall: 18/18
+hard-negative false merges: 0/72
+```
+
+Final default ring smoke:
+
+```text
+items: 2096
+positive recall: 823/823
+hard-negative false merges: 0/1273
+
+by semantic axis:
+  literal_collection_membership: positive 18/18, false merges 0/72
+```
+
+Final dense all-cross compact smoke:
+
+```text
+GATE=core CROSS=all NOSE=target/debug/nose OUT_DIR=/tmp/nose-type4-smoke-core-allcross scripts/type4-smoke.sh
+selected items: 621/4148
+positive recall: 260/260
+hard-negative false merges: 0/361
+Raw nodes: 0/25238
+```
+
+Final prioritizer state:
+
+```text
+numeric_minmax_abs: partially-covered, score 64.36, 7,037 raw hits, 0 gaps
+null_option_presence: partially-covered, score 51.52, 126,057 raw hits, 0 gaps
+membership_contains: partially-covered, score 36.54, 22,979 raw hits, 0 gaps, 2,798 filtered
+map_default_lookup: open, score 31.23, 4,319 raw hits, 0 gaps
+```
+
+Assessment: this loop expanded the strict semantic frontier and improved the adversarial
+process. It did not add visible refactoring candidates in the top membership-heavy repos,
+which is acceptable for this narrow proof fact: literal membership is often a small
+predicate, and the first real value is reducing future ambiguity around membership/contains.
+The next cost-effective ordinary open axis is now `map_default_lookup`; remaining
+membership work should target map-key and dynamic set membership only when receiver/key
+coordinates are provable.
