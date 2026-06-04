@@ -639,6 +639,34 @@ AXIS_PROPOSALS = {
         "axis": "literal_map_default_lookup",
         "why": "A same-file Java class named `Map` is not proof of the standard `java.util.Map` factory.",
     },
+    "axis_map_default_rust_hashmap_from_identity": {
+        "axis": "literal_map_default_lookup",
+        "why": "A Rust `std::collections::HashMap::from([...])` lookup with `unwrap_or` over static entries should prove literal-map default lookup.",
+    },
+    "axis_map_default_rust_btreemap_from_identity": {
+        "axis": "literal_map_default_lookup",
+        "why": "A Rust `std::collections::BTreeMap::from([...])` lookup with `unwrap_or` over static entries should prove the same literal-map default lookup.",
+    },
+    "axis_map_default_rust_hashmap_local_identity": {
+        "axis": "literal_map_default_lookup",
+        "why": "A local Rust binding initialized from `std::collections::HashMap::from([...])` should preserve literal-map default proof coordinates.",
+    },
+    "axis_map_default_rust_wrong_key_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "Rust std map factory default lookups over different key parameters are different proof coordinates.",
+    },
+    "axis_map_default_rust_wrong_default_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "Rust std map factory default lookups with different fallbacks change missing-key behavior.",
+    },
+    "axis_map_default_rust_wrong_map_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "Rust std map factory default lookups over different static entries change present-key behavior.",
+    },
+    "axis_map_default_rust_mutated_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "A local Rust map binding mutated after construction is not a strict literal-map proof.",
+    },
     "axis_map_default_module_js_map_identity": {
         "axis": "literal_map_default_lookup",
         "why": "A module-level immutable JavaScript `new Map([...])` binding should prove literal-map default lookup when the binding is not mutated.",
@@ -2905,6 +2933,8 @@ def literal_map_default_axis_supported(surface: Surface, proposal_id: str) -> bo
         return surface.key in {"python", "ruby", "javascript", "typescript"}
     if proposal_id.startswith("axis_map_default_java_map_"):
         return surface.key == "java"
+    if proposal_id.startswith("axis_map_default_rust_"):
+        return surface.key in {"python", "ruby", "rust"}
     if proposal_id.startswith("axis_map_default_module_"):
         return surface.key in {"python", "ruby", "javascript", "typescript", "java"}
     return surface.key in {"python", "ruby"}
@@ -3103,6 +3133,20 @@ def map_default_axis_parts(
         form = "java_map_shadowed_factory" if right else "literal_api"
     if proposal_id == "axis_map_default_java_map_type_shadow_boundary":
         form = "java_map_type_shadow" if right else "literal_api"
+    if proposal_id == "axis_map_default_rust_hashmap_from_identity":
+        form = "rust_hashmap_from" if right else "literal_api"
+    if proposal_id == "axis_map_default_rust_btreemap_from_identity":
+        form = "rust_btreemap_from" if right else "literal_api"
+    if proposal_id == "axis_map_default_rust_hashmap_local_identity":
+        form = "rust_hashmap_local" if right else "literal_api"
+    if proposal_id in {
+        "axis_map_default_rust_wrong_key_boundary",
+        "axis_map_default_rust_wrong_default_boundary",
+        "axis_map_default_rust_wrong_map_boundary",
+    }:
+        form = "rust_hashmap_from" if right else "literal_api"
+    if proposal_id == "axis_map_default_rust_mutated_boundary":
+        form = "rust_hashmap_mutated" if right else "literal_api"
     if proposal_id == "axis_map_default_module_js_map_identity":
         form = "js_map_module" if right else "literal_api"
     if proposal_id == "axis_map_default_module_ts_map_identity":
@@ -3137,6 +3181,12 @@ def map_default_axis_parts(
         default = 9
     if right and proposal_id == "axis_map_default_java_map_wrong_map_boundary":
         entries = (("red", 9), ("blue", 2))
+    if right and proposal_id == "axis_map_default_rust_wrong_key_boundary":
+        key = "other"
+    if right and proposal_id == "axis_map_default_rust_wrong_default_boundary":
+        default = 9
+    if right and proposal_id == "axis_map_default_rust_wrong_map_boundary":
+        entries = (("red", 9), ("blue", 2))
     if right and proposal_id == "axis_map_default_module_wrong_key_boundary":
         key = "other"
     if right and proposal_id == "axis_map_default_module_wrong_default_boundary":
@@ -3153,6 +3203,9 @@ def map_default_axis_parts(
         "axis_map_default_java_map_of_identity",
         "axis_map_default_java_map_of_entries_identity",
         "axis_map_default_java_map_local_identity",
+        "axis_map_default_rust_hashmap_from_identity",
+        "axis_map_default_rust_btreemap_from_identity",
+        "axis_map_default_rust_hashmap_local_identity",
         "axis_map_default_module_js_map_identity",
         "axis_map_default_module_ts_map_identity",
         "axis_map_default_module_java_map_identity",
@@ -3286,6 +3339,38 @@ class AxisCase {{
 }}
 """
             return Variant("axis", src, method_name)
+
+    if surface.key == "rust":
+        map_entries = f' [("{k1}", {v1}), ("{k2}", {v2})]'
+        if form == "literal_api":
+            form = "rust_hashmap_from"
+        if form == "rust_hashmap_from":
+            src = f"""pub fn {name}(key: &str, other: &str) -> i32 {{
+    *std::collections::HashMap::from({map_entries}).get({key}).unwrap_or(&{default})
+}}
+"""
+            return Variant("axis", src, name)
+        if form == "rust_btreemap_from":
+            src = f"""pub fn {name}(key: &str, other: &str) -> i32 {{
+    *std::collections::BTreeMap::from({map_entries}).get({key}).unwrap_or(&{default})
+}}
+"""
+            return Variant("axis", src, name)
+        if form == "rust_hashmap_local":
+            src = f"""pub fn {name}(key: &str, other: &str) -> i32 {{
+    let lookup = std::collections::HashMap::from({map_entries});
+    *lookup.get({key}).unwrap_or(&{default})
+}}
+"""
+            return Variant("axis", src, name)
+        if form == "rust_hashmap_mutated":
+            src = f"""pub fn {name}(key: &str, other: &str) -> i32 {{
+    let mut lookup = std::collections::HashMap::from({map_entries});
+    lookup.insert("{k1}", 9);
+    *lookup.get(key).unwrap_or(&0)
+}}
+"""
+            return Variant("axis", src, name)
 
     if surface.key in {"javascript", "typescript"}:
         typed = surface.key == "typescript"
@@ -5707,6 +5792,10 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
             "axis_map_default_java_map_of_entries_identity",
             "axis_map_default_java_map_local_identity",
             "axis_map_default_java_map_wrong_default_boundary",
+            "axis_map_default_rust_hashmap_from_identity",
+            "axis_map_default_rust_btreemap_from_identity",
+            "axis_map_default_rust_hashmap_local_identity",
+            "axis_map_default_rust_wrong_default_boundary",
             "axis_map_default_module_js_map_identity",
             "axis_map_default_module_ts_map_identity",
             "axis_map_default_module_java_map_identity",
@@ -5722,6 +5811,8 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
             "axis_map_default_js_map_wrong_map_boundary",
             "axis_map_default_js_object_wrong_map_boundary",
             "axis_map_default_java_map_wrong_map_boundary",
+            "axis_map_default_rust_wrong_map_boundary",
+            "axis_map_default_rust_mutated_boundary",
             "axis_map_default_module_wrong_map_boundary",
             "axis_map_default_module_mutated_boundary",
             "axis_map_default_module_shadowed_boundary",
@@ -6090,6 +6181,7 @@ def generate_axis_items(
                     "axis_map_default_js_map_",
                     "axis_map_default_js_object_",
                     "axis_map_default_java_map_",
+                    "axis_map_default_rust_",
                     "axis_map_default_module_",
                 )
             ):
@@ -7204,6 +7296,61 @@ def generate_literal_map_default_cross_items(
         if not generation_filter.include_proposal(proposal_id):
             continue
         for right_surface in java_right_surfaces:
+            for left_surface in reference_surfaces:
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "not_equivalent",
+                        "heldout",
+                        "literal-map-default-boundary",
+                    )
+                )
+    rust_right_surfaces = [surface_by_key["rust"]]
+    for proposal_id in (
+        "axis_map_default_rust_hashmap_from_identity",
+        "axis_map_default_rust_btreemap_from_identity",
+        "axis_map_default_rust_hashmap_local_identity",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for right_surface in rust_right_surfaces:
+            for left_surface in reference_surfaces:
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "equivalent",
+                        "heldout",
+                    )
+                )
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "not_equivalent",
+                        "heldout",
+                        "literal_map_default_lookup-semantic-mutation",
+                    )
+                )
+    for proposal_id in (
+        "axis_map_default_rust_wrong_key_boundary",
+        "axis_map_default_rust_wrong_default_boundary",
+        "axis_map_default_rust_wrong_map_boundary",
+        "axis_map_default_rust_mutated_boundary",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for right_surface in rust_right_surfaces:
             for left_surface in reference_surfaces:
                 items.append(
                     make_axis_cross_item(

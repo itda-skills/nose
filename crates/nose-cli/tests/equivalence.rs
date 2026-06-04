@@ -1738,6 +1738,28 @@ fn literal_map_default_lookup_converges_with_java_map_factory_boundaries() {
 }
 
 #[test]
+fn literal_map_default_lookup_converges_with_rust_std_map_factory_boundaries() {
+    let i = Interner::new();
+    let py_literal = "def f(key, other):\n    return {\"red\": 1, \"blue\": 2}.get(key, 0)\n";
+    let rust_hashmap_inline = "pub fn f(key: &str, other: &str) -> i32 {\n    *std::collections::HashMap::from([(\"red\", 1), (\"blue\", 2)]).get(key).unwrap_or(&0)\n}\n";
+    let rust_btreemap_inline = "pub fn f(key: &str, other: &str) -> i32 {\n    *std::collections::BTreeMap::from([(\"red\", 1), (\"blue\", 2)]).get(key).unwrap_or(&0)\n}\n";
+    let rust_hashmap_local = "pub fn f(key: &str, other: &str) -> i32 {\n    let lookup = std::collections::HashMap::from([(\"red\", 1), (\"blue\", 2)]);\n    *lookup.get(key).unwrap_or(&0)\n}\n";
+    let rust_wrong_key = "pub fn f(key: &str, other: &str) -> i32 {\n    *std::collections::HashMap::from([(\"red\", 1), (\"blue\", 2)]).get(other).unwrap_or(&0)\n}\n";
+    let rust_wrong_default = "pub fn f(key: &str, other: &str) -> i32 {\n    *std::collections::HashMap::from([(\"red\", 1), (\"blue\", 2)]).get(key).unwrap_or(&9)\n}\n";
+    let rust_wrong_map = "pub fn f(key: &str, other: &str) -> i32 {\n    *std::collections::HashMap::from([(\"red\", 9), (\"blue\", 2)]).get(key).unwrap_or(&0)\n}\n";
+    let rust_mutated = "pub fn f(key: &str, other: &str) -> i32 {\n    let mut lookup = std::collections::HashMap::from([(\"red\", 1), (\"blue\", 2)]);\n    lookup.insert(\"red\", 9);\n    *lookup.get(key).unwrap_or(&0)\n}\n";
+
+    let fp = value_fp(&i, py_literal, Lang::Python);
+    assert_eq!(fp, value_fp(&i, rust_hashmap_inline, Lang::Rust));
+    assert_eq!(fp, value_fp(&i, rust_btreemap_inline, Lang::Rust));
+    assert_eq!(fp, value_fp(&i, rust_hashmap_local, Lang::Rust));
+    assert_ne!(fp, value_fp(&i, rust_wrong_key, Lang::Rust));
+    assert_ne!(fp, value_fp(&i, rust_wrong_default, Lang::Rust));
+    assert_ne!(fp, value_fp(&i, rust_wrong_map, Lang::Rust));
+    assert_ne!(fp, value_fp(&i, rust_mutated, Lang::Rust));
+}
+
+#[test]
 fn literal_map_default_lookup_converges_with_module_map_bindings() {
     let i = Interner::new();
     let py_literal = "def f(key, other):\n    return {\"red\": 1, \"blue\": 2}.get(key, 0)\n";

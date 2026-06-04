@@ -2448,3 +2448,76 @@ promote the local Rust form into exact semantic reports. The new exact-safe rule
 minimal: it opens method `contains` only when the normalized receiver is a literal
 collection sequence, so custom receiver and mutated-vector boundaries remain outside
 strict Type-4.
+
+## Rust std map factory default lookups: loops 283-288
+
+This loop shifts from `membership_contains` to the second-ranked frontier,
+`map_default_lookup`, while preserving the batch-3 cadence. The target is the literal
+map-default sub-axis for Rust std map factories. The previous detector handled typed
+Rust map fallback APIs, but it did not prove inline/local map literals built through
+fully-qualified std factories.
+
+The batch opens three adjacent strict positives:
+
+- `std::collections::HashMap::from([("red", 1), ("blue", 2)]).get(key).unwrap_or(&0)`;
+- `std::collections::BTreeMap::from([("red", 1), ("blue", 2)]).get(key).unwrap_or(&0)`;
+- a local binding initialized from `std::collections::HashMap::from([...])` followed by
+  the same `get(...).unwrap_or(...)` default.
+
+The proof is intentionally tied to a fully-qualified standard-library factory and a
+literal array of tuple entries. Hard negatives cover wrong key, wrong fallback, wrong
+map value, and a local map mutated after construction.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 283 | frontier selection | move to `literal_map_default_lookup` and group Rust `HashMap::from`, `BTreeMap::from`, and local `HashMap::from` binding under `axis_map_default_rust_*` | focused corpus: 6 positives, 14 hard negatives |
+| 284 | baseline measurement | scan the focused batch with the previous release detector | baseline: 0/6 positives, 0/14 false merges |
+| 285 | generator/capability adversary | mark Rust literal-map-default as partial and add wrong-key/default/map plus mutation boundaries | focused generator emits 20 items across Python/Ruby references and Rust targets |
+| 286 | detector strengthening | canonicalize Rust std map factory calls into literal map entries and mark the same factories strict exact-safe | candidate focused: 6/6 positives, 0/14 false merges |
+| 287 | strict-safe tests | extend value-graph equivalence and CLI semantic tests with Rust std map factories and mutation boundaries | targeted tests passed |
+| 288 | release focused/core gates | build release and run focused Rust-map, literal-map-default core, and all-cross core gates | focused: 6/6, 0/14; literal-map core: 33/33, 0/94; all-cross core: 457/457, 0/864 |
+
+Focused release/candidate comparison:
+
+```text
+previous release:  items=20, positive=0/6, false_merges=0/14
+candidate release: items=20, positive=6/6, false_merges=0/14
+delta:             +6 positive hits, +0 false merges
+```
+
+Final release focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_map_default_rust CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 20
+positive recall: 6/6
+hard-negative false merges: 0/14
+Raw nodes: 0/790
+```
+
+Final release literal-map-default compact gate:
+
+```text
+GATE=core AXIS=literal_map_default_lookup CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 127/193
+positive recall: 33/33
+hard-negative false merges: 0/94
+Raw nodes: 0/5427
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 1321/5808
+positive recall: 457/457
+hard-negative false merges: 0/864
+Raw nodes: 0/49488
+```
+
+Assessment: this is a real strict frontier expansion on a different high-priority axis.
+The new proof shares the existing literal-map coordinate model instead of adding a Rust
+special case at the report layer: factory entries become canonical map entries in the
+value graph, and exact-safe accepts only the same fully-qualified std factories over
+literal tuple arrays. Mutation remains outside the exact clone family because the
+mutating call contributes a distinct effect/value footprint.

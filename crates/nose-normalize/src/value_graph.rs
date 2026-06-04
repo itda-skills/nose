@@ -596,12 +596,43 @@ impl<'a> Builder<'a> {
         Some(args[1..].to_vec())
     }
 
+    fn proven_rust_std_map_factory_entries(&mut self, value: ValueId) -> Option<ValueId> {
+        if self.il.meta.lang != Lang::Rust {
+            return None;
+        }
+        let node = &self.nodes[value as usize];
+        if !matches!(node.op, ValOp::Call(0)) || node.args.len() != 2 {
+            return None;
+        }
+        let args = node.args.clone();
+        if !self.is_free_name_value(args[0], "std::collections::HashMap::from")
+            && !self.is_free_name_value(args[0], "std::collections::BTreeMap::from")
+        {
+            return None;
+        }
+        let entries_node = &self.nodes[args[1] as usize];
+        if !matches!(entries_node.op, ValOp::Seq(1)) {
+            return None;
+        }
+        let entries = entries_node.args.clone();
+        let mut canonical_entries = Vec::with_capacity(entries.len());
+        for entry in entries {
+            let entry_node = &self.nodes[entry as usize];
+            if !matches!(entry_node.op, ValOp::Seq(2)) || entry_node.args.len() != 2 {
+                return None;
+            }
+            canonical_entries.push(self.mk(ValOp::Seq(4), entry_node.args.clone()));
+        }
+        Some(self.mk(ValOp::Seq(3), canonical_entries))
+    }
+
     fn proven_map_value(&mut self, value: ValueId) -> Option<ValueId> {
         if matches!(self.nodes[value as usize].op, ValOp::Seq(3)) {
             return Some(value);
         }
         self.proven_map_constructor_entries(value)
             .or_else(|| self.proven_java_map_factory_entries(value))
+            .or_else(|| self.proven_rust_std_map_factory_entries(value))
     }
 
     fn proven_map_get_value(&mut self, value: ValueId) -> Option<(ValueId, ValueId)> {

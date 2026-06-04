@@ -352,6 +352,7 @@ fn strict_exact_module_container_binding_safe(
 ) -> bool {
     strict_exact_map_constructor_entries_safe(il, interner, facts, node)
         || strict_exact_java_map_factory_safe(il, interner, facts, node)
+        || strict_exact_rust_std_map_factory_safe(il, interner, facts, node)
         || strict_exact_set_constructor_collection_safe(il, interner, facts, node)
         || strict_exact_java_collection_factory_safe(il, interner, facts, node)
 }
@@ -493,6 +494,9 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
         return true;
     }
     if strict_exact_java_map_factory_safe(il, interner, facts, node) {
+        return true;
+    }
+    if strict_exact_rust_std_map_factory_safe(il, interner, facts, node) {
         return true;
     }
     if strict_exact_map_constructor_entries_safe(il, interner, facts, node) {
@@ -753,6 +757,31 @@ fn strict_exact_map_constructor_entries_safe(
     }
     let kids = il.children(node);
     if kids.len() != 2 || !strict_exact_callee_name(il, interner, kids[0], "Map") {
+        return false;
+    }
+    strict_exact_map_entries_safe(il, interner, facts, kids[1])
+}
+
+fn strict_exact_rust_std_map_factory_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    if il.meta.lang != Lang::Rust || il.kind(node) != NodeKind::Call {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 || il.kind(kids[0]) != NodeKind::Var {
+        return false;
+    }
+    let Payload::Name(name) = il.node(kids[0]).payload else {
+        return false;
+    };
+    if !matches!(
+        interner.resolve(name),
+        "std::collections::HashMap::from" | "std::collections::BTreeMap::from"
+    ) {
         return false;
     }
     strict_exact_map_entries_safe(il, interner, facts, kids[1])

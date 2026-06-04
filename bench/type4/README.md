@@ -135,10 +135,13 @@ python3 bench/type4/frontier.py /tmp/nose-type4-next/manifest.json \
   --fail-on-regression
 ```
 
-Use the frontier summary to choose one narrow under-merge class, add a failing convergence
-test, patch lowering or value-graph normalization, and rerun the generated positives plus
-hard negatives. That loop is the intended co-evolution process: the benchmark grows by
-adversarial siblings while the exact detector gains new semantic convergence rules.
+Use the frontier summary to choose a micro-batch of about three adjacent under-merge
+classes that share one proof invariant, add focused convergence tests, patch lowering or
+value-graph normalization, and rerun the generated positives plus hard negatives. The
+batch should be narrow enough that one exact proof rule explains every new positive; if
+the positives need unrelated proofs, split them into separate loops. That loop is the
+intended co-evolution process: the benchmark grows by adversarial siblings while the exact
+detector gains new semantic convergence rules.
 
 ## Prioritize the next frontier
 
@@ -160,7 +163,8 @@ Use the prioritizer as a repeated pattern loop, not as a one-off report:
 
 - quantify broad pattern frequency and extraction gaps across the pinned repos;
 - classify broad-probe overreach separately from true extraction gaps;
-- add one narrow synthetic axis with positive and hard-negative siblings;
+- add a narrow synthetic micro-batch, usually three adjacent positives, with hard-negative
+  siblings that attack the shared proof invariant;
 - patch the detector only where the miss is a strict proof gap;
 - compare installed/release and modified detectors on real repos;
 - update the candidate status so the next cost-effective axis rises.

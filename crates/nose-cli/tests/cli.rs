@@ -1258,6 +1258,21 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
     )
     .unwrap();
     fs::write(
+        dir.join("map_default_rust_hashmap.rs"),
+        "pub fn lookup(key: &str, other: &str) -> i32 {\n    *std::collections::HashMap::from([(\"red\", 1), (\"blue\", 2)]).get(key).unwrap_or(&0)\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("map_default_rust_btreemap.rs"),
+        "pub fn lookup(key: &str, other: &str) -> i32 {\n    *std::collections::BTreeMap::from([(\"red\", 1), (\"blue\", 2)]).get(key).unwrap_or(&0)\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("map_default_rust_local.rs"),
+        "pub fn lookup(key: &str, other: &str) -> i32 {\n    let values = std::collections::HashMap::from([(\"red\", 1), (\"blue\", 2)]);\n    *values.get(key).unwrap_or(&0)\n}\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("object_hasown.js"),
         "function lookup(key, other) {\n  const values = { \"red\": 1, \"blue\": 2 };\n  return Object.hasOwn(values, key) ? values[key] : 0;\n}\n",
     )
@@ -1353,6 +1368,26 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
     )
     .unwrap();
     fs::write(
+        dir.join("wrong_rust_key.rs"),
+        "pub fn wrong(key: &str, other: &str) -> i32 {\n    *std::collections::HashMap::from([(\"red\", 1), (\"blue\", 2)]).get(other).unwrap_or(&0)\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_rust_default.rs"),
+        "pub fn wrong(key: &str, other: &str) -> i32 {\n    *std::collections::HashMap::from([(\"red\", 1), (\"blue\", 2)]).get(key).unwrap_or(&9)\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_rust_map.rs"),
+        "pub fn wrong(key: &str, other: &str) -> i32 {\n    *std::collections::HashMap::from([(\"red\", 9), (\"blue\", 2)]).get(key).unwrap_or(&0)\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("rust_map_mutated.rs"),
+        "pub fn wrong(key: &str, other: &str) -> i32 {\n    let mut values = std::collections::HashMap::from([(\"red\", 1), (\"blue\", 2)]);\n    values.insert(\"red\", 9);\n    *values.get(key).unwrap_or(&0)\n}\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("object_wrong_key.js"),
         "function wrong_key(key, other) {\n  const values = { \"red\": 1, \"blue\": 2 };\n  return Object.hasOwn(values, other) ? values[other] : 0;\n}\n",
     )
@@ -1418,6 +1453,9 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
         "map_default_module.js",
         "map_default_module.ts",
         "map_default_module.java",
+        "map_default_rust_hashmap.rs",
+        "map_default_rust_btreemap.rs",
+        "map_default_rust_local.rs",
         "object_hasown.js",
         "object_hasown_call.js",
         "object_negated.ts",
@@ -1457,6 +1495,10 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
         "module_map_mutated.js",
         "module_map_shadowed.ts",
         "module_map_shadowed.java",
+        "wrong_rust_key.rs",
+        "wrong_rust_default.rs",
+        "wrong_rust_map.rs",
+        "rust_map_mutated.rs",
         "object_wrong_key.js",
         "object_wrong_default.js",
         "object_wrong_map.js",
