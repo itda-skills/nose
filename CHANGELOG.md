@@ -33,6 +33,11 @@ break.
   Ruby, and Rust. The detector now converges `key in map`, map key APIs, Java
   `keySet().contains`, Rust `get(key).is_some`, and Go `_, ok := map[key]` while
   preserving wrong-key, wrong-map, and value-membership boundaries.
+- Strict Type-4 proof facts for typed map lookup with fallback across Go, Java, and
+  Rust. The detector now converges Go lookup-ok fallback assignments, Java
+  `containsKey/get` and `getOrDefault`, and Rust `contains_key`/index and
+  `get(key).unwrap_or(default)` shapes while preserving wrong-key, wrong-default, and
+  wrong-map boundaries.
 - Type-4 focused generation filters (`--axis`, `--proposal-prefix`) and smoke gates
   (`GATE=focused|core|full`) so detector co-evolution loops can run on one frontier
   before periodic compact/full validation.

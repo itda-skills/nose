@@ -498,6 +498,9 @@ impl<'a> Builder<'a> {
                 if let Some(v) = self.minmax_pattern(args[0], args[1], args[2]) {
                     return v;
                 }
+                if let Some(v) = self.map_default_pattern(args[0], args[1], args[2]) {
+                    return v;
+                }
             }
         }
         // Full ASSOCIATIVE-COMMUTATIVE canonicalization: flatten a `+`/`*`/`&`/`|`/`^`
@@ -2227,6 +2230,57 @@ impl<'a> Builder<'a> {
         self.mk(ValOp::Bin(Op::Eq as u32), vec![len, zero])
     }
 
+    fn map_default_pattern(
+        &mut self,
+        cond: ValueId,
+        then_v: ValueId,
+        else_v: ValueId,
+    ) -> Option<ValueId> {
+        let (key, map, negated) = self.membership_condition(cond)?;
+        let default = if negated {
+            if !self.map_lookup_value_matches(else_v, map, key) {
+                return None;
+            }
+            then_v
+        } else {
+            if !self.map_lookup_value_matches(then_v, map, key) {
+                return None;
+            }
+            else_v
+        };
+        Some(self.mk(
+            ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+            vec![map, key, default],
+        ))
+    }
+
+    fn membership_condition(&self, cond: ValueId) -> Option<(ValueId, ValueId, bool)> {
+        let node = &self.nodes[cond as usize];
+        if matches!(node.op, ValOp::Bin(o) if o == Op::In as u32) && node.args.len() == 2 {
+            return Some((node.args[0], node.args[1], false));
+        }
+        if matches!(node.op, ValOp::Un(o) if o == Op::Not as u32) && node.args.len() == 1 {
+            let inner = &self.nodes[node.args[0] as usize];
+            if matches!(inner.op, ValOp::Bin(o) if o == Op::In as u32) && inner.args.len() == 2 {
+                return Some((inner.args[0], inner.args[1], true));
+            }
+        }
+        None
+    }
+
+    fn map_lookup_value_matches(&self, value: ValueId, map: ValueId, key: ValueId) -> bool {
+        let node = &self.nodes[value as usize];
+        if matches!(node.op, ValOp::Index) && node.args.as_slice() == [map, key] {
+            return true;
+        }
+        if !matches!(node.op, ValOp::Call(0)) || node.args.len() != 2 || node.args[1] != key {
+            return false;
+        }
+        let callee = &self.nodes[node.args[0] as usize];
+        matches!(callee.op, ValOp::Field(name) if name == stable_symbol_hash("get"))
+            && callee.args.as_slice() == [map]
+    }
+
     fn eval_membership_collection(
         &mut self,
         collection: NodeId,
@@ -3191,4 +3245,13 @@ fn op_tag(op: &ValOp) -> u64 {
         ValOp::Opaque(c) => (13, *c),
     };
     combine(k.wrapping_mul(0xF00D), p)
+}
+
+fn stable_symbol_hash(name: &str) -> u64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in name.bytes() {
+        h ^= b as u64;
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    h
 }

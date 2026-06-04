@@ -1540,6 +1540,28 @@ fn map_key_membership_converges_cross_language_with_boundaries() {
 }
 
 #[test]
+fn map_default_lookup_converges_cross_language_with_boundaries() {
+    let i = Interner::new();
+    let go = "package p\n\nfunc F(lookup map[string]int, otherLookup map[string]int, key string, otherKey string, fallback int, otherDefault int) int { value, ok := lookup[key]; if !ok { value = fallback }; return value }\n";
+    let java_explicit = "import java.util.Map;\n\nclass C { static int f(Map<String, Integer> lookup, Map<String, Integer> other_lookup, String key, String other_key, int fallback, int other_default) { return lookup.containsKey(key) ? lookup.get(key) : fallback; } }\n";
+    let java_builtin = "import java.util.Map;\n\nclass C { static int f(Map<String, Integer> lookup, Map<String, Integer> other_lookup, String key, String other_key, int fallback, int other_default) { return lookup.getOrDefault(key, fallback); } }\n";
+    let rust_explicit = "use std::collections::HashMap;\n\npub fn f(lookup: &HashMap<&str, i32>, other_lookup: &HashMap<&str, i32>, key: &str, other_key: &str, fallback: i32, other_default: i32) -> i32 { if lookup.contains_key(key) { lookup[key] } else { fallback } }\n";
+    let rust_unwrap = "use std::collections::HashMap;\n\npub fn f(lookup: &HashMap<&str, i32>, other_lookup: &HashMap<&str, i32>, key: &str, other_key: &str, fallback: i32, other_default: i32) -> i32 { *lookup.get(key).unwrap_or(&fallback) }\n";
+    let wrong_key = "import java.util.Map;\n\nclass C { static int f(Map<String, Integer> lookup, Map<String, Integer> other_lookup, String key, String other_key, int fallback, int other_default) { return lookup.getOrDefault(other_key, fallback); } }\n";
+    let wrong_default = "use std::collections::HashMap;\n\npub fn f(lookup: &HashMap<&str, i32>, other_lookup: &HashMap<&str, i32>, key: &str, other_key: &str, fallback: i32, other_default: i32) -> i32 { *lookup.get(key).unwrap_or(&other_default) }\n";
+    let wrong_map = "package p\n\nfunc F(lookup map[string]int, otherLookup map[string]int, key string, otherKey string, fallback int, otherDefault int) int { value, ok := otherLookup[key]; if !ok { value = fallback }; return value }\n";
+
+    let fp = value_fp(&i, go, Lang::Go);
+    assert_eq!(fp, value_fp(&i, java_explicit, Lang::Java));
+    assert_eq!(fp, value_fp(&i, java_builtin, Lang::Java));
+    assert_eq!(fp, value_fp(&i, rust_explicit, Lang::Rust));
+    assert_eq!(fp, value_fp(&i, rust_unwrap, Lang::Rust));
+    assert_ne!(fp, value_fp(&i, wrong_key, Lang::Java));
+    assert_ne!(fp, value_fp(&i, wrong_default, Lang::Rust));
+    assert_ne!(fp, value_fp(&i, wrong_map, Lang::Go));
+}
+
+#[test]
 fn rust_if_let_option_presence_converges_with_option_predicates() {
     let i = Interner::new();
     let if_some = "pub fn f(value: Option<i32>) -> bool {\n    if let Some(_) = value { true } else { false }\n}\n";

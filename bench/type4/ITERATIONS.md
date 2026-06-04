@@ -1314,3 +1314,82 @@ Assessment: this loop followed the intended adversarial co-evolution pattern. Th
 generator found a real multi-language under-merge class, the detector gained both shared
 canonicalization and Go frontend lowering, and the regression suite forced a process
 correction so broad `contains` support did not weaken existing literal-membership safety.
+
+## Typed map-default coevolution: loops 177-184
+
+This loop closes the next strict slice of the broader `map_default_lookup` frontier:
+typed/dynamic maps in Go, Java, and Rust. It deliberately stays separate from the earlier
+Python/Ruby `literal_map_default_lookup` slice. JS/TS object or `Map.get() ?? fallback`
+forms remain open until receiver type or construction facts make the absent-value
+semantics strict.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 177 | scope split | choose typed map fallback over broad JS/TS defaulting because Go/Java/Rust expose map receiver, key, presence, and fallback coordinates directly | new `map_default_lookup` capability slice selected |
+| 178 | generator adversary | add `axis_map_fallback_*` proposals with identity, wrong-key, wrong-default, wrong-map, and semantic-mutation siblings | focused manifest generated 15 items: 3 positives, 12 negatives |
+| 179 | baseline measurement | compare the existing release binary with the focused corpus before rebuilding release | baseline: 1/3 positives, 0/12 false merges; misses were Java and Rust API/default forms |
+| 180 | detector strengthening | lower Java `getOrDefault` and Rust `get(key).unwrap_or(default)` to `GetOrDefault`, and fold `Phi(key in map, map[key]/map.get(key), fallback)` to the same value-graph node | candidate focused: 3/3 positives, 0/12 false merges |
+| 181 | focused ring check | run cross-surface focused ring for Go, Java, and Rust | 6/6 positives, 0/24 false merges |
+| 182 | regression test | add `map_default_lookup_converges_cross_language_with_boundaries` | full equivalence suite: 114/114 passed |
+| 183 | compact gate | run `GATE=core AXIS=map_default_lookup` on the release candidate | selected 17/30; 5/5 positives, 0/12 false merges, Raw 0 |
+| 184 | pause point | stop after this loop per operator request, with large default-ring/dense validation deferred | ready to resume from the notes below |
+
+Baseline comparison before rebuilding the release binary:
+
+```text
+baseline focused: items=15, positive=1/3, false_merges=0/12
+candidate focused: items=15, positive=3/3, false_merges=0/12
+delta: +2 positive hits, +0 false merges
+```
+
+Final release focused map-default gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_map_fallback NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 15
+positive recall: 3/3
+hard-negative false merges: 0/12
+Raw nodes: 0/775
+```
+
+Final release compact map-default gate:
+
+```text
+GATE=core AXIS=map_default_lookup NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 17/30
+positive recall: 5/5
+hard-negative false merges: 0/12
+Raw nodes: 0/873
+```
+
+Validation run before the pause:
+
+```text
+cargo test -p nose-cli --test equivalence
+cargo test -p nose-cli --test cli
+cargo test -p nose-frontend -p nose-normalize -p nose-detect
+cargo build --release -p nose-cli
+```
+
+Pause/resume note: this is a clean stopping point. On the next session, do not restart the
+same loop. First run one periodic broader validation if needed:
+
+```sh
+GATE=full AXIS=map_default_lookup NOSE=target/release/nose ./scripts/type4-smoke.sh
+GATE=core CROSS=all NOSE=target/release/nose OUT_DIR=/tmp/nose-type4-smoke-resume-all ./scripts/type4-smoke.sh
+```
+
+Then refresh the prioritizer with cache and choose the next cost-effective strict axis:
+
+```sh
+python3 bench/type4/prioritize_frontier.py \
+  --cache /tmp/nose-frontier-priorities.cache.json \
+  --json-out /tmp/nose-frontier-priorities.json \
+  --markdown-out bench/type4/FRONTIER_PRIORITIES.md
+```
+
+Assessment: this was a real detector improvement, not just benchmark growth. The baseline
+already handled the Go same-shape case because both sides used the explicit lookup-ok
+fallback, but it missed Java/Rust API forms. The detector now has a shared strict
+`GetOrDefault(map, key, fallback)` proof fact and keeps all coordinate-changing adversaries
+separate.

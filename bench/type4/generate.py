@@ -307,6 +307,22 @@ AXIS_PROPOSALS = {
         "axis": "literal_map_default_lookup",
         "why": "Different literal map values change present-key behavior and must not merge.",
     },
+    "axis_map_fallback_identity": {
+        "axis": "map_default_lookup",
+        "why": "Typed map default lookups should prove the same map/key/fallback behavior across contains-get and defaulting API forms.",
+    },
+    "axis_map_fallback_wrong_key_boundary": {
+        "axis": "map_default_lookup",
+        "why": "Map default lookups over different dynamic key parameters are different proof coordinates.",
+    },
+    "axis_map_fallback_wrong_default_boundary": {
+        "axis": "map_default_lookup",
+        "why": "Different fallback parameters change absent-key behavior and must not merge.",
+    },
+    "axis_map_fallback_wrong_map_boundary": {
+        "axis": "map_default_lookup",
+        "why": "Different map receivers change present-key behavior and must not merge.",
+    },
     "axis_table_access": {
         "axis": "table_access",
         "why": "Literal table access must preserve key/index identity and reject neighboring table values.",
@@ -1886,6 +1902,88 @@ def literal_map_default_axis_supported(surface: Surface, proposal_id: str) -> bo
     if not proposal_id.startswith("axis_map_default_"):
         return False
     return surface.key in {"python", "ruby"}
+
+
+def map_default_lookup_axis_supported(surface: Surface, proposal_id: str) -> bool:
+    if not proposal_id.startswith("axis_map_fallback_"):
+        return False
+    return surface.key in {"go", "java", "rust"}
+
+
+def map_default_lookup_axis_parts(
+    proposal_id: str, negative: bool, right: bool
+) -> tuple[str, str, str]:
+    receiver = "lookup"
+    key = "key"
+    default = "fallback"
+    if right and proposal_id == "axis_map_fallback_wrong_key_boundary":
+        key = "other_key"
+    if right and proposal_id == "axis_map_fallback_wrong_default_boundary":
+        default = "other_default"
+    if right and proposal_id == "axis_map_fallback_wrong_map_boundary":
+        receiver = "other_lookup"
+    if right and negative and proposal_id == "axis_map_fallback_identity":
+        key = "other_key"
+    return receiver, key, default
+
+
+def axis_map_default_lookup_variant(
+    surface: Surface,
+    proposal_id: str,
+    negative: bool,
+    right: bool,
+) -> Variant:
+    receiver, key, default = map_default_lookup_axis_parts(proposal_id, negative, right)
+    name = {
+        "go": "BuildCase" if right else "AxisCase",
+        "java": "buildCase" if right else "axisCase",
+    }.get(surface.language, "build_case" if right else "axis_case")
+
+    if surface.key == "go":
+        receiver_go = "otherLookup" if receiver == "other_lookup" else receiver
+        key_go = "otherKey" if key == "other_key" else key
+        default_go = "otherDefault" if default == "other_default" else default
+        src = f"""package p
+
+func {name}(lookup map[string]int, otherLookup map[string]int, key string, otherKey string, fallback int, otherDefault int) int {{
+    value, ok := {receiver_go}[{key_go}]
+    if !ok {{
+        value = {default_go}
+    }}
+    return value
+}}
+"""
+        return Variant("axis", src, name)
+
+    if surface.key == "java":
+        if right:
+            expr = f"{receiver}.getOrDefault({key}, {default})"
+        else:
+            expr = f"{receiver}.containsKey({key}) ? {receiver}.get({key}) : {default}"
+        src = f"""import java.util.Map;
+
+class AxisCase {{
+    static int {name}(Map<String, Integer> lookup, Map<String, Integer> other_lookup, String key, String other_key, int fallback, int other_default) {{
+        return {expr};
+    }}
+}}
+"""
+        return Variant("axis", src, name)
+
+    if surface.key == "rust":
+        if right:
+            expr = f"*{receiver}.get({key}).unwrap_or(&{default})"
+        else:
+            expr = f"if {receiver}.contains_key({key}) {{ {receiver}[{key}] }} else {{ {default} }}"
+        src = f"""use std::collections::HashMap;
+
+pub fn {name}(lookup: &HashMap<&str, i32>, other_lookup: &HashMap<&str, i32>, key: &str, other_key: &str, fallback: i32, other_default: i32) -> i32 {{
+    {expr}
+}}
+"""
+        return Variant("axis", src, name)
+
+    raise ValueError(f"unsupported surface for dynamic map default axis: {surface.key}")
 
 
 def map_default_axis_parts(
@@ -3952,6 +4050,11 @@ def axis_variants(
             axis_map_default_variant(surface, proposal_id, False, False),
             axis_map_default_variant(surface, proposal_id, negative, True),
         )
+    if axis == "map_default_lookup":
+        return (
+            axis_map_default_lookup_variant(surface, proposal_id, False, False),
+            axis_map_default_lookup_variant(surface, proposal_id, negative, True),
+        )
     if axis == "null_presence_predicate":
         return (
             axis_null_presence_variant(surface, proposal_id, False, False),
@@ -4001,6 +4104,7 @@ def axis_data_shape(axis: str) -> str:
         "literal_collection_membership": "set<string>",
         "map_key_membership": "map<string,string>+key",
         "literal_map_default_lookup": "map<string,int>+key",
+        "map_default_lookup": "map<string,int>+key+fallback",
         "null_presence_predicate": "nullable<T>+alternate",
         "numeric_minmax_abs": "scalar<int>+alternate",
         "projection_identity": "record<today:int,tomorrow:int>",
@@ -4050,6 +4154,30 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
                     {"key": "red", "other": "green"},
                     {"key": "blue", "other": "green"},
                     {"key": "green", "other": "red"},
+                ],
+                "outputs": [],
+            }
+        if axis == "map_default_lookup":
+            return {
+                "level": "E1",
+                "kind": f"same-spec-{axis}",
+                "property_inputs": [
+                    {
+                        "lookup": {"red": 1, "blue": 2},
+                        "other_lookup": {"red": 9, "blue": 2},
+                        "key": "red",
+                        "other_key": "green",
+                        "fallback": 0,
+                        "other_default": 9,
+                    },
+                    {
+                        "lookup": {"red": 1, "blue": 2},
+                        "other_lookup": {"red": 9, "blue": 2},
+                        "key": "green",
+                        "other_key": "red",
+                        "fallback": 0,
+                        "other_default": 9,
+                    },
                 ],
                 "outputs": [],
             }
@@ -4168,6 +4296,40 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
                 "input": {"key": "red", "other": "green"},
                 "left": 1,
                 "right": 9 if proposal_id == "axis_map_default_wrong_map_boundary" else 0,
+            }
+        return {
+            "level": "E2",
+            "kind": f"counterexample-{axis}",
+            "counterexample": counterexample,
+        }
+    elif axis == "map_default_lookup":
+        input_values = {
+            "lookup": {"red": 1, "blue": 2},
+            "other_lookup": {"red": 9, "blue": 2},
+            "key": "red",
+            "other_key": "green",
+            "fallback": 0,
+            "other_default": 9,
+        }
+        if proposal_id == "axis_map_fallback_wrong_default_boundary":
+            input_values["key"] = "green"
+            input_values["other_key"] = "red"
+            counterexample = {
+                "input": input_values,
+                "left": 0,
+                "right": 9,
+            }
+        elif proposal_id == "axis_map_fallback_wrong_map_boundary":
+            counterexample = {
+                "input": input_values,
+                "left": 1,
+                "right": 9,
+            }
+        else:
+            counterexample = {
+                "input": input_values,
+                "left": 1,
+                "right": 0,
             }
         return {
             "level": "E2",
@@ -4391,6 +4553,10 @@ def generate_axis_items(
                 surface, proposal_id
             ):
                 continue
+            if proposal_id.startswith("axis_map_fallback_") and not map_default_lookup_axis_supported(
+                surface, proposal_id
+            ):
+                continue
             if proposal_id in {
                 "axis_collection_threshold_boundary",
                 "axis_collection_wrong_receiver_boundary",
@@ -4472,6 +4638,23 @@ def generate_axis_items(
                         "not_equivalent",
                         "heldout",
                         "literal-map-default-boundary",
+                    )
+                )
+                continue
+            if proposal_id in {
+                "axis_map_fallback_wrong_key_boundary",
+                "axis_map_fallback_wrong_default_boundary",
+                "axis_map_fallback_wrong_map_boundary",
+            }:
+                items.append(
+                    make_axis_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        surface,
+                        "not_equivalent",
+                        "heldout",
+                        "map-default-boundary",
                     )
                 )
                 continue
@@ -4931,6 +5114,67 @@ def generate_literal_map_default_cross_items(
     return items
 
 
+def generate_map_default_lookup_cross_items(
+    out_dir: Path,
+    capabilities: dict,
+    cross_mode: str,
+    generation_filter: GenerationFilter,
+) -> list[dict]:
+    if not generation_filter.include_axis("map_default_lookup"):
+        return []
+    surfaces = [
+        s
+        for s in SURFACES
+        if map_default_lookup_axis_supported(s, "axis_map_fallback_identity")
+    ]
+    items: list[dict] = []
+    for left_surface, right_surface in cross_pairs(surfaces, cross_mode):
+        if generation_filter.include_proposal("axis_map_fallback_identity"):
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    "axis_map_fallback_identity",
+                    left_surface,
+                    right_surface,
+                    "equivalent",
+                    "heldout",
+                )
+            )
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    "axis_map_fallback_identity",
+                    left_surface,
+                    right_surface,
+                    "not_equivalent",
+                    "heldout",
+                    "map_default_lookup-semantic-mutation",
+                )
+            )
+        for proposal_id in (
+            "axis_map_fallback_wrong_key_boundary",
+            "axis_map_fallback_wrong_default_boundary",
+            "axis_map_fallback_wrong_map_boundary",
+        ):
+            if not generation_filter.include_proposal(proposal_id):
+                continue
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    proposal_id,
+                    left_surface,
+                    right_surface,
+                    "not_equivalent",
+                    "heldout",
+                    "map-default-boundary",
+                )
+            )
+    return items
+
+
 def generate_null_presence_cross_items(
     out_dir: Path,
     capabilities: dict,
@@ -5207,6 +5451,11 @@ def generate(
     )
     items.extend(
         generate_literal_map_default_cross_items(
+            out_dir, capabilities, cross_mode, generation_filter
+        )
+    )
+    items.extend(
+        generate_map_default_lookup_cross_items(
             out_dir, capabilities, cross_mode, generation_filter
         )
     )

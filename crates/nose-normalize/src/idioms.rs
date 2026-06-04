@@ -276,6 +276,20 @@ pub(crate) fn canon_call(old: &Il, interner: &Interner, call_id: NodeId) -> Call
                             arg_olds: vec![base.unwrap(), args[0], args[1]],
                         }
                     }
+                    "getOrDefault" if base.is_some() && args.len() == 2 => {
+                        return CallCanon::Builtin {
+                            op: Builtin::GetOrDefault,
+                            arg_olds: vec![base.unwrap(), args[0], args[1]],
+                        }
+                    }
+                    "unwrap_or" if base.is_some() && args.len() == 1 => {
+                        if let Some((map, key)) = map_get_call_parts(old, interner, base.unwrap()) {
+                            return CallCanon::Builtin {
+                                op: Builtin::GetOrDefault,
+                                arg_olds: vec![map, key, args[0]],
+                            };
+                        }
+                    }
                     // `functools.reduce(f, xs[, init])` — here the *base* is the module
                     // `functools`, not the collection, so it is an explicit fold over
                     // `xs` (the same `Builtin::Reduce` as a bare `reduce(f, xs, init)`),
