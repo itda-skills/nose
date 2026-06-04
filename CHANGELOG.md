@@ -26,6 +26,9 @@ break.
 - Type-4 focused generation filters (`--axis`, `--proposal-prefix`) and smoke gates
   (`GATE=focused|core|full`) so detector co-evolution loops can run on one frontier
   before periodic compact/full validation.
+- Type-4 frontier preflight (`bench/type4/preflight_axis.py`) to reject benchmark-only
+  loops when the baseline already covers all strict positives or when a candidate does
+  not improve recall without false merges.
 
 ### Changed
 - Type-4 frontier prioritization now separates true uncovered broad-probe gaps from

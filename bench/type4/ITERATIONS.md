@@ -1046,3 +1046,34 @@ Assessment: this loop is a better fit for the co-evolution goal than a narrow
 axis, added adversarial hard negatives for direction and value-coordinate mistakes, and
 kept the full corpus false-merge count at zero. The remaining weakness is that this still
 does not model richer option operations such as unwrap/default, nor pointer alias facts.
+
+## Loop preflight hardening: loop 145
+
+Immediately after the null-presence loop, `property_type_guard` was tested as the next
+open candidate. A focused corpus could be generated, but the baseline already detected all
+strict positives after the generator mutation bug was fixed:
+
+```text
+items: 37
+positive recall: 5/5
+hard-negative false merges: 0/32
+```
+
+That made the candidate a benchmark-only expansion rather than a detector-improvement
+loop, so the implementation was discarded. To prevent repeating that waste, the loop now
+has an explicit preflight:
+
+```text
+python3 bench/type4/preflight_axis.py --axis <axis> --out-dir /tmp/nose-type4-preflight
+```
+
+The preflight generates a focused corpus, evaluates baseline and candidate binaries, and
+fails if the baseline has no positive misses, either side has false merges, or the
+candidate does not reduce misses. Running it against the already-covered
+`null_presence_predicate` correctly fails with:
+
+```text
+baseline: items=88 positive=22/22 misses=0 false_merges=0/66
+candidate: items=88 positive=22/22 misses=0 false_merges=0/66
+preflight failed: baseline already covers all strict positives
+```

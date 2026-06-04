@@ -55,6 +55,16 @@ The evaluator runs `nose scan --mode semantic` over the generated sources and re
 positive recall plus hard-negative false merges. Use `--fail-on-false-merge` when this
 becomes a CI gate.
 
+Before spending implementation time on a new axis, run a focused preflight against the
+baseline and candidate binaries:
+
+```sh
+python3 bench/type4/preflight_axis.py --axis null_presence_predicate --out-dir /tmp/nose-type4-preflight
+```
+
+The preflight fails when the baseline already covers all strict positives, when either
+binary has false merges, or when the candidate does not reduce positive misses.
+
 Current smoke result with the default ring cross-surface set:
 
 ```text
