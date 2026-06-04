@@ -394,6 +394,9 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
     if strict_exact_java_collection_factory_safe(il, interner, facts, node) {
         return true;
     }
+    if strict_exact_java_map_factory_safe(il, interner, facts, node) {
+        return true;
+    }
     if strict_exact_map_constructor_entries_safe(il, interner, facts, node) {
         return true;
     }
@@ -430,11 +433,14 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
             return strict_exact_call_args_safe(il, interner, facts, node);
         }
     }
-    if matches!(method, "get" | "has") {
+    if matches!(method, "get" | "has" | "getOrDefault") {
         let Some(&receiver) = il.children(callee).first() else {
             return false;
         };
         if strict_exact_set_constructor_collection_safe(il, interner, facts, receiver) {
+            return strict_exact_call_args_safe(il, interner, facts, node);
+        }
+        if strict_exact_java_map_factory_safe(il, interner, facts, receiver) {
             return strict_exact_call_args_safe(il, interner, facts, node);
         }
         if strict_exact_map_constructor_entries_safe(il, interner, facts, receiver) {
@@ -541,6 +547,89 @@ fn java_file_defines_type_name(il: &Il, interner: &Interner, name: &str) -> bool
                 .name
                 .is_some_and(|symbol| interner.resolve(symbol) == name)
     })
+}
+
+fn strict_exact_java_std_var_name(
+    il: &Il,
+    interner: &Interner,
+    node: NodeId,
+    expected: &str,
+) -> bool {
+    if il.kind(node) != NodeKind::Var {
+        return false;
+    }
+    let Payload::Name(name) = il.node(node).payload else {
+        return false;
+    };
+    let name = interner.resolve(name);
+    name == expected && !java_file_defines_type_name(il, interner, name)
+}
+
+fn strict_exact_java_map_factory_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    if il.meta.lang != Lang::Java || il.kind(node) != NodeKind::Call {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.is_empty() || il.kind(kids[0]) != NodeKind::Field {
+        return false;
+    }
+    let Payload::Name(method) = il.node(kids[0]).payload else {
+        return false;
+    };
+    let Some(&receiver) = il.children(kids[0]).first() else {
+        return false;
+    };
+    if !strict_exact_java_std_var_name(il, interner, receiver, "Map") {
+        return false;
+    }
+    match interner.resolve(method) {
+        "of" => {
+            let entries = &kids[1..];
+            entries.len() % 2 == 0
+                && entries
+                    .iter()
+                    .all(|&arg| strict_exact_safe_tree(il, interner, facts, arg))
+        }
+        "ofEntries" => kids
+            .iter()
+            .skip(1)
+            .all(|&entry| strict_exact_java_map_entry_safe(il, interner, facts, entry)),
+        _ => false,
+    }
+}
+
+fn strict_exact_java_map_entry_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    if il.kind(node) != NodeKind::Call {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 3 || il.kind(kids[0]) != NodeKind::Field {
+        return false;
+    }
+    let Payload::Name(method) = il.node(kids[0]).payload else {
+        return false;
+    };
+    if interner.resolve(method) != "entry" {
+        return false;
+    }
+    let Some(&receiver) = il.children(kids[0]).first() else {
+        return false;
+    };
+    strict_exact_java_std_var_name(il, interner, receiver, "Map")
+        && kids
+            .iter()
+            .skip(1)
+            .all(|&arg| strict_exact_safe_tree(il, interner, facts, arg))
 }
 
 fn strict_exact_map_constructor_entries_safe(

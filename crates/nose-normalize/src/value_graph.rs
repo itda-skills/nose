@@ -521,11 +521,66 @@ impl<'a> Builder<'a> {
         Some(self.mk(ValOp::Seq(3), canonical_entries))
     }
 
+    fn proven_java_map_factory_entries(&mut self, value: ValueId) -> Option<ValueId> {
+        if self.il.meta.lang != Lang::Java {
+            return None;
+        }
+        let node = &self.nodes[value as usize];
+        if !matches!(node.op, ValOp::Call(0)) || node.args.is_empty() {
+            return None;
+        }
+        let args = node.args.clone();
+        let callee = &self.nodes[args[0] as usize];
+        let ValOp::Field(method) = callee.op else {
+            return None;
+        };
+        if callee.args.len() != 1 || !self.is_free_java_std_name(callee.args[0], "Map") {
+            return None;
+        }
+        if method == stable_symbol_hash("of") {
+            let entries = &args[1..];
+            if entries.len() % 2 != 0 {
+                return None;
+            }
+            let mut canonical_entries = Vec::with_capacity(entries.len() / 2);
+            for kv in entries.chunks(2) {
+                canonical_entries.push(self.mk(ValOp::Seq(4), kv.to_vec()));
+            }
+            return Some(self.mk(ValOp::Seq(3), canonical_entries));
+        }
+        if method == stable_symbol_hash("ofEntries") {
+            let mut canonical_entries = Vec::with_capacity(args.len().saturating_sub(1));
+            for entry in args.iter().skip(1).copied() {
+                let kv = self.proven_java_map_entry_pair(entry)?;
+                canonical_entries.push(self.mk(ValOp::Seq(4), kv));
+            }
+            return Some(self.mk(ValOp::Seq(3), canonical_entries));
+        }
+        None
+    }
+
+    fn proven_java_map_entry_pair(&self, value: ValueId) -> Option<Vec<ValueId>> {
+        let node = &self.nodes[value as usize];
+        if !matches!(node.op, ValOp::Call(0)) || node.args.len() != 3 {
+            return None;
+        }
+        let args = node.args.clone();
+        let callee = &self.nodes[args[0] as usize];
+        if !matches!(callee.op, ValOp::Field(name) if name == stable_symbol_hash("entry"))
+            || callee.args.len() != 1
+            || !self.is_free_java_std_name(callee.args[0], "Map")
+        {
+            return None;
+        }
+        Some(args[1..].to_vec())
+    }
+
     fn proven_map_value(&mut self, value: ValueId) -> Option<ValueId> {
         if matches!(self.nodes[value as usize].op, ValOp::Seq(3)) {
             return Some(value);
         }
         self.proven_map_constructor_entries(value)
+            .or_else(|| self.proven_java_map_factory_entries(value))
     }
 
     fn proven_map_get_value(&mut self, value: ValueId) -> Option<(ValueId, ValueId)> {
@@ -2921,12 +2976,14 @@ impl<'a> Builder<'a> {
         collection: NodeId,
         env: &FxHashMap<u32, ValueId>,
     ) -> ValueId {
-        if self.il.kind(collection) != NodeKind::Seq {
-            return self.eval(collection, env);
-        }
-        let kids = self.il.children(collection).to_vec();
-        let entries: Vec<ValueId> = kids.iter().map(|&k| self.eval(k, env)).collect();
-        self.mk(ValOp::Seq(3), entries)
+        let value = if self.il.kind(collection) == NodeKind::Seq {
+            let kids = self.il.children(collection).to_vec();
+            let entries: Vec<ValueId> = kids.iter().map(|&k| self.eval(k, env)).collect();
+            self.mk(ValOp::Seq(3), entries)
+        } else {
+            self.eval(collection, env)
+        };
+        self.proven_map_value(value).unwrap_or(value)
     }
 
     fn len_call_arg(&self, node: NodeId) -> Option<NodeId> {

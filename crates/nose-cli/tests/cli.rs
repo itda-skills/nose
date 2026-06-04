@@ -1128,6 +1128,21 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
     )
     .unwrap();
     fs::write(
+        dir.join("map_default_java_of.java"),
+        "import java.util.Map;\n\nclass JavaMapOf {\n  static int lookup(String key, String other) {\n    return Map.of(\"red\", 1, \"blue\", 2).getOrDefault(key, 0);\n  }\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("map_default_java_entries.java"),
+        "import java.util.Map;\n\nclass JavaMapEntries {\n  static int lookup(String key, String other) {\n    return Map.ofEntries(Map.entry(\"red\", 1), Map.entry(\"blue\", 2)).getOrDefault(key, 0);\n  }\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("map_default_java_local.java"),
+        "import java.util.Map;\n\nclass JavaMapLocal {\n  static int lookup(String key, String other) {\n    Map<String, Integer> values = Map.of(\"red\", 1, \"blue\", 2);\n    return values.getOrDefault(key, 0);\n  }\n}\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("object_hasown.js"),
         "function lookup(key, other) {\n  const values = { \"red\": 1, \"blue\": 2 };\n  return Object.hasOwn(values, key) ? values[key] : 0;\n}\n",
     )
@@ -1180,6 +1195,31 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
     fs::write(
         dir.join("shadowed_map.js"),
         "function shadowed_map(key, other, Map) {\n  return new Map([[\"red\", 1], [\"blue\", 2]]).get(key) ?? 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_java_key.java"),
+        "import java.util.Map;\n\nclass WrongJavaKey {\n  static int wrong(String key, String other) {\n    return Map.of(\"red\", 1, \"blue\", 2).getOrDefault(other, 0);\n  }\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_java_default.java"),
+        "import java.util.Map;\n\nclass WrongJavaDefault {\n  static int wrong(String key, String other) {\n    return Map.of(\"red\", 1, \"blue\", 2).getOrDefault(key, 9);\n  }\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_java_map.java"),
+        "import java.util.Map;\n\nclass WrongJavaMap {\n  static int wrong(String key, String other) {\n    return Map.of(\"red\", 9, \"blue\", 2).getOrDefault(key, 0);\n  }\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("shadowed_java_map.java"),
+        "class ShadowedJavaMap {\n  static class MapFactory {\n    java.util.Map<String, Integer> of(Object... values) { return java.util.Map.of(); }\n  }\n  static int wrong(String key, String other, MapFactory Map) {\n    return Map.of(\"red\", 1, \"blue\", 2).getOrDefault(key, 0);\n  }\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("local_java_map_type.java"),
+        "class LocalJavaMapType {\n  static int wrong(String key, String other) {\n    return Map.of(\"red\", 1, \"blue\", 2).getOrDefault(key, 0);\n  }\n}\nclass Map {\n  static java.util.Map<String, Integer> of(Object... values) { return java.util.Map.of(); }\n}\n",
     )
     .unwrap();
     fs::write(
@@ -1242,6 +1282,9 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
         "map_default_local.js",
         "map_default_has_get.js",
         "map_default_inline.ts",
+        "map_default_java_of.java",
+        "map_default_java_entries.java",
+        "map_default_java_local.java",
         "object_hasown.js",
         "object_hasown_call.js",
         "object_negated.ts",
@@ -1273,6 +1316,11 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
         "wrong_js_map.js",
         "untyped_receiver.js",
         "shadowed_map.js",
+        "wrong_java_key.java",
+        "wrong_java_default.java",
+        "wrong_java_map.java",
+        "shadowed_java_map.java",
+        "local_java_map_type.java",
         "object_wrong_key.js",
         "object_wrong_default.js",
         "object_wrong_map.js",

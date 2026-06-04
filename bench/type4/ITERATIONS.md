@@ -2083,3 +2083,71 @@ detector maps the factories into the existing literal collection membership valu
 under narrow receiver proof conditions, and exact semantic reporting uses the same proof
 for its `exact_safe` gate. The shadow boundaries keep the change from becoming a broad
 method-name or class-name heuristic.
+
+## Java literal map factories: loops 253-258
+
+This loop switches the frontier cadence to a batch-3 unit on `literal_map_default_lookup`.
+The chosen micro-frontiers are Java literal map factories whose receiver identity and
+entries can be proven without trusting arbitrary `.getOrDefault` receivers:
+
+- `Map.of("red", 1, "blue", 2).getOrDefault(key, 0)`;
+- `Map.ofEntries(Map.entry("red", 1), Map.entry("blue", 2)).getOrDefault(key, 0)`;
+- a local immutable `Map.of(...)` binding followed by `lookup.getOrDefault(key, 0)`.
+
+The proof is strict only when `Map` is the unshadowed Java standard free name. Hard
+negatives cover wrong key, wrong fallback, wrong literal value, a local value named
+`Map`, and a same-file `class Map` type shadow.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 253 | batched frontier selection | group three Java literal map factory default surfaces under `axis_map_default_java_map_*` | focused corpus: 6 positives, 16 hard negatives |
+| 254 | baseline measurement | scan the focused batch with the previous release detector after marking Java literal-map factories in-scope | baseline: 0/6 positives, 0/16 false merges |
+| 255 | generator hardening | add wrong-coordinate, local-shadow, and same-file-type-shadow boundaries for the Java factory batch | focused generator emits 22 items with 0 Raw nodes |
+| 256 | detector strengthening | canonicalize Java `Map.of` and `Map.ofEntries(Map.entry(...))` into the existing literal-map value coordinate, and pass `GetOrDefault` map operands through proven map canonicalization | targeted value-graph test passes |
+| 257 | strict-safe gate alignment | mark the same Java factory calls and their `Map.entry` children as exact-safe only under the unshadowed standard-name proof | CLI semantic scan reports Java factory positives in the literal map-default family |
+| 258 | release focused/core gates | build release and run focused Java factory, literal-map-default core, and all-cross core gates | focused: 6/6, 0/16; literal core: 21/21, 0/60; all-cross core: 427/427, 0/785 |
+
+Focused release/candidate comparison:
+
+```text
+previous release:  items=22, positive=0/6, false_merges=0/16
+candidate release: items=22, positive=6/6, false_merges=0/16
+delta:             +6 positive hits, +0 false merges
+```
+
+Final release focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_map_default_java_map CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 22
+positive recall: 6/6
+hard-negative false merges: 0/16
+Raw nodes: 0/920
+```
+
+Final release literal-map-default compact gate:
+
+```text
+GATE=core AXIS=literal_map_default_lookup CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 81/133
+positive recall: 21/21
+hard-negative false merges: 0/60
+Raw nodes: 0/3432
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 1212/5674
+positive recall: 427/427
+hard-negative false merges: 0/785
+Raw nodes: 0/45505
+```
+
+Assessment: this is a real strict-frontier widening inside `map_default_lookup`, not
+only a new benchmark slice. The previous detector already handled Java typed map
+parameters but had no proof for literal Java map factory receivers. The final path maps
+Java factories into the same canonical literal-map coordinate used by Python/Ruby and
+JS/TS, while the exact-safe gate repeats the same standard-name and shadow checks before
+semantic mode can report a clone.

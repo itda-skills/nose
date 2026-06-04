@@ -523,6 +523,38 @@ AXIS_PROPOSALS = {
         "axis": "literal_map_default_lookup",
         "why": "A locally shadowed `Object` binding is not the built-in own-property proof.",
     },
+    "axis_map_default_java_map_of_identity": {
+        "axis": "literal_map_default_lookup",
+        "why": "A Java `Map.of(...).getOrDefault(key, fallback)` over static entries should prove the same literal-map default lookup.",
+    },
+    "axis_map_default_java_map_of_entries_identity": {
+        "axis": "literal_map_default_lookup",
+        "why": "A Java `Map.ofEntries(Map.entry(...)).getOrDefault(key, fallback)` over static entries should prove the same literal-map default lookup.",
+    },
+    "axis_map_default_java_map_local_identity": {
+        "axis": "literal_map_default_lookup",
+        "why": "A local Java immutable `Map.of(...)` binding should preserve literal-map default proof coordinates.",
+    },
+    "axis_map_default_java_map_wrong_key_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "Java literal-map factory default lookups over different key parameters are different proof coordinates.",
+    },
+    "axis_map_default_java_map_wrong_default_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "Java literal-map factory default lookups with different fallbacks change missing-key behavior.",
+    },
+    "axis_map_default_java_map_wrong_map_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "Java literal-map factory default lookups over different static entries change present-key behavior.",
+    },
+    "axis_map_default_java_map_shadowed_factory_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "A local Java variable named `Map` is not proof of the standard `java.util.Map` factory.",
+    },
+    "axis_map_default_java_map_type_shadow_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "A same-file Java class named `Map` is not proof of the standard `java.util.Map` factory.",
+    },
     "axis_map_fallback_identity": {
         "axis": "map_default_lookup",
         "why": "Typed map default lookups should prove the same map/key/fallback behavior across contains-get and defaulting API forms.",
@@ -2483,6 +2515,8 @@ def literal_map_default_axis_supported(surface: Surface, proposal_id: str) -> bo
         return False
     if proposal_id.startswith(("axis_map_default_js_map_", "axis_map_default_js_object_")):
         return surface.key in {"python", "ruby", "javascript", "typescript"}
+    if proposal_id.startswith("axis_map_default_java_map_"):
+        return surface.key == "java"
     return surface.key in {"python", "ruby"}
 
 
@@ -2663,6 +2697,22 @@ def map_default_axis_parts(
         form = "js_object_method" if right else "literal_api"
     if proposal_id == "axis_map_default_js_object_shadowed_boundary":
         form = "js_object_shadowed" if right else "literal_api"
+    if proposal_id == "axis_map_default_java_map_of_identity":
+        form = "java_map_of" if right else "literal_api"
+    if proposal_id == "axis_map_default_java_map_of_entries_identity":
+        form = "java_map_of_entries" if right else "literal_api"
+    if proposal_id == "axis_map_default_java_map_local_identity":
+        form = "java_map_local" if right else "literal_api"
+    if proposal_id in {
+        "axis_map_default_java_map_wrong_key_boundary",
+        "axis_map_default_java_map_wrong_default_boundary",
+        "axis_map_default_java_map_wrong_map_boundary",
+    }:
+        form = "java_map_of" if right else "literal_api"
+    if proposal_id == "axis_map_default_java_map_shadowed_factory_boundary":
+        form = "java_map_shadowed_factory" if right else "literal_api"
+    if proposal_id == "axis_map_default_java_map_type_shadow_boundary":
+        form = "java_map_type_shadow" if right else "literal_api"
     if right and proposal_id == "axis_map_default_js_map_wrong_key_boundary":
         key = "other"
     if right and proposal_id == "axis_map_default_js_map_wrong_default_boundary":
@@ -2675,6 +2725,12 @@ def map_default_axis_parts(
         default = 9
     if right and proposal_id == "axis_map_default_js_object_wrong_map_boundary":
         entries = (("red", 9), ("blue", 2))
+    if right and proposal_id == "axis_map_default_java_map_wrong_key_boundary":
+        key = "other"
+    if right and proposal_id == "axis_map_default_java_map_wrong_default_boundary":
+        default = 9
+    if right and proposal_id == "axis_map_default_java_map_wrong_map_boundary":
+        entries = (("red", 9), ("blue", 2))
     if right and negative and proposal_id in {
         "axis_map_default_js_map_inline_identity",
         "axis_map_default_js_map_local_identity",
@@ -2682,6 +2738,9 @@ def map_default_axis_parts(
         "axis_map_default_js_object_hasown_identity",
         "axis_map_default_js_object_call_identity",
         "axis_map_default_js_object_negated_identity",
+        "axis_map_default_java_map_of_identity",
+        "axis_map_default_java_map_of_entries_identity",
+        "axis_map_default_java_map_local_identity",
     }:
         default = 9
     return key, entries, default, form
@@ -2724,6 +2783,72 @@ def axis_map_default_variant(
 end
 """
         return Variant("axis", src, name)
+
+    if surface.key == "java":
+        if form == "literal_api":
+            form = "java_map_of"
+        method_name = "buildCase" if right else "axisCase"
+        map_of = f'Map.of("{k1}", {v1}, "{k2}", {v2})'
+        map_entries = f'Map.ofEntries(Map.entry("{k1}", {v1}), Map.entry("{k2}", {v2}))'
+        if form == "java_map_of":
+            src = f"""import java.util.Map;
+
+class AxisCase {{
+    static int {method_name}(String key, String other) {{
+        return {map_of}.getOrDefault({key}, {default});
+    }}
+}}
+"""
+            return Variant("axis", src, method_name)
+        if form == "java_map_of_entries":
+            src = f"""import java.util.Map;
+
+class AxisCase {{
+    static int {method_name}(String key, String other) {{
+        return {map_entries}.getOrDefault({key}, {default});
+    }}
+}}
+"""
+            return Variant("axis", src, method_name)
+        if form == "java_map_local":
+            src = f"""import java.util.Map;
+
+class AxisCase {{
+    static int {method_name}(String key, String other) {{
+        Map<String, Integer> lookup = {map_of};
+        return lookup.getOrDefault({key}, {default});
+    }}
+}}
+"""
+            return Variant("axis", src, method_name)
+        if form == "java_map_shadowed_factory":
+            src = f"""class AxisCase {{
+    static class MapFactory {{
+        java.util.Map<String, Integer> of(Object... values) {{
+            return java.util.Map.of();
+        }}
+    }}
+
+    static int {method_name}(String key, String other, MapFactory Map) {{
+        return {map_of}.getOrDefault({key}, {default});
+    }}
+}}
+"""
+            return Variant("axis", src, method_name)
+        if form == "java_map_type_shadow":
+            src = f"""class AxisCase {{
+    static int {method_name}(String key, String other) {{
+        return {map_of}.getOrDefault({key}, {default});
+    }}
+}}
+
+class Map {{
+    static java.util.Map<String, Integer> of(Object... values) {{
+        return java.util.Map.of();
+    }}
+}}
+"""
+            return Variant("axis", src, method_name)
 
     if surface.key in {"javascript", "typescript"}:
         typed = surface.key == "typescript"
@@ -5093,6 +5218,10 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
             "axis_map_default_wrong_default_boundary",
             "axis_map_default_js_map_wrong_default_boundary",
             "axis_map_default_js_object_wrong_default_boundary",
+            "axis_map_default_java_map_of_identity",
+            "axis_map_default_java_map_of_entries_identity",
+            "axis_map_default_java_map_local_identity",
+            "axis_map_default_java_map_wrong_default_boundary",
         }:
             counterexample = {
                 "input": {"key": "green", "other": "red"},
@@ -5103,6 +5232,7 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
             "axis_map_default_wrong_map_boundary",
             "axis_map_default_js_map_wrong_map_boundary",
             "axis_map_default_js_object_wrong_map_boundary",
+            "axis_map_default_java_map_wrong_map_boundary",
         }:
             counterexample = {
                 "input": {"key": "red", "other": "green"},
@@ -5457,7 +5587,13 @@ def generate_axis_items(
                 surface, proposal_id
             ):
                 continue
-            if proposal_id.startswith(("axis_map_default_js_map_", "axis_map_default_js_object_")):
+            if proposal_id.startswith(
+                (
+                    "axis_map_default_js_map_",
+                    "axis_map_default_js_object_",
+                    "axis_map_default_java_map_",
+                )
+            ):
                 continue
             if proposal_id.startswith("axis_map_default_") and not literal_map_default_axis_supported(
                 surface, proposal_id
@@ -6328,6 +6464,62 @@ def generate_literal_map_default_cross_items(
         if not generation_filter.include_proposal(proposal_id):
             continue
         for right_surface in right_surfaces:
+            for left_surface in reference_surfaces:
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "not_equivalent",
+                        "heldout",
+                        "literal-map-default-boundary",
+                    )
+                )
+    java_right_surfaces = [surface_by_key["java"]]
+    for proposal_id in (
+        "axis_map_default_java_map_of_identity",
+        "axis_map_default_java_map_of_entries_identity",
+        "axis_map_default_java_map_local_identity",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for right_surface in java_right_surfaces:
+            for left_surface in reference_surfaces:
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "equivalent",
+                        "heldout",
+                    )
+                )
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "not_equivalent",
+                        "heldout",
+                        "literal_map_default_lookup-semantic-mutation",
+                    )
+                )
+    for proposal_id in (
+        "axis_map_default_java_map_wrong_key_boundary",
+        "axis_map_default_java_map_wrong_default_boundary",
+        "axis_map_default_java_map_wrong_map_boundary",
+        "axis_map_default_java_map_shadowed_factory_boundary",
+        "axis_map_default_java_map_type_shadow_boundary",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for right_surface in java_right_surfaces:
             for left_surface in reference_surfaces:
                 items.append(
                     make_axis_cross_item(

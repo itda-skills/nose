@@ -1605,15 +1605,9 @@ fn collection_membership_set_construction_converges_with_boundaries() {
     );
     assert_ne!(literal_fp, value_fp(&i, js_shadowed_set, Lang::JavaScript));
     assert_ne!(literal_fp, value_fp(&i, java_wrong_element, Lang::Java));
-    assert_ne!(
-        literal_fp,
-        value_fp(&i, java_wrong_collection, Lang::Java)
-    );
+    assert_ne!(literal_fp, value_fp(&i, java_wrong_collection, Lang::Java));
     assert_ne!(literal_fp, value_fp(&i, java_shadowed_list, Lang::Java));
-    assert_ne!(
-        literal_fp,
-        value_fp(&i, java_local_list_class, Lang::Java)
-    );
+    assert_ne!(literal_fp, value_fp(&i, java_local_list_class, Lang::Java));
 
     let ts_array = "function f(values: string[], value: string, other: string): boolean { return values.includes(value); }";
     let ts_set = "function f(values: Set<string>, value: string, other: string): boolean { return values.has(value); }";
@@ -1653,6 +1647,32 @@ fn literal_map_default_lookup_converges_with_js_map_construction_boundaries() {
     assert_ne!(fp, value_fp(&i, js_wrong_map, Lang::JavaScript));
     assert_ne!(fp, value_fp(&i, js_untyped, Lang::JavaScript));
     assert_ne!(fp, value_fp(&i, js_shadowed_map, Lang::JavaScript));
+}
+
+#[test]
+fn literal_map_default_lookup_converges_with_java_map_factory_boundaries() {
+    let i = Interner::new();
+    let py_literal = "def f(key, other):\n    return {\"red\": 1, \"blue\": 2}.get(key, 0)\n";
+    let ruby_literal = "def f(key, other)\n  {\"red\" => 1, \"blue\" => 2}.fetch(key, 0)\nend\n";
+    let java_map_of = "import java.util.Map;\n\nclass C { static int f(String key, String other) { return Map.of(\"red\", 1, \"blue\", 2).getOrDefault(key, 0); } }\n";
+    let java_map_of_entries = "import java.util.Map;\n\nclass C { static int f(String key, String other) { return Map.ofEntries(Map.entry(\"red\", 1), Map.entry(\"blue\", 2)).getOrDefault(key, 0); } }\n";
+    let java_map_local = "import java.util.Map;\n\nclass C { static int f(String key, String other) { Map<String, Integer> lookup = Map.of(\"red\", 1, \"blue\", 2); return lookup.getOrDefault(key, 0); } }\n";
+    let java_wrong_key = "import java.util.Map;\n\nclass C { static int f(String key, String other) { return Map.of(\"red\", 1, \"blue\", 2).getOrDefault(other, 0); } }\n";
+    let java_wrong_default = "import java.util.Map;\n\nclass C { static int f(String key, String other) { return Map.of(\"red\", 1, \"blue\", 2).getOrDefault(key, 9); } }\n";
+    let java_wrong_map = "import java.util.Map;\n\nclass C { static int f(String key, String other) { return Map.of(\"red\", 9, \"blue\", 2).getOrDefault(key, 0); } }\n";
+    let java_shadowed_factory = "class C { static class MapFactory { java.util.Map<String, Integer> of(Object... values) { return java.util.Map.of(); } } static int f(String key, String other, MapFactory Map) { return Map.of(\"red\", 1, \"blue\", 2).getOrDefault(key, 0); } }\n";
+    let java_type_shadow = "class C { static int f(String key, String other) { return Map.of(\"red\", 1, \"blue\", 2).getOrDefault(key, 0); } }\nclass Map { static java.util.Map<String, Integer> of(Object... values) { return java.util.Map.of(); } }\n";
+
+    let fp = value_fp(&i, py_literal, Lang::Python);
+    assert_eq!(fp, value_fp(&i, ruby_literal, Lang::Ruby));
+    assert_eq!(fp, value_fp(&i, java_map_of, Lang::Java));
+    assert_eq!(fp, value_fp(&i, java_map_of_entries, Lang::Java));
+    assert_eq!(fp, value_fp(&i, java_map_local, Lang::Java));
+    assert_ne!(fp, value_fp(&i, java_wrong_key, Lang::Java));
+    assert_ne!(fp, value_fp(&i, java_wrong_default, Lang::Java));
+    assert_ne!(fp, value_fp(&i, java_wrong_map, Lang::Java));
+    assert_ne!(fp, value_fp(&i, java_shadowed_factory, Lang::Java));
+    assert_ne!(fp, value_fp(&i, java_type_shadow, Lang::Java));
 }
 
 #[test]
