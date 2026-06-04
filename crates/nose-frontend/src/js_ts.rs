@@ -1025,6 +1025,9 @@ fn lower_arrow(lo: &mut Lowering, node: TsNode) -> NodeId {
 }
 
 fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
+    if let Some(guard) = lower_own_property_guard_call(lo, node) {
+        return guard;
+    }
     let span = lo.span(node);
     let mut kids = Vec::new();
     match node.child_by_field_name("function") {
@@ -1045,6 +1048,130 @@ fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
         }
     }
     lo.add(NodeKind::Call, Payload::None, span, &kids)
+}
+
+fn lower_own_property_guard_call(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
+    let callee = node.child_by_field_name("function")?;
+    let callee_text = compact_js_expr(lo.text(callee));
+    if !matches!(
+        callee_text.as_str(),
+        "Object.hasOwn" | "Object.prototype.hasOwnProperty.call"
+    ) {
+        return None;
+    }
+    if file_prefix_has_binding_ident(lo, node, "Object")
+        || enclosing_function_prefix_has_binding_ident(lo, node, "Object")
+    {
+        return None;
+    }
+    let args = node.child_by_field_name("arguments")?;
+    let args: Vec<TsNode> = Lowering::named_children(args);
+    if args.len() != 2 || args.iter().any(|arg| arg.kind() == "spread_element") {
+        return None;
+    }
+    let span = lo.span(node);
+    let receiver = lower_expr(lo, args[0]);
+    let key = lower_expr(lo, args[1]);
+    let own = lo.str_lit("own", span);
+    let present = lo.str_lit("present", span);
+    let tag = lo.sym("own_property_guard");
+    Some(lo.add(
+        NodeKind::Seq,
+        Payload::Name(tag),
+        span,
+        &[receiver, key, own, present],
+    ))
+}
+
+fn file_prefix_has_binding_ident(lo: &Lowering, node: TsNode, ident: &str) -> bool {
+    let end = node.start_byte();
+    if end > lo.src.len() {
+        return false;
+    }
+    let prefix = std::str::from_utf8(&lo.src[..end]).unwrap_or("");
+    contains_js_binding_ident(prefix, ident)
+}
+
+fn enclosing_function_prefix_has_binding_ident(lo: &Lowering, node: TsNode, ident: &str) -> bool {
+    let mut current = node;
+    while let Some(parent) = current.parent() {
+        if matches!(
+            parent.kind(),
+            "function_declaration" | "function" | "function_expression" | "arrow_function"
+        ) {
+            let start = parent.start_byte();
+            let end = node.start_byte();
+            if end <= lo.src.len() && start <= end {
+                let prefix = std::str::from_utf8(&lo.src[start..end]).unwrap_or("");
+                let header = prefix.find('{').map(|idx| &prefix[..idx]).unwrap_or(prefix);
+                return contains_js_ident(header, ident)
+                    || contains_js_binding_ident(prefix, ident);
+            }
+            return false;
+        }
+        current = parent;
+    }
+    false
+}
+
+fn contains_js_binding_ident(text: &str, ident: &str) -> bool {
+    ["const", "let", "var", "function", "class"]
+        .iter()
+        .any(|kw| contains_keyword_binding(text, kw, ident))
+        || contains_import_binding(text, ident)
+}
+
+fn contains_keyword_binding(text: &str, keyword: &str, ident: &str) -> bool {
+    text.match_indices(keyword).any(|(idx, _)| {
+        let before = text[..idx].chars().next_back();
+        if before.is_some_and(is_js_ident_continue) {
+            return false;
+        }
+        let mut rest = &text[idx + keyword.len()..];
+        let Some(next) = rest.chars().next() else {
+            return false;
+        };
+        if !next.is_whitespace() {
+            return false;
+        }
+        rest = rest.trim_start();
+        starts_with_js_ident(rest, ident)
+    })
+}
+
+fn contains_import_binding(text: &str, ident: &str) -> bool {
+    text.match_indices("import").any(|(idx, _)| {
+        let before = text[..idx].chars().next_back();
+        if before.is_some_and(is_js_ident_continue) {
+            return false;
+        }
+        let rest = text[idx + "import".len()..].trim_start();
+        starts_with_js_ident(rest, ident)
+            || rest.contains(&format!("{{ {ident}"))
+            || rest.contains(&format!("{{{ident}"))
+            || rest.contains(&format!(", {ident}"))
+            || rest.contains(&format!(" as {ident}"))
+    })
+}
+
+fn contains_js_ident(text: &str, ident: &str) -> bool {
+    text.match_indices(ident).any(|(idx, _)| {
+        let before = text[..idx].chars().next_back();
+        let after = text[idx + ident.len()..].chars().next();
+        !before.is_some_and(is_js_ident_continue) && !after.is_some_and(is_js_ident_continue)
+    })
+}
+
+fn starts_with_js_ident(text: &str, ident: &str) -> bool {
+    text.starts_with(ident)
+        && !text[ident.len()..]
+            .chars()
+            .next()
+            .is_some_and(is_js_ident_continue)
+}
+
+fn is_js_ident_continue(c: char) -> bool {
+    c == '_' || c == '$' || c.is_ascii_alphanumeric()
 }
 
 fn lower_new(lo: &mut Lowering, node: TsNode) -> NodeId {

@@ -67,7 +67,7 @@ Useful axes:
 | representation | `for-loop`, `while-index-loop`, `iterator-loop`, `reduce`, `comprehension`, `builder`, `builtin`, `recursion` |
 | control variation | `guard`, `ternary`, `early-return`, `continue`, `break`, `nested-if` |
 | data shape | `int`, `bool`, `string`, `list`, `record`, `field-write` |
-| proof fact | immutable binding, proven callee identity, table-key identity, static import/projection, nullish default, record-shape guard, unsafe boundary |
+| proof fact | immutable binding, proven callee identity, table-key identity, static import/projection, nullish default, own-property guard, record-shape guard, unsafe boundary |
 | language relation | same-language, cross-language, embedded script |
 | label status | positive, hard-negative |
 | evidence | `E1` same-spec/property evidence, `E2` counterexample evidence, future interpreter/symbolic/proof evidence |
@@ -79,8 +79,8 @@ The detector should not grow as a pile of language-specific exceptions. Each fro
 emit the thinnest facts it can prove, while the common strict engine consumes those facts:
 single-assignment immutable bindings, safe function-binding identity, receiver/method
 identity, static import coordinates, nullish-default coordinates, static field/property
-projection coordinates, record-shape guard facts, literal table keys, and explicit unsafe
-boundaries.
+projection coordinates, own-property guard facts, record-shape guard facts, literal table
+keys, and explicit unsafe boundaries.
 `capabilities.v1.json` records which surfaces currently emit which facts so unsupported
 cells stay visible.
 
@@ -157,6 +157,7 @@ Examples:
 | field write | target field changed, overwrite order changed |
 | indexed loop | skipped first or last element, wrong collection indexed |
 | C pointer-length contract | skipped first element, stride greater than one, non-contract bound |
+| own-property guard | prototype-including `in`, shadowable direct method call, shadowed `Object`, different static key |
 | record-shape guard | missing null exclusion, missing array exclusion, unrelated property predicate |
 
 For negatives, a concrete counterexample is part of the benchmark item.
@@ -180,6 +181,19 @@ usefulness =
 `real_corpus_prior` comes from the v5 labelset, under-merge diagnostics, field evaluation,
 and idiom frequency in pinned repos. This keeps synthetic work pointed at patterns that
 also occur in real code.
+
+The executable real-corpus triage step is:
+
+```sh
+python3 bench/type4/prioritize_frontier.py \
+  --json-out /tmp/nose-frontier-priorities.json \
+  --markdown-out bench/type4/FRONTIER_PRIORITIES.md
+```
+
+The report ranks candidate axes by real-code frequency, repo and language spread, estimated
+implementation cost, soundness risk, scope, and current coverage status. It is not label
+evidence. It chooses what to investigate next; the generator/verifier/evaluator loop still
+decides which items become benchmark cases.
 
 ## LLM-assisted workflow
 
@@ -278,6 +292,18 @@ representation. A JavaScript `.filter().reduce(...)`, a Rust iterator chain, a J
 and a loop in another language should all converge by producing the same value-graph shape.
 When a patch is local to one frontend, the iteration should say so; when it changes the
 shared value graph, the iteration should measure which other languages benefited.
+
+To prevent frontier work from drifting toward one language family, each candidate should be
+classified before implementation:
+
+- `all-language`: expected to apply across most supported surfaces;
+- `multi-language`: applies across several unrelated language families;
+- `language-family`: applies mainly to one family, such as JavaScript/TypeScript;
+- `single-language`: applies to one frontend only.
+
+After a `language-family` or `single-language` loop, the next ordinary frontier should be
+`all-language` or `multi-language` unless the narrower loop fixes a demonstrated strict
+soundness bug. The prioritizer should be rerun before selecting that next axis.
 
 Some cross-language convergence requires an explicit semantic contract. The current C list
 contract is narrow: generated `int f(int *xs, int n)` cases treat `n` as the exact logical

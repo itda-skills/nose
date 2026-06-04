@@ -35,8 +35,8 @@ By default the generator emits:
 - C pointer-length contract hard negatives for skipped-first and stride-two loops;
 - sign-normalizing `sum(abs(x))` map/reduce cases across every supported surface;
 - semantic-axis cases for immutable bindings, proven callee identity, literal table access,
-  static imports, static projections, nullish defaults, record-shape guards, and
-  unsafe/unproven binding boundaries;
+  static imports, static projections, nullish defaults, own-property guards,
+  record-shape guards, and unsafe/unproven binding boundaries;
 - a ring of cross-language positive pairs and cross-template hard negatives so every
   supported surface participates in cross-language coverage without exploding the seed size.
 
@@ -56,26 +56,26 @@ becomes a CI gate.
 Current smoke result with the default ring cross-surface set:
 
 ```text
-items: 1775
-positive recall: 738/738
-hard-negative false merges: 0/1037
+items: 1800
+positive recall: 743/743
+hard-negative false merges: 0/1057
 ```
 
 With `--cross none`, same-surface coverage alone currently reports:
 
 ```text
-items: 1357
-positive recall: 529/529
-hard-negative false merges: 0/828
+items: 1382
+positive recall: 534/534
+hard-negative false merges: 0/848
 ```
 
-With `--cross all`, the dense corpus now has 3447 items. The routine dense smoke uses
+With `--cross all`, the dense corpus now has 3472 items. The routine dense smoke uses
 coverage-preserving compaction before evaluation:
 
 ```text
-selected items: 491/3447
-positive recall: 210/210
-hard-negative false merges: 0/281
+selected items: 501/3472
+positive recall: 215/215
+hard-negative false merges: 0/286
 ```
 
 These are not product-quality scores. They are frontier measurements for the exact semantic
@@ -124,6 +124,21 @@ Use the frontier summary to choose one narrow under-merge class, add a failing c
 test, patch lowering or value-graph normalization, and rerun the generated positives plus
 hard negatives. That loop is the intended co-evolution process: the benchmark grows by
 adversarial siblings while the exact detector gains new semantic convergence rules.
+
+## Prioritize the next frontier
+
+Mine the pinned real-repo corpus before choosing the next semantic axis:
+
+```sh
+python3 bench/type4/prioritize_frontier.py \
+  --json-out /tmp/nose-frontier-priorities.json \
+  --markdown-out bench/type4/FRONTIER_PRIORITIES.md
+```
+
+The ranking is a triage input, not gold evidence. It combines real-code frequency,
+repo/language spread, estimated implementation cost, soundness risk, scope, and whether a
+frontier is already covered. The next loop should prefer high-scoring all-language or
+multi-language axes unless a language-family axis is fixing an urgent soundness bug.
 
 ## CI smoke
 

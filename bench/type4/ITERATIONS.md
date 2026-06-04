@@ -646,3 +646,73 @@ guards and conservative truthy-null checks now converge, while missing-null, mis
 and property-predicate siblings remain outside exact semantic mode. The next similar loop
 should start from real-corpus guard variants, especially property-presence and typed-field
 checks, before adding another synthetic guard axis.
+
+## Real-corpus-guided own-property-guard coevolution: loops 94-103
+
+This run followed the real-corpus-guided variant of the loop. Before adding a new synthetic
+axis, the 105 pinned benchmark repos were mined for JavaScript-family guard idioms:
+
+```text
+quoted `key in obj`: 599 matches in 21 repos
+typeof property === function: 425 matches in 13 repos
+direct .hasOwnProperty(...): 224 matches in 11 repos
+typeof property === string: 199 matches in 12 repos
+Object.hasOwn(...): 116 matches in 6 repos
+Object.prototype.hasOwnProperty.call(...): 109 matches in 11 repos
+```
+
+The chosen strict frontier was `own_property_guard`: `Object.hasOwn(obj, key)` and
+`Object.prototype.hasOwnProperty.call(obj, key)` prove the same own-property presence check
+when the receiver and key coordinates are fixed. The prototype-including `key in obj`,
+shadowable direct `obj.hasOwnProperty(key)`, locally shadowed `Object`, and different
+static keys remain hard boundaries.
+
+| loop | generator move | current-detector result | detector / loop change | result |
+|---|---|---:|---|---:|
+| 94 | mine guard idioms in the 105 pinned benchmark repos | `Object.hasOwn` and `hasOwnProperty.call` were both frequent enough to justify an axis | choose `own_property_guard` instead of inventing an arbitrary synthetic-only guard | frontier selected |
+| 95 | add `own_property_guard` capability axis with `Object.hasOwn` vs `Object.prototype.hasOwnProperty.call`, `in`, direct-method, shadowed-`Object`, and different-key siblings | own-property positives 0/5, false merges 0/5 | no detector change yet; this established the under-merge frontier | failure recorded |
+| 96 | focus static own-property call identity | two equivalent builtins lowered as unrelated calls | lower both call forms to `own_property_guard(receiver, key, own, present)` | focused compact closed |
+| 97 | hard-negative counterattack | `in`, direct method, shadowed `Object`, and different-key siblings stayed separate | reject `Object.hasOwn` special lowering when `Object` is locally bound before the call | 0/5 false merges |
+| 98 | focused CLI regression | synthetic smoke covered it, but a smaller invariant was needed | add `scan_mode_semantic_proves_js_own_property_guards` with direct/in/different-key/shadowed-Object negatives | CLI test passed |
+| 99 | full same-surface manifest | compact selector was not enough for a new proof axis | no detector change | 534/534 positives, 0/848 false merges |
+| 100 | dense all-cross validation | aggregate/import/projection/nullish/record frontiers stayed closed | no detector change | 501/3472 selected, 215/215 positives, 0/286 false merges |
+| 101 | default ring validation | README current smoke numbers needed a full ring run | no detector change | 1800 items, 743/743 positives, 0/1057 false merges |
+| 102 | real repo audit on `../craken-agents`, `axios`, and `drizzle-orm` | visible strict semantic family counts unchanged | no detector change; these repos did not contain same-key mixed-form families that surfaced as new refactoring candidates | 0 added, 0 removed |
+| 103 | process assessment plus prioritizer | real-corpus mining improved axis choice, but visible refactoring yield was neutral and recent loops were JS-family heavy | add `prioritize_frontier.py` and require the next ordinary frontier to be all-language or multi-language | next target: `collection_empty_check` |
+
+Final full same-surface manifest check:
+
+```text
+items: 1382
+positive recall: 534/534
+hard-negative false merges: 0/848
+
+by semantic axis:
+  own_property_guard: positive 5/5, false merges 0/20
+```
+
+Final dense compact smoke:
+
+```text
+scripts/type4-smoke.sh SUITE=core CROSS=all
+selected items: 501/3472
+positive recall: 215/215
+hard-negative false merges: 0/286
+Raw nodes: 0/22507
+```
+
+Real-repo audits were neutral:
+
+```text
+../craken-agents: 32 -> 32, added 0, removed 0
+bench/repos/axios: 7 -> 7, added 0, removed 0
+bench/repos/drizzle-orm: 56 -> 56, added 0, removed 0
+```
+
+Assessment: this loop did widen the strict frontier from real-code evidence, not from
+synthetic convenience. It is a modest detector improvement because the exact semantic
+channel now understands a common own-property idiom pair and preserves the important
+prototype/shadowing boundaries. The next loop should probably target property type guards
+only after a broader axis. The newly added prioritizer ranks `collection_empty_check` first:
+49,377 matches across 92 repos and seven languages, with low estimated implementation cost
+and moderate soundness risk. That should be the next ordinary frontier.

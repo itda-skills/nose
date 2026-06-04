@@ -777,6 +777,92 @@ fn scan_mode_semantic_proves_js_record_shape_guards() {
 }
 
 #[test]
+fn scan_mode_semantic_proves_js_own_property_guards() {
+    let dir = std::env::temp_dir().join(format!("nose_own_property_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("has_own.js"),
+        "function hasOwn(value) {\n  return Object.hasOwn(value, \"ready\");\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("has_own_call.js"),
+        "function hasOwnCall(candidate) {\n  return Object.prototype.hasOwnProperty.call(candidate, \"ready\");\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("in_operator_negative.js"),
+        "function inOperator(value) {\n  return \"ready\" in value;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("direct_method_negative.js"),
+        "function directMethod(value) {\n  return value.hasOwnProperty(\"ready\");\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("different_key_negative.js"),
+        "function differentKey(value) {\n  return Object.hasOwn(value, \"enabled\");\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("shadowed_object_negative.js"),
+        "function shadowedObject(Object, value) {\n  return Object.hasOwn(value, \"ready\");\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("shadowed_global_object_negative.js"),
+        "const Object = { hasOwn() { return false; } };\nfunction shadowedGlobal(value) {\n  return Object.hasOwn(value, \"ready\");\n}\n",
+    )
+    .unwrap();
+
+    let semantic = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "1",
+        "--min-tokens",
+        "1",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let semantic_json: serde_json::Value =
+        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
+    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    assert_eq!(
+        semantic_families.len(),
+        1,
+        "semantic mode should report one proved own-property guard family: {semantic}"
+    );
+    let semantic_text = semantic_json.to_string();
+    for expected in ["has_own.js", "has_own_call.js"] {
+        assert!(
+            semantic_text.contains(expected),
+            "semantic mode should include {expected}: {semantic}"
+        );
+    }
+    for unexpected in [
+        "in_operator_negative.js",
+        "direct_method_negative.js",
+        "different_key_negative.js",
+        "shadowed_object_negative.js",
+        "shadowed_global_object_negative.js",
+    ] {
+        assert!(
+            !semantic_text.contains(unexpected),
+            "semantic mode must reject non-own or different-key property guards: {semantic}"
+        );
+    }
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn scan_mode_semantic_converges_cross_language_list_literals() {
     let dir = std::env::temp_dir().join(format!("nose_list_cross_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);

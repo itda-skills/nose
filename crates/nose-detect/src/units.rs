@@ -368,6 +368,7 @@ fn strict_exact_safe_seq(il: &Il, interner: &Interner, node: NodeId) -> bool {
                 | "pair"
                 | "import_binding"
                 | "import_namespace"
+                | "own_property_guard"
                 | "record_guard"
         ),
         _ => false,

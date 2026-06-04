@@ -99,6 +99,22 @@ AXIS_PROPOSALS = {
         "axis": "nullish_default",
         "why": "Truthy-or defaulting is not equivalent to nullish defaulting for falsy non-null values.",
     },
+    "axis_own_property_hasown_identity": {
+        "axis": "own_property_guard",
+        "why": "Object.hasOwn and Object.prototype.hasOwnProperty.call prove the same own-property presence check.",
+    },
+    "axis_own_property_in_boundary": {
+        "axis": "own_property_guard",
+        "why": "The `in` operator includes prototype properties and must not merge with an own-property guard.",
+    },
+    "axis_own_property_method_boundary": {
+        "axis": "own_property_guard",
+        "why": "A direct hasOwnProperty method call can be shadowed and is not a strict own-property proof.",
+    },
+    "axis_own_property_shadow_boundary": {
+        "axis": "own_property_guard",
+        "why": "A locally shadowed Object binding is not the built-in Object.hasOwn proof.",
+    },
     "axis_projection_temp_identity": {
         "axis": "projection_identity",
         "why": "Projecting the same static field through a temporary binding should preserve exact value identity.",
@@ -620,6 +636,56 @@ def axis_nullish_variant(surface: Surface, proposal_id: str, negative: bool, rig
 
 def record_guard_axis_supported(surface: Surface, proposal_id: str) -> bool:
     return proposal_id.startswith("axis_record_guard_") and surface.key in JS_LIKE_SURFACES
+
+
+def own_property_axis_supported(surface: Surface, proposal_id: str) -> bool:
+    return proposal_id.startswith("axis_own_property_") and surface.key in JS_LIKE_SURFACES
+
+
+def axis_own_property_variant(
+    surface: Surface,
+    proposal_id: str,
+    negative: bool,
+    right: bool,
+) -> Variant:
+    name = "buildCase" if right else "axisCase"
+    key = "enabled" if right and negative and proposal_id == "axis_own_property_hasown_identity" else "ready"
+    if right and proposal_id == "axis_own_property_in_boundary":
+        body = f"""function {name}(value) {{
+  return '{key}' in value;
+}}
+"""
+    elif right and proposal_id == "axis_own_property_method_boundary":
+        body = f"""function {name}(value) {{
+  return value.hasOwnProperty('{key}');
+}}
+"""
+    elif right and proposal_id == "axis_own_property_shadow_boundary":
+        body = f"""function {name}(Object, value) {{
+  return Object.hasOwn(value, '{key}');
+}}
+"""
+    elif right:
+        body = f"""function {name}(candidate) {{
+  return Object.prototype.hasOwnProperty.call(candidate, '{key}');
+}}
+"""
+    else:
+        body = f"""function {name}(value) {{
+  return Object.hasOwn(value, '{key}');
+}}
+"""
+    if surface.language == "javascript":
+        return js_axis_source(surface, body, name)
+
+    if surface.key == "typescript":
+        typed = body.replace(f"function {name}(value)", f"function {name}(value: object): boolean")
+        typed = typed.replace(
+            f"function {name}(candidate)", f"function {name}(candidate: object): boolean"
+        )
+        return Variant("axis", typed, name)
+
+    raise ValueError(f"unsupported surface for own property axis: {surface.key}")
 
 
 def axis_record_guard_variant(
@@ -2660,6 +2726,11 @@ def axis_variants(
             axis_nullish_variant(surface, proposal_id, False, False),
             axis_nullish_variant(surface, proposal_id, negative, True),
         )
+    if axis == "own_property_guard":
+        return (
+            axis_own_property_variant(surface, proposal_id, False, False),
+            axis_own_property_variant(surface, proposal_id, negative, True),
+        )
     if axis == "record_shape_guard":
         return (
             axis_record_guard_variant(surface, proposal_id, False, False),
@@ -2798,6 +2869,27 @@ def generate_axis_items(out_dir: Path, capabilities: dict) -> list[dict]:
             if proposal_id.startswith("axis_nullish_") and not nullish_axis_supported(
                 surface, proposal_id
             ):
+                continue
+            if proposal_id.startswith("axis_own_property_") and not own_property_axis_supported(
+                surface, proposal_id
+            ):
+                continue
+            if proposal_id in {
+                "axis_own_property_in_boundary",
+                "axis_own_property_method_boundary",
+                "axis_own_property_shadow_boundary",
+            }:
+                items.append(
+                    make_axis_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        surface,
+                        "not_equivalent",
+                        "heldout",
+                        "unproven-own-property-guard",
+                    )
+                )
                 continue
             if proposal_id.startswith("axis_record_guard_") and not record_guard_axis_supported(
                 surface, proposal_id
