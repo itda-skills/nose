@@ -29,6 +29,10 @@ break.
   explicit sign-normalizing conditionals with safe `abs`/`Math.abs`/`math.Abs` forms, and
   scalar two-way `min`/`max` conditionals with proven builtin forms, while preserving
   signed-identity, wrong-value, min/max direction, and shadowed-`Math` boundaries.
+- Strict Type-4 proof facts for map key-membership predicates across Go, Java, Python,
+  Ruby, and Rust. The detector now converges `key in map`, map key APIs, Java
+  `keySet().contains`, Rust `get(key).is_some`, and Go `_, ok := map[key]` while
+  preserving wrong-key, wrong-map, and value-membership boundaries.
 - Type-4 focused generation filters (`--axis`, `--proposal-prefix`) and smoke gates
   (`GATE=focused|core|full`) so detector co-evolution loops can run on one frontier
   before periodic compact/full validation.

@@ -275,6 +275,22 @@ AXIS_PROPOSALS = {
         "axis": "literal_collection_membership",
         "why": "Substring contains and static literal collection membership are different semantics and must not merge.",
     },
+    "axis_map_key_membership_identity": {
+        "axis": "map_key_membership",
+        "why": "Map key-presence APIs should prove the same key-in-map predicate when receiver and key coordinates are fixed.",
+    },
+    "axis_map_key_wrong_key_boundary": {
+        "axis": "map_key_membership",
+        "why": "Map key membership is a proof over a specific key coordinate.",
+    },
+    "axis_map_key_wrong_map_boundary": {
+        "axis": "map_key_membership",
+        "why": "Map key membership is a proof over a specific map receiver coordinate.",
+    },
+    "axis_map_key_value_boundary": {
+        "axis": "map_key_membership",
+        "why": "Map value membership is not the same predicate as map key membership.",
+    },
     "axis_map_default_literal_identity": {
         "axis": "literal_map_default_lookup",
         "why": "Static literal-map lookup with a literal fallback should prove the same key/default behavior across map APIs.",
@@ -1751,6 +1767,119 @@ end
         return Variant("axis", src, name)
 
     raise ValueError(f"unsupported surface for literal membership axis: {surface.key}")
+
+
+def map_key_membership_axis_supported(surface: Surface, proposal_id: str) -> bool:
+    if not proposal_id.startswith("axis_map_key_"):
+        return False
+    return surface.key in {"python", "go", "java", "rust", "ruby"}
+
+
+def map_key_axis_parts(proposal_id: str, negative: bool, right: bool) -> tuple[str, str, str]:
+    key = "key"
+    receiver = "lookup"
+    form = "key"
+    if right and proposal_id == "axis_map_key_wrong_key_boundary":
+        key = "other"
+    if right and proposal_id == "axis_map_key_wrong_map_boundary":
+        receiver = "other_lookup"
+    if right and proposal_id == "axis_map_key_value_boundary":
+        form = "value"
+    if right and negative and proposal_id == "axis_map_key_membership_identity":
+        key = "other"
+    return receiver, key, form
+
+
+def axis_map_key_membership_variant(
+    surface: Surface,
+    proposal_id: str,
+    negative: bool,
+    right: bool,
+) -> Variant:
+    receiver, key, form = map_key_axis_parts(proposal_id, negative, right)
+    name = {
+        "go": "BuildCase" if right else "AxisCase",
+        "java": "buildCase" if right else "axisCase",
+    }.get(surface.language, "build_case" if right else "axis_case")
+
+    if surface.key == "python":
+        expr = (
+            f"{key} in {receiver}.values()"
+            if form == "value"
+            else (f"{receiver}.__contains__({key})" if right else f"{key} in {receiver}")
+        )
+        src = f"""def {name}(lookup, other_lookup, key, other):
+    return {expr}
+"""
+        return Variant("axis", src, name)
+
+    if surface.key == "go":
+        if form == "value":
+            body = f"""for _, value := range {receiver} {{
+        if value == {key} {{
+            return true
+        }}
+    }}
+    return false"""
+        else:
+            body = f"""_, ok := {receiver}[{key}]
+    return ok"""
+        src = f"""package p
+
+func {name}(lookup map[string]string, otherLookup map[string]string, key string, other string) bool {{
+    other_lookup := otherLookup
+    {body}
+}}
+"""
+        return Variant("axis", src, name)
+
+    if surface.key == "java":
+        expr = (
+            f"{receiver}.containsValue({key})"
+            if form == "value"
+            else (f"{receiver}.keySet().contains({key})" if right else f"{receiver}.containsKey({key})")
+        )
+        src = f"""import java.util.Map;
+
+class AxisCase {{
+    static boolean {name}(Map<String, String> lookup, Map<String, String> other_lookup, String key, String other) {{
+        return {expr};
+    }}
+}}
+"""
+        return Variant("axis", src, name)
+
+    if surface.key == "rust":
+        expr = (
+            f"{receiver}.values().any(|value| value == {key})"
+            if form == "value"
+            else (
+                f"{receiver}.get({key}).is_some()"
+                if right
+                else f"{receiver}.contains_key({key})"
+            )
+        )
+        src = f"""use std::collections::HashMap;
+
+pub fn {name}(lookup: &HashMap<String, String>, other_lookup: &HashMap<String, String>, key: &str, other: &str) -> bool {{
+    {expr}
+}}
+"""
+        return Variant("axis", src, name)
+
+    if surface.key == "ruby":
+        expr = (
+            f"{receiver}.value?({key})"
+            if form == "value"
+            else (f"{receiver}.has_key?({key})" if right else f"{receiver}.key?({key})")
+        )
+        src = f"""def {name}(lookup, other_lookup, key, other)
+  {expr}
+end
+"""
+        return Variant("axis", src, name)
+
+    raise ValueError(f"unsupported surface for map-key membership axis: {surface.key}")
 
 
 def literal_map_default_axis_supported(surface: Surface, proposal_id: str) -> bool:
@@ -3813,6 +3942,11 @@ def axis_variants(
             axis_membership_literal_variant(surface, proposal_id, False, False),
             axis_membership_literal_variant(surface, proposal_id, negative, True),
         )
+    if axis == "map_key_membership":
+        return (
+            axis_map_key_membership_variant(surface, proposal_id, False, False),
+            axis_map_key_membership_variant(surface, proposal_id, negative, True),
+        )
     if axis == "literal_map_default_lookup":
         return (
             axis_map_default_variant(surface, proposal_id, False, False),
@@ -3865,6 +3999,7 @@ def axis_data_shape(axis: str) -> str:
     return {
         "collection_empty_check": "list<int>",
         "literal_collection_membership": "set<string>",
+        "map_key_membership": "map<string,string>+key",
         "literal_map_default_lookup": "map<string,int>+key",
         "null_presence_predicate": "nullable<T>+alternate",
         "numeric_minmax_abs": "scalar<int>+alternate",
@@ -3884,6 +4019,26 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
                     {"value": "red", "other": "green"},
                     {"value": "blue", "other": "green"},
                     {"value": "green", "other": "red"},
+                ],
+                "outputs": [],
+            }
+        if axis == "map_key_membership":
+            return {
+                "level": "E1",
+                "kind": f"same-spec-{axis}",
+                "property_inputs": [
+                    {
+                        "lookup": {"red": "apple", "blue": "berry"},
+                        "other_lookup": {"green": "grape"},
+                        "key": "red",
+                        "other": "green",
+                    },
+                    {
+                        "lookup": {"red": "apple", "blue": "berry"},
+                        "other_lookup": {"green": "grape"},
+                        "key": "green",
+                        "other": "red",
+                    },
                 ],
                 "outputs": [],
             }
@@ -3977,6 +4132,22 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
                 "left": True,
                 "right": False,
             }
+        return {
+            "level": "E2",
+            "kind": f"counterexample-{axis}",
+            "counterexample": counterexample,
+        }
+    elif axis == "map_key_membership":
+        counterexample = {
+            "input": {
+                "lookup": {"red": "apple", "blue": "berry"},
+                "other_lookup": {"green": "grape"},
+                "key": "red",
+                "other": "green",
+            },
+            "left": True,
+            "right": False,
+        }
         return {
             "level": "E2",
             "kind": f"counterexample-{axis}",
@@ -4212,6 +4383,10 @@ def generate_axis_items(
                 surface, proposal_id
             ):
                 continue
+            if proposal_id.startswith("axis_map_key_") and not map_key_membership_axis_supported(
+                surface, proposal_id
+            ):
+                continue
             if proposal_id.startswith("axis_map_default_") and not literal_map_default_axis_supported(
                 surface, proposal_id
             ):
@@ -4263,6 +4438,23 @@ def generate_axis_items(
                         "not_equivalent",
                         "heldout",
                         "literal-membership-boundary",
+                    )
+                )
+                continue
+            if proposal_id in {
+                "axis_map_key_wrong_key_boundary",
+                "axis_map_key_wrong_map_boundary",
+                "axis_map_key_value_boundary",
+            }:
+                items.append(
+                    make_axis_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        surface,
+                        "not_equivalent",
+                        "heldout",
+                        "map-key-membership-boundary",
                     )
                 )
                 continue
@@ -4617,6 +4809,67 @@ def generate_literal_membership_cross_items(
     return items
 
 
+def generate_map_key_membership_cross_items(
+    out_dir: Path,
+    capabilities: dict,
+    cross_mode: str,
+    generation_filter: GenerationFilter,
+) -> list[dict]:
+    if not generation_filter.include_axis("map_key_membership"):
+        return []
+    surfaces = [
+        s
+        for s in SURFACES
+        if map_key_membership_axis_supported(s, "axis_map_key_membership_identity")
+    ]
+    items: list[dict] = []
+    for left_surface, right_surface in cross_pairs(surfaces, cross_mode):
+        if generation_filter.include_proposal("axis_map_key_membership_identity"):
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    "axis_map_key_membership_identity",
+                    left_surface,
+                    right_surface,
+                    "equivalent",
+                    "heldout",
+                )
+            )
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    "axis_map_key_membership_identity",
+                    left_surface,
+                    right_surface,
+                    "not_equivalent",
+                    "heldout",
+                    "map_key_membership-semantic-mutation",
+                )
+            )
+        for proposal_id in (
+            "axis_map_key_wrong_key_boundary",
+            "axis_map_key_wrong_map_boundary",
+            "axis_map_key_value_boundary",
+        ):
+            if not generation_filter.include_proposal(proposal_id):
+                continue
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    proposal_id,
+                    left_surface,
+                    right_surface,
+                    "not_equivalent",
+                    "heldout",
+                    "map-key-membership-boundary",
+                )
+            )
+    return items
+
+
 def generate_literal_map_default_cross_items(
     out_dir: Path,
     capabilities: dict,
@@ -4944,6 +5197,11 @@ def generate(
     )
     items.extend(
         generate_literal_membership_cross_items(
+            out_dir, capabilities, cross_mode, generation_filter
+        )
+    )
+    items.extend(
+        generate_map_key_membership_cross_items(
             out_dir, capabilities, cross_mode, generation_filter
         )
     )

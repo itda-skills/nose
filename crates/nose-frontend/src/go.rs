@@ -203,6 +203,36 @@ fn lower_assign_like(lo: &mut Lowering, node: TsNode) -> NodeId {
     let lefts: Vec<TsNode> = left.map(expr_list_items).unwrap_or_default();
     let rights: Vec<TsNode> = right.map(expr_list_items).unwrap_or_default();
 
+    if !compound && lefts.len() == 2 && rights.len() == 1 {
+        if let Some(ok_rhs) = lower_map_lookup_ok(lo, rights[0]) {
+            if lo.text(lefts[1]) != "_" {
+                let mut assigns = Vec::new();
+                if lo.text(lefts[0]) != "_" {
+                    let lhs = lower_expr(lo, lefts[0]);
+                    let rhs = lower_expr(lo, rights[0]);
+                    assigns.push(lo.add(
+                        NodeKind::Assign,
+                        Payload::None,
+                        lo.span(lefts[0]),
+                        &[lhs, rhs],
+                    ));
+                }
+                let ok_lhs = lower_expr(lo, lefts[1]);
+                assigns.push(lo.add(
+                    NodeKind::Assign,
+                    Payload::None,
+                    lo.span(lefts[1]),
+                    &[ok_lhs, ok_rhs],
+                ));
+                return if assigns.len() == 1 {
+                    assigns[0]
+                } else {
+                    lo.add(NodeKind::Block, Payload::None, span, &assigns)
+                };
+            }
+        }
+    }
+
     let mut assigns = Vec::new();
     for (i, l) in lefts.iter().enumerate() {
         let lspan = lo.span(*l);
@@ -228,6 +258,24 @@ fn lower_assign_like(lo: &mut Lowering, node: TsNode) -> NodeId {
     } else {
         lo.add(NodeKind::Block, Payload::None, span, &assigns)
     }
+}
+
+fn lower_map_lookup_ok(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
+    if node.kind() != "index_expression" {
+        return None;
+    }
+    let map = node
+        .child_by_field_name("operand")
+        .map(|o| lower_expr(lo, o))?;
+    let key = node
+        .child_by_field_name("index")
+        .map(|i| lower_expr(lo, i))?;
+    Some(lo.add(
+        NodeKind::Call,
+        Payload::Builtin(Builtin::Contains),
+        lo.span(node),
+        &[key, map],
+    ))
 }
 
 fn expr_list_items(node: TsNode) -> Vec<TsNode> {

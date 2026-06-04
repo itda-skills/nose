@@ -1506,6 +1506,40 @@ fn value_graph_distinguishes_membership_and_negation() {
 }
 
 #[test]
+fn map_key_membership_converges_cross_language_with_boundaries() {
+    let i = Interner::new();
+    let py = "def f(lookup, other_lookup, key, other):\n    return key in lookup\n";
+    let py_method =
+        "def f(lookup, other_lookup, key, other):\n    return lookup.__contains__(key)\n";
+    let go = "package p\n\nfunc F(lookup map[string]string, otherLookup map[string]string, key string, other string) bool { _, ok := lookup[key]; return ok }\n";
+    let java = "import java.util.Map;\n\nclass C { static boolean f(Map<String, String> lookup, Map<String, String> other_lookup, String key, String other) { return lookup.containsKey(key); } }\n";
+    let java_key_set = "import java.util.Map;\n\nclass C { static boolean f(Map<String, String> lookup, Map<String, String> other_lookup, String key, String other) { return lookup.keySet().contains(key); } }\n";
+    let rust = "use std::collections::HashMap;\n\npub fn f(lookup: &HashMap<String, String>, other_lookup: &HashMap<String, String>, key: &str, other: &str) -> bool { lookup.contains_key(key) }\n";
+    let rust_get = "use std::collections::HashMap;\n\npub fn f(lookup: &HashMap<String, String>, other_lookup: &HashMap<String, String>, key: &str, other: &str) -> bool { lookup.get(key).is_some() }\n";
+    let ruby = "def f(lookup, other_lookup, key, other)\n  lookup.key?(key)\nend\n";
+    let ruby_has = "def f(lookup, other_lookup, key, other)\n  lookup.has_key?(key)\nend\n";
+    let wrong_key =
+        "def f(lookup, other_lookup, key, other):\n    return lookup.__contains__(other)\n";
+    let wrong_map =
+        "def f(lookup, other_lookup, key, other):\n    return other_lookup.__contains__(key)\n";
+    let value_membership =
+        "def f(lookup, other_lookup, key, other):\n    return key in lookup.values()\n";
+
+    let fp = value_fp(&i, py, Lang::Python);
+    assert_eq!(fp, value_fp(&i, py_method, Lang::Python));
+    assert_eq!(fp, value_fp(&i, go, Lang::Go));
+    assert_eq!(fp, value_fp(&i, java, Lang::Java));
+    assert_eq!(fp, value_fp(&i, java_key_set, Lang::Java));
+    assert_eq!(fp, value_fp(&i, rust, Lang::Rust));
+    assert_eq!(fp, value_fp(&i, rust_get, Lang::Rust));
+    assert_eq!(fp, value_fp(&i, ruby, Lang::Ruby));
+    assert_eq!(fp, value_fp(&i, ruby_has, Lang::Ruby));
+    assert_ne!(fp, value_fp(&i, wrong_key, Lang::Python));
+    assert_ne!(fp, value_fp(&i, wrong_map, Lang::Python));
+    assert_ne!(fp, value_fp(&i, value_membership, Lang::Python));
+}
+
+#[test]
 fn rust_if_let_option_presence_converges_with_option_predicates() {
     let i = Interner::new();
     let if_some = "pub fn f(value: Option<i32>) -> bool {\n    if let Some(_) = value { true } else { false }\n}\n";

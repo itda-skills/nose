@@ -1253,3 +1253,64 @@ Assessment: this was a real detector co-evolution loop, not benchmark-only expan
 The generator exposed a broad strict under-merge class, the detector gained shared value
 graph semantics plus language-specific proof facts, and the adversarial negatives
 confirmed that `min`/`max` direction, wrong coordinates, and shadowed `Math` do not merge.
+
+## Map key-membership coevolution: loops 169-176
+
+This loop widened the membership frontier from static literal collections into dynamic map
+key-presence predicates. The strict slice covers surfaces where key membership has a
+direct, high-confidence proof shape without using JS/TS runtime type information: Python,
+Go, Java, Ruby, and Rust.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 169 | real-corpus priority | choose `membership_contains` over narrow `property_type_guard` because key-membership patterns have broader multi-language spread | prioritizer: 22,979 raw matches across 99 repos and 7 languages |
+| 170 | generator adversary | add `map_key_membership` with identity, wrong-key, wrong-map, and value-membership boundaries | focused manifest generated 50 items: 10 positives, 40 negatives |
+| 171 | baseline measurement | compare the release baseline with the focused map-key corpus | baseline: 0/10 positives, 0/40 false merges |
+| 172 | detector strengthening | canonicalize Python `__contains__`, Java `containsKey`/`keySet().contains`, Ruby `key?`/`has_key?`, Rust `contains_key`/`get().is_some`, and Go map lookup-ok assignment to `Contains(key, map)` | candidate focused: 10/10 positives, 0/40 false merges |
+| 173 | regression counterattack | full CLI tests caught that the new `contains` arm shadowed literal Rust array membership; merge keySet handling into the existing literal-membership branch | literal collection membership restored; targeted map-key test still passed |
+| 174 | focused/core gates | run proposal-focused and map-key core gates on the release binary | focused: 5/5 positives, 0/20 false merges, Raw 0; core selected 26/50, 9/9 and 0/17 |
+| 175 | aggregate validation | run default ring, same-surface, and dense all-cross compact gates | ring 914/914 and 0/1,539; same-surface 631/631 and 0/1,120; dense compact 312/312 and 0/462 |
+| 176 | scope decision | leave JS/TS `Map.has` and ambiguous `contains/includes` until receiver type or literal construction is proven | strict map-key slice closed |
+
+Preflight comparison before rebuilding the release binary:
+
+```text
+baseline: items=50 positive=0/10 misses=10 false_merges=0/40
+candidate: items=50 positive=10/10 misses=0 false_merges=0/40
+preflight passed: candidate improves the frontier with zero false merges
+```
+
+Final focused map-key gate:
+
+```text
+items: 25
+positive recall: 5/5
+hard-negative false merges: 0/20
+Raw nodes: 0/794
+```
+
+Final default ring smoke:
+
+```text
+items: 2453
+positive recall: 914/914
+hard-negative false merges: 0/1539
+
+by semantic axis:
+  map_key_membership: positive 10/10, false merges 0/40
+```
+
+Final dense all-cross compact smoke:
+
+```text
+GATE=core CROSS=all OUT_DIR=/tmp/nose-type4-smoke-all-map-key ./scripts/type4-smoke.sh
+selected items: 774/4971
+positive recall: 312/312
+hard-negative false merges: 0/462
+Raw nodes: 0/29753
+```
+
+Assessment: this loop followed the intended adversarial co-evolution pattern. The
+generator found a real multi-language under-merge class, the detector gained both shared
+canonicalization and Go frontend lowering, and the regression suite forced a process
+correction so broad `contains` support did not weaken existing literal-membership safety.

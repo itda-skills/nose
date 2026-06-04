@@ -213,10 +213,16 @@ pub(crate) fn canon_call(old: &Il, interner: &Interner, call_id: NodeId) -> Call
                         }
                     }
                     "is_some" if base.is_some() && args.is_empty() => {
+                        if let Some((map, key)) = map_get_call_parts(old, interner, base.unwrap()) {
+                            return CallCanon::Builtin {
+                                op: Builtin::Contains,
+                                arg_olds: vec![key, map],
+                            };
+                        }
                         return CallCanon::Builtin {
                             op: Builtin::IsNotNull,
                             arg_olds: vec![base.unwrap()],
-                        }
+                        };
                     }
                     "startsWith" | "startswith" | "starts_with" | "start_with?"
                         if base.is_some() && args.len() == 1 =>
@@ -234,15 +240,31 @@ pub(crate) fn canon_call(old: &Il, interner: &Interner, call_id: NodeId) -> Call
                             arg_olds: vec![base.unwrap(), args[0]],
                         }
                     }
-                    "includes" | "include?" | "contains" | "__contains__"
-                        if base.is_some()
-                            && args.len() == 1
-                            && old.kind(base.unwrap()) == NodeKind::Seq =>
+                    "containsKey" | "contains_key" | "key?" | "has_key?" | "__contains__"
+                        if base.is_some() && args.len() == 1 =>
                     {
                         return CallCanon::Builtin {
                             op: Builtin::Contains,
                             arg_olds: vec![args[0], base.unwrap()],
                         }
+                    }
+                    "includes" | "include?" | "contains" | "__contains__"
+                        if base.is_some()
+                            && args.len() == 1
+                            && (old.kind(base.unwrap()) == NodeKind::Seq
+                                || (fname == "contains"
+                                    && key_set_receiver(old, interner, base.unwrap())
+                                        .is_some())) =>
+                    {
+                        let collection = if fname == "contains" {
+                            key_set_receiver(old, interner, base.unwrap()).unwrap_or(base.unwrap())
+                        } else {
+                            base.unwrap()
+                        };
+                        return CallCanon::Builtin {
+                            op: Builtin::Contains,
+                            arg_olds: vec![args[0], collection],
+                        };
                     }
                     "get" | "fetch"
                         if base.is_some()
@@ -466,4 +488,39 @@ fn map_like_literal(old: &Il, interner: &Interner, id: NodeId) -> bool {
         Payload::Name(s) => matches!(interner.resolve(s), "dictionary" | "hash" | "object"),
         _ => false,
     }
+}
+
+fn map_get_call_parts(old: &Il, interner: &Interner, id: NodeId) -> Option<(NodeId, NodeId)> {
+    if old.kind(id) != NodeKind::Call {
+        return None;
+    }
+    let kids = old.children(id);
+    if kids.len() != 2 || old.kind(kids[0]) != NodeKind::Field {
+        return None;
+    }
+    let Payload::Name(method) = old.node(kids[0]).payload else {
+        return None;
+    };
+    if interner.resolve(method) != "get" {
+        return None;
+    }
+    let receiver = *old.children(kids[0]).first()?;
+    Some((receiver, kids[1]))
+}
+
+fn key_set_receiver(old: &Il, interner: &Interner, id: NodeId) -> Option<NodeId> {
+    if old.kind(id) != NodeKind::Call {
+        return None;
+    }
+    let kids = old.children(id);
+    if kids.len() != 1 || old.kind(kids[0]) != NodeKind::Field {
+        return None;
+    }
+    let Payload::Name(method) = old.node(kids[0]).payload else {
+        return None;
+    };
+    if interner.resolve(method) != "keySet" {
+        return None;
+    }
+    old.children(kids[0]).first().copied()
 }
