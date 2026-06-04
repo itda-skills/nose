@@ -26,8 +26,20 @@ top of it (see `docs/experiments.md` §AU/§AV and the phase plan).
   `emit_return` ternary-decomposition — composed with `guard_clause` it converges a nested
   ternary with an `elif` cascade).
 - **`Functor.lean`** — the list-functor laws. `map_fusion`: `map g (map f xs) = map (g∘f) xs`
-  (justifies `Elem(Map f c) → f(Elem c)`, the map-fusion peel); `map_id`.
-- **`Algebra.lean`** also has `neg_add_distrib`: `-(a+b) = -a + -b` (the `Neg(Add)` push-in).
+  (justifies `Elem(Map f c) → f(Elem c)`, the map-fusion peel); `map_id`; `filter_fusion`:
+  `filter q (filter p xs) = filter (λx. p x ∧ q x) xs` (justifies representing `filter(p,c)`
+  as `Hof(Map, [Elem c, p])` and fusing nested filters via `and_preds`, so a two-filter
+  comprehension, a `.filter().filter()` chain, and the filtered builder loop all converge);
+  `filter_length_eq_count`: `(filter p xs).length = Σ (p x ? 1 : 0)` (justifies folding
+  `len([c for x in xs if p])` to the same count-reduce as `sum(1 for x in xs if p)`).
+- **`Compare.lean`** — comparison-direction and negated-comparison canons over `Int` (the
+  total order the interpreter evaluates). `gt_eq_lt_swap`: `a > b ≡ b < a` (the `Gt → Lt`+swap
+  canon); `ge_eq_le_swap`: `a >= b ≡ b <= a`; `not_le_eq_gt`/`not_lt_eq_ge`: `!(a<=b) ≡ a>b`,
+  `!(a<b) ≡ a>=b` (the `negate_cmp_code` complements); `not_eq_eq_ne`: `!(a==b) ≡ a!=b`.
+- **`Algebra.lean`** also has `neg_add_distrib`: `-(a+b) = -a + -b` (the `Neg(Add)` push-in)
+  and `distrib_sound`: `(x+y)*f = x*f + y*f` over `Int` (the `factor_distribute` rewrite
+  `a*c + b*c → (a+b)*c`, gated on every leaf being proven `Num` since the string/list
+  `*`-as-repetition monoid is not a ring).
 - **`BoolReduce.lean`** — the `any`/`all` predicate reductions. OR/AND are commutative
   monoids (`or_comm`/`or_assoc`/`or_id`/`or_idem`, and the AND duals) so the seedless
   `REDUCE_ANY`/`REDUCE_ALL` fold is well-defined; `vany_iff`/`vall_iff` show they denote
@@ -47,8 +59,7 @@ for f in formal/*.lean; do ~/.elan/bin/lean "$f"; done   # exit 0 each = proofs 
 
 ## Next (roadmap)
 
-Formalize the remaining canons against the same semantics: comparison-direction
-(`a>b ≡ b<a`), field-write last-write-wins commutativity, filter fusion
-(`filter q ∘ filter p ≡ filter (p∧q)`), the `Reduce`/fold normal form, and the
-free-monoid (ordered concat) model. Each proof closes a class of potential false merges
-by construction rather than by corpus coverage.
+Formalize the remaining canons against the same semantics: field-write last-write-wins
+commutativity, the `Reduce`/fold normal form (selection reductions build on `MinMax.lean`'s
+proven min/max comm+assoc), and the free-monoid (ordered concat) model. Each proof closes a
+class of potential false merges by construction rather than by corpus coverage.

@@ -388,6 +388,23 @@ impl<'a> Builder<'a> {
             // with an identity `return self`. The oracle's all-types battery sees the
             // difference. `x*1`/`x+0` keep their identity operand (algebra no longer drops
             // it) and stay distinct from a bare `x` — a tiny convergence cost for soundness.
+
+            // DISTRIBUTION / FACTORING: `x*f + y*f → (x+y)*f`. Canonicalizes toward the
+            // factored form so `a*c + b*c` converges with `(a+b)*c`. Sound ONLY on numbers —
+            // string `*int` is repetition, where `"a"*2 + "b"*2` ("aabb") ≠ `("a"+"b")*2`
+            // ("abab") — so every leaf must be PROVEN `Num`. Lean: `Algebra.lean::distrib_sound`.
+            if o == Op::Add as u32 && args.len() == 2 {
+                if let Some(v) = self.factor_distribute(args[0], args[1]) {
+                    return v;
+                }
+            }
+            // DOUBLING (`x*k → x+…+x`, so `x*2` ≡ `x+x`) was TRIED and REJECTED: expansion is
+            // sound only on numbers, so it must gate on a PROVEN `Num`; but then the canonical
+            // form of `(a+b)*2` depends on whether the surrounding code happens to prove the
+            // operands numeric, splitting two behaviorally-identical functions (`a+=b; a*=2`
+            // diverged from `(a+b)*2`). It closed `x*2 vs x+x` but opened `compound assign` —
+            // net-zero, plus fragility. The gap stays open; see experiments §BA. (`x+x` in
+            // isolation cannot be proven `Num`, so the sound contraction direction never fires.)
         }
         // `and`/`or` are TYPE-GATED on commutativity, exactly like `+` is gated on concat:
         //   • both operands PROVEN Bool → boolean-and/or, which IS commutative
@@ -428,6 +445,43 @@ impl<'a> Builder<'a> {
                 }
             }
         }
+        // Full ASSOCIATIVE-COMMUTATIVE canonicalization: flatten a `+`/`*`/`&`/`|`/`^`
+        // chain to its leaves, sort them by structural hash, and rebuild one canonical
+        // left-leaning chain — so `(a+b)+c`, `a+(b+c)`, and a factored `(a+b)+d` (from
+        // `factor_distribute`) all reach ONE node regardless of how they were grouped or
+        // built. The value graph thus canonicalizes AC chains itself, not only via the
+        // earlier `algebra` IL pass (which keyed by a different hash and did not see nodes
+        // synthesized here). Sound: any operand permutation of an AC chain is denotation-
+        // preserving (Lean `Algebra.lean::canon_sound`). String/list `+` is NOT reordered
+        // (it is ordered concat); `* & | ^` Err on non-numeric regardless of order.
+        if let ValOp::Bin(o) = op {
+            if is_assoc_comm_code(o) && args.len() == 2 {
+                let concat = o == Op::Add as u32
+                    && (is_concat_ty(self.vty(args[0])) || is_concat_ty(self.vty(args[1])));
+                if !concat {
+                    let mut leaves = Vec::new();
+                    for &a in &args {
+                        self.flatten_into(a, o, &mut leaves);
+                    }
+                    if leaves.len() > 2 {
+                        leaves.sort_unstable_by_key(|&v| self.vhash[v as usize]);
+                        let mut acc = leaves[0];
+                        for &n in &leaves[1..] {
+                            acc = self.intern_node(ValOp::Bin(o), vec![acc, n]);
+                        }
+                        return acc;
+                    }
+                }
+            }
+        }
+        self.intern_node(op, args)
+    }
+
+    /// Intern a value node by `(op, args)` (hash-consing), computing its structural hash
+    /// and coarse type. The raw constructor used by `mk` after canonicalization — it does
+    /// NOT itself canonicalize, so callers must pass already-canonical operands (this is
+    /// how `mk` folds an AC chain without re-triggering the flatten).
+    fn intern_node(&mut self, op: ValOp, args: Vec<ValueId>) -> ValueId {
         let key = (op.clone(), args.clone());
         if let Some(&id) = self.intern.get(&key) {
             return id;
@@ -463,6 +517,43 @@ impl<'a> Builder<'a> {
         let c = self.opaque_ctr;
         self.opaque_ctr += 1;
         self.mk(ValOp::Opaque(c as u64), vec![])
+    }
+
+    /// Factor a common multiplicand out of a sum of two products: `x*f + y*f → (x+y)*f`.
+    /// Returns the factored value id when both operands are 2-ary `Mul` nodes sharing
+    /// exactly one factor AND every leaf is a PROVEN `Num` (distribution is unsound on the
+    /// string/list `*`-as-repetition monoid). Terminates: the rebuilt `Add(x,y)` has
+    /// non-`Mul` leaves, so it does not re-distribute. Lean: `Algebra.lean::distrib_sound`.
+    fn factor_distribute(&mut self, a: ValueId, b: ValueId) -> Option<ValueId> {
+        let mul = Op::Mul as u32;
+        let as_mul = |v: ValueId, s: &Self| -> Option<(ValueId, ValueId)> {
+            if let ValOp::Bin(o) = s.nodes[v as usize].op {
+                if o == mul && s.nodes[v as usize].args.len() == 2 {
+                    let ar = &s.nodes[v as usize].args;
+                    return Some((ar[0], ar[1]));
+                }
+            }
+            None
+        };
+        let (a0, a1) = as_mul(a, self)?;
+        let (b0, b1) = as_mul(b, self)?;
+        // (distributed-from-a, distributed-from-b, shared factor)
+        let (x, y, f) = if a0 == b0 {
+            (a1, b1, a0)
+        } else if a0 == b1 {
+            (a1, b0, a0)
+        } else if a1 == b0 {
+            (a0, b1, a1)
+        } else if a1 == b1 {
+            (a0, b0, a1)
+        } else {
+            return None;
+        };
+        if self.vty(x) != Ty::Num || self.vty(y) != Ty::Num || self.vty(f) != Ty::Num {
+            return None;
+        }
+        let sum = self.mk(ValOp::Bin(Op::Add as u32), vec![x, y]);
+        Some(self.mk(ValOp::Bin(mul), vec![sum, f]))
     }
 
     /// Build the value graph for a `Func`/`Method`/class unit. The unit root may
@@ -576,6 +667,50 @@ impl<'a> Builder<'a> {
         pc
     }
 
+    /// The canonical value of a dict key→value entry — `Call(DictEntry, [k, v])` — shared by
+    /// a dict `pair`, a dict-comprehension body, and a `d[k]=v` building loop, so all three
+    /// converge, while staying DISTINCT from a tuple `Seq([k, v])` (a list of pairs is a
+    /// different value than a dict). Lean: `Functor.lean::map_dict_entry` (the build is a map).
+    fn dict_entry(&mut self, kv: Vec<ValueId>) -> ValueId {
+        self.mk(ValOp::Call(Builtin::DictEntry as u32 + 1), kv)
+    }
+
+    /// If `target = Index(Var c, k)` for an ACTIVE dict-builder `c` (seeded `{}`/empty), record
+    /// the per-element `DictEntry(k, rhs)` under the current path guard and return true — a
+    /// `d[k] = v` write IS the build, so `d={}; for x: d[k]=v` converges with `{k: v for x}`.
+    /// A second write spoils it (→ ordinary effect). Sound: an empty collection only supports
+    /// keyed assignment as a dict (`[]​[k]=v` errors), so this fires only on genuine dict builds.
+    fn try_record_index_assign(
+        &mut self,
+        target: NodeId,
+        rhs: ValueId,
+        env: &FxHashMap<u32, ValueId>,
+    ) -> bool {
+        if self.il.kind(target) != NodeKind::Index {
+            return false;
+        }
+        let tk = self.il.children(target).to_vec();
+        let Some(&base) = tk.first() else {
+            return false;
+        };
+        let (NodeKind::Var, Payload::Cid(c)) = (self.il.kind(base), self.il.node(base).payload)
+        else {
+            return false;
+        };
+        if !self.building.contains_key(&c) {
+            return false;
+        }
+        let Some(&keyn) = tk.get(1) else {
+            self.building.insert(c, None);
+            return true;
+        };
+        let k = self.eval(keyn, env);
+        let entry = self.dict_entry(vec![k, rhs]);
+        let guard = self.path_cond();
+        self.building.insert(c, Some((entry, guard)));
+        true
+    }
+
     /// If `e` is a single-item `append(r, item)` to an ACTIVE builder var `r`, record the
     /// per-element contribution under the current path guard and return true (the append IS
     /// the build, not an effect). A multi-item form spoils the builder.
@@ -631,6 +766,21 @@ impl<'a> Builder<'a> {
                             *appends.entry(c).or_insert(0) += 1;
                         } else {
                             spoiled.insert(c);
+                        }
+                    }
+                }
+            }
+            // A `d[k] = v` assignment is a DICT build for `d` — counted like an append, so
+            // `d={}; for x: d[k]=v` is recognized as a builder (finalized to a `Map` of
+            // `DictEntry`s, converging with `{k: v for x}`).
+            if self.il.kind(n) == NodeKind::Assign {
+                let k = self.il.children(n);
+                if k.len() == 2 && self.il.kind(k[0]) == NodeKind::Index {
+                    if let Some(&base) = self.il.children(k[0]).first() {
+                        if let (NodeKind::Var, Payload::Cid(c)) =
+                            (self.il.kind(base), self.il.node(base).payload)
+                        {
+                            *appends.entry(c).or_insert(0) += 1;
                         }
                     }
                 }
@@ -790,6 +940,11 @@ impl<'a> Builder<'a> {
                             self.field_env.insert(name, g);
                             return;
                         }
+                    }
+                    // `d[k] = v` to an ACTIVE dict-builder records a `DictEntry` contribution
+                    // (so the loop becomes a `Map` of entries, converging with `{k:v for x}`).
+                    if self.try_record_index_assign(kids[0], rhs, env) {
+                        return;
                     }
                     // store into an index / computed target → an ordered effect
                     let target = self.eval(kids[0], env);
@@ -1545,11 +1700,20 @@ impl<'a> Builder<'a> {
                 let acc = self.fresh_opaque();
                 let body = self.eval_lambda_body(kids[0], &[acc, elem])?;
                 let (op, contrib) = self.as_reduction(body, acc)?;
-                let init = kids
-                    .get(2)
-                    .map(|&i| self.eval(i, env))
-                    .unwrap_or_else(|| self.int_const(0));
-                Some(self.mk(ValOp::Reduce(op), vec![init, contrib]))
+                // A SELECTION reduction (`reduce(λa,b. a if a>b else b, xs)` ≡ `max(xs)`)
+                // carries NO accumulator seed — exactly like the `max()`/`min()` builtin and
+                // the `m=xs[0]; for x: m=max(m,x)` loop, all of which drop the incidental
+                // init — so emit `Reduce(code, [contrib])`. Additive/multiplicative folds
+                // keep their init (explicit `reduce(f, xs, init)`, else the op identity 0/1).
+                if is_selection_code(op) {
+                    Some(self.mk(ValOp::Reduce(op), vec![contrib]))
+                } else {
+                    let init = kids
+                        .get(2)
+                        .map(|&i| self.eval(i, env))
+                        .unwrap_or_else(|| self.int_const(0));
+                    Some(self.mk(ValOp::Reduce(op), vec![init, contrib]))
+                }
             }
             Builtin::Min | Builtin::Max => {
                 let code = if matches!(b, Builtin::Max) {
@@ -1602,6 +1766,31 @@ impl<'a> Builder<'a> {
                     }
                 };
                 Some(self.mk(ValOp::Reduce(code), vec![contrib]))
+            }
+            Builtin::Len => {
+                // `len([c for x in xs if p])` counts the elements an iteration produces —
+                // the SAME count-reduce as `sum(1 for x in xs if p)`:
+                // `Reduce(Add, [0, p ? 1 : 0])`. Only a comprehension/stream (a `Hof(Map)`)
+                // is converted; `len(xs)` over a raw collection is NOT a loop and stays a
+                // `Len` call (returning `None` here keeps that path).
+                let av = self.eval(*kids.first()?, env);
+                let (op, args) = {
+                    let n = &self.nodes[av as usize];
+                    (n.op.clone(), n.args.clone())
+                };
+                let ValOp::Hof(k) = op else { return None };
+                if k != HoFKind::Map as u32 {
+                    return None;
+                }
+                let one = self.int_const(1);
+                let contrib = if args.len() >= 2 {
+                    let zero = self.int_const(0);
+                    self.mk(ValOp::Phi, vec![args[1], one, zero])
+                } else {
+                    one
+                };
+                let init = self.int_const(0);
+                Some(self.mk(ValOp::Reduce(Op::Add as u32), vec![init, contrib]))
             }
             _ => None,
         }
@@ -1934,30 +2123,14 @@ impl<'a> Builder<'a> {
                 match kind {
                     // `xs.map(λx. body)` / a comprehension → the per-element value over a
                     // canonical `Elem(xs)`, so `[x*x for x in xs]` and `xs.map(x=>x*x)`
-                    // converge regardless of the (opaque) lambda's syntax. If the mapped
-                    // collection is itself a `HoF(Filter)` (a comprehension with an `if`),
-                    // unwrap it so the real collection and the predicate share one `Elem`,
-                    // and emit `Hof(Map, [contrib, predicate])` — the filtered stream.
+                    // converge regardless of the (opaque) lambda's syntax. `map_source`
+                    // resolves the collection to its element stream and ANY predicate it
+                    // carries (a filtered collection is a `Hof(Map, [elem, pred])`, see the
+                    // `Filter` arm below) — that carried predicate is map/filter FUSION:
+                    // `map(h, filter(p, xs))` ≡ `filtered-map h@p`, so `[h(y) for y in
+                    // [x for x in xs if p]]` and `[h(x) for x in xs if p]` converge.
                     HoFKind::Map => {
-                        let (coll_node, pred_lam) = match kids.first() {
-                            Some(&c)
-                                if self.il.kind(c) == NodeKind::HoF
-                                    && matches!(
-                                        self.il.node(c).payload,
-                                        Payload::HoF(HoFKind::Filter)
-                                    ) =>
-                            {
-                                let fk = self.il.children(c).to_vec();
-                                (fk.first().copied(), fk.get(1).copied())
-                            }
-                            other => (other.copied(), None),
-                        };
-                        // Element bindings for the lambda's parameter(s) — and any predicate
-                        // CARRIED by a (filtered) Map/Filter collection value. The latter is
-                        // map/filter FUSION: `map(h, filter(p, xs))` ≡ `filtered-map h@p`, so
-                        // `[h(y) for y in [x for x in xs if p]]` and `[h(x) for x in xs if p]`
-                        // converge. (zip binds multiple elems and carries no predicate.)
-                        let (elems, carried_pred) = self.map_source(coll_node, env);
+                        let (elems, carried_pred) = self.map_source(kids.first().copied(), env);
                         let fallback = elems
                             .first()
                             .copied()
@@ -1966,33 +2139,31 @@ impl<'a> Builder<'a> {
                             Some(&l) => self.eval_lambda_body(l, &elems).unwrap_or(fallback),
                             None => fallback,
                         };
-                        let own_pred = pred_lam.and_then(|l| self.eval_lambda_body(l, &elems));
-                        // NOTE: peeling an identity map to a bare `Filter` (`map(id,c) ≡ c`,
-                        // `[x for x in c if p] ≡ filter(p,c)`) is sound in principle
-                        // (functor identity law, `formal/Functor.lean:map_id`) but the
-                        // current `Filter` node — which stores only its predicate, not its
-                        // collection's element stream — does not faithfully represent the
-                        // filtered LOOP form, so the rewrite introduced 2 false merges (the
-                        // oracle caught them) and broke `filtered_comprehension_matches_
-                        // filtered_loop`. Closing filter-of-filter needs `Filter` to carry
-                        // its element (a deferred representation change), not this peel.
-                        match self.and_preds(own_pred, carried_pred) {
+                        match carried_pred {
                             Some(p) => self.mk(ValOp::Hof(kind as u32), vec![contrib, p]),
                             None => self.mk(ValOp::Hof(kind as u32), vec![contrib]),
                         }
                     }
                     HoFKind::Filter => {
-                        // A standalone filter (`xs.filter(λx. cond)`): the predicate over
-                        // a canonical element.
-                        let elem = kids.first().map(|&c| {
-                            let cv = self.eval(c, env);
-                            self.elem(cv)
-                        });
-                        let pred = match (kids.get(1), elem) {
-                            (Some(&l), Some(e)) => self.eval_lambda_body(l, &[e]).unwrap_or(e),
-                            _ => elem.unwrap_or_else(|| self.fresh_opaque()),
-                        };
-                        self.mk(ValOp::Hof(kind as u32), vec![pred])
+                        // `filter(p, coll)` ≡ the *identity map with a predicate*:
+                        // `Hof(Map, [Elem(coll), pred])`. Representing a filter this way
+                        // (rather than the old `Hof(Filter, [pred])`, which stored ONLY the
+                        // predicate and lost the element stream) makes `Filter` carry its
+                        // element — so nested filters FUSE: `filter(q, filter(p, xs))` and
+                        // `filter(p∧q, xs)` both reduce to `Hof(Map, [Elem(xs), p∧q])`. It
+                        // also unifies a standalone filter with the filtered-loop builder
+                        // (`r=[]; for x: if p: r.append(x)` → the same node) and the filtered
+                        // comprehension `[x for x in xs if p]`. Lean: `Functor.lean::filter_fusion`.
+                        let (elems, carried_pred) = self.map_source(kids.first().copied(), env);
+                        let elem = elems
+                            .first()
+                            .copied()
+                            .unwrap_or_else(|| self.fresh_opaque());
+                        let own_pred = kids.get(1).and_then(|&l| self.eval_lambda_body(l, &elems));
+                        match self.and_preds(own_pred, carried_pred) {
+                            Some(p) => self.mk(ValOp::Hof(HoFKind::Map as u32), vec![elem, p]),
+                            None => self.mk(ValOp::Hof(HoFKind::Map as u32), vec![elem]),
+                        }
                     }
                     _ => {
                         let a: Vec<ValueId> = kids.iter().map(|&k| self.eval(k, env)).collect();
@@ -2003,6 +2174,11 @@ impl<'a> Builder<'a> {
             NodeKind::Seq => {
                 let kids = self.il.children(expr).to_vec();
                 let a: Vec<ValueId> = kids.iter().map(|&k| self.eval(k, env)).collect();
+                // A `DictEntry`-tagged `Seq` (a dict `pair` `k: v`) is a DISTINCT value, so
+                // `{k: v for x}` never collides with the tuple list `[(k, v) for x]`.
+                if matches!(node.payload, Payload::Builtin(Builtin::DictEntry)) {
+                    return self.dict_entry(a);
+                }
                 self.mk(ValOp::Seq, a)
             }
             NodeKind::If => {

@@ -498,6 +498,10 @@ impl<'a> Interp<'a> {
                 }
                 Ok(Value::Null)
             }
+            // Dicts are not modeled — a `DictEntry` makes its unit non-interpretable (Err),
+            // so dict-building units are excluded from the oracle rather than risk a false
+            // merge. Their convergence rests on the DistinctEntry-vs-tuple representation.
+            Builtin::DictEntry => Ok(Value::Err),
             Builtin::Reduce | Builtin::Any | Builtin::All => unreachable!(),
         }
     }

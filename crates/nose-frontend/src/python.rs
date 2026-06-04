@@ -9,8 +9,8 @@
 
 use crate::lower::Lowering;
 use nose_il::{
-    FileId, HoFKind, Il, Interner, Lang, LitClass, LoopKind, NodeId, NodeKind, Op, Payload,
-    UnitKind,
+    Builtin, FileId, HoFKind, Il, Interner, Lang, LitClass, LoopKind, NodeId, NodeKind, Op,
+    Payload, UnitKind,
 };
 use tree_sitter::Node as TsNode;
 
@@ -481,12 +481,21 @@ fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
                 .map(|c| lower_expr(lo, c))
                 .unwrap_or_else(|| lo.empty_block(span))
         }
+        // A dict `pair` `k: v` is a `Seq` tagged `DictEntry` — distinct from a plain tuple
+        // `Seq` (`(k, v)`), so a dict literal / comprehension never collides with a list of
+        // tuples (different behavior). Carried on a `Seq` (not a `Call`) so normalization's
+        // `canon_call` can't misread the key as a callee (`{len: v}` → wrongly `Len(v)`).
         "pair" => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
                 .into_iter()
                 .map(|c| lower_expr(lo, c))
                 .collect();
-            lo.add(NodeKind::Seq, Payload::None, span, &kids)
+            lo.add(
+                NodeKind::Seq,
+                Payload::Builtin(Builtin::DictEntry),
+                span,
+                &kids,
+            )
         }
         "list_comprehension"
         | "set_comprehension"

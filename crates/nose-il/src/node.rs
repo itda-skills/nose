@@ -238,6 +238,12 @@ pub enum Builtin {
     /// `all(p(x) for x in xs)` / `xs.every(p)` / `xs.iter().all(p)` — universal
     /// (short-circuit AND) reduction over a predicate-mapped collection.
     All,
+    /// A single dict key→value entry: a `pair` `k: v` in a dict literal / dict
+    /// comprehension, and the per-element contribution of a `d[k] = v` dict-building
+    /// loop. A DISTINCT op (not a `Seq`/tuple) so `{k: v for x in xs}` and the building
+    /// loop converge with each other WITHOUT colliding with `[(k, v) for x in xs]`
+    /// (a list of tuples — a `Seq`), which is behaviorally different.
+    DictEntry,
 }
 
 /// Kinds of canonical higher-order operation.

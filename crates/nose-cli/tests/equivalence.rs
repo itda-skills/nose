@@ -1349,6 +1349,184 @@ fn normalization_is_idempotent() {
     }
 }
 
+/// DISTRIBUTION / FACTORING (Num-gated): `a*c + b*c` ≡ `(a+b)*c`. The value graph factors
+/// a shared multiplicand out of a sum of products when every leaf is proven numeric
+/// (`value_graph.rs::factor_distribute`, Lean `Algebra.lean::distrib_sound`). The `*`
+/// operands here are provably `Num`, so the factoring fires and the two forms converge.
+#[test]
+fn distribution_factors_common_multiplicand() {
+    let i = Interner::new();
+    assert_eq!(
+        value_fp(&i, "def f(a,b,c):\n    return a*c+b*c\n", Lang::Python),
+        value_fp(&i, "def g(a,b,c):\n    return (a+b)*c\n", Lang::Python),
+        "a*c+b*c should factor to (a+b)*c on proven-numeric leaves"
+    );
+    // Three-term chain factors transitively: `a*c + b*c + d*c` ≡ `(a+b+d)*c`.
+    assert_eq!(
+        value_fp(
+            &i,
+            "def f(a,b,c,d):\n    return a*c+b*c+d*c\n",
+            Lang::Python
+        ),
+        value_fp(&i, "def g(a,b,c,d):\n    return (a+b+d)*c\n", Lang::Python),
+        "a*c+b*c+d*c should factor to (a+b+d)*c"
+    );
+}
+
+/// FILTER FUSION: `filter(q, filter(p, xs))` ≡ `filter(p∧q, xs)`. The value graph carries a
+/// filter's element so nested filters fuse (`value_graph.rs` `HoFKind::Filter` arm, Lean
+/// `Functor.lean::filter_fusion`). A two-filter comprehension, an explicitly nested one, and
+/// (cross-language) a JS `.filter().filter()` all converge to one filtered stream.
+#[test]
+fn filter_fusion_converges() {
+    let i = Interner::new();
+    assert_eq!(
+        value_fp(
+            &i,
+            "def f(xs):\n    return [x for x in xs if x>0 if x<10]\n",
+            Lang::Python
+        ),
+        value_fp(
+            &i,
+            "def g(xs):\n    return [x for x in [y for y in xs if y>0] if x<10]\n",
+            Lang::Python
+        ),
+        "two stacked filters should fuse with an explicitly nested filter"
+    );
+    assert_eq!(
+        value_fp(
+            &i,
+            "def f(xs):\n    return [x for x in xs if x>0 if x<10]\n",
+            Lang::Python
+        ),
+        value_fp(
+            &i,
+            "function g(xs){ return xs.filter(x=>x>0).filter(x=>x<10); }",
+            Lang::JavaScript
+        ),
+        "Python two-filter comprehension should converge with JS chained .filter().filter()"
+    );
+}
+
+/// DICT-BUILDER: `{k: v for x in xs}` ≡ `d={}; for x in xs: d[k]=v`. The dict-building loop
+/// is recognized as a builder of `DictEntry`s, the same node the comprehension produces.
+#[test]
+fn dict_comprehension_converges_with_building_loop() {
+    let i = Interner::new();
+    assert_eq!(
+        value_fp(
+            &i,
+            "def f(xs):\n    return {x: x*x for x in xs}\n",
+            Lang::Python
+        ),
+        value_fp(
+            &i,
+            "def g(xs):\n    d={}\n    for x in xs:\n        d[x]=x*x\n    return d\n",
+            Lang::Python
+        ),
+        "dict comprehension should converge with the dict-building loop"
+    );
+}
+
+/// SOUNDNESS GUARD for the dict-builder: a dict comprehension must stay DISTINCT from a list
+/// of tuples — `{k: v for x in xs}` and `[(k, v) for x in xs]` build different values, so a
+/// `DictEntry` must not collide with a tuple `Seq`. (Dicts are not oracle-modeled, so this
+/// representational distinctness is what prevents the false merge.)
+#[test]
+fn dict_comprehension_distinct_from_tuple_list() {
+    let i = Interner::new();
+    assert_ne!(
+        value_fp(
+            &i,
+            "def f(xs):\n    return {x: x*x for x in xs}\n",
+            Lang::Python
+        ),
+        value_fp(
+            &i,
+            "def g(xs):\n    return [(x, x*x) for x in xs]\n",
+            Lang::Python
+        ),
+        "a dict comprehension must NOT merge with a list of tuples (different behavior)"
+    );
+}
+
+/// REDUCE-LAMBDA SELECTION: `reduce(λa,b. a if a>b else b, xs)` ≡ `max(xs)` (and the `<`
+/// form ≡ `min`). The explicit fold's selection lambda is recognized as a min/max selection
+/// reduction (which carries no accumulator seed), so it converges with the builtin.
+#[test]
+fn reduce_lambda_selection_converges() {
+    let i = Interner::new();
+    assert_eq!(
+        value_fp(
+            &i,
+            "def f(xs):\n    return reduce(lambda a,b: a if a>b else b, xs)\n",
+            Lang::Python
+        ),
+        value_fp(&i, "def g(xs):\n    return max(xs)\n", Lang::Python),
+        "reduce(λ. a if a>b else b) should converge with max()"
+    );
+    assert_eq!(
+        value_fp(
+            &i,
+            "def f(xs):\n    return reduce(lambda a,b: a if a<b else b, xs)\n",
+            Lang::Python
+        ),
+        value_fp(&i, "def g(xs):\n    return min(xs)\n", Lang::Python),
+        "reduce(λ. a if a<b else b) should converge with min()"
+    );
+}
+
+/// COUNT of a filtered comprehension equals the sum of 1s: `len([x for x in xs if p])` ≡
+/// `sum(1 for x in xs if p)` ≡ (cross-language) a Rust `xs.iter().filter(p).count()`.
+#[test]
+fn len_of_filtered_comprehension_is_count() {
+    let i = Interner::new();
+    let count_loop = value_fp(
+        &i,
+        "def g(xs):\n    return sum(1 for x in xs if x>0)\n",
+        Lang::Python,
+    );
+    assert_eq!(
+        value_fp(
+            &i,
+            "def f(xs):\n    return len([x for x in xs if x>0])\n",
+            Lang::Python
+        ),
+        count_loop,
+        "len of a filtered comprehension should equal sum(1 …)"
+    );
+    assert_eq!(
+        value_fp(
+            &i,
+            "fn h(xs:&[i64])->usize{ xs.iter().filter(|x| **x>0).count() }",
+            Lang::Rust
+        ),
+        count_loop,
+        "Rust .filter(p).count() should converge with Python sum(1 for x if p)"
+    );
+}
+
+/// Cross-language METHOD-FORM iterator reductions: a Rust `xs.iter().filter(p).sum()`
+/// converges with the Python generator `sum(x for x in xs if p)` (method-form `.sum()`
+/// canonicalizes to the same `Builtin::Sum` over the filtered stream).
+#[test]
+fn rust_iterator_reductions_converge() {
+    let i = Interner::new();
+    assert_eq!(
+        value_fp(
+            &i,
+            "def f(xs):\n    return sum(x for x in xs if x>0)\n",
+            Lang::Python
+        ),
+        value_fp(
+            &i,
+            "fn g(xs:&[i64])->i64{ xs.iter().filter(|x| **x>0).sum() }",
+            Lang::Rust
+        ),
+        "Python filtered sum generator should converge with Rust .iter().filter().sum()"
+    );
+}
+
 /// Convergence probe (research): diverse genuinely-equivalent pairs that a strong IL
 /// SHOULD converge. Prints which converge vs not — the non-converging ones are IL gaps to
 /// close. Not an assertion (a map of the frontier). Run: cargo test convergence_probe -- --nocapture
@@ -1501,4 +1679,78 @@ fn convergence_probe3() {
         eprintln!("  [{}] {}", if eq { "CONVERGE" } else { "  GAP   " }, name);
     }
     eprintln!("probe3: {}/{} converge", pairs.len() - gaps, pairs.len());
+}
+
+/// Convergence probe batch 4 (research): candidate Type-4 equivalences to scope which to
+/// close next — negative indexing, count-of-filter, reduce-lambda selection, more idioms.
+#[test]
+fn convergence_probe4() {
+    let i = Interner::new();
+    let pairs: &[(&str, &str, Lang, &str, Lang)] = &[
+        (
+            "neg-index last",
+            "def f(s):\n    return s[len(s)-1]\n",
+            Lang::Python,
+            "def g(s):\n    return s[-1]\n",
+            Lang::Python,
+        ),
+        (
+            "neg-index k",
+            "def f(s):\n    return s[len(s)-2]\n",
+            Lang::Python,
+            "def g(s):\n    return s[-2]\n",
+            Lang::Python,
+        ),
+        (
+            "len-count vs sum-1",
+            "def f(xs):\n    return len([x for x in xs if x>0])\n",
+            Lang::Python,
+            "def g(xs):\n    return sum(1 for x in xs if x>0)\n",
+            Lang::Python,
+        ),
+        (
+            "reduce-lambda max vs max()",
+            "def f(xs):\n    return reduce(lambda a,b: a if a>b else b, xs)\n",
+            Lang::Python,
+            "def g(xs):\n    return max(xs)\n",
+            Lang::Python,
+        ),
+        (
+            "reduce-lambda min vs min()",
+            "def f(xs):\n    return reduce(lambda a,b: a if a<b else b, xs)\n",
+            Lang::Python,
+            "def g(xs):\n    return min(xs)\n",
+            Lang::Python,
+        ),
+        (
+            "not-in vs not(in)",
+            "def f(a,b):\n    return a not in b\n",
+            Lang::Python,
+            "def g(a,b):\n    return not (a in b)\n",
+            Lang::Python,
+        ),
+        (
+            "filter Py vs JS",
+            "def f(xs):\n    return [x for x in xs if x>0]\n",
+            Lang::Python,
+            "function g(xs){ return xs.filter(x=>x>0); }",
+            Lang::JavaScript,
+        ),
+        (
+            "sum-filter Py vs Rust",
+            "def f(xs):\n    return sum(x for x in xs if x>0)\n",
+            Lang::Python,
+            "fn g(xs:&[i64])->i64{ xs.iter().filter(|x| **x>0).sum() }",
+            Lang::Rust,
+        ),
+    ];
+    let mut gaps = 0;
+    for (name, a, la, b, lb) in pairs {
+        let eq = value_fp(&i, a, *la) == value_fp(&i, b, *lb);
+        if !eq {
+            gaps += 1;
+        }
+        eprintln!("  [{}] {}", if eq { "CONVERGE" } else { "  GAP   " }, name);
+    }
+    eprintln!("probe4: {}/{} converge", pairs.len() - gaps, pairs.len());
 }

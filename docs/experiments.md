@@ -2362,3 +2362,82 @@ This is the first ranking change to move the held-out number, and it moves it th
 so extractability ships as the default, with `--sort value` retained for raw-volume triage.
 (Detection is unchanged: the same families are found and the §AU recall holds; only the order,
 and the honest `N/M shared · Pp` cell, differ.)
+
+## BA. Exact-Type-4 convergence push — stronger types, Lean-backed algebra, filter fusion
+
+A focused pass to raise **exact Type-4 convergence** (the representation axis: behaviorally-
+equivalent code → one value-graph fingerprint), holding the soundness contract (full-corpus
+`verify` = **0 false merges**, canon-preservation ✓) and backing each new algebraic law with a
+Lean proof. Measured by the `convergence_probe{,2,3,4}` frontier maps + per-class assertion
+tests in `crates/nose-cli/tests/equivalence.rs`. The real-labelset metric is the no-regression
+gate, not the target (see the verdict below).
+
+**ADOPTED (each: 93 equivalence tests green, full-corpus `verify` SOUND, Lean where algebraic):**
+
+- **Stronger IL type inference** (`types.rs`): the param-type inference now runs to a *fixpoint*
+  over subexpression *result types* (not just literal siblings), so `(x+1)*2` and `a + b*c`
+  prove `x`/`a : Num`. Foundational — it is what licenses the gated numeric rewrites below.
+  Sound by construction (a type is recorded only when an op *requires* it); neutral on its own.
+- **Distribution / factoring** `a*c + b*c → (a+b)*c` (`value_graph.rs::factor_distribute`),
+  gated on every leaf proven `Num`. Lean `Algebra.lean::distrib_sound`. Closes the `mul-add
+  factor` probe gap.
+- **Full AC canonicalization in the value graph** (`mk` flattens+sorts `+ * & | ^` chains by
+  structural hash, factored out into `intern_node`). Previously the value graph only
+  *pairwise*-sorted and leaned on the `algebra` IL pass, so nodes *synthesized* in the graph
+  (e.g. a factored `(a+b)+d`) were not re-canonicalized; now `(a+b)+c ≡ a+(b+c)` and the 3-term
+  factoring `a*c+b*c+d*c ≡ (a+b+d)*c` converge. Sound (Lean `canon_sound`).
+- **Filter fusion** (`value_graph.rs` `HoFKind::Filter` arm): represent `filter(p, c)` as the
+  *filtered identity-map* `Hof(Map, [Elem c, p])` — which carries its element — so nested filters
+  fuse to `Hof(Map, [Elem xs, p∧q])`. This is the deferred "make `Filter` carry its element"
+  representation change the old code comment called for (the earlier *peel-to-bare-Filter*
+  attempt caused 2 false merges; this does not). It also unifies a standalone filter, a
+  two-filter comprehension, a `.filter().filter()` chain, and the filtered builder loop. Lean
+  `Functor.lean::filter_fusion`. Closes the `filter fusion` probe gap.
+- **Reduce-lambda selection** (`value_graph.rs` `Builtin::Reduce`): a fold whose lambda is a
+  min/max selection (`reduce(λa,b. a if a>b else b, xs)`) emits a *seedless* `Reduce(MAX/MIN,
+  [contrib])`, converging with `max(xs)`/`min(xs)` (the §AR deferred item).
+- **Count-of-filter** (`value_graph.rs` `Builtin::Len`): `len([c for x in xs if p])` folds to
+  the same count-reduce as `sum(1 for x in xs if p)` — `Reduce(Add, [0, p?1:0])` — only for a
+  comprehension/stream (`len(xs)` on a raw collection stays a `Len` call).
+- **Method-form iterator reductions** (`idioms.rs`): Rust `it.sum()/min()/max()/count()` (no
+  value args, receiver = collection) canonicalize to the same builtins as the function form, so
+  `xs.iter().filter(p).sum()` converges with Python `sum(x for x in xs if p)` and `.count()`
+  with `len([… if p])`.
+- **Dict-builder ≡ dict comprehension** (a `pair` lowers to a `DictEntry`-tagged `Seq`, and a
+  `d={}; for x: d[k]=v` index-assign builder is recognized like the list-builder, finalizing to
+  `Hof(Map, [DictEntry(k,v)])`). `{k:v for x in xs}` and the building loop converge. **Sound by
+  representation:** `DictEntry` is DISTINCT from a tuple `Seq`, so it cannot collide with
+  `[(k,v) for x in xs]` (a list of tuples — different behavior) — guarded by an `assert_ne!`
+  test, which matters because dicts are not oracle-modeled (a dict-building unit is non-
+  interpretable, excluded from `verify`, so the representational distinctness is what carries
+  soundness here). An empty collection only supports keyed assignment as a dict (`[]​[k]=v`
+  errors), so the builder fires only on genuine dict builds. (Resolves the earlier deferral.)
+
+**TRIED & REJECTED (kept off, recorded with evidence):**
+
+- **Doubling `x*2 ≡ x+x`.** Expansion is sound only on numbers, so it must gate on a *proven*
+  `Num`; but then the canonical form of `(a+b)*2` depends on whether the surrounding code
+  happens to prove the operands numeric — it split two behaviorally-identical functions
+  (`a+=b; a*=2` diverged from `(a+b)*2`). It closed `x*2 vs x+x` but *opened* `compound assign`
+  — net-zero on probes, plus fragility. Reconfirms the §AY rejection. (The sound contraction
+  direction `x+x → x*2` never fires: `x+x` in isolation cannot be proven `Num`.) Gap left open.
+- **Negative-index canonicalization `s[-1] ≡ s[len(s)-1]`.** Cross-language *unsound*: a
+  negative index is the last element in Python/Ruby but `undefined` in JS, and the unified IL
+  cannot gate on language (same class as doubling). Not implemented; gap documented.
+
+**LEAN CORE EXTENDED.** New machine-checked theorems against the same denotational semantics:
+`Algebra.lean::distrib_sound` (`(x+y)*f = x*f + y*f`), `Functor.lean::filter_fusion`
+(`filter q (filter p) = filter (p∧q)`) and `filter_length_eq_count` (`len(filter p xs) =
+Σ(p?1:0)`), and a new `Compare.lean` (comparison-direction `a>b ≡ b<a`, `a>=b ≡ b<=a`, and the
+negated-comparison complements `!(a<=b) ≡ a>b`, `!(a<b) ≡ a>=b`, `!(a==b) ≡ a!=b`). A `formal`
+CI job (elan + `lean formal/*.lean`) now regression-checks all of it.
+
+**VERDICT — convergence up, real metric flat, soundness held.** Probe frontier: `probe` 9→10/10,
+`probe3` 10→**12/12** (dict-comp closed), the new `probe4` 6/8, with `xlang` 9/10 and `probe2`
+12/12. Full-corpus `verify` stays **0 false merges** / canon-preserved across 28,113 interpretable
+units. The v5 real-labelset metric is **unchanged** (`eval_by_language.py` before/after both: dev
+P@10 58%/56%, heldout 51%/49%, recall ~99–100%) — reconfirming §AY that behavioral-convergence
+gains do not move the *judgment-deep* refactoring-precision number, while costing nothing there.
+The win is squarely on the exact-Type-4 axis these changes targeted, with the Lean core extended.
+Remaining open gaps are the two cross-language-*unsound* ones (`x*2≡x+x` doubling, `s[-1]` neg-
+index), documented above — not representation gaps but genuine language-semantic divergences.

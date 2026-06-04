@@ -218,6 +218,24 @@ pub(crate) fn canon_call(old: &Il, interner: &Interner, call_id: NodeId) -> Call
                             fn_old: args[0],
                         };
                     }
+                    // Method-form iterator reductions (Rust `it.sum()/min()/max()/count()`,
+                    // taking no value args — the receiver IS the collection). Canonicalize to
+                    // the same builtin as the function form, unwrapping a `.iter()` base, so
+                    // `xs.iter().filter(p).sum()` converges with Python `sum(x for x in xs if p)`
+                    // and `.count()` with `len([… if p])` / `sum(1 for …)` (both via `Len`).
+                    "sum" | "min" | "max" | "count" if base.is_some() && args.is_empty() => {
+                        let coll = unwrap_iter(old, interner, base.unwrap());
+                        let op = match fname {
+                            "sum" => Builtin::Sum,
+                            "min" => Builtin::Min,
+                            "max" => Builtin::Max,
+                            _ => Builtin::Len, // count
+                        };
+                        return CallCanon::Builtin {
+                            op,
+                            arg_olds: vec![coll],
+                        };
+                    }
                     _ => {}
                 }
             }

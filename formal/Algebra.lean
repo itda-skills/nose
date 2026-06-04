@@ -21,6 +21,7 @@ inductive Expr where
   | lit : Int → Expr
   | var : Nat → Expr
   | add : Expr → Expr → Expr
+  | mul : Expr → Expr → Expr
   | neg : Expr → Expr
   | sub : Expr → Expr → Expr
 
@@ -29,6 +30,7 @@ def eval (env : Nat → Int) : Expr → Int
   | .lit n   => n
   | .var i   => env i
   | .add a b => eval env a + eval env b
+  | .mul a b => eval env a * eval env b
   | .neg a   => - eval env a
   | .sub a b => eval env a - eval env b
 
@@ -70,6 +72,7 @@ theorem eval_eq_sumLeaves (env : Nat → Int) (e : Expr) :
   | var i => simp [eval, leaves, sumLeaves]
   | add a b iha ihb =>
     simp only [eval, leaves, sumLeaves_append, iha, ihb]
+  | mul a b _ _ => simp [leaves, sumLeaves]
   | neg a _ => simp [leaves, sumLeaves]
   | sub a b _ _ => simp [leaves, sumLeaves]
 
@@ -103,5 +106,15 @@ theorem canon_sound (env : Nat → Int) (e₁ e₂ : Expr)
     eval env e₁ = eval env e₂ := by
   rw [eval_eq_sumLeaves env e₁, eval_eq_sumLeaves env e₂]
   exact sumLeaves_perm env h
+
+/-- DISTRIBUTION / FACTORING IS SOUND: the value graph factors a shared multiplicand out
+    of a sum of products — `x*f + y*f → (x+y)*f` (`value_graph.rs::factor_distribute`).
+    Over `Int` (the value graph gates this on every leaf being proven `Num`) this is
+    denotation-preserving, so the factored and expanded forms fingerprint-equal ⇒
+    behavior-equal. The string/list `*`-as-repetition monoid is NOT a ring, which is why
+    the Rust rewrite refuses to fire unless all leaves are numeric. -/
+theorem distrib_sound (env : Nat → Int) (x y f : Expr) :
+    eval env (.mul (.add x y) f) = eval env (.add (.mul x f) (.mul y f)) := by
+  simp [eval, Int.add_mul]
 
 end NoseAlgebra

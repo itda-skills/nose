@@ -13,14 +13,23 @@
 > conjoined-guard merge, continue-guard unwrap). Pipeline: desugar → alpha →
 > dataflow → [dce] → cfg_norm::structure → algebra → cfg_norm::run; value graph on top.
 > (`dce.rs` dead-code/dead-assignment elimination is an optional pass, off by default.)
-> Later additions on the value graph: a purpose-fit **type inference** (`types.rs`)
-> gating the type-dependent canons, free-monoid strings, map/filter fusion, min/max and
-> any/all reductions (cross-language), ternary-return decomposition, negated-comparison
-> canon. Soundness enforced by the independent interpreter oracle + canon-preservation
-> check (`nose verify`) and Lean proofs (`formal/`); see §AJ/§AW/§AX.
+> Later additions on the value graph: a purpose-fit **type inference** (`types.rs`, now a
+> fixpoint over subexpression result types) gating the type-dependent canons, free-monoid
+> strings, map **and filter** fusion (a filter is the element-carrying `Hof(Map,[Elem,p])`,
+> so nested filters fuse to `p∧q`), full **AC flatten+sort in the value graph itself** (not
+> only the `algebra` IL pass), **distribution/factoring** `a*c+b*c→(a+b)*c` (Num-gated),
+> min/max and any/all reductions (cross-language), **reduce-lambda selection** (`reduce(λ. a
+> if a>b else b)≡max`), **count-of-filter** (`len([…if p])≡Σ(p?1:0)`), method-form iterator
+> reductions (Rust `.sum()/.min()/.max()/.count()`), **dict-builder ≡ dict comprehension**
+> (`d={}; for x: d[k]=v` ≡ `{k:v for x}` via a `DictEntry`-distinct rep that cannot collide
+> with a list of tuples), ternary-return decomposition, negated-comparison canon. Soundness
+> enforced by the independent interpreter oracle + canon-preservation check (`nose verify`)
+> and Lean proofs (`formal/`, incl. `distrib_sound`, `filter_fusion`, `Compare.lean`); see
+> §AJ/§AW/§AX/§BA.
 > Deferred: value-dependent folding (needs literal values), full distribution
 > (equality saturation), flag-loop↔break, loop↔recursion, the loop-form any/all (existence
-> loop), filter-of-filter fusion (needs a `Filter`-with-element representation).
+> loop). Rejected as cross-language-unsound: `x*2≡x+x`
+> doubling and `s[-1]≡s[len(s)-1]` negative-index (§BA).
 
 
 The IL today is a *normalized AST*: it canonicalizes surface syntax (loops,

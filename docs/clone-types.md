@@ -54,10 +54,15 @@ semantic equivalence is undecidable. nose converges the equivalence classes its 
 graph, and canonicalizations actually model:
 
 - loop ↔ `reduce`/`sum` ↔ comprehension ↔ `.append`/`.map` builder loop; an `any`/`all` loop
-  ↔ the functional form;
-- guard-clause ↔ nested-if, ternary ↔ early-return, min/max idioms, commutativity,
+  ↔ the functional form; a `reduce`-lambda min/max ↔ `max`/`min`; `len([… if p]) ↔ Σ(p?1:0)`;
+  a dict-building loop `d={}; for x: d[k]=v` ↔ the dict comprehension `{k: v for x in xs}`;
+- `filter q (filter p) ↔ filter (p∧q)` (and the filtered comprehension / `.filter().filter()`
+  chain / filtered builder loop);
+- guard-clause ↔ nested-if, ternary ↔ early-return, min/max idioms, commutativity +
+  associativity (AC-canonical operands), distribution `a·c + b·c ≡ (a+b)·c` (numeric),
   `a − b ≡ a + (−b)`, De Morgan, short-circuit `and`/`or`;
-- the same algorithm written in a **different language**.
+- the same algorithm written in a **different language** (incl. Rust `it.iter().filter(p).sum()`
+  ↔ Python `sum(x for x in xs if p)`).
 
 For the classes it captures, the match carries a **soundness guarantee**: equal fingerprint
 ⟹ equal behavior, enforced by an interpreter oracle (`nose verify`) and machine-checked in
