@@ -35,6 +35,12 @@ break.
   immutable local `Map` construction, and proven `has/get` ternaries with literal
   Python/Ruby map defaults, while preserving wrong-key, wrong-default, wrong-map,
   untyped-receiver, and shadowed-`Map` boundaries.
+- Strict Type-4 proof facts for JavaScript/TypeScript object-literal default
+  lookups guarded by own-property checks. Exact semantic mode now converges
+  `Object.hasOwn`, `Object.prototype.hasOwnProperty.call`, and negated own-property
+  ternaries over static object literals with literal Python/Ruby map defaults,
+  while preserving wrong-key, wrong-default, wrong-map, unguarded index default,
+  prototype-aware `in`, direct `hasOwnProperty`, and shadowed-`Object` boundaries.
 - Strict Type-4 proof facts for null/none/nil/option presence predicates. The detector
   now converges explicit null comparisons with Ruby `nil?` and Rust `is_none`/`is_some`
   method forms plus Rust `if let Some(_)`/`if let None` pattern predicates, while

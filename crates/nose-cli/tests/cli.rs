@@ -968,6 +968,21 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
     )
     .unwrap();
     fs::write(
+        dir.join("object_hasown.js"),
+        "function lookup(key, other) {\n  const values = { \"red\": 1, \"blue\": 2 };\n  return Object.hasOwn(values, key) ? values[key] : 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("object_hasown_call.js"),
+        "function lookup(key, other) {\n  const values = { \"red\": 1, \"blue\": 2 };\n  return Object.prototype.hasOwnProperty.call(values, key) ? values[key] : 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("object_negated.ts"),
+        "function lookup(key: string, other: string): number {\n  const values: Record<string, number> = { \"red\": 1, \"blue\": 2 };\n  return !Object.hasOwn(values, key) ? 0 : values[key];\n}\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("wrong_key.py"),
         "def wrong_key(key, other):\n    return {\"red\": 1, \"blue\": 2}.get(other, 0)\n",
     )
@@ -1007,6 +1022,41 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
         "function shadowed_map(key, other, Map) {\n  return new Map([[\"red\", 1], [\"blue\", 2]]).get(key) ?? 0;\n}\n",
     )
     .unwrap();
+    fs::write(
+        dir.join("object_wrong_key.js"),
+        "function wrong_key(key, other) {\n  const values = { \"red\": 1, \"blue\": 2 };\n  return Object.hasOwn(values, other) ? values[other] : 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("object_wrong_default.js"),
+        "function wrong_default(key, other) {\n  const values = { \"red\": 1, \"blue\": 2 };\n  return Object.hasOwn(values, key) ? values[key] : 9;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("object_wrong_map.js"),
+        "function wrong_map(key, other) {\n  const values = { \"red\": 9, \"blue\": 2 };\n  return Object.hasOwn(values, key) ? values[key] : 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("object_unguarded.js"),
+        "function unguarded(key, other) {\n  const values = { \"red\": 1, \"blue\": 2 };\n  return values[key] ?? 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("object_in.js"),
+        "function object_in(key, other) {\n  const values = { \"red\": 1, \"blue\": 2 };\n  return key in values ? values[key] : 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("object_method.js"),
+        "function object_method(key, other) {\n  const values = { \"red\": 1, \"blue\": 2 };\n  return values.hasOwnProperty(key) ? values[key] : 0;\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("object_shadowed.js"),
+        "function object_shadowed(key, other, Object) {\n  const values = { \"red\": 1, \"blue\": 2 };\n  return Object.hasOwn(values, key) ? values[key] : 0;\n}\n",
+    )
+    .unwrap();
 
     let semantic = run(&[
         "scan",
@@ -1032,6 +1082,9 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
         "map_default_local.js",
         "map_default_has_get.js",
         "map_default_inline.ts",
+        "object_hasown.js",
+        "object_hasown_call.js",
+        "object_negated.ts",
     ];
     let positive_family = semantic_families
         .iter()
@@ -1060,6 +1113,13 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
         "wrong_js_map.js",
         "untyped_receiver.js",
         "shadowed_map.js",
+        "object_wrong_key.js",
+        "object_wrong_default.js",
+        "object_wrong_map.js",
+        "object_unguarded.js",
+        "object_in.js",
+        "object_method.js",
+        "object_shadowed.js",
     ] {
         assert!(
             !positive_text.contains(unexpected),

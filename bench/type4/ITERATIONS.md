@@ -1869,6 +1869,79 @@ Raw nodes: 0/35053
 Assessment: this is a real strict-frontier widening, not benchmark-only expansion. The
 generator first exposed a clean 0/12 baseline gap, and the detector change reuses the
 existing literal-map default primitive instead of inventing a parallel JavaScript-only
-path. The remaining open JS/TS map-default work is object-literal/default access and
-imported or module-level Map construction where receiver identity and mutation boundaries
-need stronger proof facts.
+path. At this point, the remaining open JS/TS map-default work was object-literal/default
+access plus imported or module-level construction where receiver identity and mutation
+boundaries need stronger proof facts.
+
+## JavaScript/TypeScript object-literal defaults: loops 235-240
+
+This loop applies the faster micro-batch rule: add about three adjacent strict positives
+inside one proof family, then validate them with the shared hard-negative envelope. The
+chosen frontier was static object-literal default lookup guarded by own-property proof
+facts. It is strict only when the receiver is a proven static object literal, the key and
+fallback coordinates match, and the guard is a non-shadowed own-property builtin form.
+
+The three positive micro-frontiers were:
+
+- `Object.hasOwn(values, key) ? values[key] : fallback`;
+- `Object.prototype.hasOwnProperty.call(values, key) ? values[key] : fallback`;
+- `!Object.hasOwn(values, key) ? fallback : values[key]`.
+
+The hard-negative siblings cover wrong key, wrong default, wrong entry values, unguarded
+`values[key] ?? fallback`, prototype-aware `key in values`, direct
+`values.hasOwnProperty(key)`, and shadowed `Object` bindings.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 235 | batched frontier selection | group three JS/TS object-literal own-property default surfaces under `axis_map_default_js_object_*` | focused corpus: 12 positives, 40 hard negatives |
+| 236 | baseline measurement | scan the focused batch with the previous release detector | baseline: 0/12 positives, 4/40 false merges; all false merges were `key in values` |
+| 237 | detector strengthening | consume `own_property_guard` facts as literal-map default conditions only for proven static object literals | candidate focused: 12/12 positives, 0/40 false merges |
+| 238 | strictness hardening | lower JS/TS `in` to a separate prototype-aware boolean value instead of map-key membership | `in` boundary false merges removed |
+| 239 | release focused/axis gates | build release and run focused JS/TS object plus literal-map core gates | focused: 12/12, 0/40; literal-map core: 15/15, 0/44 |
+| 240 | broad compact gate | run `GATE=core CROSS=all` on the release candidate | all-cross core: 366/366 positives, 0/572 false merges |
+
+Focused release/candidate comparison:
+
+```text
+previous release: items=52, positive=0/12, false_merges=4/40
+candidate:        items=52, positive=12/12, false_merges=0/40
+delta:            +12 positive hits, -4 false merges
+```
+
+Final release object-literal focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_map_default_js_object CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 52
+positive recall: 12/12
+hard-negative false merges: 0/40
+Raw nodes: 0/2184
+```
+
+Final release literal-map compact gate:
+
+```text
+GATE=core AXIS=literal_map_default_lookup CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 59/111
+positive recall: 15/15
+hard-negative false merges: 0/44
+Raw nodes: 0/2512
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 938/5397
+positive recall: 366/366
+hard-negative false merges: 0/572
+Raw nodes: 0/36145
+```
+
+Assessment: the batch-3 loop improved both recall and strictness. It opened three useful
+JS/TS object-literal surfaces at once and removed an existing false merge where JS `in`
+had been treated like strict map-key membership. This is the right acceleration pattern
+when all positives share one proof primitive and the batch includes hard negatives that
+attack the exact same primitive. The remaining map-default work is imported/module-level
+construction, mutation/effect boundaries, and richer receiver proof facts beyond inline
+or immutable local construction.

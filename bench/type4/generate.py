@@ -399,6 +399,46 @@ AXIS_PROPOSALS = {
         "axis": "literal_map_default_lookup",
         "why": "A shadowed `Map` constructor cannot prove static literal-map default semantics.",
     },
+    "axis_map_default_js_object_hasown_identity": {
+        "axis": "literal_map_default_lookup",
+        "why": "A static JavaScript/TypeScript object literal guarded by `Object.hasOwn` should prove literal-map default lookup.",
+    },
+    "axis_map_default_js_object_call_identity": {
+        "axis": "literal_map_default_lookup",
+        "why": "A static JavaScript/TypeScript object literal guarded by `Object.prototype.hasOwnProperty.call` should prove literal-map default lookup.",
+    },
+    "axis_map_default_js_object_negated_identity": {
+        "axis": "literal_map_default_lookup",
+        "why": "A negated own-property guard around a static JavaScript/TypeScript object literal should prove the same literal-map default lookup.",
+    },
+    "axis_map_default_js_object_wrong_key_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "Object-literal default lookups over different key parameters are different proof coordinates.",
+    },
+    "axis_map_default_js_object_wrong_default_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "Object-literal default lookups with different fallbacks change missing-key behavior.",
+    },
+    "axis_map_default_js_object_wrong_map_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "Object-literal default lookups over different static values change present-key behavior.",
+    },
+    "axis_map_default_js_object_unguarded_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "A nullish default over arbitrary object indexing is not an own-property proof.",
+    },
+    "axis_map_default_js_object_in_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "The JavaScript `in` operator includes prototype properties and is not strict map-key presence.",
+    },
+    "axis_map_default_js_object_method_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "A direct `hasOwnProperty` method call can be shadowed and is not a strict own-property proof.",
+    },
+    "axis_map_default_js_object_shadowed_boundary": {
+        "axis": "literal_map_default_lookup",
+        "why": "A locally shadowed `Object` binding is not the built-in own-property proof.",
+    },
     "axis_map_fallback_identity": {
         "axis": "map_default_lookup",
         "why": "Typed map default lookups should prove the same map/key/fallback behavior across contains-get and defaulting API forms.",
@@ -2245,7 +2285,7 @@ end
 def literal_map_default_axis_supported(surface: Surface, proposal_id: str) -> bool:
     if not proposal_id.startswith("axis_map_default_"):
         return False
-    if proposal_id.startswith("axis_map_default_js_map_"):
+    if proposal_id.startswith(("axis_map_default_js_map_", "axis_map_default_js_object_")):
         return surface.key in {"python", "ruby", "javascript", "typescript"}
     return surface.key in {"python", "ruby"}
 
@@ -2407,16 +2447,45 @@ def map_default_axis_parts(
         form = "js_map_untyped" if right else "literal_api"
     if proposal_id == "axis_map_default_js_map_shadowed_constructor_boundary":
         form = "js_map_shadowed" if right else "literal_api"
+    if proposal_id == "axis_map_default_js_object_hasown_identity":
+        form = "js_object_hasown" if right else "literal_api"
+    if proposal_id == "axis_map_default_js_object_call_identity":
+        form = "js_object_call" if right else "literal_api"
+    if proposal_id == "axis_map_default_js_object_negated_identity":
+        form = "js_object_negated" if right else "literal_api"
+    if proposal_id in {
+        "axis_map_default_js_object_wrong_key_boundary",
+        "axis_map_default_js_object_wrong_default_boundary",
+        "axis_map_default_js_object_wrong_map_boundary",
+    }:
+        form = "js_object_hasown" if right else "literal_api"
+    if proposal_id == "axis_map_default_js_object_unguarded_boundary":
+        form = "js_object_unguarded" if right else "literal_api"
+    if proposal_id == "axis_map_default_js_object_in_boundary":
+        form = "js_object_in" if right else "literal_api"
+    if proposal_id == "axis_map_default_js_object_method_boundary":
+        form = "js_object_method" if right else "literal_api"
+    if proposal_id == "axis_map_default_js_object_shadowed_boundary":
+        form = "js_object_shadowed" if right else "literal_api"
     if right and proposal_id == "axis_map_default_js_map_wrong_key_boundary":
         key = "other"
     if right and proposal_id == "axis_map_default_js_map_wrong_default_boundary":
         default = 9
     if right and proposal_id == "axis_map_default_js_map_wrong_map_boundary":
         entries = (("red", 9), ("blue", 2))
+    if right and proposal_id == "axis_map_default_js_object_wrong_key_boundary":
+        key = "other"
+    if right and proposal_id == "axis_map_default_js_object_wrong_default_boundary":
+        default = 9
+    if right and proposal_id == "axis_map_default_js_object_wrong_map_boundary":
+        entries = (("red", 9), ("blue", 2))
     if right and negative and proposal_id in {
         "axis_map_default_js_map_inline_identity",
         "axis_map_default_js_map_local_identity",
         "axis_map_default_js_map_has_get_identity",
+        "axis_map_default_js_object_hasown_identity",
+        "axis_map_default_js_object_call_identity",
+        "axis_map_default_js_object_negated_identity",
     }:
         default = 9
     return key, entries, default, form
@@ -2440,6 +2509,12 @@ def axis_map_default_variant(
         and proposal_id.startswith("axis_map_default_js_map_")
     ):
         form = "js_map_inline"
+    if (
+        surface.key in {"javascript", "typescript"}
+        and form == "literal_api"
+        and proposal_id.startswith("axis_map_default_js_object_")
+    ):
+        form = "js_object_hasown"
 
     if surface.key == "python":
         src = f"""def {name}(key, other):
@@ -2502,6 +2577,33 @@ end
             )
             src = f"""function {name}({sig}){return_ty} {{
   return {map_expr}.get({key}) ?? {default};
+}}
+"""
+            return js_axis_source(surface, src, name)
+        object_type = ": Record<string, number>" if typed else ""
+        object_entries = f'{{ "{k1}": {v1}, "{k2}": {v2} }}'
+        if form.startswith("js_object_"):
+            shadow_param = ", Object: any" if typed and form == "js_object_shadowed" else ""
+            shadow_param = ", Object" if not typed and form == "js_object_shadowed" else shadow_param
+            src_key_sig = key_sig.replace(")", "")
+            guard = f"Object.hasOwn(lookup, {key})"
+            if form == "js_object_call":
+                guard = f"Object.prototype.hasOwnProperty.call(lookup, {key})"
+            elif form == "js_object_negated":
+                guard = f"!Object.hasOwn(lookup, {key})"
+            elif form == "js_object_in":
+                guard = f"{key} in lookup"
+            elif form == "js_object_method":
+                guard = f"lookup.hasOwnProperty({key})"
+            then_expr = default if form == "js_object_negated" else f"lookup[{key}]"
+            else_expr = f"lookup[{key}]" if form == "js_object_negated" else default
+            if form == "js_object_unguarded":
+                body = f"return lookup[{key}] ?? {default};"
+            else:
+                body = f"return {guard} ? {then_expr} : {else_expr};"
+            src = f"""function {name}({src_key_sig}{shadow_param}){return_ty} {{
+  const lookup{object_type} = {object_entries};
+  {body}
 }}
 """
             return js_axis_source(surface, src, name)
@@ -4777,19 +4879,62 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
             "axis_map_default_js_map_inline_identity",
             "axis_map_default_js_map_local_identity",
             "axis_map_default_js_map_has_get_identity",
+            "axis_map_default_js_object_hasown_identity",
+            "axis_map_default_js_object_call_identity",
+            "axis_map_default_js_object_negated_identity",
             "axis_map_default_wrong_default_boundary",
             "axis_map_default_js_map_wrong_default_boundary",
+            "axis_map_default_js_object_wrong_default_boundary",
         }:
             counterexample = {
                 "input": {"key": "green", "other": "red"},
                 "left": 0,
                 "right": 9,
             }
+        elif proposal_id in {
+            "axis_map_default_wrong_map_boundary",
+            "axis_map_default_js_map_wrong_map_boundary",
+            "axis_map_default_js_object_wrong_map_boundary",
+        }:
+            counterexample = {
+                "input": {"key": "red", "other": "green"},
+                "left": 1,
+                "right": 9,
+            }
+        elif proposal_id in {
+            "axis_map_default_js_object_unguarded_boundary",
+            "axis_map_default_js_object_in_boundary",
+        }:
+            counterexample = {
+                "input": {"key": "toString", "other": "green"},
+                "left": 0,
+                "right": "prototype property value",
+            }
+        elif proposal_id == "axis_map_default_js_object_method_boundary":
+            counterexample = {
+                "input": {
+                    "key": "red",
+                    "other": "green",
+                    "environment": "Object.prototype.hasOwnProperty patched to return false",
+                },
+                "left": 1,
+                "right": 0,
+            }
+        elif proposal_id == "axis_map_default_js_object_shadowed_boundary":
+            counterexample = {
+                "input": {
+                    "key": "red",
+                    "other": "green",
+                    "Object": {"hasOwn": "returns false"},
+                },
+                "left": 1,
+                "right": 0,
+            }
         else:
             counterexample = {
                 "input": {"key": "red", "other": "green"},
                 "left": 1,
-                "right": 9 if proposal_id == "axis_map_default_wrong_map_boundary" else 0,
+                "right": 0,
             }
         return {
             "level": "E2",
@@ -5077,7 +5222,7 @@ def generate_axis_items(
                 surface, proposal_id
             ):
                 continue
-            if proposal_id.startswith("axis_map_default_js_map_"):
+            if proposal_id.startswith(("axis_map_default_js_map_", "axis_map_default_js_object_")):
                 continue
             if proposal_id.startswith("axis_map_default_") and not literal_map_default_axis_supported(
                 surface, proposal_id
@@ -5866,6 +6011,63 @@ def generate_literal_map_default_cross_items(
         "axis_map_default_js_map_wrong_map_boundary",
         "axis_map_default_js_map_untyped_receiver_boundary",
         "axis_map_default_js_map_shadowed_constructor_boundary",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for right_surface in right_surfaces:
+            for left_surface in reference_surfaces:
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "not_equivalent",
+                        "heldout",
+                        "literal-map-default-boundary",
+                    )
+                )
+    for proposal_id in (
+        "axis_map_default_js_object_hasown_identity",
+        "axis_map_default_js_object_call_identity",
+        "axis_map_default_js_object_negated_identity",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for right_surface in right_surfaces:
+            for left_surface in reference_surfaces:
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "equivalent",
+                        "heldout",
+                    )
+                )
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "not_equivalent",
+                        "heldout",
+                        "literal_map_default_lookup-semantic-mutation",
+                    )
+                )
+    for proposal_id in (
+        "axis_map_default_js_object_wrong_key_boundary",
+        "axis_map_default_js_object_wrong_default_boundary",
+        "axis_map_default_js_object_wrong_map_boundary",
+        "axis_map_default_js_object_unguarded_boundary",
+        "axis_map_default_js_object_in_boundary",
+        "axis_map_default_js_object_method_boundary",
+        "axis_map_default_js_object_shadowed_boundary",
     ):
         if not generation_filter.include_proposal(proposal_id):
             continue

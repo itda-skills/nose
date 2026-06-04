@@ -21,8 +21,8 @@
 use crate::combine;
 use crate::types::Ty;
 use nose_il::{
-    Builtin, HoFKind, Il, Interner, LoopKind, NodeId, NodeKind, Op, ParamSemantic, Payload, Symbol,
-    UnitKind,
+    Builtin, HoFKind, Il, Interner, Lang, LoopKind, NodeId, NodeKind, Op, ParamSemantic, Payload,
+    Symbol, UnitKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -228,6 +228,7 @@ impl<'a> Builder<'a> {
                         || x == Builtin::StartsWith as u32 + 1
                         || x == Builtin::EndsWith as u32 + 1
                         || x == Builtin::Contains as u32 + 1
+                        || x == JS_PROTOTYPE_IN_CODE
                 ) =>
             {
                 Ty::Bool
@@ -396,6 +397,13 @@ impl<'a> Builder<'a> {
             return false;
         };
         matches!(self.param_semantic.get(&cid), Some(ParamSemantic::Map))
+    }
+
+    fn is_js_like_lang(&self) -> bool {
+        matches!(
+            self.il.meta.lang,
+            Lang::JavaScript | Lang::TypeScript | Lang::Vue | Lang::Svelte | Lang::Html
+        )
     }
 
     fn free_name_input_key(&self, name: &str) -> u32 {
@@ -2635,7 +2643,9 @@ impl<'a> Builder<'a> {
         then_v: ValueId,
         else_v: ValueId,
     ) -> Option<ValueId> {
-        let (key, map, negated) = self.membership_condition(cond)?;
+        let (key, map, negated) = self
+            .own_property_condition(cond)
+            .or_else(|| self.membership_condition(cond))?;
         let default = if negated {
             if !self.map_lookup_value_matches(else_v, map, key) {
                 return None;
@@ -2735,6 +2745,30 @@ impl<'a> Builder<'a> {
             let inner = &self.nodes[node.args[0] as usize];
             if matches!(inner.op, ValOp::Bin(o) if o == Op::In as u32) && inner.args.len() == 2 {
                 return Some((inner.args[0], inner.args[1], true));
+            }
+        }
+        None
+    }
+
+    fn own_property_condition(&self, cond: ValueId) -> Option<(ValueId, ValueId, bool)> {
+        let parse = |node: &ValNode| {
+            if matches!(node.op, ValOp::Seq(OWN_PROPERTY_GUARD_SEQ_TAG)) && node.args.len() == 4 {
+                let map = node.args[0];
+                if !matches!(self.nodes[map as usize].op, ValOp::Seq(3)) {
+                    return None;
+                }
+                return Some((node.args[1], map, false));
+            }
+            None
+        };
+        let node = &self.nodes[cond as usize];
+        if let Some(parts) = parse(node) {
+            return Some(parts);
+        }
+        if matches!(node.op, ValOp::Un(o) if o == Op::Not as u32) && node.args.len() == 1 {
+            let inner = &self.nodes[node.args[0] as usize];
+            if let Some((key, map, _)) = parse(inner) {
+                return Some((key, map, true));
             }
         }
         None
@@ -3102,6 +3136,11 @@ impl<'a> Builder<'a> {
                 let kids = self.il.children(expr).to_vec();
                 if op == Op::In as u32 && kids.len() == 2 {
                     let element = self.eval(kids[0], env);
+                    if self.is_js_like_lang() {
+                        let collection = self.eval(kids[1], env);
+                        return self
+                            .mk(ValOp::Call(JS_PROTOTYPE_IN_CODE), vec![element, collection]);
+                    }
                     let collection = self.eval_membership_collection(kids[1], env);
                     return self.mk(ValOp::Bin(op), vec![element, collection]);
                 }
@@ -3461,7 +3500,7 @@ impl<'a> Builder<'a> {
                 "import_binding" => 5,
                 "import_namespace" => 6,
                 "record_guard" => 7,
-                "own_property_guard" => 8,
+                "own_property_guard" => OWN_PROPERTY_GUARD_SEQ_TAG,
                 _ => self.interner.symbol_hash(s),
             },
             _ => 0,
@@ -3716,6 +3755,8 @@ const ABS_CODE: u32 = 0xAB5;
 /// `Op` discriminants and `ABS_CODE`. Commutative (min/max are symmetric).
 const MIN_CODE: u32 = 0x319;
 const MAX_CODE: u32 = 0x32A;
+const JS_PROTOTYPE_IN_CODE: u32 = 0x4A53_494E;
+const OWN_PROPERTY_GUARD_SEQ_TAG: u64 = 8;
 
 /// A selection reduction (min/max) keeps no additive/multiplicative identity, so its
 /// `Reduce` carries only the per-element contribution (no init) — a `max`-loop and
