@@ -1446,6 +1446,24 @@ hard negatives. The candidate closes all three without increasing false merges. 
 cadence is viable when the batch stays inside one semantic axis and the end gate is compact
 and cross-axis.
 
+## Accelerated micro-batch loop policy
+
+For ordinary frontier work, use batches of about three independent micro-frontiers instead
+of one full loop per proposal. A batch should normally contain one strictness/soundness
+counterattack plus two recall/frontier probes. Each candidate still gets a small focused
+probe so failures remain attributable, but the expensive gates are run once for the whole
+batch:
+
+```sh
+GATE=focused PROPOSAL_PREFIX=prefix_a,prefix_b,prefix_c NOSE=target/debug/nose ./scripts/type4-smoke.sh
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+```
+
+The batch is acceptable only if every focused candidate has clear proof evidence, the
+combined compact gate has zero false merges, and the change either widens the strict
+semantic frontier or prevents an over-broad future widening. If a candidate fails, split
+only that candidate out; keep the rest of the batch intact.
+
 ## Rust option-default micro-batch coevolution: loops 193-201
 
 This loop continues the accelerated cadence with three same-axis micro-frontiers under
@@ -1498,3 +1516,52 @@ Assessment: this loop widened a real strict frontier. The previous detector miss
 three Rust option-default API forms, while the candidate closes them and keeps all
 wrong-value/default and truthy-default adversaries separate. The process also improved the
 loop itself by forcing a regression correction for guard-return nullish defaults.
+
+## Membership strictness micro-batch: loops 202-205
+
+This batch applies the accelerated loop policy. It does not open broad dynamic collection
+membership yet; instead it fixes the soundness boundary needed before that frontier can be
+expanded. The adversary found that unproven receiver-overloaded calls such as Java
+`List.contains(value)` and `String.contains(value)` had the same value graph shape after
+types were erased.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 202 | operator cadence | adopt three-candidate micro-batches: focused attribution per candidate, expensive validation once per batch | policy recorded above |
+| 203 | strictness adversary | add `axis_membership_unproven_receiver_boundary` for Java, Rust, and TypeScript | previous release false-merged 3/3 hard negatives |
+| 204 | detector strengthening | make unproven membership-like field calls source-salted opaque values; proven `Builtin::Contains` facts are unchanged | candidate focused: 0/3 false merges |
+| 205 | batched validation | run the new boundary together with `axis_map_fallback*` and `axis_scalar*`, then compact all-cross | batch 33/33 positives, 0/100 false merges; compact all-cross 321/321 positives, 0/480 false merges |
+
+Focused release/candidate comparison for the new boundary:
+
+```text
+previous release: items=3, positive=0/0, false_merges=3/3
+candidate:        items=3, positive=0/0, false_merges=0/3
+delta:            -3 false merges
+```
+
+Final release batched focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_membership_unproven_receiver,axis_map_fallback,axis_scalar NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 133
+positive recall: 33/33
+hard-negative false merges: 0/100
+Raw nodes: 0/4978
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 801/5112
+positive recall: 321/321
+hard-negative false merges: 0/480
+Raw nodes: 0/30940
+```
+
+Assessment: this is a detector improvement by subtraction. Exact semantic mode is stricter
+now: broad `.contains`/`.includes`/`include?`-style calls do not become Type-4 evidence
+unless an earlier proof fact canonicalized them to `Builtin::Contains`. The next
+membership recall step should add dynamic collection membership only with receiver/key type
+facts, not by matching method names.

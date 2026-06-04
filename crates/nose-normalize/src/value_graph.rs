@@ -278,6 +278,46 @@ impl<'a> Builder<'a> {
             .unwrap_or(0)
     }
 
+    fn source_salted_hash(&mut self, expr: NodeId, tag: u64) -> u64 {
+        let span = self.il.node(expr).span;
+        let mut h = combine(tag, self.valued_subtree_hash(expr));
+        h = combine(h, span.file.0 as u64);
+        h = combine(h, span.start_byte as u64);
+        h = combine(h, span.end_byte as u64);
+        h = combine(h, span.start_line as u64);
+        combine(h, span.end_line as u64)
+    }
+
+    fn is_unproven_membership_like_call(&self, expr: NodeId, kids: &[NodeId]) -> bool {
+        if matches!(self.il.node(expr).payload, Payload::Builtin(_)) {
+            return false;
+        }
+        let Some(&callee) = kids.first() else {
+            return false;
+        };
+        if self.il.kind(callee) != NodeKind::Field {
+            return false;
+        }
+        let Payload::Name(name) = self.il.node(callee).payload else {
+            return false;
+        };
+        matches!(
+            self.interner.resolve(name),
+            "contains"
+                | "containsKey"
+                | "containsValue"
+                | "contains_key"
+                | "contains_value"
+                | "has"
+                | "has_key?"
+                | "include?"
+                | "includes"
+                | "key?"
+                | "member?"
+                | "__contains__"
+        )
+    }
+
     /// Push an effect sink, tagged with the current path condition — so a *conditional*
     /// effect (`if c { append(x) }`) carries `c`, the way a guarded return does.
     fn push_effect(&mut self, v: ValueId) {
@@ -2962,6 +3002,10 @@ impl<'a> Builder<'a> {
                             return self.mk(ValOp::Bin(c), vec![x, y]);
                         }
                     }
+                }
+                if self.is_unproven_membership_like_call(expr, &kids) {
+                    let salt = self.source_salted_hash(expr, 0x4D45_4D42_4552);
+                    return self.mk(ValOp::Opaque(salt), vec![]);
                 }
                 let a: Vec<ValueId> = kids.iter().map(|&k| self.eval(k, env)).collect();
                 let tag = match node.payload {

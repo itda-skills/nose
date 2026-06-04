@@ -30,7 +30,7 @@ and whether a frontier is already covered.
    - why: Static literal collection membership is covered; substring contains, map-key membership, dynamic sets, and ambiguous receiver contains must stay distinct.
    - evidence: 22979 raw / 13478.1 weighted matches across 99 repos and 7 languages (go, java, javascript, python, ruby, rust, typescript)
    - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 2798
-   - next probe: Continue with map-key and dynamic set membership only when receiver/key coordinates can be proven; keep substring and regex boundaries separate.
+   - next probe: Continue with map-key and dynamic set membership only when receiver/key coordinates can be proven; keep substring, regex, and unproven receiver-overloaded calls as hard boundaries.
 2. `map_default_lookup`
    - why: Literal Python/Ruby map lookup with fallback is covered; typed maps, object/map APIs, absent-key semantics, and mutation/effects remain open.
    - evidence: 4319 raw / 3645.3 weighted matches across 73 repos and 7 languages (go, java, javascript, python, ruby, rust, typescript)

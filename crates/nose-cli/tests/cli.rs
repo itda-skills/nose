@@ -555,6 +555,52 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
 }
 
 #[test]
+fn scan_mode_semantic_keeps_unproven_contains_calls_distinct() {
+    let dir = std::env::temp_dir().join(format!("nose_unproven_contains_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("java_list.java"),
+        "import java.util.List;\n\nclass C { static boolean f(List<String> values, String value) { return values.contains(value); } }\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("java_string_negative.java"),
+        "class C { static boolean f(String values, String value) { return values.contains(value); } }\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("rust_slice.rs"),
+        "pub fn f(values: &[&str], value: &str) -> bool {\n    values.contains(&value)\n}\n",
+    )
+    .unwrap();
+
+    let semantic = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "1",
+        "--min-tokens",
+        "1",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let semantic_json: serde_json::Value =
+        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
+    let semantic_text = semantic_json.to_string();
+    assert!(
+        !semantic_text.contains("java_string_negative.java"),
+        "semantic mode must not merge unproven collection membership with substring contains: {semantic}"
+    );
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn scan_mode_semantic_proves_literal_map_default_lookup() {
     let dir = std::env::temp_dir().join(format!("nose_map_default_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);

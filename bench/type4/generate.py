@@ -295,6 +295,10 @@ AXIS_PROPOSALS = {
         "axis": "literal_collection_membership",
         "why": "Substring contains and static literal collection membership are different semantics and must not merge.",
     },
+    "axis_membership_unproven_receiver_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Receiver-overloaded membership-like calls are not strict proof unless the collection or map receiver coordinate is proven.",
+    },
     "axis_map_key_membership_identity": {
         "axis": "map_key_membership",
         "why": "Map key-presence APIs should prove the same key-in-map predicate when receiver and key coordinates are fixed.",
@@ -1740,6 +1744,8 @@ end
 def literal_membership_axis_supported(surface: Surface, proposal_id: str) -> bool:
     if not proposal_id.startswith("axis_membership_"):
         return False
+    if proposal_id == "axis_membership_unproven_receiver_boundary":
+        return surface.key in {"java", "rust", "typescript"}
     return surface.key in {
         "python",
         "javascript",
@@ -1766,6 +1772,8 @@ def membership_axis_parts(
         items = ("green", "blue")
     if right and proposal_id == "axis_membership_substring_boundary":
         form = "substring"
+    if proposal_id == "axis_membership_unproven_receiver_boundary":
+        form = "unproven_receiver" if right else "dynamic_collection"
     if right and negative and proposal_id == "axis_membership_literal_identity":
         items = ("green", "blue")
     return element, items, form
@@ -1797,6 +1805,18 @@ def axis_membership_literal_variant(
         return js_axis_source(surface, body, name)
 
     if surface.key == "typescript":
+        if form == "dynamic_collection":
+            src = f"""function {name}(values: string[], value: string, other: string): boolean {{
+  return values.includes(value);
+}}
+"""
+            return Variant("axis", src, name)
+        if form == "unproven_receiver":
+            src = f"""function {name}(values: string, value: string, other: string): boolean {{
+  return values.includes(value);
+}}
+"""
+            return Variant("axis", src, name)
         if form == "substring":
             expr = f'{element}.includes("{left}")'
         else:
@@ -1841,6 +1861,18 @@ func {name}(value string, other string) bool {{
         return Variant("axis", src, name)
 
     if surface.key == "rust":
+        if form == "dynamic_collection":
+            src = f"""pub fn {name}(values: &[&str], value: &str, other: &str) -> bool {{
+    values.contains(&value)
+}}
+"""
+            return Variant("axis", src, name)
+        if form == "unproven_receiver":
+            src = f"""pub fn {name}(values: &str, value: &str, other: &str) -> bool {{
+    values.contains(value)
+}}
+"""
+            return Variant("axis", src, name)
         if form == "substring":
             expr = f'{element}.contains("{left}")'
         else:
@@ -1849,6 +1881,19 @@ func {name}(value string, other string) bool {{
     {expr}
 }}
 """
+        return Variant("axis", src, name)
+
+    if surface.key == "java":
+        if form == "dynamic_collection":
+            src = f"""import java.util.List;
+
+class C {{ static boolean {name}(List<String> values, String value, String other) {{ return values.contains(value); }} }}
+"""
+        elif form == "unproven_receiver":
+            src = f"""class C {{ static boolean {name}(String values, String value, String other) {{ return values.contains(value); }} }}
+"""
+        else:
+            raise ValueError(f"unsupported Java membership form: {form}")
         return Variant("axis", src, name)
 
     if surface.key == "ruby":
@@ -4717,6 +4762,7 @@ def generate_axis_items(
                 "axis_membership_wrong_element_boundary",
                 "axis_membership_wrong_collection_boundary",
                 "axis_membership_substring_boundary",
+                "axis_membership_unproven_receiver_boundary",
             }:
                 items.append(
                     make_axis_item(
