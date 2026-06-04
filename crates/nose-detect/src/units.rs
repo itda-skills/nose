@@ -388,6 +388,9 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
             .iter()
             .all(|&c| strict_exact_safe_tree(il, interner, facts, c));
     }
+    if strict_exact_set_constructor_collection_safe(il, interner, facts, node) {
+        return true;
+    }
     let Some(&callee) = il.children(node).first() else {
         return false;
     };
@@ -412,6 +415,14 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
     if method == "isArray" {
         return strict_exact_field_receiver_name(il, interner, callee, "Array")
             && strict_exact_call_args_safe(il, interner, facts, node);
+    }
+    if method == "has" {
+        let Some(&receiver) = il.children(callee).first() else {
+            return false;
+        };
+        if strict_exact_set_constructor_collection_safe(il, interner, facts, receiver) {
+            return strict_exact_call_args_safe(il, interner, facts, node);
+        }
     }
     if matches!(
         method,
@@ -445,6 +456,22 @@ fn strict_exact_membership_collection_safe(
             .children(node)
             .iter()
             .all(|&c| strict_exact_safe_tree(il, interner, facts, c))
+}
+
+fn strict_exact_set_constructor_collection_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    if il.kind(node) != NodeKind::Call {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 || !strict_exact_callee_name(il, interner, kids[0], "Set") {
+        return false;
+    }
+    strict_exact_membership_collection_safe(il, interner, facts, kids[1])
 }
 
 fn strict_exact_call_args_safe(

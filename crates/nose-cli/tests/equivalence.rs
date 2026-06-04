@@ -1529,6 +1529,7 @@ fn map_key_membership_converges_cross_language_with_boundaries() {
     let rust_get = "use std::collections::HashMap;\n\npub fn f(lookup: &HashMap<String, String>, other_lookup: &HashMap<String, String>, key: &str, other: &str) -> bool { lookup.get(key).is_some() }\n";
     let ruby = "def f(lookup, other_lookup, key, other)\n  lookup.key?(key)\nend\n";
     let ruby_has = "def f(lookup, other_lookup, key, other)\n  lookup.has_key?(key)\nend\n";
+    let typed_set_same_names = "function f(lookup: Set<string>, other_lookup: Set<string>, key: string, other: string): boolean { return lookup.has(key); }";
     let wrong_key =
         "def f(lookup, other_lookup, key, other):\n    return lookup.__contains__(other)\n";
     let wrong_map =
@@ -1545,9 +1546,42 @@ fn map_key_membership_converges_cross_language_with_boundaries() {
     assert_eq!(fp, value_fp(&i, rust_get, Lang::Rust));
     assert_eq!(fp, value_fp(&i, ruby, Lang::Ruby));
     assert_eq!(fp, value_fp(&i, ruby_has, Lang::Ruby));
+    assert_ne!(fp, value_fp(&i, typed_set_same_names, Lang::TypeScript));
     assert_ne!(fp, value_fp(&i, wrong_key, Lang::Python));
     assert_ne!(fp, value_fp(&i, wrong_map, Lang::Python));
     assert_ne!(fp, value_fp(&i, value_membership, Lang::Python));
+}
+
+#[test]
+fn collection_membership_set_construction_converges_with_boundaries() {
+    let i = Interner::new();
+    let py_literal = "def f(value, other):\n    return value in [\"red\", \"blue\"]\n";
+    let js_set_inline =
+        "function f(value, other) { return new Set([\"red\", \"blue\"]).has(value); }";
+    let js_set_local = "function f(value, other) { const values = new Set([\"red\", \"blue\"]); return values.has(value); }";
+    let js_wrong_element =
+        "function f(value, other) { return new Set([\"red\", \"blue\"]).has(other); }";
+    let js_wrong_collection =
+        "function f(value, other) { return new Set([\"green\", \"blue\"]).has(value); }";
+    let js_shadowed_set =
+        "function f(Set, value, other) { return new Set([\"red\", \"blue\"]).has(value); }";
+
+    let literal_fp = value_fp(&i, py_literal, Lang::Python);
+    assert_eq!(literal_fp, value_fp(&i, js_set_inline, Lang::JavaScript));
+    assert_eq!(literal_fp, value_fp(&i, js_set_local, Lang::JavaScript));
+    assert_ne!(literal_fp, value_fp(&i, js_wrong_element, Lang::JavaScript));
+    assert_ne!(
+        literal_fp,
+        value_fp(&i, js_wrong_collection, Lang::JavaScript)
+    );
+    assert_ne!(literal_fp, value_fp(&i, js_shadowed_set, Lang::JavaScript));
+
+    let ts_array = "function f(values: string[], value: string, other: string): boolean { return values.includes(value); }";
+    let ts_set = "function f(values: Set<string>, value: string, other: string): boolean { return values.has(value); }";
+    let ts_untyped = "function f(values, value, other) { return values.has(value); }";
+    let typed_fp = value_fp(&i, ts_array, Lang::TypeScript);
+    assert_eq!(typed_fp, value_fp(&i, ts_set, Lang::TypeScript));
+    assert_ne!(typed_fp, value_fp(&i, ts_untyped, Lang::TypeScript));
 }
 
 #[test]

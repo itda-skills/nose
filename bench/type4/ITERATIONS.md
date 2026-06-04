@@ -1448,11 +1448,12 @@ and cross-axis.
 
 ## Accelerated micro-batch loop policy
 
-For ordinary frontier work, use batches of about three independent micro-frontiers instead
-of one full loop per proposal. A batch should normally contain one strictness/soundness
-counterattack plus two recall/frontier probes. Each candidate still gets a small focused
-probe so failures remain attributable, but the expensive gates are run once for the whole
-batch:
+For ordinary frontier work, use batches of about three micro-frontiers instead of one full
+loop per proposal. Keep the batch inside one semantic family or proof channel whenever
+possible, so failures remain attributable and a shared hard-negative set can police the
+whole widening. A batch should normally contain one strictness/soundness counterattack plus
+two recall/frontier probes. Each candidate still gets a small focused probe when needed,
+but the expensive gates are run once for the whole batch:
 
 ```sh
 GATE=focused PROPOSAL_PREFIX=prefix_a,prefix_b,prefix_c NOSE=target/debug/nose ./scripts/type4-smoke.sh
@@ -1734,3 +1735,70 @@ mechanism and the combined hard negatives made each boundary explicit. It also i
 the loop itself: the untyped boundary exposed that expression ternaries were being
 extracted as exact block units without enough semantic context, so block extraction was
 tightened to statement-level `if` units only.
+
+## Proven Set membership micro-batch: loops 223-228
+
+This loop applies the accelerated three-candidate cadence to the `membership_contains`
+frontier. The batch opens three adjacent strict positives that share one semantic family:
+
+- typed TypeScript `Set<T>.has(value)`;
+- inline `new Set([...]).has(value)` over static literal items;
+- immutable local `const values = new Set([...]); values.has(value)`.
+
+The hard-negative siblings cover wrong element, wrong literal collection, untyped receiver,
+and shadowed `Set` constructor boundaries. The central rule is unchanged: `.has` by name is
+not proof. The receiver must be proven by explicit collection type or by an exact Set
+construction whose constructor is not shadowed.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 223 | batched frontier selection | group three Set-membership surfaces under `axis_membership_set_*` | focused corpus: 24 positives, 54 hard negatives |
+| 224 | baseline measurement | scan the focused batch with the previous release detector | baseline: 0/24 positives, 0/54 false merges |
+| 225 | detector strengthening | prove `Set` constructor calls over exact literal collections and route typed `Set<T>.has` through proven collection membership | candidate focused: 24/24 positives, 0/54 false merges |
+| 226 | regression counterattack | full CLI tests caught `Set.has` merging with typed `Map.has` when receiver names matched; add a value-graph `CollectionParam` wrapper for proven collection receivers | map-key and Set-membership targeted tests both passed |
+| 227 | release focused/axis gates | build release and run focused Set plus literal-membership core gates | focused: 24/24, 0/54; literal-membership core: 32/32, 0/63 |
+| 228 | broad compact gate | run `GATE=core CROSS=all` on the release candidate | all-cross core: 354/354 positives, 0/536 false merges |
+
+Focused release/candidate comparison:
+
+```text
+previous release: items=78, positive=0/24, false_merges=0/54
+candidate:        items=78, positive=24/24, false_merges=0/54
+delta:            +24 positive hits, +0 false merges
+```
+
+Final release Set-membership focused gate:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_membership_set CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+items: 78
+positive recall: 24/24
+hard-negative false merges: 0/54
+Raw nodes: 0/2132
+```
+
+Final release literal-membership compact gate:
+
+```text
+GATE=core AXIS=literal_collection_membership CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 95/357
+positive recall: 32/32
+hard-negative false merges: 0/63
+Raw nodes: 0/2497
+```
+
+Final release compact all-cross gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
+selected items: 890/5301
+positive recall: 354/354
+hard-negative false merges: 0/536
+Raw nodes: 0/34007
+```
+
+Assessment: the three-at-once loop is effective when the batch stays inside one operator
+family and shares hard negatives. It also improved strictness: the Map/Set collision found
+by the batch would have been easy to miss in a one-off focused positive test, but the
+combined CLI and compact gates forced the detector to preserve the `Map.has` vs `Set.has`
+semantic boundary.

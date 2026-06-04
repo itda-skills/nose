@@ -27,10 +27,10 @@ and whether a frontier is already covered.
 ## Recommended Order
 
 1. `membership_contains`
-   - why: Static literal collection membership and explicitly typed dynamic collection membership are covered; substring contains, map-key membership, untyped dynamic sets, and ambiguous receiver contains must stay distinct.
+   - why: Static literal collection membership, explicitly typed dynamic collection membership, typed `Set<T>.has`, and exact literal `Set` construction membership are covered; substring contains, map-key membership, untyped dynamic sets, and ambiguous receiver contains must stay distinct.
    - evidence: 22979 raw / 13478.1 weighted matches across 99 repos and 7 languages (go, java, javascript, python, ruby, rust, typescript)
    - probe coverage: 100.0%; uncovered probe hits: 0; filtered probe hits: 2798
-   - next probe: Continue with dynamic set membership only when receiver/key coordinates can be proven by type, construction, or local immutable binding facts; keep substring, regex, and unproven receiver-overloaded calls as hard boundaries.
+   - next probe: Continue with dynamic collection/set membership only when receiver/key coordinates can be proven by import, construction, immutable binding, or richer type facts beyond the current typed-parameter and literal-`Set` cases; keep substring, regex, map-key, and unproven receiver-overloaded calls as hard boundaries.
 2. `map_default_lookup`
    - why: Literal Python/Ruby, typed Go/Java/Rust, and explicit typed TypeScript `Map` fallback lookups are covered; JS/TS object-or-Map defaults, absent-key semantics, and mutation/effects remain open when receiver identity is not yet proven.
    - evidence: 4319 raw / 3645.3 weighted matches across 73 repos and 7 languages (go, java, javascript, python, ruby, rust, typescript)

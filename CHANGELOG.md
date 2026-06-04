@@ -21,6 +21,11 @@ break.
   from explicit type annotations, and exact semantic mode uses them to converge
   collection membership APIs while keeping typed string receivers and wrong-element
   boundaries distinct.
+- Strict Type-4 proof facts for proven Set membership. Exact semantic mode now
+  converges typed TypeScript `Set<T>.has(value)`, inline `new Set([...]).has(value)`,
+  and immutable local `Set` construction with the corresponding collection-membership
+  predicates, while preserving wrong-element, wrong-collection, shadowed-constructor,
+  untyped-receiver, and map-key-membership boundaries.
 - Strict Type-4 proof facts for literal Python/Ruby map lookup with fallback. The detector
   now converges dict `.get(key, default)` and hash `.fetch(key, default)` only when the
   receiver is a static literal map, preserving wrong-key, wrong-default, and wrong-map

@@ -684,6 +684,101 @@ fn scan_mode_semantic_proves_typed_dynamic_collection_membership() {
 }
 
 #[test]
+fn scan_mode_semantic_proves_set_membership_when_receiver_is_proven() {
+    let dir = std::env::temp_dir().join(format!("nose_set_membership_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("literal.py"),
+        "def f(value, other):\n    return value in [\"red\", \"blue\"]\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("set_inline.js"),
+        "function f(value, other) {\n  return new Set([\"red\", \"blue\"]).has(value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("set_local.js"),
+        "function f(value, other) {\n  const values = new Set([\"red\", \"blue\"]);\n  return values.has(value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("typed_array.ts"),
+        "function f(values: string[], value: string, other: string): boolean {\n  return values.includes(value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("typed_set.ts"),
+        "function f(values: Set<string>, value: string, other: string): boolean {\n  return values.has(value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_element.js"),
+        "function f(value, other) {\n  return new Set([\"red\", \"blue\"]).has(other);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("wrong_collection.js"),
+        "function f(value, other) {\n  return new Set([\"green\", \"blue\"]).has(value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("untyped_receiver.ts"),
+        "function f(values, value, other) {\n  return values.has(value);\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("shadowed_set.js"),
+        "function f(Set, value, other) {\n  return new Set([\"red\", \"blue\"]).has(value);\n}\n",
+    )
+    .unwrap();
+
+    let semantic = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "1",
+        "--min-tokens",
+        "1",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let semantic_json: serde_json::Value =
+        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
+    let semantic_text = semantic_json.to_string();
+    for expected in [
+        "literal.py",
+        "set_inline.js",
+        "set_local.js",
+        "typed_array.ts",
+        "typed_set.ts",
+    ] {
+        assert!(
+            semantic_text.contains(expected),
+            "semantic mode should include proven Set membership {expected}: {semantic}"
+        );
+    }
+    for unexpected in [
+        "wrong_element.js",
+        "wrong_collection.js",
+        "untyped_receiver.ts",
+        "shadowed_set.js",
+    ] {
+        assert!(
+            !semantic_text.contains(unexpected),
+            "semantic mode must preserve Set membership boundaries: {semantic}"
+        );
+    }
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn scan_mode_semantic_proves_typed_typescript_map_key_membership() {
     let dir = std::env::temp_dir().join(format!("nose_typed_ts_map_key_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);

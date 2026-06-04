@@ -311,6 +311,30 @@ AXIS_PROPOSALS = {
         "axis": "literal_collection_membership",
         "why": "A typed string receiver's substring predicate is not dynamic collection membership.",
     },
+    "axis_membership_set_param_identity": {
+        "axis": "literal_collection_membership",
+        "why": "A typed TypeScript `Set<T>.has(value)` receiver should prove the same collection-membership predicate as other typed dynamic collections.",
+    },
+    "axis_membership_set_inline_identity": {
+        "axis": "literal_collection_membership",
+        "why": "An inline `new Set([...]).has(value)` over a static literal should prove the same membership predicate as literal collection APIs.",
+    },
+    "axis_membership_set_local_identity": {
+        "axis": "literal_collection_membership",
+        "why": "A local immutable `new Set([...])` binding should preserve literal collection-membership proof coordinates.",
+    },
+    "axis_membership_set_wrong_element_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Set construction membership over a different element parameter changes the proof coordinate.",
+    },
+    "axis_membership_set_wrong_collection_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "Set construction membership over different literal items changes membership behavior.",
+    },
+    "axis_membership_set_untyped_receiver_boundary": {
+        "axis": "literal_collection_membership",
+        "why": "An arbitrary `.has` receiver is not proof of strict collection-membership semantics.",
+    },
     "axis_map_key_membership_identity": {
         "axis": "map_key_membership",
         "why": "Map key-presence APIs should prove the same key-in-map predicate when receiver and key coordinates are fixed.",
@@ -1793,6 +1817,8 @@ def literal_membership_axis_supported(surface: Surface, proposal_id: str) -> boo
         return surface.key in {"typescript", "rust", "java"}
     if proposal_id == "axis_membership_unproven_receiver_boundary":
         return surface.key in {"java", "rust", "typescript"}
+    if proposal_id.startswith("axis_membership_set_"):
+        return surface.key in {"python", "javascript", "typescript", "go", "rust", "ruby"}
     return surface.key in {
         "python",
         "javascript",
@@ -1831,6 +1857,28 @@ def membership_axis_parts(
         form = "unproven_receiver"
     if right and negative and proposal_id == "axis_membership_literal_identity":
         items = ("green", "blue")
+    if proposal_id == "axis_membership_set_param_identity":
+        form = "set_param" if right else "typed_membership"
+    if proposal_id in {
+        "axis_membership_set_inline_identity",
+        "axis_membership_set_wrong_element_boundary",
+        "axis_membership_set_wrong_collection_boundary",
+    }:
+        form = "set_inline" if right else "membership"
+    if proposal_id == "axis_membership_set_local_identity":
+        form = "set_local" if right else "membership"
+    if proposal_id == "axis_membership_set_untyped_receiver_boundary":
+        form = "set_untyped" if right else "membership"
+    if right and negative and proposal_id in {
+        "axis_membership_set_param_identity",
+        "axis_membership_set_inline_identity",
+        "axis_membership_set_local_identity",
+    }:
+        element = "other"
+    if right and proposal_id == "axis_membership_set_wrong_element_boundary":
+        element = "other"
+    if right and proposal_id == "axis_membership_set_wrong_collection_boundary":
+        items = ("green", "blue")
     return element, items, form
 
 
@@ -1849,7 +1897,22 @@ def axis_membership_literal_variant(
     left, right_item = items
 
     if surface.language == "javascript":
-        if form == "substring":
+        if form == "set_inline":
+            expr = f'new Set(["{left}", "{right_item}"]).has({element})'
+        elif form == "set_local":
+            body = f"""function {name}(value, other) {{
+  const values = new Set(["{left}", "{right_item}"]);
+  return values.has({element});
+}}
+"""
+            return js_axis_source(surface, body, name)
+        elif form == "set_untyped":
+            body = f"""function {name}(values, value, other) {{
+  return values.has(value);
+}}
+"""
+            return js_axis_source(surface, body, name)
+        elif form == "substring":
             expr = f'{element}.includes("{left}")'
         else:
             expr = f'["{left}", "{right_item}"].includes({element})'
@@ -1860,6 +1923,31 @@ def axis_membership_literal_variant(
         return js_axis_source(surface, body, name)
 
     if surface.key == "typescript":
+        if form == "set_param":
+            src = f"""function {name}(values: Set<string>, value: string, other: string): boolean {{
+  return values.has({element});
+}}
+"""
+            return Variant("axis", src, name)
+        if form == "set_inline":
+            src = f"""function {name}(value: string, other: string): boolean {{
+  return new Set<string>(["{left}", "{right_item}"]).has({element});
+}}
+"""
+            return Variant("axis", src, name)
+        if form == "set_local":
+            src = f"""function {name}(value: string, other: string): boolean {{
+  const values = new Set<string>(["{left}", "{right_item}"]);
+  return values.has({element});
+}}
+"""
+            return Variant("axis", src, name)
+        if form == "set_untyped":
+            src = f"""function {name}(values: any, value: string, other: string): boolean {{
+  return values.has(value);
+}}
+"""
+            return Variant("axis", src, name)
         if form == "typed_membership":
             src = f"""function {name}(values: string[], value: string, other: string): boolean {{
   return values.includes({element});
@@ -1966,7 +2054,7 @@ func {name}(value string, other string) bool {{
         return Variant("axis", src, name)
 
     if surface.key == "java":
-        if form == "typed_membership":
+        if form in {"typed_membership", "set_param"}:
             src = f"""import java.util.List;
 
 class C {{ static boolean {name}(List<String> values, String value, String other) {{ return values.contains({element}); }} }}
@@ -4855,6 +4943,8 @@ def generate_axis_items(
                 surface, proposal_id
             ):
                 continue
+            if proposal_id.startswith("axis_membership_set_"):
+                continue
             if proposal_id.startswith("axis_map_key_") and not map_key_membership_axis_supported(
                 surface, proposal_id
             ):
@@ -5360,6 +5450,112 @@ def generate_literal_membership_cross_items(
                 s for s in SURFACES if literal_membership_axis_supported(s, proposal_id)
             ]
             for left_surface, right_surface in cross_pairs(boundary_surfaces, cross_mode):
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "not_equivalent",
+                        "heldout",
+                        "literal-membership-boundary",
+                    )
+                )
+
+    surface_by_key = {surface.key: surface for surface in SURFACES}
+    set_reference_surfaces = [
+        surface_by_key["python"],
+        surface_by_key["javascript"],
+        surface_by_key["typescript"],
+        surface_by_key["go"],
+        surface_by_key["rust"],
+        surface_by_key["ruby"],
+    ]
+    set_right_surfaces = [surface_by_key["javascript"], surface_by_key["typescript"]]
+    if cross_mode == "ring":
+        set_reference_surfaces = [surface_by_key["python"]]
+    elif cross_mode == "none":
+        set_reference_surfaces = []
+    for proposal_id in (
+        "axis_membership_set_inline_identity",
+        "axis_membership_set_local_identity",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for right_surface in set_right_surfaces:
+            for left_surface in set_reference_surfaces:
+                if left_surface.key == right_surface.key:
+                    continue
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "equivalent",
+                        "heldout",
+                    )
+                )
+                items.append(
+                    make_axis_cross_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        left_surface,
+                        right_surface,
+                        "not_equivalent",
+                        "heldout",
+                        "literal_collection_membership-semantic-mutation",
+                    )
+                )
+    if generation_filter.include_proposal("axis_membership_set_param_identity"):
+        typed_reference_surfaces = [
+            surface_by_key["python"],
+            surface_by_key["go"],
+            surface_by_key["rust"],
+            surface_by_key["java"],
+        ]
+        if cross_mode == "ring":
+            typed_reference_surfaces = [surface_by_key["python"]]
+        elif cross_mode == "none":
+            typed_reference_surfaces = []
+        for left_surface in typed_reference_surfaces:
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    "axis_membership_set_param_identity",
+                    left_surface,
+                    surface_by_key["typescript"],
+                    "equivalent",
+                    "heldout",
+                )
+            )
+            items.append(
+                make_axis_cross_item(
+                    out_dir,
+                    capabilities,
+                    "axis_membership_set_param_identity",
+                    left_surface,
+                    surface_by_key["typescript"],
+                    "not_equivalent",
+                    "heldout",
+                    "literal_collection_membership-semantic-mutation",
+                )
+            )
+    for proposal_id in (
+        "axis_membership_set_wrong_element_boundary",
+        "axis_membership_set_wrong_collection_boundary",
+        "axis_membership_set_untyped_receiver_boundary",
+    ):
+        if not generation_filter.include_proposal(proposal_id):
+            continue
+        for right_surface in set_right_surfaces:
+            for left_surface in set_reference_surfaces:
+                if left_surface.key == right_surface.key:
+                    continue
                 items.append(
                     make_axis_cross_item(
                         out_dir,

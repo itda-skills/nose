@@ -51,22 +51,23 @@ type ValueId = u32;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 enum ValOp {
-    Input(u32),  // a parameter or free variable, keyed by canonical id
-    Const(u32),  // literal class
-    Bin(u32),    // binary operator
-    Un(u32),     // unary operator
-    Field(u64),  // field access, keyed by content hash of the name
-    Index,       // base[index]
-    Call(u32),   // 0 = opaque callee; otherwise builtin discriminant + 1
-    Hof(u32),    // higher-order op kind
-    Seq(u64),    // aggregate literal, keyed by lowered sequence kind
-    Phi,         // branch merge: args = [cond, then, else]
-    Lambda(u64), // opaque, keyed by a structural hash of the lambda body
-    Loop(u32),   // loop-carried opaque value, keyed by canonical id
-    Elem(u64),   // an element drawn from an iterable, keyed by the iterable's hash
-    Idx(u64),    // the iteration index into a collection (range/while/enumerate)
-    Reduce(u32), // canonical fold over elements: args = [init, per-element contrib]
-    Opaque(u64), // anything not otherwise modeled, keyed by a tag (counter or subtree hash)
+    Input(u32),      // a parameter or free variable, keyed by canonical id
+    Const(u32),      // literal class
+    Bin(u32),        // binary operator
+    Un(u32),         // unary operator
+    Field(u64),      // field access, keyed by content hash of the name
+    Index,           // base[index]
+    Call(u32),       // 0 = opaque callee; otherwise builtin discriminant + 1
+    Hof(u32),        // higher-order op kind
+    Seq(u64),        // aggregate literal, keyed by lowered sequence kind
+    CollectionParam, // proven collection parameter, distinct from map-like key membership
+    Phi,             // branch merge: args = [cond, then, else]
+    Lambda(u64),     // opaque, keyed by a structural hash of the lambda body
+    Loop(u32),       // loop-carried opaque value, keyed by canonical id
+    Elem(u64),       // an element drawn from an iterable, keyed by the iterable's hash
+    Idx(u64),        // the iteration index into a collection (range/while/enumerate)
+    Reduce(u32),     // canonical fold over elements: args = [init, per-element contrib]
+    Opaque(u64),     // anything not otherwise modeled, keyed by a tag (counter or subtree hash)
 }
 
 struct ValNode {
@@ -219,7 +220,7 @@ impl<'a> Builder<'a> {
                     Ty::Unknown
                 }
             }
-            ValOp::Seq(_) => Ty::List,
+            ValOp::Seq(_) | ValOp::CollectionParam => Ty::List,
             ValOp::Call(tag)
                 if matches!(
                     *tag,
@@ -397,6 +398,40 @@ impl<'a> Builder<'a> {
         matches!(self.param_semantic.get(&cid), Some(ParamSemantic::Map))
     }
 
+    fn free_name_input_key(&self, name: &str) -> u32 {
+        let sym = self.interner.intern(name);
+        0x8000_0000u32 | (self.interner.symbol_hash(sym) as u32)
+    }
+
+    fn is_free_name_value(&self, value: ValueId, name: &str) -> bool {
+        matches!(
+            self.nodes[value as usize].op,
+            ValOp::Input(key) if key == self.free_name_input_key(name)
+        )
+    }
+
+    fn proven_set_constructor_collection(&self, value: ValueId) -> Option<ValueId> {
+        let node = &self.nodes[value as usize];
+        if !matches!(node.op, ValOp::Call(0)) || node.args.len() != 2 {
+            return None;
+        }
+        if !self.is_free_name_value(node.args[0], "Set") {
+            return None;
+        }
+        let collection = node.args[1];
+        if !matches!(self.nodes[collection as usize].op, ValOp::Seq(1)) {
+            return None;
+        }
+        Some(collection)
+    }
+
+    fn proven_collection_value(&self, value: ValueId) -> Option<ValueId> {
+        if matches!(self.nodes[value as usize].op, ValOp::Seq(1)) {
+            return Some(value);
+        }
+        self.proven_set_constructor_collection(value)
+    }
+
     fn proven_map_get_value(&self, value: ValueId) -> Option<(ValueId, ValueId)> {
         let node = &self.nodes[value as usize];
         if !matches!(node.op, ValOp::Call(0)) || node.args.len() != 2 {
@@ -431,16 +466,22 @@ impl<'a> Builder<'a> {
         let callee_kids = self.il.children(callee);
         let receiver = callee_kids.first().copied();
 
-        let (element_node, collection_node) = if matches!(
+        if matches!(
             method,
-            "contains" | "includes" | "include?" | "__contains__"
+            "contains" | "includes" | "include?" | "__contains__" | "has"
         ) && kids.len() == 2
         {
             let receiver = receiver?;
-            if !self.is_collection_param_expr(receiver) {
-                return None;
+            let element = self.eval(kids[1], env);
+            if self.is_collection_param_expr(receiver) {
+                let collection = self.eval_membership_collection(receiver, env);
+                return Some(self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]));
             }
-            (kids[1], receiver)
+            let receiver_value = self.eval(receiver, env);
+            if let Some(collection) = self.proven_collection_value(receiver_value) {
+                return Some(self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]));
+            }
+            None
         } else if method == "Contains" && kids.len() == 3 {
             let module_name =
                 receiver.and_then(|r| match (self.il.kind(r), self.il.node(r).payload) {
@@ -450,14 +491,12 @@ impl<'a> Builder<'a> {
             if module_name != Some("slices") || !self.is_collection_param_expr(kids[1]) {
                 return None;
             }
-            (kids[2], kids[1])
+            let element = self.eval(kids[2], env);
+            let collection = self.eval_membership_collection(kids[1], env);
+            Some(self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]))
         } else {
-            return None;
-        };
-
-        let element = self.eval(element_node, env);
-        let collection = self.eval(collection_node, env);
-        Some(self.mk(ValOp::Bin(Op::In as u32), vec![element, collection]))
+            None
+        }
     }
 
     fn eval_proven_map_key_membership_call(
@@ -2681,6 +2720,10 @@ impl<'a> Builder<'a> {
         collection: NodeId,
         env: &FxHashMap<u32, ValueId>,
     ) -> ValueId {
+        if self.is_collection_param_expr(collection) {
+            let value = self.eval(collection, env);
+            return self.mk(ValOp::CollectionParam, vec![value]);
+        }
         if self.il.kind(collection) != NodeKind::Seq {
             return self.eval(collection, env);
         }
@@ -3007,6 +3050,11 @@ impl<'a> Builder<'a> {
             NodeKind::BinOp => {
                 let op = op_code(node.payload);
                 let kids = self.il.children(expr).to_vec();
+                if op == Op::In as u32 && kids.len() == 2 {
+                    let element = self.eval(kids[0], env);
+                    let collection = self.eval_membership_collection(kids[1], env);
+                    return self.mk(ValOp::Bin(op), vec![element, collection]);
+                }
                 if let Some(v) = self.eval_len_zero_comparison(op, &kids, env) {
                     return v;
                 }
@@ -3651,6 +3699,7 @@ fn op_tag(op: &ValOp) -> u64 {
         ValOp::Call(t) => (7, *t as u64),
         ValOp::Hof(h) => (8, *h as u64),
         ValOp::Seq(t) => (9, *t),
+        ValOp::CollectionParam => (17, 0),
         ValOp::Phi => (10, 0),
         ValOp::Lambda(h) => (11, *h),
         ValOp::Loop(c) => (12, *c as u64),
