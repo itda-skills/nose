@@ -1067,13 +1067,65 @@ has an explicit preflight:
 python3 bench/type4/preflight_axis.py --axis <axis> --out-dir /tmp/nose-type4-preflight
 ```
 
-The preflight generates a focused corpus, evaluates baseline and candidate binaries, and
-fails if the baseline has no positive misses, either side has false merges, or the
-candidate does not reduce misses. Running it against the already-covered
-`null_presence_predicate` correctly fails with:
+The preflight generates a focused corpus and evaluates baseline and candidate binaries. It
+fails if the candidate has false merges, if the baseline has no positive misses and no
+false merges, or if the candidate does not reduce either misses or baseline false merges.
+Running it against the already-covered `null_presence_predicate` correctly fails with:
 
 ```text
 baseline: items=88 positive=22/22 misses=0 false_merges=0/66
 candidate: items=88 positive=22/22 misses=0 false_merges=0/66
 preflight failed: baseline already covers all strict positives
 ```
+
+## Rust option-pattern presence: loops 146-152
+
+The next null/option slice attacked a Rust-specific gap inside the broader
+`null_presence_predicate` axis: `if let Some(_) = value { true } else { false }` should be
+the same strict presence predicate as `value.is_some()`, while `if let None` and checks on
+another option value must stay outside the family.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| 146 | generator adversary | add Rust `if let Some(_)` identity, `if let None` boundary, and wrong-value boundary proposals under `null_presence_predicate` | focused manifest generated 4 items: 1 positive, 3 negatives |
+| 147 | baseline measurement | pre-loop release did not understand the pattern condition and also over-merged two hard negatives | baseline: 0/1 positives, 2/3 false merges |
+| 148 | preflight policy | treat removal of baseline false merges as a valid detector-improvement loop, while still requiring candidate false merges to be zero | candidate preflight: 1/1 positives, 0/3 false merges |
+| 149 | Rust frontend strengthening | lower `let Some`/`let None` conditions to `IsNotNull`/`IsNull`, and return tail expression statements without semicolons | CLI and equivalence regressions passed |
+| 150 | value-graph strengthening | canonicalize `Phi(cond, true, false)` to `cond` and `Phi(cond, false, true)` to `Not(cond)` | `if let Some(_)` converges with `is_some()` and stays distinct from `if let None` |
+| 151 | focused/core gates | run focused proposal and null-presence core gates | focused: 1/1 and 0/3; null core selected 49/92, 18/18 and 0/31 |
+| 152 | aggregate validation | run default ring, same-surface, and dense all-cross compact gates | ring 850/850 and 0/1,358; same-surface 599/599 and 0/1,022; dense compact 280/280 and 0/400 |
+
+Final focused if-let gate:
+
+```text
+items: 4
+positive recall: 1/1
+hard-negative false merges: 0/3
+```
+
+Final default ring smoke:
+
+```text
+items: 2208
+positive recall: 850/850
+hard-negative false merges: 0/1358
+
+by semantic axis:
+  null_presence_predicate: positive 23/23, false merges 0/69
+```
+
+Final dense all-cross compact smoke:
+
+```text
+GATE=core CROSS=all OUT_DIR=/tmp/nose-type4-smoke-all-iflet ./scripts/type4-smoke.sh
+selected items: 680/4431
+positive recall: 280/280
+hard-negative false merges: 0/400
+Raw nodes: 0/26551
+```
+
+Assessment: this was a real detector co-evolution loop, not just a benchmark expansion.
+The generator found both an under-merge and a strict false-merge bug in the existing
+release, the detector gained a narrow Rust frontend proof fact plus a shared boolean
+select simplification, and the adversarial same-value/opposite-direction/wrong-value
+boundaries now stay clean.

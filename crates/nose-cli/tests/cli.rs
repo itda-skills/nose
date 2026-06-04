@@ -650,6 +650,11 @@ fn scan_mode_semantic_proves_null_presence_predicates() {
     )
     .unwrap();
     fs::write(
+        dir.join("iflet_none.rs"),
+        "pub fn is_missing(value: Option<i32>, other: Option<i32>) -> bool {\n    if let None = value { true } else { false }\n}\n",
+    )
+    .unwrap();
+    fs::write(
         dir.join("some_method.rs"),
         "pub fn is_present(value: Option<i32>, other: Option<i32>) -> bool {\n    value.is_some()\n}\n",
     )
@@ -688,6 +693,7 @@ fn scan_mode_semantic_proves_null_presence_predicates() {
         "null_compare.c",
         "nil_method.rb",
         "none_method.rs",
+        "iflet_none.rs",
     ] {
         assert!(
             semantic_text.contains(expected),

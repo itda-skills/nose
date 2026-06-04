@@ -111,6 +111,18 @@ AXIS_PROPOSALS = {
         "axis": "null_presence_predicate",
         "why": "Null presence is a proof over a specific value coordinate; checking another value is not equivalent.",
     },
+    "axis_null_presence_iflet_some_identity": {
+        "axis": "null_presence_predicate",
+        "why": "Rust `if let Some(_)` presence tests should prove the same option-presence predicate as `is_some()`.",
+    },
+    "axis_null_presence_iflet_none_boundary": {
+        "axis": "null_presence_predicate",
+        "why": "Rust `if let None` and `if let Some(_)` have opposite option-presence directions and must not merge.",
+    },
+    "axis_null_presence_iflet_wrong_value_boundary": {
+        "axis": "null_presence_predicate",
+        "why": "Rust option-pattern presence is a proof over a specific option value coordinate.",
+    },
     "axis_own_property_hasown_identity": {
         "axis": "own_property_guard",
         "why": "Object.hasOwn and Object.prototype.hasOwnProperty.call prove the same own-property presence check.",
@@ -743,6 +755,8 @@ def axis_nullish_variant(surface: Surface, proposal_id: str, negative: bool, rig
 
 
 def null_presence_axis_supported(surface: Surface, proposal_id: str) -> bool:
+    if proposal_id.startswith("axis_null_presence_iflet_"):
+        return surface.key == "rust"
     return proposal_id.startswith("axis_null_presence_")
 
 
@@ -781,6 +795,9 @@ def axis_null_presence_variant(
     negative: bool,
     right: bool,
 ) -> Variant:
+    if proposal_id.startswith("axis_null_presence_iflet_"):
+        return axis_null_presence_iflet_variant(surface, proposal_id, negative, right)
+
     name = "buildCase" if right else "axisCase"
     snake_name = "build_case" if right else "axis_case"
     expr = null_presence_expr(surface, proposal_id, negative, right)
@@ -841,6 +858,38 @@ int {snake_name}(void *value, void *other) {{
         return Variant("axis", src, snake_name)
 
     raise ValueError(f"unsupported surface for null presence axis: {surface.key}")
+
+
+def axis_null_presence_iflet_variant(
+    surface: Surface,
+    proposal_id: str,
+    negative: bool,
+    right: bool,
+) -> Variant:
+    if surface.key != "rust":
+        raise ValueError(f"unsupported surface for Rust if-let null presence axis: {surface.key}")
+    name = "build_case" if right else "axis_case"
+    target = (
+        "other" if right and proposal_id == "axis_null_presence_iflet_wrong_value_boundary" else "value"
+    )
+    if right and (
+        proposal_id == "axis_null_presence_iflet_none_boundary"
+        or (negative and proposal_id == "axis_null_presence_iflet_some_identity")
+    ):
+        pattern = "None"
+    else:
+        pattern = "Some(_)"
+
+    if right and proposal_id == "axis_null_presence_iflet_some_identity" and not negative:
+        body = f"{target}.is_some()"
+    else:
+        body = f"if let {pattern} = {target} {{ true }} else {{ false }}"
+
+    src = f"""pub fn {name}(value: Option<i32>, other: Option<i32>) -> bool {{
+    {body}
+}}
+"""
+    return Variant("axis", src, name)
 
 
 def record_guard_axis_supported(surface: Surface, proposal_id: str) -> bool:
@@ -3615,7 +3664,10 @@ def axis_evidence(axis: str, status: str, negative: bool, proposal_id: str | Non
             "counterexample": counterexample,
         }
     elif axis == "null_presence_predicate":
-        if proposal_id == "axis_null_presence_wrong_value_boundary":
+        if proposal_id in {
+            "axis_null_presence_wrong_value_boundary",
+            "axis_null_presence_iflet_wrong_value_boundary",
+        }:
             counterexample = {
                 "input": {"value": None, "other": 1},
                 "left": True,
@@ -3867,6 +3919,8 @@ def generate_axis_items(
             if proposal_id in {
                 "axis_null_presence_nonnull_boundary",
                 "axis_null_presence_wrong_value_boundary",
+                "axis_null_presence_iflet_none_boundary",
+                "axis_null_presence_iflet_wrong_value_boundary",
             }:
                 items.append(
                     make_axis_item(

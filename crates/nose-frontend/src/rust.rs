@@ -9,7 +9,8 @@
 
 use crate::lower::Lowering;
 use nose_il::{
-    FileId, Il, Interner, Lang, LitClass, LoopKind, NodeId, NodeKind, Op, Payload, Span, UnitKind,
+    Builtin, FileId, Il, Interner, Lang, LitClass, LoopKind, NodeId, NodeKind, Op, Payload, Span,
+    UnitKind,
 };
 use tree_sitter::Node as TsNode;
 
@@ -326,7 +327,12 @@ fn lower_fn_body(lo: &mut Lowering, node: TsNode) -> NodeId {
     let mut stmts = Vec::new();
     for (idx, child) in children.into_iter().enumerate() {
         let k = child.kind();
-        if idx + 1 == n && is_tail_expr(k) {
+        if idx + 1 == n && k == "expression_statement" && !lo.text(child).trim_end().ends_with(';')
+        {
+            let expr = child.named_child(0).unwrap_or(child);
+            let e = lower_expr(lo, expr);
+            stmts.push(lo.add(NodeKind::Return, Payload::None, lo.span(child), &[e]));
+        } else if idx + 1 == n && is_tail_expr(k) {
             let e = lower_expr(lo, child);
             stmts.push(lo.add(NodeKind::Return, Payload::None, lo.span(child), &[e]));
         } else if let Some(id) = lower_item(lo, child) {
@@ -789,13 +795,37 @@ fn lower_if(lo: &mut Lowering, node: TsNode) -> NodeId {
 /// as the condition (the pattern binding is irrelevant to behavioral shape).
 fn lower_cond(lo: &mut Lowering, node: TsNode) -> NodeId {
     match node.kind() {
-        "let_condition" | "let_chain" => node
+        "let_condition" => lower_let_condition(lo, node),
+        "let_chain" => node
             .child_by_field_name("value")
             .or_else(|| node.named_child(node.named_child_count().saturating_sub(1)))
             .map(|v| lower_expr(lo, v))
             .unwrap_or_else(|| lower_expr(lo, node)),
         _ => lower_expr(lo, node),
     }
+}
+
+fn lower_let_condition(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let Some(value_node) = node
+        .child_by_field_name("value")
+        .or_else(|| node.named_child(node.named_child_count().saturating_sub(1)))
+    else {
+        return lower_expr(lo, node);
+    };
+    let text = lo.text(node).trim();
+    let op = if text.starts_with("let Some") {
+        Some(Builtin::IsNotNull)
+    } else if text.starts_with("let None") {
+        Some(Builtin::IsNull)
+    } else {
+        None
+    };
+    if let Some(op) = op {
+        let value = lower_expr(lo, value_node);
+        return lo.add(NodeKind::Call, Payload::Builtin(op), span, &[value]);
+    }
+    lower_expr(lo, value_node)
 }
 
 /// `match e { p1 => b1, p2 => b2, … }` → nested `if`/`else` chain, each arm's

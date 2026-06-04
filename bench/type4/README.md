@@ -37,8 +37,8 @@ By default the generator emits:
 - semantic-axis cases for immutable bindings, proven callee identity, literal table access,
   static imports, static projections, nullish defaults, own-property guards,
   record-shape guards, string prefix/suffix predicates, literal collection membership,
-  literal map-default lookup, null/none/nil/option presence predicates, and
-  unsafe/unproven binding boundaries;
+  literal map-default lookup, null/none/nil/option presence predicates including Rust
+  option-pattern predicates, and unsafe/unproven binding boundaries;
 - a ring of cross-language positive pairs and cross-template hard negatives so every
   supported surface participates in cross-language coverage without exploding the seed size.
 
@@ -62,32 +62,33 @@ baseline and candidate binaries:
 python3 bench/type4/preflight_axis.py --axis null_presence_predicate --out-dir /tmp/nose-type4-preflight
 ```
 
-The preflight fails when the baseline already covers all strict positives, when either
-binary has false merges, or when the candidate does not reduce positive misses.
+The preflight fails when the candidate has false merges, when the baseline already covers
+all strict positives with no false merges, or when the candidate does not reduce positive
+misses or remove baseline false merges.
 
 Current smoke result with the default ring cross-surface set:
 
 ```text
-items: 2204
-positive recall: 849/849
-hard-negative false merges: 0/1355
+items: 2208
+positive recall: 850/850
+hard-negative false merges: 0/1358
 ```
 
 With `--cross none`, same-surface coverage alone currently reports:
 
 ```text
-items: 1617
-positive recall: 598/598
-hard-negative false merges: 0/1019
+items: 1621
+positive recall: 599/599
+hard-negative false merges: 0/1022
 ```
 
-With `--cross all`, the dense corpus now has 4427 items. The routine dense smoke uses
+With `--cross all`, the dense corpus now has 4431 items. The routine dense smoke uses
 coverage-preserving compaction before evaluation:
 
 ```text
-selected items: 678/4427
+selected items: 680/4431
 positive recall: 280/280
-hard-negative false merges: 0/398
+hard-negative false merges: 0/400
 ```
 
 These are not product-quality scores. They are frontier measurements for the exact semantic

@@ -484,6 +484,14 @@ impl<'a> Builder<'a> {
         //   `x if x>=0 else -x` → Abs(x) ;  `x if x<y else y` → Min(x,y) / Max(x,y).
         if let ValOp::Phi = op {
             if args.len() == 3 {
+                if self.bool_const(args[1]) == Some(true) && self.bool_const(args[2]) == Some(false)
+                {
+                    return args[0];
+                }
+                if self.bool_const(args[1]) == Some(false) && self.bool_const(args[2]) == Some(true)
+                {
+                    return self.mk(ValOp::Un(Op::Not as u32), vec![args[0]]);
+                }
                 if let Some(v) = self.abs_pattern(args[0], args[1], args[2]) {
                     return v;
                 }
@@ -1930,6 +1938,14 @@ impl<'a> Builder<'a> {
 
     fn null_const(&mut self) -> ValueId {
         self.mk(ValOp::Const(nose_il::LitClass::Null as u32), vec![])
+    }
+
+    fn bool_const(&self, id: ValueId) -> Option<bool> {
+        match self.nodes[id as usize].op {
+            ValOp::Const(c) if c == 0x3000_0001 => Some(false),
+            ValOp::Const(c) if c == 0x3000_0002 => Some(true),
+            _ => None,
+        }
     }
 
     /// A canonical "element of `coll`" value. The collection is carried as an argument

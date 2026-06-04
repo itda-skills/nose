@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Preflight a Type-4 frontier loop before spending detector work.
 
-The loop is worth entering only when the current baseline misses at least one
-strict positive and the candidate improves recall without introducing false
-merges. This catches benchmark-only expansions that do not actually strengthen
-the detector.
+The loop is worth entering only when the candidate improves strict recall or
+removes baseline false merges without introducing any candidate false merge.
+This catches benchmark-only expansions that do not actually strengthen the
+detector.
 """
 
 from __future__ import annotations
@@ -87,19 +87,22 @@ def main() -> int:
     print_row("baseline", baseline)
     print_row("candidate", candidate)
 
-    if baseline["false_merges"] > 0:
-        print("preflight failed: baseline has false merges; fix the generator first")
-        return 2
     if candidate["false_merges"] > 0:
         print("preflight failed: candidate introduces false merges")
         return 2
-    if baseline["positive_misses"] == 0 and not args.allow_no_baseline_miss:
+    recall_improved = candidate["positive_misses"] < baseline["positive_misses"]
+    false_merges_removed = candidate["false_merges"] < baseline["false_merges"]
+    if (
+        baseline["positive_misses"] == 0
+        and baseline["false_merges"] == 0
+        and not args.allow_no_baseline_miss
+    ):
         print("preflight failed: baseline already covers all strict positives")
         return 3
-    if candidate["positive_misses"] >= baseline["positive_misses"]:
-        print("preflight failed: candidate does not improve strict positive recall")
+    if not (recall_improved or false_merges_removed):
+        print("preflight failed: candidate does not improve strict recall or false merges")
         return 4
-    print("preflight passed: candidate improves strict recall with zero false merges")
+    print("preflight passed: candidate improves the frontier with zero false merges")
     return 0
 
 

@@ -1447,6 +1447,24 @@ fn value_graph_distinguishes_membership_and_negation() {
 }
 
 #[test]
+fn rust_if_let_option_presence_converges_with_option_predicates() {
+    let i = Interner::new();
+    let if_some = "pub fn f(value: Option<i32>) -> bool {\n    if let Some(_) = value { true } else { false }\n}\n";
+    let is_some = "pub fn g(value: Option<i32>) -> bool {\n    value.is_some()\n}\n";
+    let if_none = "pub fn h(value: Option<i32>) -> bool {\n    if let None = value { true } else { false }\n}\n";
+    assert_eq!(
+        value_fp(&i, if_some, Lang::Rust),
+        value_fp(&i, is_some, Lang::Rust),
+        "if let Some(_) should converge with is_some()"
+    );
+    assert_ne!(
+        value_fp(&i, if_some, Lang::Rust),
+        value_fp(&i, if_none, Lang::Rust),
+        "if let Some(_) must stay distinct from if let None"
+    );
+}
+
+#[test]
 fn value_graph_distinguishes_boolean_literals() {
     // `True` and `False` are behavior-defining (like `0`≠`1`): a predicate
     // `if x>0: return True else False` and its negation (booleans swapped) compute
