@@ -2018,6 +2018,32 @@ fn value_graph_keeps_try_index_base_effects_before_static_index_err() {
 }
 
 #[test]
+fn value_graph_runs_try_handler_after_static_index_assignment_target_err() {
+    let i = Interner::new();
+    let try_err =
+        "def f(xs):\n    try:\n        xs[1 / 0] = 2\n    except Exception:\n        return 7\n";
+    let plain_return = "def f(xs):\n    return 7\n";
+    assert_eq!(
+        value_fp(&i, try_err, Lang::Python),
+        value_fp(&i, plain_return, Lang::Python),
+        "a static index assignment target error should run the simple catch handler"
+    );
+}
+
+#[test]
+fn value_graph_keeps_try_index_assignment_rhs_effects_before_target_err() {
+    let i = Interner::new();
+    let effect_then_err =
+        "def f(xs):\n    try:\n        xs[1 / 0] = print(1)\n    except Exception:\n        return 7\n";
+    let plain_return = "def f(xs):\n    return 7\n";
+    assert_ne!(
+        value_fp(&i, effect_then_err, Lang::Python),
+        value_fp(&i, plain_return, Lang::Python),
+        "observable RHS effects before an index assignment target error must not be discarded"
+    );
+}
+
+#[test]
 fn value_graph_runs_try_handler_after_static_seq_item_err() {
     let i = Interner::new();
     let try_err =

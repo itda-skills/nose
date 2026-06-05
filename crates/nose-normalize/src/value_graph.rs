@@ -2898,6 +2898,7 @@ impl<'a> Builder<'a> {
                 .children(node)
                 .first()
                 .is_some_and(|&expr| self.expr_is_static_runtime_err(expr, env)),
+            NodeKind::Assign => self.assign_is_static_runtime_err(node, env),
             NodeKind::Block => {
                 let Some((&last, prefix)) = self.il.children(node).split_last() else {
                     return false;
@@ -2909,6 +2910,39 @@ impl<'a> Builder<'a> {
             }
             _ => false,
         }
+    }
+
+    fn assign_is_static_runtime_err(
+        &mut self,
+        node: NodeId,
+        env: &FxHashMap<u32, ValueId>,
+    ) -> bool {
+        let kids = self.il.children(node).to_vec();
+        if kids.len() != 2 {
+            return false;
+        }
+        let target = kids[0];
+        let rhs = kids[1];
+        if self.expr_is_static_runtime_err(rhs, env) {
+            return crate::is_pure(self.il, rhs);
+        }
+        crate::is_pure(self.il, rhs) && self.assignment_target_is_static_runtime_err(target, env)
+    }
+
+    fn assignment_target_is_static_runtime_err(
+        &mut self,
+        target: NodeId,
+        env: &FxHashMap<u32, ValueId>,
+    ) -> bool {
+        if self.il.kind(target) != NodeKind::Index {
+            return false;
+        }
+        self.il
+            .children(target)
+            .to_vec()
+            .get(1)
+            .copied()
+            .is_some_and(|index| self.expr_is_static_runtime_err(index, env))
     }
 
     fn expr_is_static_runtime_err(&mut self, expr: NodeId, env: &FxHashMap<u32, ValueId>) -> bool {

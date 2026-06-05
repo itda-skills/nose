@@ -212,7 +212,8 @@ throw or a statically visible expression error (`Div`/`Mod` by zero, or `Pow` wi
 exponent outside the integer oracle's domain, including the same errors inside eager builtin
 arguments, opaque/user call-by-value arguments, a `Seq` literal with left-to-right effect
 guards, unary/binary operands, index bases/subscripts, or a map/filter/reduce lambda over a
-statically non-empty `Seq`, plus ternary conditions and statically selected branches) with
+statically non-empty `Seq`, plus index assignment targets, ternary conditions, and
+statically selected branches) with
 its handler. Richer exception control flow remains outside the oracle.
 Field reads are interpreted only after the same unit has written that field; an unwritten
 field access remains unsupported rather than invented. The value graph follows the same
