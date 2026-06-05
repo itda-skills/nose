@@ -96,6 +96,9 @@ are attached to every [release](https://github.com/corca-ai/nose/releases).
 
 ## Quick start
 
+New to nose? [docs/getting-started.md](docs/getting-started.md) walks through a first
+scan and how to read the report.
+
 ```sh
 # Build from source (requires the Rust toolchain):
 cargo build --release
@@ -190,7 +193,7 @@ source ──tree-sitter──▶ raw IL ──normalize──▶ canonical IL �
     `--write-baseline`, `--new-only`, `--fail-on-new`, `--fail` (CI gate),
     `--cache-dir <dir>` (fast re-runs).
   - inline `// nose-ignore` marks a clone as intentionally kept.
-- `nose il <file> [--normalized] [--format sexpr|json]` — inspect the IL.
+- `nose il <file> [--normalized] [--no-cfg-norm] [--format sexpr|json]` — inspect the IL.
 - `nose stats <paths…>` — IL lowering coverage per language.
 
 A `detect` command (raw clone pairs/groups) and `eval`/`ceiling` (benchmark
@@ -199,13 +202,20 @@ hidden from `--help` because `scan` is the command for everyday use.
 
 ## Documentation
 
-Full guides live in the [`docs/`](docs/home.md) wiki — **for users**:
-[Usage](docs/usage.md), [Configuration](docs/configuration.md),
-[Continuous-Integration](docs/continuous-integration.md),
-[Languages](docs/languages.md); **for contributors**:
-[Architecture](docs/architecture.md), [Normalization](docs/normalization.md),
-[Experiments](docs/experiments.md), [Benchmark](docs/benchmark.md),
-[Field-Evaluation](docs/field-evaluation.md), [Dogfooding](docs/dogfooding.md).
+New to nose? **[Getting started](docs/getting-started.md)** walks through your first
+scan and how to read the report. The full [`docs/`](docs/home.md) wiki is grouped by
+what you're here to do:
+
+- **Using nose** — [Usage](docs/usage.md), [Configuration](docs/configuration.md),
+  [Continuous-Integration](docs/continuous-integration.md),
+  [Structured-Ignores](docs/structured-ignores.md),
+  [Clone-Types](docs/clone-types.md), [Languages](docs/languages.md).
+- **Integrating nose** — [Capabilities](docs/capabilities.md),
+  [Scan-JSON](docs/scan-json.md).
+- **Contributing** — [Architecture](docs/architecture.md),
+  [Normalization](docs/normalization.md), [Experiments](docs/experiments.md),
+  [Benchmark](docs/benchmark.md), [Field-Evaluation](docs/field-evaluation.md),
+  [Dogfooding](docs/dogfooding.md).
 
 ## Crates
 
@@ -236,11 +246,11 @@ methodology and the bugs this discipline caught (§S).
 
 ## Quality gates
 
-`./scripts/check.sh` runs every gate CI runs: rustfmt, clippy (`-D warnings`), doc-link
-check, the test suite, **cargo-machete** (unused deps), **cargo-deny** (advisories /
-licenses / bans), and a **duplication gate** — nose run on its own source, so the clone
-detector polices its own duplication. Lint policy lives once in `[workspace.lints]`. See
-[`CONTRIBUTING.md`](CONTRIBUTING.md).
+`./scripts/check-ci-local.sh --fast` is the PR/push preflight: rustfmt, clippy
+(`-D warnings`), `nose-cli` tests, and docs wiki lint. `./scripts/check.sh` is the
+full local CI mirror, including release build/tests, supply-chain checks, MSRV,
+Lean proofs, and the self-hosted duplication gate. Lint policy lives once in
+`[workspace.lints]`. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 

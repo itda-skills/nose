@@ -18,11 +18,15 @@
 > strings, map **and filter** fusion (a filter is the element-carrying `Hof(Map,[Elem,p])`,
 > so nested filters fuse to `p∧q`), full **AC flatten+sort in the value graph itself** (not
 > only the `algebra` IL pass), **distribution/factoring** `a*c+b*c→(a+b)*c` (Num-gated),
-> min/max and any/all reductions (cross-language), **reduce-lambda selection** (`reduce(λ. a
-> if a>b else b)≡max`), **count-of-filter** (`len([…if p])≡Σ(p?1:0)`), method-form iterator
-> reductions (Rust `.sum()/.min()/.max()/.count()`), **dict-builder ≡ dict comprehension**
+> min/max and any/all reductions (cross-language), simple **flag+break existence/universal
+> loops** (`found=false; if p { found=true; break }` / the dual `all` form),
+> **reduce-lambda selection** (`reduce(λ. a if a>b else b)≡max`), **count-of-filter**
+> (`len([…if p])≡Σ(p?1:0)`), method-form iterator reductions (Rust
+> `.sum()/.min()/.max()/.count()`), **dict-builder ≡ dict comprehension**
 > (`d={}; for x: d[k]=v` ≡ `{k:v for x}` via a `DictEntry`-distinct rep that cannot collide
-> with a list of tuples), ternary-return decomposition, negated-comparison canon. Also
+> with a list of tuples), ternary-return decomposition, negated-comparison canon,
+> equality-chain literal membership (`x=="a" || x=="b"`), stricter record-shape guard
+> facts, and ordered string-builder joins (`out += elem` over a loop ≡ `"".join(xs)`). Also
 > landed: **recursion → iteration** (`recursion.rs`) — tail recursion → `while`, and numeric
 > structural (linear) recursion → an accumulator fold, so a recursive function converges with
 > the loop a programmer would have written and with other same-shape recursions
@@ -30,16 +34,15 @@
 > (commutative + associative; identities `0`/`1`) with the base returning that identity
 > literal; the interpreter now executes self-recursion so `nose verify` interprets the
 > pre-canon recursive form and validates the rewrite (see *Recursion → iteration* below).
-> Soundness
-> enforced by the independent interpreter oracle + canon-preservation check (`nose verify`)
-> and Lean proofs (`formal/`, incl. `distrib_sound`, `filter_fusion`, `Compare.lean`); see
-> §AJ/§AW/§AX/§BA.
+> Soundness enforced by the independent interpreter oracle + canon-preservation check
+> (`nose verify`) and Lean proofs (`formal/`, incl. `distrib_sound`, `filter_fusion`,
+> `Compare.lean`); see §AJ/§AW/§AX/§BA.
 > Deferred: value-dependent folding (needs literal values), full distribution
-> (equality saturation), flag-loop↔break, the loop-form any/all (existence
-> loop); recursion→iteration beyond the tail / numeric-monoid subset (tree & mutual
-> recursion, list-tail catamorphisms over opaque slices, and the countdown↔`range` pairing —
-> the rewrite is sound there but the value graph does not yet converge the two index forms).
-> Rejected as cross-language-unsound: `x*2≡x+x`
+> (equality saturation), general CFG flag-loop↔break, and non-local early-exit variants
+> beyond the simple flag+break loop; recursion→iteration beyond the tail / numeric-monoid
+> subset (tree & mutual recursion, list-tail catamorphisms over opaque slices, and the
+> countdown↔`range` pairing — the rewrite is sound there but the value graph does not yet
+> converge the two index forms). Rejected as cross-language-unsound: `x*2≡x+x`
 > doubling and `s[-1]≡s[len(s)-1]` negative-index (§BA).
 
 
@@ -74,8 +77,10 @@ Guiding constraints for every pass:
   numbers, tolerating structural difference — lives in the **candidate axis** and its
   scoring, never in the behavioral base. Never nondeterministic, either way.
 - **Termination**: bounded rewriting (no infinite saturation).
-- **Composition order**: desugar → alpha → **dataflow** → **algebra** → cfg →
-  (later) value-graph. Each documented below.
+- **Composition order**: desugar → alpha → **dataflow** → [dce] → **cfg_norm::structure**
+  → **algebra** → **cfg_norm::run** → (later) value-graph (matching the status block above;
+  CFG normalization straddles algebra — `structure()` runs before it, `run()` after). Each
+  documented below.
 
 ---
 
