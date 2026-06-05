@@ -111,13 +111,6 @@ fn find_dead(
     }
 }
 
-fn is_terminator(kind: NodeKind) -> bool {
-    matches!(
-        kind,
-        NodeKind::Return | NodeKind::Throw | NodeKind::Break | NodeKind::Continue
-    )
-}
-
 struct Rebuilder<'a> {
     old: &'a Il,
     b: IlBuilder,
@@ -155,7 +148,7 @@ impl Rebuilder<'_> {
             }
             let kind = self.old.kind(s);
             out.push(self.go(s));
-            if is_terminator(kind) {
+            if crate::is_terminator(kind) {
                 break; // unreachable code after a terminator
             }
         }

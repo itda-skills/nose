@@ -121,6 +121,16 @@ pub(crate) fn is_pure(il: &Il, node: NodeId) -> bool {
     }
 }
 
+/// A control-flow terminator: a statement that unconditionally diverts control out of the
+/// straight-line flow, so any code after it in the same block is unreachable. Shared by DCE
+/// (dead-code-after-terminator) and desugar (guard-clause then-block termination).
+pub(crate) fn is_terminator(kind: NodeKind) -> bool {
+    matches!(
+        kind,
+        NodeKind::Return | NodeKind::Throw | NodeKind::Break | NodeKind::Continue
+    )
+}
+
 /// Knobs for the normalization pipeline.
 #[derive(Clone, Copy, Debug)]
 pub struct NormalizeOptions {

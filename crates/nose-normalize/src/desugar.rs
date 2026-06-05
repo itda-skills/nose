@@ -163,16 +163,10 @@ impl Rebuilder<'_> {
     /// True if the (then-)block's last statement is a control-flow terminator.
     fn then_terminates(&self, block_id: NodeId) -> bool {
         if self.old.kind(block_id) != NodeKind::Block {
-            return matches!(
-                self.old.kind(block_id),
-                NodeKind::Return | NodeKind::Throw | NodeKind::Break | NodeKind::Continue
-            );
+            return crate::is_terminator(self.old.kind(block_id));
         }
         match self.old.children(block_id).last() {
-            Some(&last) => matches!(
-                self.old.kind(last),
-                NodeKind::Return | NodeKind::Throw | NodeKind::Break | NodeKind::Continue
-            ),
+            Some(&last) => crate::is_terminator(self.old.kind(last)),
             None => false,
         }
     }
