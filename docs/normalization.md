@@ -91,7 +91,7 @@ Guiding constraints for every pass:
   target or item computations; binary left operands and index bases fail before later
   operands/subscript expressions run; and C-style loop updates plus for-each iterable
   evaluation propagate runtime errors just like the loop condition and body.
-  Eager builtin arguments, direct
+  Eager builtin arguments (left-to-right), direct
   self-recursion call-by-value arguments, list/tuple literal items, reduce initial values,
   higher-order map/filter/reduce, and `any`/`all` predicate errors also stay
   observable instead of being hidden inside a collection value or coerced through truthiness

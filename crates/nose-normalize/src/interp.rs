@@ -518,10 +518,11 @@ impl<'a> Interp<'a> {
             return self.eval_value_or_default_call(&kids, env);
         }
         for &k in &kids {
-            args.push(self.eval(k, env)?);
-        }
-        if args.iter().any(|arg| matches!(arg, Value::Err)) {
-            return Ok(Value::Err);
+            let arg = self.eval(k, env)?;
+            if matches!(arg, Value::Err) {
+                return Ok(Value::Err);
+            }
+            args.push(arg);
         }
         match b {
             Builtin::Len => match args.first() {
@@ -1807,6 +1808,43 @@ mod tests {
     #[test]
     fn eager_builtin_argument_err_stops_execution() {
         assert_eq!(print_with_error_arg_then_return(), Value::Err);
+    }
+
+    fn print_with_error_arg_before_effect_arg() -> Behavior {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let zero = b.add(NodeKind::Lit, Payload::LitInt(0), sp, &[]);
+        let div = b.add(NodeKind::BinOp, Payload::Op(Op::Div), sp, &[one, zero]);
+        let nested_print = b.add(NodeKind::Call, Payload::Builtin(Builtin::Print), sp, &[one]);
+        let print = b.add(
+            NodeKind::Call,
+            Payload::Builtin(Builtin::Print),
+            sp,
+            &[div, nested_print],
+        );
+        let print_stmt = b.add(NodeKind::ExprStmt, Payload::None, sp, &[print]);
+        let seven = b.add(NodeKind::Lit, Payload::LitInt(7), sp, &[]);
+        let ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
+        let block = b.add(NodeKind::Block, Payload::None, sp, &[print_stmt, ret]);
+        let func = b.add(NodeKind::Func, Payload::None, sp, &[block]);
+        let il = b.finish(
+            func,
+            FileMeta {
+                path: "t".into(),
+                lang: Lang::Python,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+        run_unit(&il, func, &[]).expect("run_unit")
+    }
+
+    #[test]
+    fn eager_builtin_argument_err_stops_later_arguments() {
+        let behavior = print_with_error_arg_before_effect_arg();
+        assert_eq!(behavior.ret, Value::Err);
+        assert!(behavior.effects.is_empty());
     }
 
     fn self_call_with_error_arg_ignored_by_callee() -> Value {
