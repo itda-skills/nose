@@ -1922,21 +1922,36 @@ impl<'a> Builder<'a> {
         None
     }
 
-    /// `(x ≤ y) ∧ (x ≠ y) → x < y`. The `≤` is ordered so it fixes `(x, y)`; the `≠` is
-    /// commutative so its operands match `{x, y}` either way. Sound on a total order
-    /// (Lean `Compare.lean::le_and_ne_eq_lt`); the post-normalize oracle re-checks it.
-    fn lattice_le_ne_to_lt(&mut self, a: ValueId, b: ValueId) -> Option<ValueId> {
-        let ne = Op::Ne as u32;
-        for (le_v, ne_v) in [(a, b), (b, a)] {
-            if let Some((x, y)) = self.cmp_operands(le_v, Op::Le as u32) {
-                if let Some((n0, n1)) = self.cmp_operands(ne_v, ne) {
-                    if (n0 == x && n1 == y) || (n0 == y && n1 == x) {
-                        return Some(self.mk(ValOp::Bin(Op::Lt as u32), vec![x, y]));
+    /// Lattice canon combining an ORDERED comparison (`ordered`, which fixes the operand
+    /// pair `(x, y)` in source order) with a COMMUTATIVE (in)equality (`comm`, whose
+    /// operands match `{x, y}` in either order) into a single `result` comparison. The two
+    /// arguments may arrive in either slot (the conjunction/disjunction is itself sorted),
+    /// so both assignments are tried. Sound on a total order; each instantiation cites its
+    /// own Lean lemma at the call site.
+    fn lattice_pair_canon(
+        &mut self,
+        a: ValueId,
+        b: ValueId,
+        ordered: u32,
+        comm: u32,
+        result: u32,
+    ) -> Option<ValueId> {
+        for (ord_v, comm_v) in [(a, b), (b, a)] {
+            if let Some((x, y)) = self.cmp_operands(ord_v, ordered) {
+                if let Some((c0, c1)) = self.cmp_operands(comm_v, comm) {
+                    if (c0 == x && c1 == y) || (c0 == y && c1 == x) {
+                        return Some(self.mk(ValOp::Bin(result), vec![x, y]));
                     }
                 }
             }
         }
         None
+    }
+
+    /// `(x ≤ y) ∧ (x ≠ y) → x < y`. Sound on a total order
+    /// (Lean `Compare.lean::le_and_ne_eq_lt`); the post-normalize oracle re-checks it.
+    fn lattice_le_ne_to_lt(&mut self, a: ValueId, b: ValueId) -> Option<ValueId> {
+        self.lattice_pair_canon(a, b, Op::Le as u32, Op::Ne as u32, Op::Lt as u32)
     }
 
     fn has_primitive_order_comparisons(&self) -> bool {
@@ -1963,19 +1978,10 @@ impl<'a> Builder<'a> {
         None
     }
 
-    /// `(x < y) ∨ (x = y) → x ≤ y` — the dual of [`lattice_le_ne_to_lt`] over `∨`.
+    /// `(x < y) ∨ (x = y) → x ≤ y` — the dual of [`lattice_le_ne_to_lt`] over `∨`
+    /// (Lean `Compare.lean::lt_or_eq_eq_le`).
     fn lattice_lt_eq_to_le(&mut self, a: ValueId, b: ValueId) -> Option<ValueId> {
-        let eq = Op::Eq as u32;
-        for (lt_v, eq_v) in [(a, b), (b, a)] {
-            if let Some((x, y)) = self.cmp_operands(lt_v, Op::Lt as u32) {
-                if let Some((e0, e1)) = self.cmp_operands(eq_v, eq) {
-                    if (e0 == x && e1 == y) || (e0 == y && e1 == x) {
-                        return Some(self.mk(ValOp::Bin(Op::Le as u32), vec![x, y]));
-                    }
-                }
-            }
-        }
-        None
+        self.lattice_pair_canon(a, b, Op::Lt as u32, Op::Eq as u32, Op::Le as u32)
     }
 
     /// Build the value graph for a `Func`/`Method`/class unit. The unit root may
