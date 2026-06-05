@@ -493,29 +493,7 @@ fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             // `..`/`..=` operator is anonymous, so collecting named children collapsed
             // `1..` and `..1` to `Seq(1)`. Split on the operator; emit a `None`
             // placeholder for each empty slot and a trailing `0`/`1` inclusivity flag.
-            let mut start: Option<NodeId> = None;
-            let mut end: Option<NodeId> = None;
-            let mut inclusive = false;
-            let mut seen_op = false;
-            let mut cursor = node.walk();
-            for child in node.children(&mut cursor) {
-                match child.kind() {
-                    ".." => seen_op = true,
-                    "..=" | "..." => {
-                        seen_op = true;
-                        inclusive = true;
-                    }
-                    _ if child.is_named() => {
-                        let v = lower_expr(lo, child);
-                        if seen_op {
-                            end = Some(v);
-                        } else {
-                            start = Some(v);
-                        }
-                    }
-                    _ => {}
-                }
-            }
+            let (start, end, inclusive) = lower_range_bounds(lo, node);
             let none =
                 |lo: &mut Lowering| lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[]);
             let s = start.unwrap_or_else(|| none(lo));
@@ -942,6 +920,9 @@ fn lower_match_pattern_condition(
         }
         return fold_or(lo, span, conditions);
     }
+    if pattern.kind() == "range_pattern" {
+        return lower_range_pattern_condition(lo, scrutinee, pattern, span);
+    }
     let pat = lower_expr(lo, pattern);
     Some(lo.add(
         NodeKind::BinOp,
@@ -949,6 +930,61 @@ fn lower_match_pattern_condition(
         span,
         &[scrutinee, pat],
     ))
+}
+
+fn lower_range_bounds(lo: &mut Lowering, node: TsNode) -> (Option<NodeId>, Option<NodeId>, bool) {
+    let mut start: Option<NodeId> = None;
+    let mut end: Option<NodeId> = None;
+    let mut inclusive = false;
+    let mut seen_op = false;
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        match child.kind() {
+            ".." => seen_op = true,
+            "..=" | "..." => {
+                seen_op = true;
+                inclusive = true;
+            }
+            _ if child.is_named() => {
+                let v = lower_expr(lo, child);
+                if seen_op {
+                    end = Some(v);
+                } else {
+                    start = Some(v);
+                }
+            }
+            _ => {}
+        }
+    }
+    (start, end, inclusive)
+}
+
+fn lower_range_pattern_condition(
+    lo: &mut Lowering,
+    scrutinee: NodeId,
+    pattern: TsNode,
+    span: Span,
+) -> Option<NodeId> {
+    let (start, end, inclusive) = lower_range_bounds(lo, pattern);
+    let lower = start.map(|start| {
+        lo.add(
+            NodeKind::BinOp,
+            Payload::Op(Op::Ge),
+            span,
+            &[scrutinee, start],
+        )
+    });
+    let upper = end.map(|end| {
+        let op = if inclusive { Op::Le } else { Op::Lt };
+        lo.add(NodeKind::BinOp, Payload::Op(op), span, &[scrutinee, end])
+    });
+    match (lower, upper) {
+        (Some(lower), Some(upper)) => {
+            Some(lo.add(NodeKind::BinOp, Payload::Op(Op::And), span, &[lower, upper]))
+        }
+        (Some(cond), None) | (None, Some(cond)) => Some(cond),
+        (None, None) => None,
+    }
 }
 
 fn fold_or(lo: &mut Lowering, span: Span, conditions: Vec<NodeId>) -> Option<NodeId> {
@@ -1069,6 +1105,28 @@ mod tests {
         (interner, il)
     }
 
+    fn raw_names(il: &Il, interner: &Interner) -> Vec<String> {
+        il.nodes
+            .iter()
+            .filter(|node| node.kind == NodeKind::Raw)
+            .filter_map(|node| match node.payload {
+                Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn binop_ops(il: &Il) -> Vec<Op> {
+        il.nodes
+            .iter()
+            .filter(|node| node.kind == NodeKind::BinOp)
+            .filter_map(|node| match node.payload {
+                Payload::Op(op) => Some(op),
+                _ => None,
+            })
+            .collect()
+    }
+
     #[test]
     fn match_cases_compare_scrutinee_to_literal_patterns() {
         let src = "fn f(x: i32) -> i32 { match x { 7 => 1, 8 => 2, _ => 3 } }";
@@ -1089,6 +1147,23 @@ mod tests {
             Payload::Name(sym) => interner.resolve(sym) == "ok",
             _ => false,
         }));
+    }
+
+    #[test]
+    fn match_range_pattern_lowers_to_bounds() {
+        let src = "fn f(x: i32) -> i32 { match x { 1..=3 => 7, _ => 0 } }";
+        let (interner, il) = lower_rust(src);
+
+        let raw = raw_names(&il, &interner);
+        assert!(
+            !raw.iter().any(|name| name == "range_pattern"),
+            "range match pattern should lower without Raw range_pattern: {raw:?}"
+        );
+        let ops = binop_ops(&il);
+        assert!(
+            ops.contains(&Op::Ge) && ops.contains(&Op::Le) && ops.contains(&Op::And),
+            "inclusive range pattern should lower to lower/upper bound checks, got {ops:?}"
+        );
     }
 
     #[test]
