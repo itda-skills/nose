@@ -96,7 +96,9 @@ Lean (`formal/`). See [normalization](normalization.md) for the full pass list.
   iteration binding,
   optionally preceded by one loop-local temporary assignment or a two-temporary linear
   chain whose first RHS depends on the iteration binding and whose final value is
-  immediately consumed by that effect, plus Java
+  immediately consumed by that effect, plus exact conditional branches containing two
+  ordered single-item append effects where each item is direct or immediately consumes a
+  branch-local temp/temp-chain, plus Java
   `this.field = value` self-field assignments and all-self-field Java function-body blocks
   with the receiver fixed to `this`, optionally ending in `return this`), not arbitrary
   statement windows with unmodeled free-variable, live-out, receiver-overload, or effect

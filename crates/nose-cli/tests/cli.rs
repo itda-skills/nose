@@ -2143,7 +2143,7 @@ fn semantic_scan_reports_exact_safe_conditional_foreach_append_effect_fragments_
 }
 
 #[test]
-fn semantic_scan_rejects_multiple_append_effect_order_false_merge() {
+fn semantic_scan_reports_exact_safe_ordered_append_effect_branch_fragments() {
     let dir = std::env::temp_dir().join(format!(
         "nose_append_effect_order_boundary_{}",
         std::process::id()
@@ -2154,15 +2154,55 @@ fn semantic_scan_rejects_multiple_append_effect_order_false_merge() {
     let fixtures = [
         (
             "append_pair_a.js",
-            "function appendPairLeft(flag, out, x) {\n  if (flag) {\n    out.push(x + 1);\n    out.push(x + 2);\n  }\n}\n",
+            "function appendPairLeft(flag, out, x) {\n  if (flag) {\n    out.push(x + 1);\n    out.push(x + 2);\n  }\n  audit(/opaque/);\n}\n",
         ),
         (
             "append_pair_b.js",
-            "function appendPairRight(enabled, dst, y) {\n  if (enabled) {\n    dst.push(1 + y);\n    dst.push(2 + y);\n  }\n}\n",
+            "function appendPairRight(enabled, dst, y) {\n  if (enabled) {\n    dst.push(1 + y);\n    dst.push(2 + y);\n  }\n  trace(/opaque/);\n}\n",
         ),
         (
             "append_pair_wrong_order.js",
-            "function appendPairWrongOrder(flag, out, x) {\n  if (flag) {\n    out.push(x + 2);\n    out.push(x + 1);\n  }\n}\n",
+            "function appendPairWrongOrder(flag, out, x) {\n  if (flag) {\n    out.push(x + 2);\n    out.push(x + 1);\n  }\n  audit(/opaque/);\n}\n",
+        ),
+        (
+            "append_pair_wrong_receiver.js",
+            "function appendPairWrongReceiver(flag, out, other, x) {\n  if (flag) {\n    out.push(x + 1);\n    other.push(x + 2);\n  }\n  audit(/opaque/);\n}\n",
+        ),
+        (
+            "append_pair_mutated.js",
+            "function appendPairMutated(flag, out, x) {\n  out.push(0);\n  if (flag) {\n    out.push(x + 1);\n    out.push(x + 2);\n  }\n  audit(/opaque/);\n}\n",
+        ),
+        (
+            "append_temp_pair_a.js",
+            "function appendTempPairLeft(flag, out, x) {\n  if (flag) {\n    const first = x + 1;\n    out.push(first);\n    out.push(x + 2);\n  }\n  audit(/opaque/);\n}\n",
+        ),
+        (
+            "append_temp_pair_b.js",
+            "function appendTempPairRight(enabled, dst, y) {\n  if (enabled) {\n    dst.push(1 + y);\n    dst.push(2 + y);\n  }\n  trace(/opaque/);\n}\n",
+        ),
+        (
+            "append_temp_pair_wrong.js",
+            "function appendTempPairWrong(flag, out, x) {\n  if (flag) {\n    const first = x + 3;\n    out.push(first);\n    out.push(x + 2);\n  }\n  audit(/opaque/);\n}\n",
+        ),
+        (
+            "append_chain_pair_a.js",
+            "function appendChainPairLeft(flag, out, x) {\n  if (flag) {\n    const base = x + 1;\n    const first = base * base;\n    out.push(first);\n    out.push(x + 2);\n  }\n  audit(/opaque/);\n}\n",
+        ),
+        (
+            "append_chain_pair_b.js",
+            "function appendChainPairRight(enabled, dst, y) {\n  if (enabled) {\n    dst.push((1 + y) * (1 + y));\n    dst.push(2 + y);\n  }\n  trace(/opaque/);\n}\n",
+        ),
+        (
+            "append_chain_pair_wrong.js",
+            "function appendChainPairWrong(flag, out, x) {\n  if (flag) {\n    const base = x + 1;\n    const first = base + base;\n    out.push(first);\n    out.push(x + 2);\n  }\n  audit(/opaque/);\n}\n",
+        ),
+        (
+            "append_chain_pair_uses_prior.js",
+            "function appendChainPairUsesPrior(flag, out, x) {\n  if (flag) {\n    const base = x + 1;\n    const first = base * base;\n    out.push(first + base);\n    out.push(x + 2);\n  }\n  audit(/opaque/);\n}\n",
+        ),
+        (
+            "append_chain_pair_forward_ref.js",
+            "function appendChainPairForwardRef(flag, out, x) {\n  if (flag) {\n    const base = first + 1;\n    const first = x * x;\n    out.push(first);\n    out.push(x + 2);\n  }\n  audit(/opaque/);\n}\n",
         ),
         (
             "append_cond_before.js",
@@ -2183,9 +2223,9 @@ fn semantic_scan_rejects_multiple_append_effect_order_false_merge() {
         "--mode",
         "semantic",
         "--min-lines",
-        "1",
+        "100",
         "--min-size",
-        "1",
+        "100",
         "--format",
         "json",
         "--top",
@@ -2193,6 +2233,34 @@ fn semantic_scan_rejects_multiple_append_effect_order_false_merge() {
     ]);
     let json = scan_json(&out);
     let families = scan_families(&json);
+
+    let assert_block_pair = |left: &str, right: &str, negative: &str| {
+        let family = families
+            .iter()
+            .find(|family| {
+                let locations = family["locations"].as_array().expect("locations");
+                let files: Vec<&str> = locations
+                    .iter()
+                    .filter_map(|loc| loc["file"].as_str())
+                    .collect();
+                files.iter().any(|file| file.ends_with(left))
+                    && files.iter().any(|file| file.ends_with(right))
+                    && files.iter().all(|file| !file.ends_with(negative))
+                    && locations.iter().all(|loc| loc["kind"] == "Block")
+            })
+            .unwrap_or_else(|| {
+                panic!("missing ordered append-effect branch family {left}/{right}: {out}")
+            });
+        assert!(
+            family["locations"]
+                .as_array()
+                .expect("locations")
+                .iter()
+                .all(|loc| loc["kind"] == "Block"),
+            "ordered append-effect branch fragments should report as Block units: {family:?}"
+        );
+    };
+
     let assert_no_merge = |left: &str, right: &str, kind: Option<&str>| {
         let merged = families.iter().any(|family| {
             let files: Vec<&str> = family["locations"]
@@ -2210,7 +2278,35 @@ fn semantic_scan_rejects_multiple_append_effect_order_false_merge() {
             "semantic mode must not merge ordered append effects when the order changes ({left}/{right}): {out}"
         );
     };
+
+    assert_block_pair(
+        "append_pair_a.js",
+        "append_pair_b.js",
+        "append_pair_wrong_order.js",
+    );
+    assert_block_pair(
+        "append_temp_pair_a.js",
+        "append_temp_pair_b.js",
+        "append_temp_pair_wrong.js",
+    );
+    assert_block_pair(
+        "append_chain_pair_a.js",
+        "append_chain_pair_b.js",
+        "append_chain_pair_wrong.js",
+    );
     assert_no_merge("append_pair_a.js", "append_pair_wrong_order.js", None);
+    assert_no_merge("append_pair_a.js", "append_pair_wrong_receiver.js", None);
+    assert_no_merge("append_pair_a.js", "append_pair_mutated.js", None);
+    assert_no_merge(
+        "append_chain_pair_a.js",
+        "append_chain_pair_uses_prior.js",
+        None,
+    );
+    assert_no_merge(
+        "append_chain_pair_a.js",
+        "append_chain_pair_forward_ref.js",
+        None,
+    );
     assert_no_merge(
         "append_cond_before.js",
         "append_cond_after.js",

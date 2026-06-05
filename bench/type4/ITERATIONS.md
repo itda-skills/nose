@@ -5582,6 +5582,77 @@ still moved up slightly on the sampled full corpus. The next loop should avoid a
 fragment shapes unless a non-Java evidence-backed real frontier miss requires them;
 otherwise switch to the `membership_contains` or `map_default_lookup` proof-fact frontier.
 
+## Fragment batch 20: exact ordered append-effect branch fragments
+
+This batch stays on the non-Java unit-fragment axis and opens only an effect sequence that
+the value graph already proves: a direct conditional branch may contain exactly two
+ordered single-item append effects. Each appended item may be direct, produced by one
+branch-local temporary immediately consumed by the append, or produced by a two-temporary
+linear chain whose final temporary is immediately consumed by the append. The receiver
+must not depend on the temporary or any prior chain temporary, and the existing
+direct-function-body context guard still rejects preceding receiver mutation.
+
+The proof invariant is order-sensitive. Append effects carry effect ordinals in the value
+fingerprint, so swapping the two appends changes behavior and must not merge. This does
+not open arbitrary statement windows, unordered effect bags, multi-item append calls,
+custom receiver semantics, or branches with more than two effect items.
+
+The three focused positives share one proof invariant and intentionally use JavaScript:
+
+- direct/direct append sequence: `out.push(x + 1); out.push(x + 2)`;
+- temp/direct append sequence: `first = x + 1; out.push(first); out.push(x + 2)`;
+- temp-chain/direct append sequence: `base = x + 1; first = base * base; out.push(first); out.push(x + 2)`.
+
+Adjacent hard negatives cover swapped append order, wrong receiver, preceding receiver
+mutation, wrong temp RHS, wrong chain RHS, final append reading a prior chain temp, and a
+forward reference from the first temp RHS to the later temp.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-ordered-append-1 | baseline | scan focused ordered-append fixtures with the previous release binary | 0 semantic families under fragment-only size gates |
+| fragment-ordered-append-2 | candidate extraction | allow exactly two ordered append-effect items in a direct conditional branch | 3 focused JS ordered-append branch families reported as `Block` units |
+| fragment-ordered-append-3 | hard negatives | require single-item appends, temp-local consumption, no temp-dependent receiver, and preserve effect order | wrong order/receiver/mutation/temp/prior-temp negatives excluded |
+| fragment-ordered-append-4 | performance guard | cap the new branch parser to 2-4 statements so long blocks are skipped before semantic extraction | full corpus families/locations unchanged; median normalize+extract baseline 5178.4ms vs candidate 5115.0ms |
+| fragment-ordered-append-5 | release gates | run focused exact-fragment tests, full Rust suite, clippy, release build, compact all-cross core smoke | `cargo test` pass; clippy clean; core smoke 634/634 positives and 0/1246 hard-negative false merges |
+
+Focused regression:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_append_effect_branch_fragments -- --nocapture
+3 ordered append-effect branch positives reported; wrong-order, wrong-receiver,
+preceding-mutation, wrong-temp, prior-temp-read, and forward-reference negatives excluded.
+```
+
+Core gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+positive recall: 634/634
+hard-negative false merges: 0/1246
+```
+
+Real corpus and performance:
+
+```text
+NOSE_TIME=1 <baseline> scan black prettier jest axios date-fns requests --mode semantic --format json --top 0
+NOSE_TIME=1 target/release/nose scan black prettier jest axios date-fns requests --mode semantic --format json --top 0
+selected files: 10216
+families: 206 before, 206 after
+locations: 615 before, 615 after
+normalize+extract: 187.8ms before, 174.1ms after
+
+NOSE_TIME=1 <baseline> scan . --mode semantic --format json --top 0
+NOSE_TIME=1 target/release/nose scan . --mode semantic --format json --top 0
+full files: 60748
+families: 7401 before, 7401 after
+locations: 32961 before, 32961 after
+median normalize+extract over three alternating runs: 5178.4ms before, 5115.0ms after
+```
+
+This is a focused unit-fragment completeness expansion rather than a real-corpus
+evidence-backed closure. It keeps the soundness boundary narrow by relying on existing
+ordered effect sinks and by refusing longer mixed-effect branch windows.
+
 ## Real-corpus C u32 unsigned-cast byte-pack: batch 2026-06-06
 
 This batch was selected to correct the recent Java-heavy skew in the real frontier work.

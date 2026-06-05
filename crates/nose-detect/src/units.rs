@@ -1907,6 +1907,9 @@ fn empty_or_single_direct_exact_statement_block(
     if kids.is_empty() {
         return Some(false);
     }
+    if exact_ordered_append_effect_sequence_block(il, node) {
+        return Some(true);
+    }
     if kids.len() == 3 && exact_temp_chain_consumed_by_statement(il, kids[0], kids[1], kids[2]) {
         return Some(true);
     }
@@ -1925,6 +1928,122 @@ fn empty_or_single_direct_exact_statement_block(
         NodeKind::Loop if exact_loop_effect_fragment_root(il, interner, kids[0]) => Some(true),
         _ => None,
     }
+}
+
+fn exact_ordered_append_effect_sequence_block(il: &Il, node: NodeId) -> bool {
+    if il.kind(node) != NodeKind::Block {
+        return false;
+    }
+    let kids = il.children(node);
+    if !(2..=4).contains(&kids.len()) {
+        return false;
+    }
+    let mut idx = 0;
+    let mut effects = 0;
+    while idx < kids.len() {
+        if idx + 2 < kids.len()
+            && exact_temp_chain_consumed_by_append_effect(
+                il,
+                kids[idx],
+                kids[idx + 1],
+                kids[idx + 2],
+            )
+        {
+            effects += 1;
+            idx += 3;
+            continue;
+        }
+        if idx + 1 < kids.len()
+            && exact_temp_assignment_consumed_by_append_effect(il, kids[idx], kids[idx + 1])
+        {
+            effects += 1;
+            idx += 2;
+            continue;
+        }
+        if exact_append_effect_statement_root(il, kids[idx]) {
+            effects += 1;
+            idx += 1;
+            continue;
+        }
+        return false;
+    }
+    effects == 2
+}
+
+fn exact_append_effect_statement_root(il: &Il, stmt: NodeId) -> bool {
+    if il.kind(stmt) != NodeKind::ExprStmt {
+        return false;
+    }
+    let kids = il.children(stmt);
+    kids.len() == 1 && exact_single_item_append_call(il, kids[0])
+}
+
+fn exact_single_item_append_call(il: &Il, call: NodeId) -> bool {
+    il.kind(call) == NodeKind::Call
+        && matches!(il.node(call).payload, Payload::Builtin(Builtin::Append))
+        && il.children(call).len() == 2
+}
+
+fn exact_temp_assignment_consumed_by_append_effect(
+    il: &Il,
+    assign: NodeId,
+    effect: NodeId,
+) -> bool {
+    let Some((temp_cid, _)) = local_nontrivial_temp_assignment(il, assign) else {
+        return false;
+    };
+    let mut temp_cids = FxHashSet::default();
+    temp_cids.insert(temp_cid);
+    let empty = FxHashSet::default();
+    let kids = il.children(effect);
+    il.kind(effect) == NodeKind::ExprStmt
+        && kids.len() == 1
+        && exact_single_item_append_call(il, kids[0])
+        && append_effect_consumes_temp(il, kids[0], &empty, &temp_cids)
+}
+
+fn exact_temp_chain_consumed_by_append_effect(
+    il: &Il,
+    first_assign: NodeId,
+    second_assign: NodeId,
+    effect: NodeId,
+) -> bool {
+    let Some((first_cid, first_rhs)) = local_nontrivial_temp_assignment(il, first_assign) else {
+        return false;
+    };
+    let Some((second_cid, second_rhs)) = local_nontrivial_temp_assignment(il, second_assign) else {
+        return false;
+    };
+    if first_cid == second_cid {
+        return false;
+    }
+    let mut first_temp = FxHashSet::default();
+    first_temp.insert(first_cid);
+    let mut second_temp = FxHashSet::default();
+    second_temp.insert(second_cid);
+    if node_mentions_any_cid(il, first_rhs, &first_temp)
+        || node_mentions_any_cid(il, first_rhs, &second_temp)
+        || !node_mentions_any_cid(il, second_rhs, &first_temp)
+    {
+        return false;
+    }
+    let mut all_temps = first_temp.clone();
+    all_temps.insert(second_cid);
+    let mut final_temp = FxHashSet::default();
+    final_temp.insert(second_cid);
+    let empty = FxHashSet::default();
+    let kids = il.children(effect);
+    il.kind(effect) == NodeKind::ExprStmt
+        && kids.len() == 1
+        && exact_single_item_append_call(il, kids[0])
+        && append_effect_consumes_chained_temp(
+            il,
+            kids[0],
+            &empty,
+            &all_temps,
+            &final_temp,
+            &first_temp,
+        )
 }
 
 fn exact_temp_assignment_consumed_by_statement(il: &Il, assign: NodeId, stmt: NodeId) -> bool {

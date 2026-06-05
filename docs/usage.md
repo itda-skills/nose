@@ -140,6 +140,8 @@ Conditional branches may also assign one local temporary, or a two-temporary lin
 and immediately consume the final value in a direct return/throw/effect statement or a
 non-overloadable C/Go/Java index assignment whose receiver does not depend on the
 temporary.
+They may contain exactly two ordered single-item append effects when each appended item is
+direct or is immediately produced by a branch-local temporary or linear temp chain.
 They also include ForEach append-effect loops whose only loop-body effects append values
 that depend on the iteration binding, plus C/Go/Java index-assignment effects where index
 assignment is not receiver-overloadable, and Java `this.field = value` self-field
