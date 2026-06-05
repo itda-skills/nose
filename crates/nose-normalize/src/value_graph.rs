@@ -2920,6 +2920,20 @@ impl<'a> Builder<'a> {
                 .into_iter()
                 .any(|child| self.expr_is_static_runtime_err(child, env));
         }
+        if self.il.kind(expr) == NodeKind::HoF
+            && matches!(
+                self.il.node(expr).payload,
+                Payload::HoF(HoFKind::Map | HoFKind::Filter)
+            )
+        {
+            let kids = self.il.children(expr).to_vec();
+            return kids
+                .first()
+                .is_some_and(|&coll| self.expr_is_static_non_empty_seq(coll))
+                && kids
+                    .get(1)
+                    .is_some_and(|&lambda| self.lambda_body_is_static_runtime_err(lambda, env));
+        }
         if self.il.kind(expr) != NodeKind::BinOp {
             return false;
         }
@@ -2938,6 +2952,24 @@ impl<'a> Builder<'a> {
                 .is_some_and(|exp| !(0..=u32::MAX as i64).contains(&exp)),
             _ => false,
         }
+    }
+
+    fn expr_is_static_non_empty_seq(&self, expr: NodeId) -> bool {
+        self.il.kind(expr) == NodeKind::Seq && !self.il.children(expr).is_empty()
+    }
+
+    fn lambda_body_is_static_runtime_err(
+        &mut self,
+        lambda: NodeId,
+        env: &FxHashMap<u32, ValueId>,
+    ) -> bool {
+        if self.il.kind(lambda) != NodeKind::Lambda {
+            return false;
+        }
+        self.il
+            .children(lambda)
+            .last()
+            .is_some_and(|&body| self.is_effect_free_static_err_body(body, env))
     }
 
     fn static_int_expr(&self, expr: NodeId) -> Option<i64> {
