@@ -1910,6 +1910,9 @@ fn empty_or_single_direct_exact_statement_block(
     if exact_ordered_append_effect_sequence_block(il, node) {
         return Some(true);
     }
+    if exact_ordered_index_assignment_effect_sequence_block(il, node) {
+        return Some(true);
+    }
     if kids.len() == 3 && exact_temp_chain_consumed_by_statement(il, kids[0], kids[1], kids[2]) {
         return Some(true);
     }
@@ -2044,6 +2047,95 @@ fn exact_temp_chain_consumed_by_append_effect(
             &final_temp,
             &first_temp,
         )
+}
+
+fn exact_ordered_index_assignment_effect_sequence_block(il: &Il, node: NodeId) -> bool {
+    if !matches!(il.meta.lang, Lang::C | Lang::Go | Lang::Java) {
+        return false;
+    }
+    if il.kind(node) != NodeKind::Block {
+        return false;
+    }
+    let kids = il.children(node);
+    if !(2..=4).contains(&kids.len()) {
+        return false;
+    }
+    if !kids.iter().all(|&kid| il.kind(kid) == NodeKind::Assign) {
+        return false;
+    }
+    let mut idx = 0;
+    let mut effects = 0;
+    while idx < kids.len() {
+        if idx + 2 < kids.len()
+            && exact_temp_chain_consumed_by_index_assignment_effect(
+                il,
+                kids[idx],
+                kids[idx + 1],
+                kids[idx + 2],
+            )
+        {
+            effects += 1;
+            idx += 3;
+            continue;
+        }
+        if idx + 1 < kids.len()
+            && exact_temp_assignment_consumed_by_index_assignment_effect(
+                il,
+                kids[idx],
+                kids[idx + 1],
+            )
+        {
+            effects += 1;
+            idx += 2;
+            continue;
+        }
+        if exact_index_assignment_fragment_root(il, kids[idx]) {
+            effects += 1;
+            idx += 1;
+            continue;
+        }
+        return false;
+    }
+    effects == 2
+}
+
+fn exact_temp_assignment_consumed_by_index_assignment_effect(
+    il: &Il,
+    assign: NodeId,
+    effect: NodeId,
+) -> bool {
+    let Some((temp_cid, _)) = local_nontrivial_temp_assignment(il, assign) else {
+        return false;
+    };
+    exact_index_assignment_consumes_temp(il, effect, temp_cid, None)
+}
+
+fn exact_temp_chain_consumed_by_index_assignment_effect(
+    il: &Il,
+    first_assign: NodeId,
+    second_assign: NodeId,
+    effect: NodeId,
+) -> bool {
+    let Some((first_cid, first_rhs)) = local_nontrivial_temp_assignment(il, first_assign) else {
+        return false;
+    };
+    let Some((second_cid, second_rhs)) = local_nontrivial_temp_assignment(il, second_assign) else {
+        return false;
+    };
+    if first_cid == second_cid {
+        return false;
+    }
+    let mut first = FxHashSet::default();
+    first.insert(first_cid);
+    let mut second = FxHashSet::default();
+    second.insert(second_cid);
+    if node_mentions_any_cid(il, first_rhs, &first)
+        || node_mentions_any_cid(il, first_rhs, &second)
+        || !node_mentions_any_cid(il, second_rhs, &first)
+    {
+        return false;
+    }
+    exact_index_assignment_consumes_temp(il, effect, second_cid, Some(&first))
 }
 
 fn exact_temp_assignment_consumed_by_statement(il: &Il, assign: NodeId, stmt: NodeId) -> bool {
