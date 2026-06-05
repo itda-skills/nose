@@ -51,6 +51,7 @@ meaningful IL shape, so clones involving it won't converge. Closing those gaps
 Go from 0.40% to 0.03%, or Java local record/annotation declarations being erased
 as type metadata instead of surfacing as opaque statements, or Rust `async { ... }`
 blocks lowering to their body instead of a `Raw` wrapper, or Python literal/wildcard
-`match` cases lowering to an if-chain) is how a language becomes a first-class citizen — see the
+`match` cases lowering to an if-chain, or Go channel send statements lowering to a tagged
+effect shape) is how a language becomes a first-class citizen — see the
 [experiments](experiments.md) log and the convergence-test discipline in
 [`CONTRIBUTING`](../CONTRIBUTING.md).

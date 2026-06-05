@@ -60,6 +60,7 @@ fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
         }
         "break_statement" => Some(lo.add(NodeKind::Break, Payload::None, span, &[])),
         "continue_statement" => Some(lo.add(NodeKind::Continue, Payload::None, span, &[])),
+        "send_statement" => Some(lower_send_statement(lo, node)),
         // strip `go` / `defer` to the called expression
         "go_statement" | "defer_statement" => node.named_child(0).map(|c| {
             let e = lower_expr(lo, c);
@@ -96,6 +97,17 @@ fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
             }
         }
     }
+}
+
+fn lower_send_statement(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .map(|child| lower_expr(lo, child))
+        .collect();
+    let tag = lo.sym("send_statement");
+    let send = lo.add(NodeKind::Seq, Payload::Name(tag), span, &kids);
+    lo.add(NodeKind::ExprStmt, Payload::None, span, &[send])
 }
 
 fn lower_static_import(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
@@ -812,5 +824,32 @@ mod tests {
             !and.contains(&Op::BitNot),
             "`a & b` must not introduce BitNot, got {and:?}"
         );
+    }
+
+    #[test]
+    fn send_statement_lowers_without_raw() {
+        let interner = Interner::new();
+        let il = lower(
+            FileId(0),
+            "t.go",
+            b"package main\nfunc f(ch chan int, x int) { ch <- x }\n",
+            &interner,
+        )
+        .expect("lower");
+
+        let raw: Vec<_> = il
+            .nodes
+            .iter()
+            .filter(|node| node.kind == NodeKind::Raw)
+            .filter_map(|node| match node.payload {
+                Payload::Name(sym) => Some(interner.resolve(sym)),
+                _ => None,
+            })
+            .collect();
+        assert!(raw.is_empty(), "send should lower without Raw: {raw:?}");
+        assert!(il.nodes.iter().any(|node| {
+            matches!(node.kind, NodeKind::Seq)
+                && matches!(node.payload, Payload::Name(sym) if interner.resolve(sym) == "send_statement")
+        }));
     }
 }
