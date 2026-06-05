@@ -2940,13 +2940,21 @@ impl<'a> Builder<'a> {
                 .children(target)
                 .first()
                 .is_some_and(|&receiver| self.expr_is_static_runtime_err(receiver, env)),
-            NodeKind::Index => self
-                .il
-                .children(target)
-                .to_vec()
-                .get(1)
-                .copied()
-                .is_some_and(|index| self.expr_is_static_runtime_err(index, env)),
+            NodeKind::Index => {
+                self.il
+                    .children(target)
+                    .to_vec()
+                    .split_first()
+                    .is_some_and(|(&base, rest)| {
+                        if self.expr_is_static_runtime_err(base, env) {
+                            return true;
+                        }
+                        crate::is_pure(self.il, base)
+                            && rest
+                                .first()
+                                .is_some_and(|&index| self.expr_is_static_runtime_err(index, env))
+                    })
+            }
             _ => false,
         }
     }

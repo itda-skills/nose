@@ -2057,6 +2057,19 @@ fn value_graph_runs_try_handler_after_static_index_assignment_target_err() {
 }
 
 #[test]
+fn value_graph_runs_try_handler_after_static_index_assignment_base_err() {
+    let i = Interner::new();
+    let try_err =
+        "def f():\n    try:\n        (1 / 0)[print(1)] = 2\n    except Exception:\n        return 7\n";
+    let plain_return = "def f():\n    return 7\n";
+    assert_eq!(
+        value_fp(&i, try_err, Lang::Python),
+        value_fp(&i, plain_return, Lang::Python),
+        "a static index assignment base error should run the simple catch handler before subscript effects"
+    );
+}
+
+#[test]
 fn value_graph_keeps_try_index_assignment_rhs_effects_before_target_err() {
     let i = Interner::new();
     let effect_then_err =
