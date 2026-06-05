@@ -4761,6 +4761,59 @@ Targeted coverage added
 `java_arrays_aslist_single_argument_respects_array_provenance`, plus the existing literal
 collection membership and typed-empty-domain regressions stayed green.
 
+## Fragment batch 12: exact Java `this.field` assignment effects
+
+This batch opens the next assignment-effect fragment only where the receiver coordinate is
+language-fixed: Java `this.field = value`. The value graph already models self-field writes
+as final per-field state, but that model is sound only for the implicit receiver. The batch
+therefore does **not** allow arbitrary `receiver.field = value`, C/Go parameter receiver
+field writes, JS/TS dynamic properties, Python `__setattr__`, Ruby writers, or Rust field
+mutation fragments. Conditions and RHS expressions still pass through the existing strict
+exact-safe tree; the special case is limited to the LHS `this.field` target.
+
+The three focused positives share one proof invariant: a direct Java self-field write, a
+single conditional self-field write, and a nested conditional self-field write all produce a
+guarded final field-state sink whose field name, guard, and value are exact fingerprint
+coordinates. Adjacent hard negatives cover wrong assigned value, wrong target field, wrong
+receiver (`other.field`), and dynamic JS/Python self-field surfaces.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-this-field-1 | candidate extraction | allow exact Java `Assign(Field(this, name), value)` fragments, including single-statement conditional branches | 3 focused self-field families reported as `Block` units |
+| fragment-this-field-2 | soundness boundary | keep arbitrary receiver field writes outside exact fragments and require condition/RHS strict exact-safety | wrong value/field/receiver and JS/Python dynamic receiver negatives excluded |
+| fragment-this-field-3 | smoke gate repair | update `eval_manifest.py` from removed `--min-tokens` to `--min-size` so `type4-smoke.sh` uses the current scan CLI | compact all-cross gate runs without CLI option failure |
+| fragment-this-field-4 | regression | full unit/CLI/equivalence suite, clippy, and compact all-cross smoke | `cargo test` pass; `cargo clippy --all-targets -- -D warnings` pass; core smoke 626/626 positives and 0/1233 hard-negative false merges |
+| fragment-this-field-5 | oracle check | run `nose verify` on a no-opaque Java self-field corpus | 3/3 units interpretable; 1 fingerprint-equal group; 0 false merges |
+| fragment-this-field-6 | real delta | selected JS/Python/TS scan unchanged; selected C/Go/Java scan increased only on Java `this.field` block families | JS/Python/TS stayed at 66 families; C/Go/Java 940 -> 1063 families; 123 sampled Java `this.field` families |
+| fragment-this-field-7 | performance | scan `bench/repos/flask bench/repos/axios bench/repos/rust` with `NOSE_TIME=1` | 335 files; normalize+extract 15.5ms, candidates 2.9ms, score 0.3ms; 66 semantic families |
+| fragment-this-field-8 | performance | scan `bench/repos/curl bench/repos/gin bench/repos/guava` with `NOSE_TIME=1` | 4357 files; normalize+extract 168.8ms, candidates 35.5ms, score 0.8ms; 1063 semantic families |
+
+Focused regression:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_java_this_field_assignment_fragments
+3 exact Java self-field assignment fragment families found; wrong value/field/receiver and
+JS/Python dynamic receiver negatives excluded.
+```
+
+Core gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+selected items: 1859/6728
+positive recall: 626/626
+hard-negative false merges: 0/1233
+Raw nodes: 0/68421
+```
+
+The real-repo increase is intentionally visible: Guava has many constructor-style
+`this.field = ...` assignments that were previously hidden by opaque neighboring calls or
+large methods. The sampled new families are dominated by same-field assignments such as
+`this.function = checkNotNull(function)`, `this.event = checkNotNull(event)`, and guarded
+graph/cache constructor state. Do not widen this to arbitrary receiver field writes until
+the value graph and interpreter include receiver identity in field-write effects or another
+proof fact establishes a fixed receiver.
+
 ## Fragment batch 11: exact conditional ForEach append-effect branches
 
 This batch extends the batch-10 proof invariant into conditional branch bodies. A direct

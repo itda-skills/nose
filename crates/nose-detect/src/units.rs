@@ -419,7 +419,10 @@ pub(crate) fn extract(
         }
 
         let safe_start = unit_timer.start();
-        let exact_safe = strict_exact_safe_tree(il, interner, &facts, root);
+        let strict_exact_safe = strict_exact_safe_tree(il, interner, &facts, root);
+        let exact_safe = strict_exact_safe
+            || (exact_fragment
+                && strict_exact_self_field_assignment_fragment_safe(il, interner, &facts, root));
         let safe_ms = UnitTimer::elapsed(safe_start);
         // The value graph is the semantic fingerprint (already sorted), with the
         // literal-only multiset for data-table detection. Computed before the size
@@ -441,7 +444,7 @@ pub(crate) fn extract(
         // path (`value.len() >= 4`, the same floor that path uses) — this recovers the
         // compressed functional Type-4 forms without lowering the gate for trivial units
         // (`return x` has 1–2 atoms) or for blocks (kept strict; they are the noisy ones).
-        // Control-flow blocks keep the same syntactic min-lines/min-tokens gate as
+        // Control-flow blocks keep the same syntactic min-lines/min-size gate as
         // functions: measurement showed the real sub-function clones are small (24–40
         // tokens), so a stricter block gate drops signal (pool-precision 0.106→0.074,
         // AUC 0.42→0.17) faster than noise. Exact statement fragments are the narrow
@@ -1846,9 +1849,9 @@ fn exact_statement_fragment_root(
         NodeKind::Throw => {
             kids.len() == 1 && !matches!(il.kind(kids[0]), NodeKind::Var | NodeKind::Lit)
         }
-        NodeKind::Assign => exact_index_assignment_fragment_root(il, node),
+        NodeKind::Assign => exact_assignment_fragment_root(il, interner, node),
         NodeKind::ExprStmt => exact_expr_statement_fragment_root(il, node),
-        NodeKind::If => exact_conditional_fragment_root(il, node),
+        NodeKind::If => exact_conditional_fragment_root(il, interner, node),
         NodeKind::Loop => exact_loop_effect_fragment_root(il, node),
         _ => false,
     }
@@ -1868,7 +1871,7 @@ fn exact_expr_statement_fragment_root(il: &Il, node: NodeId) -> bool {
         )
 }
 
-fn exact_conditional_fragment_root(il: &Il, node: NodeId) -> bool {
+fn exact_conditional_fragment_root(il: &Il, interner: &Interner, node: NodeId) -> bool {
     let kids = il.children(node);
     if !(kids.len() == 2 || kids.len() == 3) {
         return false;
@@ -1876,7 +1879,7 @@ fn exact_conditional_fragment_root(il: &Il, node: NodeId) -> bool {
     let mut has_exact_statement = false;
     for &branch in kids.iter().skip(1) {
         let Some(branch_has_exact_statement) =
-            empty_or_single_direct_exact_statement_block(il, branch)
+            empty_or_single_direct_exact_statement_block(il, interner, branch)
         else {
             return false;
         };
@@ -1885,7 +1888,11 @@ fn exact_conditional_fragment_root(il: &Il, node: NodeId) -> bool {
     has_exact_statement
 }
 
-fn empty_or_single_direct_exact_statement_block(il: &Il, node: NodeId) -> Option<bool> {
+fn empty_or_single_direct_exact_statement_block(
+    il: &Il,
+    interner: &Interner,
+    node: NodeId,
+) -> Option<bool> {
     if il.kind(node) != NodeKind::Block {
         return None;
     }
@@ -1899,12 +1906,17 @@ fn empty_or_single_direct_exact_statement_block(il: &Il, node: NodeId) -> Option
     match il.kind(kids[0]) {
         NodeKind::Return if il.children(kids[0]).len() <= 1 => Some(true),
         NodeKind::Throw if il.children(kids[0]).len() == 1 => Some(true),
-        NodeKind::Assign if exact_index_assignment_fragment_root(il, kids[0]) => Some(true),
+        NodeKind::Assign if exact_assignment_fragment_root(il, interner, kids[0]) => Some(true),
         NodeKind::ExprStmt if exact_expr_statement_fragment_root(il, kids[0]) => Some(true),
-        NodeKind::If if exact_conditional_fragment_root(il, kids[0]) => Some(true),
+        NodeKind::If if exact_conditional_fragment_root(il, interner, kids[0]) => Some(true),
         NodeKind::Loop if exact_loop_effect_fragment_root(il, kids[0]) => Some(true),
         _ => None,
     }
+}
+
+fn exact_assignment_fragment_root(il: &Il, interner: &Interner, node: NodeId) -> bool {
+    exact_index_assignment_fragment_root(il, node)
+        || exact_self_field_assignment_fragment_root(il, interner, node)
 }
 
 fn exact_index_assignment_fragment_root(il: &Il, node: NodeId) -> bool {
@@ -1913,6 +1925,88 @@ fn exact_index_assignment_fragment_root(il: &Il, node: NodeId) -> bool {
     }
     let kids = il.children(node);
     kids.len() == 2 && il.kind(kids[0]) == NodeKind::Index
+}
+
+// Field-write fingerprints intentionally model final self-field state without a receiver
+// coordinate. Expose only Java's fixed `this.field = ...`; arbitrary receivers such as
+// `other.field = ...` need a receiver-aware proof fact before they can be exact fragments.
+fn exact_self_field_assignment_fragment_root(il: &Il, interner: &Interner, node: NodeId) -> bool {
+    if il.meta.lang != Lang::Java || il.kind(node) != NodeKind::Assign {
+        return false;
+    }
+    let kids = il.children(node);
+    kids.len() == 2 && exact_java_this_field(il, interner, kids[0])
+}
+
+fn exact_java_this_field(il: &Il, interner: &Interner, node: NodeId) -> bool {
+    if il.meta.lang != Lang::Java || il.kind(node) != NodeKind::Field {
+        return false;
+    }
+    if !matches!(il.node(node).payload, Payload::Name(_)) {
+        return false;
+    }
+    let Some(&receiver) = il.children(node).first() else {
+        return false;
+    };
+    il.kind(receiver) == NodeKind::Var
+        && matches!(il.node(receiver).payload, Payload::Name(name) if interner.resolve(name) == "this")
+}
+
+fn strict_exact_self_field_assignment_fragment_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    match il.kind(node) {
+        NodeKind::Assign => {
+            let kids = il.children(node);
+            kids.len() == 2
+                && exact_self_field_assignment_fragment_root(il, interner, node)
+                && strict_exact_safe_tree(il, interner, facts, kids[1])
+        }
+        NodeKind::If => {
+            let kids = il.children(node);
+            if !(kids.len() == 2 || kids.len() == 3) {
+                return false;
+            }
+            if !strict_exact_safe_tree(il, interner, facts, kids[0]) {
+                return false;
+            }
+            let mut has_field_assignment = false;
+            for &branch in kids.iter().skip(1) {
+                let Some(branch_has_field_assignment) =
+                    strict_exact_self_field_assignment_branch_safe(il, interner, facts, branch)
+                else {
+                    return false;
+                };
+                has_field_assignment |= branch_has_field_assignment;
+            }
+            has_field_assignment
+        }
+        _ => false,
+    }
+}
+
+fn strict_exact_self_field_assignment_branch_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> Option<bool> {
+    if il.kind(node) != NodeKind::Block {
+        return None;
+    }
+    let kids = il.children(node);
+    if kids.is_empty() {
+        return Some(false);
+    }
+    if kids.len() != 1 {
+        return None;
+    }
+    Some(strict_exact_self_field_assignment_fragment_safe(
+        il, interner, facts, kids[0],
+    ))
 }
 
 fn exact_loop_effect_fragment_root(il: &Il, node: NodeId) -> bool {

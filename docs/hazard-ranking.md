@@ -174,7 +174,7 @@ later converged was probably unintended), and let users dismiss false positives 
    (`0.3 + 0.7·(1 − tightness)`, `tightness = shared_weight / mean_lines`) and
    `scope_weight` (prod 1.0 / mixed 0.5 / test 0.25) inline. Magnitude is `mean_lines`
    — **not** `mean_sem` (the data showed semantic size is anti-predictive; this also
-   softly demotes the tiny dense functions the `min-tokens` gate cannot, see
+   softly demotes the tiny dense functions the `min-size` gate cannot, see
    [normalization](normalization.md)).
 2. ✅ `SortKey::Hazard` in `crates/nose-cli/src/main.rs`, wired into `score()`,
    `sort_name()`, the `--sort` value list, and `capabilities` — and made **the

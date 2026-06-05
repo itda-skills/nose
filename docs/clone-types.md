@@ -86,8 +86,9 @@ Lean (`formal/`). See [normalization](normalization.md) for the full pass list.
   branches, and nested branches whose only non-empty statement is another exact
   conditional or exact ForEach append-effect loop, plus ForEach append-effect loops whose
   only loop-body effects append values that depend on the iteration binding and
-  non-overloadable C/Go/Java index-assignment effects), not arbitrary statement windows
-  with unmodeled free-variable, live-out, receiver-overload, or effect boundaries.
+  non-overloadable C/Go/Java index-assignment effects, plus Java `this.field = value`
+  self-field assignments with the receiver fixed to `this`), not arbitrary statement
+  windows with unmodeled free-variable, live-out, receiver-overload, or effect boundaries.
 
 ## Scan modes, and cross-language
 

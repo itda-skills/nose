@@ -52,7 +52,7 @@ pub struct DetectOptions {
     pub block_units: bool,
     /// Minimum duplicated run size for the contiguous copy-paste channel, in IL
     /// tokens. This is separate from structural unit size internally, but the CLI's
-    /// `scan --min-tokens` intentionally drives both so syntax gates have one size knob.
+    /// `scan --min-size` intentionally drives both so syntax gates have one size knob.
     pub contiguous_min_tokens: usize,
     /// Minimum duplicated run size for the contiguous copy-paste channel, in source
     /// lines. The CLI's `scan --min-lines` drives both unit extraction and this floor.

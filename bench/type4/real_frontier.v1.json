@@ -43,7 +43,7 @@
       "evidence": "IL confirms both predicates lower to EnumSet.of(...).contains(unit), but the second enclosing method has an additional HALF_DAYS exclusion assertion, so the method-level units are not an evidence-backed Type-4 clone pair.",
       "detector": {
         "current_detector_miss": true,
-        "baseline_command": "nose scan ParameterizedTestDemo.java --mode semantic --format json --top 0 --min-tokens 1 --min-lines 1",
+        "baseline_command": "nose scan ParameterizedTestDemo.java --mode semantic --format json --top 0 --min-size 1 --min-lines 1",
         "baseline_result": "No family contains testWithEnumSourceInclude and testWithEnumSourceRangeExclude; selected before/after EnumSet whitelist experiment also produced no new real family."
       },
       "proof_invariant": "Would require only unshadowed java.util.EnumSet.of with strict-safe arguments and order-insensitive membership collection canon, but this is not sufficient to close a real method-level miss here.",
@@ -106,7 +106,7 @@
       "evidence": "near/syntax scan reports a real duplicate block, but semantic scan alone reports no family because the expression depends on a dynamic JUnit API call chain.",
       "detector": {
         "current_detector_miss": true,
-        "baseline_command": "nose scan HttpServerExtension.java HttpTests.java --mode semantic --format json --top 0 --min-lines 1 --min-tokens 1",
+        "baseline_command": "nose scan HttpServerExtension.java HttpTests.java --mode semantic --format json --top 0 --min-lines 1 --min-size 1",
         "baseline_result": "0 semantic families; syntax,semantic reports a block family."
       },
       "proof_invariant": "Would require proving Class literal equality and the purity/identity of parameterContext.getParameter().getType(), which is a library-specific receiver chain not currently modeled.",
@@ -175,7 +175,7 @@
       "evidence": "nose verify selected SymPy files before: under-merged lead vj=0.76 modular.py:11 ↮ galoistools.py:154. After the batch selected verify reports no under-merged groups.",
       "detector": {
         "current_detector_miss": false,
-        "baseline_command": "nose scan selected SymPy files --mode semantic --format json --top 0 --min-lines 1 --min-tokens 1",
+        "baseline_command": "nose scan selected SymPy files --mode semantic --format json --top 0 --min-lines 1 --min-size 1",
         "baseline_result": "Previous release had only a smaller block family at modular.py:20 and galoistools.py:169.",
         "candidate_result": "Candidate scan reports function family 666a9056967fa013 with galoistools.py:154 and modular.py:11."
       },
@@ -280,7 +280,7 @@
       "evidence": "Candidate scan added function family 81a0c70aa0e3d978; previous release had no function-level family for these spans.",
       "detector": {
         "current_detector_miss": false,
-        "baseline_command": "nose scan selected SymPy files --mode semantic --format json --top 0 --min-lines 1 --min-tokens 1",
+        "baseline_command": "nose scan selected SymPy files --mode semantic --format json --top 0 --min-lines 1 --min-size 1",
         "baseline_result": "No previous release function family for densebasic.py:121 and galoistools.py:193.",
         "candidate_result": "Candidate scan reports function family 81a0c70aa0e3d978."
       },
@@ -315,7 +315,7 @@
       "evidence": "Candidate scan added function family 490a609cb8f7e2b8; previous release had no function-level family for these spans.",
       "detector": {
         "current_detector_miss": false,
-        "baseline_command": "nose scan selected SymPy files --mode semantic --format json --top 0 --min-lines 1 --min-tokens 1",
+        "baseline_command": "nose scan selected SymPy files --mode semantic --format json --top 0 --min-lines 1 --min-size 1",
         "baseline_result": "No previous release function family for densebasic.py:141 and galoistools.py:213.",
         "candidate_result": "Candidate scan reports function family 490a609cb8f7e2b8."
       },
@@ -350,7 +350,7 @@
       "evidence": "Candidate scan added method family 8cfcba8974d82c2d; previous release had no method-level family for these spans.",
       "detector": {
         "current_detector_miss": false,
-        "baseline_command": "nose scan selected SymPy files --mode semantic --format json --top 0 --min-lines 1 --min-tokens 1",
+        "baseline_command": "nose scan selected SymPy files --mode semantic --format json --top 0 --min-lines 1 --min-size 1",
         "baseline_result": "No previous release method family for common.py:693 and common.py:3142.",
         "candidate_result": "Candidate scan reports method family 8cfcba8974d82c2d."
       },

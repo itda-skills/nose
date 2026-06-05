@@ -1573,6 +1573,157 @@ fn semantic_scan_reports_exact_safe_index_assignment_fragments_for_non_overloade
 }
 
 #[test]
+fn semantic_scan_reports_exact_safe_java_this_field_assignment_fragments() {
+    let dir = std::env::temp_dir().join(format!(
+        "nose_exact_this_field_assign_fragments_{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+
+    let fixtures = [
+        (
+            "FieldSelfSquareA.java",
+            "class FieldSelfSquareA {\n  int value;\n  void f(int v) {\n    this.value = (v + 1) * (v + 1);\n    audit(this);\n  }\n}\n",
+        ),
+        (
+            "FieldSelfSquareB.java",
+            "class FieldSelfSquareB {\n  int value;\n  void f(int w) {\n    this.value = (1 + w) * (1 + w);\n    trace(this);\n  }\n}\n",
+        ),
+        (
+            "FieldSelfSquareWrongValue.java",
+            "class FieldSelfSquareWrongValue {\n  int value;\n  void f(int x) {\n    this.value = (x + 2) * (x + 2);\n    audit(this);\n  }\n}\n",
+        ),
+        (
+            "FieldSelfConditionalA.java",
+            "class FieldSelfConditionalA {\n  int total;\n  int other;\n  void f(boolean enabled, int a, int b) {\n    if (enabled) {\n      this.total = a + b;\n    }\n    audit(this);\n  }\n}\n",
+        ),
+        (
+            "FieldSelfConditionalB.java",
+            "class FieldSelfConditionalB {\n  int total;\n  int other;\n  void f(boolean ready, int c, int d) {\n    if (ready) {\n      this.total = d + c;\n    }\n    trace(this);\n  }\n}\n",
+        ),
+        (
+            "FieldSelfConditionalWrongField.java",
+            "class FieldSelfConditionalWrongField {\n  int total;\n  int other;\n  void f(boolean ready, int c, int d) {\n    if (ready) {\n      this.other = d + c;\n    }\n    audit(this);\n  }\n}\n",
+        ),
+        (
+            "FieldSelfNestedA.java",
+            "class FieldSelfNestedA {\n  int score;\n  void f(boolean enabled, int a, int b) {\n    if (enabled) {\n      if (a > 0) {\n        this.score = (a + b) * 2;\n      }\n    }\n    audit(this);\n  }\n}\n",
+        ),
+        (
+            "FieldSelfNestedB.java",
+            "class FieldSelfNestedB {\n  int score;\n  void f(boolean ready, int c, int d) {\n    if (ready) {\n      if (0 < c) {\n        this.score = 2 * (d + c);\n      }\n    }\n    trace(this);\n  }\n}\n",
+        ),
+        (
+            "FieldSelfNestedWrongReceiver.java",
+            "class FieldSelfNestedWrongReceiverBox { int score; }\nclass FieldSelfNestedWrongReceiver {\n  int score;\n  void f(FieldSelfNestedWrongReceiverBox other, boolean ready, int c, int d) {\n    if (ready) {\n      if (0 < c) {\n        other.score = 2 * (d + c);\n      }\n    }\n    audit(this);\n  }\n}\n",
+        ),
+        (
+            "js_this_field_a.js",
+            "function jsThisFieldLeft(v) {\n  this.value = (v + 1) * (v + 1);\n  audit(this);\n}\n",
+        ),
+        (
+            "js_this_field_b.js",
+            "function jsThisFieldRight(w) {\n  this.value = (1 + w) * (1 + w);\n  trace(this);\n}\n",
+        ),
+        (
+            "py_self_field_a.py",
+            "class PyFieldLeft:\n    def f(self, v):\n        self.value = (v + 1) * (v + 1)\n        audit(self)\n",
+        ),
+        (
+            "py_self_field_b.py",
+            "class PyFieldRight:\n    def f(self, w):\n        self.value = (1 + w) * (1 + w)\n        trace(self)\n",
+        ),
+    ];
+    for (name, src) in fixtures {
+        fs::write(dir.join(name), src).unwrap();
+    }
+
+    let out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "100",
+        "--min-size",
+        "100",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let json = scan_json(&out);
+    let families = scan_families(&json);
+
+    let assert_fragment_family = |left: &str, right: &str, negative: &str| {
+        let family = families
+            .iter()
+            .find(|family| {
+                let locations = family["locations"].as_array().expect("locations");
+                let files: Vec<&str> = locations
+                    .iter()
+                    .filter_map(|loc| loc["file"].as_str())
+                    .collect();
+                files.iter().any(|file| file.ends_with(left))
+                    && files.iter().any(|file| file.ends_with(right))
+                    && locations.iter().all(|loc| loc["kind"] == "Block")
+                    && files.iter().all(|file| !file.ends_with(negative))
+            })
+            .unwrap_or_else(|| {
+                panic!("missing exact this-field fragment family {left}/{right}: {out}")
+            });
+        let locations = family["locations"].as_array().expect("locations");
+        assert!(
+            locations
+                .iter()
+                .filter(|loc| loc["file"].as_str().unwrap_or("").ends_with(left)
+                    || loc["file"].as_str().unwrap_or("").ends_with(right))
+                .all(|loc| loc["end_line"].as_u64().unwrap_or(0)
+                    <= loc["start_line"].as_u64().unwrap_or(0) + 5),
+            "this-field fragments should stay tightly scoped: {family:?}"
+        );
+    };
+
+    let assert_no_pair = |left: &str, right: &str| {
+        let has_pair = families.iter().any(|family| {
+            let files: Vec<&str> = family["locations"]
+                .as_array()
+                .expect("locations")
+                .iter()
+                .filter_map(|loc| loc["file"].as_str())
+                .collect();
+            files.iter().any(|file| file.ends_with(left))
+                && files.iter().any(|file| file.ends_with(right))
+        });
+        assert!(
+            !has_pair,
+            "dynamic or wrong-receiver field assignment must stay outside exact fragments: {left}/{right}: {out}"
+        );
+    };
+
+    assert_fragment_family(
+        "FieldSelfSquareA.java",
+        "FieldSelfSquareB.java",
+        "FieldSelfSquareWrongValue.java",
+    );
+    assert_fragment_family(
+        "FieldSelfConditionalA.java",
+        "FieldSelfConditionalB.java",
+        "FieldSelfConditionalWrongField.java",
+    );
+    assert_fragment_family(
+        "FieldSelfNestedA.java",
+        "FieldSelfNestedB.java",
+        "FieldSelfNestedWrongReceiver.java",
+    );
+    assert_no_pair("FieldSelfNestedA.java", "FieldSelfNestedWrongReceiver.java");
+    assert_no_pair("js_this_field_a.js", "js_this_field_b.js");
+    assert_no_pair("py_self_field_a.py", "py_self_field_b.py");
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn semantic_scan_reports_exact_safe_throw_fragments_under_opaque_functions() {
     let dir =
         std::env::temp_dir().join(format!("nose_exact_throw_fragments_{}", std::process::id()));

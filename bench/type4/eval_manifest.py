@@ -76,7 +76,7 @@ def run_scan(nose: Path, sources: Path) -> list[dict]:
         "json",
         "--top",
         "1000000",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--min-lines",
         "1",
