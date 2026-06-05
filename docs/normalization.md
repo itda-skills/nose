@@ -31,7 +31,8 @@
 > short-circuit `!local && ...` guard unreachable), primitive total-order comparator
 > guard absorption (`x<y ∧ x≤y` keeps `x<y` for non-overloadable ordered comparisons),
 > C byte-buffer `u16` big-endian packing (`(a[0]<<8)+a[1]` ≡ `(a[0]<<8)|a[1]` only
-> under a byte-array parameter proof), plus Java primitive-integer low-bit toggle selection
+> under a byte-array parameter proof), Java `Arrays.asList(arrayParam)` membership over the
+> proven array element domain, plus Java primitive-integer low-bit toggle selection
 > (`x%2==0 ? x+1 : x-1` ≡ `x^1`).
 > Also landed: **recursion → iteration** (`recursion.rs`) — tail recursion → `while`, and numeric
 > structural (linear) recursion → an accumulator fold, so a recursive function converges with
@@ -82,6 +83,9 @@ Guiding constraints for every pass:
   receivers, arrays, and strings do not share the same strict fingerprint merely because
   each surface exposes an “empty” idiom. A real Netty audit caught this boundary when Java
   `Object[]` length, `Queue.isEmpty()`, and `String.isEmpty()` had collapsed.
+  Java `Arrays.asList(values).contains(x)` also carries the array domain when `values` is
+  a proven array parameter, keeping element membership distinct from singleton-list
+  membership such as `List.of(values).contains(x)` or `Arrays.asList(listParam).contains(x)`.
   The remaining documented *exceptions* are large-constant/float abstraction (genuinely
   missing type information). The **fuzziness** a clone detector needs — abstracting magic
   numbers, tolerating structural difference — lives in the **candidate axis** and its

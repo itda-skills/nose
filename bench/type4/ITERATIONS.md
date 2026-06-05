@@ -4742,3 +4742,21 @@ it remains unsupported rather than guessed. The `u32` helpers remain open becaus
 left shifts such as `a[0] << 24` can overflow or be undefined without a stronger unsigned
 cast/proven-range invariant. The next C byte-decoder batch should add include-aware typedef
 proofs or unsigned-cast/range facts before attempting those cases.
+
+## Focused Java `Arrays.asList` array-param membership: cycle 2026-06-06
+
+This cycle closed a narrow Java value-graph soundness/completeness boundary that had been
+called out repeatedly in the real-corpus notes: `Arrays.asList(array).contains(value)` is
+only exact when the single argument is proven to be an array domain. Java varargs make this
+case different from both `List.of(values).contains(value)` and
+`Arrays.asList(listParam).contains(value)`, which are singleton-list membership over the
+parameter object itself.
+
+The implementation reuses the Java array parameter fact introduced for typed empty-domain
+soundness. When `Arrays.asList` receives exactly one proven array parameter, the membership
+collection is salted as `ArrayParam`; otherwise Java literal factory behavior remains a
+regular `Seq` over the varargs elements.
+
+Targeted coverage added
+`java_arrays_aslist_single_argument_respects_array_provenance`, plus the existing literal
+collection membership and typed-empty-domain regressions stayed green.

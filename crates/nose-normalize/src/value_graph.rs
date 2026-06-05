@@ -612,6 +612,16 @@ impl<'a> Builder<'a> {
         matches!(self.param_semantic.get(&cid), Some(ParamSemantic::Map))
     }
 
+    fn is_array_param_value(&self, value: ValueId) -> bool {
+        match self.nodes[value as usize].op {
+            ValOp::ArrayParam => true,
+            ValOp::Input(cid) => {
+                matches!(self.param_semantic.get(&cid), Some(ParamSemantic::Array))
+            }
+            _ => false,
+        }
+    }
+
     fn param_domain_value(&mut self, value: ValueId) -> ValueId {
         let ValOp::Input(cid) = self.nodes[value as usize].op else {
             return value;
@@ -685,6 +695,12 @@ impl<'a> Builder<'a> {
         };
         if !is_standard_factory {
             return None;
+        }
+        if method == stable_symbol_hash("asList")
+            && args.len() == 2
+            && self.is_array_param_value(args[1])
+        {
+            return Some(self.mk(ValOp::ArrayParam, vec![args[1]]));
         }
         Some(self.mk(ValOp::Seq(1), args[1..].to_vec()))
     }

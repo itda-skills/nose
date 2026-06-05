@@ -2525,6 +2525,21 @@ fn collection_membership_set_construction_converges_with_boundaries() {
 }
 
 #[test]
+fn java_arrays_aslist_single_argument_respects_array_provenance() {
+    let i = Interner::new();
+    let array_membership = "import java.util.Arrays;\n\nclass C { static boolean f(String[] values, String value) { return Arrays.asList(values).contains(value); } }\n";
+    let list_membership = "import java.util.Arrays;\nimport java.util.List;\n\nclass C { static boolean f(List<String> values, String value) { return Arrays.asList(values).contains(value); } }\n";
+    let singleton_list_membership = "import java.util.List;\n\nclass C { static boolean f(String[] values, String value) { return List.of(values).contains(value); } }\n";
+
+    let array_fp = value_fp(&i, array_membership, Lang::Java);
+    assert_ne!(array_fp, value_fp(&i, list_membership, Lang::Java));
+    assert_ne!(
+        array_fp,
+        value_fp(&i, singleton_list_membership, Lang::Java)
+    );
+}
+
+#[test]
 fn typed_empty_checks_keep_array_collection_and_string_domains_distinct() {
     let i = Interner::new();
     let java_list_size =
