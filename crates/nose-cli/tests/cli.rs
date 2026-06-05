@@ -3363,6 +3363,263 @@ fn semantic_scan_reports_exact_safe_ordered_loop_conditional_effect_branch_fragm
 }
 
 #[test]
+fn semantic_scan_reports_exact_safe_ordered_loop_conditional_mixed_effect_branch_fragments() {
+    let dir = std::env::temp_dir().join(format!(
+        "nose_ordered_loop_conditional_mixed_effect_branch_fragments_{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+
+    let fixtures = [
+        (
+            "loop_cond_mixed_append_a.js",
+            "function loopCondMixedLeft(enabled, xs, y, z, out) {\n  if (enabled) {\n    for (const x of xs) {\n      out.push(x + 1);\n    }\n    if (y > 0) {\n      out.push(y * y);\n    }\n    out.push(z + 3);\n  }\n  audit(enabled);\n}\n",
+        ),
+        (
+            "loop_cond_mixed_append_b.js",
+            "function loopCondMixedRight(flag, ys, b, c, dst) {\n  if (flag) {\n    for (const a of ys) {\n      dst.push(1 + a);\n    }\n    if (b > 0) {\n      dst.push(b * b);\n    }\n    dst.push(3 + c);\n  }\n  trace(flag);\n}\n",
+        ),
+        (
+            "loop_cond_mixed_append_wrong_order.js",
+            "function loopCondMixedWrongOrder(flag, ys, b, c, dst) {\n  if (flag) {\n    if (b > 0) {\n      dst.push(b * b);\n    }\n    for (const a of ys) {\n      dst.push(1 + a);\n    }\n    dst.push(3 + c);\n  }\n  trace(flag);\n}\n",
+        ),
+        (
+            "loop_cond_mixed_append_wrong_guard.js",
+            "function loopCondMixedWrongGuard(flag, ys, b, c, dst) {\n  if (flag) {\n    for (const a of ys) {\n      dst.push(1 + a);\n    }\n    if (b >= 0) {\n      dst.push(b * b);\n    }\n    dst.push(3 + c);\n  }\n  trace(flag);\n}\n",
+        ),
+        (
+            "loop_cond_mixed_append_wrong_receiver.js",
+            "function loopCondMixedWrongReceiver(flag, ys, b, c, dst, other) {\n  if (flag) {\n    for (const a of ys) {\n      dst.push(1 + a);\n    }\n    if (b > 0) {\n      dst.push(b * b);\n    }\n    other.push(3 + c);\n  }\n  trace(flag);\n}\n",
+        ),
+        (
+            "loop_cond_mixed_append_mutated.js",
+            "function loopCondMixedMutated(flag, ys, b, c, dst) {\n  dst.push(0);\n  if (flag) {\n    for (const a of ys) {\n      dst.push(1 + a);\n    }\n    if (b > 0) {\n      dst.push(b * b);\n    }\n    dst.push(3 + c);\n  }\n  trace(flag);\n}\n",
+        ),
+        (
+            "loop_cond_mixed_append_fourth.js",
+            "function loopCondMixedFourth(flag, ys, b, c, d, dst) {\n  if (flag) {\n    for (const a of ys) {\n      dst.push(1 + a);\n    }\n    if (b > 0) {\n      dst.push(b * b);\n    }\n    dst.push(3 + c);\n    dst.push(d + 4);\n  }\n  trace(flag);\n}\n",
+        ),
+        (
+            "loop_cond_mixed_append_a.py",
+            "def loop_cond_mixed_left(flag, xs, y, z, out):\n    if flag:\n        if y > 0:\n            out.append(y * y)\n        for x in xs:\n            value = x + 1\n            out.append(value)\n        out.append(z + 3)\n    audit(flag)\n",
+        ),
+        (
+            "loop_cond_mixed_append_b.py",
+            "def loop_cond_mixed_right(enabled, ys, b, c, dst):\n    if enabled:\n        if b > 0:\n            dst.append(b * b)\n        for a in ys:\n            item = 1 + a\n            dst.append(item)\n        dst.append(3 + c)\n    trace(enabled)\n",
+        ),
+        (
+            "loop_cond_mixed_append_wrong_order.py",
+            "def loop_cond_mixed_wrong_order(flag, ys, b, c, dst):\n    if flag:\n        for a in ys:\n            item = 1 + a\n            dst.append(item)\n        if b > 0:\n            dst.append(b * b)\n        dst.append(3 + c)\n    trace(flag)\n",
+        ),
+        (
+            "loop_cond_mixed_append_wrong_temp.py",
+            "def loop_cond_mixed_wrong_temp(flag, ys, b, c, dst):\n    if flag:\n        if b > 0:\n            dst.append(b * b)\n        for a in ys:\n            item = 2 + a\n            dst.append(item)\n        dst.append(3 + c)\n    trace(flag)\n",
+        ),
+        (
+            "loop_cond_mixed_index_a.go",
+            "package p\nfunc loopCondMixedIndexLeft(flag bool, xs []int, y int, z int, out []int) {\n  if flag {\n    for i, x := range xs {\n      out[i] = x * x\n    }\n    if y > 0 {\n      out[0] = y + 1\n    }\n    out[1] = z + 3\n  }\n  audit(out)\n}\n",
+        ),
+        (
+            "loop_cond_mixed_index_b.go",
+            "package p\nfunc loopCondMixedIndexRight(enabled bool, ys []int, b int, c int, dst []int) {\n  if enabled {\n    for j, a := range ys {\n      dst[j] = a * a\n    }\n    if b > 0 {\n      dst[0] = 1 + b\n    }\n    dst[1] = 3 + c\n  }\n  trace(dst)\n}\n",
+        ),
+        (
+            "loop_cond_mixed_index_wrong_index.go",
+            "package p\nfunc loopCondMixedIndexWrongIndex(flag bool, ys []int, b int, c int, dst []int) {\n  if flag {\n    for j, a := range ys {\n      dst[j] = a * a\n    }\n    if b > 0 {\n      dst[0] = 1 + b\n    }\n    dst[2] = 3 + c\n  }\n  trace(dst)\n}\n",
+        ),
+        (
+            "loop_cond_mixed_index_wrong_receiver.go",
+            "package p\nfunc loopCondMixedIndexWrongReceiver(flag bool, ys []int, b int, c int, dst []int, other []int) {\n  if flag {\n    for j, a := range ys {\n      dst[j] = a * a\n    }\n    if b > 0 {\n      dst[0] = 1 + b\n    }\n    other[1] = 3 + c\n  }\n  trace(dst)\n}\n",
+        ),
+    ];
+    for (name, src) in fixtures {
+        fs::write(dir.join(name), src).unwrap();
+    }
+
+    let out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "100",
+        "--min-size",
+        "100",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let json = scan_json(&out);
+    let families = scan_families(&json);
+
+    let assert_branch_pair = |left: &str,
+                              right: &str,
+                              negative: &str,
+                              start_line: u64,
+                              end_line: u64| {
+        let family = families
+            .iter()
+            .find(|family| {
+                let locations = family["locations"].as_array().expect("locations");
+                let branch_files: Vec<&str> = locations
+                    .iter()
+                    .filter(|loc| loc["start_line"] == start_line && loc["end_line"] == end_line)
+                    .filter_map(|loc| loc["file"].as_str())
+                    .collect();
+                branch_files.iter().any(|file| file.ends_with(left))
+                    && branch_files.iter().any(|file| file.ends_with(right))
+                    && locations.iter().all(|loc| loc["kind"] == "Block")
+                    && locations
+                        .iter()
+                        .filter_map(|loc| loc["file"].as_str())
+                        .all(|file| !file.ends_with(negative))
+            })
+            .unwrap_or_else(|| {
+                panic!(
+                    "missing ordered loop conditional mixed-effect branch family {left}/{right}: {out}"
+                )
+            });
+        assert!(
+                family["locations"]
+                    .as_array()
+                    .expect("locations")
+                    .iter()
+                    .all(|loc| loc["kind"] == "Block"),
+                "ordered loop conditional mixed-effect branch fragments should report as Block units: {family:?}"
+            );
+    };
+
+    let assert_no_branch_pair = |left: &str,
+                                 right: &str,
+                                 left_start: u64,
+                                 left_end: u64,
+                                 right_start: u64,
+                                 right_end: u64| {
+        let has_branch_pair = families.iter().any(|family| {
+            let locations = family["locations"].as_array().expect("locations");
+            let has_left = locations.iter().any(|loc| {
+                loc["file"]
+                    .as_str()
+                    .is_some_and(|file| file.ends_with(left))
+                    && loc["start_line"] == left_start
+                    && loc["end_line"] == left_end
+            });
+            let has_right = locations.iter().any(|loc| {
+                loc["file"]
+                    .as_str()
+                    .is_some_and(|file| file.ends_with(right))
+                    && loc["start_line"] == right_start
+                    && loc["end_line"] == right_end
+            });
+            has_left && has_right
+        });
+        assert!(
+            !has_branch_pair,
+            "ordered loop conditional mixed-effect branch boundary must not merge {left}/{right}: {out}"
+        );
+    };
+
+    assert_branch_pair(
+        "loop_cond_mixed_append_a.js",
+        "loop_cond_mixed_append_b.js",
+        "loop_cond_mixed_append_wrong_order.js",
+        2,
+        10,
+    );
+    assert_branch_pair(
+        "loop_cond_mixed_append_a.py",
+        "loop_cond_mixed_append_b.py",
+        "loop_cond_mixed_append_wrong_temp.py",
+        2,
+        8,
+    );
+    assert_branch_pair(
+        "loop_cond_mixed_index_a.go",
+        "loop_cond_mixed_index_b.go",
+        "loop_cond_mixed_index_wrong_index.go",
+        3,
+        11,
+    );
+
+    assert_no_branch_pair(
+        "loop_cond_mixed_append_a.js",
+        "loop_cond_mixed_append_wrong_order.js",
+        2,
+        10,
+        2,
+        10,
+    );
+    assert_no_branch_pair(
+        "loop_cond_mixed_append_a.js",
+        "loop_cond_mixed_append_wrong_guard.js",
+        2,
+        10,
+        2,
+        10,
+    );
+    assert_no_branch_pair(
+        "loop_cond_mixed_append_a.js",
+        "loop_cond_mixed_append_wrong_receiver.js",
+        2,
+        10,
+        2,
+        10,
+    );
+    assert_no_branch_pair(
+        "loop_cond_mixed_append_a.js",
+        "loop_cond_mixed_append_mutated.js",
+        2,
+        10,
+        3,
+        11,
+    );
+    assert_no_branch_pair(
+        "loop_cond_mixed_append_a.js",
+        "loop_cond_mixed_append_fourth.js",
+        2,
+        10,
+        2,
+        11,
+    );
+    assert_no_branch_pair(
+        "loop_cond_mixed_append_a.py",
+        "loop_cond_mixed_append_wrong_order.py",
+        2,
+        8,
+        2,
+        8,
+    );
+    assert_no_branch_pair(
+        "loop_cond_mixed_append_a.py",
+        "loop_cond_mixed_append_wrong_temp.py",
+        2,
+        8,
+        2,
+        8,
+    );
+    assert_no_branch_pair(
+        "loop_cond_mixed_index_a.go",
+        "loop_cond_mixed_index_wrong_index.go",
+        3,
+        11,
+        3,
+        11,
+    );
+    assert_no_branch_pair(
+        "loop_cond_mixed_index_a.go",
+        "loop_cond_mixed_index_wrong_receiver.go",
+        3,
+        11,
+        3,
+        11,
+    );
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn semantic_scan_reports_exact_safe_ordered_append_effect_branch_fragments() {
     let dir = std::env::temp_dir().join(format!(
         "nose_append_effect_order_boundary_{}",

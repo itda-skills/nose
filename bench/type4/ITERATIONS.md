@@ -5659,6 +5659,89 @@ multi-language real frontier evidence; if none is found, keep fragment work tied
 shared proof invariant and avoid opening dynamic property or arbitrary statement-window
 semantics.
 
+## Fragment batch 29: exact ordered loop conditional mixed-effect branch fragments
+
+This batch opens one deliberately narrow three-item composition on the same non-Java
+branch-fragment axis. A direct conditional branch may now contain exactly one exact
+`ForEach` effect loop, exactly one conditional direct-effect item, and exactly one direct
+effect item. Each item reuses an existing proof helper; this does not open arbitrary
+statement windows, return/throw conditionals, temp-chain expansion beyond existing loop
+proofs, two-loop-plus-conditional branches, two-conditional-plus-loop branches, dynamic
+property effects, or four-effect branches.
+
+The proof invariant is compositional and prefiltered. The parent branch body must have
+exactly three children: one `Loop`, one `If`, and one direct `ExprStmt`/`Assign` effect.
+The `Loop` must satisfy the exact loop-effect helper, the `If` must satisfy the
+conditional-direct-effect helper, and the direct item must satisfy the append/index effect
+helper. Swapping any item order, changing a guard, changing a receiver, mutating the
+receiver before the parent branch, changing a loop temp RHS, changing a Go index
+expression, or adding a fourth effect remains a hard negative.
+
+The focused positives share one invariant and intentionally avoid Java:
+
+- JavaScript `ForEach` append loop, conditional append effect, and direct append effect;
+- Python conditional append effect, temp-consumed `ForEach` append loop, and direct append
+  effect;
+- Go range index-assignment loop, conditional index assignment, and direct index
+  assignment.
+
+Baseline evidence:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_loop_conditional_mixed_effect_branch_fragments -- --nocapture
+baseline result before detector change: failed with 0 semantic families in the focused corpus.
+```
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-loop-cond-mixed-1 | candidate extraction | allow exact branch bodies with exactly one exact `ForEach` effect loop, one conditional direct-effect item, and one direct effect item | 3 focused JS/Python/Go branch families reported as `Block` units |
+| fragment-loop-cond-mixed-2 | hard negatives | preserve loop/conditional/direct order, guard value, receiver identity, receiver mutation boundaries, loop temp RHS, Go index/value identity, and the three-effect cap | swapped-order, wrong-guard, wrong-receiver, mutation, wrong-temp, wrong-index, and fourth-effect negatives excluded |
+| fragment-loop-cond-mixed-3 | performance guard | require exactly one `Loop`, one `If`, and one direct effect before running recursive exact proofs | selected/full families and locations unchanged; diagnostic unit/candidate counts unchanged; full candidate wall-time median 294.1ms -> 341.5ms but candidate pairs stayed 2,847,195 |
+| fragment-loop-cond-mixed-4 | regression | rerun loop-conditional, loop/direct mixed, and conditional/direct mixed focused tests | all focused regressions pass |
+| fragment-loop-cond-mixed-5 | release gates | run full Rust suite, clippy, compact all-cross core smoke, and docs/whitespace checks | `cargo test` pass; clippy clean; core smoke 634/634 positives and 0/1246 hard-negative false merges; docs lint clean |
+
+Focused regressions:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_loop_conditional_mixed_effect_branch_fragments -- --nocapture
+JS, Python, and Go ordered loop conditional mixed-effect branch positives reported;
+swapped-order, wrong-guard, wrong-receiver, mutation, wrong-temp, wrong-index, and
+fourth-effect negatives excluded.
+
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_loop_conditional_effect_branch_fragments -- --nocapture
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_mixed_effect_branch_fragments -- --nocapture
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_conditional_mixed_effect_branch_fragments -- --nocapture
+Existing loop/conditional, loop/direct, and conditional/direct boundaries still pass.
+```
+
+Real corpus and performance:
+
+```text
+NOSE_TIME=1 <baseline> scan prettier jest radash sympy black gorm nats-server --mode semantic --format json --top 0
+NOSE_TIME=1 target/release/nose scan prettier jest radash sympy black gorm nats-server --mode semantic --format json --top 0
+selected files: 10338
+families: 1199 before, 1199 after
+locations: 4389 before, 4389 after
+diagnostic units/candidate pairs: 91,517 / 254,282 before and after
+median normalize+extract over three alternating runs: 591.9ms before, 584.9ms after
+median candidates over three alternating runs: 32.0ms before, 31.4ms after
+
+NOSE_TIME=1 <baseline> scan bench/repos --mode semantic --format json --top 0
+NOSE_TIME=1 target/release/nose scan bench/repos --mode semantic --format json --top 0
+full files: 60748
+families: 7403 before, 7403 after
+locations: 32965 before, 32965 after
+diagnostic units/candidate pairs: 810,697 / 2,847,195 before and after
+median normalize+extract over three alternating runs: 3713.2ms before, 3867.4ms after
+median candidates over three alternating runs: 294.1ms before, 341.5ms after
+```
+
+The full-corpus candidate wall time moved upward in this sample, but the hidden diagnostic
+summary shows the exact same unit and candidate-pair counts before/after, so this batch did
+not increase candidate cardinality. Keep watching this path before opening any broader
+three-item branch shapes; if the timing rise repeats with count growth in a later batch,
+stop and narrow the extraction predicate before accepting more fragment units.
+
 ## Fragment batch 28: exact ordered loop conditional-effect branch fragments
 
 This batch continues the non-Java branch-fragment direction rather than adding another
