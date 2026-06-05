@@ -2848,6 +2848,16 @@ impl<'a> Builder<'a> {
         }
     }
 
+    fn is_effect_free_bare_throw(&self, node: NodeId) -> bool {
+        match self.il.kind(node) {
+            NodeKind::Throw => true,
+            NodeKind::Block => {
+                matches!(self.il.children(node), [only] if self.il.kind(*only) == NodeKind::Throw)
+            }
+            _ => false,
+        }
+    }
+
     /// Walk a container (class/module body), folding each contained method's behavior
     /// into the current sinks. A `Func` is processed in its own parameter scope (its
     /// returns/effects become the container's), so the container's fingerprint is the
@@ -3009,6 +3019,10 @@ impl<'a> Builder<'a> {
                 let kids = self.il.children(stmt).to_vec();
                 if kids.len() == 2 && self.branch_returns(kids[0]) {
                     self.process_stmt(kids[0], env);
+                    return;
+                }
+                if kids.len() == 2 && self.is_effect_free_bare_throw(kids[0]) {
+                    self.process_stmt(kids[1], env);
                     return;
                 }
                 for c in kids {

@@ -1853,6 +1853,18 @@ fn value_graph_skips_try_handler_after_normal_return() {
 }
 
 #[test]
+fn value_graph_runs_try_handler_after_bare_throw() {
+    let i = Interner::new();
+    let try_throw = "function f() { try { throw \"x\"; } catch (err) { return 7; } }";
+    let plain_return = "function f() { return 7; }";
+    assert_eq!(
+        value_fp(&i, try_throw, Lang::JavaScript),
+        value_fp(&i, plain_return, Lang::JavaScript),
+        "a side-effect-free throw body should be replaced by the simple catch handler"
+    );
+}
+
+#[test]
 fn value_graph_distinguishes_membership_and_negation() {
     // `in` is directional membership, not equality: `a in b` ≠ `b in a` ≠ `a == b`.
     // And `not in` / `is not` must keep their negation (`x is not None` ≢ `x is None`).
