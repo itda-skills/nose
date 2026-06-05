@@ -6,6 +6,23 @@ owned by a team that is not ready to refactor it yet. For command basics see
 [usage](usage.md); for CI gates see [continuous-integration](continuous-integration.md).
 Back to [home](home.md).
 
+## Inline marker vs structured file — which to use
+
+nose has two ways to say "this clone is fine"; they serve different needs, so pick by
+*who* the suppression is for:
+
+| | inline `// nose-ignore` | structured `nose.ignore.json` |
+|---|---|---|
+| Lives | next to the code, travels with it | one file at the repo root |
+| Carries | nothing — just "skip this site" | reason, owner, expiry, note |
+| Audit | invisible in reports | listed under `ignored_families` in JSON |
+| Best for | a quick, local, self-evident exception | team-level, reviewable, expiring debt |
+
+Rule of thumb: reach for the **inline marker** when the reason is obvious to anyone
+reading the line; reach for the **structured file** when the suppression is a decision
+someone else should be able to find, question, and revisit later. When in doubt — or for
+anything going through CI — prefer the structured file, because it stays auditable.
+
 ## Quick start
 
 Run a scan and copy the family ID from the human, markdown, or JSON report:
@@ -35,8 +52,8 @@ Then run `nose scan` from that root. nose automatically reads
 `ignore-file = "path/to/file.json"` in [configuration](configuration.md) when the
 file lives elsewhere.
 
-Ignored families are removed from the active report and do not trip `--fail` or
-`--fail-on-new`. JSON output still carries them under `ignored_families` with the
+Ignored families are removed from the active report and do not trip `--fail-on any` or
+`--fail-on new`. JSON output still carries them under `ignored_families` with the
 ignore metadata, so suppressions remain auditable.
 
 ## File shape

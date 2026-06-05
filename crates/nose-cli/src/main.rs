@@ -4,6 +4,7 @@ mod baseline;
 mod cache;
 mod config;
 mod ignores;
+mod review;
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -129,30 +130,32 @@ enum Cmd {
         config: Option<PathBuf>,
         /// Detection channels to run. Omit for `syntax,semantic`. If present, this
         /// replaces the default; pass a comma-list or repeat it, e.g.
-        /// `--mode syntax,near` or `--mode syntax --mode semantic`.
+        /// `--mode syntax,near` or `--mode syntax --mode semantic`. The `near` channel
+        /// takes an optional acceptance threshold inline: `--mode near:0.8` (default 0.70).
         #[arg(
             long,
             value_delimiter = ',',
             num_args = 1,
             action = clap::ArgAction::Append,
+            value_parser = parse_scan_mode,
             value_name = "MODE"
         )]
         mode: Vec<ScanMode>,
-        /// After the report, print duplication hotspots — directories/modules
-        /// ranked by total duplicated lines across families (architecture view).
-        #[arg(long)]
-        hotspots: bool,
+        /// Extra views (repeatable / comma-list): `diff` (each family as a unified
+        /// diff of its two copies), `proposal` (an extraction skeleton), `hotspots`
+        /// (directories ranked by duplicated lines). e.g. `--show diff,hotspots`.
+        #[arg(long, value_delimiter = ',', value_name = "VIEW")]
+        show: Vec<ShowView>,
         /// Cache per-file analysis under this directory. Re-runs reuse the cache for
         /// unchanged files (keyed by content hash), skipping parse/normalize/extract
         /// — much faster on repeated invocations (CI, pre-commit, iterating).
         #[arg(long, value_name = "DIR")]
         cache_dir: Option<PathBuf>,
-        /// Exit with a non-zero status if any family is reported after filters.
-        /// Turns `scan` into a CI gate, e.g.
-        /// `nose scan src --mode syntax --fail` or
-        /// `nose scan src --min-value 300 --min-members 3 --fail`.
-        #[arg(long)]
-        fail: bool,
+        /// CI gate — exit non-zero when families are reported: `any` (any reported
+        /// family fails) or `new` (only families new/changed vs `--baseline` fail;
+        /// requires `--baseline`). e.g. `nose scan src --mode syntax --fail-on any`.
+        #[arg(long, value_name = "WHAT")]
+        fail_on: Option<FailOn>,
         /// Baseline file of already-accepted families. Families recorded here are
         /// hidden from the report and don't trip `--fail`, so a run flags only *new*
         /// duplication — the way to adopt on a codebase that already has clones.
@@ -162,48 +165,73 @@ enum Cmd {
         /// to `nose.ignore.json` when that file exists.
         #[arg(long, value_name = "FILE")]
         ignore_file: Option<PathBuf>,
-        /// Explicitly report only families that are new or changed compared with
-        /// `--baseline`. This is the default behavior when `--baseline` is present;
-        /// the flag makes CI intent readable in scripts.
-        #[arg(long, requires = "baseline", conflicts_with = "write_baseline")]
-        new_only: bool,
-        /// Exit non-zero only when the baseline comparison finds new or changed
-        /// families. Requires `--baseline` and implies new-only reporting.
-        #[arg(long, requires = "baseline", conflicts_with = "write_baseline")]
-        fail_on_new: bool,
         /// Write the current families to the `--baseline` file (accept today's state)
         /// and exit, instead of reporting.
         #[arg(long, requires = "baseline")]
         write_baseline: bool,
-        /// Acceptance threshold in `[0,1]` for the `near` channel. Rejected unless
-        /// --mode includes `near`; default with `near` is 0.70.
-        #[arg(long)]
-        threshold: Option<f64>,
         /// Output format.
         #[arg(long, default_value = "human")]
         format: ReportFormat,
-        /// Show each family's source inline (human format) as a unified diff between
-        /// its two representative members — both copies and exactly what differs.
-        #[arg(long)]
-        diff: bool,
-        /// Show an extraction proposal per family (human format): the shared skeleton
-        /// of two copies with the varying spots collapsed to ⟨param N⟩ placeholders —
-        /// i.e. what to extract and how many parameters it needs.
-        #[arg(long)]
-        proposal: bool,
         /// Skip files matching a gitignore-style glob (repeatable), e.g.
         /// `--exclude tests --exclude 'vendor/**' --exclude '**/*.generated.ts'`.
         /// (.gitignore is already respected automatically.)
         #[arg(long)]
         exclude: Vec<String>,
-        /// Ignore units or syntax copy-paste runs smaller than this IL-token size.
-        /// [default: 24]
+        /// Ignore units or syntax copy-paste runs smaller than this size, measured in
+        /// IL tokens (the unit's node count). [default: 24]
         #[arg(long)]
-        min_tokens: Option<usize>,
-        /// Ignore units or syntax copy-paste runs spanning fewer source lines.
-        /// [default: 5]
-        #[arg(long)]
+        min_size: Option<usize>,
+        /// Advanced: also require this many source lines (most users only need
+        /// --min-size). [default: 5]
+        #[arg(long, hide = true)]
         min_lines: Option<u32>,
+    },
+    /// Flag clone families changed inconsistently in a diff: a copy was edited but its
+    /// sibling clones were not — a likely un-propagated change. Needs a git repository.
+    /// e.g. `nose review --base origin/main` in CI, or `nose review` for local changes.
+    Review {
+        /// Paths to scan (recursively). Defaults to the current directory.
+        paths: Vec<PathBuf>,
+        /// Compare the working tree against this git ref (`origin/main` for a PR branch;
+        /// the default `HEAD` reviews uncommitted local changes).
+        #[arg(long, default_value = "HEAD")]
+        base: String,
+        /// Detection channels, like `scan`: `syntax`, `semantic`, `near[:T]` (comma-list
+        /// or repeatable). Omit for `syntax,semantic`.
+        #[arg(
+            long,
+            value_delimiter = ',',
+            num_args = 1,
+            action = clap::ArgAction::Append,
+            value_parser = parse_scan_mode,
+            value_name = "MODE"
+        )]
+        mode: Vec<ScanMode>,
+        /// Ignore units smaller than this size, in IL tokens. [default: 24]
+        #[arg(long)]
+        min_size: Option<usize>,
+        /// Advanced: also require this many source lines. [default: 5]
+        #[arg(long, hide = true)]
+        min_lines: Option<u32>,
+        /// Skip paths matching a gitignore-style glob (repeatable).
+        #[arg(long)]
+        exclude: Vec<String>,
+        /// Read defaults from this config file (else `nose.toml`/`.nose.toml`).
+        #[arg(long, value_name = "FILE")]
+        config: Option<PathBuf>,
+        /// Structured ignore file for accepted divergences (same format as `scan`).
+        /// Defaults to `nose.ignore.json` when it exists.
+        #[arg(long, value_name = "FILE")]
+        ignore_file: Option<PathBuf>,
+        /// Output format.
+        #[arg(long, default_value = "human")]
+        format: ReportFormat,
+        /// Show at most N findings (0 = all). [default: 30]
+        #[arg(long)]
+        top: Option<usize>,
+        /// Exit non-zero if any family changed inconsistently (CI gate).
+        #[arg(long)]
+        fail: bool,
     },
     /// Recall-ceiling diagnostic: split gold recall across unit-extraction /
     /// candidate-generation stages. (Hidden — benchmark/research tooling.)
@@ -331,7 +359,7 @@ enum Format {
 }
 
 #[derive(Clone, Copy, PartialEq, clap::ValueEnum)]
-enum ReportFormat {
+pub(crate) enum ReportFormat {
     /// Ranked, human-readable terminal report.
     Human,
     /// Machine-readable JSON report with a versioned top-level schema.
@@ -342,15 +370,55 @@ enum ReportFormat {
     Sarif,
 }
 
-#[derive(Clone, Copy, PartialEq, clap::ValueEnum, serde::Deserialize)]
-#[serde(rename_all = "kebab-case")]
+/// One `--mode` channel. `near` carries its own acceptance threshold (`near:0.8`),
+/// so there is no separate `--threshold` flag to mis-combine.
+#[derive(Clone, Copy, PartialEq, serde::Deserialize)]
+#[serde(try_from = "String")]
 enum ScanMode {
     /// CPD-style syntax copy-paste runs (the Type-1/2 floor).
     Syntax,
     /// Exact value-fingerprint Type-4 semantic clones.
     Semantic,
-    /// Fuzzy Type-3 near-duplicate candidates.
-    Near,
+    /// Fuzzy Type-3 near-duplicate candidates, with an optional acceptance threshold.
+    Near(Option<f64>),
+}
+
+impl std::str::FromStr for ScanMode {
+    type Err = String;
+    fn from_str(s: &str) -> std::result::Result<Self, String> {
+        let s = s.trim();
+        match s {
+            "syntax" => Ok(ScanMode::Syntax),
+            "semantic" => Ok(ScanMode::Semantic),
+            "near" => Ok(ScanMode::Near(None)),
+            _ => {
+                if let Some(t) = s.strip_prefix("near:") {
+                    let v: f64 = t
+                        .parse()
+                        .map_err(|_| format!("invalid near threshold in `{s}`"))?;
+                    if !(0.0..=1.0).contains(&v) {
+                        return Err(format!("near threshold must be in [0,1], got {v}"));
+                    }
+                    Ok(ScanMode::Near(Some(v)))
+                } else {
+                    Err(format!(
+                        "unknown mode `{s}` (expected syntax, semantic, near, or near:T)"
+                    ))
+                }
+            }
+        }
+    }
+}
+
+impl TryFrom<String> for ScanMode {
+    type Error = String;
+    fn try_from(s: String) -> std::result::Result<Self, String> {
+        s.parse()
+    }
+}
+
+fn parse_scan_mode(s: &str) -> std::result::Result<ScanMode, String> {
+    s.parse()
 }
 
 #[derive(Clone, Copy)]
@@ -358,6 +426,8 @@ struct ScanChannels {
     syntax: bool,
     semantic: bool,
     near: bool,
+    /// The `near:T` threshold, if one was given in the mode spec.
+    threshold: Option<f64>,
 }
 
 impl ScanChannels {
@@ -373,12 +443,18 @@ impl ScanChannels {
             syntax: false,
             semantic: false,
             near: false,
+            threshold: None,
         };
         for mode in selected {
             match mode {
                 ScanMode::Syntax => channels.syntax = true,
                 ScanMode::Semantic => channels.semantic = true,
-                ScanMode::Near => channels.near = true,
+                ScanMode::Near(t) => {
+                    channels.near = true;
+                    if t.is_some() {
+                        channels.threshold = t;
+                    }
+                }
             }
         }
         if !channels.syntax && !channels.semantic && !channels.near {
@@ -389,10 +465,6 @@ impl ScanChannels {
 
     fn structural(self) -> bool {
         self.semantic || self.near
-    }
-
-    fn uses_threshold(self) -> bool {
-        self.near
     }
 
     fn report_label(self, count: usize) -> &'static str {
@@ -426,13 +498,21 @@ enum SortKey {
     /// How cleanly it extracts: invariant (shared) lines × copies × spread, penalized
     /// by the number of parameters the helper would need. Surfaces the duplication you
     /// can actually fold into one helper, not the biggest block that merely *looks*
-    /// similar. The default.
+    /// similar (a *fixability* axis). The default.
     Extractability,
     /// Raw duplicated volume: removable lines × similarity × spread. The most
     /// *code* you'd delete, even if the copies diverge a lot (more manual work).
     Value,
     /// Most copies first — the most-repeated patterns.
     Sites,
+    /// Divergent-edit *hazard*: how likely a family is to be edited inconsistently
+    /// (one copy fixed, the siblings missed) and cause a bug. A severity axis, not a
+    /// fixability one — surfaces copies that share little text yet are behaviorally the
+    /// same (the invisible siblings a developer won't update). Calibrated against mined
+    /// history as a *divergence-propensity* signal — it is NOT yet a validated *harm*
+    /// ranker (an LLM-gold audit found ~chance harm discrimination); see
+    /// `docs/hazard-ranking.md`. Opt-in via `--sort hazard`.
+    Hazard,
 }
 
 impl SortKey {
@@ -441,6 +521,7 @@ impl SortKey {
             SortKey::Extractability => "extractability",
             SortKey::Value => "value",
             SortKey::Sites => "sites",
+            SortKey::Hazard => "hazard",
         }
     }
 
@@ -450,6 +531,7 @@ impl SortKey {
             SortKey::Extractability => f.extractability(),
             SortKey::Value => f.value,
             SortKey::Sites => f.members as f64,
+            SortKey::Hazard => f.hazard(),
         }
     }
 }
@@ -461,7 +543,30 @@ fn sort_name(s: SortKey) -> &'static str {
         SortKey::Extractability => "extractability (cleanest to fold into one helper)",
         SortKey::Value => "raw duplicated volume",
         SortKey::Sites => "number of copies",
+        SortKey::Hazard => "divergent-edit hazard (most likely to be edited inconsistently)",
     }
+}
+
+/// CI fail-gate policy, selected with `--fail-on`.
+#[derive(Clone, Copy, PartialEq, Eq, clap::ValueEnum, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+enum FailOn {
+    /// Any reported family (after filters) fails the run.
+    Any,
+    /// Only families new or changed vs `--baseline` fail. Requires `--baseline`.
+    New,
+}
+
+/// Extra per-report views (human/markdown), selected with `--show`.
+#[derive(Clone, Copy, PartialEq, Eq, clap::ValueEnum, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+enum ShowView {
+    /// Each family inline as a unified diff between its two representative copies.
+    Diff,
+    /// An extraction skeleton per family: the shared structure with varying spots as ⟨param N⟩.
+    Proposal,
+    /// After the report, directories/modules ranked by total duplicated lines.
+    Hotspots,
 }
 
 /// What `scan` actually looked at: the file count and per-language breakdown, shown as
@@ -596,7 +701,7 @@ impl CapabilitiesReport {
                 doctor_json: false,
             },
             commands: CapabilitiesCommands {
-                stable: vec!["capabilities", "il", "scan", "stats"],
+                stable: vec!["capabilities", "il", "review", "scan", "stats"],
             },
             schemas: CapabilitiesSchemas {
                 capabilities: vec![CAPABILITIES_SCHEMA_VERSION],
@@ -606,17 +711,16 @@ impl CapabilitiesReport {
                 modes: vec!["syntax", "semantic", "near"],
                 default_modes: vec!["syntax", "semantic"],
                 output_formats: vec!["human", "json", "markdown", "sarif"],
-                sort_keys: vec!["extractability", "value", "sites"],
+                sort_keys: vec!["extractability", "value", "sites", "hazard"],
                 config_keys: vec![
                     "exclude",
                     "ignore-file",
                     "min-lines",
                     "min-members",
-                    "min-tokens",
+                    "min-size",
                     "min-value",
                     "mode",
                     "sort",
-                    "threshold",
                     "top",
                 ],
                 capabilities: scan_capability_flags(),
@@ -1080,20 +1184,15 @@ fn run() -> Result<()> {
             sort,
             config,
             mode,
-            hotspots,
+            show,
             cache_dir,
-            fail,
+            fail_on,
             baseline,
             ignore_file,
-            new_only: _,
-            fail_on_new,
             write_baseline,
-            threshold,
             format,
-            diff,
-            proposal,
             exclude,
-            min_tokens,
+            min_size,
             min_lines,
         } => cmd_scan(ScanArgs {
             paths,
@@ -1103,21 +1202,49 @@ fn run() -> Result<()> {
             sort,
             config,
             mode,
-            hotspots,
+            show,
             cache_dir,
-            fail,
+            fail_on,
             baseline,
             ignore_file,
-            fail_on_new,
             write_baseline,
-            threshold,
             format,
-            diff,
-            proposal,
             exclude,
-            min_tokens,
+            min_size,
             min_lines,
         }),
+        Cmd::Review {
+            paths,
+            base,
+            mode,
+            min_size,
+            min_lines,
+            exclude,
+            config,
+            ignore_file,
+            format,
+            top,
+            fail,
+        } => {
+            let paths = if paths.is_empty() {
+                vec![PathBuf::from(".")]
+            } else {
+                paths
+            };
+            review::cmd_review(review::ReviewArgs {
+                paths,
+                base,
+                mode,
+                min_size,
+                min_lines,
+                exclude,
+                config,
+                ignore_file,
+                format,
+                top,
+                fail,
+            })
+        }
         Cmd::Ceiling {
             gold,
             units,
@@ -2178,19 +2305,15 @@ struct ScanArgs {
     sort: Option<SortKey>,
     config: Option<PathBuf>,
     mode: Vec<ScanMode>,
-    hotspots: bool,
+    show: Vec<ShowView>,
     cache_dir: Option<PathBuf>,
-    fail: bool,
+    fail_on: Option<FailOn>,
     baseline: Option<PathBuf>,
     ignore_file: Option<PathBuf>,
-    fail_on_new: bool,
     write_baseline: bool,
-    threshold: Option<f64>,
     format: ReportFormat,
-    diff: bool,
-    proposal: bool,
     exclude: Vec<String>,
-    min_tokens: Option<usize>,
+    min_size: Option<usize>,
     min_lines: Option<u32>,
 }
 
@@ -2210,6 +2333,42 @@ impl nose_detect::Detector for ChannelDetector {
             .map(|d| d.score(a, b))
             .fold(0.0, f64::max)
     }
+}
+
+/// Lower + detect + rank clone families for a set of paths — the shared core of `scan`
+/// and `review` (no cache, baseline, or presentation post-processing).
+pub(crate) fn detect_families(
+    paths: &[PathBuf],
+    exclude: &[String],
+    mode: Vec<ScanMode>,
+    cfg_mode: Vec<ScanMode>,
+    min_tokens: usize,
+    min_lines: u32,
+) -> Result<Vec<nose_detect::RefactorFamily>> {
+    let refs: Vec<&std::path::Path> = paths.iter().map(|p| p.as_path()).collect();
+    let channels = ScanChannels::resolve(mode, cfg_mode)?;
+    let threshold = if channels.near {
+        channels.threshold.unwrap_or(0.70)
+    } else {
+        1.0
+    };
+    let opts = nose_detect::DetectOptions {
+        threshold,
+        min_lines,
+        min_tokens,
+        contiguous_min_tokens: min_tokens,
+        contiguous_min_lines: min_lines,
+        structural: channels.structural(),
+        contiguous: channels.syntax,
+        value_candidates: channels.semantic,
+        shape_candidates: channels.near,
+        shape_features: channels.near,
+        ..Default::default()
+    };
+    let detector = scan_detector(channels, &opts);
+    let corpus = nose_frontend::lower_corpus_filtered(&refs, exclude);
+    let report = nose_detect::detect(&corpus, &opts, detector.as_ref());
+    Ok(nose_detect::rank_families(&report))
 }
 
 fn scan_detector(
@@ -2284,16 +2443,13 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
     let min_value = args.min_value.or(cfg.min_value).unwrap_or(0.0);
     let sort = args.sort.or(cfg.sort).unwrap_or(SortKey::Extractability);
     let channels = ScanChannels::resolve(args.mode, cfg.mode)?;
-    if !channels.uses_threshold() && (args.threshold.is_some() || cfg.threshold.is_some()) {
-        anyhow::bail!("--threshold is only valid when --mode includes near");
-    }
-    let threshold = if channels.uses_threshold() {
-        args.threshold.or(cfg.threshold).unwrap_or(0.70)
+    let threshold = if channels.near {
+        channels.threshold.unwrap_or(0.70)
     } else {
         1.0
     };
     let min_lines = args.min_lines.or(cfg.min_lines).unwrap_or(5);
-    let min_tokens = args.min_tokens.or(cfg.min_tokens).unwrap_or(24);
+    let min_tokens = args.min_size.or(cfg.min_size).unwrap_or(24);
     let ignore_file = args.ignore_file.or(cfg.ignore_file);
     // Excludes are additive: config patterns plus any given on the command line.
     let mut exclude = cfg.exclude;
@@ -2474,17 +2630,26 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
             if let Some(ignore_set) = &ignore_set {
                 println!("{}", ignore_set.summary(ignored_families.len()).line());
             }
-            print_refactor_human(&families, &shown, sort, channels, args.diff, args.proposal)
+            print_refactor_human(
+                &families,
+                &shown,
+                sort,
+                channels,
+                args.show.contains(&ShowView::Diff),
+                args.show.contains(&ShowView::Proposal),
+            )
         }
         ReportFormat::Sarif => println!("{}", refactor_sarif(&shown, families.len())?),
     }
-    if args.hotspots && matches!(args.format, ReportFormat::Human | ReportFormat::Markdown) {
+    if args.show.contains(&ShowView::Hotspots)
+        && matches!(args.format, ReportFormat::Human | ReportFormat::Markdown)
+    {
         print_hotspots(&families);
     }
     // CI gate: report is already printed; a non-empty (filtered) family set is a
     // failure when --fail is set.
     if let (true, Some(comparison)) = (
-        args.fail_on_new && !families.is_empty(),
+        matches!(args.fail_on, Some(FailOn::New)) && !families.is_empty(),
         baseline_comparison.as_ref(),
     ) {
         let mut new_families = 0usize;
@@ -2498,14 +2663,14 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
         }
         let reportable_families = new_families + changed_families;
         eprintln!(
-            "\nnose: {} new and {} changed {} found (--fail-on-new)",
+            "\nnose: {} new and {} changed {} found (--fail-on new)",
             new_families,
             changed_families,
             channels.report_label(reportable_families)
         );
         std::process::exit(1);
     }
-    if args.fail && !families.is_empty() {
+    if matches!(args.fail_on, Some(FailOn::Any)) && !families.is_empty() {
         eprintln!(
             "\nnose: {} {} found (--fail)",
             families.len(),

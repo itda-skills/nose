@@ -47,14 +47,12 @@ Grouped by what they do. Anything here can also be set in
 
 | flag | effect |
 |---|---|
-| `--sort KEY` | ranking: `extractability` (default), `value`, or `sites` (see [Ranking](#ranking)) |
+| `--sort KEY` | ranking: `extractability` (default), `value`, `sites`, or `hazard` (experimental; see [Ranking](#ranking)) |
 | `--top N` | show only the top N families (default 30; `--top 0` = all) |
 | `--min-members N` | only families with at least N duplicated sites (default 2) |
 | `--min-value V` | hide families below this refactoring value (noise floor on large repos) |
-| `--min-tokens N` | ignore units or syntax copy-paste runs smaller than this IL-token size (default 24) |
-| `--min-lines N` | ignore units or syntax copy-paste runs spanning fewer source lines (default 5) |
+| `--min-size N` | ignore units or syntax copy-paste runs smaller than this size, in IL tokens (default 24) |
 | `--mode MODE` | one or more of `syntax`, `semantic`, `near`; comma-list or repeatable; when present, replaces the default |
-| `--threshold T` | acceptance similarity in `[0,1]` for the `near` channel; invalid unless `--mode` includes `near` |
 | `--exclude <glob>` | skip paths matching a gitignore-syntax glob (repeatable) |
 | `--ignore-file <file>` | suppress reviewed families using a structured ignore file with reason/owner/expiry metadata |
 
@@ -68,6 +66,7 @@ noise floor on raw value and applies under every sort.
 | `extractability` *(default)* | invariant (shared) lines × copies × spread, weighted by tightness (shared/total) and penalized by parameter count | you want the duplication that folds *cleanly* into one helper — not the biggest block that merely looks similar |
 | `value` | raw duplicated volume: removable lines × similarity × spread | you want the most *code* deleted, accepting that divergent copies cost more to merge |
 | `sites` | number of copies | hunting the most-repeated patterns |
+| `hazard` *(experimental)* | divergent-edit *propensity*: line span × spread × invisibility × scope | you want a view of which clones tend to get edited inconsistently — **not yet a validated *harm* ranker** (see [hazard-ranking](hazard-ranking.md)) |
 
 Extractability is the default because raw volume over-rewards a large block whose
 copies share little: a 384-line family that shares only 22 lines across 14 varying
@@ -77,21 +76,25 @@ report is the same signal the ranking uses. Same-language families with **no** s
 invariant lines (a language idiom, or two unrelated type literals with the same shape)
 have nothing to extract and sink to the bottom, even at `sim 1.00`.
 
+`--sort hazard` is an **experimental** severity-style ranking calibrated on mined
+divergent-edit history. It predicts *which clones get edited inconsistently* (divergence
+propensity) but, per a gold-label audit, **does not yet rank actual *harm* better than
+chance** — see [hazard-ranking](hazard-ranking.md) for the full, honest evaluation.
+
 **Review what was found**
 
 | flag | effect |
 |---|---|
-| `--diff` | show each family inline as a unified diff between its two representative copies — both versions and exactly what differs |
-| `--proposal` | show an extraction skeleton per family — the shared structure with the differing parts marked as parameters |
-| `--hotspots` | after the report, rank directories/modules by total duplicated lines (architecture view) |
+| `--show diff` | show each family inline as a unified diff between its two representative copies — both versions and exactly what differs |
+| `--show proposal` | show an extraction skeleton per family — the shared structure with the differing parts marked as parameters |
+| `--show hotspots` | after the report, rank directories/modules by total duplicated lines (architecture view) |
 | `--format human\|json\|markdown\|sarif` | output format (default `human`) |
 
 `--format json` emits a versioned object with `schema_version`, `tool_version`,
 scan scope, ranking metadata, and a `families` array. The stable contract and
 compatibility rule are documented in [scan-json](scan-json.md).
 
-**Workflow** (`--baseline`, `--write-baseline`, `--new-only`, `--fail-on-new`,
-`--fail`, `--ignore-file`, `--cache-dir`, `--config`) is covered in
+**Workflow** (`--baseline`, `--write-baseline`, `--fail-on any|new`, `--ignore-file`, `--cache-dir`, `--config`) is covered in
 [continuous-integration](continuous-integration.md) and [configuration](configuration.md).
 Structured suppressions are covered in [structured-ignores](structured-ignores.md).
 
@@ -112,15 +115,15 @@ Examples:
 
 ```sh
 nose scan src                                  # syntax + semantic
-nose scan src --mode syntax --fail             # jscpd-style gate
+nose scan src --mode syntax --fail-on any             # jscpd-style gate
 nose scan src --mode semantic                  # exact Type-4 only
-nose scan src --mode near --threshold 0.70     # Type-3 only
+nose scan src --mode near:0.70                 # Type-3 only
 nose scan src --mode syntax,semantic,near      # all channels
 nose scan src --mode syntax --mode semantic    # same as --mode syntax,semantic
 ```
 
-Only `near` uses `--threshold` (default `0.70`). `syntax` and `semantic` are exact
-channels, so `--threshold` is rejected unless `near` is also enabled.
+The `near` channel takes its acceptance threshold inline — `--mode near:0.8` (default
+`0.70`). `syntax` and `semantic` are exact channels and take no threshold.
 
 The `syntax` channel is the CPD floor: it finds duplicated token runs even when they
 start or end in the middle of a function. The normalized unit channels (`semantic` and
@@ -145,6 +148,9 @@ change to improve readability. The stable contract is documented in
 
 ## Other commands
 
+- `nose review [paths…] --base <ref>` — flag clones changed inconsistently in a diff (a
+  copy edited, its siblings missed). The git-aware companion to `scan`; full guide in
+  [review](review.md).
 - `nose stats <paths…> [--top N] [--json]` — per-language IL lowering coverage (the
   Raw-node ratio), with the top unhandled surface kinds (`--top`, default 30; `--json`
   for machine output). Use it to spot a language/construct that isn't lowering well; see

@@ -14,7 +14,7 @@ mode        = ["syntax", "semantic"]
 sort        = "extractability"
 min-value   = 200
 min-members = 3
-min-tokens  = 30
+min-size    = 30
 top         = 50
 ignore-file = "nose.ignore.json"
 ```
@@ -31,12 +31,11 @@ the built-in default". Keys are kebab-case and live under the `[scan]` table.
 |---|---|---|---|
 | `exclude` | list of globs | `[]` | `--exclude` |
 | `mode` | list of `syntax`\|`semantic`\|`near` | `["syntax", "semantic"]` | `--mode` |
-| `sort` | `extractability`\|`value`\|`sites` | `extractability` | `--sort` |
+| `sort` | `extractability`\|`value`\|`sites`\|`hazard` | `extractability` | `--sort` |
 | `min-value` | float | `0.0` | `--min-value` |
 | `min-members` | int | `2` | `--min-members` |
-| `threshold` | float | `0.70` when `near` is enabled | `--threshold` |
-| `min-tokens` | int | `24` | `--min-tokens` |
-| `min-lines` | int | `5` | `--min-lines` |
+| `min-size` | int (IL tokens) | `24` | `--min-size` |
+| `min-lines` | int (advanced) | `5` | `--min-lines` |
 | `top` | int | `30` | `--top` |
 | `ignore-file` | string path | auto-read `nose.ignore.json` when present | `--ignore-file` |
 
@@ -49,19 +48,16 @@ mode = ["syntax"]                  # jscpd-style gate
 # mode = ["syntax", "semantic", "near"]
 ```
 
-`min-tokens` and `min-lines` apply to both structural units and the syntax copy-paste
-floor. For `--mode syntax`, those two settings are the jscpd-style size gate.
+`min-size` (and the advanced `min-lines`) apply to both structural units and the syntax
+copy-paste floor. For `--mode syntax`, they are the jscpd-style size gate.
 
-`threshold` is valid only when `mode` includes `near`; `syntax` and `semantic` are
-exact channels and do not use fuzzy similarity. When omitted for `near`, the
-threshold defaults to `0.70`.
-
-If `threshold` is set in config and a CLI `--mode` override excludes `near`, the run
-fails instead of silently ignoring the threshold. Keep `threshold` next to a `mode` that
-includes `near`, or pass both on the command line:
+The `near` channel's acceptance threshold rides on the `mode` value itself —
+`mode = ["syntax", "semantic", "near:0.8"]` (or `--mode near:0.8`), default `0.70`.
+There is no separate threshold setting, so it can never be mis-applied to the exact
+`syntax`/`semantic` channels.
 
 ```sh
-nose scan src --mode syntax,semantic,near --threshold 0.70
+nose scan src --mode syntax,semantic,near:0.70
 ```
 
 ## Excludes
@@ -85,8 +81,8 @@ ignore-file = "nose.ignore.json"
 
 When unset, nose automatically reads `nose.ignore.json` in the current working
 directory if it exists. Pass `--ignore-file <file>` to override the config for one
-run. Ignored families are hidden from the active report and from `--fail` /
-`--fail-on-new`, while `--format json` still includes them with their reason,
+run. Ignored families are hidden from the active report and from `--fail-on any` /
+`--fail-on new`, while `--format json` still includes them with their reason,
 owner, note, and expiry metadata.
 
 The file format, selector semantics, and expiry behavior are documented in

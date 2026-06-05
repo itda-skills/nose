@@ -180,7 +180,7 @@ fn scan_json_report_has_versioned_contract() {
     let out = run(&[
         "scan",
         dir.to_str().unwrap(),
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "json",
@@ -207,7 +207,7 @@ fn scan_mode_syntax_reports_copy_paste_only() {
         p,
         "--mode",
         "syntax",
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "json",
@@ -236,7 +236,7 @@ fn scan_mode_syntax_min_tokens_controls_copy_paste_floor() {
         p,
         "--mode",
         "syntax",
-        "--min-tokens",
+        "--min-size",
         "80",
         "--format",
         "json",
@@ -258,7 +258,7 @@ fn scan_mode_semantic_keeps_renamed_exact_clone_candidates() {
         p,
         "--mode",
         "semantic",
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "json",
@@ -303,7 +303,7 @@ fn scan_mode_semantic_reports_c_u16_byte_pack_only_when_byte_buffer_proven() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -392,7 +392,7 @@ fn scan_mode_semantic_rejects_unproved_regex_predicate_matches() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -418,12 +418,10 @@ fn scan_mode_semantic_rejects_unproved_regex_predicate_matches() {
         "scan",
         dir.to_str().unwrap(),
         "--mode",
-        "near",
-        "--threshold",
-        "0.5",
+        "near:0.5",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -466,7 +464,7 @@ fn scan_mode_semantic_allows_proved_js_static_builtins() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -543,7 +541,7 @@ fn scan_mode_semantic_proves_extreme_type4_idioms() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -628,7 +626,7 @@ fn scan_mode_semantic_proves_collection_empty_checks() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -720,7 +718,7 @@ fn scan_mode_semantic_proves_string_prefix_checks() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -826,7 +824,7 @@ fn scan_mode_semantic_proves_rust_numeric_methods() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -1324,7 +1322,7 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -1525,7 +1523,7 @@ fn scan_mode_semantic_keeps_unproven_contains_calls_distinct() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -1644,7 +1642,7 @@ fn scan_mode_semantic_proves_typed_dynamic_collection_membership() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -1789,7 +1787,7 @@ fn scan_mode_semantic_proves_set_membership_when_receiver_is_proven() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -1976,7 +1974,7 @@ fn scan_mode_semantic_proves_typed_typescript_map_key_membership() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -2192,7 +2190,7 @@ fn scan_mode_semantic_proves_typed_typescript_map_default_lookup() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -2629,7 +2627,7 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -2881,7 +2879,7 @@ fn scan_mode_semantic_proves_null_presence_predicates() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -2942,7 +2940,7 @@ fn scan_mode_semantic_reports_flattened_guard_span_only() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3013,7 +3011,7 @@ fn scan_mode_semantic_preserves_js_typeof_operator() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3068,7 +3066,7 @@ fn scan_mode_semantic_allows_safe_uninterpreted_calls() {
         "semantic",
         "--min-lines",
         "3",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3122,7 +3120,7 @@ fn scan_mode_semantic_allows_safe_uninterpreted_method_calls() {
         "semantic",
         "--min-lines",
         "3",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3175,7 +3173,7 @@ fn scan_mode_semantic_distinguishes_sequence_kinds() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3228,7 +3226,7 @@ fn scan_mode_semantic_allows_static_import_identity() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3289,7 +3287,7 @@ fn scan_mode_semantic_allows_named_namespace_import_identity() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3356,7 +3354,7 @@ fn scan_mode_semantic_allows_static_projection_identity() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3423,7 +3421,7 @@ fn scan_mode_semantic_distinguishes_nullish_from_truthy_defaults() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3499,7 +3497,7 @@ fn scan_mode_semantic_proves_js_record_shape_guards() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3582,7 +3580,7 @@ fn scan_mode_semantic_proves_js_own_property_guards() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3652,7 +3650,7 @@ fn scan_mode_semantic_converges_cross_language_list_literals() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3706,7 +3704,7 @@ fn scan_mode_semantic_preserves_js_object_keys() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3764,7 +3762,7 @@ fn scan_mode_semantic_converges_cross_language_map_literals() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3823,7 +3821,7 @@ fn scan_mode_semantic_captures_module_literal_bindings() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3887,7 +3885,7 @@ fn scan_mode_semantic_preserves_python_dict_keys() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3952,7 +3950,7 @@ fn scan_mode_semantic_preserves_ruby_hash_keys() {
         "semantic",
         "--min-lines",
         "1",
-        "--min-tokens",
+        "--min-size",
         "1",
         "--format",
         "json",
@@ -3983,7 +3981,7 @@ fn scan_mode_semantic_preserves_ruby_hash_keys() {
 fn default_mode_runs_syntax_and_semantic() {
     let dir = make_mode_project("default_modes");
     let p = dir.to_str().unwrap();
-    let out = run(&["scan", p, "--min-tokens", "12", "--format", "json"]);
+    let out = run(&["scan", p, "--min-size", "12", "--format", "json"]);
     assert!(
         out.contains("copy_a.py") && out.contains("copy_b.py"),
         "default mode includes syntax: {out}"
@@ -3999,7 +3997,7 @@ fn default_mode_runs_syntax_and_semantic() {
         "syntax",
         "--mode",
         "semantic",
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "json",
@@ -4018,16 +4016,10 @@ fn default_mode_runs_syntax_and_semantic() {
 #[test]
 fn non_near_scan_modes_reject_similarity_thresholds() {
     let dir = make_mode_project("exact_threshold");
-    for mode in ["syntax", "semantic", "syntax,semantic"] {
+    // Only `near` carries an inline threshold; `syntax:0.5` / `semantic:0.5` are invalid.
+    for mode in ["syntax:0.5", "semantic:0.5"] {
         let out = Command::new(bin())
-            .args([
-                "scan",
-                dir.to_str().unwrap(),
-                "--mode",
-                mode,
-                "--threshold",
-                "0.5",
-            ])
+            .args(["scan", dir.to_str().unwrap(), "--mode", mode])
             .output()
             .expect("run nose");
         assert!(
@@ -4036,7 +4028,7 @@ fn non_near_scan_modes_reject_similarity_thresholds() {
         );
         let stderr = String::from_utf8(out.stderr).unwrap();
         assert!(
-            stderr.contains("--threshold is only valid when --mode includes near"),
+            stderr.contains("unknown mode"),
             "specific error explains the invalid threshold for {mode}: {stderr}"
         );
     }
@@ -4051,10 +4043,8 @@ fn near_scan_mode_accepts_similarity_threshold() {
             "scan",
             dir.to_str().unwrap(),
             "--mode",
-            "near",
-            "--threshold",
-            "0.5",
-            "--min-tokens",
+            "near:0.5",
+            "--min-size",
             "12",
             "--format",
             "json",
@@ -4075,7 +4065,7 @@ fn scan_reports_the_clone_family() {
     let out = run(&[
         "scan",
         dir.to_str().unwrap(),
-        "--min-tokens",
+        "--min-size",
         "12",
         "--top",
         "10",
@@ -4093,7 +4083,7 @@ fn exclude_drops_matching_paths() {
     let with = run(&[
         "scan",
         p,
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "json",
@@ -4103,7 +4093,7 @@ fn exclude_drops_matching_paths() {
     let without = run(&[
         "scan",
         p,
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "json",
@@ -4135,7 +4125,7 @@ fn exclude_supports_globs() {
     let out = run(&[
         "scan",
         p,
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "json",
@@ -4155,8 +4145,8 @@ fn min_value_filters_low_value_families() {
     let dir = make_project("minval");
     let p = dir.to_str().unwrap();
     // A value floor above any family's value hides them all; zero keeps them.
-    let all = run(&["scan", p, "--min-tokens", "12", "--min-value", "0"]);
-    let none = run(&["scan", p, "--min-tokens", "12", "--min-value", "100000"]);
+    let all = run(&["scan", p, "--min-size", "12", "--min-value", "0"]);
+    let none = run(&["scan", p, "--min-size", "12", "--min-value", "100000"]);
     assert!(all.contains("copies"), "unfiltered shows a family: {all}");
     assert!(
         !none.contains("copies"),
@@ -4171,9 +4161,10 @@ fn hotspots_lists_modules() {
     let out = run(&[
         "scan",
         dir.to_str().unwrap(),
-        "--min-tokens",
+        "--min-size",
         "12",
-        "--hotspots",
+        "--show",
+        "hotspots",
     ]);
     assert!(
         out.contains("duplication hotspots"),
@@ -4210,7 +4201,7 @@ fn output_is_independent_of_thread_count() {
     let p = dir.to_str().unwrap();
     let run_with_threads = |n: &str| {
         let out = Command::new(bin())
-            .args(["scan", p, "--min-tokens", "12", "--format", "json"])
+            .args(["scan", p, "--min-size", "12", "--format", "json"])
             .env("RAYON_NUM_THREADS", n)
             .output()
             .expect("run nose");
@@ -4246,11 +4237,11 @@ fn cache_output_matches_uncached_cold_and_warm() {
     let _ = fs::remove_dir_all(&cache);
     let cd = cache.to_str().unwrap();
 
-    let uncached = run(&["scan", p, "--min-tokens", "12", "--format", "json"]);
+    let uncached = run(&["scan", p, "--min-size", "12", "--format", "json"]);
     let cold = run(&[
         "scan",
         p,
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "json",
@@ -4260,7 +4251,7 @@ fn cache_output_matches_uncached_cold_and_warm() {
     let warm = run(&[
         "scan",
         p,
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "json",
@@ -4283,7 +4274,7 @@ fn fail_flag_sets_exit_code_as_ci_gate() {
     let p = dir.to_str().unwrap();
     // A family exists → --fail must exit non-zero.
     let found = Command::new(bin())
-        .args(["scan", p, "--min-tokens", "12", "--fail"])
+        .args(["scan", p, "--min-size", "12", "--fail-on", "any"])
         .output()
         .expect("run");
     assert!(
@@ -4295,11 +4286,12 @@ fn fail_flag_sets_exit_code_as_ci_gate() {
         .args([
             "scan",
             p,
-            "--min-tokens",
+            "--min-size",
             "12",
             "--min-value",
             "1e9",
-            "--fail",
+            "--fail-on",
+            "any",
         ])
         .output()
         .expect("run");
@@ -4320,7 +4312,7 @@ fn output_paths_are_relative_to_cwd() {
         .args([
             "scan",
             abs.to_str().unwrap(),
-            "--min-tokens",
+            "--min-size",
             "12",
             "--format",
             "json",
@@ -4349,14 +4341,14 @@ fn baseline_hides_accepted_families() {
     let bls = bl.to_str().unwrap();
 
     // Sanity: without a baseline there IS a family.
-    assert!(run(&["scan", p, "--min-tokens", "12"]).contains("copies"));
+    assert!(run(&["scan", p, "--min-size", "12"]).contains("copies"));
 
     // Accept current state…
     let _ = Command::new(bin())
         .args([
             "scan",
             p,
-            "--min-tokens",
+            "--min-size",
             "12",
             "--baseline",
             bls,
@@ -4372,7 +4364,7 @@ fn baseline_hides_accepted_families() {
     );
 
     // …then a re-run shows no *new* families.
-    let after = run(&["scan", p, "--min-tokens", "12", "--baseline", bls]);
+    let after = run(&["scan", p, "--min-size", "12", "--baseline", bls]);
     assert!(
         !after.contains("sites"),
         "baselined families must be hidden, got: {after}"
@@ -4392,7 +4384,7 @@ fn new_only_json_marks_new_families_against_baseline() {
         .args([
             "scan",
             p,
-            "--min-tokens",
+            "--min-size",
             "12",
             "--baseline",
             bls,
@@ -4406,11 +4398,10 @@ fn new_only_json_marks_new_families_against_baseline() {
     let out = run(&[
         "scan",
         p,
-        "--min-tokens",
+        "--min-size",
         "12",
         "--baseline",
         bls,
-        "--new-only",
         "--format",
         "json",
         "--top",
@@ -4453,7 +4444,7 @@ fn fail_on_new_fails_for_changed_family_and_passes_when_clean() {
         .args([
             "scan",
             p,
-            "--min-tokens",
+            "--min-size",
             "12",
             "--baseline",
             bls,
@@ -4467,11 +4458,12 @@ fn fail_on_new_fails_for_changed_family_and_passes_when_clean() {
         .args([
             "scan",
             p,
-            "--min-tokens",
+            "--min-size",
             "12",
             "--baseline",
             bls,
-            "--fail-on-new",
+            "--fail-on",
+            "new",
         ])
         .output()
         .expect("clean run");
@@ -4485,11 +4477,12 @@ fn fail_on_new_fails_for_changed_family_and_passes_when_clean() {
         .args([
             "scan",
             p,
-            "--min-tokens",
+            "--min-size",
             "12",
             "--baseline",
             bls,
-            "--fail-on-new",
+            "--fail-on",
+            "new",
             "--format",
             "json",
             "--top",
@@ -4509,7 +4502,7 @@ fn fail_on_new_fails_for_changed_family_and_passes_when_clean() {
     assert_eq!(json["baseline"]["resolved_families"], 0);
     assert_eq!(scan_families(&json)[0]["baseline_status"], "changed");
     assert!(
-        stderr.contains("--fail-on-new"),
+        stderr.contains("--fail-on new"),
         "stderr should name the explicit gate: {stderr}"
     );
 
@@ -4554,7 +4547,7 @@ fn inline_nose_ignore_suppresses_a_site() {
     fs::write(dir.join("b/f.py"), format!("# nose-ignore\n{body}")).unwrap();
     let p = dir.to_str().unwrap();
     assert!(
-        run(&["scan", p, "--min-tokens", "12"]).contains("0 clone"),
+        run(&["scan", p, "--min-size", "12"]).contains("0 clone"),
         "the marked copy must be suppressed, leaving no family"
     );
     let _ = fs::remove_dir_all(&dir);
@@ -4569,7 +4562,7 @@ fn structured_ignore_suppresses_family_id_with_metadata() {
         p,
         "--mode",
         "semantic",
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "json",
@@ -4598,7 +4591,7 @@ fn structured_ignore_suppresses_family_id_with_metadata() {
         p,
         "--mode",
         "semantic",
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "json",
@@ -4642,7 +4635,7 @@ fn default_structured_ignore_file_matches_paths() {
             ".",
             "--mode",
             "semantic",
-            "--min-tokens",
+            "--min-size",
             "12",
             "--format",
             "json",
@@ -4690,7 +4683,7 @@ fn expired_structured_ignore_is_reported_but_not_applied() {
             ".",
             "--mode",
             "semantic",
-            "--min-tokens",
+            "--min-size",
             "12",
             "--format",
             "json",
@@ -4732,7 +4725,7 @@ fn malformed_structured_ignore_file_fails_clearly() {
         .args([
             "scan",
             dir.to_str().unwrap(),
-            "--min-tokens",
+            "--min-size",
             "12",
             "--ignore-file",
             ignore_file.to_str().unwrap(),
@@ -4754,7 +4747,7 @@ fn sarif_output_is_well_formed() {
     let out = run(&[
         "scan",
         dir.to_str().unwrap(),
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "sarif",
@@ -4816,7 +4809,7 @@ fn sarif_records_and_notes_top_truncation() {
     let out = run(&[
         "scan",
         dir.to_str().unwrap(),
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "sarif",
@@ -4844,7 +4837,7 @@ fn sarif_records_and_notes_top_truncation() {
     let full = run(&[
         "scan",
         dir.to_str().unwrap(),
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "sarif",
@@ -4889,12 +4882,11 @@ fn diff_shows_the_differing_line() {
         "scan",
         dir.to_str().unwrap(),
         "--mode",
-        "near",
-        "--threshold",
-        "0.5",
-        "--min-tokens",
+        "near:0.5",
+        "--min-size",
         "10",
-        "--diff",
+        "--show",
+        "diff",
     ]);
     assert!(out.contains("diff  "), "should print a diff header: {out}");
     assert!(
@@ -4937,7 +4929,7 @@ fn capabilities_command_emits_machine_readable_contract() {
 
     assert_eq!(
         json_array_strings(&json["commands"], "stable"),
-        vec!["capabilities", "il", "scan", "stats"]
+        vec!["capabilities", "il", "review", "scan", "stats"]
     );
     assert_eq!(json["schemas"]["capabilities"][0], 1);
     assert_eq!(json["schemas"]["scan_json"][0], 1);
@@ -4955,7 +4947,7 @@ fn capabilities_command_emits_machine_readable_contract() {
     );
     assert_eq!(
         json_array_strings(&json["scan"], "sort_keys"),
-        vec!["extractability", "value", "sites"]
+        vec!["extractability", "value", "sites", "hazard"]
     );
     assert_eq!(json["scan"]["capabilities"]["baseline"], true);
     assert_eq!(json["scan"]["capabilities"]["structured_ignores"], true);
@@ -5002,10 +4994,9 @@ fn broken_pipe_exits_cleanly() {
             "scan",
             dir.to_str().unwrap(),
             "--mode",
-            "near",
-            "--threshold",
-            "0.5",
-            "--diff",
+            "near:0.5",
+            "--show",
+            "diff",
             "--top",
             "40",
         ])
@@ -5063,11 +5054,10 @@ fn proposal_shows_shared_skeleton_and_parameters() {
         "scan",
         dir.to_str().unwrap(),
         "--mode",
-        "near",
-        "--threshold",
-        "0.5",
-        "--proposal",
-        "--min-tokens",
+        "near:0.5",
+        "--show",
+        "proposal",
+        "--min-size",
         "12",
     ]);
     assert!(out.contains("proposal"), "should print a proposal: {out}");
@@ -5087,10 +5077,16 @@ fn sort_keys_label_the_ranking_and_reject_garbage() {
     let dir = make_project("sort");
     let p = dir.to_str().unwrap();
     // Default ranking is extractability — the header says so, in plain language.
-    let def = run(&["scan", p, "--min-tokens", "12"]);
+    let def = run(&["scan", p, "--min-size", "12"]);
     assert!(
         def.contains("ranked by extractability"),
         "default header names the ranking: {def}"
+    );
+    // --sort hazard is available and switches the header.
+    let byhaz = run(&["scan", p, "--min-size", "12", "--sort", "hazard"]);
+    assert!(
+        byhaz.contains("ranked by divergent-edit hazard"),
+        "--sort hazard names the ranking: {byhaz}"
     );
     // Families are described in plain language (copies + removable lines), not a
     // wall of internal metrics.
@@ -5099,7 +5095,7 @@ fn sort_keys_label_the_ranking_and_reject_garbage() {
         "family summary is plain-language: {def}"
     );
     // --sort value switches the header.
-    let byval = run(&["scan", p, "--min-tokens", "12", "--sort", "value"]);
+    let byval = run(&["scan", p, "--min-size", "12", "--sort", "value"]);
     assert!(
         byval.contains("raw duplicated volume"),
         "--sort value names the ranking: {byval}"
@@ -5119,13 +5115,13 @@ fn scan_reports_what_it_scanned() {
     let p = dir.to_str().unwrap();
     // The scope line states the file count and per-language breakdown (make_project
     // writes four Python files), so a `.gitignore`-pruned scope is visible, not silent.
-    let out = run(&["scan", p, "--min-tokens", "12"]);
+    let out = run(&["scan", p, "--min-size", "12"]);
     assert!(
         out.contains("scanned 4 files") && out.contains("python 4"),
         "header reports scanned count and languages: {out}"
     );
     // The scope line must not corrupt machine-readable output.
-    let json = run(&["scan", p, "--min-tokens", "12", "--format", "json"]);
+    let json = run(&["scan", p, "--min-size", "12", "--format", "json"]);
     let report = scan_json(&json);
     assert!(
         json.trim_start().starts_with('{') && !json.contains("scanned"),
@@ -5176,10 +5172,8 @@ fn output_is_byte_identical_across_thread_counts_on_a_rich_project() {
                 "scan",
                 p,
                 "--mode",
-                "near",
-                "--threshold",
-                "0.5",
-                "--min-tokens",
+                "near:0.5",
+                "--min-size",
                 "12",
                 "--format",
                 "json",
@@ -5241,7 +5235,7 @@ fn top_zero_shows_all_families() {
     let all = count(&[
         "scan",
         p,
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "json",
@@ -5251,7 +5245,7 @@ fn top_zero_shows_all_families() {
     let one = count(&[
         "scan",
         p,
-        "--min-tokens",
+        "--min-size",
         "12",
         "--format",
         "json",
@@ -5264,5 +5258,183 @@ fn top_zero_shows_all_families() {
         all >= 6,
         "--top 0 should include every distinct family (expected >=6, got {all})"
     );
+    let _ = fs::remove_dir_all(&dir);
+}
+
+/// Helper: run git in a fixture dir, asserting success.
+fn git_in(dir: &Path, args: &[&str]) {
+    let out = Command::new("git")
+        .current_dir(dir)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
+        .env_remove("GIT_OBJECT_DIRECTORY")
+        .env_remove("GIT_COMMON_DIR")
+        .args(args)
+        .output()
+        .expect("run git");
+    assert!(
+        out.status.success(),
+        "git {args:?} failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+/// Turn a fixture dir into a committed git repo.
+fn init_git_repo(dir: &Path) {
+    git_in(dir, &["init", "-q", "-b", "main"]);
+    git_in(dir, &["config", "user.email", "t@example.com"]);
+    git_in(dir, &["config", "user.name", "Test"]);
+    git_in(dir, &["add", "-A"]);
+    git_in(dir, &["commit", "-q", "-m", "init"]);
+}
+
+fn nose_review(dir: &Path, extra: &[&str]) -> std::process::Output {
+    let mut args = vec!["review", ".", "--min-size", "8"];
+    args.extend_from_slice(extra);
+    Command::new(bin())
+        .current_dir(dir)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
+        .env_remove("GIT_OBJECT_DIRECTORY")
+        .env_remove("GIT_COMMON_DIR")
+        .args(&args)
+        .output()
+        .expect("run nose review")
+}
+
+#[test]
+fn review_flags_a_clone_changed_in_one_copy_only() {
+    let dir = make_project("review_flag");
+    init_git_repo(&dir);
+
+    // Edit ONE copy of the clone family (a/f.py) — a fix not propagated to b/f.py.
+    let a = dir.join("a/f.py");
+    let src = fs::read_to_string(&a).unwrap();
+    fs::write(
+        &a,
+        src.replace(
+            "    return total",
+            "    total = total + 1\n    return total",
+        ),
+    )
+    .unwrap();
+
+    let out = nose_review(&dir, &[]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("changed inconsistently"),
+        "should flag the inconsistently-changed clone: {stdout}"
+    );
+    assert!(
+        stdout.contains("a/f.py"),
+        "names the changed copy: {stdout}"
+    );
+    assert!(
+        stdout.contains("b/f.py"),
+        "lists the un-updated sibling: {stdout}"
+    );
+
+    // --fail turns it into a non-zero CI gate.
+    let gated = nose_review(&dir, &["--fail"]);
+    assert!(
+        !gated.status.success(),
+        "--fail should exit non-zero when flagged"
+    );
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn review_is_quiet_when_a_clone_changes_consistently() {
+    let dir = make_project("review_consistent");
+    init_git_repo(&dir);
+
+    // Apply the *same* edit to every copy — a consistent change, nothing to flag.
+    for sub in ["a", "b", "tests"] {
+        let f = dir.join(sub).join("f.py");
+        let src = fs::read_to_string(&f).unwrap();
+        fs::write(&f, src.replace("    return", "    pass\n    return")).unwrap();
+    }
+
+    let out = nose_review(&dir, &[]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        !stdout.contains("not updated"),
+        "a consistent change must not be flagged: {stdout}"
+    );
+    assert!(
+        out.status.success(),
+        "no --fail trip on a consistent change"
+    );
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn review_needs_a_git_repository() {
+    let dir = make_project("review_nogit");
+    let out = Command::new(bin())
+        .current_dir(&dir)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
+        .env_remove("GIT_OBJECT_DIRECTORY")
+        .env_remove("GIT_COMMON_DIR")
+        .args(["review", "."])
+        .output()
+        .expect("run nose review");
+    assert!(!out.status.success(), "review must fail outside a git repo");
+    assert!(
+        String::from_utf8_lossy(&out.stderr).contains("git repository"),
+        "explains the git requirement: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn review_respects_structured_ignores() {
+    let dir = make_project("review_ignore");
+    init_git_repo(&dir);
+
+    // Edit one copy so a family is flagged.
+    let a = dir.join("a/f.py");
+    let src = fs::read_to_string(&a).unwrap();
+    fs::write(
+        &a,
+        src.replace(
+            "    return total",
+            "    total = total + 1\n    return total",
+        ),
+    )
+    .unwrap();
+
+    // Grab the stable family_id from JSON, then suppress it.
+    let json_out = nose_review(&dir, &["--format", "json"]);
+    let json: serde_json::Value = serde_json::from_slice(&json_out.stdout).expect("review JSON");
+    let findings = json["findings"].as_array().expect("findings");
+    assert!(!findings.is_empty(), "expected a flagged family first");
+    let fid = findings[0]["family_id"].as_str().unwrap();
+
+    let ignore = dir.join("nose.ignore.json");
+    fs::write(
+        &ignore,
+        format!(r#"{{"ignores":[{{"family_id":"{fid}","reason":"intentional"}}]}}"#),
+    )
+    .unwrap();
+
+    let out = nose_review(&dir, &["--fail"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        !stdout.contains("not updated"),
+        "the ignored family must be suppressed: {stdout}"
+    );
+    assert!(
+        out.status.success(),
+        "a fully-suppressed review must not trip --fail"
+    );
+
     let _ = fs::remove_dir_all(&dir);
 }

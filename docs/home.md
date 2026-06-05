@@ -20,8 +20,9 @@ what you're here to do.
 You want to *run* nose on a codebase and act on what it finds.
 
 - [usage](usage.md) — the complete command and flag reference (`scan`, `stats`, `il`), the ranking keys, and the scan modes.
+- [review](review.md) — `nose review`: flag clones changed inconsistently in a diff (a copy fixed, its siblings missed) — a PR/CI check on top of git.
 - [configuration](configuration.md) — the `nose.toml` file: excludes, thresholds, baselines, caching, inline `// nose-ignore`.
-- [continuous-integration](continuous-integration.md) — the `--fail` gate, baseline-driven incremental adoption, SARIF, and fast re-runs.
+- [continuous-integration](continuous-integration.md) — the `--fail-on any` gate, baseline-driven incremental adoption, SARIF, and fast re-runs.
 - [structured-ignores](structured-ignores.md) — suppress reviewed findings with reason, owner, expiry, and machine-readable ignored-family output.
 - [clone-types](clone-types.md) — what nose covers across the standard Type-1/2/3/4 taxonomy, with its honest limits.
 - [languages](languages.md) — the supported languages and the embedded `<script>` extraction for Vue/Svelte/HTML.
@@ -40,6 +41,9 @@ You want to *change* nose or understand how it works inside.
 
 - [architecture](architecture.md) — the crates and the lower → normalize → detect → rank pipeline.
 - [normalization](normalization.md) — the passes that make behaviorally-equivalent code converge (the hard part).
+- [hazard-ranking](hazard-ranking.md) — the evidence base for the experimental `--sort hazard` (a divergence-*propensity* signal; **not** a validated harm ranker — it ranks actual harm near chance) and the honest evaluation trail.
+- [hazard-benchmark](hazard-benchmark.md) — the evaluation criteria and labeled dataset hazard is measured against (repo selection, graded labels, quantitative sufficiency).
+- [hazard-release-checklist](hazard-release-checklist.md) — what to do for the hazard ranking on every new nose release (one-page runbook: refresh the dataset, re-tune, re-validate).
 - [experiments](experiments.md) — the measured log of what was tried and what happened.
 - [benchmark](benchmark.md) — the gold set, methodology, and the headline precision/recall numbers.
 - [type4-benchmark](type4-benchmark.md) — the evidence-carrying synthetic Type-4 benchmark factory.

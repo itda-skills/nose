@@ -672,3 +672,96 @@ interpreter oracle as an in-loop *acceptance gate*, then chased the lead it surf
   §BE pointer-length contract (re-measured 800 → 252). The durable lesson: **a soundness-oracle
   improvement is durable only insofar as the IL shape it keys on is durable** — canons keyed on
   stable value-graph structure survived; builtin-keyed modeling did not.
+
+## BG. Hazard ranking — divergent-edit calibration from mined history
+
+A *severity* ranking ([hazard-ranking](hazard-ranking.md)) distinct from extractability:
+rank families by how likely they are to be edited inconsistently and cause a bug. The
+literature ([hazard-benchmark](hazard-benchmark.md)) gave the signals and directions but
+not the weights, so we mined ground truth before implementing.
+
+- **BG-data.** Used nose as a cross-revision linker (`eval/hazard/`): monthly snapshots
+  of **12 repos across 8 languages** (django, pandas, kafka[Java], terraform, hugo, tokio,
+  ripgrep, redis, vue-core, express; thrift[X], grpc[X]), labeling each family-interval by
+  Kim's Inconsistent-Change from `git diff` over member spans; **G2** = a G1 whose changed
+  sibling's *function* was modified by a bug-fix commit that did not propagate (git
+  `-L:funcname`). **462,569 events; 4,639 divergent edits (G1), 181 "G2" over 15,199
+  families.** Function-level attribution landed the G2 *rate* in the literature's 1–3%
+  range — **but an LLM-judge audit of all 181 found the G2 label only ~11% precise**
+  (48 message false-matches, 47 intentional divergences, 41 not-clones). So **G2 is
+  retracted as a gold label**; validation rests on the clean, directly-observed **G1**.
+- **BG-finding — the pre-data formula was mis-specified.** Leave-one-repo-out logistic
+  weights (stable): `mean_lines` **+0.43** (top), `modules` **+0.28**, `mean_sem`
+  **−0.27 (anti)**, `invisibility` **+0.14**, `members` +0.13, `params` +0.04 (noise — sign
+  flipped from −0.06 at 7 repos). The first-draft design led with `mean_sem` as the
+  *primary* multiplier — but semantic-fingerprint size is **anti-predictive** for
+  divergent-edit ranking (typical divergences are in smaller families; the mean is a
+  large-tail artifact). Source-**line** span is the real magnitude signal.
+- **BG-formula.** `hazard = mean_lines × spread(files,modules,languages) × invisibility ×
+  scope_weight` — leave-one-repo-out AUC **G1 0.644** vs **0.609** size-led draft, 0.611
+  value-baseline, ~0.49 random. **Shipped as nose's default sort** (`SortKey::Hazard`);
+  `--sort extractability` keeps the fixability axis. The param-dampening term tested
+  earlier was dropped (sign-unstable weight).
+  `invisibility` (1−tightness) is a modest, stable general signal (+0.14). **Correction:**
+  a first draft claimed it was "the top signal in the cross-language stratum (0.67)" —
+  but that was a repo-level mislabel (thrift+grpc tagged X). True cross-language families
+  are structurally rare (37 of 15,199; arrow 0 of 928), so the cross-language-specific
+  claim is retracted; invisibility holds as a general predictor.
+- **BG-audit — the gold label was mostly noise.** An LLM judge reviewed all 181 G2 events
+  blind (`audit_sample.py` rebuilds the two members' code + the bug-fix commit): **strict
+  precision 11% (20/180)**. False sources: 48 message false-matches (the bug-fix keyword
+  caught version drops, features, typo/docs/config changes), 47 intentional divergences
+  (async/sync, virtual/stored, test variants that legitimately differ), 41 not-clones
+  (near@0.70 grouped trivial stubs). The lesson: `rate-match ≠ precision`, and a real gold
+  label needs the LLM judge *as the labeler*, not the keyword heuristic. The 20 confirmed
+  positives seed a real (small) gold set.
+- **BG-gold — the formula predicts propensity, not harm.** Built that real gold: an LLM
+  labeled 1,390 G1 candidates blind *with the diff* into harm/should-propagate/benign,
+  adversarial pass refuting weak positives (`build_candidates.py` → `gold-label-divergence`
+  → `gold_eval.py`). Only 22 (strict) / 53 (lenient) are genuine should-propagate harms
+  (~1.6–3.8%, reproducing the literature's 1–3%). On this gold, AUC for harmful-vs-benign
+  divergence: `mean_sem` 0.61–0.64 (the *dropped* feature, best), `extractability`
+  0.59–0.64, **`hazard` 0.51 (chance)**, value 0.42. **The G1 0.64 does not transfer to
+  harm** — propensity ≠ harm, and static features cap ~0.6 (harm depends on whether a
+  change *applies to the sibling*, a semantic question). Also: 50% of candidates are not
+  real clones (near@0.70 precision). → `hazard` reverted to opt-in (default stays
+  `extractability`); a real harm ranker needs git-history + a larger gold + better clone
+  precision.
+- **BG-gold2 — the structural+history ceiling is ~0.60 (definitive).** Did all three:
+  a clone-quality gate (`shared_weight≥4`), a larger gold (2,296 labeled, 51 confirmed
+  harm positives, usable CIs), and a git-history feature (blame: were the changed vs
+  lagging member last touched *together*?). Harm-AUC: `-skew_days` 0.600, `mean_sem` 0.572,
+  `same_commit` 0.568, `hazard` 0.531, `extractability` 0.475; a leave-one-repo-out logistic
+  **combination 0.524 — no lift.** git-history is real and theory-aligned (harm happens in
+  families previously maintained *together*, Barbour/Kim) but weak and only ~52%
+  computable; the gate still left 46% non-clones. **Conclusion: clone-structural +
+  git-history features cannot rank harm above ~0.60.** Harm is semantic — the LLM judge
+  captures it (the gold's basis), metrics do not. The evidence-indicated harm ranker is a
+  **bounded LLM pass over top-K structurally-surfaced candidates**, not more features.
+- **BG-gold3 — cognitive complexity (#23) moved the ceiling, post-divergence.** Tested
+  the parked #23 edit-surface idea on the same gold from captured member code/diff
+  (`cogcomplexity.py`, `harm_model.py`). `diff_per_cog` (a small subtle change in a
+  *complex* function — Krinke "critical change") harm-AUC **0.65**, the best signal yet —
+  but it needs the diff, so it is a **post-divergence** signal. The best **pre-divergence**
+  signal is `cog` (member cognitive complexity) at ~0.61 (≈ prior ceiling). The #23
+  axis-B "edit-surface symmetry" hypothesis was wrong (asymmetry AUC 0.44); absolute
+  complexity × change locality is the signal. Combos still do not lift (logistic 0.595 on
+  51 positives). Revised view: harm is best assessed *after* a divergence (it is a
+  property of the realized edit), where #23 reaches ~0.65 — a usable **post-divergence**
+  ranker. Untried/likely-additive: IL-based cognitive complexity (vs the text proxy) and a
+  larger gold. Pre-divergence ranking still caps ~0.61.
+- **BG-gold4 — does the IL obscure cognitive complexity? No (tested).** Worry: cog is a
+  surface property, the IL normalizes for equivalence. `il_cog.py` computed cog from
+  `nose il --normalized` (If/Loop + nesting + And/Or) vs the source-text proxy on the gold
+  (95% IL parse rate): **harm-AUC 0.599 (IL) vs 0.597 (source) — identical.** Control
+  structure survives `il --normalized`; only the deeper value-fingerprint collapse
+  (loop≡comprehension, = `mean_sem`) erases it, and cog is not computed from that. Flip
+  side: a fancier IL-cog will NOT beat the proxy — cog is ~0.60 regardless of
+  representation. **Firmly established: the pre-divergence structural harm ceiling is
+  ~0.60 across every representation and feature; only `diff_per_cog` (post-divergence,
+  0.65) is above it. A strong harm ranker needs the semantic (LLM) layer.**
+- **BG-durability.** Labels are git-derived (version-independent); features/families are
+  nose-derived (stamped `nose_ver`). Only *detection* changes force a re-mine+re-tune;
+  ranking changes (this work) do not. Refresh = `run_corpus.sh` + `tune.py` (minutes,
+  cached clones); per-release steps in [hazard-release-checklist](hazard-release-checklist.md).
+  Full numbers in `eval/hazard/RESULTS.md`.

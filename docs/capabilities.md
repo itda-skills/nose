@@ -49,7 +49,7 @@ nose capabilities
     "modes": ["syntax", "semantic", "near"],
     "default_modes": ["syntax", "semantic"],
     "output_formats": ["human", "json", "markdown", "sarif"],
-    "sort_keys": ["extractability", "value", "sites"],
+    "sort_keys": ["extractability", "value", "sites", "hazard"],
     "config_keys": ["exclude", "ignore-file", "min-lines"],
     "capabilities": {
       "baseline": true,
@@ -114,9 +114,9 @@ Version 1 defines these `scan.capabilities` keys:
 | `baseline` | `--baseline` and `--write-baseline` are supported. |
 | `baseline_changed_detection` | Baseline comparisons can classify changed and resolved families. |
 | `cache` | `--cache-dir` file analysis caching is supported. |
-| `ci_fail_gate` | `--fail` and `--fail-on-new` gate behavior is supported. |
-| `diff` | Human `--diff` review output is supported. |
-| `hotspots` | `--hotspots` module-level duplicate-line summary is supported. |
+| `ci_fail_gate` | `--fail-on any|new` gate behavior is supported. |
+| `diff` | the `--show diff` review view is supported. |
+| `hotspots` | the `--show hotspots` directory duplicated-line summary is supported. |
 | `inline_suppression` | Source-level `nose-ignore` markers are supported. |
-| `proposal` | Human `--proposal` extraction skeletons are supported. |
+| `proposal` | the `--show proposal` extraction-skeleton view is supported. |
 | `structured_ignores` | `nose.ignore.json` / `--ignore-file` audited suppressions are supported. |
