@@ -2956,6 +2956,13 @@ impl<'a> Builder<'a> {
         if self.il.kind(expr) == NodeKind::Call && self.call_has_static_runtime_arg_err(expr, env) {
             return true;
         }
+        if self.il.kind(expr) == NodeKind::UnOp {
+            return self
+                .il
+                .children(expr)
+                .first()
+                .is_some_and(|&operand| self.expr_is_static_runtime_err(operand, env));
+        }
         if self.il.kind(expr) != NodeKind::BinOp {
             return false;
         }
