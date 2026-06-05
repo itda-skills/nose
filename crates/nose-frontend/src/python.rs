@@ -418,17 +418,15 @@ fn lower_match(lo: &mut Lowering, node: TsNode) -> NodeId {
             acc = body;
             continue;
         };
-        let pattern_children = Lowering::named_children(pattern);
-        if pattern_children.is_empty()
-            || pattern_children
-                .first()
-                .is_some_and(|child| child.kind() == "identifier" && lo.text(*child) == "_")
-        {
-            acc = body;
-            continue;
-        }
-        let cond = lower_match_pattern_condition(lo, subject, pattern_children[0], cspan);
-        let Some(cond) = cond else {
+        let pattern_cond = Lowering::named_children(pattern)
+            .first()
+            .and_then(|&child| lower_match_pattern_condition(lo, subject, child, cspan));
+        let guard_cond = Lowering::named_children(clause)
+            .into_iter()
+            .find(|child| child.kind() == "if_clause")
+            .and_then(|guard| guard.named_child(0))
+            .map(|guard| lower_expr(lo, guard));
+        let Some(cond) = combine_match_conditions(lo, cspan, pattern_cond, guard_cond) else {
             acc = body;
             continue;
         };
@@ -465,6 +463,24 @@ fn fold_or(lo: &mut Lowering, span: Span, conditions: Vec<NodeId>) -> Option<Nod
         acc = lo.add(NodeKind::BinOp, Payload::Op(Op::Or), span, &[acc, cond]);
     }
     Some(acc)
+}
+
+fn combine_match_conditions(
+    lo: &mut Lowering,
+    span: Span,
+    pattern_cond: Option<NodeId>,
+    guard_cond: Option<NodeId>,
+) -> Option<NodeId> {
+    match (pattern_cond, guard_cond) {
+        (Some(pattern), Some(guard)) => Some(lo.add(
+            NodeKind::BinOp,
+            Payload::Op(Op::And),
+            span,
+            &[pattern, guard],
+        )),
+        (Some(cond), None) | (None, Some(cond)) => Some(cond),
+        (None, None) => None,
+    }
 }
 
 fn lower_try(lo: &mut Lowering, node: TsNode) -> NodeId {
@@ -1093,6 +1109,42 @@ mod tests {
                 .iter()
                 .any(|node| node.kind == NodeKind::BinOp && node.payload == Payload::Op(Op::Or)),
             "or-pattern match should lower to an OR condition"
+        );
+    }
+
+    #[test]
+    fn guarded_match_lowers_guard_into_condition() {
+        let interner = Interner::new();
+        let il = lower(
+            FileId(0),
+            "t.py",
+            b"def f(x, ok):\n    match x:\n        case 1 if ok:\n            return 1\n        case _:\n            return 0\n",
+            &interner,
+        )
+        .expect("lower");
+
+        assert!(
+            il.nodes
+                .iter()
+                .any(|node| node.kind == NodeKind::BinOp && node.payload == Payload::Op(Op::And)),
+            "match guard should combine with the pattern condition"
+        );
+    }
+
+    #[test]
+    fn wildcard_guard_match_is_not_unconditional() {
+        let interner = Interner::new();
+        let il = lower(
+            FileId(0),
+            "t.py",
+            b"def f(x, ok):\n    match x:\n        case _ if ok:\n            return 1\n        case _:\n            return 0\n",
+            &interner,
+        )
+        .expect("lower");
+
+        assert!(
+            il.nodes.iter().any(|node| node.kind == NodeKind::If),
+            "a guarded wildcard case should still lower to a conditional branch"
         );
     }
 }
