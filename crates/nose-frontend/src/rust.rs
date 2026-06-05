@@ -880,16 +880,17 @@ fn lower_match(lo: &mut Lowering, node: TsNode) -> NodeId {
         let pattern = arm.child_by_field_name("pattern").or_else(|| {
             Lowering::named_children(arm)
                 .into_iter()
-                .find(|child| Some(child.id()) != body_node_id && child.kind() != "match_arm_guard")
+                .find(|child| Some(child.id()) != body_node_id && !is_match_guard(*child))
         });
         let pattern_cond =
             pattern.and_then(|pattern| lower_match_pattern_condition(lo, scrutinee, pattern, span));
         let guard_cond = arm
             .child_by_field_name("condition")
+            .or_else(|| arm.child_by_field_name("guard"))
             .or_else(|| {
                 Lowering::named_children(arm)
                     .into_iter()
-                    .find(|child| child.kind() == "match_arm_guard")
+                    .find(|child| is_match_guard(*child))
                     .and_then(|guard| guard.named_child(0))
             })
             .map(|guard| lower_expr(lo, guard));
@@ -906,6 +907,10 @@ fn lower_match(lo: &mut Lowering, node: TsNode) -> NodeId {
     acc
 }
 
+fn is_match_guard(node: TsNode) -> bool {
+    matches!(node.kind(), "match_arm_guard" | "match_guard")
+}
+
 fn lower_match_pattern_condition(
     lo: &mut Lowering,
     scrutinee: NodeId,
@@ -916,9 +921,18 @@ fn lower_match_pattern_condition(
         return None;
     }
     if pattern.kind() == "match_pattern" {
-        return pattern
-            .named_child(0)
+        let guard = pattern.child_by_field_name("condition");
+        let guard_id = guard.map(|guard| guard.id());
+        let pattern_cond = pattern
+            .child_by_field_name("pattern")
+            .or_else(|| {
+                Lowering::named_children(pattern)
+                    .into_iter()
+                    .find(|child| Some(child.id()) != guard_id)
+            })
             .and_then(|child| lower_match_pattern_condition(lo, scrutinee, child, span));
+        let guard_cond = guard.map(|guard| lower_expr(lo, guard));
+        return combine_match_conditions(lo, span, pattern_cond, guard_cond);
     }
     if pattern.kind() == "or_pattern" {
         let mut conditions = Vec::new();
@@ -1049,10 +1063,32 @@ mod tests {
             .collect()
     }
 
+    fn lower_rust(src: &str) -> (Interner, Il) {
+        let interner = Interner::new();
+        let il = lower(FileId(0), "t.rs", src.as_bytes(), &interner).expect("lower");
+        (interner, il)
+    }
+
     #[test]
     fn match_cases_compare_scrutinee_to_literal_patterns() {
         let src = "fn f(x: i32) -> i32 { match x { 7 => 1, 8 => 2, _ => 3 } }";
         assert_eq!(match_case_rhs_ints(src), vec![7, 8]);
+    }
+
+    #[test]
+    fn guarded_match_combines_pattern_and_guard() {
+        let src = "fn f(x: i32, ok: bool) -> i32 { match x { 7 | 8 if ok => 1, _ => 2 } }";
+        let (interner, il) = lower_rust(src);
+
+        assert_eq!(match_case_rhs_ints(src), vec![7, 8]);
+        assert!(il
+            .nodes
+            .iter()
+            .any(|node| node.kind == NodeKind::BinOp && node.payload == Payload::Op(Op::And)));
+        assert!(il.nodes.iter().any(|node| match node.payload {
+            Payload::Name(sym) => interner.resolve(sym) == "ok",
+            _ => false,
+        }));
     }
 
     #[test]
