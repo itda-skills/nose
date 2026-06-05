@@ -30,108 +30,50 @@ pub(crate) fn canon_call(old: &Il, interner: &Interner, call_id: NodeId) -> Call
     }
     let callee = kids[0];
     let args = &kids[1..];
+    // Every plain builtin recognition returns the same shape — a `CallCanon::Builtin`
+    // carrying either the single first argument or all arguments. `builtin!(Op, first)` and
+    // `builtin!(Op, all)` name those two cases so the recognition arms stay one line each.
+    macro_rules! builtin {
+        ($op:expr, first) => {
+            return CallCanon::Builtin {
+                op: $op,
+                arg_olds: vec![args[0]],
+            }
+        };
+        ($op:expr, all) => {
+            return CallCanon::Builtin {
+                op: $op,
+                arg_olds: args.to_vec(),
+            }
+        };
+    }
     let cn = old.node(callee);
     match cn.kind {
         NodeKind::Var => {
             if let Payload::Name(s) = cn.payload {
                 match interner.resolve(s) {
-                    "len" if args.len() == 1 => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Len,
-                            arg_olds: vec![args[0]],
-                        }
-                    }
-                    "print" => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Print,
-                            arg_olds: args.to_vec(),
-                        }
-                    }
+                    "len" if args.len() == 1 => builtin!(Builtin::Len, first),
+                    "print" => builtin!(Builtin::Print, all),
                     // Go's builtin `append(xs, x...)`
-                    "append" => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Append,
-                            arg_olds: args.to_vec(),
-                        }
-                    }
-                    "range" => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Range,
-                            arg_olds: args.to_vec(),
-                        }
-                    }
+                    "append" => builtin!(Builtin::Append, all),
+                    "range" => builtin!(Builtin::Range, all),
                     // `sum(xs)` / `sum(x for x in xs)` — additive reduction.
-                    "sum" if args.len() == 1 => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Sum,
-                            arg_olds: vec![args[0]],
-                        }
-                    }
+                    "sum" if args.len() == 1 => builtin!(Builtin::Sum, first),
                     // `functools.reduce(f, xs[, init])` — explicit fold.
-                    "reduce" if args.len() >= 2 => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Reduce,
-                            arg_olds: args.to_vec(),
-                        }
-                    }
+                    "reduce" if args.len() >= 2 => builtin!(Builtin::Reduce, all),
                     // `min(iterable)` / `max(iterable)` — selection reduction.
                     // `min(a, b)` / `max(a, b)` — scalar 2-way choice.
-                    "min" if args.len() == 1 || args.len() == 2 => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Min,
-                            arg_olds: args.to_vec(),
-                        }
-                    }
-                    "max" if args.len() == 1 || args.len() == 2 => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Max,
-                            arg_olds: args.to_vec(),
-                        }
-                    }
-                    "fmin" | "fminf" | "fminl" if args.len() == 2 => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Min,
-                            arg_olds: args.to_vec(),
-                        }
-                    }
-                    "fmax" | "fmaxf" | "fmaxl" if args.len() == 2 => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Max,
-                            arg_olds: args.to_vec(),
-                        }
-                    }
-                    "abs" | "fabs" if args.len() == 1 => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Abs,
-                            arg_olds: vec![args[0]],
-                        }
-                    }
-                    "zip" if args.len() == 2 => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Zip,
-                            arg_olds: args.to_vec(),
-                        }
-                    }
-                    "enumerate" if args.len() == 1 => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Enumerate,
-                            arg_olds: vec![args[0]],
-                        }
-                    }
+                    "min" if args.len() == 1 || args.len() == 2 => builtin!(Builtin::Min, all),
+                    "max" if args.len() == 1 || args.len() == 2 => builtin!(Builtin::Max, all),
+                    "fmin" | "fminf" | "fminl" if args.len() == 2 => builtin!(Builtin::Min, all),
+                    "fmax" | "fmaxf" | "fmaxl" if args.len() == 2 => builtin!(Builtin::Max, all),
+                    "abs" | "fabs" if args.len() == 1 => builtin!(Builtin::Abs, first),
+                    "zip" if args.len() == 2 => builtin!(Builtin::Zip, all),
+                    "enumerate" if args.len() == 1 => builtin!(Builtin::Enumerate, first),
                     // `any(gen)` / `all(gen)` — Python existential/universal reduction over
                     // a generator (which lowers to a `Map`). One canonical arg (the Map).
-                    "any" if args.len() == 1 => {
-                        return CallCanon::Builtin {
-                            op: Builtin::Any,
-                            arg_olds: vec![args[0]],
-                        }
-                    }
-                    "all" if args.len() == 1 => {
-                        return CallCanon::Builtin {
-                            op: Builtin::All,
-                            arg_olds: vec![args[0]],
-                        }
-                    }
+                    "any" if args.len() == 1 => builtin!(Builtin::Any, first),
+                    "all" if args.len() == 1 => builtin!(Builtin::All, first),
                     _ => {}
                 }
             }
