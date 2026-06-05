@@ -2977,11 +2977,28 @@ impl<'a> Builder<'a> {
                         .get(2)
                         .is_some_and(|&init| self.expr_is_static_runtime_err(init, env))
             }
-            Payload::Builtin(_) => kids
-                .into_iter()
-                .any(|arg| self.expr_is_static_runtime_err(arg, env)),
-            _ => false,
+            Payload::Builtin(_) => self.call_args_have_static_runtime_err(kids, env),
+            _ => self.call_args_have_static_runtime_err(kids.into_iter().skip(1), env),
         }
+    }
+
+    fn call_args_have_static_runtime_err<I>(
+        &mut self,
+        args: I,
+        env: &FxHashMap<u32, ValueId>,
+    ) -> bool
+    where
+        I: IntoIterator<Item = NodeId>,
+    {
+        for arg in args {
+            if self.expr_is_static_runtime_err(arg, env) {
+                return crate::is_pure(self.il, arg);
+            }
+            if !crate::is_pure(self.il, arg) {
+                return false;
+            }
+        }
+        false
     }
 
     fn expr_is_static_non_empty_seq(&self, expr: NodeId) -> bool {

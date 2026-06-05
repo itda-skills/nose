@@ -1978,6 +1978,32 @@ fn value_graph_runs_try_handler_after_static_builtin_arg_err() {
 }
 
 #[test]
+fn value_graph_runs_try_handler_after_static_opaque_call_arg_err() {
+    let i = Interner::new();
+    let try_err =
+        "def f():\n    try:\n        unknown(1 / 0)\n    except Exception:\n        return 7\n";
+    let plain_return = "def f():\n    return 7\n";
+    assert_eq!(
+        value_fp(&i, try_err, Lang::Python),
+        value_fp(&i, plain_return, Lang::Python),
+        "a statically visible opaque call argument error should run the simple catch handler"
+    );
+}
+
+#[test]
+fn value_graph_keeps_try_opaque_call_arg_prefix_effects() {
+    let i = Interner::new();
+    let effect_then_err =
+        "def f():\n    try:\n        unknown(print(1), 1 / 0)\n    except Exception:\n        return 7\n";
+    let plain_return = "def f():\n    return 7\n";
+    assert_ne!(
+        value_fp(&i, effect_then_err, Lang::Python),
+        value_fp(&i, plain_return, Lang::Python),
+        "observable argument effects before a runtime error must not be discarded"
+    );
+}
+
+#[test]
 fn value_graph_keeps_try_static_expr_err_prefix_effects() {
     let i = Interner::new();
     let effect_then_err = "def f():\n    try:\n        print(1)\n        1 / 0\n    except Exception:\n        return 7\n";
