@@ -1860,7 +1860,7 @@ fn exact_statement_fragment_root(
         NodeKind::Assign => exact_assignment_fragment_root(il, interner, node),
         NodeKind::ExprStmt => exact_expr_statement_fragment_root(il, node),
         NodeKind::If => exact_conditional_fragment_root(il, interner, node),
-        NodeKind::Loop => exact_loop_effect_fragment_root(il, node),
+        NodeKind::Loop => exact_loop_effect_fragment_root(il, interner, node),
         _ => false,
     }
 }
@@ -1920,7 +1920,7 @@ fn empty_or_single_direct_exact_statement_block(
         NodeKind::Assign if exact_assignment_fragment_root(il, interner, kids[0]) => Some(true),
         NodeKind::ExprStmt if exact_expr_statement_fragment_root(il, kids[0]) => Some(true),
         NodeKind::If if exact_conditional_fragment_root(il, interner, kids[0]) => Some(true),
-        NodeKind::Loop if exact_loop_effect_fragment_root(il, kids[0]) => Some(true),
+        NodeKind::Loop if exact_loop_effect_fragment_root(il, interner, kids[0]) => Some(true),
         _ => None,
     }
 }
@@ -2191,37 +2191,43 @@ fn strict_exact_self_field_branch_safe(
     ))
 }
 
-fn exact_loop_effect_fragment_root(il: &Il, node: NodeId) -> bool {
+fn exact_loop_effect_fragment_root(il: &Il, interner: &Interner, node: NodeId) -> bool {
     if !matches!(il.node(node).payload, Payload::Loop(LoopKind::ForEach)) {
         return false;
     }
     let kids = il.children(node);
-    if kids.len() != 3 || il.kind(kids[0]) != NodeKind::Var {
+    if kids.len() != 3 {
         return false;
     }
-    let Payload::Cid(iter_cid) = il.node(kids[0]).payload else {
+    let mut iter_cids = FxHashSet::default();
+    collect_cids(il, kids[0], &mut iter_cids);
+    if iter_cids.is_empty() {
         return false;
-    };
-    foreach_append_effect_body_depends_on_iter(il, kids[2], iter_cid).unwrap_or(false)
+    }
+    foreach_effect_body_depends_on_iter(il, interner, kids[2], &iter_cids).unwrap_or(false)
 }
 
-fn foreach_append_effect_body_depends_on_iter(
+fn foreach_effect_body_depends_on_iter(
     il: &Il,
+    interner: &Interner,
     node: NodeId,
-    iter_cid: u32,
+    iter_cids: &FxHashSet<u32>,
 ) -> Option<bool> {
     match il.kind(node) {
         NodeKind::Block => {
-            let mut has_append = false;
+            let mut has_effect = false;
             for &child in il.children(node) {
-                has_append |= foreach_append_effect_body_depends_on_iter(il, child, iter_cid)?;
+                has_effect |= foreach_effect_body_depends_on_iter(il, interner, child, iter_cids)?;
             }
-            Some(has_append)
+            Some(has_effect)
         }
         NodeKind::ExprStmt => {
             let kids = il.children(node);
-            (kids.len() == 1 && append_effect_depends_on_iter(il, kids[0], iter_cid))
+            (kids.len() == 1 && append_effect_depends_on_iter(il, kids[0], iter_cids))
                 .then_some(true)
+        }
+        NodeKind::Assign => {
+            index_assignment_effect_depends_on_iter(il, interner, node, iter_cids).then_some(true)
         }
         NodeKind::If => {
             let kids = il.children(node);
@@ -2233,7 +2239,7 @@ fn foreach_append_effect_body_depends_on_iter(
                 if il.kind(branch) != NodeKind::Block {
                     return None;
                 }
-                has_append |= foreach_append_effect_body_depends_on_iter(il, branch, iter_cid)?;
+                has_append |= foreach_effect_body_depends_on_iter(il, interner, branch, iter_cids)?;
             }
             Some(has_append)
         }
@@ -2241,7 +2247,7 @@ fn foreach_append_effect_body_depends_on_iter(
     }
 }
 
-fn append_effect_depends_on_iter(il: &Il, node: NodeId, iter_cid: u32) -> bool {
+fn append_effect_depends_on_iter(il: &Il, node: NodeId, iter_cids: &FxHashSet<u32>) -> bool {
     if il.kind(node) != NodeKind::Call
         || !matches!(il.node(node).payload, Payload::Builtin(Builtin::Append))
     {
@@ -2251,9 +2257,33 @@ fn append_effect_depends_on_iter(il: &Il, node: NodeId, iter_cid: u32) -> bool {
     if kids.len() != 2 {
         return false;
     }
-    let mut required = FxHashSet::default();
-    required.insert(iter_cid);
-    !node_mentions_any_cid(il, kids[0], &required) && node_mentions_any_cid(il, kids[1], &required)
+    !node_mentions_any_cid(il, kids[0], iter_cids) && node_mentions_any_cid(il, kids[1], iter_cids)
+}
+
+fn index_assignment_effect_depends_on_iter(
+    il: &Il,
+    _interner: &Interner,
+    node: NodeId,
+    iter_cids: &FxHashSet<u32>,
+) -> bool {
+    if !exact_index_assignment_fragment_root(il, node) {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 || il.kind(kids[0]) != NodeKind::Index {
+        return false;
+    }
+    let target_kids = il.children(kids[0]);
+    let Some(&receiver) = target_kids.first() else {
+        return false;
+    };
+    if node_mentions_any_cid(il, receiver, iter_cids) {
+        return false;
+    }
+    target_kids
+        .get(1)
+        .is_some_and(|&key| node_mentions_any_cid(il, key, iter_cids))
+        || node_mentions_any_cid(il, kids[1], iter_cids)
 }
 
 fn top_level_statement_fragment_context_safe(

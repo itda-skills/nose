@@ -5327,6 +5327,48 @@ This batch improves focused unit-fragment coverage but did not close an evidence
 real-corpus miss. The next batch should prefer a real frontier with measurable corpus delta,
 or tighten/retire fragment predicates if performance accumulates without practical recall.
 
+## Fragment batch 16: exact Go foreach index-assignment effects
+
+This batch keeps the existing exact loop-effect proof invariant but extends the accepted
+effect surface from append-only loops to non-overloadable index-assignment loops. The
+implementation is deliberately narrow: a `ForEach` loop may become an exact `Block`
+fragment only when every loop-body statement is a supported effect, every index assignment
+uses a non-iteration receiver in a non-overloadable language, and the assigned value or
+index expression depends on the iteration binding. This avoids loops that ignore the
+iterator, mutate the iterated receiver, or rely on overloadable receiver semantics.
+
+The three focused positives are Go range-loop fragments that share the same proof
+invariant:
+
+- `out[i] = x * x` with renamed `i/x/out`;
+- `out[i + 1] = x + 1` with commuted index/value expressions;
+- guarded `if x > 0 { out[i] = x + 1 }` with operand-reversed guard.
+
+Adjacent hard negatives cover wrong assigned value, wrong index expression, wrong guard,
+wrong receiver, preceding receiver mutation, and an unused-iteration loop.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-foreach-index-1 | baseline | scan focused Go range-loop fixtures with the previous release binary | no semantic families under high line/token gates |
+| fragment-foreach-index-2 | candidate extraction | generalize exact loop-effect roots from append-only to append-or-index-assignment effects tied to iteration cids | 3 focused Go range index-assignment families reported as `Block` units |
+| fragment-foreach-index-3 | hard negatives | require non-iteration receiver and iteration-dependent index/value; reuse preceding mutation guard | wrong value/index/guard/receiver, preceding mutation, and unused-iteration negatives excluded |
+| fragment-foreach-index-4 | real delta | compare selected Go/Rust/Python/JS repos and full `bench/repos` before/after | selected 125 -> 125 families / 489 -> 489 locations; full 7431 -> 7431 families / 33057 -> 33057 locations |
+| fragment-foreach-index-5 | performance | release `NOSE_TIME=1` scans before/after | selected candidate path 11.7ms -> 14.8ms; full candidate path 352.7ms -> 398.8ms; no location growth, but continue watching fragment extraction cost |
+| fragment-foreach-index-6 | release gates | run full Rust suite, clippy, compact all-cross core smoke, and whitespace checks | `cargo test` pass; clippy clean; core smoke 629/629 positives and 0/1240 hard-negative false merges |
+
+Focused regression:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_foreach_index_assignment_fragments_for_go
+3 exact Go foreach index-assignment fragment families found; wrong value/index/guard/receiver,
+preceding mutation, and unused-iteration negatives excluded.
+```
+
+This batch is a focused unit-fragment expansion, not a real-corpus completeness win. The
+next ordinary batch should return to evidence-backed real frontier items, preferably
+non-Java or explicitly multi-language, and should stop if fragment extraction cost keeps
+rising without visible corpus delta.
+
 ## Real-corpus C u32 unsigned-cast byte-pack: batch 2026-06-06
 
 This batch was selected to correct the recent Java-heavy skew in the real frontier work.
