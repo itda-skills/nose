@@ -88,8 +88,8 @@ Lean (`formal/`). See [normalization](normalization.md) for the full pass list.
   conditional return/throw/effect guards, including bare returns, explicit empty no-op
   branches, and nested branches whose only non-empty statement is another exact
   conditional, a single exact ForEach effect loop, or exactly two ordered exact effect
-  items drawn from ForEach effect loops, append effects, and non-overloadable C/Go/Java
-  index assignments, plus branches that assign one local
+  items drawn from ForEach effect loops, append effects, conditional direct effects, and
+  non-overloadable C/Go/Java index assignments, plus branches that assign one local
   temporary and immediately consume it in a direct return/throw/effect statement or
   assign two local temporaries as a linear chain and immediately consume the final
   temporary in such a statement or a non-overloadable C/Go/Java index assignment whose

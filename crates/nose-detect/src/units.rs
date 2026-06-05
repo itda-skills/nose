@@ -1919,6 +1919,9 @@ fn empty_or_single_direct_exact_statement_block(
     if exact_ordered_mixed_effect_sequence_block(il, interner, node) {
         return Some(true);
     }
+    if exact_ordered_conditional_effect_sequence_block(il, node) {
+        return Some(true);
+    }
     if kids.len() == 3 && exact_temp_chain_consumed_by_statement(il, kids[0], kids[1], kids[2]) {
         return Some(true);
     }
@@ -1979,6 +1982,51 @@ fn exact_ordered_mixed_effect_sequence_item(il: &Il, interner: &Interner, node: 
         NodeKind::ExprStmt => exact_append_effect_statement_root(il, node),
         NodeKind::Assign => exact_index_assignment_fragment_root(il, node),
         _ => false,
+    }
+}
+
+fn exact_ordered_conditional_effect_sequence_block(il: &Il, node: NodeId) -> bool {
+    if il.kind(node) != NodeKind::Block {
+        return false;
+    }
+    let kids = il.children(node);
+    kids.len() == 2
+        && kids.iter().all(|&kid| il.kind(kid) == NodeKind::If)
+        && kids
+            .iter()
+            .all(|&kid| exact_conditional_direct_effect_fragment_root(il, kid))
+}
+
+fn exact_conditional_direct_effect_fragment_root(il: &Il, node: NodeId) -> bool {
+    let kids = il.children(node);
+    if il.kind(node) != NodeKind::If || !(kids.len() == 2 || kids.len() == 3) {
+        return false;
+    }
+    let mut has_effect = false;
+    for &branch in kids.iter().skip(1) {
+        let Some(branch_has_effect) = empty_or_single_direct_exact_effect_block(il, branch) else {
+            return false;
+        };
+        has_effect |= branch_has_effect;
+    }
+    has_effect
+}
+
+fn empty_or_single_direct_exact_effect_block(il: &Il, node: NodeId) -> Option<bool> {
+    if il.kind(node) != NodeKind::Block {
+        return None;
+    }
+    let kids = il.children(node);
+    if kids.is_empty() {
+        return Some(false);
+    }
+    if kids.len() != 1 {
+        return None;
+    }
+    match il.kind(kids[0]) {
+        NodeKind::ExprStmt if exact_append_effect_statement_root(il, kids[0]) => Some(true),
+        NodeKind::Assign if exact_index_assignment_fragment_root(il, kids[0]) => Some(true),
+        _ => None,
     }
 }
 
