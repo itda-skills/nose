@@ -2953,6 +2953,19 @@ fn option_defaulting_converges_with_nullish_default_boundaries() {
 }
 
 #[test]
+fn repeated_nullish_default_with_same_fallback_collapses() {
+    let i = Interner::new();
+    let single = "function f(value, fallback, otherDefault) { return value ?? fallback; }";
+    let repeated =
+        "function f(value, fallback, otherDefault) { return (value ?? fallback) ?? fallback; }";
+    let different_default =
+        "function f(value, fallback, otherDefault) { return (value ?? fallback) ?? otherDefault; }";
+    let fp = value_fp(&i, single, Lang::JavaScript);
+    assert_eq!(fp, value_fp(&i, repeated, Lang::JavaScript));
+    assert_ne!(fp, value_fp(&i, different_default, Lang::JavaScript));
+}
+
+#[test]
 fn rust_if_let_option_presence_converges_with_option_predicates() {
     let i = Interner::new();
     let if_some = "pub fn f(value: Option<i32>) -> bool {\n    if let Some(_) = value { true } else { false }\n}\n";

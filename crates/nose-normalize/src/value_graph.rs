@@ -2545,10 +2545,7 @@ impl<'a> Builder<'a> {
                 vec![map, key, default],
             ));
         }
-        Some(self.mk(
-            ValOp::Call(Builtin::ValueOrDefault as u32 + 1),
-            vec![value, default],
-        ))
+        Some(self.mk_value_default(value, default))
     }
 
     fn value_default_from_guarded_fallthrough(
@@ -2569,10 +2566,7 @@ impl<'a> Builder<'a> {
             }
             guarded_ret
         };
-        Some(self.mk(
-            ValOp::Call(Builtin::ValueOrDefault as u32 + 1),
-            vec![value, default],
-        ))
+        Some(self.mk_value_default(value, default))
     }
 
     fn guarded_return_parts(&self, value: ValueId) -> Option<(ValueId, ValueId)> {
@@ -4817,17 +4811,15 @@ impl<'a> Builder<'a> {
         }
         let (value, present) = self.null_condition(cond)?;
         let default = if present {
-            let then_default = self.value_default_call(then_v);
-            if then_v != value && then_default.is_none_or(|(v, _)| v != value) {
+            if !self.value_branch_returns_value(then_v, value) {
                 return None;
             }
-            then_default.map(|(_, default)| default).unwrap_or(else_v)
+            else_v
         } else {
-            let else_default = self.value_default_call(else_v);
-            if else_v != value && else_default.is_none_or(|(v, _)| v != value) {
+            if !self.value_branch_returns_value(else_v, value) {
                 return None;
             }
-            else_default.map(|(_, default)| default).unwrap_or(then_v)
+            then_v
         };
         if let Some((map, key)) = self.proven_map_get_value(value) {
             return Some(self.mk(
@@ -4835,10 +4827,7 @@ impl<'a> Builder<'a> {
                 vec![map, key, default],
             ));
         }
-        Some(self.mk(
-            ValOp::Call(Builtin::ValueOrDefault as u32 + 1),
-            vec![value, default],
-        ))
+        Some(self.mk_value_default(value, default))
     }
 
     fn value_default_call(&self, value: ValueId) -> Option<(ValueId, ValueId)> {
@@ -4850,6 +4839,26 @@ impl<'a> Builder<'a> {
         } else {
             None
         }
+    }
+
+    fn value_branch_returns_value(&self, branch: ValueId, value: ValueId) -> bool {
+        branch == value
+            || self
+                .value_default_call(branch)
+                .is_some_and(|(inner_value, _)| inner_value == value)
+    }
+
+    fn mk_value_default(&mut self, value: ValueId, default: ValueId) -> ValueId {
+        if self
+            .value_default_call(value)
+            .is_some_and(|(_, inner_default)| inner_default == default)
+        {
+            return value;
+        }
+        self.mk(
+            ValOp::Call(Builtin::ValueOrDefault as u32 + 1),
+            vec![value, default],
+        )
     }
 
     fn null_condition(&self, cond: ValueId) -> Option<(ValueId, bool)> {
@@ -5582,10 +5591,7 @@ impl<'a> Builder<'a> {
                     if let [value, default] = kids.as_slice() {
                         let value = self.eval(*value, env);
                         let default = self.eval(*default, env);
-                        return self.mk(
-                            ValOp::Call(Builtin::ValueOrDefault as u32 + 1),
-                            vec![value, default],
-                        );
+                        return self.mk_value_default(value, default);
                     }
                 }
                 if let Payload::Builtin(b) = node.payload {

@@ -189,7 +189,8 @@ code `nose verify` stays sound (0 false merges). Its concrete model covers
 `range(stop)` and `range(start, stop[, step])`, including zero-step error behavior, so
 range-index loops are checked under the same bounded input semantics. Nullish/option
 defaulting evaluates the fallback only for a null value, so `x ?? bad()` stays interpretable
-when `x` is present. Bare `throw`/`raise` statements execute as observable `Err` behavior and
+when `x` is present; the value graph also collapses repeated same-fallback defaulting such
+as `(x ?? f) ?? f`. Bare `throw`/`raise` statements execute as observable `Err` behavior and
 value-graph `Throw` sinks, not plain
 expression effects. The interpreter models the simple `try`/handler form only when there is
 no `finally` and the handler is non-empty; the handler runs after an explicit throw or a
