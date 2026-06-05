@@ -2832,6 +2832,22 @@ impl<'a> Builder<'a> {
         }
     }
 
+    fn branch_returns(&self, node: NodeId) -> bool {
+        match self.il.kind(node) {
+            NodeKind::Return => true,
+            NodeKind::Block => self
+                .il
+                .children(node)
+                .last()
+                .is_some_and(|&c| self.branch_returns(c)),
+            NodeKind::If => {
+                let k = self.il.children(node);
+                k.len() >= 3 && self.branch_returns(k[1]) && self.branch_returns(k[2])
+            }
+            _ => false,
+        }
+    }
+
     /// Walk a container (class/module body), folding each contained method's behavior
     /// into the current sinks. A `Func` is processed in its own parameter scope (its
     /// returns/effects become the container's), so the container's fingerprint is the
@@ -2990,7 +3006,12 @@ impl<'a> Builder<'a> {
             NodeKind::If => self.process_if(stmt, env),
             NodeKind::Loop => self.process_loop(stmt, env),
             NodeKind::Try => {
-                for c in self.il.children(stmt).to_vec() {
+                let kids = self.il.children(stmt).to_vec();
+                if kids.len() == 2 && self.branch_returns(kids[0]) {
+                    self.process_stmt(kids[0], env);
+                    return;
+                }
+                for c in kids {
                     self.process_stmt(c, env);
                 }
             }

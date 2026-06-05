@@ -194,8 +194,9 @@ guessed. Field reads are interpreted only after the same unit has written that f
 unwritten field access remains unsupported rather than invented. The value graph follows the
 same boundary: `self.x = v; return self.x` resolves the read to `v`, while an unproven field
 read stays field-shaped. The interpreter also models the simple `try`/handler form only when
-there is no `finally` and the handler is non-empty; richer exception control flow remains
-outside the oracle.
+there is no `finally` and the handler is non-empty; the value graph mirrors the normal-return
+half of that boundary by skipping the handler after an unconditional try-body return. Richer
+exception control flow remains outside the oracle.
 
 Out of scope (sound but not yet convergent, or genuinely hard): tree & mutual recursion
 (multiple / non-tail self-calls); list-tail catamorphisms `head ⊕ f(xs[1:])`, whose slice is

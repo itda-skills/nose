@@ -1840,6 +1840,19 @@ fn value_graph_reads_field_written_in_unit() {
 }
 
 #[test]
+fn value_graph_skips_try_handler_after_normal_return() {
+    let i = Interner::new();
+    let try_return =
+        "def f():\n    try:\n        return 1\n    except Exception:\n        return 7\n";
+    let plain_return = "def f():\n    return 1\n";
+    assert_eq!(
+        value_fp(&i, try_return, Lang::Python),
+        value_fp(&i, plain_return, Lang::Python),
+        "a try handler should not contribute when the try body already returned normally"
+    );
+}
+
+#[test]
 fn value_graph_distinguishes_membership_and_negation() {
     // `in` is directional membership, not equality: `a in b` ≠ `b in a` ≠ `a == b`.
     // And `not in` / `is not` must keep their negation (`x is not None` ≢ `x is None`).
