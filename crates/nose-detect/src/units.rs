@@ -56,10 +56,10 @@ pub struct UnitFeat {
 
 const SEED: u64 = 0x9E37_79B9_7F4A_7C15;
 
-/// Upper bound (pre-order node count) for a *block* unit. ~10× the typical
-/// fragment clone; bounds the cost of extracting features for every nested block in
-/// a very large function/class (which the enclosing unit already covers).
-const MAX_BLOCK_TOKENS: usize = 400;
+/// Upper bound (pre-order node count) for a *block* unit. Blocks are meant to surface
+/// sub-function fragments; broad nested bodies are covered by their enclosing unit and
+/// can multiply value extraction cost across almost-identical regions.
+const MAX_BLOCK_TOKENS: usize = 160;
 const EXACT_VALUE_MIN: usize = 4;
 
 struct UnitTimer {
@@ -93,15 +93,21 @@ impl UnitTimer {
         safe_ms: Option<f64>,
         value_ms: Option<f64>,
     ) {
-        let (Some(start), Some(pre_ms), Some(safe_ms), Some(value_ms)) =
-            (start, pre_ms, safe_ms, value_ms)
-        else {
+        let Some(start) = start else {
             return;
         };
         let total_ms = start.elapsed().as_secs_f64() * 1e3;
         if total_ms >= 10.0 {
+            let ms = |value: Option<f64>| {
+                value
+                    .map(|value| format!("{value:.1}ms"))
+                    .unwrap_or_else(|| "-".to_string())
+            };
             eprintln!(
-                "  [unit] skip {kind:?} {path}:{start_line}-{end_line} tokens={tokens} pre={pre_ms:.1}ms safe={safe_ms:.1}ms value={value_ms:.1}ms total={total_ms:.1}ms"
+                "  [unit] skip {kind:?} {path}:{start_line}-{end_line} tokens={tokens} pre={} safe={} value={} total={total_ms:.1}ms",
+                ms(pre_ms),
+                ms(safe_ms),
+                ms(value_ms),
             );
         }
     }
@@ -187,6 +193,25 @@ pub(crate) fn extract(
         let mut pre = Vec::new();
         collect_pre(il, root, &mut pre);
         let pre_ms = UnitTimer::elapsed(pre_start);
+
+        // A huge block is not a fragment clone; it is covered by its enclosing
+        // function/class unit. Apply this cap before strict/value extraction so a
+        // discarded block never pays the dominant semantic fingerprint cost.
+        if kind == UnitKind::Block && pre.len() > MAX_BLOCK_TOKENS {
+            unit_timer.report_skip(
+                unit_start,
+                &kind,
+                &il.meta.path,
+                span.start_line,
+                span.end_line,
+                pre.len(),
+                pre_ms,
+                None,
+                None,
+            );
+            continue;
+        }
+
         let safe_start = unit_timer.start();
         let exact_safe = strict_exact_safe_tree(il, interner, &facts, root);
         let safe_ms = UnitTimer::elapsed(safe_start);
@@ -218,26 +243,6 @@ pub(crate) fn extract(
         if (lines < min_lines || pre.len() < min_tokens) && !dense_fn {
             continue;
         }
-        // …but a *huge* block (a whole big method/class body) is not a "fragment"
-        // clone — it's covered by its enclosing function/class unit — and extracting
-        // features for every nested block of a 700-line class is quadratic. Cap block
-        // units well above real fragment clones (≈40 tokens) so only the pathological
-        // giants are skipped; functions/methods/classes are never capped.
-        if kind == UnitKind::Block && pre.len() > MAX_BLOCK_TOKENS {
-            unit_timer.report_skip(
-                unit_start,
-                &kind,
-                &il.meta.path,
-                span.start_line,
-                span.end_line,
-                pre.len(),
-                pre_ms,
-                safe_ms,
-                value_ms,
-            );
-            continue;
-        }
-
         let feature_start = unit_timer.start();
         let mut shapes = Vec::with_capacity(pre.len());
         let mut linear = Vec::with_capacity(pre.len());

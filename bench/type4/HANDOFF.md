@@ -1,7 +1,7 @@
 # Type-4 Coevolution Handoff
 
 Date: 2026-06-05
-Updated: 2026-06-05, paused after semantic performance-enabling work
+Updated: 2026-06-05, continued after semantic performance commit
 
 This records where the adversarial Type-4 coevolution work stopped and how to resume it.
 The work was intentionally paused after a real-repository evaluation pass. Do not start
@@ -14,15 +14,15 @@ another autonomous frontier loop unless the user explicitly resumes it.
 - Last committed detector/frontier change: `0b63ad9 feat(type4): prove python module membership`.
 - The strict frontier loop itself is still paused after the Python module membership batch.
   No new semantic frontier axis has been accepted after loop 406.
-- A separate performance-enabling pass was started after that pause and is currently
-  uncommitted. It changes:
+- A separate performance-enabling pass was started after that pause and was committed as
+  `93475b4 perf(type4): speed semantic value extraction`.
+- A follow-up performance pass is currently uncommitted. It changes:
   - `crates/nose-detect/src/units.rs`;
-  - `crates/nose-normalize/src/lib.rs`;
-  - `crates/nose-normalize/src/value_graph.rs`.
+  - this handoff file.
 - Installed baseline used for real-repo comparison: `/opt/homebrew/bin/nose`, version `0.2.0`.
 - Current candidate used for comparison: `target/release/nose`, version `0.4.0`.
-- Worktree at this pause: dirty with the three uncommitted performance files above and
-  this handoff update, plus the pre-existing untracked `.claude/` directory.
+- Worktree at this pause: dirty with the follow-up block-unit cap change and this
+  handoff update, plus the pre-existing untracked `.claude/` directory.
 
 The exact stop line is:
 
@@ -32,7 +32,8 @@ performance pass opened -> core hotspots fixed -> 105-repo sweep exposed raylib/
 shared subtree hash cache implemented -> large AC expression fast path implemented ->
 iterative AC flatten implemented -> weakly-justified flatten cache removed ->
 shadowed callback collection recursion fixed -> final validation and representative timing rerun ->
-pause before commit or next hotspot pass
+committed as 93475b4 -> block-unit cap moved before value extraction and lowered to 160 ->
+validation and representative timing rerun -> pause before commit or next hotspot pass
 ```
 
 There is no half-implemented semantic frontier to finish. There is, however, an
@@ -40,14 +41,17 @@ uncommitted performance patch that supports the coevolution workflow by making r
 semantic audits cheaper. Do not start a new frontier loop until this patch is either
 finished and committed, or deliberately shelved.
 
-Current uncommitted code state:
+Current follow-up code state:
 
 - `cargo fmt` and `cargo build --release -p nose-cli` passed after the latest code edits.
 - `cargo test -p nose-normalize`, `cargo test -p nose-detect`, `cargo test -p nose-cli`,
   and `GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh` passed
   after the latest logic change.
-- The final code output checks performed so far were byte-identical for the profiled
-  baseline repos listed below.
+- `git diff --check` passed.
+- The follow-up block-unit cap change intentionally alters some real-repo report surfaces:
+  SQLite keeps the same 74 family count with only metadata-level change in one family;
+  Raylib drops several broad vendored C header block families and adds one narrower
+  replacement, going 223 -> 219 families.
 - The briefly added `flatten_cache` in `value_graph.rs` was removed because SQLite
   improved from the iterative flatten rewrite itself, while the extra cache did not
   materially improve the measured scan.
@@ -73,7 +77,8 @@ Baseline release timings before the performance changes:
 | `bench/repos/sqlalchemy` | 57.693s | 57345ms | 447 |
 | `bench/repos/clap` | >120s timeout | not completed | not completed |
 
-Nine performance/design changes are currently present in the worktree:
+Ten performance/design changes are present across the committed pass and current
+follow-up:
 
 1. Numeric-method recognition now checks the method shape before recursively evaluating
    the receiver. This fixed a pathological fluent-chain case in `clap_builder`:
@@ -135,6 +140,12 @@ Nine performance/design changes are currently present in the worktree:
    focused CLI regression test was added:
    `scan_mode_semantic_handles_shadowed_callback_collection_name`.
 
+10. Block units are now capped at 160 preorder tokens and the cap is applied immediately
+    after `collect_pre`, before strict-safety and value fingerprint extraction. This makes
+    block extraction match its purpose: keep fragment-sized sub-function regions, while
+    leaving broad nested bodies to their enclosing function/class units. The change
+    removes repeated value extraction for large overlapping blocks in SQLite and Vim.
+
 Representative measured state after the first three core fixes:
 
 | repo | baseline `normalize+extract` | final measured `normalize+extract` | output check |
@@ -168,6 +179,16 @@ Final rerun after removing `flatten_cache` and fixing the Prettier stack overflo
 | `bench/repos/sqlite` | 3416.0ms | 4.16s | byte-identical | still the best next hotspot |
 | `bench/repos/prettier` | 47.6ms | 1.06s | previously crashed | stack overflow fixed |
 
+Follow-up rerun after lowering and moving the block-unit cap:
+
+| repo | before `normalize+extract` | after `normalize+extract` | after wall time | output effect |
+|---|---:|---:|---:|---|
+| `bench/repos/sqlite` | 3218.3ms | 950.3ms | 1.71s | 74 families preserved; one `sem` metadata value changed |
+| `bench/repos/vim` | 1545.2ms | 264.4ms | 0.75s | 19 families preserved |
+| `bench/repos/raylib` | 1835.7ms | 1778.4ms | 2.58s | broad vendored block families reduced, 223 -> 219 |
+| `bench/repos/zod` | 77.4ms | 73.3ms | 0.17s | byte-identical |
+| `bench/repos/sympy` | 1023-1214ms | 1085.3ms | 1.69s | 502 families preserved |
+
 The original `sqlalchemy` output mismatch is resolved. The cause was semantic drift in the
 new file-level mutation summary: it recursively collected symbols from `Append` and
 mutating-field receivers, while the old proof checked only direct receiver symbols for
@@ -178,10 +199,10 @@ The broader 105-repo sweep after the core fixes wrote temporary artifacts under
 
 | repo | wall time | semantic families | status |
 |---|---:|---:|---|
-| `raylib` | 83.88s | 223 | reduced to about 2.6-2.8s; final representative rerun pending |
+| `raylib` | 83.88s | 223 | reduced to about 2.58s wall; broad vendored block families reduced to 219 families |
 | `sympy` | 6.57s | 502 | reduced to 2.16s with large AC fast path |
-| `sqlite` | 4.59s | 74 | reduced to about 4.16s wall / 3416ms normalize; still the best next hotspot |
-| `vim` | 2.28s | 19 | reduced to about 1.85s wall / 1545ms normalize |
+| `sqlite` | 4.59s | 74 | reduced to about 1.71s wall / 950ms normalize after block cap follow-up |
+| `vim` | 2.28s | 19 | reduced to about 0.75s wall / 264ms normalize after block cap follow-up |
 | `nats-server` | 1.91s | 48 | reduced to about 0.47s wall / 226ms normalize |
 | `netty` | 1.76s | 182 | reduced to 0.81s with large AC fast path |
 | `sqlalchemy` | 0.91s | 447 | reduced to 0.44s; acceptable after fixes |
@@ -237,16 +258,14 @@ Additional outlier notes:
 - `sympy` was dominated by a giant generated arithmetic expression:
   `eqs_165x165` spent about 5889ms in value extraction before the large-AC fast path.
   After the patch, the full repo `normalize+extract` time was 1214ms.
-- `sqlite` is now dominated by repeated extraction around `walChecksumBytes` and nested
-  blocks in the same region. Iterative AC flatten reduced the repo from 4263.6ms to about
-  3100ms, but the next improvement likely needs a cleaner answer to repeated nested-block
-  extraction or value interning cost.
+- `sqlite` was dominated by repeated extraction around `walChecksumBytes` and nested
+  blocks in the same region. The follow-up block cap removed the repeated nested-block
+  value extraction and reduced full-repo `normalize+extract` from 3218.3ms to 950.3ms.
 - `netty` improved from 1421.4ms `normalize+extract` after subtree-cache work to 225.2ms
   after the large-AC path.
-- `vim` currently finishes in about 1.85s wall time, with `normalize+extract` at
-  1545.2ms. Unit timing shows a few visible C functions (`json_decode_item`,
-  `reg_equi_class`, `nfa_emit_equi_class`), but much of the remaining cost is
-  distributed rather than one single pathological unit.
+- `vim` previously spent 1545.2ms in `normalize+extract`, including several broad C block
+  units. The block cap follow-up reduced it to 264.4ms and preserved 19 reported
+  families.
 - `nats-server` is no longer a priority after the latest rerun: about 0.47s wall time and
   226.2ms `normalize+extract`.
 
@@ -271,6 +290,9 @@ Hotspots found and improved in this pass:
 - local collection binding proof could recursively re-enter an initializer when callback
   parameters shadowed the outer collection cid; this is fixed by refusing self-cid RHS
   inlining;
+- broad nested block units repeated value extraction for regions already covered by
+  enclosing function/class units; this is reduced by applying a 160-token block cap before
+  strict/value extraction;
 - reduction recognition recomputed the same `(value, loopv)` classifications inside
   nested `Phi` branches;
 - reduction recognition repeatedly walked the same value DAGs for `references(value,
@@ -291,12 +313,12 @@ Type-4 frontier:
 
    ```text
    git status --short
-   git diff -- crates/nose-detect/src/units.rs crates/nose-normalize/src/lib.rs crates/nose-normalize/src/value_graph.rs
+   git diff -- crates/nose-detect/src/units.rs bench/type4/HANDOFF.md
    ```
 
-2. The current patch has good measured wins and has passed the core validation set. Before
-   committing, inspect the final diff for accidental breadth and decide whether to include
-   the CLI regression test in the same commit or split it with the stack-overflow fix.
+2. The current follow-up patch has good measured wins and has passed the core validation
+   set. Before committing, inspect the final diff for accidental breadth and decide
+   whether to commit it as a separate block-unit compaction change.
 
 3. If profiling further, start from a fresh release build:
 
@@ -305,30 +327,23 @@ Type-4 frontier:
    cargo build --release -p nose-cli
    ```
 
-4. Treat SQLite as the next performance target.
+4. Treat raylib and sympy as the next performance targets.
 
-   Removing `flatten_cache` kept SQLite output byte-identical and retained most of the
-   iterative-flatten win (`normalize+extract` about 3.2-3.4s). The next improvement likely
-   needs a design answer for repeated nested-block extraction around `walChecksumBytes`,
-   not another local cache.
+   SQLite and Vim are no longer the best next hotspots after the block-unit cap follow-up.
+   Raylib remains useful for many-file/many-unit fixed-cost behavior; sympy remains useful
+   for generated-formula and single-unit expression cost.
 
-5. Re-run the before/after semantic output checks after that cleanup decision. At minimum:
-
-   ```text
-   NOSE_TIME=1 target/release/nose scan bench/repos/sqlalchemy --mode semantic --format json --top 0 > /tmp/nose-perf-baseline/sqlalchemy.final.full.json
-   cmp /tmp/nose-perf-baseline/sqlalchemy.after1.full.json /tmp/nose-perf-baseline/sqlalchemy.final.full.json
-   ```
-
-   Also compare raylib against the sweep baseline:
+5. If validating before commit, rerun the small representative set:
 
    ```text
-   NOSE_TIME=1 target/release/nose scan bench/repos/raylib --mode semantic --format json --top 0 > /tmp/nose-perf-sweep/raylib.final.json 2> /tmp/nose-perf-sweep/raylib.final.err
-   cmp /tmp/nose-perf-sweep/raylib.full.json /tmp/nose-perf-sweep/raylib.final.json
+   NOSE_TIME=1 target/release/nose scan bench/repos/sqlite --mode semantic --format json --top 0 > /tmp/nose-perf-continue/sqlite.after-block-gate.json
+   NOSE_TIME=1 target/release/nose scan bench/repos/vim --mode semantic --format json --top 0 > /tmp/nose-perf-continue/vim.after-block-gate.json
+   NOSE_TIME=1 target/release/nose scan bench/repos/raylib --mode semantic --format json --top 0 > /tmp/nose-perf-continue/raylib.after-block-gate.json
+   NOSE_TIME=1 target/release/nose scan bench/repos/zod --mode semantic --format json --top 0 > /tmp/nose-perf-continue/zod.after-block-gate.json
    ```
 
-   If `cmp` differs, compare parsed JSON family sets before assuming a regression.
-   A semantic difference is a blocker. A pure ordering difference should be made
-   deterministic before commit if practical.
+   `zod` was byte-identical; SQLite/Vim preserved family counts; Raylib intentionally
+   reduced broad vendored block reports.
 
 6. Re-run the core validation set:
 
@@ -340,11 +355,12 @@ Type-4 frontier:
 
 7. Re-run a small top-outlier sweep after validation. The next likely targets are:
 
-   - `bench/repos/sqlite`, still around 4.16s wall and currently the best next hotspot;
-   - `bench/repos/vim`, around 1.85s wall and 1545ms `normalize+extract`;
-   - `bench/repos/sympy`, now improved but still useful as a generated-formula regression
+   - `bench/repos/raylib`, still around 2.58s wall and useful as a many-unit regression
      target;
-   - `bench/repos/raylib`, now improved but still useful as a many-unit regression target.
+   - `bench/repos/sympy`, around 1.69s wall and useful as a generated-formula regression
+     target;
+   - `bench/repos/sqlite`, now around 1.71s wall after the block cap follow-up;
+   - `bench/repos/vim`, now around 0.75s wall after the block cap follow-up;
 
    For each outlier, use both global timing and unit timing:
 
@@ -393,9 +409,9 @@ cmp /tmp/nose-perf-after-subtree/sympy.json /tmp/nose-perf-after-subtree/sympy.a
 cmp /tmp/nose-perf-after-subtree/sqlite.json /tmp/nose-perf-final/sqlite.after-guard.json
 ```
 
-Latest validation passed after the final large-AC, flatten, cache-removal, and Prettier
-guard changes. The exact `/tmp` output names above are historical; the final rerun used
-`/tmp/nose-perf-final/*.after-guard.*` for zod/raylib/sqlite/prettier.
+Latest validation passed after the final large-AC, flatten, cache-removal, Prettier
+guard, and block-cap changes. The block-cap rerun used
+`/tmp/nose-perf-continue/*.after-block-gate.*`.
 
 ## Last Completed Coevolution Loop
 
