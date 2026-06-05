@@ -863,11 +863,12 @@ fn lower_match(lo: &mut Lowering, node: TsNode) -> NodeId {
                 .collect()
         })
         .unwrap_or_default();
-    // build from the last arm backwards into nested Ifs
-    let mut acc = lo.empty_block(span);
-    for arm in arms.iter().rev() {
-        let body = arm
-            .child_by_field_name("value")
+    let mut branches = Vec::new();
+    let mut default_body = None;
+    for arm in arms {
+        let body_node = arm.child_by_field_name("value");
+        let body_node_id = body_node.map(|v| v.id());
+        let body = body_node
             .map(|v| {
                 if v.kind() == "block" {
                     lower_block(lo, v)
@@ -876,17 +877,91 @@ fn lower_match(lo: &mut Lowering, node: TsNode) -> NodeId {
                 }
             })
             .unwrap_or_else(|| lo.empty_block(span));
-        // condition: scrutinee compared against the arm pattern (use scrutinee value
-        // as a proxy — the discriminating structure is the arm bodies).
-        let cond = lo.add(
-            NodeKind::BinOp,
-            Payload::Op(Op::Eq),
-            span,
-            &[scrutinee, scrutinee],
-        );
+        let pattern = arm.child_by_field_name("pattern").or_else(|| {
+            Lowering::named_children(arm)
+                .into_iter()
+                .find(|child| Some(child.id()) != body_node_id && child.kind() != "match_arm_guard")
+        });
+        let pattern_cond =
+            pattern.and_then(|pattern| lower_match_pattern_condition(lo, scrutinee, pattern, span));
+        let guard_cond = arm
+            .child_by_field_name("condition")
+            .or_else(|| {
+                Lowering::named_children(arm)
+                    .into_iter()
+                    .find(|child| child.kind() == "match_arm_guard")
+                    .and_then(|guard| guard.named_child(0))
+            })
+            .map(|guard| lower_expr(lo, guard));
+        let Some(cond) = combine_match_conditions(lo, span, pattern_cond, guard_cond) else {
+            default_body = Some(body);
+            continue;
+        };
+        branches.push((cond, body));
+    }
+    let mut acc = default_body.unwrap_or_else(|| lo.empty_block(span));
+    for (cond, body) in branches.into_iter().rev() {
         acc = lo.add(NodeKind::If, Payload::None, span, &[cond, body, acc]);
     }
     acc
+}
+
+fn lower_match_pattern_condition(
+    lo: &mut Lowering,
+    scrutinee: NodeId,
+    pattern: TsNode,
+    span: Span,
+) -> Option<NodeId> {
+    if lo.text(pattern).trim() == "_" || pattern.kind() == "wildcard_pattern" {
+        return None;
+    }
+    if pattern.kind() == "match_pattern" {
+        return pattern
+            .named_child(0)
+            .and_then(|child| lower_match_pattern_condition(lo, scrutinee, child, span));
+    }
+    if pattern.kind() == "or_pattern" {
+        let mut conditions = Vec::new();
+        for child in Lowering::named_children(pattern) {
+            let cond = lower_match_pattern_condition(lo, scrutinee, child, span)?;
+            conditions.push(cond);
+        }
+        return fold_or(lo, span, conditions);
+    }
+    let pat = lower_expr(lo, pattern);
+    Some(lo.add(
+        NodeKind::BinOp,
+        Payload::Op(Op::Eq),
+        span,
+        &[scrutinee, pat],
+    ))
+}
+
+fn fold_or(lo: &mut Lowering, span: Span, conditions: Vec<NodeId>) -> Option<NodeId> {
+    let mut it = conditions.into_iter();
+    let mut acc = it.next()?;
+    for cond in it {
+        acc = lo.add(NodeKind::BinOp, Payload::Op(Op::Or), span, &[acc, cond]);
+    }
+    Some(acc)
+}
+
+fn combine_match_conditions(
+    lo: &mut Lowering,
+    span: Span,
+    pattern_cond: Option<NodeId>,
+    guard_cond: Option<NodeId>,
+) -> Option<NodeId> {
+    match (pattern_cond, guard_cond) {
+        (Some(pattern), Some(guard)) => Some(lo.add(
+            NodeKind::BinOp,
+            Payload::Op(Op::And),
+            span,
+            &[pattern, guard],
+        )),
+        (Some(cond), None) | (None, Some(cond)) => Some(cond),
+        (None, None) => None,
+    }
 }
 
 fn lower_for(lo: &mut Lowering, node: TsNode) -> NodeId {
@@ -953,6 +1028,32 @@ fn rust_bin_op(text: &str) -> Option<Op> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn match_case_rhs_ints(src: &str) -> Vec<i64> {
+        let interner = Interner::new();
+        let il = lower(FileId(0), "t.rs", src.as_bytes(), &interner).expect("lower");
+        il.nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, n)| n.kind == NodeKind::BinOp && n.payload == Payload::Op(Op::Eq))
+            .filter_map(|(idx, _)| {
+                let kids = il.children(NodeId(idx as u32));
+                match kids {
+                    [_, rhs] => match il.node(*rhs).payload {
+                        Payload::LitInt(value) => Some(value),
+                        _ => None,
+                    },
+                    _ => None,
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn match_cases_compare_scrutinee_to_literal_patterns() {
+        let src = "fn f(x: i32) -> i32 { match x { 7 => 1, 8 => 2, _ => 3 } }";
+        assert_eq!(match_case_rhs_ints(src), vec![7, 8]);
+    }
 
     #[test]
     fn async_blocks_lower_to_body_not_raw() {
