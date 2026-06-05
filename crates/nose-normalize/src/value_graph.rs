@@ -33,6 +33,13 @@ use std::sync::OnceLock;
 
 const LARGE_AC_EXPR_OPERANDS: usize = 64;
 
+/// The [`ValOp::Call`] tag for a known builtin: its discriminant + 1. The `+1` reserves tag
+/// `0` for an opaque (non-builtin) callee — see [`ValOp::Call`]'s definition. Centralizes
+/// that encoding so the reserved-zero invariant lives in one place.
+fn builtin_tag(b: Builtin) -> u32 {
+    b as u32 + 1
+}
+
 /// Public entry: the value-graph fingerprint of the unit rooted at `root`
 /// (sorted multiset of `u64` value hashes). Equivalent computations → equal
 /// multisets.
@@ -424,10 +431,10 @@ impl<'a> Builder<'a> {
             ValOp::Call(tag)
                 if matches!(
                     *tag,
-                    x if x == Builtin::IsEmpty as u32 + 1
-                        || x == Builtin::StartsWith as u32 + 1
-                        || x == Builtin::EndsWith as u32 + 1
-                        || x == Builtin::Contains as u32 + 1
+                    x if x == builtin_tag(Builtin::IsEmpty)
+                        || x == builtin_tag(Builtin::StartsWith)
+                        || x == builtin_tag(Builtin::EndsWith)
+                        || x == builtin_tag(Builtin::Contains)
                         || x == JS_PROTOTYPE_IN_CODE
                 ) =>
             {
@@ -1414,7 +1421,7 @@ impl<'a> Builder<'a> {
         let key = self.eval(kids[1], env);
         let default = self.eval(kids[2], env);
         Some(self.mk(
-            ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+            ValOp::Call(builtin_tag(Builtin::GetOrDefault)),
             vec![map, key, default],
         ))
     }
@@ -2458,7 +2465,7 @@ impl<'a> Builder<'a> {
             return None;
         }
         Some(self.mk(
-            ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+            ValOp::Call(builtin_tag(Builtin::GetOrDefault)),
             vec![map, key, fallback_ret],
         ))
     }
@@ -2487,7 +2494,7 @@ impl<'a> Builder<'a> {
             ret_a
         };
         Some(self.mk(
-            ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+            ValOp::Call(builtin_tag(Builtin::GetOrDefault)),
             vec![map_a, key_a, default],
         ))
     }
@@ -2511,7 +2518,7 @@ impl<'a> Builder<'a> {
             guarded_ret
         };
         Some(self.mk(
-            ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+            ValOp::Call(builtin_tag(Builtin::GetOrDefault)),
             vec![map, key, default],
         ))
     }
@@ -2541,7 +2548,7 @@ impl<'a> Builder<'a> {
         };
         if let Some((map, key)) = self.proven_map_get_value(value) {
             return Some(self.mk(
-                ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+                ValOp::Call(builtin_tag(Builtin::GetOrDefault)),
                 vec![map, key, default],
             ));
         }
@@ -2582,7 +2589,7 @@ impl<'a> Builder<'a> {
 
     fn map_default_bottom_call(&self, value: ValueId) -> Option<(ValueId, ValueId)> {
         let node = &self.nodes[value as usize];
-        if matches!(node.op, ValOp::Call(tag) if tag == Builtin::GetOrDefault as u32 + 1)
+        if matches!(node.op, ValOp::Call(tag) if tag == builtin_tag(Builtin::GetOrDefault))
             && node.args.len() == 3
             && self.is_bottom_value(node.args[2])
         {
@@ -2612,7 +2619,7 @@ impl<'a> Builder<'a> {
     /// converge, while staying DISTINCT from a tuple `Seq([k, v])` (a list of pairs is a
     /// different value than a dict). Lean: `Functor.lean::map_dict_entry` (the build is a map).
     fn dict_entry(&mut self, kv: Vec<ValueId>) -> ValueId {
-        self.mk(ValOp::Call(Builtin::DictEntry as u32 + 1), kv)
+        self.mk(ValOp::Call(builtin_tag(Builtin::DictEntry)), kv)
     }
 
     /// If `target = Index(Var c, k)` for an ACTIVE dict-builder `c` (seeded `{}`/empty), record
@@ -4843,7 +4850,7 @@ impl<'a> Builder<'a> {
 
     fn is_empty_value(&mut self, coll: ValueId) -> ValueId {
         let coll = self.param_domain_value(coll);
-        let len = self.mk(ValOp::Call(Builtin::Len as u32 + 1), vec![coll]);
+        let len = self.mk(ValOp::Call(builtin_tag(Builtin::Len)), vec![coll]);
         let zero = self.int_const(0);
         self.mk(ValOp::Bin(Op::Eq as u32), vec![len, zero])
     }
@@ -4869,7 +4876,7 @@ impl<'a> Builder<'a> {
             else_v
         };
         Some(self.mk(
-            ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+            ValOp::Call(builtin_tag(Builtin::GetOrDefault)),
             vec![map, key, default],
         ))
     }
@@ -4897,7 +4904,7 @@ impl<'a> Builder<'a> {
         };
         if let Some((map, key)) = self.proven_map_get_value(value) {
             return Some(self.mk(
-                ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+                ValOp::Call(builtin_tag(Builtin::GetOrDefault)),
                 vec![map, key, default],
             ));
         }
@@ -4906,7 +4913,7 @@ impl<'a> Builder<'a> {
 
     fn value_default_call(&self, value: ValueId) -> Option<(ValueId, ValueId)> {
         let node = &self.nodes[value as usize];
-        if matches!(node.op, ValOp::Call(tag) if tag == Builtin::ValueOrDefault as u32 + 1)
+        if matches!(node.op, ValOp::Call(tag) if tag == builtin_tag(Builtin::ValueOrDefault))
             && node.args.len() == 2
         {
             Some((node.args[0], node.args[1]))
@@ -4930,7 +4937,7 @@ impl<'a> Builder<'a> {
             return value;
         }
         self.mk(
-            ValOp::Call(Builtin::ValueOrDefault as u32 + 1),
+            ValOp::Call(builtin_tag(Builtin::ValueOrDefault)),
             vec![value, default],
         )
     }
@@ -5603,7 +5610,7 @@ impl<'a> Builder<'a> {
                 if a.len() == 2 {
                     if let Some((map, default)) = self.proven_go_literal_zero_map_value(a[0]) {
                         return self.mk(
-                            ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+                            ValOp::Call(builtin_tag(Builtin::GetOrDefault)),
                             vec![map, a[1], default],
                         );
                     }
@@ -5656,7 +5663,7 @@ impl<'a> Builder<'a> {
                         let key = self.eval(*key, env);
                         let default = self.eval(*default, env);
                         return self.mk(
-                            ValOp::Call(Builtin::GetOrDefault as u32 + 1),
+                            ValOp::Call(builtin_tag(Builtin::GetOrDefault)),
                             vec![map, key, default],
                         );
                     }
@@ -5739,7 +5746,7 @@ impl<'a> Builder<'a> {
                 }
                 let a: Vec<ValueId> = kids.iter().map(|&k| self.eval(k, env)).collect();
                 let tag = match node.payload {
-                    Payload::Builtin(b) => b as u32 + 1,
+                    Payload::Builtin(b) => builtin_tag(b),
                     _ => 0,
                 };
                 self.mk(ValOp::Call(tag), a)
