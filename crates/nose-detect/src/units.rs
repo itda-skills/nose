@@ -1913,6 +1913,9 @@ fn empty_or_single_direct_exact_statement_block(
     if exact_ordered_index_assignment_effect_sequence_block(il, node) {
         return Some(true);
     }
+    if exact_ordered_loop_effect_sequence_block(il, interner, node) {
+        return Some(true);
+    }
     if kids.len() == 3 && exact_temp_chain_consumed_by_statement(il, kids[0], kids[1], kids[2]) {
         return Some(true);
     }
@@ -1931,6 +1934,17 @@ fn empty_or_single_direct_exact_statement_block(
         NodeKind::Loop if exact_loop_effect_fragment_root(il, interner, kids[0]) => Some(true),
         _ => None,
     }
+}
+
+fn exact_ordered_loop_effect_sequence_block(il: &Il, interner: &Interner, node: NodeId) -> bool {
+    if il.kind(node) != NodeKind::Block {
+        return false;
+    }
+    let kids = il.children(node);
+    kids.len() == 2
+        && kids
+            .iter()
+            .all(|&kid| exact_loop_effect_fragment_root(il, interner, kid))
 }
 
 fn exact_ordered_append_effect_sequence_block(il: &Il, node: NodeId) -> bool {

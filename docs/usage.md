@@ -134,8 +134,8 @@ handled.
 By default, sub-function units include bounded control-flow blocks and exact-safe
 single-statement fragments such as return/throw expressions and simple
 conditional return/throw/effect guards, including bare returns, explicit empty no-op
-branches, and nested branches whose only non-empty statement is another exact conditional
-or exact ForEach append-effect loop.
+branches, and nested branches whose only non-empty statement is another exact conditional,
+a single exact ForEach effect loop, or exactly two ordered exact ForEach effect loops.
 Conditional branches may also assign one local temporary, or a two-temporary linear chain,
 and immediately consume the final value in a direct return/throw/effect statement or a
 non-overloadable C/Go/Java index assignment whose receiver does not depend on the

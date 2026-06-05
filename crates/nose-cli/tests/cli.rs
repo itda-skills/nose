@@ -2143,6 +2143,228 @@ fn semantic_scan_reports_exact_safe_conditional_foreach_append_effect_fragments_
 }
 
 #[test]
+fn semantic_scan_reports_exact_safe_ordered_foreach_effect_branch_fragments() {
+    let dir = std::env::temp_dir().join(format!(
+        "nose_ordered_foreach_effect_branch_fragments_{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+
+    let fixtures = [
+        (
+            "cond_two_loops_a.js",
+            "function condTwoLoopsLeft(enabled, xs, ys, out) {\n  if (enabled) {\n    for (const x of xs) {\n      out.push(x + 1);\n    }\n    for (const y of ys) {\n      out.push(y * y);\n    }\n  }\n  audit(enabled);\n}\n",
+        ),
+        (
+            "cond_two_loops_b.js",
+            "function condTwoLoopsRight(flag, as, bs, dst) {\n  if (flag) {\n    for (const a of as) {\n      dst.push(1 + a);\n    }\n    for (const b of bs) {\n      dst.push(b * b);\n    }\n  }\n  trace(flag);\n}\n",
+        ),
+        (
+            "cond_two_loops_wrong_order.js",
+            "function condTwoLoopsWrongOrder(flag, xs, ys, out) {\n  if (flag) {\n    for (const y of ys) {\n      out.push(y * y);\n    }\n    for (const x of xs) {\n      out.push(x + 1);\n    }\n  }\n  audit(flag);\n}\n",
+        ),
+        (
+            "cond_two_loops_wrong_receiver.js",
+            "function condTwoLoopsWrongReceiver(flag, xs, ys, out) {\n  if (flag) {\n    for (const x of xs) {\n      out.push(x + 1);\n    }\n    for (const y of ys) {\n      ys.push(y * y);\n    }\n  }\n  audit(flag);\n}\n",
+        ),
+        (
+            "cond_two_loops_mutated.js",
+            "function condTwoLoopsMutated(flag, xs, ys, out) {\n  out.push(0);\n  if (flag) {\n    for (const x of xs) {\n      out.push(x + 1);\n    }\n    for (const y of ys) {\n      out.push(y * y);\n    }\n  }\n  audit(flag);\n}\n",
+        ),
+        (
+            "cond_three_loops.js",
+            "function condThreeLoops(flag, xs, ys, zs, out) {\n  if (flag) {\n    for (const x of xs) {\n      out.push(x + 1);\n    }\n    for (const y of ys) {\n      out.push(y * y);\n    }\n    for (const z of zs) {\n      out.push(z + 3);\n    }\n  }\n  audit(flag);\n}\n",
+        ),
+        (
+            "cond_two_temp_loops_a.py",
+            "def cond_two_temp_loops_left(flag, xs, ys, out):\n    if flag:\n        for x in xs:\n            value = x + 1\n            out.append(value * value)\n        for y in ys:\n            out.append(y + 2)\n    audit(flag)\n",
+        ),
+        (
+            "cond_two_temp_loops_b.py",
+            "def cond_two_temp_loops_right(enabled, as_, bs, dst):\n    if enabled:\n        for a in as_:\n            item = 1 + a\n            dst.append(item * item)\n        for b in bs:\n            dst.append(2 + b)\n    trace(enabled)\n",
+        ),
+        (
+            "cond_two_temp_loops_wrong.py",
+            "def cond_two_temp_loops_wrong(flag, xs, ys, out):\n    if flag:\n        for x in xs:\n            value = x + 2\n            out.append(value * value)\n        for y in ys:\n            out.append(y + 2)\n    audit(flag)\n",
+        ),
+        (
+            "cond_two_index_loops_a.go",
+            "package p\nfunc condTwoIndexLoopsLeft(flag bool, xs []int, ys []int, out []int) {\n  if flag {\n    for i, x := range xs {\n      out[i] = x * x\n    }\n    for j, y := range ys {\n      out[j+1] = y + 1\n    }\n  }\n  audit(out)\n}\n",
+        ),
+        (
+            "cond_two_index_loops_b.go",
+            "package p\nfunc condTwoIndexLoopsRight(enabled bool, as []int, bs []int, dst []int) {\n  if enabled {\n    for k, a := range as {\n      dst[k] = a * a\n    }\n    for m, b := range bs {\n      dst[1+m] = 1 + b\n    }\n  }\n  trace(dst)\n}\n",
+        ),
+        (
+            "cond_two_index_loops_wrong_index.go",
+            "package p\nfunc condTwoIndexLoopsWrongIndex(flag bool, xs []int, ys []int, out []int) {\n  if flag {\n    for i, x := range xs {\n      out[i] = x * x\n    }\n    for j, y := range ys {\n      out[j+2] = y + 1\n    }\n  }\n  audit(out)\n}\n",
+        ),
+        (
+            "cond_two_index_loops_wrong_receiver.go",
+            "package p\nfunc condTwoIndexLoopsWrongReceiver(flag bool, xs []int, ys []int, out []int) {\n  if flag {\n    for i, x := range xs {\n      out[i] = x * x\n    }\n    for j, y := range ys {\n      ys[j+1] = y + 1\n    }\n  }\n  audit(out)\n}\n",
+        ),
+    ];
+    for (name, src) in fixtures {
+        fs::write(dir.join(name), src).unwrap();
+    }
+
+    let out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "100",
+        "--min-size",
+        "100",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let json = scan_json(&out);
+    let families = scan_families(&json);
+
+    let assert_branch_pair =
+        |left: &str, right: &str, negative: &str, start_line: u64, end_line: u64| {
+            let family = families
+                .iter()
+                .find(|family| {
+                    let locations = family["locations"].as_array().expect("locations");
+                    let branch_files: Vec<&str> = locations
+                        .iter()
+                        .filter(|loc| {
+                            loc["start_line"] == start_line && loc["end_line"] == end_line
+                        })
+                        .filter_map(|loc| loc["file"].as_str())
+                        .collect();
+                    branch_files.iter().any(|file| file.ends_with(left))
+                        && branch_files.iter().any(|file| file.ends_with(right))
+                        && locations.iter().all(|loc| loc["kind"] == "Block")
+                        && locations
+                            .iter()
+                            .filter_map(|loc| loc["file"].as_str())
+                            .all(|file| !file.ends_with(negative))
+                })
+                .unwrap_or_else(|| {
+                    panic!("missing ordered foreach-effect branch family {left}/{right}: {out}")
+                });
+            assert!(
+                family["locations"]
+                    .as_array()
+                    .expect("locations")
+                    .iter()
+                    .all(|loc| loc["kind"] == "Block"),
+                "ordered foreach-effect branch fragments should report as Block units: {family:?}"
+            );
+        };
+
+    let assert_no_branch_pair = |left: &str,
+                                 right: &str,
+                                 left_start: u64,
+                                 left_end: u64,
+                                 right_start: u64,
+                                 right_end: u64| {
+        let has_branch_pair = families.iter().any(|family| {
+            let locations = family["locations"].as_array().expect("locations");
+            let has_left = locations.iter().any(|loc| {
+                loc["file"]
+                    .as_str()
+                    .is_some_and(|file| file.ends_with(left))
+                    && loc["start_line"] == left_start
+                    && loc["end_line"] == left_end
+            });
+            let has_right = locations.iter().any(|loc| {
+                loc["file"]
+                    .as_str()
+                    .is_some_and(|file| file.ends_with(right))
+                    && loc["start_line"] == right_start
+                    && loc["end_line"] == right_end
+            });
+            has_left && has_right
+        });
+        assert!(
+            !has_branch_pair,
+            "ordered foreach-effect branch boundary must not merge {left}/{right}: {out}"
+        );
+    };
+
+    assert_branch_pair(
+        "cond_two_loops_a.js",
+        "cond_two_loops_b.js",
+        "cond_two_loops_wrong_order.js",
+        2,
+        9,
+    );
+    assert_branch_pair(
+        "cond_two_temp_loops_a.py",
+        "cond_two_temp_loops_b.py",
+        "cond_two_temp_loops_wrong.py",
+        2,
+        7,
+    );
+    assert_branch_pair(
+        "cond_two_index_loops_a.go",
+        "cond_two_index_loops_b.go",
+        "cond_two_index_loops_wrong_index.go",
+        3,
+        10,
+    );
+    assert_no_branch_pair(
+        "cond_two_loops_a.js",
+        "cond_two_loops_wrong_order.js",
+        2,
+        9,
+        2,
+        9,
+    );
+    assert_no_branch_pair(
+        "cond_two_loops_a.js",
+        "cond_two_loops_wrong_receiver.js",
+        2,
+        9,
+        2,
+        9,
+    );
+    assert_no_branch_pair(
+        "cond_two_loops_a.js",
+        "cond_two_loops_mutated.js",
+        2,
+        9,
+        3,
+        10,
+    );
+    assert_no_branch_pair("cond_two_loops_a.js", "cond_three_loops.js", 2, 9, 2, 12);
+    assert_no_branch_pair(
+        "cond_two_temp_loops_a.py",
+        "cond_two_temp_loops_wrong.py",
+        2,
+        7,
+        2,
+        7,
+    );
+    assert_no_branch_pair(
+        "cond_two_index_loops_a.go",
+        "cond_two_index_loops_wrong_index.go",
+        3,
+        10,
+        3,
+        10,
+    );
+    assert_no_branch_pair(
+        "cond_two_index_loops_a.go",
+        "cond_two_index_loops_wrong_receiver.go",
+        3,
+        10,
+        3,
+        10,
+    );
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn semantic_scan_reports_exact_safe_ordered_append_effect_branch_fragments() {
     let dir = std::env::temp_dir().join(format!(
         "nose_append_effect_order_boundary_{}",

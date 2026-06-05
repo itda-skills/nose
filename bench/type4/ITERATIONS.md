@@ -5659,6 +5659,80 @@ multi-language real frontier evidence; if none is found, keep fragment work tied
 shared proof invariant and avoid opening dynamic property or arbitrary statement-window
 semantics.
 
+## Fragment batch 24: exact ordered foreach-effect branch fragments
+
+This batch responds to the Java-skew concern by staying on a shared non-Java
+unit-fragment boundary. A direct conditional branch may now contain exactly two ordered
+exact `ForEach` effect loops. Each child loop must already satisfy the existing exact
+loop-effect fragment root; three loops, arbitrary statement windows, and mixed non-loop
+statements remain outside this exact fragment set.
+
+The proof invariant is intentionally narrow: the branch body has exactly two `Loop`
+children, and each loop already proves an exact effect sink. The ordered child values keep
+loop order in the branch fingerprint, while the loop-level proof still carries receiver,
+mutation, temporary, index, and assigned-value boundaries. This adds no language-specific
+frontend exception and does not introduce fragment free-variable/live-out modeling.
+
+The three focused positives share one invariant and intentionally avoid Java:
+
+- JavaScript direct append loop followed by another direct append loop;
+- Python temp-consumed append loop followed by a direct append loop;
+- Go range index-assignment loop followed by another range index-assignment loop.
+
+Adjacent hard negatives cover swapped loop order, wrong receiver, preceding receiver
+mutation, wrong temp RHS, wrong Go index expression, and a third-loop boundary.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-foreach-loop-1 | candidate extraction | allow exact conditional branches with exactly two ordered exact `ForEach` effect loops | 3 focused JS/Python/Go branch families reported as `Block` units |
+| fragment-foreach-loop-2 | hard negatives | preserve loop order, receiver identity, receiver mutation boundaries, temp-local consumption, Go index/value identity, and the two-loop cap | swapped-order, wrong-receiver, mutation, wrong-temp, wrong-index, and third-loop negatives excluded |
+| fragment-foreach-loop-3 | performance guard | require exactly two loop children and reuse the existing exact loop-effect fragment root | selected/full families and locations unchanged; selected candidate median 31.9ms -> 31.9ms |
+| fragment-foreach-loop-4 | regression | rerun the existing single-loop conditional focused test | existing conditional foreach append-effect fragment test pass |
+| fragment-foreach-loop-5 | release gates | run full Rust suite, clippy, release build, compact all-cross core smoke | `cargo test` pass; clippy clean; core smoke 634/634 positives and 0/1246 hard-negative false merges |
+
+Focused regressions:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_foreach_effect_branch_fragments -- --nocapture
+JS, Python, and Go ordered two-loop branch positives reported; swapped-order,
+wrong-receiver, mutation, wrong-temp, wrong-index, and third-loop negatives excluded.
+
+cargo test -p nose-cli semantic_scan_reports_exact_safe_conditional_foreach_append_effect_fragments_under_opaque_functions -- --nocapture
+Existing single-loop conditional fragment positives still reported with their hard-negative boundaries.
+```
+
+Core gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+positive recall: 634/634
+hard-negative false merges: 0/1246
+```
+
+Real corpus and performance:
+
+```text
+NOSE_TIME=1 <baseline> scan prettier jest radash sympy black gorm nats-server --mode semantic --format json --top 0
+NOSE_TIME=1 target/release/nose scan prettier jest radash sympy black gorm nats-server --mode semantic --format json --top 0
+selected files: 10338
+families: 1199 before, 1199 after
+locations: 4389 before, 4389 after
+median normalize+extract over three alternating runs: 571.7ms before, 583.9ms after
+median candidates over three alternating runs: 31.9ms before, 31.9ms after
+
+NOSE_TIME=1 <baseline> scan bench/repos --mode semantic --format json --top 0
+NOSE_TIME=1 target/release/nose scan bench/repos --mode semantic --format json --top 0
+full files: 60748
+families: 7403 before, 7403 after
+locations: 32965 before, 32965 after
+median normalize+extract over three alternating runs: 3838.3ms before, 3447.1ms after
+median candidates over three alternating runs: 319.1ms before, 298.9ms after
+```
+
+This is a focused unit-fragment coverage expansion, not a real-corpus evidence-backed
+closure. The next frontier should continue to prefer non-Java or multi-language
+evidence-backed misses unless a Java-only lead clearly dominates on evidence and cost.
+
 ## Fragment batch 23: exact three-index branch fragments
 
 This batch avoids adding another Java-only proof and extends the shared non-overloadable
