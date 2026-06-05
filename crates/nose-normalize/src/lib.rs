@@ -21,6 +21,7 @@ mod desugar;
 mod idioms;
 mod interp;
 mod literals;
+mod recursion;
 mod types;
 mod value_graph;
 
@@ -160,6 +161,11 @@ pub fn normalize(il: &Il, interner: &Interner, opts: &NormalizeOptions) -> Il {
         debug_assert!(out.validate().is_ok());
         return out;
     }
+    // Recursion → iteration: a SEMANTIC canon, so it runs after the oracle cutoff above
+    // (the oracle interprets the original recursion to validate this rewrite). First in the
+    // phase, so the loops it emits flow through dataflow / cfg-norm / the value graph and
+    // converge with hand-written iteration.
+    out = recursion::run(&out);
     if opts.dataflow {
         out = dataflow::run(&out);
     }
