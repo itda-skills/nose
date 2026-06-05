@@ -476,6 +476,10 @@ fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             .named_child(0)
             .map(|c| lower_expr(lo, c))
             .unwrap_or_else(|| lo.empty_block(span)),
+        "reference_pattern" => node
+            .named_child(0)
+            .map(|c| lower_expr(lo, c))
+            .unwrap_or_else(|| lo.empty_block(span)),
         // `&x` / `&mut x` → the referenced value (skip the mutable_specifier)
         "reference_expression" => node
             .child_by_field_name("value")
@@ -1203,6 +1207,18 @@ mod tests {
         assert!(
             !raw.iter().any(|name| name == "slice_pattern"),
             "slice match pattern should lower without Raw slice_pattern: {raw:?}"
+        );
+    }
+
+    #[test]
+    fn match_reference_pattern_lowers_without_raw() {
+        let src = "fn f(x: &i32) -> i32 { match x { &1 => 7, _ => 0 } }";
+        let (interner, il) = lower_rust(src);
+
+        let raw = raw_names(&il, &interner);
+        assert!(
+            !raw.iter().any(|name| name == "reference_pattern"),
+            "reference match pattern should lower without Raw reference_pattern: {raw:?}"
         );
     }
 
