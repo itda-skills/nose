@@ -215,10 +215,12 @@ guards, unary/binary operands, index bases/subscripts, or a map/filter/reduce la
 statically non-empty `Seq`, plus index assignment targets, ternary conditions, and
 statically selected branches) with
 its handler. Richer exception control flow remains outside the oracle.
-Field reads are interpreted only after the same unit has written that field; an unwritten
-field access remains unsupported rather than invented. The value graph follows the same
-boundary: `self.x = v; return self.x` resolves the read to `v`, while an unproven field read
-stays field-shaped.
+Field reads evaluate their receiver before consulting same-unit field state, so receiver
+errors propagate instead of falling through to a cached field value. After that, reads are
+interpreted only when the same unit has written the field; an unwritten field access remains
+unsupported rather than invented. The value graph follows the same boundary:
+`self.x = v; return self.x` resolves the read to `v`, while an unproven field read stays
+field-shaped.
 
 Out of scope (sound but not yet convergent, or genuinely hard): tree & mutual recursion
 (multiple / non-tail self-calls); list-tail catamorphisms `head ⊕ f(xs[1:])`, whose slice is

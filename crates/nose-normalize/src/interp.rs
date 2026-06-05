@@ -472,14 +472,22 @@ impl<'a> Interp<'a> {
                 }
                 Ok(Value::List(out))
             }
-            NodeKind::Field => match n.payload {
-                Payload::Name(sym) => self
-                    .fields
-                    .get(&(nose_il::symbol_index(sym) as i64))
-                    .cloned()
-                    .ok_or(Unsupported),
-                _ => Err(Unsupported),
-            },
+            NodeKind::Field => {
+                if let Some(&receiver) = self.il.children(node).first() {
+                    let receiver = self.eval(receiver, env)?;
+                    if matches!(receiver, Value::Err) {
+                        return Ok(Value::Err);
+                    }
+                }
+                match n.payload {
+                    Payload::Name(sym) => self
+                        .fields
+                        .get(&(nose_il::symbol_index(sym) as i64))
+                        .cloned()
+                        .ok_or(Unsupported),
+                    _ => Err(Unsupported),
+                }
+            }
             NodeKind::If => {
                 // ternary expression
                 let kids = self.il.children(node).to_vec();
@@ -1381,6 +1389,44 @@ mod tests {
         let (behavior, field_key) = run_field_write_read();
         assert_eq!(behavior.ret, Value::Int(7));
         assert_eq!(behavior.fields, vec![(field_key, Value::Int(7))]);
+    }
+
+    fn run_field_read_with_error_receiver() -> Behavior {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let interner = Interner::new();
+        let field_name = interner.intern("x");
+        let base = b.add(NodeKind::Lit, Payload::Lit(LitClass::Null), sp, &[]);
+        let write_target = b.add(NodeKind::Field, Payload::Name(field_name), sp, &[base]);
+        let seven = b.add(NodeKind::Lit, Payload::LitInt(7), sp, &[]);
+        let assign = b.add(NodeKind::Assign, Payload::None, sp, &[write_target, seven]);
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let zero = b.add(NodeKind::Lit, Payload::LitInt(0), sp, &[]);
+        let error_receiver = b.add(NodeKind::BinOp, Payload::Op(Op::Div), sp, &[one, zero]);
+        let read_target = b.add(
+            NodeKind::Field,
+            Payload::Name(field_name),
+            sp,
+            &[error_receiver],
+        );
+        let ret = b.add(NodeKind::Return, Payload::None, sp, &[read_target]);
+        let block = b.add(NodeKind::Block, Payload::None, sp, &[assign, ret]);
+        let func = b.add(NodeKind::Func, Payload::None, sp, &[block]);
+        let il = b.finish(
+            func,
+            FileMeta {
+                path: "t".into(),
+                lang: Lang::Python,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+        run_unit(&il, func, &[]).expect("run_unit")
+    }
+
+    #[test]
+    fn field_read_propagates_receiver_err_before_cached_value() {
+        assert_eq!(run_field_read_with_error_receiver().ret, Value::Err);
     }
 
     fn run_try(body_stmt: NodeId, handler_stmt: NodeId, mut b: IlBuilder, sp: Span) -> Value {
