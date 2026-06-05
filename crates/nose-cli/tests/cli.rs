@@ -1028,6 +1028,134 @@ fn semantic_scan_reports_exact_safe_conditional_expr_effect_fragments_under_opaq
 }
 
 #[test]
+fn semantic_scan_reports_exact_safe_branch_temp_consumption_fragments_under_opaque_functions() {
+    let dir = std::env::temp_dir().join(format!(
+        "nose_exact_branch_temp_fragments_{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+
+    let fixtures = [
+        (
+            "temp_return_a.py",
+            "def temp_return_left(xs):\n    if xs[0] > 0:\n        result = xs[0] * xs[0] + xs[1]\n        return result\n    audit(xs)\n",
+        ),
+        (
+            "temp_return_b.py",
+            "def temp_return_right(ys):\n    if 0 < ys[0]:\n        return ys[1] + ys[0] * ys[0]\n    trace(ys)\n",
+        ),
+        (
+            "temp_return_neg.py",
+            "def temp_return_wrong(zs):\n    if zs[0] > 0:\n        result = zs[0] * zs[0] - zs[1]\n        return result\n    audit(zs)\n",
+        ),
+        (
+            "temp_return_self_dependent.py",
+            "def temp_return_self_dependent(xs):\n    result = xs[0]\n    if xs[0] > 0:\n        result = result + xs[1]\n        return result\n    audit(xs)\n",
+        ),
+        (
+            "temp_return_window_gap.py",
+            "def temp_return_window_gap(xs):\n    if xs[0] > 0:\n        result = xs[0] * xs[0] + xs[1]\n        observe(result)\n        return result\n    audit(xs)\n",
+        ),
+        (
+            "temp_throw_a.js",
+            "function tempThrowLeft(xs) {\n  if (xs[0] + xs[1] > 10) {\n    const result = xs[0] + xs[1];\n    throw result;\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "temp_throw_b.js",
+            "function tempThrowRight(ys) {\n  if (10 < ys[1] + ys[0]) {\n    throw ys[1] + ys[0];\n  }\n  trace(ys);\n}\n",
+        ),
+        (
+            "temp_throw_neg.js",
+            "function tempThrowWrong(zs) {\n  if (zs[0] + zs[1] > 10) {\n    const result = zs[0] - zs[1];\n    throw result;\n  }\n  audit(zs);\n}\n",
+        ),
+        (
+            "temp_effect_a.js",
+            "function tempEffectLeft(xs, out) {\n  if (xs[0] > 0) {\n    const result = xs[0] * xs[0] + xs[1];\n    out.push(result);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "temp_effect_b.js",
+            "function tempEffectRight(ys, dst) {\n  if (0 < ys[0]) {\n    dst.push(ys[1] + ys[0] * ys[0]);\n  }\n  trace(ys);\n}\n",
+        ),
+        (
+            "temp_effect_neg.js",
+            "function tempEffectWrong(zs, out) {\n  if (zs[0] > 0) {\n    const result = zs[0] * zs[0] - zs[1];\n    out.push(result);\n  }\n  audit(zs);\n}\n",
+        ),
+    ];
+    for (name, src) in fixtures {
+        fs::write(dir.join(name), src).unwrap();
+    }
+
+    let out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "100",
+        "--min-size",
+        "100",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let json = scan_json(&out);
+    let families = scan_families(&json);
+
+    let assert_temp_family = |left: &str, right: &str, negative: &str| {
+        let family = families
+            .iter()
+            .find(|family| {
+                let locations = family["locations"].as_array().expect("locations");
+                let files: Vec<&str> = locations
+                    .iter()
+                    .filter_map(|loc| loc["file"].as_str())
+                    .collect();
+                files.iter().any(|file| file.ends_with(left))
+                    && files.iter().any(|file| file.ends_with(right))
+                    && locations.iter().all(|loc| loc["kind"] == "Block")
+                    && files.iter().all(|file| !file.ends_with(negative))
+            })
+            .unwrap_or_else(|| {
+                panic!("missing exact branch temp-consumption family {left}/{right}: {out}")
+            });
+        assert!(
+            family["locations"]
+                .as_array()
+                .expect("locations")
+                .iter()
+                .all(|loc| loc["kind"] == "Block"),
+            "branch temp-consumption fragments should report as Block units: {family:?}"
+        );
+    };
+
+    let assert_no_pair = |left: &str, right: &str| {
+        let has_pair = families.iter().any(|family| {
+            let files: Vec<&str> = family["locations"]
+                .as_array()
+                .expect("locations")
+                .iter()
+                .filter_map(|loc| loc["file"].as_str())
+                .collect();
+            files.iter().any(|file| file.ends_with(left))
+                && files.iter().any(|file| file.ends_with(right))
+        });
+        assert!(
+            !has_pair,
+            "self-dependent or non-adjacent temp consumption must stay outside exact fragments: {left}/{right}: {out}"
+        );
+    };
+
+    assert_temp_family("temp_return_a.py", "temp_return_b.py", "temp_return_neg.py");
+    assert_temp_family("temp_throw_a.js", "temp_throw_b.js", "temp_throw_neg.js");
+    assert_temp_family("temp_effect_a.js", "temp_effect_b.js", "temp_effect_neg.js");
+    assert_no_pair("temp_return_self_dependent.py", "temp_return_b.py");
+    assert_no_pair("temp_return_window_gap.py", "temp_return_b.py");
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn semantic_scan_reports_exact_safe_nested_conditional_effect_fragments_under_opaque_functions() {
     let dir = std::env::temp_dir().join(format!(
         "nose_exact_nested_fragments_{}",

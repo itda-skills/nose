@@ -5230,6 +5230,72 @@ positive recall: 626/626
 hard-negative false merges: 0/1233
 ```
 
+## Fragment batch 15: exact branch-local temp consumption
+
+This batch keeps the exact conditional-fragment contract and opens only a two-statement
+branch shape where a local temporary is assigned and immediately consumed by one direct
+statement. The accepted forms are:
+
+- `tmp = exact_rhs; return tmp`
+- `tmp = exact_rhs; throw tmp`
+- `tmp = exact_rhs; effect(tmp)`
+
+This is deliberately not a general statement-window extractor. The temporary must be a
+local `Var(Cid)`, the RHS must be non-trivial and must not mention that same temp, and the
+next statement must be the immediate consumer. Branches with an intervening statement,
+self-dependent reassignment, missing direct consumption, or any non-exact expression still
+stay out. The existing direct function-body context guard, preceding mutation/alias guard,
+`exact_safe`, and value-size gates still decide whether the enclosing conditional fragment
+can be reported.
+
+The three focused positives share the same proof invariant: the branch-local temp is a
+single-use name for the already exact RHS and has no live-out boundary because the branch
+immediately exits or emits the effect. Adjacent hard negatives cover wrong RHS value,
+self-dependent reassignment, and a non-adjacent statement window.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-temp-1 | candidate extraction | allow branch-local temp assignment consumed by direct return | Python focused positive converges with direct return; wrong-value negative excluded |
+| fragment-temp-2 | candidate extraction | allow branch-local temp assignment consumed by direct throw | JavaScript focused positive converges with direct throw; wrong-value negative excluded |
+| fragment-temp-3 | candidate extraction | allow branch-local temp assignment consumed by direct expression effect | JavaScript focused positive converges with direct push effect; wrong-value negative excluded |
+| fragment-temp-4 | soundness boundary | reject self-dependent temp reassignment and temp windows with an intervening statement | focused hard negatives stayed unmerged |
+| fragment-temp-5 | real corpus delta | compare baseline/candidate semantic scans over selected mixed repos and full `bench/repos` | selected subset: 1015 -> 1015 families; full corpus: 7431 -> 7431 families, 33086 -> 33086 locations |
+| fragment-temp-6 | performance | warm full-corpus `NOSE_TIME=1` baseline/candidate scan | candidate path 381.2ms -> 409.7ms; normalize+extract 3804.4ms -> 4162.2ms, acceptable but worth watching in the next fragment batch |
+| fragment-temp-7 | release gates | run full Rust suite, clippy, docs lint, and compact all-cross core smoke | `cargo test` pass; clippy clean; docs lint clean; core smoke 626/626, 0/1233 |
+
+Focused regression:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_branch_temp_consumption_fragments_under_opaque_functions
+3 branch-local temp-consumption families found; wrong-value, self-dependent, and
+non-adjacent-window negatives excluded.
+```
+
+Real selected scans:
+
+```text
+NOSE_TIME=1 <baseline> scan bench/repos/flask bench/repos/axios bench/repos/rust bench/repos/sympy bench/repos/minio --mode semantic --format json --top 0
+NOSE_TIME=1 target/release/nose scan bench/repos/flask bench/repos/axios bench/repos/rust bench/repos/sympy bench/repos/minio --mode semantic --format json --top 0
+families: 1015 before, 1015 after
+
+NOSE_TIME=1 <baseline> scan bench/repos --mode semantic --format json --top 0
+NOSE_TIME=1 target/release/nose scan bench/repos --mode semantic --format json --top 0
+families: 7431 before, 7431 after
+locations: 33086 before, 33086 after
+```
+
+Core gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+positive recall: 626/626
+hard-negative false merges: 0/1233
+```
+
+This batch improves focused unit-fragment coverage but did not close an evidence-backed
+real-corpus miss. The next batch should prefer a real frontier with measurable corpus delta,
+or tighten/retire fragment predicates if performance accumulates without practical recall.
+
 ## Fragment batch 7: exact conditional expression-effect fragments
 
 This batch reuses the existing exact single-statement `ExprStmt` predicate inside

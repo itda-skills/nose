@@ -1908,6 +1908,9 @@ fn empty_or_single_direct_exact_statement_block(
     if kids.is_empty() {
         return Some(false);
     }
+    if kids.len() == 2 && exact_temp_assignment_consumed_by_statement(il, kids[0], kids[1]) {
+        return Some(true);
+    }
     if kids.len() != 1 {
         return None;
     }
@@ -1919,6 +1922,39 @@ fn empty_or_single_direct_exact_statement_block(
         NodeKind::If if exact_conditional_fragment_root(il, interner, kids[0]) => Some(true),
         NodeKind::Loop if exact_loop_effect_fragment_root(il, kids[0]) => Some(true),
         _ => None,
+    }
+}
+
+fn exact_temp_assignment_consumed_by_statement(il: &Il, assign: NodeId, stmt: NodeId) -> bool {
+    if il.kind(assign) != NodeKind::Assign {
+        return false;
+    }
+    let assign_kids = il.children(assign);
+    if assign_kids.len() != 2 || il.kind(assign_kids[0]) != NodeKind::Var {
+        return false;
+    }
+    let Payload::Cid(temp_cid) = il.node(assign_kids[0]).payload else {
+        return false;
+    };
+    if matches!(il.kind(assign_kids[1]), NodeKind::Var | NodeKind::Lit) {
+        return false;
+    }
+    let mut temp = FxHashSet::default();
+    temp.insert(temp_cid);
+    if node_mentions_any_cid(il, assign_kids[1], &temp) {
+        return false;
+    }
+    match il.kind(stmt) {
+        NodeKind::Return | NodeKind::Throw => {
+            let kids = il.children(stmt);
+            kids.len() == 1
+                && il.kind(kids[0]) == NodeKind::Var
+                && matches!(il.node(kids[0]).payload, Payload::Cid(cid) if cid == temp_cid)
+        }
+        NodeKind::ExprStmt if exact_expr_statement_fragment_root(il, stmt) => {
+            node_mentions_any_cid(il, stmt, &temp)
+        }
+        _ => false,
     }
 }
 
