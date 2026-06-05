@@ -73,6 +73,10 @@ pub struct DetectOptions {
     /// near Type-3 path: code can reach scoring even when behavior-defining literals or
     /// operators differ and therefore the value fingerprint no longer matches.
     pub shape_candidates: bool,
+    /// Build syntactic unit features (`shapes`, `shape_minhash`, `linear`) for fuzzy
+    /// structural scoring. Exact semantic scans do not need them: candidate generation
+    /// and scoring both use the value graph only.
+    pub shape_features: bool,
 }
 
 impl Default for DetectOptions {
@@ -99,6 +103,7 @@ impl Default for DetectOptions {
             structural: true,
             value_candidates: true,
             shape_candidates: false,
+            shape_features: true,
         }
     }
 }
@@ -496,6 +501,7 @@ pub fn units_of_file(il: &Il, interner: &Interner, opts: &DetectOptions) -> Vec<
         opts.min_lines,
         opts.min_tokens,
         opts.block_units,
+        opts.shape_features,
     )
 }
 
@@ -521,15 +527,20 @@ pub fn detect_with_dump(
         .files
         .par_iter()
         .map(|il| {
-            let n = nose_normalize::normalize(il, &corpus.interner, &norm_opts);
-            let units = units::extract(
-                &n,
-                &corpus.interner,
-                &seeds,
-                opts.min_lines,
-                opts.min_tokens,
-                opts.block_units,
-            );
+            let units = if opts.structural {
+                let n = nose_normalize::normalize(il, &corpus.interner, &norm_opts);
+                units::extract(
+                    &n,
+                    &corpus.interner,
+                    &seeds,
+                    opts.min_lines,
+                    opts.min_tokens,
+                    opts.block_units,
+                    opts.shape_features,
+                )
+            } else {
+                Vec::new()
+            };
             // Build the contiguous stream from the *raw* IL, not the normalized one:
             // alpha-renaming is function-scoped, so a copy-pasted block's variable
             // cids depend on its enclosing function and identical blocks diverge.

@@ -122,6 +122,7 @@ fn options_signature(opts: &DetectOptions) -> u64 {
         opts.cfg_norm as u64,
         opts.dce as u64,
         opts.minhash_k as u64,
+        opts.shape_features as u64,
     ] {
         h = (h ^ v).wrapping_mul(0x0000_0100_0000_01b3);
     }

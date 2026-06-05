@@ -1450,6 +1450,7 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
         contiguous: channels.syntax,
         value_candidates: channels.semantic,
         shape_candidates: channels.near,
+        shape_features: channels.near,
         ..Default::default()
     };
     let detector = scan_detector(channels, &opts);

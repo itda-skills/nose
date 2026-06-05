@@ -311,6 +311,7 @@ pub(crate) fn extract(
     min_lines: u32,
     min_tokens: usize,
     block_units: bool,
+    shape_features: bool,
 ) -> Vec<UnitFeat> {
     // Frontend-tagged functions/methods/classes, and (when enabled) substantial
     // sub-function blocks (loops / ifs / try). The ceiling funnel showed ~56% of
@@ -418,33 +419,45 @@ pub(crate) fn extract(
             continue;
         }
         let feature_start = unit_timer.start();
-        let mut shapes = Vec::with_capacity(pre.len());
-        let mut linear = Vec::with_capacity(pre.len());
-        for &nid in &pre {
-            let n = il.node(nid);
-            let tag = node_tag(n.kind, n.payload, interner);
-            linear.push(tag);
-            let mut shape = tag;
-            for &c in il.children(nid) {
-                let cn = il.node(c);
-                shape = combine(shape, node_tag(cn.kind, cn.payload, interner));
+        let (shapes, shape_minhash, linear) = if shape_features {
+            let mut shapes = Vec::with_capacity(pre.len());
+            let mut linear = Vec::with_capacity(pre.len());
+            for &nid in &pre {
+                let n = il.node(nid);
+                let tag = node_tag(n.kind, n.payload, interner);
+                linear.push(tag);
+                let mut shape = tag;
+                for &c in il.children(nid) {
+                    let cn = il.node(c);
+                    shape = combine(shape, node_tag(cn.kind, cn.payload, interner));
+                }
+                shapes.push(shape);
             }
-            shapes.push(shape);
-        }
-        shapes.sort_unstable();
-        let mut distinct_shapes = shapes.clone();
-        distinct_shapes.dedup();
-        let shape_minhash = crate::minhash::sign(&distinct_shapes, seeds);
+            shapes.sort_unstable();
+            let mut distinct_shapes = shapes.clone();
+            distinct_shapes.dedup();
+            (
+                shapes,
+                crate::minhash::sign(&distinct_shapes, seeds),
+                linear,
+            )
+        } else {
+            (Vec::new(), Vec::new(), Vec::new())
+        };
 
         // Candidate generation keys on the value graph when present (so clones
         // that converge only semantically still become candidates).
-        let mut distinct = if value.is_empty() {
-            shapes.clone()
+        let minhash = if value.is_empty() && !shape_features {
+            Vec::new()
         } else {
-            value.clone()
+            let mut distinct = if value.is_empty() {
+                shapes.clone()
+            } else {
+                value.clone()
+            };
+            distinct.dedup();
+            crate::minhash::sign(&distinct, seeds)
         };
-        distinct.dedup();
-        let minhash = crate::minhash::sign(&distinct, seeds);
 
         let display_name = uname
             .map(|s| interner.resolve(s).to_string())
