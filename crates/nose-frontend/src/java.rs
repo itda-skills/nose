@@ -9,7 +9,7 @@
 use crate::lower::{common_bin_op, Lowering};
 use nose_il::{
     Builtin, FileId, Il, Interner, Lang, LitClass, LoopKind, NodeId, NodeKind, Op, ParamSemantic,
-    Payload, UnitKind,
+    Payload, Span, UnitKind,
 };
 use tree_sitter::Node as TsNode;
 
@@ -304,6 +304,95 @@ fn lower_switch(lo: &mut Lowering, node: TsNode) -> NodeId {
     )
 }
 
+fn lower_switch_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let scrutinee = switch_expr_value(node)
+        .map(|v| lower_expr(lo, v))
+        .unwrap_or_else(|| lo.empty_block(span));
+    let rules: Vec<TsNode> = node
+        .child_by_field_name("body")
+        .map(|body| {
+            Lowering::named_children(body)
+                .into_iter()
+                .filter(|child| child.kind() == "switch_rule")
+                .collect()
+        })
+        .unwrap_or_default();
+    let mut branches = Vec::new();
+    let mut default_body = None;
+
+    for rule in rules {
+        let mut labels = Vec::new();
+        let mut body = None;
+        let mut saw_label = false;
+        for child in Lowering::named_children(rule) {
+            if child.kind() == "switch_label" {
+                saw_label = true;
+                labels.extend(
+                    Lowering::named_children(child)
+                        .into_iter()
+                        .map(|label| lower_expr(lo, label)),
+                );
+                continue;
+            }
+            if saw_label {
+                body = Some(lower_switch_rule_expr_body(lo, child));
+                break;
+            }
+        }
+
+        let body = body.unwrap_or_else(|| lo.empty_block(span));
+        match fold_switch_expr_labels(lo, span, scrutinee, labels) {
+            Some(cond) => branches.push((cond, body)),
+            None => default_body = Some(body),
+        }
+    }
+
+    let mut acc = default_body.unwrap_or_else(|| lo.empty_block(span));
+    for (cond, body) in branches.into_iter().rev() {
+        acc = lo.add(NodeKind::If, Payload::None, span, &[cond, body, acc]);
+    }
+    acc
+}
+
+fn switch_expr_value(node: TsNode) -> Option<TsNode> {
+    node.child_by_field_name("value").or_else(|| {
+        Lowering::named_children(node)
+            .into_iter()
+            .find(|child| child.kind() != "switch_block")
+    })
+}
+
+fn lower_switch_rule_expr_body(lo: &mut Lowering, node: TsNode) -> NodeId {
+    if node.kind() == "block" {
+        lower_block(lo, node)
+    } else {
+        lower_expr(lo, node)
+    }
+}
+
+fn fold_switch_expr_labels(
+    lo: &mut Lowering,
+    span: Span,
+    scrutinee: NodeId,
+    labels: Vec<NodeId>,
+) -> Option<NodeId> {
+    let mut acc = None;
+    for label in labels {
+        let cond = lo.add(
+            NodeKind::BinOp,
+            Payload::Op(Op::Eq),
+            span,
+            &[scrutinee, label],
+        );
+        acc = Some(match acc {
+            None => cond,
+            Some(prev) => lo.add(NodeKind::BinOp, Payload::Op(Op::Or), span, &[prev, cond]),
+        });
+    }
+    acc
+}
+
 fn lower_try(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let mut kids = Vec::new();
@@ -414,6 +503,7 @@ fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             lo.add(NodeKind::Assign, Payload::None, span, &[operand, bin])
         }
         "method_invocation" => lower_call(lo, node),
+        "switch_expression" => lower_switch_expr(lo, node),
         "object_creation_expression" => {
             let mut kids = Vec::new();
             if let Some(args) = node.child_by_field_name("arguments") {
@@ -778,6 +868,63 @@ mod tests {
             .collect()
     }
 
+    fn raw_names(src: &str) -> Vec<String> {
+        let interner = Interner::new();
+        let il = lower(FileId(0), "T.java", src.as_bytes(), &interner).expect("lower");
+        il.nodes
+            .iter()
+            .filter(|node| node.kind == NodeKind::Raw)
+            .filter_map(|node| match node.payload {
+                Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn switch_expression_branch_ints(src: &str) -> Vec<i64> {
+        let interner = Interner::new();
+        let il = lower(FileId(0), "T.java", src.as_bytes(), &interner).expect("lower");
+        il.nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, node)| node.kind == NodeKind::If)
+            .find_map(|(idx, _)| {
+                let kids = il.children(NodeId(idx as u32));
+                match kids {
+                    [_, then_expr, else_expr] => {
+                        match (il.node(*then_expr).payload, il.node(*else_expr).payload) {
+                            (Payload::LitInt(then_value), Payload::LitInt(else_value)) => {
+                                Some(vec![then_value, else_value])
+                            }
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                }
+            })
+            .unwrap_or_default()
+    }
+
+    fn switch_case_lhs_names(src: &str) -> Vec<String> {
+        let interner = Interner::new();
+        let il = lower(FileId(0), "T.java", src.as_bytes(), &interner).expect("lower");
+        il.nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, node)| node.kind == NodeKind::BinOp && node.payload == Payload::Op(Op::Eq))
+            .filter_map(|(idx, _)| {
+                let kids = il.children(NodeId(idx as u32));
+                match kids {
+                    [lhs, _] => match il.node(*lhs).payload {
+                        Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+                        _ => None,
+                    },
+                    _ => None,
+                }
+            })
+            .collect()
+    }
+
     fn expr_stmt_ints(src: &str) -> Vec<i64> {
         let interner = Interner::new();
         let il = lower(FileId(0), "T.java", src.as_bytes(), &interner).expect("lower");
@@ -805,6 +952,20 @@ mod tests {
         assert!(
             expr_stmt_ints(src).is_empty(),
             "case labels should not remain as stray expression statements"
+        );
+    }
+
+    #[test]
+    fn switch_expression_rules_lower_to_expression_if_chain() {
+        let src = "class C { int f(int x){ return switch (x) { case 1 -> 2; default -> 3; }; } }";
+        assert_eq!(switch_case_rhs_ints(src), vec![1]);
+        assert_eq!(switch_case_lhs_names(src), vec!["x"]);
+        assert_eq!(switch_expression_branch_ints(src), vec![2, 3]);
+        let raw = raw_names(src);
+        assert!(
+            !raw.iter()
+                .any(|name| matches!(name.as_str(), "switch_expression" | "switch_rule")),
+            "switch expression rules should lower without Raw nodes: {raw:?}"
         );
     }
 
