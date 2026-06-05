@@ -3000,6 +3000,13 @@ impl<'a> Builder<'a> {
                 .first()
                 .is_some_and(|&operand| self.expr_is_static_runtime_err(operand, env));
         }
+        if self.il.kind(expr) == NodeKind::Field {
+            return self
+                .il
+                .children(expr)
+                .first()
+                .is_some_and(|&receiver| self.expr_is_static_runtime_err(receiver, env));
+        }
         if self.il.kind(expr) == NodeKind::Index {
             let kids = self.il.children(expr).to_vec();
             if kids.len() != 2 {

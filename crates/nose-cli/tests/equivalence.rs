@@ -2005,6 +2005,19 @@ fn value_graph_runs_try_handler_after_static_index_base_err() {
 }
 
 #[test]
+fn value_graph_runs_try_handler_after_static_field_receiver_err() {
+    let i = Interner::new();
+    let try_err =
+        "def f():\n    try:\n        return (1 / 0).x\n    except Exception:\n        return 7\n";
+    let plain_return = "def f():\n    return 7\n";
+    assert_eq!(
+        value_fp(&i, try_err, Lang::Python),
+        value_fp(&i, plain_return, Lang::Python),
+        "a statically visible field receiver error should run the simple catch handler"
+    );
+}
+
+#[test]
 fn value_graph_keeps_try_index_base_effects_before_static_index_err() {
     let i = Interner::new();
     let effect_then_err =

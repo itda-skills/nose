@@ -211,9 +211,9 @@ unconditional try-body return, and also replaces a side-effect-free try body tha
 throw or a statically visible expression error (`Div`/`Mod` by zero, or `Pow` with an
 exponent outside the integer oracle's domain, including the same errors inside eager builtin
 arguments, opaque/user call-by-value arguments, a `Seq` literal with left-to-right effect
-guards, unary/binary operands, index bases/subscripts, or a map/filter/reduce lambda over a
-statically non-empty `Seq`, plus index assignment targets, ternary conditions, and
-statically selected branches) with
+guards, unary/binary operands, field receivers, index bases/subscripts, or a
+map/filter/reduce lambda over a statically non-empty `Seq`, plus index assignment targets,
+ternary conditions, and statically selected branches) with
 its handler. Richer exception control flow remains outside the oracle.
 Field reads evaluate their receiver before consulting same-unit field state, so receiver
 errors propagate instead of falling through to a cached field value. After that, reads are
