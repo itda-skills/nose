@@ -2365,6 +2365,248 @@ fn semantic_scan_reports_exact_safe_ordered_foreach_effect_branch_fragments() {
 }
 
 #[test]
+fn semantic_scan_reports_exact_safe_ordered_mixed_effect_branch_fragments() {
+    let dir = std::env::temp_dir().join(format!(
+        "nose_ordered_mixed_effect_branch_fragments_{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+
+    let fixtures = [
+        (
+            "mixed_loop_append_a.js",
+            "function mixedLoopAppendLeft(enabled, xs, out, seed) {\n  if (enabled) {\n    for (const x of xs) {\n      out.push(x + 1);\n    }\n    out.push(seed * seed);\n  }\n  audit(enabled);\n}\n",
+        ),
+        (
+            "mixed_loop_append_b.js",
+            "function mixedLoopAppendRight(flag, ys, dst, base) {\n  if (flag) {\n    for (const y of ys) {\n      dst.push(1 + y);\n    }\n    dst.push(base * base);\n  }\n  trace(flag);\n}\n",
+        ),
+        (
+            "mixed_loop_append_wrong_order.js",
+            "function mixedLoopAppendWrongOrder(flag, ys, dst, base) {\n  if (flag) {\n    dst.push(base * base);\n    for (const y of ys) {\n      dst.push(1 + y);\n    }\n  }\n  trace(flag);\n}\n",
+        ),
+        (
+            "mixed_loop_append_wrong_receiver.js",
+            "function mixedLoopAppendWrongReceiver(flag, ys, dst, base) {\n  if (flag) {\n    for (const y of ys) {\n      dst.push(1 + y);\n    }\n    ys.push(base * base);\n  }\n  trace(flag);\n}\n",
+        ),
+        (
+            "mixed_loop_append_mutated.js",
+            "function mixedLoopAppendMutated(flag, ys, dst, base) {\n  dst.push(0);\n  if (flag) {\n    for (const y of ys) {\n      dst.push(1 + y);\n    }\n    dst.push(base * base);\n  }\n  trace(flag);\n}\n",
+        ),
+        (
+            "mixed_loop_append_third_effect.js",
+            "function mixedLoopAppendThirdEffect(flag, ys, dst, base) {\n  if (flag) {\n    for (const y of ys) {\n      dst.push(1 + y);\n    }\n    dst.push(base * base);\n    dst.push(base + 1);\n  }\n  trace(flag);\n}\n",
+        ),
+        (
+            "mixed_append_loop_a.py",
+            "def mixed_append_loop_left(flag, xs, out, seed):\n    if flag:\n        out.append(seed + 1)\n        for x in xs:\n            value = x + 1\n            out.append(value)\n    audit(flag)\n",
+        ),
+        (
+            "mixed_append_loop_b.py",
+            "def mixed_append_loop_right(enabled, ys, dst, base):\n    if enabled:\n        dst.append(1 + base)\n        for y in ys:\n            item = 1 + y\n            dst.append(item)\n    trace(enabled)\n",
+        ),
+        (
+            "mixed_append_loop_wrong_temp.py",
+            "def mixed_append_loop_wrong_temp(flag, ys, dst, base):\n    if flag:\n        dst.append(1 + base)\n        for y in ys:\n            item = 2 + y\n            dst.append(item)\n    trace(flag)\n",
+        ),
+        (
+            "mixed_append_loop_wrong_order.py",
+            "def mixed_append_loop_wrong_order(flag, ys, dst, base):\n    if flag:\n        for y in ys:\n            item = 1 + y\n            dst.append(item)\n        dst.append(1 + base)\n    trace(flag)\n",
+        ),
+        (
+            "mixed_index_loop_a.go",
+            "package p\nfunc mixedIndexLoopLeft(flag bool, xs []int, out []int, seed int) {\n  if flag {\n    for i, x := range xs {\n      out[i] = x * x\n    }\n    out[0] = seed + 1\n  }\n  audit(out)\n}\n",
+        ),
+        (
+            "mixed_index_loop_b.go",
+            "package p\nfunc mixedIndexLoopRight(enabled bool, ys []int, dst []int, base int) {\n  if enabled {\n    for j, y := range ys {\n      dst[j] = y * y\n    }\n    dst[0] = 1 + base\n  }\n  trace(dst)\n}\n",
+        ),
+        (
+            "mixed_index_loop_wrong_index.go",
+            "package p\nfunc mixedIndexLoopWrongIndex(flag bool, ys []int, dst []int, base int) {\n  if flag {\n    for j, y := range ys {\n      dst[j] = y * y\n    }\n    dst[1] = 1 + base\n  }\n  trace(dst)\n}\n",
+        ),
+        (
+            "mixed_index_loop_wrong_receiver.go",
+            "package p\nfunc mixedIndexLoopWrongReceiver(flag bool, ys []int, dst []int, base int) {\n  if flag {\n    for j, y := range ys {\n      dst[j] = y * y\n    }\n    ys[0] = 1 + base\n  }\n  trace(dst)\n}\n",
+        ),
+    ];
+    for (name, src) in fixtures {
+        fs::write(dir.join(name), src).unwrap();
+    }
+
+    let out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "100",
+        "--min-size",
+        "100",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let json = scan_json(&out);
+    let families = scan_families(&json);
+
+    let assert_branch_pair =
+        |left: &str, right: &str, negative: &str, start_line: u64, end_line: u64| {
+            let family = families
+                .iter()
+                .find(|family| {
+                    let locations = family["locations"].as_array().expect("locations");
+                    let branch_files: Vec<&str> = locations
+                        .iter()
+                        .filter(|loc| {
+                            loc["start_line"] == start_line && loc["end_line"] == end_line
+                        })
+                        .filter_map(|loc| loc["file"].as_str())
+                        .collect();
+                    branch_files.iter().any(|file| file.ends_with(left))
+                        && branch_files.iter().any(|file| file.ends_with(right))
+                        && locations.iter().all(|loc| loc["kind"] == "Block")
+                        && locations
+                            .iter()
+                            .filter_map(|loc| loc["file"].as_str())
+                            .all(|file| !file.ends_with(negative))
+                })
+                .unwrap_or_else(|| {
+                    panic!("missing ordered mixed-effect branch family {left}/{right}: {out}")
+                });
+            assert!(
+                family["locations"]
+                    .as_array()
+                    .expect("locations")
+                    .iter()
+                    .all(|loc| loc["kind"] == "Block"),
+                "ordered mixed-effect branch fragments should report as Block units: {family:?}"
+            );
+        };
+
+    let assert_no_branch_pair = |left: &str,
+                                 right: &str,
+                                 left_start: u64,
+                                 left_end: u64,
+                                 right_start: u64,
+                                 right_end: u64| {
+        let has_branch_pair = families.iter().any(|family| {
+            let locations = family["locations"].as_array().expect("locations");
+            let has_left = locations.iter().any(|loc| {
+                loc["file"]
+                    .as_str()
+                    .is_some_and(|file| file.ends_with(left))
+                    && loc["start_line"] == left_start
+                    && loc["end_line"] == left_end
+            });
+            let has_right = locations.iter().any(|loc| {
+                loc["file"]
+                    .as_str()
+                    .is_some_and(|file| file.ends_with(right))
+                    && loc["start_line"] == right_start
+                    && loc["end_line"] == right_end
+            });
+            has_left && has_right
+        });
+        assert!(
+            !has_branch_pair,
+            "ordered mixed-effect branch boundary must not merge {left}/{right}: {out}"
+        );
+    };
+
+    assert_branch_pair(
+        "mixed_loop_append_a.js",
+        "mixed_loop_append_b.js",
+        "mixed_loop_append_wrong_order.js",
+        2,
+        7,
+    );
+    assert_branch_pair(
+        "mixed_append_loop_a.py",
+        "mixed_append_loop_b.py",
+        "mixed_append_loop_wrong_temp.py",
+        2,
+        6,
+    );
+    assert_branch_pair(
+        "mixed_index_loop_a.go",
+        "mixed_index_loop_b.go",
+        "mixed_index_loop_wrong_index.go",
+        3,
+        8,
+    );
+
+    assert_no_branch_pair(
+        "mixed_loop_append_a.js",
+        "mixed_loop_append_wrong_order.js",
+        2,
+        7,
+        2,
+        7,
+    );
+    assert_no_branch_pair(
+        "mixed_loop_append_a.js",
+        "mixed_loop_append_wrong_receiver.js",
+        2,
+        7,
+        2,
+        7,
+    );
+    assert_no_branch_pair(
+        "mixed_loop_append_a.js",
+        "mixed_loop_append_mutated.js",
+        2,
+        7,
+        3,
+        8,
+    );
+    assert_no_branch_pair(
+        "mixed_loop_append_a.js",
+        "mixed_loop_append_third_effect.js",
+        2,
+        7,
+        2,
+        8,
+    );
+    assert_no_branch_pair(
+        "mixed_append_loop_a.py",
+        "mixed_append_loop_wrong_temp.py",
+        2,
+        6,
+        2,
+        6,
+    );
+    assert_no_branch_pair(
+        "mixed_append_loop_a.py",
+        "mixed_append_loop_wrong_order.py",
+        2,
+        6,
+        2,
+        6,
+    );
+    assert_no_branch_pair(
+        "mixed_index_loop_a.go",
+        "mixed_index_loop_wrong_index.go",
+        3,
+        8,
+        3,
+        8,
+    );
+    assert_no_branch_pair(
+        "mixed_index_loop_a.go",
+        "mixed_index_loop_wrong_receiver.go",
+        3,
+        8,
+        3,
+        8,
+    );
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn semantic_scan_reports_exact_safe_ordered_append_effect_branch_fragments() {
     let dir = std::env::temp_dir().join(format!(
         "nose_append_effect_order_boundary_{}",

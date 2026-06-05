@@ -5659,6 +5659,91 @@ multi-language real frontier evidence; if none is found, keep fragment work tied
 shared proof invariant and avoid opening dynamic property or arbitrary statement-window
 semantics.
 
+## Fragment batch 25: exact ordered mixed-effect branch fragments
+
+This batch continues the non-Java fragment work by opening only a mixed ordered-effect
+branch boundary. A direct conditional branch may now contain exactly one exact `ForEach`
+effect loop and exactly one direct exact effect statement. The direct effect must be an
+append effect or a non-overloadable C/Go/Java index assignment; the loop must already
+pass the existing exact loop-effect fragment root. Two-loop branches remain handled by
+the previous helper, and append-only/index-only sequences remain handled by their existing
+ordered-effect helpers.
+
+The proof invariant is deliberately compositional: no new effect semantics are invented.
+The branch sequence is accepted only when it has exactly two children, exactly one `Loop`,
+and exactly one direct `ExprStmt`/`Assign` effect item. The effect item then reuses the
+existing append/index proof, while the loop item reuses the existing iteration-dependent
+effect proof. Swapping effect order, changing the receiver, mutating the receiver before
+the branch, changing a loop temp RHS, changing a Go index expression, or adding a third
+effect remains a hard negative.
+
+The focused positives share one invariant and intentionally avoid Java:
+
+- JavaScript `ForEach` append loop followed by a direct append effect;
+- Python direct append effect followed by a temp-consumed `ForEach` append loop;
+- Go range index-assignment loop followed by a direct index assignment.
+
+Baseline evidence:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_mixed_effect_branch_fragments -- --nocapture
+baseline result before detector change: failed with 0 semantic families in the focused corpus.
+```
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-mixed-effect-1 | candidate extraction | allow exact conditional branches with exactly one exact `ForEach` effect loop plus one direct exact effect | 3 focused JS/Python/Go branch families reported as `Block` units |
+| fragment-mixed-effect-2 | hard negatives | preserve effect order, receiver identity, receiver mutation boundaries, loop temp RHS, Go index/value identity, and the two-effect cap | swapped-order, wrong-receiver, mutation, wrong-temp, wrong-index, and third-effect negatives excluded |
+| fragment-mixed-effect-3 | performance guard | require exactly one loop and one direct effect before running exact item proofs | selected/full families and locations unchanged; full candidate median 306.6ms -> 281.7ms |
+| fragment-mixed-effect-4 | regression | rerun the existing two-loop focused test to keep the previous helper boundary intact | existing ordered foreach-effect branch test pass |
+| fragment-mixed-effect-5 | release gates | run full Rust suite, clippy, release build, compact all-cross core smoke | `cargo test` pass; clippy clean; core smoke 634/634 positives and 0/1246 hard-negative false merges |
+
+Focused regressions:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_mixed_effect_branch_fragments -- --nocapture
+JS, Python, and Go ordered mixed-effect branch positives reported; swapped-order,
+wrong-receiver, mutation, wrong-temp, wrong-index, and third-effect negatives excluded.
+
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_foreach_effect_branch_fragments -- --nocapture
+Existing ordered two-loop branch positives still reported with their hard-negative boundaries.
+```
+
+Core gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+positive recall: 634/634
+hard-negative false merges: 0/1246
+```
+
+Real corpus and performance:
+
+```text
+NOSE_TIME=1 <baseline> scan prettier jest radash sympy black gorm nats-server --mode semantic --format json --top 0
+NOSE_TIME=1 target/release/nose scan prettier jest radash sympy black gorm nats-server --mode semantic --format json --top 0
+selected files: 10338
+families: 1199 before, 1199 after
+locations: 4389 before, 4389 after
+median normalize+extract over three alternating runs: 564.0ms before, 540.3ms after
+median candidates over three alternating runs: 31.3ms before, 34.6ms after
+
+NOSE_TIME=1 <baseline> scan bench/repos --mode semantic --format json --top 0
+NOSE_TIME=1 target/release/nose scan bench/repos --mode semantic --format json --top 0
+full files: 60748
+families: 7403 before, 7403 after
+locations: 32965 before, 32965 after
+median normalize+extract over three alternating runs: 3604.7ms before, 3702.1ms after
+median candidates over three alternating runs: 306.6ms before, 281.7ms after
+```
+
+The first full-corpus performance pass showed a larger normalize+extract increase, so the
+helper was narrowed from "any two exact effect items" to "exactly one loop plus exactly
+one direct effect" and the existing two-loop helper was restored separately. The final
+full-corpus normalize+extract delta is still a small watchpoint, but family/location
+counts are unchanged and the candidate stage improved. The next loop should keep
+prefiltering fragment shapes before invoking recursive exact proof helpers.
+
 ## Fragment batch 24: exact ordered foreach-effect branch fragments
 
 This batch responds to the Java-skew concern by staying on a shared non-Java
