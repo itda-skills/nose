@@ -177,7 +177,10 @@ impl<'a> Interp<'a> {
             }
             NodeKind::ExprStmt => {
                 if let Some(&e) = self.il.children(node).first() {
-                    if !self.exec_stmt_append(e, env)? && matches!(self.eval(e, env)?, Value::Err) {
+                    if let Some(flow) = self.exec_stmt_append(e, env)? {
+                        return Ok(flow);
+                    }
+                    if matches!(self.eval(e, env)?, Value::Err) {
                         return Ok(Flow::Err);
                     }
                 }
@@ -650,43 +653,54 @@ impl<'a> Interp<'a> {
     /// The Python/JS *statement* form `r.append(x)` is handled in `exec` (in-place build for
     /// a local list, effect for a parameter), not here.
     fn eval_append(&mut self, kids: &[NodeId], env: &mut FxHashMap<u32, Value>) -> R<Value> {
+        let mut xs = match kids.first() {
+            Some(&t) => match self.eval(t, env)? {
+                Value::List(xs) => xs,
+                Value::Err => return Ok(Value::Err),
+                _ => return Ok(Value::Err),
+            },
+            None => return Ok(Value::Err),
+        };
         let mut items = Vec::with_capacity(kids.len().saturating_sub(1));
         for &k in kids.iter().skip(1) {
-            items.push(self.eval(k, env)?);
+            let item = self.eval(k, env)?;
+            if matches!(item, Value::Err) {
+                return Ok(Value::Err);
+            }
+            items.push(item);
         }
-        match kids.first() {
-            Some(&t) => match self.eval(t, env)? {
-                Value::List(mut xs) => {
-                    xs.extend(items);
-                    Ok(Value::List(xs))
-                }
-                _ => Ok(Value::Null),
-            },
-            None => Ok(Value::Null),
-        }
+        xs.extend(items);
+        Ok(Value::List(xs))
     }
 
     /// A statement-level `r.append(x)` / `r.push(x)`: build `r` in place when it is a LOCAL
     /// list var (so `return r` yields the constructed list, converging with `[x for …]`);
     /// when `r` is a parameter (or non-list / non-var target) the append is a caller-visible
-    /// mutation, recorded as an effect. Returns true if `e` was an append (handled here).
-    fn exec_stmt_append(&mut self, e: NodeId, env: &mut FxHashMap<u32, Value>) -> R<bool> {
+    /// mutation, recorded as an effect. Returns `Some` if `e` was an append handled here.
+    fn exec_stmt_append(&mut self, e: NodeId, env: &mut FxHashMap<u32, Value>) -> R<Option<Flow>> {
         if self.il.kind(e) != NodeKind::Call
             || !matches!(self.il.node(e).payload, Payload::Builtin(Builtin::Append))
         {
-            return Ok(false);
+            return Ok(None);
         }
         let kids = self.il.children(e).to_vec();
         let mut items = Vec::with_capacity(kids.len().saturating_sub(1));
         for &k in kids.iter().skip(1) {
-            items.push(self.eval(k, env)?);
+            let item = self.eval(k, env)?;
+            if matches!(item, Value::Err) {
+                return Ok(Some(Flow::Err));
+            }
+            items.push(item);
         }
         if let Some(&t) = kids.first() {
             if let (NodeKind::Var, Payload::Cid(c)) = (self.il.kind(t), self.il.node(t).payload) {
+                if matches!(env.get(&c), Some(Value::Err)) {
+                    return Ok(Some(Flow::Err));
+                }
                 if !self.params.contains(&c) {
                     if let Some(Value::List(xs)) = env.get_mut(&c) {
                         xs.extend(items);
-                        return Ok(true);
+                        return Ok(Some(Flow::Normal));
                     }
                 }
             }
@@ -694,7 +708,7 @@ impl<'a> Interp<'a> {
         for a in items {
             self.effects.push(a);
         }
-        Ok(true)
+        Ok(Some(Flow::Normal))
     }
 
     fn eval_any_all_call(
@@ -1287,6 +1301,118 @@ mod tests {
         let seven = b.add(NodeKind::Lit, Payload::LitInt(7), sp, &[]);
         let handler_ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
         assert_eq!(run_try(assign, handler_ret, b, sp), Value::Int(7));
+    }
+
+    fn append_with_error_item_value() -> Value {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let list = b.add(NodeKind::Seq, Payload::None, sp, &[one]);
+        let zero = b.add(NodeKind::Lit, Payload::LitInt(0), sp, &[]);
+        let div = b.add(NodeKind::BinOp, Payload::Op(Op::Div), sp, &[one, zero]);
+        let append = b.add(
+            NodeKind::Call,
+            Payload::Builtin(Builtin::Append),
+            sp,
+            &[list, div],
+        );
+        let ret = b.add(NodeKind::Return, Payload::None, sp, &[append]);
+        let func = b.add(NodeKind::Func, Payload::None, sp, &[ret]);
+        let il = b.finish(
+            func,
+            FileMeta {
+                path: "t".into(),
+                lang: Lang::Go,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+        run_unit(&il, func, &[]).expect("run_unit").ret
+    }
+
+    #[test]
+    fn value_append_propagates_error_items() {
+        assert_eq!(append_with_error_item_value(), Value::Err);
+    }
+
+    fn statement_append_with_error_item_value() -> Value {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let var = b.add(NodeKind::Var, Payload::Cid(0), sp, &[]);
+        let empty = b.add(NodeKind::Seq, Payload::None, sp, &[]);
+        let assign = b.add(NodeKind::Assign, Payload::None, sp, &[var, empty]);
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let zero = b.add(NodeKind::Lit, Payload::LitInt(0), sp, &[]);
+        let div = b.add(NodeKind::BinOp, Payload::Op(Op::Div), sp, &[one, zero]);
+        let append = b.add(
+            NodeKind::Call,
+            Payload::Builtin(Builtin::Append),
+            sp,
+            &[var, div],
+        );
+        let append_stmt = b.add(NodeKind::ExprStmt, Payload::None, sp, &[append]);
+        let ret = b.add(NodeKind::Return, Payload::None, sp, &[var]);
+        let block = b.add(
+            NodeKind::Block,
+            Payload::None,
+            sp,
+            &[assign, append_stmt, ret],
+        );
+        let func = b.add(NodeKind::Func, Payload::None, sp, &[block]);
+        let il = b.finish(
+            func,
+            FileMeta {
+                path: "t".into(),
+                lang: Lang::Python,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+        run_unit(&il, func, &[]).expect("run_unit").ret
+    }
+
+    #[test]
+    fn statement_append_propagates_error_items() {
+        assert_eq!(statement_append_with_error_item_value(), Value::Err);
+    }
+
+    #[test]
+    fn try_handler_catches_statement_append_item_err() {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let var = b.add(NodeKind::Var, Payload::Cid(0), sp, &[]);
+        let empty = b.add(NodeKind::Seq, Payload::None, sp, &[]);
+        let assign = b.add(NodeKind::Assign, Payload::None, sp, &[var, empty]);
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let zero = b.add(NodeKind::Lit, Payload::LitInt(0), sp, &[]);
+        let div = b.add(NodeKind::BinOp, Payload::Op(Op::Div), sp, &[one, zero]);
+        let append = b.add(
+            NodeKind::Call,
+            Payload::Builtin(Builtin::Append),
+            sp,
+            &[var, div],
+        );
+        let append_stmt = b.add(NodeKind::ExprStmt, Payload::None, sp, &[append]);
+        let body = b.add(NodeKind::Block, Payload::None, sp, &[assign, append_stmt]);
+        let seven = b.add(NodeKind::Lit, Payload::LitInt(7), sp, &[]);
+        let handler_ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
+        let handler = b.add(NodeKind::Block, Payload::None, sp, &[handler_ret]);
+        let try_node = b.add(NodeKind::Try, Payload::None, sp, &[body, handler]);
+        let block = b.add(NodeKind::Block, Payload::None, sp, &[try_node]);
+        let func = b.add(NodeKind::Func, Payload::None, sp, &[block]);
+        let il = b.finish(
+            func,
+            FileMeta {
+                path: "t".into(),
+                lang: Lang::Python,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+        assert_eq!(
+            run_unit(&il, func, &[]).expect("run_unit").ret,
+            Value::Int(7)
+        );
     }
 
     #[test]
