@@ -521,6 +521,14 @@ fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         }
         "break_expression" => lo.add(NodeKind::Break, Payload::None, span, &[]),
         "continue_expression" => lo.add(NodeKind::Continue, Payload::None, span, &[]),
+        "tuple_pattern" => {
+            let kids: Vec<NodeId> = Lowering::named_children(node)
+                .into_iter()
+                .map(|c| lower_expr(lo, c))
+                .collect();
+            let tag = lo.sym("tuple_expression");
+            lo.add(NodeKind::Seq, Payload::Name(tag), span, &kids)
+        }
         "array_expression" | "tuple_expression" => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
                 .into_iter()
@@ -1163,6 +1171,18 @@ mod tests {
         assert!(
             ops.contains(&Op::Ge) && ops.contains(&Op::Le) && ops.contains(&Op::And),
             "inclusive range pattern should lower to lower/upper bound checks, got {ops:?}"
+        );
+    }
+
+    #[test]
+    fn match_tuple_pattern_lowers_without_raw() {
+        let src = "fn f(x: (i32, i32)) -> i32 { match x { (1, 2) => 7, _ => 0 } }";
+        let (interner, il) = lower_rust(src);
+
+        let raw = raw_names(&il, &interner);
+        assert!(
+            !raw.iter().any(|name| name == "tuple_pattern"),
+            "tuple match pattern should lower without Raw tuple_pattern: {raw:?}"
         );
     }
 
