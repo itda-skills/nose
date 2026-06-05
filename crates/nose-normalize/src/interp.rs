@@ -732,6 +732,9 @@ impl<'a> Interp<'a> {
                 Some(&l) => self.apply(l, &[x], env)?,
                 None => x,
             };
+            if matches!(v, Value::Err) {
+                return Ok(Value::Err);
+            }
             let t = truthy(&v);
             // short-circuit: `any` stops at the first truthy, `all` at the first falsy.
             if all != t {
@@ -857,7 +860,9 @@ impl<'a> Interp<'a> {
         let body = *kids.last().ok_or(Unsupported)?;
         match self.exec(body, &mut local)? {
             Flow::Ret(v) => Ok(v),
-            _ => Ok(Value::Null),
+            Flow::Err => Ok(Value::Err),
+            Flow::Normal => Ok(Value::Null),
+            Flow::Break | Flow::Continue => Err(Unsupported),
         }
     }
 }
@@ -1480,6 +1485,44 @@ mod tests {
             Vec::new(),
         );
         assert_eq!(run_unit(&il, func, &[]).expect("run_unit").ret, Value::Err);
+    }
+
+    fn run_any_all_with_error_predicate(all: bool) -> Value {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let param = b.add(NodeKind::Param, Payload::Cid(0), sp, &[]);
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let zero = b.add(NodeKind::Lit, Payload::LitInt(0), sp, &[]);
+        let div = b.add(NodeKind::BinOp, Payload::Op(Op::Div), sp, &[one, zero]);
+        let lambda_ret = b.add(NodeKind::Return, Payload::None, sp, &[div]);
+        let lambda_body = b.add(NodeKind::Block, Payload::None, sp, &[lambda_ret]);
+        let lambda = b.add(NodeKind::Lambda, Payload::None, sp, &[param, lambda_body]);
+        let coll = b.add(NodeKind::Seq, Payload::None, sp, &[one]);
+        let builtin = if all { Builtin::All } else { Builtin::Any };
+        let call = b.add(
+            NodeKind::Call,
+            Payload::Builtin(builtin),
+            sp,
+            &[coll, lambda],
+        );
+        let ret = b.add(NodeKind::Return, Payload::None, sp, &[call]);
+        let func = b.add(NodeKind::Func, Payload::None, sp, &[ret]);
+        let il = b.finish(
+            func,
+            FileMeta {
+                path: "t".into(),
+                lang: Lang::Python,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+        run_unit(&il, func, &[]).expect("run_unit").ret
+    }
+
+    #[test]
+    fn any_all_predicate_err_propagates() {
+        assert_eq!(run_any_all_with_error_predicate(false), Value::Err);
+        assert_eq!(run_any_all_with_error_predicate(true), Value::Err);
     }
 
     /// Build `fn() { return base ** exp }` over integer literals and run it.
