@@ -5296,6 +5296,71 @@ This batch improves focused unit-fragment coverage but did not close an evidence
 real-corpus miss. The next batch should prefer a real frontier with measurable corpus delta,
 or tighten/retire fragment predicates if performance accumulates without practical recall.
 
+## Real-corpus C u32 unsigned-cast byte-pack: batch 2026-06-06
+
+This batch was selected to correct the recent Java-heavy skew in the real frontier work.
+Several non-Java repos were audited first. MinIO, RuboCop, SQLAlchemy, Scrapy, Nushell,
+and Poetry had no structurally-near verify leads worth closing in this pass. SymPy
+produced a near lead in `convolutions.py`, but inspection showed it was not a strict
+Type-4 clone. The actionable non-Java frontier was SQLite C byte unpacking, where several
+functions build the same big-endian u32 value with an explicitly unsigned high-lane cast.
+
+The proof invariant is intentionally narrow: for C only, exactly four byte-buffer lanes
+from the same proven byte-array base at indexes 0, 1, 2, and 3 must be combined with
+shifts 24, 16, 8, and 0, and the high lane must carry a proven unsigned 32-bit cast.
+Accepted cast proofs are `unsigned`, `unsigned int`, `uint32_t`, or a same-file/direct
+local include typedef such as `typedef unsigned int u32`. Uncasted high lanes, wrong byte
+order, signed aliases, and non-byte receivers remain hard negatives.
+
+Closed selected real candidates:
+
+- `bench/repos/sqlite/ext/fts5/fts5_index.c:737`
+- `bench/repos/sqlite/ext/recover/dbdata.c:347`
+- `bench/repos/sqlite/ext/recover/sqlite3recover.c:2086`
+
+The adjacent hard-negative sibling `bench/repos/sqlite/ext/misc/btreeinfo.c:272` remains
+unmerged because its high lane is uncasted. This closes the cast-proven subset only; it
+does not claim that every u32 unpacking idiom is semantically safe to merge.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| real-c-u32-1 | frontier selection | pivot to a non-Java C frontier after auditing several Python/Ruby/Go/Rust repos | SQLite had a concrete evidence-backed u32 byte-pack miss; SymPy lead was unsupported |
+| real-c-u32-2 | frontend proof facts | preserve `UnsignedCast32` only for subscript-like byte-lane casts and record narrow unsigned 32-bit aliases | generic `(u32)field` casts still peel; byte-lane casts remain explicit proof facts |
+| real-c-u32-3 | value-graph canon | canonicalize four-lane big-endian u32 packs only under the shared byte-buffer/cast invariant | selected real scan reports the 3-copy cast-proven SQLite family |
+| real-c-u32-4 | hard negatives | add uncasted high-lane, wrong order, wrong byte, signed alias, and non-byte receiver boundaries | focused gate: 3/3 positives, 0/7 hard-negative false merges |
+| real-c-u32-5 | real corpus delta | compare selected SQLite files, whole SQLite, and full `bench/repos` before/after | selected locations 9 -> 10; full families 7431 -> 7432, locations 33086 -> 33086 |
+| real-c-u32-6 | performance | run release `NOSE_TIME=1` scans on selected files, SQLite, and full corpus | full candidate path 341.8ms -> 357.6ms; SQLite candidate path 15.6ms -> 115.7ms, watch next batch |
+| real-c-u32-7 | release gates | run full suite, clippy, docs lint, focused/axis/core smoke, JSON and whitespace checks | `cargo test` pass; clippy clean; focused and axis gates 3/3, 0/7; core gate 629/629, 0/1240 |
+
+Real selected verify:
+
+```text
+target/debug/nose verify <selected SQLite files> --max-violations 0
+SOUND; false merges 0; completeness 13/16
+remaining under-merged group: fts5_index.c:737 ↮ btreeinfo.c:272
+```
+
+Required release gates:
+
+```text
+GATE=focused PROPOSAL_PREFIX=axis_c_u32_be_byte_pack_ CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+positive recall: 3/3
+hard-negative false merges: 0/7
+
+GATE=core AXIS=c_u32_be_byte_pack CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+positive recall: 3/3
+hard-negative false merges: 0/7
+
+GATE=core CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+positive recall: 629/629
+hard-negative false merges: 0/1240
+```
+
+The next frontier should stay non-Java unless a Java lead clearly dominates on
+evidence/cost. Good follow-up axes are C byte-pack variants with explicit proof facts,
+Python/Ruby small pure-call idioms, or Go/Rust collection idioms with adjacent
+hard-negative siblings.
+
 ## Fragment batch 7: exact conditional expression-effect fragments
 
 This batch reuses the existing exact single-statement `ExprStmt` predicate inside

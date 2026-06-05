@@ -7,8 +7,8 @@
 
 use crate::lower::{common_bin_op, Lowering};
 use nose_il::{
-    FileId, Il, Interner, Lang, LitClass, LoopKind, NodeId, NodeKind, Op, ParamSemantic, Payload,
-    UnitKind,
+    Builtin, FileId, Il, Interner, Lang, LitClass, LoopKind, NodeId, NodeKind, Op, ParamSemantic,
+    Payload, UnitKind,
 };
 use std::{fs, path::Path};
 use tree_sitter::Node as TsNode;
@@ -38,7 +38,12 @@ fn record_c_direct_include_type_aliases(path: &str, src: &[u8], lo: &mut Lowerin
     let Ok(source) = std::str::from_utf8(src) else {
         return;
     };
-    if !contains_c_identifier(source, "u8") || !c_source_may_contain_u16_byte_pack(source) {
+    let needs_byte_alias = contains_c_identifier(source, "u8")
+        && (c_source_may_contain_u16_byte_pack(source)
+            || c_source_may_contain_u32_byte_pack(source));
+    let needs_unsigned_32_alias =
+        contains_c_identifier(source, "u32") && c_source_may_contain_u32_byte_pack(source);
+    if !needs_byte_alias && !needs_unsigned_32_alias {
         return;
     }
     let Some(dir) = Path::new(path).parent() else {
@@ -62,9 +67,18 @@ fn record_c_direct_include_type_aliases(path: &str, src: &[u8], lo: &mut Lowerin
             continue;
         };
         for header_line in header_text.lines() {
-            if let Some(alias) = c_unsigned_char_typedef_alias(header_line) {
-                if contains_c_identifier(source, &alias) {
-                    lo.record_param_semantic_alias(&alias, ParamSemantic::ByteArray);
+            if needs_byte_alias {
+                if let Some(alias) = c_unsigned_char_typedef_alias(header_line) {
+                    if contains_c_identifier(source, &alias) {
+                        lo.record_param_semantic_alias(&alias, ParamSemantic::ByteArray);
+                    }
+                }
+            }
+            if needs_unsigned_32_alias {
+                if let Some(alias) = c_unsigned_32_typedef_alias(header_line) {
+                    if contains_c_identifier(source, &alias) {
+                        lo.record_unsigned_32_alias(&alias);
+                    }
                 }
             }
         }
@@ -96,6 +110,14 @@ fn c_source_may_contain_u16_byte_pack(source: &str) -> bool {
     source.contains("[0]")
         && source.contains("[1]")
         && (source.contains("<<8") || source.contains("<< 8"))
+}
+
+fn c_source_may_contain_u32_byte_pack(source: &str) -> bool {
+    source.contains("[0]")
+        && source.contains("[1]")
+        && source.contains("[2]")
+        && source.contains("[3]")
+        && (source.contains("<<24") || source.contains("<< 24"))
 }
 
 fn lower_items(lo: &mut Lowering, node: TsNode) -> NodeId {
@@ -207,6 +229,9 @@ fn record_c_type_definition(lo: &mut Lowering, node: TsNode) {
     if let Some(alias) = c_unsigned_char_typedef_alias(lo.text(node)) {
         lo.record_param_semantic_alias(&alias, ParamSemantic::ByteArray);
     }
+    if let Some(alias) = c_unsigned_32_typedef_alias(lo.text(node)) {
+        lo.record_unsigned_32_alias(&alias);
+    }
 }
 
 fn c_unsigned_char_typedef_alias(text: &str) -> Option<String> {
@@ -218,6 +243,18 @@ fn c_unsigned_char_typedef_alias(text: &str) -> Option<String> {
     } else {
         None
     }
+}
+
+fn c_unsigned_32_typedef_alias(text: &str) -> Option<String> {
+    let tokens = c_identifier_tokens(text);
+    let token_refs: Vec<&str> = tokens.iter().map(String::as_str).collect();
+    let alias = match token_refs.as_slice() {
+        ["typedef", "unsigned", "int", alias] => Some(alias),
+        ["typedef", "unsigned", alias] => Some(alias),
+        ["typedef", "uint32_t", alias] => Some(alias),
+        _ => None,
+    }?;
+    is_c_identifier(alias).then(|| alias.to_string())
 }
 
 fn c_param_semantic_from_text(lo: &Lowering, text: &str) -> Option<ParamSemantic> {
@@ -503,8 +540,11 @@ fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             };
             lo.add(NodeKind::UnOp, Payload::Op(op), span, &[operand])
         }
-        // `*p`, `&x` pointer ops, and casts peel to the operand
-        "pointer_expression" | "cast_expression" | "parenthesized_expression" => node
+        // `*p`, `&x` pointer ops, and parentheses peel to the operand. Most casts keep
+        // the historical behavior too, but explicit unsigned 32-bit casts are proof facts
+        // for C byte-pack shifts such as `((u32)a[0]) << 24`.
+        "cast_expression" => lower_cast(lo, node),
+        "pointer_expression" | "parenthesized_expression" => node
             .child_by_field_name("argument")
             .or_else(|| node.child_by_field_name("value"))
             .or_else(|| node.named_child(node.named_child_count().saturating_sub(1)))
@@ -649,6 +689,52 @@ fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
                 .collect();
             lo.raw(node.kind(), span, &kids)
         }
+    }
+}
+
+fn lower_cast(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let value = node
+        .child_by_field_name("argument")
+        .or_else(|| node.child_by_field_name("value"))
+        .or_else(|| node.named_child(node.named_child_count().saturating_sub(1)));
+    let lowered = value
+        .map(|c| lower_expr(lo, c))
+        .unwrap_or_else(|| lo.empty_block(span));
+    let cast_ty = node
+        .child_by_field_name("type")
+        .map(|ty| lo.text(ty))
+        .unwrap_or("");
+    if c_unsigned_32_cast_type(lo, cast_ty) && value.is_some_and(c_cast_operand_may_be_byte_lane) {
+        lo.add(
+            NodeKind::Call,
+            Payload::Builtin(Builtin::UnsignedCast32),
+            span,
+            &[lowered],
+        )
+    } else {
+        lowered
+    }
+}
+
+fn c_unsigned_32_cast_type(lo: &Lowering, text: &str) -> bool {
+    let mut compact = compact_c_type_text(text);
+    for qualifier in ["const", "volatile", "restrict"] {
+        compact = compact.replace(qualifier, "");
+    }
+    matches!(compact.as_str(), "unsigned" | "unsignedint" | "uint32_t")
+        || lo.unsigned_32_aliases.contains(&compact)
+}
+
+fn c_cast_operand_may_be_byte_lane(node: TsNode) -> bool {
+    match node.kind() {
+        "subscript_expression" => true,
+        "parenthesized_expression" | "pointer_expression" => node
+            .child_by_field_name("argument")
+            .or_else(|| node.child_by_field_name("value"))
+            .or_else(|| node.named_child(node.named_child_count().saturating_sub(1)))
+            .is_some_and(c_cast_operand_may_be_byte_lane),
+        _ => false,
     }
 }
 

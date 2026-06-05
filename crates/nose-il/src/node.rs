@@ -281,6 +281,10 @@ pub enum Builtin {
     IsNotNull,
     /// Ordered string join over `(separator, collection)`.
     Join,
+    /// C unsigned 32-bit cast proof over one numeric value. This is emitted only when
+    /// the C frontend sees an explicit unsigned 32-bit cast; it is not a general
+    /// language-agnostic conversion.
+    UnsignedCast32,
 }
 
 /// Kinds of canonical higher-order operation.

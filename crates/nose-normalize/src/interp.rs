@@ -589,6 +589,10 @@ impl<'a> Interp<'a> {
                 Some(Value::Int(v)) => Ok(Value::Int(v.abs())),
                 _ => Ok(Value::Err),
             },
+            Builtin::UnsignedCast32 => match args.first() {
+                Some(Value::Int(v)) => Ok(Value::Int(v.rem_euclid(1_i64 << 32))),
+                _ => Ok(Value::Err),
+            },
             Builtin::Sum => Ok(fold_ints(args.first(), 0, |a, x| a + x)),
             Builtin::Min => Ok(fold_opt(args.first(), |a, x| a.min(x))),
             Builtin::Max => Ok(fold_opt(args.first(), |a, x| a.max(x))),

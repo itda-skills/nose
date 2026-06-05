@@ -16,6 +16,7 @@ pub(crate) struct Lowering<'a> {
     pub units: Vec<Unit>,
     pub param_type_facts: Vec<ParamTypeFact>,
     pub param_semantic_aliases: Vec<(String, ParamSemantic)>,
+    pub unsigned_32_aliases: Vec<String>,
 }
 
 impl<'a> Lowering<'a> {
@@ -27,6 +28,7 @@ impl<'a> Lowering<'a> {
             units: Vec::new(),
             param_type_facts: Vec::new(),
             param_semantic_aliases: Vec::new(),
+            unsigned_32_aliases: Vec::new(),
         }
     }
 
@@ -87,6 +89,14 @@ impl<'a> Lowering<'a> {
         }
         self.param_semantic_aliases
             .retain(|(known, _)| known != &alias);
+    }
+
+    pub(crate) fn record_unsigned_32_alias(&mut self, local: &str) {
+        let alias = normalize_type_text(local);
+        if alias.is_empty() || self.unsigned_32_aliases.iter().any(|known| known == &alias) {
+            return;
+        }
+        self.unsigned_32_aliases.push(alias);
     }
 
     pub(crate) fn param_semantic_from_text(&self, text: &str) -> Option<ParamSemantic> {

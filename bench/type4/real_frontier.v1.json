@@ -605,6 +605,55 @@
       ],
       "batch": "2026-06-06-c-u16-include-typedef",
       "notes": "The include-header u8 miss is closed without a general preprocessor: C lowering only reads same-directory quote includes for byte-pack-shaped sources and records single-line typedef unsigned char aliases from small headers. The 32-bit get_uint32/recoverGetU32 pair remains unsupported because uncasted signed left shifts can overflow or enter undefined behavior."
+    },
+    {
+      "case_id": "c-u32-byte-pack-sqlite-unsigned-cast-decode",
+      "status": "closed",
+      "candidate_axis": "c_u32_be_byte_pack",
+      "repo": "sqlite",
+      "language": "c",
+      "locations": [
+        {
+          "path": "ext/recover/dbdata.c",
+          "span": "347-352",
+          "snippet": "static u32 get_uint32(unsigned char *a) { return ((u32)a[0]<<24) | ((u32)a[1]<<16) | ((u32)a[2]<<8) | ((u32)a[3]); }"
+        },
+        {
+          "path": "ext/fts5/fts5_index.c",
+          "span": "737-742",
+          "snippet": "static u32 fts5GetU32(const u8 *a) { return ((u32)a[0] << 24) + ((u32)a[1] << 16) + ((u32)a[2] << 8) + ((u32)a[3] << 0); }"
+        },
+        {
+          "path": "ext/recover/sqlite3recover.c",
+          "span": "2086-2088",
+          "snippet": "static u32 recoverGetU32(const u8 *a) { return (((u32)a[0])<<24) + (((u32)a[1])<<16) + (((u32)a[2])<<8) + ((u32)a[3]); }"
+        },
+        {
+          "path": "ext/misc/btreeinfo.c",
+          "span": "272-274",
+          "snippet": "static unsigned int get_uint32(unsigned char *a) { return (a[0]<<24)|(a[1]<<16)|(a[2]<<8)|a[3]; }",
+          "role": "hard-negative sibling: uncasted high lane remains unmerged"
+        }
+      ],
+      "semantic_claim": "The first three helpers decode the same big-endian unsigned 32-bit value from four byte lanes over a proven byte buffer, with an explicit unsigned 32-bit cast on the high byte lane before shifting by 24. The uncasted btreeinfo helper is behaviorally similar in the oracle battery but is not accepted as strict semantic proof because C signed left shift may overflow or be undefined.",
+      "evidence": "Baseline selected scan split or mixed the u32 helpers: dbdata.c:347 was paired with uncasted btreeinfo.c:272, while fts5_index.c:737 and sqlite3recover.c:2086 did not form the strict cast-proven family. Candidate selected scan reports a 3-copy family containing fts5_index.c:737, dbdata.c:347, and sqlite3recover.c:2086; btreeinfo.c:272 stays outside. Candidate selected verify is SOUND with 0 false merges and leaves only the intended uncasted btreeinfo under-merge at vj=0.24.",
+      "detector": {
+        "current_detector_miss": false,
+        "baseline_command": "NOSE_TIME=1 target/release/nose scan ext/recover/sqlite3recover.c ext/recover/dbdata.c ext/rtree/rtree.c ext/fts5/fts5_index.c ext/misc/btreeinfo.c --mode semantic --format json --top 0 before rebuilding release",
+        "baseline_result": "Selected baseline had no cast-proven 3-copy u32 family and included dbdata.c:347 with uncasted btreeinfo.c:272 in a smaller family.",
+        "candidate_result": "target/release/nose scan over the same selected files reports the 3-copy cast-proven u32 family fts5_index.c:737, dbdata.c:347, sqlite3recover.c:2086; verify over the selected files reports SOUND, completeness 13/16, and 1 intended under-merged uncasted group."
+      },
+      "proof_invariant": "In C only, the receiver must be a proven byte buffer (`unsigned char *`, `uint8_t *`, same-file `typedef unsigned char u8`, or same-directory direct quote include proving that alias). A 32-bit unsigned cast proof must be explicit in source for the high lane: direct `unsigned`/`unsigned int`/`uint32_t` cast, or `u32` only when a same-file/direct local include proves `typedef unsigned int u32`. The four lanes must be the same base pointer at indices 0, 1, 2, and 3 with shifts 24, 16, 8, and 0 respectively, combined only with `+` or `|`.",
+      "hard_negative_siblings": [
+        "uncasted high lane such as `(a[0] << 24)` even when the receiver is `unsigned char *`",
+        "swapped byte order such as `((u32)a[1] << 24) | ((u32)a[0] << 16) | ...`",
+        "wrong byte coordinate or duplicate lane",
+        "`typedef signed int u32` or missing/unread include for the `u32` cast alias",
+        "non-byte receiver such as `int *a`",
+        "32-bit little-endian or mixed-endian packing, which is a separate semantic axis"
+      ],
+      "batch": "2026-06-06-c-u32-unsigned-cast-byte-pack",
+      "notes": "Selected to correct Java skew with a non-Java real-corpus batch. The change also tightens soundness by keeping uncasted C high-lane shifts out of strict semantic proof."
     }
   ]
 }

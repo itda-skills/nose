@@ -3600,6 +3600,70 @@ unsigned int q(const int *a) {
 }
 
 #[test]
+fn c_u32_big_endian_byte_pack_requires_unsigned_high_lane() {
+    let i = Interner::new();
+    let add_casted_alias = r#"
+typedef unsigned char u8;
+typedef unsigned int u32;
+u32 f(const u8 *a) {
+    return (((u32)a[0]) << 24) + (((u32)a[1]) << 16) + (((u32)a[2]) << 8) + ((u32)a[3]);
+}
+"#;
+    let or_casted_alias = r#"
+typedef unsigned char u8;
+typedef unsigned int u32;
+u32 g(u8 *a) {
+    return ((u32)a[0] << 24) | ((u32)a[1] << 16) | ((u32)a[2] << 8) | ((u32)a[3]);
+}
+"#;
+    let unsigned_int_cast = r#"
+unsigned int h(unsigned char *a) {
+    return ((unsigned int)a[0] << 24) + ((unsigned int)a[1] << 16) + ((unsigned int)a[2] << 8) + (unsigned int)a[3];
+}
+"#;
+    let high_lane_uncasted = r#"
+typedef unsigned char u8;
+typedef unsigned int u32;
+u32 u(const u8 *a) {
+    return (a[0] << 24) | (a[1] << 16) | (a[2] << 8) | a[3];
+}
+"#;
+    let wrong_order = r#"
+typedef unsigned char u8;
+typedef unsigned int u32;
+u32 r(const u8 *a) {
+    return ((u32)a[1] << 24) | ((u32)a[0] << 16) | ((u32)a[2] << 8) | ((u32)a[3]);
+}
+"#;
+    let wrong_alias = r#"
+typedef unsigned char u8;
+typedef signed int u32;
+u32 s(const u8 *a) {
+    return ((u32)a[0] << 24) | ((u32)a[1] << 16) | ((u32)a[2] << 8) | ((u32)a[3]);
+}
+"#;
+    let int_pointer = r#"
+typedef unsigned int u32;
+u32 q(const int *a) {
+    return ((u32)a[0] << 24) | ((u32)a[1] << 16) | ((u32)a[2] << 8) | ((u32)a[3]);
+}
+"#;
+
+    let fp = value_fp(&i, add_casted_alias, Lang::C);
+    assert!(
+        fp.len() >= 4,
+        "C u32 byte-pack fingerprint must stay large enough for exact scan buckets: {} atoms",
+        fp.len()
+    );
+    assert_eq!(fp, value_fp(&i, or_casted_alias, Lang::C));
+    assert_eq!(fp, value_fp(&i, unsigned_int_cast, Lang::C));
+    assert_ne!(fp, value_fp(&i, high_lane_uncasted, Lang::C));
+    assert_ne!(fp, value_fp(&i, wrong_order, Lang::C));
+    assert_ne!(fp, value_fp(&i, wrong_alias, Lang::C));
+    assert_ne!(fp, value_fp(&i, int_pointer, Lang::C));
+}
+
+#[test]
 fn value_graph_cross_language_reorder() {
     // Same computation, different statement order, different language.
     let i = Interner::new();

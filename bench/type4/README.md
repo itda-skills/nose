@@ -40,7 +40,7 @@ By default the generator emits:
   literal map-default lookup, map key-membership predicates,
   null/none/nil/option presence predicates including Rust
   option-pattern predicates, scalar absolute-value and min/max idioms, and
-  C total-order three-way comparator guard/ternary forms, C byte-buffer u16
+  C total-order three-way comparator guard/ternary forms, C byte-buffer u16/u32
   big-endian packing, and Java statically-false loop-entry guard and low-bit toggle forms, plus
   unsafe/unproven binding boundaries;
 - a ring of cross-language positive pairs and cross-template hard negatives so every

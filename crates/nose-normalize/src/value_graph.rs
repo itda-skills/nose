@@ -4451,6 +4451,60 @@ impl<'a> Builder<'a> {
         None
     }
 
+    fn c_u32_be_byte_pack_pattern(&mut self, operands: &[ValueId]) -> Option<ValueId> {
+        if self.il.meta.lang != Lang::C || operands.len() != 4 {
+            return None;
+        }
+        let mut base = None;
+        let mut seen = [false; 4];
+        for &operand in operands {
+            let (lane_base, index, shift, unsigned_cast) = self.c_u32_byte_pack_lane(operand)?;
+            if Some(lane_base) != base {
+                if base.is_some() {
+                    return None;
+                }
+                base = Some(lane_base);
+            }
+            let expected_shift = (3u8.checked_sub(index)? as i64) * 8;
+            if shift != expected_shift {
+                return None;
+            }
+            if index == 0 && !unsigned_cast {
+                return None;
+            }
+            if seen[index as usize] {
+                return None;
+            }
+            seen[index as usize] = true;
+        }
+        if !seen.iter().all(|seen| *seen) {
+            return None;
+        }
+        let base = base?;
+        if !self.is_byte_array_param_value(base) {
+            return None;
+        }
+        let zero = self.int_const(0);
+        let one = self.int_const(1);
+        let two = self.int_const(2);
+        let three = self.int_const(3);
+        Some(self.mk(
+            ValOp::Call(C_U32_BE_BYTE_PACK_CODE),
+            vec![base, zero, one, two, three],
+        ))
+    }
+
+    fn c_u32_byte_pack_lane(&self, value: ValueId) -> Option<(ValueId, u8, i64, bool)> {
+        let node = &self.nodes[value as usize];
+        if matches!(node.op, ValOp::Bin(o) if o == Op::Shl as u32) && node.args.len() == 2 {
+            let shift = self.int_const_value(node.args[1])?;
+            let (base, index, unsigned_cast) = self.byte_lane_with_unsigned_cast(node.args[0])?;
+            return Some((base, index, shift, unsigned_cast));
+        }
+        let (base, index, unsigned_cast) = self.byte_lane_with_unsigned_cast(value)?;
+        Some((base, index, 0, unsigned_cast))
+    }
+
     fn shifted_byte_lane(&self, value: ValueId) -> Option<(ValueId, u8)> {
         let node = &self.nodes[value as usize];
         if !matches!(node.op, ValOp::Bin(o) if o == Op::Shl as u32) || node.args.len() != 2 {
@@ -4463,6 +4517,27 @@ impl<'a> Builder<'a> {
     }
 
     fn byte_lane(&self, value: ValueId) -> Option<(ValueId, u8)> {
+        let (base, index, _) = self.byte_lane_with_unsigned_cast(value)?;
+        if index <= 1 {
+            Some((base, index))
+        } else {
+            None
+        }
+    }
+
+    fn byte_lane_with_unsigned_cast(&self, value: ValueId) -> Option<(ValueId, u8, bool)> {
+        let node = &self.nodes[value as usize];
+        if matches!(node.op, ValOp::Call(tag) if tag == Builtin::UnsignedCast32 as u32 + 1)
+            && node.args.len() == 1
+        {
+            let (base, index, _) = self.byte_lane_with_unsigned_cast(node.args[0])?;
+            return Some((base, index, true));
+        }
+        self.byte_lane_any_index(value)
+            .map(|(base, index)| (base, index, false))
+    }
+
+    fn byte_lane_any_index(&self, value: ValueId) -> Option<(ValueId, u8)> {
         let node = &self.nodes[value as usize];
         if !matches!(node.op, ValOp::Index) || node.args.len() != 2 {
             return None;
@@ -4471,6 +4546,10 @@ impl<'a> Builder<'a> {
             Some((node.args[0], 0))
         } else if self.int_const_eq(node.args[1], 1) {
             Some((node.args[0], 1))
+        } else if self.int_const_eq(node.args[1], 2) {
+            Some((node.args[0], 2))
+        } else if self.int_const_eq(node.args[1], 3) {
+            Some((node.args[0], 3))
         } else {
             None
         }
@@ -4487,8 +4566,14 @@ impl<'a> Builder<'a> {
     }
 
     fn int_const_eq(&self, value: ValueId, expected: i64) -> bool {
-        let expected_key = 0x1000_0000u32.wrapping_add(expected as u32);
-        matches!(self.nodes[value as usize].op, ValOp::Const(key) if key == expected_key)
+        self.int_const_value(value) == Some(expected)
+    }
+
+    fn int_const_value(&self, value: ValueId) -> Option<i64> {
+        let ValOp::Const(key) = self.nodes[value as usize].op else {
+            return None;
+        };
+        Some(key.wrapping_sub(0x1000_0000) as i32 as i64)
     }
 
     /// An integer-literal value, keyed identically to `eval`'s `LitInt` path so a
@@ -5777,6 +5862,9 @@ impl<'a> Builder<'a> {
                             let v = self.eval(k, env);
                             self.flatten_into(v, op, &mut operands);
                         }
+                        if let Some(v) = self.c_u32_be_byte_pack_pattern(&operands) {
+                            return v;
+                        }
                         let do_sort = op != Op::Add as u32
                             || operands.iter().all(|&v| !is_concat_ty(self.vty(v)));
                         if do_sort {
@@ -5789,6 +5877,9 @@ impl<'a> Builder<'a> {
                     for k in kids {
                         let v = self.eval(k, env);
                         self.flatten_into(v, op, &mut operands);
+                    }
+                    if let Some(v) = self.c_u32_be_byte_pack_pattern(&operands) {
+                        return v;
                     }
                     let do_sort = op != Op::Add as u32
                         || operands.iter().all(|&v| !is_concat_ty(self.vty(v)));
@@ -6400,6 +6491,7 @@ const MIN_CODE: u32 = 0x319;
 const MAX_CODE: u32 = 0x32A;
 const JS_PROTOTYPE_IN_CODE: u32 = 0x4A53_494E;
 const C_U16_BE_BYTE_PACK_CODE: u32 = 0x4331_3642;
+const C_U32_BE_BYTE_PACK_CODE: u32 = 0x4333_3242;
 const OWN_PROPERTY_GUARD_SEQ_TAG: u64 = 8;
 
 /// A selection reduction (min/max) keeps no additive/multiplicative identity, so its

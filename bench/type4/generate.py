@@ -331,6 +331,34 @@ AXIS_PROPOSALS = {
         "axis": "c_u16_be_byte_pack",
         "why": "A C `u8` spelling is not a byte-buffer proof unless the same file proves it aliases unsigned char.",
     },
+    "axis_c_u32_be_byte_pack_unsigned_alias_identity": {
+        "axis": "c_u32_be_byte_pack",
+        "why": "A proven C byte-buffer plus unsigned 32-bit cast can safely canonicalize 4-lane big-endian addition and bitwise-or forms.",
+    },
+    "axis_c_u32_be_byte_pack_unsigned_int_identity": {
+        "axis": "c_u32_be_byte_pack",
+        "why": "A direct `unsigned int` cast on byte lanes is an explicit proof for the high 32-bit big-endian lane shift.",
+    },
+    "axis_c_u32_be_byte_pack_uint8_identity": {
+        "axis": "c_u32_be_byte_pack",
+        "why": "A `uint8_t *` byte-buffer proof should support unsigned-cast 32-bit big-endian lane packing.",
+    },
+    "axis_c_u32_be_byte_pack_uncasted_high_boundary": {
+        "axis": "c_u32_be_byte_pack",
+        "why": "An uncasted C high byte lane shifted by 24 is not accepted because signed left shift can overflow or be undefined.",
+    },
+    "axis_c_u32_be_byte_pack_wrong_order_boundary": {
+        "axis": "c_u32_be_byte_pack",
+        "why": "Swapping decoded bytes changes the 32-bit big-endian value and must not merge.",
+    },
+    "axis_c_u32_be_byte_pack_wrong_byte_boundary": {
+        "axis": "c_u32_be_byte_pack",
+        "why": "The 32-bit byte-pack proof fixes all four byte coordinates.",
+    },
+    "axis_c_u32_be_byte_pack_wrong_alias_boundary": {
+        "axis": "c_u32_be_byte_pack",
+        "why": "A `u32` spelling is not an unsigned-cast proof unless the same file or direct include proves it aliases unsigned int.",
+    },
     "axis_own_property_hasown_identity": {
         "axis": "own_property_guard",
         "why": "Object.hasOwn and Object.prototype.hasOwnProperty.call prove the same own-property presence check.",
@@ -2439,6 +2467,10 @@ def c_u16_be_byte_pack_axis_supported(surface: Surface, proposal_id: str) -> boo
     return proposal_id.startswith("axis_c_u16_be_byte_pack_") and surface.key == "c"
 
 
+def c_u32_be_byte_pack_axis_supported(surface: Surface, proposal_id: str) -> bool:
+    return proposal_id.startswith("axis_c_u32_be_byte_pack_") and surface.key == "c"
+
+
 def axis_java_dead_loop_variant(
     surface: Surface,
     proposal_id: str,
@@ -2570,6 +2602,46 @@ def axis_c_u16_be_byte_pack_variant(
         elif proposal_id == "axis_c_u16_be_byte_pack_unproven_alias_boundary":
             typedef = "typedef unsigned short u8;\n"
             param = "const u8 *a"
+
+    src = f"""{typedef}unsigned int {name}({param}) {{
+    return {expr};
+}}
+"""
+    return Variant("axis", src, name)
+
+
+def axis_c_u32_be_byte_pack_variant(
+    surface: Surface,
+    proposal_id: str,
+    negative: bool,
+    right: bool,
+) -> Variant:
+    if surface.key != "c":
+        raise ValueError(f"unsupported surface for C u32 byte-pack axis: {surface.key}")
+    name = "build_case" if right else "axis_case"
+    typedef = "typedef unsigned char u8;\ntypedef unsigned int u32;\n"
+    param = "const u8 *a"
+    expr = "(((u32)a[0]) << 24) + (((u32)a[1]) << 16) + (((u32)a[2]) << 8) + ((u32)a[3])"
+    if right:
+        expr = "((u32)a[0] << 24) | ((u32)a[1] << 16) | ((u32)a[2] << 8) | ((u32)a[3])"
+        if proposal_id == "axis_c_u32_be_byte_pack_unsigned_int_identity" and not negative:
+            typedef = ""
+            param = "unsigned char *a"
+            expr = "((unsigned int)a[0] << 24) + ((unsigned int)a[1] << 16) + ((unsigned int)a[2] << 8) + (unsigned int)a[3]"
+        elif proposal_id == "axis_c_u32_be_byte_pack_uint8_identity" and not negative:
+            typedef = ""
+            param = "const uint8_t *a"
+            expr = "((uint32_t)a[0] << 24) | ((uint32_t)a[1] << 16) | ((uint32_t)a[2] << 8) | ((uint32_t)a[3])"
+        elif proposal_id == "axis_c_u32_be_byte_pack_uncasted_high_boundary":
+            expr = "(a[0] << 24) | (a[1] << 16) | (a[2] << 8) | a[3]"
+        elif proposal_id == "axis_c_u32_be_byte_pack_wrong_order_boundary":
+            expr = "((u32)a[1] << 24) | ((u32)a[0] << 16) | ((u32)a[2] << 8) | ((u32)a[3])"
+        elif proposal_id == "axis_c_u32_be_byte_pack_wrong_byte_boundary":
+            expr = "((u32)a[0] << 24) | ((u32)a[1] << 16) | ((u32)a[3] << 8) | ((u32)a[2])"
+        elif proposal_id == "axis_c_u32_be_byte_pack_wrong_alias_boundary":
+            typedef = "typedef unsigned char u8;\ntypedef signed int u32;\n"
+        elif negative:
+            expr = "((u32)a[0] << 24) | ((u32)a[1] << 16) | ((u32)a[3] << 8) | ((u32)a[2])"
 
     src = f"""{typedef}unsigned int {name}({param}) {{
     return {expr};
@@ -7463,6 +7535,11 @@ def axis_variants(
             axis_c_u16_be_byte_pack_variant(surface, proposal_id, False, False),
             axis_c_u16_be_byte_pack_variant(surface, proposal_id, negative, True),
         )
+    if axis == "c_u32_be_byte_pack":
+        return (
+            axis_c_u32_be_byte_pack_variant(surface, proposal_id, False, False),
+            axis_c_u32_be_byte_pack_variant(surface, proposal_id, negative, True),
+        )
     if axis == "immutable_binding":
         return (
             axis_immutable_binding_variant(surface, False, False),
@@ -7514,6 +7591,7 @@ def axis_data_shape(axis: str) -> str:
         "java_statically_false_loop": "java-array-scan",
         "java_integer_low_bit_toggle": "java-int-edge-key",
         "c_u16_be_byte_pack": "c-byte-buffer",
+        "c_u32_be_byte_pack": "c-byte-buffer",
     }.get(axis, "scalar<int>")
 
 
@@ -8360,6 +8438,10 @@ def generate_axis_items(
                 "axis_c_u16_be_byte_pack_"
             ) and not c_u16_be_byte_pack_axis_supported(surface, proposal_id):
                 continue
+            if proposal_id.startswith(
+                "axis_c_u32_be_byte_pack_"
+            ) and not c_u32_be_byte_pack_axis_supported(surface, proposal_id):
+                continue
             if proposal_id.startswith("axis_own_property_") and not own_property_axis_supported(
                 surface, proposal_id
             ):
@@ -8533,6 +8615,24 @@ def generate_axis_items(
                         "not_equivalent",
                         "heldout",
                         "c-u16-byte-pack-boundary",
+                    )
+                )
+                continue
+            if proposal_id in {
+                "axis_c_u32_be_byte_pack_uncasted_high_boundary",
+                "axis_c_u32_be_byte_pack_wrong_order_boundary",
+                "axis_c_u32_be_byte_pack_wrong_byte_boundary",
+                "axis_c_u32_be_byte_pack_wrong_alias_boundary",
+            }:
+                items.append(
+                    make_axis_item(
+                        out_dir,
+                        capabilities,
+                        proposal_id,
+                        surface,
+                        "not_equivalent",
+                        "heldout",
+                        "c-u32-byte-pack-boundary",
                     )
                 )
                 continue
