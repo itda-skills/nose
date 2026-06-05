@@ -10,9 +10,20 @@ another autonomous frontier loop unless the user explicitly resumes it.
 
 - Branch: `main`.
 - Last committed detector/frontier change: `0b63ad9 feat(type4): prove python module membership`.
+- This handoff is a pause marker, not a new frontier loop. No detector or generator
+  work has started after the Python module membership batch.
 - Installed baseline used for real-repo comparison: `/opt/homebrew/bin/nose`, version `0.2.0`.
 - Current candidate used for comparison: `target/release/nose`, version `0.4.0`.
 - Worktree at pause time: clean except the pre-existing untracked `.claude/` directory.
+
+The exact stop line is:
+
+```text
+loop 406 completed -> generated gates clean -> real-repo sample compared -> pause
+```
+
+There is no half-implemented frontier to finish. The next session should choose a new
+frontier deliberately instead of continuing an implied loop counter.
 
 ## Last Completed Coevolution Loop
 
@@ -64,6 +75,14 @@ to this normalized IL shape:
 
 No files were changed for that candidate. It is only a candidate note.
 
+Do not treat this as an accepted next axis. It lacks:
+
+- real-repo frequency evidence;
+- a mined positive family showing useful refactoring value;
+- hard negatives for custom `fetch`-like methods or mutated receivers;
+- a focused generated batch;
+- a before/after detector measurement.
+
 ## Real-Repo Evaluation Pass
 
 Before continuing synthetic work, a real-repo sample comparison was run as requested:
@@ -79,6 +98,9 @@ Results were written to:
 ```text
 /tmp/nose-real-compare2/summary.json
 ```
+
+The `/tmp` artifacts existed at handoff time, but they are intentionally not durable.
+If they are missing, rerun the sample before making a resume decision.
 
 Final sampled repos:
 
@@ -177,6 +199,45 @@ Examples with low refactoring value:
    Rust repos finished quickly. This should be profiled before using `clap` as a routine
    real-repo gate.
 
+6. Persist important real-repo audit outputs outside `/tmp`.
+
+   The generated benchmark artifacts can stay temporary, but real-repo deltas that affect
+   frontier selection should be copied or summarized under `bench/type4/` before pausing.
+   Otherwise the next session has to reconstruct too much context.
+
+7. Separate three kinds of success.
+
+   A loop should report them independently:
+
+   - strict-frontier coverage: generated positives found, generated hard negatives clean;
+   - product usefulness: real-repo families that a human would plausibly refactor;
+   - operational cost: scan/build/gate runtime, especially on large real repos.
+
+   Do not let a clean generated smoke hide weak real-repo usefulness or a serious runtime
+   regression.
+
+8. Prefer corpus-driven all-language axes.
+
+   Recent improvements included language-specific proof work, but the broader objective is
+   not to bias the detector toward one language family. Use
+   `bench/type4/prioritize_frontier.py` to find proof invariants that appear across the
+   pinned multi-language corpus, then implement language-specific lowerings only as needed
+   to express that common invariant.
+
+9. Keep the accelerated loop shape, but cap each batch by one invariant.
+
+   The 3-item batch shape worked for loops 392-406 because each batch shared one proof
+   invariant. Continue grouping two or three related surfaces per loop, but split the work
+   when the proof story changes. Faster batching is useful only while false-merge
+   diagnosis remains simple.
+
+10. Add a short qualitative review before merging more frontier code.
+
+    For each real-repo comparison, inspect representative added and removed families.
+    Mark each as `useful`, `low-value`, `unsafe/removed`, or `unclear`. A strict detector
+    can still produce low-value clones; those should steer ranking and reporting even when
+    they are technically exact.
+
 ## Suggested Resume Sequence
 
 1. Rebuild current binary:
@@ -193,9 +254,43 @@ Examples with low refactoring value:
 
 3. Re-run the real-repo sample if `/tmp/nose-real-compare2/summary.json` is gone.
 
-4. Pick the next frontier only after reviewing real examples. The best current candidate
-   is Ruby `Hash#fetch(key, default)` under `map_default_lookup`, but it is not yet
-   committed to the plan.
+4. Refresh frontier priorities from the pinned corpus:
 
-5. If implementing a new batch, record it in `bench/type4/ITERATIONS.md` and keep this
+   ```text
+   python3 bench/type4/prioritize_frontier.py \
+     --cache /tmp/nose-frontier-priorities.cache.json \
+     --json-out /tmp/nose-frontier-priorities.json \
+     --md-out bench/type4/FRONTIER_PRIORITIES.md
+   ```
+
+5. Pick the next frontier only after reviewing real examples. Ruby
+   `Hash#fetch(key, default)` under `map_default_lookup` is a plausible note, but it is
+   not committed to the plan. It should lose to any higher-yield corpus-backed invariant.
+
+6. For the selected frontier, run the loop in this order:
+
+   - mine real examples and write the proof invariant;
+   - add two or three generated positives plus matching hard negatives;
+   - measure focused baseline against the previous release/current baseline;
+   - implement the smallest detector/lowering change that proves the invariant;
+   - run focused, axis-core, and compact all-cross gates;
+   - run a small real-repo installed-vs-current or before-vs-after comparison;
+   - qualitatively review added/removed families before deciding whether to keep it.
+
+7. If implementing a new batch, record it in `bench/type4/ITERATIONS.md` and keep this
    handoff file updated at the end of the session.
+
+## Resume Decision Checklist
+
+Before starting another autonomous run, answer these questions in the next session notes:
+
+- Which proof invariant is being widened?
+- Which languages express the same invariant, and which are intentionally deferred?
+- What real-repo samples justify the axis?
+- What hard negatives prevent over-merging?
+- Which generated gate is expected to fail before the detector change?
+- Which real-repo audit will decide whether the loop was useful?
+- What runtime budget is acceptable for that audit?
+
+If any answer is missing, spend the next turn on mining or profiling rather than detector
+code.
