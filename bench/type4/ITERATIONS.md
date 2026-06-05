@@ -4809,6 +4809,44 @@ positive recall: 626/626
 hard-negative false merges: 0/1233
 ```
 
+## Fragment batch 7: exact conditional expression-effect fragments
+
+This batch reuses the existing exact single-statement `ExprStmt` predicate inside
+conditional branches. A direct function-body `if` can become an exact `Block` fragment
+when each present branch is empty, a single exact return/throw exit, or a single exact
+expression statement, and at least one branch has such a statement. This does not open
+assignments, arbitrary statement windows, loop-local break/continue, or live-out slices.
+The same self-contained span, direct function-body, preceding mutation/alias/unknown-call,
+`exact_safe`, and value-size gates still apply.
+
+The three positives share one proof invariant: a conditional expression statement is a
+guarded effect fragment, and the effect value includes the receiver, argument value, and
+path guard. The focused batch uses JS `push` statements so the fragment represents an
+observable mutation rather than a pure no-op expression. Adjacent hard negatives cover a
+wrong guard threshold, a wrong pushed expression, and a preceding receiver mutation.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-expr-effect-1 | candidate extraction | allow single exact `ExprStmt` branches in conditional fragments | 3 focused conditional expression-effect families reported as `Block` units |
+| fragment-expr-effect-2 | soundness boundary | keep branch bodies single-statement only and reuse existing exact `ExprStmt` plus preceding mutation guards | wrong guard/expression/mutation negatives excluded |
+| fragment-expr-effect-3 | regression | full unit/CLI/equivalence suite, core smoke, clippy, duplication, docs lint | `cargo test` pass; core smoke 626/626 positives and 0/1233 hard-negative false merges |
+| fragment-expr-effect-4 | performance | scan `bench/repos/flask bench/repos/axios bench/repos/rust` with `NOSE_TIME=1` | 335 files; normalize+extract 16.7ms, candidates 2.6ms, score 0.5ms; 66 semantic families |
+
+Focused regression:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_conditional_expr_effect_fragments_under_opaque_functions
+3 exact conditional expression-effect fragment families found; wrong guard/expression/mutation negatives excluded.
+```
+
+Core gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+positive recall: 626/626
+hard-negative false merges: 0/1233
+```
+
 ## Fragment batch 6: exact conditional bare-return guards
 
 This batch keeps the conditional fragment proof invariant and opens only `return;` /
