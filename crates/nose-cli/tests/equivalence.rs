@@ -129,6 +129,90 @@ fn filtered_reduction_converges_for_and_while() {
 }
 
 #[test]
+fn coupled_loop_recurrence_stays_compact_and_distinct() {
+    let i = Interner::new();
+    let checksum_like = r#"
+void f(int *a, int n, int *out) {
+  int s1 = 0;
+  int s2 = 0;
+  int i = 0;
+  while (i < n) {
+    s1 = s1 + a[i] + s2;
+    s2 = s2 + a[i] + s1;
+    s1 = s1 + a[i] + s2;
+    s2 = s2 + a[i] + s1;
+    s1 = s1 + a[i] + s2;
+    s2 = s2 + a[i] + s1;
+    s1 = s1 + a[i] + s2;
+    s2 = s2 + a[i] + s1;
+    i = i + 1;
+  }
+  out[0] = s1;
+  out[1] = s2;
+}
+"#;
+    let changed_recurrence = r#"
+void f(int *a, int n, int *out) {
+  int s1 = 0;
+  int s2 = 0;
+  int i = 0;
+  while (i < n) {
+    s1 = s1 + a[i] + s2;
+    s2 = s2 + a[i] + s1;
+    s1 = s1 + a[i] + s2;
+    s2 = s2 + a[i] + s1;
+    s1 = s1 + a[i] + s2;
+    s2 = s2 + a[i] + s1;
+    s1 = s1 + a[i] + s2;
+    s2 = s2 - a[i] + s1;
+    i = i + 1;
+  }
+  out[0] = s1;
+  out[1] = s2;
+}
+"#;
+
+    let fp = value_fp(&i, checksum_like, Lang::C);
+    assert!(
+        fp.len() < 200,
+        "coupled loop recurrence should not expand into a huge value DAG: {} atoms",
+        fp.len()
+    );
+    assert_ne!(
+        fp,
+        value_fp(&i, changed_recurrence, Lang::C),
+        "compacted recurrence must keep behavior-defining update differences"
+    );
+}
+
+#[test]
+fn large_generated_ac_formula_stays_compact_and_distinct() {
+    let i = Interner::new();
+    let params: Vec<String> = (0..80).map(|n| format!("x{n}")).collect();
+    let forward = params.join(" + ");
+    let reverse = params.iter().rev().cloned().collect::<Vec<_>>().join(" + ");
+    let changed = format!("{} + x0 * x0", params[1..].join(" + "));
+    let src = |expr: &str| format!("def f({}):\n    return {expr}\n", params.join(", "));
+
+    let fp = value_fp(&i, &src(&forward), Lang::Python);
+    assert_eq!(
+        fp,
+        value_fp(&i, &src(&reverse), Lang::Python),
+        "large generated AC formulas should keep canonical operand ordering"
+    );
+    assert_ne!(
+        fp,
+        value_fp(&i, &src(&changed), Lang::Python),
+        "large formula compaction must keep changed terms distinct"
+    );
+    assert!(
+        fp.len() < 20,
+        "large formula should fingerprint as a compact atom set: {} atoms",
+        fp.len()
+    );
+}
+
+#[test]
 fn filtered_comprehension_matches_filtered_loop() {
     // `sum(x for x in xs if x>0)` and the guarded loop `if x>0: t += x` produce the
     // same guarded Reduce (§AI). The loop additionally records the guard as a

@@ -1,7 +1,7 @@
 # Type-4 Coevolution Handoff
 
 Date: 2026-06-05
-Updated: 2026-06-05, continued after semantic performance commit
+Updated: 2026-06-05, continued through generated-formula compaction pass
 
 This records where the adversarial Type-4 coevolution work stopped and how to resume it.
 The work was intentionally paused after a real-repository evaluation pass. Do not start
@@ -11,18 +11,22 @@ another autonomous frontier loop unless the user explicitly resumes it.
 
 - Branch: `main`.
 - Last handoff/documentation commit: `d237b21 docs(type4): sharpen coevolution resume notes`.
-- Last committed detector/frontier change: `0b63ad9 feat(type4): prove python module membership`.
+- Last committed semantic frontier change: `0b63ad9 feat(type4): prove python module membership`.
 - The strict frontier loop itself is still paused after the Python module membership batch.
   No new semantic frontier axis has been accepted after loop 406.
-- A separate performance-enabling pass was started after that pause and was committed as
-  `93475b4 perf(type4): speed semantic value extraction`.
-- A follow-up performance pass is currently uncommitted. It changes:
+- Separate performance-enabling passes were started after that pause and committed as
+  `93475b4 perf(type4): speed semantic value extraction` and
+  `58ff3ed perf(type4): cap broad semantic block units`.
+- This handoff snapshot includes the follow-up performance pass after `58ff3ed`. It
+  changes:
+  - `crates/nose-normalize/src/value_graph.rs`;
+  - `crates/nose-cli/tests/equivalence.rs`;
   - `crates/nose-detect/src/units.rs`;
   - this handoff file.
 - Installed baseline used for real-repo comparison: `/opt/homebrew/bin/nose`, version `0.2.0`.
 - Current candidate used for comparison: `target/release/nose`, version `0.4.0`.
-- Worktree at this pause: dirty with the follow-up block-unit cap change and this
-  handoff update, plus the pre-existing untracked `.claude/` directory.
+- Worktree expectation at this pause: clean after committing this snapshot, except for
+  the pre-existing untracked `.claude/` directory.
 
 The exact stop line is:
 
@@ -33,13 +37,17 @@ shared subtree hash cache implemented -> large AC expression fast path implement
 iterative AC flatten implemented -> weakly-justified flatten cache removed ->
 shadowed callback collection recursion fixed -> final validation and representative timing rerun ->
 committed as 93475b4 -> block-unit cap moved before value extraction and lowered to 160 ->
-validation and representative timing rerun -> pause before commit or next hotspot pass
+validation and representative timing rerun -> committed as 58ff3ed ->
+sympy/raylib profiled again -> class-container cap added at 8k preorder tokens ->
+validation and representative timing rerun -> sqlite walChecksumBytes profiled ->
+coupled loop recurrence compacted into a keyed Recurrence atom ->
+validation and representative timing rerun -> very large generated AC expressions compacted
+into keyed Formula atoms -> representative timing and output checks rerun -> pause at commit
 ```
 
-There is no half-implemented semantic frontier to finish. There is, however, an
-uncommitted performance patch that supports the coevolution workflow by making real-repo
-semantic audits cheaper. Do not start a new frontier loop until this patch is either
-finished and committed, or deliberately shelved.
+There is no half-implemented semantic frontier to finish. There is, however, a
+performance patch captured by this snapshot that supports the coevolution workflow by
+making real-repo semantic audits cheaper.
 
 Current follow-up code state:
 
@@ -48,10 +56,18 @@ Current follow-up code state:
   and `GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh` passed
   after the latest logic change.
 - `git diff --check` passed.
-- The follow-up block-unit cap change intentionally alters some real-repo report surfaces:
+- The committed block-unit cap change intentionally alters some real-repo report surfaces:
   SQLite keeps the same 74 family count with only metadata-level change in one family;
   Raylib drops several broad vendored C header block families and adds one narrower
   replacement, going 223 -> 219 families.
+- The current class-container cap preserves representative outputs:
+  Sympy is byte-identical to the pre-class-cap run; Zod is byte-identical to the
+  post-block-cap/class-cap run; SQLite, Raylib, and Vim keep the same families and are
+  identical after dropping only `sem`/`mean_sem` metadata.
+- The current coupled-recurrence and generated-formula compactions intentionally reduce
+  `sem` metadata in some families because large raw value DAGs no longer expose every
+  intermediate atom. The family locations and counts are preserved in the representative
+  set.
 - The briefly added `flatten_cache` in `value_graph.rs` was removed because SQLite
   improved from the iterative flatten rewrite itself, while the extra cache did not
   materially improve the measured scan.
@@ -77,7 +93,7 @@ Baseline release timings before the performance changes:
 | `bench/repos/sqlalchemy` | 57.693s | 57345ms | 447 |
 | `bench/repos/clap` | >120s timeout | not completed | not completed |
 
-Ten performance/design changes are present across the committed pass and current
+Thirteen performance/design changes are present across the committed passes and current
 follow-up:
 
 1. Numeric-method recognition now checks the method shape before recursively evaluating
@@ -125,9 +141,9 @@ follow-up:
 
 7. Very large associative/commutative source expressions now have a fast path. For
    same-operator binary expression trees with at least 64 operands, the builder collects
-   source operands first, evaluates leaves once, canonicalizes once, and rebuilds one
-   canonical AC chain. This targets generated or symbolic algebra style expressions
-   without changing the small-expression path.
+   source operands first, evaluates leaves once, and canonicalizes once. This targets
+   generated or symbolic algebra style expressions without changing the small-expression
+   path; the current large-formula representation is described in item 13.
 
 8. AC value flattening is now iterative instead of recursive and no longer clones each
    nested node's argument vector while flattening. A per-builder `flatten_cache` was tried
@@ -145,6 +161,27 @@ follow-up:
     block extraction match its purpose: keep fragment-sized sub-function regions, while
     leaving broad nested bodies to their enclosing function/class units. The change
     removes repeated value extraction for large overlapping blocks in SQLite and Vim.
+
+11. Very large class container units are capped at 8,000 preorder tokens through the same
+    container-cap policy helper. Ordinary class/type clones remain eligible, but generated
+    or monolithic class bodies are delegated to their method/function units. This removes
+    duplicated semantic fingerprint work for Sympy's 49k-token `PolyQuintic` class while
+    preserving the 502 reported Sympy families byte-for-byte.
+
+12. Coupled non-reduction loop recurrences now compact into a keyed `Recurrence` value
+    atom when a loop-carried assignment depends on another loop-carried value or an
+    already compacted recurrence. Clean reductions (`acc += elem`, guarded reductions,
+    min/max selection reductions) still reach `Reduce`; only raw coupled updates such as
+    `s1 += f(s2); s2 += g(s1)` stop expanding into a large expression DAG. A focused C
+    equivalence regression verifies the atom set stays compact and a changed recurrence
+    remains distinct.
+
+13. Very large generated associative/commutative formulas now compact into a keyed
+    `Formula` atom after operand collection and canonicalization. The key includes the
+    operator, operand count, and canonical operand value hashes, so reordered additions
+    remain equivalent while changed terms remain distinct. A focused Python equivalence
+    regression covers compactness, operand-order canonicalization, and changed-term
+    separation.
 
 Representative measured state after the first three core fixes:
 
@@ -189,6 +226,40 @@ Follow-up rerun after lowering and moving the block-unit cap:
 | `bench/repos/zod` | 77.4ms | 73.3ms | 0.17s | byte-identical |
 | `bench/repos/sympy` | 1023-1214ms | 1085.3ms | 1.69s | 502 families preserved |
 
+Follow-up rerun after adding the class-container cap:
+
+| repo | before `normalize+extract` | after `normalize+extract` | after wall time | output effect |
+|---|---:|---:|---:|---|
+| `bench/repos/sympy` | 1101.9ms | 633.6ms | 1.73s | byte-identical; 502 families |
+| `bench/repos/raylib` | 1740.8ms | 1771.7ms | 2.86s | byte-identical; class cap has no direct effect |
+| `bench/repos/sqlite` | 950.3ms | 1015.1ms | 1.36s | 74 families preserved; only `sem` metadata differs from the previous post-block run |
+| `bench/repos/vim` | 264.4ms | 200.7ms | 0.69s | byte-identical; 19 families |
+| `bench/repos/zod` | 73.3ms | 69.6ms | 0.36s | byte-identical; 9 families |
+
+Follow-up rerun after adding coupled-recurrence compaction:
+
+| repo | before `normalize+extract` | after `normalize+extract` | after wall time | output effect |
+|---|---:|---:|---:|---|
+| `bench/repos/sqlite` | 1214.7ms profile / 1015.1ms representative | 218.8ms representative | 0.47s | 74 families preserved; only `sem` metadata differs |
+| `bench/repos/sympy` | 633.6-697.6ms | 730.5ms | 1.71s | byte-identical/no-sem-identical; 502 families |
+| `bench/repos/raylib` | 1771.7-1790.3ms | 1826.2ms | 2.84s | 219 families preserved; only `sem` metadata differs |
+| `bench/repos/vim` | 200.7ms | 207.9ms | 0.54s | 19 families preserved; only `sem` metadata differs |
+| `bench/repos/zod` | 69.6ms | 43.9ms | 0.14s | byte-identical; 9 families |
+
+Follow-up rerun after adding generated-formula compaction:
+
+| repo | before `normalize+extract` | after `normalize+extract` | after wall time | output effect |
+|---|---:|---:|---:|---|
+| `bench/repos/sympy` | 636.3ms | 655.3ms | 1.81s | 502 families preserved; no-sem-identical |
+| `bench/repos/sqlite` | 355.9ms | 419.3ms | 1.35s | 74 families preserved; no-sem-identical |
+| `bench/repos/raylib` | 1932.9ms | 1736.3ms | 3.06s | 219 families preserved; no-sem-identical |
+
+The generated-formula pass is a compactness/frontier-safety improvement more than a
+clear wall-time win on this sample. In Sympy, `eqs_165x165` went from `54372` value atoms
+to `167`, while measured value time moved from `71.4ms` to `84.3ms` in this run. The
+remaining Sympy hotspot is still the generated `PolyQuintic` methods (`b`, `o`, `c`),
+which are not addressed by the current AC formula path.
+
 The original `sqlalchemy` output mismatch is resolved. The cause was semantic drift in the
 new file-level mutation summary: it recursively collected symbols from `Append` and
 mutating-field receivers, while the old proof checked only direct receiver symbols for
@@ -200,8 +271,8 @@ The broader 105-repo sweep after the core fixes wrote temporary artifacts under
 | repo | wall time | semantic families | status |
 |---|---:|---:|---|
 | `raylib` | 83.88s | 223 | reduced to about 2.58s wall; broad vendored block families reduced to 219 families |
-| `sympy` | 6.57s | 502 | reduced to 2.16s with large AC fast path |
-| `sqlite` | 4.59s | 74 | reduced to about 1.71s wall / 950ms normalize after block cap follow-up |
+| `sympy` | 6.57s | 502 | reduced to 1.73s wall / 634ms normalize after class-container cap |
+| `sqlite` | 4.59s | 74 | reduced to about 0.47s wall / 219ms normalize after recurrence compaction |
 | `vim` | 2.28s | 19 | reduced to about 0.75s wall / 264ms normalize after block cap follow-up |
 | `nats-server` | 1.91s | 48 | reduced to about 0.47s wall / 226ms normalize |
 | `netty` | 1.76s | 182 | reduced to 0.81s with large AC fast path |
@@ -258,9 +329,17 @@ Additional outlier notes:
 - `sympy` was dominated by a giant generated arithmetic expression:
   `eqs_165x165` spent about 5889ms in value extraction before the large-AC fast path.
   After the patch, the full repo `normalize+extract` time was 1214ms.
+- `sympy` then exposed a duplicated container-unit cost: `Class PolyQuintic` spent about
+  430ms in value extraction while its large methods were already extracted as method
+  units, and no reported family used `polyquinticconst.py`. The class-container cap
+  reduces full-repo `normalize+extract` to 633.6ms with byte-identical output.
 - `sqlite` was dominated by repeated extraction around `walChecksumBytes` and nested
   blocks in the same region. The follow-up block cap removed the repeated nested-block
   value extraction and reduced full-repo `normalize+extract` from 3218.3ms to 950.3ms.
+- After the block cap, `sqlite` exposed a single-function coupled recurrence hotspot:
+  `walChecksumBytes` spent 1076.7ms in value extraction and produced 6830 value atoms
+  from a 334-token C function. The recurrence compaction removed it from the unit timing
+  log and reduced a representative full-repo scan to 218.8ms `normalize+extract`.
 - `netty` improved from 1421.4ms `normalize+extract` after subtree-cache work to 225.2ms
   after the large-AC path.
 - `vim` previously spent 1545.2ms in `normalize+extract`, including several broad C block
@@ -293,6 +372,12 @@ Hotspots found and improved in this pass:
 - broad nested block units repeated value extraction for regions already covered by
   enclosing function/class units; this is reduced by applying a 160-token block cap before
   strict/value extraction;
+- very large class container units repeated value extraction for method bodies already
+  covered by primary method/function units; this is reduced by applying an 8k-token class
+  cap before strict/value extraction;
+- coupled non-reduction loop recurrences expanded raw accumulator expressions across
+  mutually dependent loop-carried variables; this is reduced by compacting the full RHS
+  value hash into a `Recurrence` atom while keeping changed recurrences distinct;
 - reduction recognition recomputed the same `(value, loopv)` classifications inside
   nested `Phi` branches;
 - reduction recognition repeatedly walked the same value DAGs for `references(value,
@@ -313,12 +398,15 @@ Type-4 frontier:
 
    ```text
    git status --short
-   git diff -- crates/nose-detect/src/units.rs bench/type4/HANDOFF.md
+   git diff -- crates/nose-normalize/src/value_graph.rs crates/nose-cli/tests/equivalence.rs crates/nose-detect/src/units.rs bench/type4/HANDOFF.md
    ```
 
 2. The current follow-up patch has good measured wins and has passed the core validation
-   set. Before committing, inspect the final diff for accidental breadth and decide
-   whether to commit it as a separate block-unit compaction change.
+   set. Before committing, inspect the final diff for accidental breadth. It currently
+   combines two related extraction-cost changes: class-container compaction in
+   `units.rs`, and coupled-recurrence compaction in `value_graph.rs`. They can be
+   committed together as one semantic extraction compaction pass, or split if a cleaner
+   history is preferred.
 
 3. If profiling further, start from a fresh release build:
 
@@ -329,38 +417,46 @@ Type-4 frontier:
 
 4. Treat raylib and sympy as the next performance targets.
 
-   SQLite and Vim are no longer the best next hotspots after the block-unit cap follow-up.
-   Raylib remains useful for many-file/many-unit fixed-cost behavior; sympy remains useful
-   for generated-formula and single-unit expression cost.
+   SQLite and Vim are no longer the best next hotspots after the block-unit cap and
+   recurrence-compaction follow-ups.
+   Sympy's class-container duplicate cost is addressed, but its huge generated methods
+   (`PolyQuintic.b/o/c`) remain visible; do not cap primary method/function units without a
+   stronger policy argument, because those are the detector's main clone boundaries.
+   Raylib remains useful for many-file/many-unit fixed-cost behavior where no single unit
+   dominates.
 
 5. If validating before commit, rerun the small representative set:
 
    ```text
-   NOSE_TIME=1 target/release/nose scan bench/repos/sqlite --mode semantic --format json --top 0 > /tmp/nose-perf-continue/sqlite.after-block-gate.json
-   NOSE_TIME=1 target/release/nose scan bench/repos/vim --mode semantic --format json --top 0 > /tmp/nose-perf-continue/vim.after-block-gate.json
-   NOSE_TIME=1 target/release/nose scan bench/repos/raylib --mode semantic --format json --top 0 > /tmp/nose-perf-continue/raylib.after-block-gate.json
-   NOSE_TIME=1 target/release/nose scan bench/repos/zod --mode semantic --format json --top 0 > /tmp/nose-perf-continue/zod.after-block-gate.json
+   NOSE_TIME=1 target/release/nose scan bench/repos/sqlite --mode semantic --format json --top 0 > /tmp/nose-perf-next2/sqlite.after-recurrence.json
+   NOSE_TIME=1 target/release/nose scan bench/repos/vim --mode semantic --format json --top 0 > /tmp/nose-perf-next2/vim.after-recurrence.json
+   NOSE_TIME=1 target/release/nose scan bench/repos/raylib --mode semantic --format json --top 0 > /tmp/nose-perf-next2/raylib.after-recurrence.json
+   NOSE_TIME=1 target/release/nose scan bench/repos/zod --mode semantic --format json --top 0 > /tmp/nose-perf-next2/zod.after-recurrence.json
+   NOSE_TIME=1 target/release/nose scan bench/repos/sympy --mode semantic --format json --top 0 > /tmp/nose-perf-next2/sympy.after-recurrence.json
    ```
 
-   `zod` was byte-identical; SQLite/Vim preserved family counts; Raylib intentionally
-   reduced broad vendored block reports.
+   `zod` was byte-identical for the latest comparable run. `sqlite`, `raylib`, and `vim`
+   preserved families and changed only `sem` metadata. `sympy` was byte-identical or
+   no-sem-identical depending on which nearby timing run is compared. Raylib intentionally
+   reduced broad vendored block reports in the earlier block-cap commit.
 
 6. Re-run the core validation set:
 
    ```text
    cargo test -p nose-normalize
    cargo test -p nose-detect
+   cargo test -p nose-cli
    GATE=core CROSS=all NOSE=target/release/nose ./scripts/type4-smoke.sh
    ```
 
 7. Re-run a small top-outlier sweep after validation. The next likely targets are:
 
-   - `bench/repos/raylib`, still around 2.58s wall and useful as a many-unit regression
+   - `bench/repos/raylib`, still around 2.4-2.9s wall and useful as a many-unit regression
      target;
-   - `bench/repos/sympy`, around 1.69s wall and useful as a generated-formula regression
-     target;
-   - `bench/repos/sqlite`, now around 1.71s wall after the block cap follow-up;
-   - `bench/repos/vim`, now around 0.75s wall after the block cap follow-up;
+   - `bench/repos/sympy`, now around 1.7s wall / 700ms normalize and useful as a
+     generated-formula regression target;
+   - `bench/repos/sqlite`, now around 0.5s wall after recurrence compaction;
+   - `bench/repos/vim`, now around 0.5-0.7s wall after the block cap follow-up;
 
    For each outlier, use both global timing and unit timing:
 

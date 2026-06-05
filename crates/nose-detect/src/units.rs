@@ -60,7 +60,18 @@ const SEED: u64 = 0x9E37_79B9_7F4A_7C15;
 /// sub-function fragments; broad nested bodies are covered by their enclosing unit and
 /// can multiply value extraction cost across almost-identical regions.
 const MAX_BLOCK_TOKENS: usize = 160;
+/// Upper bound for a *class* container unit. Ordinary class/type clones stay eligible,
+/// while very large class bodies are delegated to their method/function units.
+const MAX_CLASS_TOKENS: usize = 8_000;
 const EXACT_VALUE_MIN: usize = 4;
+
+fn semantic_container_token_cap(kind: UnitKind) -> Option<usize> {
+    match kind {
+        UnitKind::Block => Some(MAX_BLOCK_TOKENS),
+        UnitKind::Class => Some(MAX_CLASS_TOKENS),
+        UnitKind::Function | UnitKind::Method => None,
+    }
+}
 
 struct UnitTimer {
     enabled: bool,
@@ -194,10 +205,10 @@ pub(crate) fn extract(
         collect_pre(il, root, &mut pre);
         let pre_ms = UnitTimer::elapsed(pre_start);
 
-        // A huge block is not a fragment clone; it is covered by its enclosing
-        // function/class unit. Apply this cap before strict/value extraction so a
-        // discarded block never pays the dominant semantic fingerprint cost.
-        if kind == UnitKind::Block && pre.len() > MAX_BLOCK_TOKENS {
+        // Broad container units are covered by their nested primary units. Apply
+        // this cap before strict/value extraction so discarded containers never pay
+        // the dominant semantic fingerprint cost.
+        if semantic_container_token_cap(kind).is_some_and(|cap| pre.len() > cap) {
             unit_timer.report_skip(
                 unit_start,
                 &kind,

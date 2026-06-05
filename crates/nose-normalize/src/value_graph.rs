@@ -188,6 +188,8 @@ enum ValOp {
     Elem(u64),       // an element drawn from an iterable, keyed by the iterable's hash
     Idx(u64),        // the iteration index into a collection (range/while/enumerate)
     Reduce(u32),     // canonical fold over elements: args = [init, per-element contrib]
+    Formula(u64),    // compact canonical hash for a very large generated expression
+    Recurrence(u64), // compact non-reduction loop-carried update, keyed by full RHS hash
     Opaque(u64),     // anything not otherwise modeled, keyed by a tag (counter or subtree hash)
 }
 
@@ -260,6 +262,15 @@ struct Builder<'a> {
     /// targets are alpha-renamed to `Cid`; this map reconnects safe top-level literal
     /// data (`const table = {...}`) to free uses inside the function.
     global_env: FxHashMap<Symbol, ValueId>,
+    /// Current loop-carried placeholders while evaluating a loop body. Used only to
+    /// compact coupled recurrences such as `s1 += f(s2); s2 += g(s1)`, which otherwise
+    /// expand into a large raw expression DAG even though they are not clean reductions.
+    loop_recurrence: Option<LoopRecurrenceScope>,
+}
+
+#[derive(Clone)]
+struct LoopRecurrenceScope {
+    loop_values: FxHashMap<u32, ValueId>,
 }
 
 #[derive(Default)]
@@ -288,6 +299,7 @@ impl<'a> Builder<'a> {
             path: Vec::new(),
             building: FxHashMap::default(),
             global_env: FxHashMap::default(),
+            loop_recurrence: None,
         }
     }
 
@@ -1685,6 +1697,15 @@ impl<'a> Builder<'a> {
         acc
     }
 
+    fn compact_formula(&mut self, opc: u32, operands: &[ValueId]) -> ValueId {
+        let mut h = combine(0xF0A5_7A11, opc as u64);
+        h = combine(h, operands.len() as u64);
+        for &operand in operands {
+            h = combine(h, self.vhash[operand as usize]);
+        }
+        self.mk(ValOp::Formula(h), vec![])
+    }
+
     /// Flatten an associative-commutative chain of value nodes into `out`.
     fn flatten_into(&mut self, vid: ValueId, opc: u32, out: &mut Vec<ValueId>) {
         let mut stack = vec![vid];
@@ -2642,6 +2663,43 @@ impl<'a> Builder<'a> {
         }
     }
 
+    fn compact_coupled_recurrence(&mut self, cid: u32, value: ValueId) -> ValueId {
+        let should_compact = self.loop_recurrence.as_ref().is_some_and(|scope| {
+            scope.loop_values.contains_key(&cid)
+                && self.references_nonself_loop_dependency(value, cid, scope)
+        });
+        if !should_compact {
+            return value;
+        }
+
+        let h = combine(combine(0xC0AD_D1EC, cid as u64), self.vhash[value as usize]);
+        self.mk(ValOp::Recurrence(h), vec![])
+    }
+
+    fn references_nonself_loop_dependency(
+        &self,
+        value: ValueId,
+        self_cid: u32,
+        scope: &LoopRecurrenceScope,
+    ) -> bool {
+        let mut stack = vec![value];
+        let mut seen = FxHashSet::default();
+        while let Some(v) = stack.pop() {
+            if !seen.insert(v) {
+                continue;
+            }
+            match &self.nodes[v as usize].op {
+                ValOp::Loop(cid) if *cid != self_cid && scope.loop_values.contains_key(cid) => {
+                    return true;
+                }
+                ValOp::Recurrence(_) => return true,
+                _ => {}
+            }
+            stack.extend(self.nodes[v as usize].args.iter().copied());
+        }
+        false
+    }
+
     fn process_stmt(&mut self, stmt: NodeId, env: &mut FxHashMap<u32, ValueId>) {
         match self.il.kind(stmt) {
             NodeKind::Block => self.process_block(stmt, env),
@@ -2651,6 +2709,7 @@ impl<'a> Builder<'a> {
                     let rhs = self.eval(kids[1], env);
                     if self.il.kind(kids[0]) == NodeKind::Var {
                         if let Payload::Cid(c) = self.il.node(kids[0]).payload {
+                            let rhs = self.compact_coupled_recurrence(c, rhs);
                             env.insert(c, rhs);
                             return;
                         }
@@ -2985,7 +3044,11 @@ impl<'a> Builder<'a> {
             self.building.insert(c, None);
         }
         let sink_start = self.sinks.len();
+        let outer_recurrence = self.loop_recurrence.replace(LoopRecurrenceScope {
+            loop_values: loop_vals.clone(),
+        });
         self.process_stmt(body, &mut body_env);
+        self.loop_recurrence = outer_recurrence;
         if !index_vals.is_empty() {
             let mut memo = FxHashMap::default();
             for idx in sink_start..self.sinks.len() {
@@ -4618,7 +4681,7 @@ impl<'a> Builder<'a> {
                         if do_sort {
                             operands.sort_by_key(|&v| self.vhash[v as usize]);
                         }
-                        return self.intern_ac_chain(op, &operands);
+                        return self.compact_formula(op, &operands);
                     }
 
                     let mut operands = Vec::new();
@@ -5386,6 +5449,8 @@ fn op_tag(op: &ValOp) -> u64 {
         ValOp::Elem(h) => (14, *h),
         ValOp::Reduce(o) => (15, *o as u64),
         ValOp::Idx(h) => (16, *h),
+        ValOp::Formula(h) => (19, *h),
+        ValOp::Recurrence(h) => (18, *h),
         ValOp::Opaque(c) => (13, *c),
     };
     combine(k.wrapping_mul(0xF00D), p)
