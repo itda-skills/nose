@@ -576,6 +576,109 @@ fn semantic_scan_reports_exact_safe_conditional_return_fragments_under_opaque_fu
 }
 
 #[test]
+fn semantic_scan_reports_exact_safe_throw_fragments_under_opaque_functions() {
+    let dir =
+        std::env::temp_dir().join(format!("nose_exact_throw_fragments_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+
+    let fixtures = [
+        (
+            "throw_arith_a.js",
+            "function throwArithLeft(xs) {\n  throw (xs[0] + 1) * 2;\n  audit(xs);\n}\n",
+        ),
+        (
+            "throw_arith_b.js",
+            "function throwArithRight(ys) {\n  throw 2 * (ys[0] + 1);\n  trace(ys);\n}\n",
+        ),
+        (
+            "throw_arith_neg.js",
+            "function throwArithWrong(zs) {\n  throw (zs[0] + 2) * 2;\n  audit(zs);\n}\n",
+        ),
+        (
+            "throw_squares_a.js",
+            "function throwSquaresLeft(xs) {\n  throw xs[0] * xs[0] + xs[1] * xs[1];\n  audit(xs);\n}\n",
+        ),
+        (
+            "throw_squares_b.js",
+            "function throwSquaresRight(ys) {\n  throw ys[1] * ys[1] + ys[0] * ys[0];\n  trace(ys);\n}\n",
+        ),
+        (
+            "throw_squares_neg.js",
+            "function throwSquaresWrong(zs) {\n  throw zs[0] * zs[0] - zs[1] * zs[1];\n  audit(zs);\n}\n",
+        ),
+        (
+            "throw_product_a.js",
+            "function throwProductLeft(xs) {\n  throw (xs[0] + xs[1]) * (xs[2] + 4);\n  audit(xs);\n}\n",
+        ),
+        (
+            "throw_product_b.js",
+            "function throwProductRight(ys) {\n  throw (4 + ys[2]) * (ys[1] + ys[0]);\n  trace(ys);\n}\n",
+        ),
+        (
+            "throw_product_mutated.js",
+            "function throwProductMutated(zs) {\n  zs.push(1);\n  throw (zs[0] + zs[1]) * (zs[2] + 4);\n  audit(zs);\n}\n",
+        ),
+    ];
+    for (name, src) in fixtures {
+        fs::write(dir.join(name), src).unwrap();
+    }
+
+    let out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let json = scan_json(&out);
+    let families = scan_families(&json);
+
+    let assert_throw_family = |left: &str, right: &str, negative: &str| {
+        let family = families
+            .iter()
+            .find(|family| {
+                let files: Vec<&str> = family["locations"]
+                    .as_array()
+                    .expect("locations")
+                    .iter()
+                    .filter_map(|loc| loc["file"].as_str())
+                    .collect();
+                files.iter().any(|file| file.ends_with(left))
+                    && files.iter().any(|file| file.ends_with(right))
+            })
+            .unwrap_or_else(|| panic!("missing exact throw fragment family {left}/{right}: {out}"));
+        let locations = family["locations"].as_array().expect("locations");
+        assert!(
+            locations.iter().all(|loc| loc["kind"] == "Block"),
+            "throw fragments should report as Block units: {family:?}"
+        );
+        assert!(
+            locations
+                .iter()
+                .all(|loc| !loc["file"].as_str().unwrap_or("").ends_with(negative)),
+            "hard negative must not merge into {left}/{right}: {family:?}"
+        );
+    };
+
+    assert_throw_family("throw_arith_a.js", "throw_arith_b.js", "throw_arith_neg.js");
+    assert_throw_family(
+        "throw_squares_a.js",
+        "throw_squares_b.js",
+        "throw_squares_neg.js",
+    );
+    assert_throw_family(
+        "throw_product_a.js",
+        "throw_product_b.js",
+        "throw_product_mutated.js",
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn scan_mode_semantic_rejects_unproved_regex_predicate_matches() {
     let dir = std::env::temp_dir().join(format!("nose_regex_semantic_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);

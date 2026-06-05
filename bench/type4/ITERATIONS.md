@@ -4837,3 +4837,29 @@ Focused regression:
 cargo test -p nose-cli semantic_scan_reports_exact_safe_conditional_return_fragments_under_opaque_functions
 3 exact conditional-return fragment families found; wrong guard/result/mutation negatives excluded.
 ```
+
+## Fragment batch 3: exact throw fragments
+
+This batch adds another single-statement, effect-bearing fragment class without changing
+semantic acceptance. Direct function-body `throw` statements can become exact `Block`
+fragments when the thrown value is non-trivial, self-contained in the displayed span, and
+passes the same `exact_safe` / value-size gate. The preceding-sibling guard is reused so a
+mutation or unknown call touching the thrown value's cids prevents fragment extraction.
+
+The three positives share the same invariant as return-expression fragments, but with the
+value emitted as an effect sink rather than a return sink. The batch covers arithmetic,
+commuted sum-of-squares, and commuted product throw expressions. Adjacent hard negatives
+cover a wrong literal, wrong operator, and preceding receiver mutation.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-throw-1 | candidate extraction | allow direct `throw <expr>` roots as exact fragments | 3 focused throw-expression families reported as `Block` units |
+| fragment-throw-2 | soundness boundary | exclude trivial var/literal throws and reuse self-contained span plus preceding mutation guards | wrong literal/operator/mutation negatives excluded |
+| fragment-throw-3 | regression | targeted CLI throw-fragment test | passed |
+
+Focused regression:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_throw_fragments_under_opaque_functions
+3 exact throw fragment families found; wrong literal/operator/mutation negatives excluded.
+```

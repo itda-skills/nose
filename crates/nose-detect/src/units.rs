@@ -1842,6 +1842,9 @@ fn exact_statement_fragment_root(
         NodeKind::Return => {
             kids.len() == 1 && !matches!(il.kind(kids[0]), NodeKind::Var | NodeKind::Lit)
         }
+        NodeKind::Throw => {
+            kids.len() == 1 && !matches!(il.kind(kids[0]), NodeKind::Var | NodeKind::Lit)
+        }
         NodeKind::ExprStmt => {
             kids.len() == 1
                 && !matches!(
