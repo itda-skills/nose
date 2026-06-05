@@ -47,13 +47,20 @@ pub(crate) struct MemberKey {
     pub name: String,
 }
 
+/// Build a [`MemberKey`] from a `(file, optional name)` pair, applying the canonical
+/// missing-name default (`""`). The single place that decides how an absent member name
+/// maps into a key, shared by `member_keys` and baseline loading.
+pub(crate) fn member_key(file: &str, name: &Option<String>) -> MemberKey {
+    MemberKey {
+        file: file.to_owned(),
+        name: name.clone().unwrap_or_default(),
+    }
+}
+
 pub(crate) fn member_keys(f: &RefactorFamily) -> Vec<MemberKey> {
     f.locations
         .iter()
-        .map(|l| MemberKey {
-            file: l.file.clone(),
-            name: l.name.clone().unwrap_or_default(),
-        })
+        .map(|l| member_key(&l.file, &l.name))
         .collect()
 }
 
@@ -100,10 +107,7 @@ pub(crate) fn load(path: &Path) -> Baseline {
             let members = e
                 .members
                 .iter()
-                .map(|m| MemberKey {
-                    file: m.file.clone(),
-                    name: m.name.clone().unwrap_or_default(),
-                })
+                .map(|m| member_key(&m.file, &m.name))
                 .collect();
             Some(BaselineEntry { key, members })
         })
