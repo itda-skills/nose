@@ -2216,8 +2216,24 @@ fn foreach_effect_body_depends_on_iter(
     match il.kind(node) {
         NodeKind::Block => {
             let mut has_effect = false;
-            for &child in il.children(node) {
-                has_effect |= foreach_effect_body_depends_on_iter(il, interner, child, iter_cids)?;
+            let kids = il.children(node);
+            let mut idx = 0;
+            while idx < kids.len() {
+                if idx + 1 < kids.len()
+                    && loop_temp_assignment_consumed_by_effect(
+                        il,
+                        kids[idx],
+                        kids[idx + 1],
+                        iter_cids,
+                    )
+                {
+                    has_effect = true;
+                    idx += 2;
+                    continue;
+                }
+                has_effect |=
+                    foreach_effect_body_depends_on_iter(il, interner, kids[idx], iter_cids)?;
+                idx += 1;
             }
             Some(has_effect)
         }
@@ -2245,6 +2261,115 @@ fn foreach_effect_body_depends_on_iter(
         }
         _ => None,
     }
+}
+
+fn loop_temp_assignment_consumed_by_effect(
+    il: &Il,
+    assign: NodeId,
+    effect: NodeId,
+    iter_cids: &FxHashSet<u32>,
+) -> bool {
+    let Some(temp_cid) = loop_local_iter_temp_assignment(il, assign, iter_cids) else {
+        return false;
+    };
+    let mut temp_cids = FxHashSet::default();
+    temp_cids.insert(temp_cid);
+    loop_effect_consumes_temp(il, effect, iter_cids, &temp_cids)
+}
+
+fn loop_local_iter_temp_assignment(
+    il: &Il,
+    node: NodeId,
+    iter_cids: &FxHashSet<u32>,
+) -> Option<u32> {
+    if il.kind(node) != NodeKind::Assign {
+        return None;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 || il.kind(kids[0]) != NodeKind::Var {
+        return None;
+    }
+    if matches!(il.kind(kids[1]), NodeKind::Var | NodeKind::Lit) {
+        return None;
+    }
+    let Payload::Cid(temp_cid) = il.node(kids[0]).payload else {
+        return None;
+    };
+    if iter_cids.contains(&temp_cid) {
+        return None;
+    }
+    let mut temp_cids = FxHashSet::default();
+    temp_cids.insert(temp_cid);
+    if node_mentions_any_cid(il, kids[1], &temp_cids)
+        || !node_mentions_any_cid(il, kids[1], iter_cids)
+    {
+        return None;
+    }
+    Some(temp_cid)
+}
+
+fn loop_effect_consumes_temp(
+    il: &Il,
+    node: NodeId,
+    iter_cids: &FxHashSet<u32>,
+    temp_cids: &FxHashSet<u32>,
+) -> bool {
+    match il.kind(node) {
+        NodeKind::ExprStmt => {
+            let kids = il.children(node);
+            kids.len() == 1 && append_effect_consumes_temp(il, kids[0], iter_cids, temp_cids)
+        }
+        NodeKind::Assign => index_assignment_effect_consumes_temp(il, node, iter_cids, temp_cids),
+        _ => false,
+    }
+}
+
+fn append_effect_consumes_temp(
+    il: &Il,
+    node: NodeId,
+    iter_cids: &FxHashSet<u32>,
+    temp_cids: &FxHashSet<u32>,
+) -> bool {
+    if il.kind(node) != NodeKind::Call
+        || !matches!(il.node(node).payload, Payload::Builtin(Builtin::Append))
+    {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 {
+        return false;
+    }
+    !node_mentions_any_cid(il, kids[0], iter_cids)
+        && !node_mentions_any_cid(il, kids[0], temp_cids)
+        && node_mentions_any_cid(il, kids[1], temp_cids)
+}
+
+fn index_assignment_effect_consumes_temp(
+    il: &Il,
+    node: NodeId,
+    iter_cids: &FxHashSet<u32>,
+    temp_cids: &FxHashSet<u32>,
+) -> bool {
+    if !exact_index_assignment_fragment_root(il, node) {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 || il.kind(kids[0]) != NodeKind::Index {
+        return false;
+    }
+    let target_kids = il.children(kids[0]);
+    let Some(&receiver) = target_kids.first() else {
+        return false;
+    };
+    if node_mentions_any_cid(il, receiver, iter_cids)
+        || node_mentions_any_cid(il, receiver, temp_cids)
+    {
+        return false;
+    }
+    target_kids
+        .get(1)
+        .is_some_and(|&key| node_mentions_any_cid(il, key, temp_cids))
+        || node_mentions_any_cid(il, kids[1], temp_cids)
 }
 
 fn append_effect_depends_on_iter(il: &Il, node: NodeId, iter_cids: &FxHashSet<u32>) -> bool {

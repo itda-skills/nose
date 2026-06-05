@@ -158,6 +158,7 @@ benchmark also proves what must *not* merge. Each negative carries a concrete co
 | field write | target field changed, overwrite order changed |
 | statement effect | append/emit order changed on the same execution path |
 | foreach index assignment | wrong receiver, wrong index expression, wrong assigned value, unused iteration binding |
+| foreach temp-consumed effect | wrong temp RHS, temp not consumed by the effect, temp RHS independent of iteration, receiver touches iteration/temp |
 | indexed loop | skipped first or last element, wrong collection indexed |
 | C pointer-length contract | skipped first element, stride greater than one, non-contract bound |
 | C byte-pack | swapped byte order, overlapping shift, wrong byte coordinate, unproven byte alias, non-byte receiver, uncasted 32-bit high-lane shift, unproven unsigned cast alias |

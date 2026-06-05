@@ -5369,6 +5369,56 @@ next ordinary batch should return to evidence-backed real frontier items, prefer
 non-Java or explicitly multi-language, and should stop if fragment extraction cost keeps
 rising without visible corpus delta.
 
+## Fragment batch 17: loop-local temp consumed by exact effects
+
+This batch keeps the exact loop-effect proof invariant but opens one common non-Java
+fragment shape: a `ForEach` loop body may contain a single loop-local temporary assignment
+immediately followed by an exact append or non-overloadable index-assignment effect that
+consumes that temporary. The temporary RHS must be non-trivial, must depend on the
+iteration binding, and must not mention the temporary itself. The effect receiver must not
+mention the iteration binding or the temporary. Arbitrary two-statement loop bodies,
+unconsumed temps, temp-independent constants, and receiver-touching effects remain outside
+exact fragments.
+
+The three focused positives share one proof invariant:
+
+- JavaScript `const squared = x * x; out.push(squared)`;
+- Python `value = x + 1; out.append(value)`;
+- Go `squared := x * x; out[i] = squared`.
+
+Adjacent hard negatives cover wrong temp RHS, unused iteration/temp-independent RHS,
+wrong receiver, wrong index/value, preceding receiver mutation, and a temp that is not
+consumed by the effect.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-loop-temp-1 | candidate extraction | allow exactly one loop-local iter-derived temp immediately consumed by append/index effect | JS, Python, and Go focused temp-effect families reported as `Block` units |
+| fragment-loop-temp-2 | hard negatives | require temp RHS to depend on the iteration binding and effect receiver to avoid iteration/temp cids | wrong value/index/receiver, temp-independent, unconsumed-temp, and mutation negatives excluded |
+| fragment-loop-temp-3 | real delta | compare selected Python/Ruby/Go repos and full `bench/repos` before/after against a detached `HEAD` baseline | selected 2061 -> 2061 families / 6922 -> 6922 locations; full 7411 -> 7411 families / 32988 -> 32988 locations |
+| fragment-loop-temp-4 | performance | release `NOSE_TIME=1` warm scans before/after | selected candidate path 98.2ms -> 62.1ms; full candidate path 380.0ms -> 349.5ms; no location growth |
+| fragment-loop-temp-5 | release gates | run focused CLI regressions, full Rust suite, clippy, compact all-cross core smoke | `cargo test` pass; clippy clean; core smoke 629/629 positives and 0/1240 hard-negative false merges |
+
+Focused regressions:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_foreach_append_effect_fragments_under_opaque_functions
+cargo test -p nose-cli semantic_scan_reports_exact_safe_foreach_index_assignment_fragments_for_go
+JS/Python append temp and Go index temp positives reported; wrong temp/value/receiver and
+unconsumed-temp negatives excluded.
+```
+
+Core gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+positive recall: 629/629
+hard-negative false merges: 0/1240
+```
+
+This is again a focused unit-fragment expansion rather than a real-corpus completeness win.
+The next batch should switch back to evidence-backed real misses or stop fragment growth
+until a real frontier item needs one of these unit predicates.
+
 ## Real-corpus C u32 unsigned-cast byte-pack: batch 2026-06-06
 
 This batch was selected to correct the recent Java-heavy skew in the real frontier work.

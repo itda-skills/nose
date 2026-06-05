@@ -87,7 +87,9 @@ Lean (`formal/`). See [normalization](normalization.md) for the full pass list.
   conditional or exact ForEach append-effect loop, plus branches that assign one local
   temporary and immediately consume it in a direct return/throw/effect statement, plus
   ForEach loops whose only loop-body effects are appends or non-overloadable C/Go/Java
-  index assignments that depend on the iteration binding, plus Java
+  index assignments that depend on the iteration binding, optionally preceded by one
+  loop-local temporary assignment whose RHS depends on the iteration binding and whose
+  value is immediately consumed by that effect, plus Java
   `this.field = value` self-field assignments and all-self-field Java function-body blocks
   with the receiver fixed to `this`, optionally ending in `return this`), not arbitrary
   statement windows with unmodeled free-variable, live-out, receiver-overload, or effect

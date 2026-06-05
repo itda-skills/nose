@@ -1416,6 +1416,38 @@ fn semantic_scan_reports_exact_safe_foreach_append_effect_fragments_under_opaque
             "function loopPushGuardWrong(zs, out) {\n  for (const z of zs) {\n    if (z >= 0) out.push(z + 1);\n  }\n  audit(zs);\n}\n",
         ),
         (
+            "loop_temp_push_square_a.js",
+            "function loopTempPushSquareLeft(xs, out) {\n  for (const x of xs) {\n    const squared = x * x;\n    out.push(squared);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "loop_temp_push_square_b.js",
+            "function loopTempPushSquareRight(ys, dst) {\n  for (const y of ys) {\n    const result = y * y;\n    dst.push(result);\n  }\n  trace(ys);\n}\n",
+        ),
+        (
+            "loop_temp_push_square_wrong.js",
+            "function loopTempPushSquareWrong(zs, out) {\n  for (const z of zs) {\n    const squared = z + z;\n    out.push(squared);\n  }\n  audit(zs);\n}\n",
+        ),
+        (
+            "loop_temp_append_py_a.py",
+            "def loop_temp_append_left(xs, out):\n    for x in xs:\n        value = x + 1\n        out.append(value)\n    audit(xs)\n",
+        ),
+        (
+            "loop_temp_append_py_b.py",
+            "def loop_temp_append_right(ys, dst):\n    for y in ys:\n        item = 1 + y\n        dst.append(item)\n    trace(ys)\n",
+        ),
+        (
+            "loop_temp_append_py_wrong.py",
+            "def loop_temp_append_wrong(zs, out):\n    for z in zs:\n        value = z + 2\n        out.append(value)\n    audit(zs)\n",
+        ),
+        (
+            "loop_temp_unused.js",
+            "function loopTempUnused(xs, out) {\n  for (const x of xs) {\n    const constant = 1;\n    out.push(constant);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "loop_temp_rebind_iter.js",
+            "function loopTempRebindIter(xs, out) {\n  for (let x of xs) {\n    x = x + 1;\n    out.push(x);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
             "loop_unused_effect.js",
             "function loopUnusedEffect(xs, out) {\n  for (const unused of xs) {\n    out.push(1);\n  }\n  audit(xs);\n}\n",
         ),
@@ -1445,14 +1477,18 @@ fn semantic_scan_reports_exact_safe_foreach_append_effect_fragments_under_opaque
     let json = scan_json(&out);
     let families = scan_families(&json);
 
-    let assert_loop_family = |left: &str, right: &str, negative: &str| {
+    let assert_loop_family = |left: &str,
+                              right: &str,
+                              negative: &str,
+                              start_line: u64,
+                              end_line: u64| {
         let family = families
             .iter()
             .find(|family| {
                 let locations = family["locations"].as_array().expect("locations");
                 let loop_files: Vec<&str> = locations
                     .iter()
-                    .filter(|loc| loc["start_line"] == 2 && loc["end_line"] == 4)
+                    .filter(|loc| loc["start_line"] == start_line && loc["end_line"] == end_line)
                     .filter_map(|loc| loc["file"].as_str())
                     .collect();
                 loop_files.iter().any(|file| file.ends_with(left))
@@ -1472,7 +1508,7 @@ fn semantic_scan_reports_exact_safe_foreach_append_effect_fragments_under_opaque
                 .iter()
                 .filter(|loc| loc["file"].as_str().unwrap_or("").ends_with(left)
                     || loc["file"].as_str().unwrap_or("").ends_with(right))
-                .all(|loc| loc["start_line"] == 2 && loc["end_line"] == 4),
+                .all(|loc| loc["start_line"] == start_line && loc["end_line"] == end_line),
             "foreach append-effect fragments should report the loop span only: {family:?}"
         );
     };
@@ -1498,6 +1534,8 @@ fn semantic_scan_reports_exact_safe_foreach_append_effect_fragments_under_opaque
         "loop_push_square_a.js",
         "loop_push_square_b.js",
         "loop_push_square_mutated.js",
+        2,
+        4,
     );
     assert_no_pair(
         "loop_push_square_a.js",
@@ -1507,13 +1545,33 @@ fn semantic_scan_reports_exact_safe_foreach_append_effect_fragments_under_opaque
         "loop_push_product_a.js",
         "loop_push_product_b.js",
         "loop_push_product_neg.js",
+        2,
+        4,
     );
     assert_loop_family(
         "loop_push_guard_a.js",
         "loop_push_guard_b.js",
         "loop_push_guard_neg.js",
+        2,
+        4,
+    );
+    assert_loop_family(
+        "loop_temp_push_square_a.js",
+        "loop_temp_push_square_b.js",
+        "loop_temp_push_square_wrong.js",
+        2,
+        5,
+    );
+    assert_loop_family(
+        "loop_temp_append_py_a.py",
+        "loop_temp_append_py_b.py",
+        "loop_temp_append_py_wrong.py",
+        2,
+        4,
     );
     assert_no_pair("loop_unused_effect.js", "direct_unused_effect.js");
+    assert_no_pair("loop_temp_unused.js", "direct_unused_effect.js");
+    assert_no_pair("loop_temp_append_py_a.py", "loop_temp_rebind_iter.js");
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -1570,6 +1628,22 @@ fn semantic_scan_reports_exact_safe_foreach_index_assignment_fragments_for_go() 
         (
             "loop_index_mutated.go",
             "package p\nfunc loopIndexMutated(xs []int, out []int) {\n  out[0] = 0\n  for i, x := range xs {\n    out[i] = x * x\n  }\n  audit(out)\n}\n",
+        ),
+        (
+            "loop_index_temp_square_a.go",
+            "package p\nfunc loopIndexTempSquareLeft(xs []int, out []int) {\n  for i, x := range xs {\n    squared := x * x\n    out[i] = squared\n  }\n  audit(out)\n}\n",
+        ),
+        (
+            "loop_index_temp_square_b.go",
+            "package p\nfunc loopIndexTempSquareRight(ys []int, dst []int) {\n  for j, y := range ys {\n    result := y * y\n    dst[j] = result\n  }\n  trace(dst)\n}\n",
+        ),
+        (
+            "loop_index_temp_square_wrong.go",
+            "package p\nfunc loopIndexTempSquareWrong(zs []int, dst []int) {\n  for k, z := range zs {\n    result := z + z\n    dst[k] = result\n  }\n  trace(dst)\n}\n",
+        ),
+        (
+            "loop_index_temp_unconsumed.go",
+            "package p\nfunc loopIndexTempUnconsumed(xs []int, out []int) {\n  for i, x := range xs {\n    squared := x * x\n    out[i] = x * x\n  }\n  audit(out)\n}\n",
         ),
         (
             "loop_index_unused.go",
@@ -1675,9 +1749,20 @@ fn semantic_scan_reports_exact_safe_foreach_index_assignment_fragments_for_go() 
         3,
         7,
     );
+    assert_loop_family(
+        "loop_index_temp_square_a.go",
+        "loop_index_temp_square_b.go",
+        "loop_index_temp_square_wrong.go",
+        3,
+        6,
+    );
     assert_no_pair("loop_index_square_a.go", "loop_index_wrong_receiver.go");
     assert_no_pair("loop_index_square_a.go", "loop_index_mutated.go");
     assert_no_pair("loop_index_unused.go", "direct_index_unused.go");
+    assert_no_pair(
+        "loop_index_temp_square_a.go",
+        "loop_index_temp_unconsumed.go",
+    );
     let _ = fs::remove_dir_all(&dir);
 }
 
