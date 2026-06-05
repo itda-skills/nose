@@ -568,6 +568,7 @@ fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     match node.kind() {
         "identifier" => lo.var(lo.text(node), span),
+        "dotted_name" => lower_dotted_name(lo, node),
         "integer" => {
             let t = lo.text(node);
             lo.int_lit(t, span)
@@ -767,6 +768,20 @@ fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             lo.raw(node.kind(), span, &kids)
         }
     }
+}
+
+fn lower_dotted_name(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let mut parts = Lowering::named_children(node).into_iter();
+    let Some(first) = parts.next() else {
+        return lo.empty_block(span);
+    };
+    let mut acc = lo.var(lo.text(first), lo.span(first));
+    for part in parts {
+        let sym = lo.sym(lo.text(part));
+        acc = lo.add(NodeKind::Field, Payload::Name(sym), lo.span(part), &[acc]);
+    }
+    acc
 }
 
 fn lower_dictionary(lo: &mut Lowering, node: TsNode) -> NodeId {
@@ -1151,6 +1166,32 @@ mod tests {
         assert!(
             !il.nodes.iter().any(|node| node.kind == NodeKind::If),
             "a capture pattern should not lower to a scrutinee comparison"
+        );
+    }
+
+    #[test]
+    fn qualified_match_pattern_lowers_without_raw_dotted_name() {
+        let interner = Interner::new();
+        let il = lower(
+            FileId(0),
+            "t.py",
+            b"def f(x):\n    match x:\n        case Color.RED:\n            return 1\n        case _:\n            return 0\n",
+            &interner,
+        )
+        .expect("lower");
+
+        let raw: Vec<_> = il
+            .nodes
+            .iter()
+            .filter(|node| node.kind == NodeKind::Raw)
+            .filter_map(|node| match node.payload {
+                Payload::Name(sym) => Some(interner.resolve(sym)),
+                _ => None,
+            })
+            .collect();
+        assert!(
+            !raw.contains(&"dotted_name"),
+            "qualified match pattern should lower without Raw dotted_name: {raw:?}"
         );
     }
 
