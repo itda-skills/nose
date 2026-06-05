@@ -13,7 +13,7 @@
 //! self-consistent — a genuinely-equivalent pair agrees under *any* consistent
 //! semantics, so a fingerprint merge the interpreter contradicts is a real bug.
 
-use nose_il::{Builtin, HoFKind, Il, LoopKind, NodeId, NodeKind, Op, Payload};
+use nose_il::{Builtin, HoFKind, Il, LoopKind, NodeId, NodeKind, Op, Payload, Symbol};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 /// A runtime value. `List` is nested so `zip`/`enumerate` can yield pairs.
@@ -80,6 +80,14 @@ struct Interp<'a> {
     /// Parameter cids — appending to one is a caller-visible mutation (an effect); appending
     /// to a LOCAL list var builds that list's value (faithful, converges with a comprehension).
     params: FxHashSet<u32>,
+    /// The `Func` node being run and its name, so a same-named call inside the body is
+    /// executed as **direct self-recursion** (a fresh frame, shared effect trace / step
+    /// budget) rather than left opaque. This lets the oracle interpret the *pre-canon*
+    /// recursive form and so validate the recursion→iteration canonicalization; unbounded
+    /// recursion safely hits the step budget and the unit becomes uninterpretable. Any other
+    /// (non-self) opaque call stays unsupported.
+    func_root: NodeId,
+    func_name: Option<Symbol>,
 }
 
 /// Run the `Func` unit at `root` with `args` bound to its parameters (in order).
@@ -88,12 +96,19 @@ pub fn run_unit(il: &Il, root: NodeId, args: &[Value]) -> Option<Behavior> {
     if il.kind(root) != NodeKind::Func {
         return None;
     }
+    let func_name = il
+        .units
+        .iter()
+        .find(|u| u.root == root)
+        .and_then(|u| u.name);
     let mut it = Interp {
         il,
         steps: 0,
         effects: Vec::new(),
         fields: FxHashMap::default(),
         params: FxHashSet::default(),
+        func_root: root,
+        func_name,
     };
     let mut env: FxHashMap<u32, Value> = FxHashMap::default();
     let kids = il.children(root).to_vec();
@@ -428,7 +443,7 @@ impl<'a> Interp<'a> {
     fn eval_call(&mut self, node: NodeId, env: &mut FxHashMap<u32, Value>) -> R<Value> {
         let b = match self.il.node(node).payload {
             Payload::Builtin(b) => b,
-            _ => return Err(Unsupported), // opaque call — can't model
+            _ => return self.eval_user_call(node, env), // self-recursion, else opaque
         };
         let kids = self.il.children(node).to_vec();
         let mut args = Vec::new();
@@ -526,6 +541,48 @@ impl<'a> Interp<'a> {
             Builtin::GetOrDefault => Ok(Value::Err),
             Builtin::ValueOrDefault => Ok(Value::Err),
             Builtin::Reduce | Builtin::Any | Builtin::All => unreachable!(),
+        }
+    }
+
+    /// A non-builtin `callee(args…)`. Modeled ONLY when `callee` names the function being
+    /// run — i.e. **direct self-recursion** — by binding the evaluated arguments to the
+    /// function's parameters in a fresh frame and executing its body; the effect trace,
+    /// field state, and step budget are shared with the caller, so effects stay ordered and
+    /// runaway recursion terminates as `Unsupported`. Every other opaque call is unsupported
+    /// (the unit is excluded from the soundness check rather than guessed at).
+    fn eval_user_call(&mut self, node: NodeId, env: &mut FxHashMap<u32, Value>) -> R<Value> {
+        let kids = self.il.children(node).to_vec();
+        let callee = *kids.first().ok_or(Unsupported)?;
+        let is_self = match (self.il.node(callee).payload, self.func_name) {
+            (Payload::Name(s), Some(name)) => s == name,
+            _ => false,
+        };
+        if !is_self {
+            return Err(Unsupported);
+        }
+        // Evaluate the arguments in the CURRENT frame (call-by-value), left to right.
+        let mut argv = Vec::with_capacity(kids.len().saturating_sub(1));
+        for &a in &kids[1..] {
+            argv.push(self.eval(a, env)?);
+        }
+        // Bind them positionally to the callee's parameters in a fresh environment; locals
+        // start empty, exactly like a real call.
+        let params = self.il.children(self.func_root).to_vec();
+        let mut fenv: FxHashMap<u32, Value> = FxHashMap::default();
+        let mut pi = 0;
+        for &p in &params {
+            if self.il.kind(p) == NodeKind::Param {
+                if let Payload::Cid(c) = self.il.node(p).payload {
+                    fenv.insert(c, argv.get(pi).cloned().unwrap_or(Value::Null));
+                    pi += 1;
+                }
+            }
+        }
+        let body = *params.last().ok_or(Unsupported)?;
+        match self.exec(body, &mut fenv)? {
+            Flow::Ret(v) => Ok(v),
+            Flow::Err => Ok(Value::Err),
+            _ => Ok(Value::Null),
         }
     }
 

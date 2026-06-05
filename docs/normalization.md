@@ -26,13 +26,23 @@
 > (`d={}; for x: d[k]=v` ≡ `{k:v for x}` via a `DictEntry`-distinct rep that cannot collide
 > with a list of tuples), ternary-return decomposition, negated-comparison canon,
 > equality-chain literal membership (`x=="a" || x=="b"`), stricter record-shape guard
-> facts, and ordered string-builder joins (`out += elem` over a loop ≡ `"".join(xs)`).
+> facts, and ordered string-builder joins (`out += elem` over a loop ≡ `"".join(xs)`). Also
+> landed: **recursion → iteration** (`recursion.rs`) — tail recursion → `while`, and numeric
+> structural (linear) recursion → an accumulator fold, so a recursive function converges with
+> the loop a programmer would have written and with other same-shape recursions
+> (cross-language included). Structural recursion is gated to a `+`/`·` numeric monoid
+> (commutative + associative; identities `0`/`1`) with the base returning that identity
+> literal; the interpreter now executes self-recursion so `nose verify` interprets the
+> pre-canon recursive form and validates the rewrite (see *Recursion → iteration* below).
 > Soundness enforced by the independent interpreter oracle + canon-preservation check
 > (`nose verify`) and Lean proofs (`formal/`, incl. `distrib_sound`, `filter_fusion`,
 > `Compare.lean`); see §AJ/§AW/§AX/§BA.
 > Deferred: value-dependent folding (needs literal values), full distribution
-> (equality saturation), general CFG flag-loop↔break, loop↔recursion, and non-local
-> early-exit variants beyond the simple flag+break loop. Rejected as cross-language-unsound: `x*2≡x+x`
+> (equality saturation), general CFG flag-loop↔break, and non-local early-exit variants
+> beyond the simple flag+break loop; recursion→iteration beyond the tail / numeric-monoid
+> subset (tree & mutual recursion, list-tail catamorphisms over opaque slices, and the
+> countdown↔`range` pairing — the rewrite is sound there but the value graph does not yet
+> converge the two index forms). Rejected as cross-language-unsound: `x*2≡x+x`
 > doubling and `s[-1]≡s[len(s)-1]` negative-index (§BA).
 
 
@@ -119,8 +129,49 @@ canonical extraction, integer/float/overflow caveats (kept approximate).
 Beyond today's local rewrites (else-after-return, branch orientation): build a
 structured CFG and canonicalize equivalent shapes — flag-variable loop ↔ `break`,
 nested guards ↔ flattened guards, `continue`-skip ↔ wrapped body, redundant-jump
-elimination. Excludes loop↔recursion (out of scope). Hard parts: structuring
+elimination. Hard parts: structuring
 arbitrary control flow, proving shape-equivalence, determinism.
+
+## Track 4 — Recursion → iteration
+
+`recursion.rs` rewrites the two recursion schemes that have a behavior-preserving iterative
+form, in the SEMANTIC phase (after the oracle's structural cutoff), so the loops it emits
+flow through dataflow / cfg-norm / the value graph and converge with hand-written iteration.
+
+- **Tail recursion → `while`.** `f(p…): if c₀: return v₀; …; return f(a…)` becomes
+  `while not(c₀ or …) { p… := a… }; if c₀: return v₀; …; return vₖ₋₁`. The next call's
+  argument bindings run each turn in a hazard-safe order (a cyclic binding such as a swap
+  bails); on exit exactly one guard holds, so the post-loop guard chain returns the same base
+  value. This is plain tail-call elimination — sound for *any* guards/arguments, no algebra
+  needed.
+- **Structural (linear) recursion → accumulator fold.** `f(p…): if base: return e;
+  return HEAD ⊕ f(a…)` becomes `acc = e; while not(base) { acc = acc ⊕ HEAD; p… := a… };
+  return acc`. The recursion is a right fold `HEAD₀ ⊕ (HEAD₁ ⊕ (… ⊕ e))`; the loop is a left
+  fold. They are equal **iff ⊕ is an associative monoid with identity `e`**, so the rewrite
+  fires only for `⊕ ∈ {+, ·}` proven `Num` (commutative + associative; identities `0`/`1`)
+  with the base case returning exactly that identity literal. Short-circuit `and`/`or` are
+  excluded: their early-exit skips later `HEAD`s the accumulator loop still evaluates.
+
+Both schemes require exactly one self-call (a same-named call inside a standalone function);
+anything else is left untouched. **Soundness** is checked, not assumed: the interpreter
+([`interp`](../crates/nose-normalize/src/interp.rs)) now executes self-recursion, so
+`nose verify` interprets the original recursion *and* the rewritten loop and flags any
+behavioral difference (when the recursion terminates on the input battery — a guard like
+`n == 0` that loops forever on negatives is excluded on both sides, identically). On real
+code `nose verify` stays sound (0 false merges).
+
+Out of scope (sound but not yet convergent, or genuinely hard): tree & mutual recursion
+(multiple / non-tail self-calls); list-tail catamorphisms `head ⊕ f(xs[1:])`, whose slice is
+opaque to the interpreter and value graph; and the countdown-loop ↔ `range`-loop pairing,
+where the rewrite's `while n != 0` countdown is correct but does not converge with a
+`for i in range(n)` form.
+
+(A pre-existing value-graph false merge surfaced while building this — a non-reduction
+loop accumulator's compact `Recurrence` value was keyed on its per-iteration update only,
+dropping the pre-loop **seed**, so `a + Σ` (parameter seed) collapsed onto `Σ` (literal-`0`
+seed). Fixed in the same change: the recurrence now carries its seed as an operand, so the
+seed reaches the fingerprint. It reproduced with hand-written loops alone — the recursion
+rewrite merely made it reachable from recursive functions too.)
 
 ---
 

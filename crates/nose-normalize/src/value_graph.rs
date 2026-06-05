@@ -3300,8 +3300,21 @@ impl<'a> Builder<'a> {
                     let red = self.mk(ValOp::Reduce(op), args);
                     env.insert(cid, red);
                 }
-                _ => {
-                    env.insert(cid, newv);
+                (init, _) => {
+                    // A non-reduction loop-carried value still depends on its pre-loop
+                    // SEED. The compact `Recurrence` key is the per-iteration update
+                    // expression ONLY, so `acc = a` (a parameter seed, the loop returning
+                    // `a + Σ`) collapsed onto `acc = 0` (returning `Σ`) — a false merge,
+                    // since the two differ exactly by that seed. Re-key the recurrence on
+                    // the seed as well so the seed reaches the fingerprint. (Clean
+                    // reductions above already carry their `init`.)
+                    let v = match (init, self.nodes[newv as usize].op.clone()) {
+                        (Some(init), ValOp::Recurrence(h)) => {
+                            self.mk(ValOp::Recurrence(h), vec![init])
+                        }
+                        _ => newv,
+                    };
+                    env.insert(cid, v);
                 }
             }
         }
