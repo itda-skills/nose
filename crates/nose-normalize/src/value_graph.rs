@@ -2935,11 +2935,23 @@ impl<'a> Builder<'a> {
                     .is_some_and(|&lambda| self.lambda_body_is_static_runtime_err(lambda, env));
         }
         if self.il.kind(expr) == NodeKind::If {
-            return self
-                .il
-                .children(expr)
-                .first()
-                .is_some_and(|&cond| self.expr_is_static_runtime_err(cond, env));
+            let kids = self.il.children(expr).to_vec();
+            let Some(&cond) = kids.first() else {
+                return false;
+            };
+            if self.expr_is_static_runtime_err(cond, env) {
+                return true;
+            }
+            let cond_value = self.eval(cond, env);
+            return match self.bool_const(cond_value) {
+                Some(true) => kids
+                    .get(1)
+                    .is_some_and(|&then_expr| self.expr_is_static_runtime_err(then_expr, env)),
+                Some(false) => kids
+                    .get(2)
+                    .is_some_and(|&else_expr| self.expr_is_static_runtime_err(else_expr, env)),
+                None => false,
+            };
         }
         if self.il.kind(expr) == NodeKind::Call && self.call_has_static_runtime_arg_err(expr, env) {
             return true;

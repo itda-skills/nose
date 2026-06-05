@@ -1927,6 +1927,19 @@ fn value_graph_runs_try_handler_after_static_ternary_condition_err() {
 }
 
 #[test]
+fn value_graph_runs_try_handler_after_static_selected_ternary_branch_err() {
+    let i = Interner::new();
+    let try_err =
+        "def f():\n    try:\n        return 1 / 0 if True else 2\n    except Exception:\n        return 7\n";
+    let plain_return = "def f():\n    return 7\n";
+    assert_eq!(
+        value_fp(&i, try_err, Lang::Python),
+        value_fp(&i, plain_return, Lang::Python),
+        "a statically selected ternary branch error should run the simple catch handler"
+    );
+}
+
+#[test]
 fn value_graph_runs_try_handler_after_static_pow_err() {
     let i = Interner::new();
     let try_err =
