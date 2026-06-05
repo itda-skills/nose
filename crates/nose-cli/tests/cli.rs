@@ -101,6 +101,18 @@ fn scan_families(json: &serde_json::Value) -> &[serde_json::Value] {
         .expect("scan JSON should contain families array")
 }
 
+fn json_array_strings<'a>(value: &'a serde_json::Value, key: &str) -> Vec<&'a str> {
+    value[key]
+        .as_array()
+        .unwrap_or_else(|| panic!("{key} should be an array"))
+        .iter()
+        .map(|item| {
+            item.as_str()
+                .unwrap_or_else(|| panic!("{key} entries should be strings"))
+        })
+        .collect()
+}
+
 fn assert_scan_json_v1_contract(json: &serde_json::Value) {
     assert_eq!(json["schema_version"], 1);
     assert!(
@@ -480,9 +492,8 @@ fn scan_mode_semantic_proves_collection_empty_checks() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert!(
         !semantic_families.is_empty(),
         "semantic mode should report collection emptiness families: {semantic}"
@@ -573,9 +584,8 @@ fn scan_mode_semantic_proves_string_prefix_checks() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert!(
         !semantic_families.is_empty(),
         "semantic mode should report string prefix families: {semantic}"
@@ -680,9 +690,8 @@ fn scan_mode_semantic_proves_rust_numeric_methods() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     for expected_pair in [
         ["abs_conditional.py", "abs_method.rs"],
         ["min_conditional.py", "min_method.rs"],
@@ -1179,9 +1188,8 @@ fn scan_mode_semantic_proves_literal_collection_membership() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert!(
         !semantic_families.is_empty(),
         "semantic mode should report literal membership families: {semantic}"
@@ -1500,9 +1508,8 @@ fn scan_mode_semantic_proves_typed_dynamic_collection_membership() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     let expected = [
         "membership.py",
         "membership.ts",
@@ -1646,9 +1653,8 @@ fn scan_mode_semantic_proves_set_membership_when_receiver_is_proven() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     let expected_positive = [
         "literal.py",
         "set_inline.js",
@@ -1834,9 +1840,8 @@ fn scan_mode_semantic_proves_typed_typescript_map_key_membership() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     let positive_family = semantic_families
         .iter()
         .map(serde_json::Value::to_string)
@@ -2051,9 +2056,8 @@ fn scan_mode_semantic_proves_typed_typescript_map_default_lookup() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     let expected = [
         "map_default.go",
         "ts_nullish.ts",
@@ -2489,9 +2493,8 @@ fn scan_mode_semantic_proves_literal_map_default_lookup() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     let expected = [
         "map_default.py",
         "map_default.rb",
@@ -2742,9 +2745,8 @@ fn scan_mode_semantic_proves_null_presence_predicates() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -2804,9 +2806,8 @@ fn scan_mode_semantic_reports_flattened_guard_span_only() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let families = scan_families(&semantic_json);
     let text = semantic_json.to_string();
     assert!(
         text.contains("large_branch.rb") && text.contains("small_guard.rb"),
@@ -3091,9 +3092,8 @@ fn scan_mode_semantic_allows_static_import_identity() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -3220,9 +3220,8 @@ fn scan_mode_semantic_allows_static_projection_identity() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert!(
         !semantic_families.is_empty(),
         "semantic mode should report static projection identities: {semantic}"
@@ -3288,9 +3287,8 @@ fn scan_mode_semantic_distinguishes_nullish_from_truthy_defaults() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -3365,9 +3363,8 @@ fn scan_mode_semantic_proves_js_record_shape_guards() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -3449,9 +3446,8 @@ fn scan_mode_semantic_proves_js_own_property_guards() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -4674,6 +4670,65 @@ fn diff_shows_the_differing_line() {
 fn version_flag_works() {
     let out = run(&["--version"]);
     assert!(out.starts_with("nose "), "version line: {out}");
+}
+
+#[test]
+fn capabilities_command_emits_machine_readable_contract() {
+    let out = run(&["capabilities"]);
+    let json: serde_json::Value =
+        serde_json::from_str(&out).expect("capabilities must emit valid JSON");
+
+    assert_eq!(json["schema_version"], 1);
+    assert_eq!(json["tool"]["name"], "nose");
+    assert_eq!(json["tool"]["version"], env!("CARGO_PKG_VERSION"));
+    assert!(
+        json["platform"]["os"]
+            .as_str()
+            .is_some_and(|s| !s.is_empty()),
+        "platform.os should be non-empty: {out}"
+    );
+    assert!(
+        json["platform"]["arch"]
+            .as_str()
+            .is_some_and(|s| !s.is_empty()),
+        "platform.arch should be non-empty: {out}"
+    );
+    assert_eq!(json["interfaces"]["capabilities_json"], true);
+    assert_eq!(json["interfaces"]["version_json"], false);
+    assert_eq!(json["interfaces"]["doctor_json"], false);
+
+    assert_eq!(
+        json_array_strings(&json["commands"], "stable"),
+        vec!["capabilities", "il", "scan", "stats"]
+    );
+    assert_eq!(json["schemas"]["capabilities"][0], 1);
+    assert_eq!(json["schemas"]["scan_json"][0], 1);
+    assert_eq!(
+        json_array_strings(&json["scan"], "modes"),
+        vec!["syntax", "semantic", "near"]
+    );
+    assert_eq!(
+        json_array_strings(&json["scan"], "default_modes"),
+        vec!["syntax", "semantic"]
+    );
+    assert_eq!(
+        json_array_strings(&json["scan"], "output_formats"),
+        vec!["human", "json", "markdown", "sarif"]
+    );
+    assert_eq!(
+        json_array_strings(&json["scan"], "sort_keys"),
+        vec!["extractability", "value", "sites"]
+    );
+    assert_eq!(json["scan"]["capabilities"]["baseline"], true);
+    assert_eq!(json["scan"]["capabilities"]["structured_ignores"], true);
+    assert_eq!(
+        json_array_strings(&json["il"], "output_formats"),
+        vec!["sexpr", "json"]
+    );
+    assert_eq!(
+        json_array_strings(&json["stats"], "output_formats"),
+        vec!["human", "json"]
+    );
 }
 
 #[test]
