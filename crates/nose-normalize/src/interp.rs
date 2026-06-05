@@ -212,6 +212,7 @@ impl<'a> Interp<'a> {
                 Ok(Flow::Normal)
             }
             NodeKind::Loop => self.exec_loop(node, env),
+            NodeKind::Try => self.exec_try(node, env),
             NodeKind::Break => Ok(Flow::Break),
             NodeKind::Continue => Ok(Flow::Continue),
             // Empty block / no-op pass lowers to an empty Block (handled above) or a
@@ -287,6 +288,17 @@ impl<'a> Interp<'a> {
                 Ok(Flow::Normal)
             }
             _ => Err(Unsupported),
+        }
+    }
+
+    fn exec_try(&mut self, node: NodeId, env: &mut FxHashMap<u32, Value>) -> R<Flow> {
+        let kids = self.il.children(node).to_vec();
+        if kids.len() != 2 || self.il.children(kids[1]).is_empty() {
+            return Err(Unsupported);
+        }
+        match self.exec(kids[0], env)? {
+            Flow::Err => self.exec(kids[1], env),
+            other => Ok(other),
         }
     }
 
@@ -1126,6 +1138,46 @@ mod tests {
         let (behavior, field_key) = run_field_write_read();
         assert_eq!(behavior.ret, Value::Int(7));
         assert_eq!(behavior.fields, vec![(field_key, Value::Int(7))]);
+    }
+
+    fn run_try(body_stmt: NodeId, handler_stmt: NodeId, mut b: IlBuilder, sp: Span) -> Value {
+        let body = b.add(NodeKind::Block, Payload::None, sp, &[body_stmt]);
+        let handler = b.add(NodeKind::Block, Payload::None, sp, &[handler_stmt]);
+        let try_node = b.add(NodeKind::Try, Payload::None, sp, &[body, handler]);
+        let block = b.add(NodeKind::Block, Payload::None, sp, &[try_node]);
+        let func = b.add(NodeKind::Func, Payload::None, sp, &[block]);
+        let il = b.finish(
+            func,
+            FileMeta {
+                path: "t".into(),
+                lang: Lang::Python,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+        run_unit(&il, func, &[]).expect("run_unit").ret
+    }
+
+    #[test]
+    fn try_handler_runs_on_throw_err() {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let thrown = b.add(NodeKind::Lit, Payload::LitStr(0xBAD), sp, &[]);
+        let throw = b.add(NodeKind::Throw, Payload::None, sp, &[thrown]);
+        let seven = b.add(NodeKind::Lit, Payload::LitInt(7), sp, &[]);
+        let handler_ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
+        assert_eq!(run_try(throw, handler_ret, b, sp), Value::Int(7));
+    }
+
+    #[test]
+    fn try_handler_is_skipped_on_normal_return() {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let body_ret = b.add(NodeKind::Return, Payload::None, sp, &[one]);
+        let seven = b.add(NodeKind::Lit, Payload::LitInt(7), sp, &[]);
+        let handler_ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
+        assert_eq!(run_try(body_ret, handler_ret, b, sp), Value::Int(1));
     }
 
     /// Build `fn() { return base ** exp }` over integer literals and run it.
