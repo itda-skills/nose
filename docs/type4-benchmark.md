@@ -156,6 +156,7 @@ benchmark also proves what must *not* merge. Each negative carries a concrete co
 | `min` | changed to `max`, reversed comparison with different tie behavior |
 | string concat | operand order swap, separator placement change |
 | field write | target field changed, overwrite order changed |
+| statement effect | append/emit order changed on the same execution path |
 | indexed loop | skipped first or last element, wrong collection indexed |
 | C pointer-length contract | skipped first element, stride greater than one, non-contract bound |
 | C byte-pack | swapped byte order, overlapping shift, wrong byte coordinate, unproven byte alias, non-byte receiver, uncasted 32-bit high-lane shift, unproven unsigned cast alias |

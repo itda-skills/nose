@@ -30,6 +30,8 @@
 > statically-false loop entry guards (a proven-true local boolean makes a left
 > short-circuit `!local && ...` guard unreachable), primitive total-order comparator
 > guard absorption (`x<y ∧ x≤y` keeps `x<y` for non-overloadable ordered comparisons),
+> control-flow-aware ordering for statement-level effects (so `append(a); append(b)` does not
+> merge with `append(b); append(a)`),
 > C byte-buffer `u16`/`u32` big-endian packing (`(a[0]<<8)+a[1]` ≡ `(a[0]<<8)|a[1]`
 > only under a byte-array parameter proof, including same-file and direct local-include
 > `typedef unsigned char` aliases; `u32` additionally requires an explicit unsigned

@@ -91,7 +91,9 @@ Lean (`formal/`). See [normalization](normalization.md) for the full pass list.
   `this.field = value` self-field assignments and all-self-field Java function-body blocks
   with the receiver fixed to `this`, optionally ending in `return this`), not arbitrary
   statement windows with unmodeled free-variable, live-out, receiver-overload, or effect
-  boundaries.
+  boundaries. Multiple statement-level effects are ordered through control-flow-aware
+  sink tags; swapping appends/emits on one execution path is a behavior change, not a
+  Type-4 clone.
 
 ## Scan modes, and cross-language
 

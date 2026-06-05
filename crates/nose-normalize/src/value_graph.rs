@@ -244,6 +244,31 @@ enum SinkKind {
     Throw = 4,
 }
 
+#[derive(Clone, Copy)]
+struct Sink {
+    kind: SinkKind,
+    value: ValueId,
+    effect_ord: Option<u32>,
+}
+
+impl Sink {
+    fn new(kind: SinkKind, value: ValueId) -> Self {
+        Self {
+            kind,
+            value,
+            effect_ord: None,
+        }
+    }
+
+    fn ordered_effect(value: ValueId, effect_ord: u32) -> Self {
+        Self {
+            kind: SinkKind::Effect,
+            value,
+            effect_ord: Some(effect_ord),
+        }
+    }
+}
+
 struct Builder<'a> {
     il: &'a Il,
     interner: &'a Interner,
@@ -251,7 +276,7 @@ struct Builder<'a> {
     /// Structural hash per value node, kept in lockstep with `nodes`.
     vhash: Vec<u64>,
     intern: FxHashMap<(ValOp, Vec<ValueId>), ValueId>,
-    sinks: Vec<(SinkKind, ValueId)>,
+    sinks: Vec<Sink>,
     opaque_ctr: u32,
     /// Object field writes (`self.x = v`), keyed by field name → its CURRENT value
     /// (last-write-wins). Flushed to sinks at the end as one (field, final-value) sink
@@ -289,6 +314,10 @@ struct Builder<'a> {
     /// so `if c {return A} else {return B}` and the branch-swapped `if c {return B}
     /// else {return A}` produce *different* fingerprints (path-sensitive returns).
     path: Vec<ValueId>,
+    /// Ordered statement-effect slot for the current control-flow path. Alternative
+    /// `if` branches start from the same slot, then join at the max consumed slot, so
+    /// branch-source order does not matter while sequential effects still do.
+    effect_slot: u32,
     /// Active list-builder variables during a loop body (`r = []; for x: r.append(f(x))`):
     /// cid → `Some((contrib, guard))` for a single clean per-element append, or `None` once
     /// spoiled (a second append, multi-arg append, or other use). On loop exit a clean
@@ -353,6 +382,7 @@ impl<'a> Builder<'a> {
             param_ty: Vec::new(),
             param_semantic: FxHashMap::default(),
             path: Vec::new(),
+            effect_slot: 0,
             building: FxHashMap::default(),
             global_env: FxHashMap::default(),
             loop_recurrence: None,
@@ -451,7 +481,7 @@ impl<'a> Builder<'a> {
         entries.sort_unstable_by_key(|(k, _)| *k);
         for (name, v) in entries {
             let f = self.mk(ValOp::Field(name), vec![v]);
-            self.sinks.push((SinkKind::Effect, f));
+            self.sinks.push(Sink::new(SinkKind::Effect, f));
         }
     }
 
@@ -1472,13 +1502,20 @@ impl<'a> Builder<'a> {
     /// Push an effect sink, tagged with the current path condition — so a *conditional*
     /// effect (`if c { append(x) }`) carries `c`, the way a guarded return does.
     fn push_effect(&mut self, v: ValueId) {
+        let ord = self.next_effect_ordinal();
         let g = self.guarded(v);
-        self.sinks.push((SinkKind::Effect, g));
+        self.sinks.push(Sink::ordered_effect(g, ord));
+    }
+
+    fn next_effect_ordinal(&mut self) -> u32 {
+        let ord = self.effect_slot;
+        self.effect_slot = self.effect_slot.saturating_add(1);
+        ord
     }
 
     fn emit_throw(&mut self, v: ValueId) {
         let g = self.guarded(v);
-        self.sinks.push((SinkKind::Throw, g));
+        self.sinks.push(Sink::new(SinkKind::Throw, g));
     }
 
     /// Tag a value with the current path condition: under branch conditions, the
@@ -1512,7 +1549,7 @@ impl<'a> Builder<'a> {
             }
         }
         let g = self.guarded(v);
-        self.sinks.push((SinkKind::Return, g));
+        self.sinks.push(Sink::new(SinkKind::Return, g));
     }
 
     fn guarded(&mut self, v: ValueId) -> ValueId {
@@ -2052,7 +2089,7 @@ impl<'a> Builder<'a> {
                 vals.sort_unstable();
                 vals.dedup();
                 for v in vals {
-                    self.sinks.push((SinkKind::Effect, v));
+                    self.sinks.push(Sink::new(SinkKind::Effect, v));
                 }
             }
             _ => {
@@ -2369,12 +2406,12 @@ impl<'a> Builder<'a> {
             || self
                 .sinks
                 .iter()
-                .any(|(k, _)| !matches!(k, SinkKind::Return))
+                .any(|sink| !matches!(sink.kind, SinkKind::Return))
         {
             return;
         }
-        let r0 = self.sinks[0].1;
-        let r1 = self.sinks[1].1;
+        let r0 = self.sinks[0].value;
+        let r1 = self.sinks[1].value;
         let bot = self.mk(ValOp::Const(0x3000_0000), vec![]);
         let tru = self.mk(ValOp::Const(0x3000_0002), vec![]);
         let fls = self.mk(ValOp::Const(0x3000_0001), vec![]);
@@ -2401,7 +2438,7 @@ impl<'a> Builder<'a> {
                 continue;
             };
             let red = self.mk(ValOp::Reduce(code), vec![pred]);
-            self.sinks = vec![(SinkKind::Return, red)];
+            self.sinks = vec![Sink::new(SinkKind::Return, red)];
             return;
         }
     }
@@ -2411,45 +2448,50 @@ impl<'a> Builder<'a> {
             || self
                 .sinks
                 .iter()
-                .any(|(kind, _)| !matches!(kind, SinkKind::Return))
+                .any(|sink| !matches!(sink.kind, SinkKind::Return))
         {
             return;
         }
         if let Some(defaulted) = self
-            .map_default_from_partial_default_pair(self.sinks[0].1, self.sinks[1].1)
+            .map_default_from_partial_default_pair(self.sinks[0].value, self.sinks[1].value)
             .or_else(|| {
-                self.map_default_from_partial_default_pair(self.sinks[1].1, self.sinks[0].1)
+                self.map_default_from_partial_default_pair(self.sinks[1].value, self.sinks[0].value)
             })
         {
-            self.sinks = vec![(SinkKind::Return, defaulted)];
+            self.sinks = vec![Sink::new(SinkKind::Return, defaulted)];
             return;
         }
         if let Some(defaulted) =
-            self.map_default_from_guarded_pair(self.sinks[0].1, self.sinks[1].1)
+            self.map_default_from_guarded_pair(self.sinks[0].value, self.sinks[1].value)
         {
-            self.sinks = vec![(SinkKind::Return, defaulted)];
+            self.sinks = vec![Sink::new(SinkKind::Return, defaulted)];
             return;
         }
         if let Some(defaulted) = self
-            .map_default_from_guarded_fallthrough(self.sinks[0].1, self.sinks[1].1)
-            .or_else(|| self.map_default_from_guarded_fallthrough(self.sinks[1].1, self.sinks[0].1))
+            .map_default_from_guarded_fallthrough(self.sinks[0].value, self.sinks[1].value)
+            .or_else(|| {
+                self.map_default_from_guarded_fallthrough(self.sinks[1].value, self.sinks[0].value)
+            })
         {
-            self.sinks = vec![(SinkKind::Return, defaulted)];
+            self.sinks = vec![Sink::new(SinkKind::Return, defaulted)];
             return;
         }
         if let Some(defaulted) =
-            self.value_default_from_guarded_pair(self.sinks[0].1, self.sinks[1].1)
+            self.value_default_from_guarded_pair(self.sinks[0].value, self.sinks[1].value)
         {
-            self.sinks = vec![(SinkKind::Return, defaulted)];
+            self.sinks = vec![Sink::new(SinkKind::Return, defaulted)];
             return;
         }
         if let Some(defaulted) = self
-            .value_default_from_guarded_fallthrough(self.sinks[0].1, self.sinks[1].1)
+            .value_default_from_guarded_fallthrough(self.sinks[0].value, self.sinks[1].value)
             .or_else(|| {
-                self.value_default_from_guarded_fallthrough(self.sinks[1].1, self.sinks[0].1)
+                self.value_default_from_guarded_fallthrough(
+                    self.sinks[1].value,
+                    self.sinks[0].value,
+                )
             })
         {
-            self.sinks = vec![(SinkKind::Return, defaulted)];
+            self.sinks = vec![Sink::new(SinkKind::Return, defaulted)];
         }
     }
 
@@ -3346,7 +3388,7 @@ impl<'a> Builder<'a> {
                 // is captured by the normal path-guard machinery.)
                 let marker = self.mk(ValOp::Const(0xB2EA_C0DE), vec![]);
                 let g = self.guarded(marker);
-                self.sinks.push((SinkKind::Break, g));
+                self.sinks.push(Sink::new(SinkKind::Break, g));
             }
             NodeKind::Continue => {}
             _ => {
@@ -3369,20 +3411,30 @@ impl<'a> Builder<'a> {
         // equivalent ternary (`x = a if c else x`), which has no such sink. (`cond` is
         // still evaluated — for the path stack and so its sub-values are interned.)
         let cond = self.eval(kids[0], env);
+        let effect_slot_base = self.effect_slot;
 
         let mut env_then = env.clone();
-        if kids.len() >= 2 {
+        let then_effect_slot = if kids.len() >= 2 {
+            self.effect_slot = effect_slot_base;
             self.path.push(cond);
             self.process_stmt(kids[1], &mut env_then);
             self.path.pop();
-        }
+            self.effect_slot
+        } else {
+            effect_slot_base
+        };
         let mut env_else = env.clone();
-        if kids.len() >= 3 {
+        let else_effect_slot = if kids.len() >= 3 {
+            self.effect_slot = effect_slot_base;
             let ncond = self.mk(ValOp::Un(Op::Not as u32), vec![cond]);
             self.path.push(ncond);
             self.process_stmt(kids[2], &mut env_else);
             self.path.pop();
-        }
+            self.effect_slot
+        } else {
+            effect_slot_base
+        };
+        self.effect_slot = then_effect_slot.max(else_effect_slot);
 
         // Merge: for each var that differs across branches, insert a Phi.
         let mut keys: Vec<u32> = env_then.keys().chain(env_else.keys()).copied().collect();
@@ -3531,7 +3583,7 @@ impl<'a> Builder<'a> {
                             let bv = self.eval(bound, env);
                             if !self.full_pointer_length_contract(cmp, cv, bv) {
                                 let gv = self.indexed_bound_guard(cmp, bv);
-                                self.sinks.push((SinkKind::Cond, gv));
+                                self.sinks.push(Sink::new(SinkKind::Cond, gv));
                             } else if let (Some(arr), Some(len)) =
                                 (self.input_key(cv), self.input_key(bv))
                             {
@@ -3571,7 +3623,7 @@ impl<'a> Builder<'a> {
                         induction.clear();
                         if let Some(&c) = cond {
                             let cv = self.eval(c, env);
-                            self.sinks.push((SinkKind::Cond, cv));
+                            self.sinks.push(Sink::new(SinkKind::Cond, cv));
                         }
                     }
                 }
@@ -3631,8 +3683,8 @@ impl<'a> Builder<'a> {
         if !index_vals.is_empty() {
             let mut memo = FxHashMap::default();
             for idx in sink_start..self.sinks.len() {
-                let (k, v) = self.sinks[idx];
-                self.sinks[idx] = (k, self.rewrite_indices(v, &index_vals, &mut memo));
+                let v = self.sinks[idx].value;
+                self.sinks[idx].value = self.rewrite_indices(v, &index_vals, &mut memo);
             }
             for &cid in &carried {
                 if let Some(&v) = body_env.get(&cid) {
@@ -6187,7 +6239,7 @@ impl<'a> Builder<'a> {
         let h = &self.vhash; // structural hashes, maintained during construction
                              // reachable from sinks
         let mut reachable = vec![false; self.nodes.len()];
-        let mut stack: Vec<ValueId> = self.sinks.iter().map(|(_, v)| *v).collect();
+        let mut stack: Vec<ValueId> = self.sinks.iter().map(|sink| sink.value).collect();
         while let Some(v) = stack.pop() {
             let vi = v as usize;
             if reachable[vi] {
@@ -6211,10 +6263,16 @@ impl<'a> Builder<'a> {
             }
         }
         let mut returns: Vec<u64> = Vec::new();
-        for (kind, v) in &self.sinks {
-            out.push(combine(0x5117 + *kind as u64, h[*v as usize]));
-            if matches!(kind, SinkKind::Return) {
-                returns.push(h[*v as usize]);
+        for sink in &self.sinks {
+            let mut tag = 0x5117 + sink.kind as u64;
+            if matches!(sink.kind, SinkKind::Effect) {
+                if let Some(ord) = sink.effect_ord {
+                    tag = combine(tag, EFFECT_ORDINAL_SINK_TAG ^ u64::from(ord));
+                }
+            }
+            out.push(combine(tag, h[sink.value as usize]));
+            if matches!(sink.kind, SinkKind::Return) {
+                returns.push(h[sink.value as usize]);
             }
         }
         out.sort_unstable();
@@ -6493,6 +6551,7 @@ const JS_PROTOTYPE_IN_CODE: u32 = 0x4A53_494E;
 const C_U16_BE_BYTE_PACK_CODE: u32 = 0x4331_3642;
 const C_U32_BE_BYTE_PACK_CODE: u32 = 0x4333_3242;
 const OWN_PROPERTY_GUARD_SEQ_TAG: u64 = 8;
+const EFFECT_ORDINAL_SINK_TAG: u64 = 0xEFFE_C701;
 
 /// A selection reduction (min/max) keeps no additive/multiplicative identity, so its
 /// `Reduce` carries only the per-element contribution (no init) — a `max`-loop and

@@ -1681,6 +1681,84 @@ fn semantic_scan_reports_exact_safe_conditional_foreach_append_effect_fragments_
 }
 
 #[test]
+fn semantic_scan_rejects_multiple_append_effect_order_false_merge() {
+    let dir = std::env::temp_dir().join(format!(
+        "nose_append_effect_order_boundary_{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+
+    let fixtures = [
+        (
+            "append_pair_a.js",
+            "function appendPairLeft(flag, out, x) {\n  if (flag) {\n    out.push(x + 1);\n    out.push(x + 2);\n  }\n}\n",
+        ),
+        (
+            "append_pair_b.js",
+            "function appendPairRight(enabled, dst, y) {\n  if (enabled) {\n    dst.push(1 + y);\n    dst.push(2 + y);\n  }\n}\n",
+        ),
+        (
+            "append_pair_wrong_order.js",
+            "function appendPairWrongOrder(flag, out, x) {\n  if (flag) {\n    out.push(x + 2);\n    out.push(x + 1);\n  }\n}\n",
+        ),
+        (
+            "append_cond_before.js",
+            "function appendCondBefore(flag, out, x) {\n  if (flag) {\n    out.push(x + 1);\n  }\n  out.push(x + 2);\n}\n",
+        ),
+        (
+            "append_cond_after.js",
+            "function appendCondAfter(flag, out, x) {\n  out.push(x + 2);\n  if (flag) {\n    out.push(x + 1);\n  }\n}\n",
+        ),
+    ];
+    for (name, src) in fixtures {
+        fs::write(dir.join(name), src).unwrap();
+    }
+
+    let out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "1",
+        "--min-size",
+        "1",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let json = scan_json(&out);
+    let families = scan_families(&json);
+    let assert_no_merge = |left: &str, right: &str, kind: Option<&str>| {
+        let merged = families.iter().any(|family| {
+            let files: Vec<&str> = family["locations"]
+                .as_array()
+                .expect("locations")
+                .iter()
+                .filter(|loc| kind.is_none_or(|kind| loc["kind"].as_str() == Some(kind)))
+                .filter_map(|loc| loc["file"].as_str())
+                .collect();
+            files.iter().any(|file| file.ends_with(left))
+                && files.iter().any(|file| file.ends_with(right))
+        });
+        assert!(
+            !merged,
+            "semantic mode must not merge ordered append effects when the order changes ({left}/{right}): {out}"
+        );
+    };
+    assert_no_merge("append_pair_a.js", "append_pair_wrong_order.js", None);
+    assert_no_merge(
+        "append_cond_before.js",
+        "append_cond_after.js",
+        Some("Function"),
+    );
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn semantic_scan_reports_exact_safe_index_assignment_fragments_for_non_overloaded_languages() {
     let dir = std::env::temp_dir().join(format!(
         "nose_exact_index_assign_fragments_{}",

@@ -4761,6 +4761,37 @@ Targeted coverage added
 `java_arrays_aslist_single_argument_respects_array_provenance`, plus the existing literal
 collection membership and typed-empty-domain regressions stayed green.
 
+## Effect-order soundness hardening: batch 2026-06-06
+
+This batch interrupted fragment expansion because a focused audit found a strict semantic
+false merge: two JavaScript functions with `out.push(x + 1); out.push(x + 2)` and the same
+two append effects in the opposite order shared a value fingerprint even though the
+interpreter reported different ordered effects. Soundness takes priority over coverage, so
+the batch fixed the value graph before opening any new unit-fragment shape.
+
+The proof invariant is control-flow-aware statement-effect ordering. Statement-level effects
+carry an ordinal in the sink tag, not as extra reachable value-graph nodes. Alternative
+`if` branches start from the same slot and join at the maximum consumed slot, while
+sequential effects on one execution path no longer collapse as an unordered sink multiset.
+Final Java self-field state remains a separate last-write-wins field sink.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| effect-order-1 | rebase | rebase the branch onto latest `origin/main` before continuing | branch moved to 0 behind / 18 ahead; conflicts were documentation-only |
+| effect-order-2 | soundness audit | reproduce ordered append false merge with `nose verify` | previous value graph had 1 false merge for swapped append order |
+| effect-order-3 | value graph | add statement-effect ordinal sink tags with branch-aware slot joins | swapped append order no longer shares a fingerprint without increasing reachable value size |
+| effect-order-4 | focused regression | add CLI semantic regression for ordered append effects, including conditional-before/after reorder | targeted CLI test passes |
+| effect-order-5 | oracle regression | rerun the reproducer with `--max-violations 0` | SOUND; 0 false merges |
+| effect-order-6 | release gates | run full Rust tests, clippy, docs lint, core all-cross smoke, formatting, and whitespace checks | `cargo test` pass; clippy clean; `awiki lint --root docs` pass; core smoke 629/629 positives and 0/1240 hard-negative false merges |
+| effect-order-7 | real-corpus delta/perf | compare the previous release scan to the ordered-effect release on selected repos and the full pinned corpus | selected Flask/Axios/Rust unchanged at 66 families / 214 locations; full corpus 7428 -> 7430 families and 33056 -> 33051 locations; full candidate path 457.7ms -> 374.5ms |
+
+This is a deliberate soundness hardening rather than a completeness win. The next fragment
+batch should resume from a narrow proof axis only after the full smoke/performance gates
+stay clean with ordered effects. Because the recent real-corpus frontier work has been
+Java-heavy, the next ordinary completeness batch should prefer a non-Java or explicitly
+multi-language proof axis unless a Java lead clearly dominates on evidence-backed yield and
+cost.
+
 ## Fragment batch 14: exact Java fluent self-field return bodies
 
 This batch extends the batch-13 function-body boundary only for Java fluent builders and
