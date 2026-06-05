@@ -159,10 +159,14 @@ Out of scope (sound but not yet convergent, or genuinely hard): tree & mutual re
 (multiple / non-tail self-calls); list-tail catamorphisms `head ⊕ f(xs[1:])`, whose slice is
 opaque to the interpreter and value graph; and the countdown-loop ↔ `range`-loop pairing,
 where the rewrite's `while n != 0` countdown is correct but does not converge with a
-`for i in range(n)` form. One **pre-existing** value-graph approximation is now reachable
-from recursion too: an accumulator seeded by a *parameter* (`a + Σ`) shares a fingerprint
-with one seeded by the matching *identity literal* (`Σ`) — reproducible with hand-written
-loops alone, independent of this pass.
+`for i in range(n)` form.
+
+(A pre-existing value-graph false merge surfaced while building this — a non-reduction
+loop accumulator's compact `Recurrence` value was keyed on its per-iteration update only,
+dropping the pre-loop **seed**, so `a + Σ` (parameter seed) collapsed onto `Σ` (literal-`0`
+seed). Fixed in the same change: the recurrence now carries its seed as an operand, so the
+seed reaches the fingerprint. It reproduced with hand-written loops alone — the recursion
+rewrite merely made it reachable from recursive functions too.)
 
 ---
 

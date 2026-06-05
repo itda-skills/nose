@@ -210,8 +210,10 @@ impl Rebuilder<'_> {
         if self.old.kind(last) != NodeKind::Return {
             return None;
         }
-        let guards: Vec<(NodeId, NodeId)> =
-            guard_stmts.iter().map(|&g| self.parse_guard(g)).collect::<Option<_>>()?;
+        let guards: Vec<(NodeId, NodeId)> = guard_stmts
+            .iter()
+            .map(|&g| self.parse_guard(g))
+            .collect::<Option<_>>()?;
         if guards.is_empty() {
             return None;
         }
@@ -350,7 +352,8 @@ impl Rebuilder<'_> {
                 let init = {
                     let lhs = self.var(acc, span);
                     let rhs = self.go_val(*identity);
-                    self.b.add(NodeKind::Assign, Payload::None, span, &[lhs, rhs])
+                    self.b
+                        .add(NodeKind::Assign, Payload::None, span, &[lhs, rhs])
                 };
                 // `acc = acc ⊕ HEAD` runs first (reads the current params/acc), then the
                 // params advance to the next call's arguments.
@@ -358,14 +361,18 @@ impl Rebuilder<'_> {
                     let lhs = self.var(acc, span);
                     let cur = self.var(acc, span);
                     let h = self.go_val(*head);
-                    let combined = self.b.add(NodeKind::BinOp, Payload::Op(*op), span, &[cur, h]);
+                    let combined = self
+                        .b
+                        .add(NodeKind::BinOp, Payload::Op(*op), span, &[cur, h]);
                     self.b
                         .add(NodeKind::Assign, Payload::None, span, &[lhs, combined])
                 };
                 let mut loop_stmts = vec![acc_update];
                 loop_stmts.extend(self.ordered_updates(param_cids, args)?);
                 let cond = self.not_any(vec![*base_cond]);
-                let loop_body = self.b.add(NodeKind::Block, Payload::None, span, &loop_stmts);
+                let loop_body = self
+                    .b
+                    .add(NodeKind::Block, Payload::None, span, &loop_stmts);
                 let wl = self.while_loop(cond, loop_body, span);
                 let ret = {
                     let v = self.var(acc, span);
@@ -413,9 +420,12 @@ impl Rebuilder<'_> {
         let mut acc = self.go_val(it.next().unwrap());
         for c in it {
             let cc = self.go_val(c);
-            acc = self.b.add(NodeKind::BinOp, Payload::Op(Op::Or), span, &[acc, cc]);
+            acc = self
+                .b
+                .add(NodeKind::BinOp, Payload::Op(Op::Or), span, &[acc, cc]);
         }
-        self.b.add(NodeKind::UnOp, Payload::Op(Op::Not), span, &[acc])
+        self.b
+            .add(NodeKind::UnOp, Payload::Op(Op::Not), span, &[acc])
     }
 
     /// A fresh canonical id for an introduced variable: one past the max id used in the
@@ -462,7 +472,8 @@ impl Rebuilder<'_> {
                     let span = self.old.node(*arg).span;
                     let lhs = self.var(*p, span);
                     let rhs = self.go_val(*arg);
-                    self.b.add(NodeKind::Assign, Payload::None, span, &[lhs, rhs])
+                    self.b
+                        .add(NodeKind::Assign, Payload::None, span, &[lhs, rhs])
                 })
                 .collect(),
         )
@@ -507,7 +518,12 @@ fn toposort_updates(updates: &[(u32, NodeId, FxHashSet<u32>)]) -> Option<Vec<usi
     // Kahn, picking the lowest index among ready nodes for determinism.
     let mut order = Vec::with_capacity(n);
     let mut ready: Vec<usize> = (0..n).filter(|&i| indeg[i] == 0).collect();
-    while let Some(pos) = ready.iter().enumerate().min_by_key(|&(_, &v)| v).map(|(k, _)| k) {
+    while let Some(pos) = ready
+        .iter()
+        .enumerate()
+        .min_by_key(|&(_, &v)| v)
+        .map(|(k, _)| k)
+    {
         let u = ready.remove(pos);
         order.push(u);
         for &v in &adj[u] {

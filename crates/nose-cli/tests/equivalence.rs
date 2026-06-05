@@ -3457,7 +3457,6 @@ fn convergence_probe4() {
     eprintln!("probe4: {}/{} converge", pairs.len() - gaps, pairs.len());
 }
 
-
 // ---------------------------------------------------------------------------
 // Recursion ↔ iteration (recursion.rs). Tail recursion and numeric structural
 // recursion are rewritten to the loop a programmer would have written, so they
@@ -3524,10 +3523,7 @@ fn two_structural_recursions_converge() {
     let i = Interner::new();
     let f = "def f(n):\n    if n == 0:\n        return 0\n    return n + f(n - 1)\n";
     let g = "def h(m):\n    if m == 0:\n        return 0\n    return m + h(m - 1)\n";
-    assert_eq!(
-        value_fp(&i, f, Lang::Python),
-        value_fp(&i, g, Lang::Python),
-    );
+    assert_eq!(value_fp(&i, f, Lang::Python), value_fp(&i, g, Lang::Python),);
 }
 
 #[test]
@@ -3555,7 +3551,6 @@ fn recursion_does_not_falsely_merge() {
     }
 }
 
-
 #[test]
 fn interp_executes_self_recursion() {
     // The oracle form keeps recursion un-rewritten (it stops before the recursion pass), so
@@ -3574,5 +3569,34 @@ fn interp_executes_self_recursion() {
     );
     let root = first_func(&oracle);
     let beh = run_unit(&oracle, root, &[Value::Int(5)]).expect("recursion should interpret");
-    assert_eq!(beh.ret, Value::Int(120), "5! = 120 via interpreted recursion");
+    assert_eq!(
+        beh.ret,
+        Value::Int(120),
+        "5! = 120 via interpreted recursion"
+    );
+}
+
+#[test]
+fn loop_accumulator_seed_is_not_abstracted() {
+    // A loop-carried accumulator that is not a clean collection reduction (a numeric
+    // countdown fold) still depends on its pre-loop SEED. Regression: the compact
+    // `Recurrence` value keyed only on the per-iteration update, so a parameter-seeded
+    // accumulator (`acc=a` → returns `a + Σ`) collapsed onto a zero-seeded one
+    // (`total=0` → returns `Σ`) — a false merge. They must now stay distinct.
+    let i = Interner::new();
+    let param_seed = "def f(n, acc):\n    while n > 0:\n        acc = acc + n\n        n = n - 1\n    return acc\n";
+    let zero_seed = "def g(n):\n    total = 0\n    while n > 0:\n        total = total + n\n        n = n - 1\n    return total\n";
+    assert_ne!(
+        value_fp(&i, param_seed, Lang::Python),
+        value_fp(&i, zero_seed, Lang::Python),
+        "a parameter-seeded accumulator must not merge with a zero-seeded one"
+    );
+    // Same seed (both 0) and same update still converge — the fix only adds the seed to the
+    // key, it does not over-split.
+    let zero_seed2 = "def h(m):\n    s = 0\n    while m > 0:\n        s = s + m\n        m = m - 1\n    return s\n";
+    assert_eq!(
+        value_fp(&i, zero_seed, Lang::Python),
+        value_fp(&i, zero_seed2, Lang::Python),
+        "two zero-seeded countdown sums must still converge"
+    );
 }
