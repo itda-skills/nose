@@ -12,7 +12,7 @@ pub mod span;
 
 mod sexpr;
 
-pub use intern::{stable_symbol_hash, symbol_index, Interner, Symbol};
+pub use intern::{stable_symbol_hash, symbol_index, Interner, Symbol, FNV_OFFSET_BASIS, FNV_PRIME};
 pub use node::{
     Builtin, HoFKind, LitClass, LoopKind, Node, NodeId, NodeKind, Op, ParamSemantic, ParamTypeFact,
     Payload,

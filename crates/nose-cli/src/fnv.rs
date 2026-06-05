@@ -1,12 +1,13 @@
 //! FNV-1a 64-bit hashing primitives, shared by the content-cache key (`cache.rs`) and the
-//! baseline family key (`baseline.rs`). Centralizing the constants and the per-step mix keeps
-//! the two stable on-disk hashes computed by exactly the same arithmetic.
+//! baseline family key (`baseline.rs`). The constants are the workspace-wide FNV parameters
+//! defined in `nose-il` (the same ones `stable_symbol_hash` uses), so every FNV hash in the
+//! project — string identities and these cache keys alike — shares one source of truth.
 
 /// FNV-1a 64-bit offset basis — the accumulator seed.
-pub(crate) const OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
+pub(crate) const OFFSET_BASIS: u64 = nose_il::FNV_OFFSET_BASIS;
 
 /// FNV-1a 64-bit prime — the per-step multiplier.
-pub(crate) const PRIME: u64 = 0x0000_0100_0000_01b3;
+pub(crate) const PRIME: u64 = nose_il::FNV_PRIME;
 
 /// One FNV-1a step: xor `x` into the accumulator `h`, then multiply by [`PRIME`].
 pub(crate) fn mix(h: u64, x: u64) -> u64 {
