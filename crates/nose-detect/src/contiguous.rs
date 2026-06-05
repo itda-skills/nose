@@ -93,17 +93,11 @@ pub(crate) fn stream(il: &Il, interner: &Interner) -> Stream {
 
 const BASE: u64 = 0x100_0000_01b3; // FNV prime, used as the rolling-hash base
 
-// Tunable during the jscpd-superset sweep via env.
-fn envu(key: &str, default: usize) -> usize {
-    std::env::var(key)
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(default)
-}
 /// k-gram window for the rolling hash. Consecutive equal `node_tag`s are a strong
 /// signal (each tag hashes kind+payload), so a modest window keeps false seeds rare.
+/// Tunable during the jscpd-superset sweep via env.
 fn k() -> usize {
-    envu("NOSE_CONTIG_K", 10)
+    crate::env_or("NOSE_CONTIG_K", 10)
 }
 
 /// Rolling k-gram hashes for one stream (`tags.len() - k + 1` entries, or empty).
