@@ -8,8 +8,8 @@
 
 use crate::lower::{common_bin_op, Lowering};
 use nose_il::{
-    Builtin, FileId, Il, Interner, Lang, LitClass, LoopKind, NodeId, NodeKind, Op, Payload, Symbol,
-    UnitKind,
+    Builtin, FileId, Il, Interner, Lang, LitClass, LoopKind, NodeId, NodeKind, Op, Payload, Span,
+    Symbol, UnitKind,
 };
 use tree_sitter::Node as TsNode;
 
@@ -234,10 +234,7 @@ fn lower_case(lo: &mut Lowering, node: TsNode) -> NodeId {
         .collect();
     let mut acc = lo.empty_block(span);
     for w in whens.iter().rev() {
-        let body = w
-            .child_by_field_name("body")
-            .map(|b| block_of(lo, b))
-            .unwrap_or_else(|| lo.empty_block(span));
+        let body = lower_case_arm_body(lo, *w, span);
         if w.kind() == "else" {
             acc = body;
         } else {
@@ -277,6 +274,18 @@ fn lower_case(lo: &mut Lowering, node: TsNode) -> NodeId {
         }
     }
     acc
+}
+
+fn lower_case_arm_body(lo: &mut Lowering, arm: TsNode, span: Span) -> NodeId {
+    arm.child_by_field_name("body")
+        .map(|body| block_of(lo, body))
+        .unwrap_or_else(|| {
+            if arm.kind() == "else" {
+                lower_clause_body(lo, arm)
+            } else {
+                lo.empty_block(span)
+            }
+        })
 }
 
 fn lower_assign(lo: &mut Lowering, node: TsNode) -> NodeId {
@@ -621,7 +630,7 @@ fn try_each_loop(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
     ))
 }
 
-fn lower_block_param_var(lo: &mut Lowering, node: TsNode, span: nose_il::Span) -> NodeId {
+fn lower_block_param_var(lo: &mut Lowering, node: TsNode, span: Span) -> NodeId {
     if lo.text(node) == "_" {
         return lo.empty_block(span);
     }
@@ -705,6 +714,26 @@ mod tests {
             .collect()
     }
 
+    fn expr_stmt_ints(src: &str) -> Vec<i64> {
+        let interner = Interner::new();
+        let il = lower(FileId(0), "t.rb", src.as_bytes(), &interner).expect("lower");
+        il.nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, node)| node.kind == NodeKind::ExprStmt)
+            .filter_map(|(idx, _)| {
+                let kids = il.children(NodeId(idx as u32));
+                match kids {
+                    [expr] => match il.node(*expr).payload {
+                        Payload::LitInt(value) => Some(value),
+                        _ => None,
+                    },
+                    _ => None,
+                }
+            })
+            .collect()
+    }
+
     #[test]
     fn unary_operators_lower_to_distinct_ops() {
         let ops = unary_ops("x = +5\ny = -5\nz = !a\nw = ~5\n");
@@ -747,5 +776,12 @@ mod tests {
             !ops.contains(&Op::Eq),
             "scrutinee-less case should not compare an empty scrutinee, got {ops:?}"
         );
+    }
+
+    #[test]
+    fn case_else_body_is_preserved() {
+        let mut ints = expr_stmt_ints("case\nwhen x > 0\n  1\nelse\n  2\nend\n");
+        ints.sort_unstable();
+        assert_eq!(ints, vec![1, 2]);
     }
 }

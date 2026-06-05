@@ -57,5 +57,6 @@ statements lowering to a tagged effect shape, or Go multi-label `switch` cases l
 ORed scrutinee comparisons, or C/Java `switch` labels lowering to real scrutinee comparisons
 instead of placeholder branches, or Java `switch` expression rules lowering to expression
 if-chains instead of `Raw`, or Ruby scrutinee-less `case` lowering its `when` predicates
-directly) is how a language becomes a first-class citizen — see the [experiments](experiments.md)
-log and the convergence-test discipline in [`CONTRIBUTING`](../CONTRIBUTING.md).
+directly while preserving the `else` arm) is how a language becomes a first-class citizen —
+see the [experiments](experiments.md) log and the convergence-test discipline in
+[`CONTRIBUTING`](../CONTRIBUTING.md).
