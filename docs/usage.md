@@ -141,11 +141,13 @@ that depend on the iteration binding, plus C/Go/Java index-assignment effects wh
 assignment is not receiver-overloadable, and Java `this.field = value` self-field
 assignments whose receiver is the language-fixed `this` object. Java function-body blocks
 can also become exact fragments when every body statement is one of those direct or
-conditional `this.field` assignments. General field writes such as `other.field = value`,
-mixed-effect bodies, arbitrary statement windows, and dynamic-property languages remain
-outside this exact fragment set. Those fragments are reported only when the whole value
-subtree stays inside the displayed source span, the fragment is `exact_safe`, and the value
-fingerprint is large enough for the exact semantic gate.
+conditional `this.field` assignments, optionally followed by a terminal `return this`.
+General field writes such as `other.field = value`, implicit field assignments such as
+`field = value`, `return other`, mixed-effect bodies, arbitrary statement windows, and
+dynamic-property languages remain outside this exact fragment set. Those fragments are
+reported only when the whole value subtree stays inside the displayed source span, the
+fragment is `exact_safe`, and the value fingerprint is large enough for the exact semantic
+gate.
 
 ## Integrating with nose
 

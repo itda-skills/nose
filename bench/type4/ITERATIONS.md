@@ -4761,6 +4761,58 @@ Targeted coverage added
 `java_arrays_aslist_single_argument_respects_array_provenance`, plus the existing literal
 collection membership and typed-empty-domain regressions stayed green.
 
+## Fragment batch 14: exact Java fluent self-field return bodies
+
+This batch extends the batch-13 function-body boundary only for Java fluent builders and
+setters whose body has exact Java `this.field = value` effects and ends with terminal
+`return this`. The proof invariant stays receiver-fixed: Java `this` cannot be shadowed,
+and the terminal return is accepted only when the returned expression is exactly `this`.
+Implicit field assignments such as `field = value`, `return other`, arbitrary receiver
+field writes, branch-local `return this`, and mixed-effect statement windows remain outside
+the exact fragment set.
+
+The three focused positives share one proof invariant: direct, conditional, and nested
+conditional self-field updates produce a final field-state fingerprint and return the fixed
+self receiver. Adjacent hard negatives cover a wrong returned receiver, a wrong target
+field, and a wrong assigned value.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-this-field-return-1 | real corpus audit | select Java fluent builder/setter bodies from Guava (`GraphBuilder`, `Escapers.Builder`, `Interners`, cache test builders) | repeated explicit `this.field = ...; return this;` bodies found in Android/non-Android Guava mirrors |
+| fragment-this-field-return-2 | candidate extraction | allow Java function-body `Block` fragments with exact self-field effects plus terminal `return this` | 3 focused return-this body families reported as multi-line `Block` units |
+| fragment-this-field-return-3 | soundness boundary | require exact Java `this` on both field receiver and terminal return; do not accept `return other`, wrong field, or wrong value | focused hard negatives excluded |
+| fragment-this-field-return-4 | focused regression | run focused exact-fragment tests | `cargo test -p nose-cli semantic_scan_reports_exact_safe_ -- --nocapture` pass; 14 tests |
+| fragment-this-field-return-5 | regression | run full test and lint gates | `cargo test` pass; `cargo build --release` pass; `cargo clippy --all-targets -- -D warnings` pass |
+| fragment-this-field-return-6 | core smoke | run compact all-cross smoke gate | 626/626 positives; 0/1233 hard-negative false merges; Raw nodes 0/68421 |
+| fragment-this-field-return-7 | real delta | scan selected C/Go/Java corpus and audit Java fluent return-this block families | C/Go/Java 1153 -> 1162 semantic families; 17 sampled Java fluent `this.field` + `return this` `Block` families |
+| fragment-this-field-return-8 | performance | scan `bench/repos/flask bench/repos/axios bench/repos/rust` with `NOSE_TIME=1` | 335 files; normalize+extract 16.7ms, candidates 2.6ms, score 0.5ms; 66 semantic families |
+| fragment-this-field-return-9 | performance | scan `bench/repos/curl bench/repos/gin bench/repos/guava` with `NOSE_TIME=1` | 4357 files; normalize+extract 170.8ms, candidates 34.0ms, score 0.9ms; 1162 semantic families |
+
+Focused regression:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_java_this_field_return_this_body_fragments -- --nocapture
+3 exact Java self-field return-this body fragment families found; wrong returned receiver,
+wrong field, and wrong value negatives excluded.
+```
+
+Core gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+selected items: 1859/6728
+positive recall: 626/626
+hard-negative false merges: 0/1233
+Raw nodes: 0/68421
+```
+
+The real-repo increase is concentrated in fluent Java builders: `GraphBuilder`,
+`NetworkBuilder`, and `ValueGraphBuilder` `allowsSelfLoops`, `Escapers.Builder`
+`setSafeRange`, `Interners.InternerBuilder` `strong`/`weak`, and cache test builder
+`with*` setters. Do not widen this to implicit field assignments until Java lowering can
+prove field-vs-local binding, and do not widen terminal returns beyond `this` without a
+receiver identity proof.
+
 ## Fragment batch 13: exact Java self-field function-body blocks
 
 This batch keeps the batch-12 receiver invariant and widens only the unit boundary. A Java

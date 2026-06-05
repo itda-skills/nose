@@ -1861,6 +1861,145 @@ fn semantic_scan_reports_exact_safe_java_this_field_assignment_body_fragments() 
 }
 
 #[test]
+fn semantic_scan_reports_exact_safe_java_this_field_return_this_body_fragments() {
+    let dir = std::env::temp_dir().join(format!(
+        "nose_exact_this_field_return_this_body_fragments_{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+
+    let fixtures = [
+        (
+            "FluentBodyDirectA.java",
+            "class FluentBodyDirectA {\n  int value;\n  int limit;\n  FluentBodyDirectA f(int v, int n) {\n    this.value = (v + 1) * (v + 1);\n    this.limit = n + 3;\n    return this;\n  }\n}\n",
+        ),
+        (
+            "FluentBodyDirectB.java",
+            "class FluentBodyDirectB {\n  int value;\n  int limit;\n  FluentBodyDirectB f(int w, int m) {\n    this.value = (1 + w) * (1 + w);\n    this.limit = 3 + m;\n    return this;\n  }\n}\n",
+        ),
+        (
+            "FluentBodyDirectWrongReturn.java",
+            "class FluentBodyDirectWrongReturn {\n  int value;\n  int limit;\n  FluentBodyDirectWrongReturn f(FluentBodyDirectWrongReturn other, int w, int m) {\n    this.value = (1 + w) * (1 + w);\n    this.limit = 3 + m;\n    return other;\n  }\n}\n",
+        ),
+        (
+            "FluentBodyConditionalA.java",
+            "class FluentBodyConditionalA {\n  int total;\n  int score;\n  FluentBodyConditionalA f(boolean enabled, int a, int b) {\n    this.total = a + b;\n    if (enabled) {\n      this.score = (a + b) * 2;\n    }\n    return this;\n  }\n}\n",
+        ),
+        (
+            "FluentBodyConditionalB.java",
+            "class FluentBodyConditionalB {\n  int total;\n  int score;\n  FluentBodyConditionalB f(boolean ready, int c, int d) {\n    this.total = d + c;\n    if (ready) {\n      this.score = 2 * (d + c);\n    }\n    return this;\n  }\n}\n",
+        ),
+        (
+            "FluentBodyConditionalWrongField.java",
+            "class FluentBodyConditionalWrongField {\n  int total;\n  int score;\n  int other;\n  FluentBodyConditionalWrongField f(boolean ready, int c, int d) {\n    this.total = d + c;\n    if (ready) {\n      this.other = 2 * (d + c);\n    }\n    return this;\n  }\n}\n",
+        ),
+        (
+            "FluentBodyNestedA.java",
+            "class FluentBodyNestedA {\n  int base;\n  int score;\n  FluentBodyNestedA f(boolean enabled, int a, int b) {\n    this.base = a + b;\n    if (enabled) {\n      if (a > 0) {\n        this.score = (a + b) * (a + b);\n      }\n    }\n    return this;\n  }\n}\n",
+        ),
+        (
+            "FluentBodyNestedB.java",
+            "class FluentBodyNestedB {\n  int base;\n  int score;\n  FluentBodyNestedB f(boolean ready, int c, int d) {\n    this.base = d + c;\n    if (ready) {\n      if (0 < c) {\n        this.score = (d + c) * (d + c);\n      }\n    }\n    return this;\n  }\n}\n",
+        ),
+        (
+            "FluentBodyNestedWrongValue.java",
+            "class FluentBodyNestedWrongValue {\n  int base;\n  int score;\n  FluentBodyNestedWrongValue f(boolean ready, int c, int d) {\n    this.base = d + c;\n    if (ready) {\n      if (0 < c) {\n        this.score = (d + c) + (d + c);\n      }\n    }\n    return this;\n  }\n}\n",
+        ),
+    ];
+    for (name, src) in fixtures {
+        fs::write(dir.join(name), src).unwrap();
+    }
+
+    let out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "100",
+        "--min-size",
+        "100",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let json = scan_json(&out);
+    let families = scan_families(&json);
+
+    let assert_body_family = |left: &str, right: &str, negative: &str| {
+        let family = families
+            .iter()
+            .find(|family| {
+                let locations = family["locations"].as_array().expect("locations");
+                let files: Vec<&str> = locations
+                    .iter()
+                    .filter_map(|loc| loc["file"].as_str())
+                    .collect();
+                files.iter().any(|file| file.ends_with(left))
+                    && files.iter().any(|file| file.ends_with(right))
+                    && locations.iter().all(|loc| loc["kind"] == "Block")
+                    && locations.iter().any(|loc| {
+                        loc["end_line"].as_u64().unwrap_or(0)
+                            > loc["start_line"].as_u64().unwrap_or(0) + 1
+                    })
+                    && files.iter().all(|file| !file.ends_with(negative))
+            })
+            .unwrap_or_else(|| {
+                panic!(
+                    "missing exact this-field return-this body fragment family {left}/{right}: {out}"
+                )
+            });
+        let locations = family["locations"].as_array().expect("locations");
+        assert!(
+            locations
+                .iter()
+                .filter(|loc| loc["file"].as_str().unwrap_or("").ends_with(left)
+                    || loc["file"].as_str().unwrap_or("").ends_with(right))
+                .all(|loc| loc["end_line"].as_u64().unwrap_or(0)
+                    <= loc["start_line"].as_u64().unwrap_or(0) + 9),
+            "this-field return-this body fragments should stay tightly scoped: {family:?}"
+        );
+    };
+
+    let assert_no_pair = |left: &str, right: &str| {
+        let has_pair = families.iter().any(|family| {
+            let files: Vec<&str> = family["locations"]
+                .as_array()
+                .expect("locations")
+                .iter()
+                .filter_map(|loc| loc["file"].as_str())
+                .collect();
+            files.iter().any(|file| file.ends_with(left))
+                && files.iter().any(|file| file.ends_with(right))
+        });
+        assert!(
+            !has_pair,
+            "wrong-return field body must stay outside exact fragments: {left}/{right}: {out}"
+        );
+    };
+
+    assert_body_family(
+        "FluentBodyDirectA.java",
+        "FluentBodyDirectB.java",
+        "FluentBodyDirectWrongReturn.java",
+    );
+    assert_body_family(
+        "FluentBodyConditionalA.java",
+        "FluentBodyConditionalB.java",
+        "FluentBodyConditionalWrongField.java",
+    );
+    assert_body_family(
+        "FluentBodyNestedA.java",
+        "FluentBodyNestedB.java",
+        "FluentBodyNestedWrongValue.java",
+    );
+    assert_no_pair("FluentBodyDirectA.java", "FluentBodyDirectWrongReturn.java");
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn semantic_scan_reports_exact_safe_throw_fragments_under_opaque_functions() {
     let dir =
         std::env::temp_dir().join(format!("nose_exact_throw_fragments_{}", std::process::id()));

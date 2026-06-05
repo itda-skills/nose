@@ -88,8 +88,8 @@ Lean (`formal/`). See [normalization](normalization.md) for the full pass list.
   only loop-body effects append values that depend on the iteration binding and
   non-overloadable C/Go/Java index-assignment effects, plus Java `this.field = value`
   self-field assignments and all-self-field Java function-body blocks with the receiver
-  fixed to `this`), not arbitrary statement windows with unmodeled free-variable,
-  live-out, receiver-overload, or effect boundaries.
+  fixed to `this`, optionally ending in `return this`), not arbitrary statement windows
+  with unmodeled free-variable, live-out, receiver-overload, or effect boundaries.
 
 ## Scan modes, and cross-language
 

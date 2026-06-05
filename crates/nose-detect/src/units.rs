@@ -1956,8 +1956,21 @@ fn exact_java_this_field(il: &Il, interner: &Interner, node: NodeId) -> bool {
     let Some(&receiver) = il.children(node).first() else {
         return false;
     };
-    il.kind(receiver) == NodeKind::Var
-        && matches!(il.node(receiver).payload, Payload::Name(name) if interner.resolve(name) == "this")
+    exact_java_this_var(il, interner, receiver)
+}
+
+fn exact_java_this_var(il: &Il, interner: &Interner, node: NodeId) -> bool {
+    il.meta.lang == Lang::Java
+        && il.kind(node) == NodeKind::Var
+        && matches!(il.node(node).payload, Payload::Name(name) if interner.resolve(name) == "this")
+}
+
+fn exact_java_return_this_fragment_root(il: &Il, interner: &Interner, node: NodeId) -> bool {
+    if il.meta.lang != Lang::Java || il.kind(node) != NodeKind::Return {
+        return false;
+    }
+    let kids = il.children(node);
+    kids.len() == 1 && exact_java_this_var(il, interner, kids[0])
 }
 
 fn exact_function_body_self_field_fragment_root(
@@ -1976,10 +1989,38 @@ fn exact_function_body_self_field_fragment_root(
         return false;
     }
     let kids = il.children(node);
-    kids.len() >= 2
-        && kids
-            .iter()
-            .all(|&child| exact_self_field_statement_fragment_root(il, interner, child))
+    if kids.len() < 2 {
+        return false;
+    }
+    let mut has_field_effect = false;
+    for (idx, &child) in kids.iter().enumerate() {
+        match exact_self_field_body_statement_root(il, interner, child) {
+            Some(SelfFieldBodyStatement::FieldEffect) => {
+                has_field_effect = true;
+            }
+            Some(SelfFieldBodyStatement::ReturnThis) if idx + 1 == kids.len() => {}
+            _ => return false,
+        }
+    }
+    has_field_effect
+}
+
+#[derive(Clone, Copy)]
+enum SelfFieldBodyStatement {
+    FieldEffect,
+    ReturnThis,
+}
+
+fn exact_self_field_body_statement_root(
+    il: &Il,
+    interner: &Interner,
+    node: NodeId,
+) -> Option<SelfFieldBodyStatement> {
+    if exact_java_return_this_fragment_root(il, interner, node) {
+        return Some(SelfFieldBodyStatement::ReturnThis);
+    }
+    exact_self_field_statement_fragment_root(il, interner, node)
+        .then_some(SelfFieldBodyStatement::FieldEffect)
 }
 
 fn exact_self_field_statement_fragment_root(il: &Il, interner: &Interner, node: NodeId) -> bool {
@@ -2037,9 +2078,32 @@ fn strict_exact_self_field_fragment_safe(
             let kids = il.children(node);
             exact_function_body_self_field_fragment_root(il, interner, parents, node)
                 && kids.iter().all(|&child| {
-                    strict_exact_self_field_fragment_safe(il, interner, facts, parents, child)
+                    strict_exact_self_field_body_statement_safe(il, interner, facts, parents, child)
                 })
         }
+        _ => strict_exact_self_field_effect_safe(il, interner, facts, parents, node),
+    }
+}
+
+fn strict_exact_self_field_body_statement_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    parents: &[Option<NodeId>],
+    node: NodeId,
+) -> bool {
+    exact_java_return_this_fragment_root(il, interner, node)
+        || strict_exact_self_field_effect_safe(il, interner, facts, parents, node)
+}
+
+fn strict_exact_self_field_effect_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    parents: &[Option<NodeId>],
+    node: NodeId,
+) -> bool {
+    match il.kind(node) {
         NodeKind::Assign => {
             let kids = il.children(node);
             kids.len() == 2
@@ -2086,7 +2150,7 @@ fn strict_exact_self_field_branch_safe(
     if kids.len() != 1 {
         return None;
     }
-    Some(strict_exact_self_field_fragment_safe(
+    Some(strict_exact_self_field_effect_safe(
         il, interner, facts, parents, kids[0],
     ))
 }
