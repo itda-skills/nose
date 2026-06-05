@@ -1173,6 +1173,50 @@ fn semantic_scan_reports_exact_safe_branch_temp_consumption_fragments_under_opaq
             "temp_effect_neg.js",
             "function tempEffectWrong(zs, out) {\n  if (zs[0] > 0) {\n    const result = zs[0] * zs[0] - zs[1];\n    out.push(result);\n  }\n  audit(zs);\n}\n",
         ),
+        (
+            "temp_chain_return_a.py",
+            "def temp_chain_return_left(xs):\n    if xs[0] > 0:\n        shifted = xs[0] + 1\n        result = shifted * shifted + xs[1]\n        return result\n    audit(xs)\n",
+        ),
+        (
+            "temp_chain_return_b.py",
+            "def temp_chain_return_right(ys):\n    if 0 < ys[0]:\n        return ys[1] + (1 + ys[0]) * (1 + ys[0])\n    trace(ys)\n",
+        ),
+        (
+            "temp_chain_return_neg.py",
+            "def temp_chain_return_wrong(zs):\n    if zs[0] > 0:\n        shifted = zs[0] + 2\n        result = shifted * shifted + zs[1]\n        return result\n    audit(zs)\n",
+        ),
+        (
+            "temp_chain_throw_a.js",
+            "function tempChainThrowLeft(xs) {\n  if (xs[0] > 0) {\n    const shifted = xs[0] + 1;\n    const result = shifted * shifted + xs[1];\n    throw result;\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "temp_chain_throw_b.js",
+            "function tempChainThrowRight(ys) {\n  if (0 < ys[0]) {\n    throw ys[1] + (1 + ys[0]) * (1 + ys[0]);\n  }\n  trace(ys);\n}\n",
+        ),
+        (
+            "temp_chain_throw_neg.js",
+            "function tempChainThrowWrong(zs) {\n  if (zs[0] > 0) {\n    const shifted = zs[0] + 1;\n    const result = shifted + shifted + zs[1];\n    throw result;\n  }\n  audit(zs);\n}\n",
+        ),
+        (
+            "temp_chain_effect_a.js",
+            "function tempChainEffectLeft(xs, out) {\n  if (xs[0] > 0) {\n    const shifted = xs[0] + 1;\n    const result = shifted * shifted + xs[1];\n    out.push(result);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "temp_chain_effect_b.js",
+            "function tempChainEffectRight(ys, dst) {\n  if (0 < ys[0]) {\n    dst.push(ys[1] + (1 + ys[0]) * (1 + ys[0]));\n  }\n  trace(ys);\n}\n",
+        ),
+        (
+            "temp_chain_effect_neg.js",
+            "function tempChainEffectWrong(zs, out) {\n  if (zs[0] > 0) {\n    const shifted = zs[0] + 1;\n    const result = shifted * shifted - zs[1];\n    out.push(result);\n  }\n  audit(zs);\n}\n",
+        ),
+        (
+            "temp_chain_unconsumed_first.js",
+            "function tempChainUnconsumedFirst(xs, out) {\n  if (xs[0] > 0) {\n    const shifted = xs[0] + 1;\n    const result = xs[0] * xs[0] + xs[1];\n    out.push(result);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "temp_chain_effect_uses_prior.js",
+            "function tempChainEffectUsesPrior(xs, out) {\n  if (xs[0] > 0) {\n    const shifted = xs[0] + 1;\n    const result = shifted * shifted + xs[1];\n    out.push(result + shifted);\n  }\n  audit(xs);\n}\n",
+        ),
     ];
     for (name, src) in fixtures {
         fs::write(dir.join(name), src).unwrap();
@@ -1242,8 +1286,25 @@ fn semantic_scan_reports_exact_safe_branch_temp_consumption_fragments_under_opaq
     assert_temp_family("temp_return_a.py", "temp_return_b.py", "temp_return_neg.py");
     assert_temp_family("temp_throw_a.js", "temp_throw_b.js", "temp_throw_neg.js");
     assert_temp_family("temp_effect_a.js", "temp_effect_b.js", "temp_effect_neg.js");
+    assert_temp_family(
+        "temp_chain_return_a.py",
+        "temp_chain_return_b.py",
+        "temp_chain_return_neg.py",
+    );
+    assert_temp_family(
+        "temp_chain_throw_a.js",
+        "temp_chain_throw_b.js",
+        "temp_chain_throw_neg.js",
+    );
+    assert_temp_family(
+        "temp_chain_effect_a.js",
+        "temp_chain_effect_b.js",
+        "temp_chain_effect_neg.js",
+    );
     assert_no_pair("temp_return_self_dependent.py", "temp_return_b.py");
     assert_no_pair("temp_return_window_gap.py", "temp_return_b.py");
+    assert_no_pair("temp_chain_unconsumed_first.js", "temp_chain_effect_b.js");
+    assert_no_pair("temp_chain_effect_uses_prior.js", "temp_chain_effect_b.js");
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -1440,6 +1501,38 @@ fn semantic_scan_reports_exact_safe_foreach_append_effect_fragments_under_opaque
             "def loop_temp_append_wrong(zs, out):\n    for z in zs:\n        value = z + 2\n        out.append(value)\n    audit(zs)\n",
         ),
         (
+            "loop_temp_chain_push_a.js",
+            "function loopTempChainPushLeft(xs, out) {\n  for (const x of xs) {\n    const shifted = x + 1;\n    const squared = shifted * shifted;\n    out.push(squared);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "loop_temp_chain_push_b.js",
+            "function loopTempChainPushRight(ys, dst) {\n  for (const y of ys) {\n    const offset = 1 + y;\n    const result = offset * offset;\n    dst.push(result);\n  }\n  trace(ys);\n}\n",
+        ),
+        (
+            "loop_temp_chain_push_wrong.js",
+            "function loopTempChainPushWrong(zs, out) {\n  for (const z of zs) {\n    const shifted = z + 2;\n    const squared = shifted * shifted;\n    out.push(squared);\n  }\n  audit(zs);\n}\n",
+        ),
+        (
+            "loop_temp_chain_append_py_a.py",
+            "def loop_temp_chain_append_left(xs, out):\n    for x in xs:\n        shifted = x + 1\n        value = shifted * shifted\n        out.append(value)\n    audit(xs)\n",
+        ),
+        (
+            "loop_temp_chain_append_py_b.py",
+            "def loop_temp_chain_append_right(ys, dst):\n    for y in ys:\n        offset = 1 + y\n        item = offset * offset\n        dst.append(item)\n    trace(ys)\n",
+        ),
+        (
+            "loop_temp_chain_append_py_wrong.py",
+            "def loop_temp_chain_append_wrong(zs, out):\n    for z in zs:\n        shifted = z + 1\n        value = shifted + shifted\n        out.append(value)\n    audit(zs)\n",
+        ),
+        (
+            "loop_temp_chain_unconsumed.js",
+            "function loopTempChainUnconsumed(xs, out) {\n  for (const x of xs) {\n    const shifted = x + 1;\n    const squared = x * x;\n    out.push(squared);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "loop_temp_chain_uses_prior.js",
+            "function loopTempChainUsesPrior(xs, out) {\n  for (const x of xs) {\n    const shifted = x + 1;\n    const squared = shifted * shifted;\n    out.push(squared + shifted);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
             "loop_temp_unused.js",
             "function loopTempUnused(xs, out) {\n  for (const x of xs) {\n    const constant = 1;\n    out.push(constant);\n  }\n  audit(xs);\n}\n",
         ),
@@ -1569,9 +1662,25 @@ fn semantic_scan_reports_exact_safe_foreach_append_effect_fragments_under_opaque
         2,
         4,
     );
+    assert_loop_family(
+        "loop_temp_chain_push_a.js",
+        "loop_temp_chain_push_b.js",
+        "loop_temp_chain_push_wrong.js",
+        2,
+        6,
+    );
+    assert_loop_family(
+        "loop_temp_chain_append_py_a.py",
+        "loop_temp_chain_append_py_b.py",
+        "loop_temp_chain_append_py_wrong.py",
+        2,
+        5,
+    );
     assert_no_pair("loop_unused_effect.js", "direct_unused_effect.js");
     assert_no_pair("loop_temp_unused.js", "direct_unused_effect.js");
     assert_no_pair("loop_temp_append_py_a.py", "loop_temp_rebind_iter.js");
+    assert_no_pair("loop_temp_chain_unconsumed.js", "loop_temp_chain_push_b.js");
+    assert_no_pair("loop_temp_chain_uses_prior.js", "loop_temp_chain_push_b.js");
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -1644,6 +1753,26 @@ fn semantic_scan_reports_exact_safe_foreach_index_assignment_fragments_for_go() 
         (
             "loop_index_temp_unconsumed.go",
             "package p\nfunc loopIndexTempUnconsumed(xs []int, out []int) {\n  for i, x := range xs {\n    squared := x * x\n    out[i] = x * x\n  }\n  audit(out)\n}\n",
+        ),
+        (
+            "loop_index_temp_chain_a.go",
+            "package p\nfunc loopIndexTempChainLeft(xs []int, out []int) {\n  for i, x := range xs {\n    shifted := x + 1\n    squared := shifted * shifted\n    out[i] = squared\n  }\n  audit(out)\n}\n",
+        ),
+        (
+            "loop_index_temp_chain_b.go",
+            "package p\nfunc loopIndexTempChainRight(ys []int, dst []int) {\n  for j, y := range ys {\n    offset := 1 + y\n    result := offset * offset\n    dst[j] = result\n  }\n  trace(dst)\n}\n",
+        ),
+        (
+            "loop_index_temp_chain_wrong.go",
+            "package p\nfunc loopIndexTempChainWrong(zs []int, dst []int) {\n  for k, z := range zs {\n    shifted := z + 2\n    result := shifted * shifted\n    dst[k] = result\n  }\n  trace(dst)\n}\n",
+        ),
+        (
+            "loop_index_temp_chain_unconsumed.go",
+            "package p\nfunc loopIndexTempChainUnconsumed(xs []int, out []int) {\n  for i, x := range xs {\n    shifted := x + 1\n    squared := x * x\n    out[i] = squared\n  }\n  audit(out)\n}\n",
+        ),
+        (
+            "loop_index_temp_chain_uses_prior.go",
+            "package p\nfunc loopIndexTempChainUsesPrior(xs []int, out []int) {\n  for i, x := range xs {\n    shifted := x + 1\n    squared := shifted * shifted\n    out[i] = squared + shifted\n  }\n  audit(out)\n}\n",
         ),
         (
             "loop_index_unused.go",
@@ -1756,12 +1885,27 @@ fn semantic_scan_reports_exact_safe_foreach_index_assignment_fragments_for_go() 
         3,
         6,
     );
+    assert_loop_family(
+        "loop_index_temp_chain_a.go",
+        "loop_index_temp_chain_b.go",
+        "loop_index_temp_chain_wrong.go",
+        3,
+        7,
+    );
     assert_no_pair("loop_index_square_a.go", "loop_index_wrong_receiver.go");
     assert_no_pair("loop_index_square_a.go", "loop_index_mutated.go");
     assert_no_pair("loop_index_unused.go", "direct_index_unused.go");
     assert_no_pair(
         "loop_index_temp_square_a.go",
         "loop_index_temp_unconsumed.go",
+    );
+    assert_no_pair(
+        "loop_index_temp_chain_a.go",
+        "loop_index_temp_chain_unconsumed.go",
+    );
+    assert_no_pair(
+        "loop_index_temp_chain_a.go",
+        "loop_index_temp_chain_uses_prior.go",
     );
     let _ = fs::remove_dir_all(&dir);
 }

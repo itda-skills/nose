@@ -4,9 +4,8 @@
 //! tags for alignment, and a **MinHash** signature for candidate generation.
 
 use nose_il::{
-    stable_symbol_hash, Builtin, Il, Interner, Lang, LitClass, NodeId, NodeKind, Op, ParamSemantic,
-    Payload, Symbol, UnitKind,
-    LoopKind,
+    stable_symbol_hash, Builtin, Il, Interner, Lang, LitClass, LoopKind, NodeId, NodeKind, Op,
+    ParamSemantic, Payload, Symbol, UnitKind,
 };
 use nose_normalize::{
     module_facts::{collect_module_mutations, mutating_method_name},
@@ -1908,6 +1907,9 @@ fn empty_or_single_direct_exact_statement_block(
     if kids.is_empty() {
         return Some(false);
     }
+    if kids.len() == 3 && exact_temp_chain_consumed_by_statement(il, kids[0], kids[1], kids[2]) {
+        return Some(true);
+    }
     if kids.len() == 2 && exact_temp_assignment_consumed_by_statement(il, kids[0], kids[1]) {
         return Some(true);
     }
@@ -1926,33 +1928,88 @@ fn empty_or_single_direct_exact_statement_block(
 }
 
 fn exact_temp_assignment_consumed_by_statement(il: &Il, assign: NodeId, stmt: NodeId) -> bool {
-    if il.kind(assign) != NodeKind::Assign {
-        return false;
-    }
-    let assign_kids = il.children(assign);
-    if assign_kids.len() != 2 || il.kind(assign_kids[0]) != NodeKind::Var {
-        return false;
-    }
-    let Payload::Cid(temp_cid) = il.node(assign_kids[0]).payload else {
+    let Some((temp_cid, _)) = local_nontrivial_temp_assignment(il, assign) else {
         return false;
     };
-    if matches!(il.kind(assign_kids[1]), NodeKind::Var | NodeKind::Lit) {
+    exact_statement_consumes_temp(il, stmt, temp_cid, None)
+}
+
+fn exact_temp_chain_consumed_by_statement(
+    il: &Il,
+    first_assign: NodeId,
+    second_assign: NodeId,
+    stmt: NodeId,
+) -> bool {
+    let Some((first_cid, _)) = local_nontrivial_temp_assignment(il, first_assign) else {
+        return false;
+    };
+    let Some((second_cid, second_rhs)) = local_nontrivial_temp_assignment(il, second_assign) else {
+        return false;
+    };
+    if first_cid == second_cid {
         return false;
     }
+    let mut first = FxHashSet::default();
+    first.insert(first_cid);
+    if !node_mentions_any_cid(il, second_rhs, &first) {
+        return false;
+    }
+    exact_statement_consumes_temp(il, stmt, second_cid, Some(&first))
+}
+
+fn local_nontrivial_temp_assignment(il: &Il, node: NodeId) -> Option<(u32, NodeId)> {
+    if il.kind(node) != NodeKind::Assign {
+        return None;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 || il.kind(kids[0]) != NodeKind::Var {
+        return None;
+    }
+    if matches!(il.kind(kids[1]), NodeKind::Var | NodeKind::Lit) {
+        return None;
+    }
+    let Payload::Cid(temp_cid) = il.node(kids[0]).payload else {
+        return None;
+    };
     let mut temp = FxHashSet::default();
     temp.insert(temp_cid);
-    if node_mentions_any_cid(il, assign_kids[1], &temp) {
-        return false;
+    if node_mentions_any_cid(il, kids[1], &temp) {
+        return None;
     }
+    Some((temp_cid, kids[1]))
+}
+
+fn exact_statement_consumes_temp(
+    il: &Il,
+    stmt: NodeId,
+    temp_cid: u32,
+    forbidden_cids: Option<&FxHashSet<u32>>,
+) -> bool {
     match il.kind(stmt) {
         NodeKind::Return | NodeKind::Throw => {
             let kids = il.children(stmt);
-            kids.len() == 1
-                && il.kind(kids[0]) == NodeKind::Var
-                && matches!(il.node(kids[0]).payload, Payload::Cid(cid) if cid == temp_cid)
+            if kids.len() != 1 {
+                return false;
+            }
+            let mut temp = FxHashSet::default();
+            temp.insert(temp_cid);
+            (il.kind(kids[0]) == NodeKind::Var
+                && matches!(il.node(kids[0]).payload, Payload::Cid(cid) if cid == temp_cid))
+                || (!matches!(il.kind(kids[0]), NodeKind::Var | NodeKind::Lit)
+                    && node_mentions_any_cid(il, kids[0], &temp)
+                    && match forbidden_cids {
+                        Some(cids) => !node_mentions_any_cid(il, kids[0], cids),
+                        None => true,
+                    })
         }
         NodeKind::ExprStmt if exact_expr_statement_fragment_root(il, stmt) => {
+            let mut temp = FxHashSet::default();
+            temp.insert(temp_cid);
             node_mentions_any_cid(il, stmt, &temp)
+                && match forbidden_cids {
+                    Some(cids) => !node_mentions_any_cid(il, stmt, cids),
+                    None => true,
+                }
         }
         _ => false,
     }
@@ -2219,6 +2276,19 @@ fn foreach_effect_body_depends_on_iter(
             let kids = il.children(node);
             let mut idx = 0;
             while idx < kids.len() {
+                if idx + 2 < kids.len()
+                    && loop_temp_chain_consumed_by_effect(
+                        il,
+                        kids[idx],
+                        kids[idx + 1],
+                        kids[idx + 2],
+                        iter_cids,
+                    )
+                {
+                    has_effect = true;
+                    idx += 3;
+                    continue;
+                }
                 if idx + 1 < kids.len()
                     && loop_temp_assignment_consumed_by_effect(
                         il,
@@ -2277,6 +2347,39 @@ fn loop_temp_assignment_consumed_by_effect(
     loop_effect_consumes_temp(il, effect, iter_cids, &temp_cids)
 }
 
+fn loop_temp_chain_consumed_by_effect(
+    il: &Il,
+    first_assign: NodeId,
+    second_assign: NodeId,
+    effect: NodeId,
+    iter_cids: &FxHashSet<u32>,
+) -> bool {
+    let Some((first_cid, first_rhs)) = local_nontrivial_temp_assignment(il, first_assign) else {
+        return false;
+    };
+    if iter_cids.contains(&first_cid) || !node_mentions_any_cid(il, first_rhs, iter_cids) {
+        return false;
+    }
+    let Some((second_cid, second_rhs)) = local_nontrivial_temp_assignment(il, second_assign) else {
+        return false;
+    };
+    if iter_cids.contains(&second_cid) || first_cid == second_cid {
+        return false;
+    }
+
+    let mut first_temp = FxHashSet::default();
+    first_temp.insert(first_cid);
+    if !node_mentions_any_cid(il, second_rhs, &first_temp) {
+        return false;
+    }
+
+    let mut all_temps = first_temp.clone();
+    all_temps.insert(second_cid);
+    let mut final_temp = FxHashSet::default();
+    final_temp.insert(second_cid);
+    loop_effect_consumes_chained_temp(il, effect, iter_cids, &all_temps, &final_temp, &first_temp)
+}
+
 fn loop_local_iter_temp_assignment(
     il: &Il,
     node: NodeId,
@@ -2324,6 +2427,39 @@ fn loop_effect_consumes_temp(
     }
 }
 
+fn loop_effect_consumes_chained_temp(
+    il: &Il,
+    node: NodeId,
+    iter_cids: &FxHashSet<u32>,
+    all_temp_cids: &FxHashSet<u32>,
+    final_temp_cids: &FxHashSet<u32>,
+    prior_temp_cids: &FxHashSet<u32>,
+) -> bool {
+    match il.kind(node) {
+        NodeKind::ExprStmt => {
+            let kids = il.children(node);
+            kids.len() == 1
+                && append_effect_consumes_chained_temp(
+                    il,
+                    kids[0],
+                    iter_cids,
+                    all_temp_cids,
+                    final_temp_cids,
+                    prior_temp_cids,
+                )
+        }
+        NodeKind::Assign => index_assignment_effect_consumes_chained_temp(
+            il,
+            node,
+            iter_cids,
+            all_temp_cids,
+            final_temp_cids,
+            prior_temp_cids,
+        ),
+        _ => false,
+    }
+}
+
 fn append_effect_consumes_temp(
     il: &Il,
     node: NodeId,
@@ -2342,6 +2478,29 @@ fn append_effect_consumes_temp(
     !node_mentions_any_cid(il, kids[0], iter_cids)
         && !node_mentions_any_cid(il, kids[0], temp_cids)
         && node_mentions_any_cid(il, kids[1], temp_cids)
+}
+
+fn append_effect_consumes_chained_temp(
+    il: &Il,
+    node: NodeId,
+    iter_cids: &FxHashSet<u32>,
+    all_temp_cids: &FxHashSet<u32>,
+    final_temp_cids: &FxHashSet<u32>,
+    prior_temp_cids: &FxHashSet<u32>,
+) -> bool {
+    if il.kind(node) != NodeKind::Call
+        || !matches!(il.node(node).payload, Payload::Builtin(Builtin::Append))
+    {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 {
+        return false;
+    }
+    !node_mentions_any_cid(il, kids[0], iter_cids)
+        && !node_mentions_any_cid(il, kids[0], all_temp_cids)
+        && node_mentions_any_cid(il, kids[1], final_temp_cids)
+        && !node_mentions_any_cid(il, kids[1], prior_temp_cids)
 }
 
 fn index_assignment_effect_consumes_temp(
@@ -2370,6 +2529,41 @@ fn index_assignment_effect_consumes_temp(
         .get(1)
         .is_some_and(|&key| node_mentions_any_cid(il, key, temp_cids))
         || node_mentions_any_cid(il, kids[1], temp_cids)
+}
+
+fn index_assignment_effect_consumes_chained_temp(
+    il: &Il,
+    node: NodeId,
+    iter_cids: &FxHashSet<u32>,
+    all_temp_cids: &FxHashSet<u32>,
+    final_temp_cids: &FxHashSet<u32>,
+    prior_temp_cids: &FxHashSet<u32>,
+) -> bool {
+    if !exact_index_assignment_fragment_root(il, node) {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 || il.kind(kids[0]) != NodeKind::Index {
+        return false;
+    }
+    let target_kids = il.children(kids[0]);
+    let Some(&receiver) = target_kids.first() else {
+        return false;
+    };
+    if node_mentions_any_cid(il, receiver, iter_cids)
+        || node_mentions_any_cid(il, receiver, all_temp_cids)
+    {
+        return false;
+    }
+    let key_uses_final = target_kids
+        .get(1)
+        .is_some_and(|&key| node_mentions_any_cid(il, key, final_temp_cids));
+    let key_uses_prior = target_kids
+        .get(1)
+        .is_some_and(|&key| node_mentions_any_cid(il, key, prior_temp_cids));
+    let value_uses_final = node_mentions_any_cid(il, kids[1], final_temp_cids);
+    let value_uses_prior = node_mentions_any_cid(il, kids[1], prior_temp_cids);
+    (key_uses_final || value_uses_final) && !key_uses_prior && !value_uses_prior
 }
 
 fn append_effect_depends_on_iter(il: &Il, node: NodeId, iter_cids: &FxHashSet<u32>) -> bool {

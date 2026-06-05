@@ -5419,6 +5419,64 @@ This is again a focused unit-fragment expansion rather than a real-corpus comple
 The next batch should switch back to evidence-backed real misses or stop fragment growth
 until a real frontier item needs one of these unit predicates.
 
+## Fragment batch 18: exact temp-chain fragments
+
+This batch keeps the exact fragment contract and extends the non-Java/cross-language temp
+axis rather than adding another Java-specific rule. A direct conditional branch may now
+contain a two-assignment local temp chain when the second temp consumes the first and the
+final return/throw/effect immediately consumes only the final temp. A single local temp may
+also be consumed inside the immediately following return/throw expression; normalization
+folds some source-level two-temp returns into that shape before unit extraction.
+
+The loop side uses the same invariant for exact `ForEach` effects: the first temp RHS must
+depend on the iteration binding, the second temp must consume the first, and the append or
+non-overloadable C/Go/Java index-assignment effect must consume the final temp. Receivers
+must not mention the iteration binding or any chain temp, and the final effect may not also
+read a prior temp. Arbitrary statement windows, skipped first temps, receiver-touching
+effects, unproven calls, and overloadable index assignments remain outside exact fragments.
+
+The focused positives share one proof invariant:
+
+- Python branch return chain: `shifted = xs[0] + 1; result = shifted * shifted + xs[1]; return result`;
+- JavaScript branch throw/effect chains with the same two-temp shape;
+- JavaScript/Python `ForEach` append chains and Go range-loop index-assignment chains.
+
+Adjacent hard negatives cover wrong first temp RHS, wrong second temp RHS, skipped first
+temp, final effect also reading a prior temp, wrong receiver/index/value, and existing
+mutation/receiver boundaries.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-temp-chain-1 | candidate extraction | allow two local temp assignments as a linear branch chain consumed by return/throw/effect | Python return and JS throw/effect focused families reported as `Block` units |
+| fragment-temp-chain-2 | candidate extraction | allow two loop-local iter-derived temp assignments immediately consumed by append/index effect | JS/Python append chains and Go index chains reported as `Block` units |
+| fragment-temp-chain-3 | hard negatives | require second temp to consume the first and final effect/statement to avoid prior temps | skipped-first-temp, prior-temp-read, wrong value/index, and receiver negatives excluded |
+| fragment-temp-chain-4 | real delta | compare selected Python/JS/Go/Ruby repos and full `bench/repos` before/after against a detached `HEAD^` baseline | selected 210 -> 210 families / 673 -> 673 locations; full 7403 -> 7403 families / 32961 -> 32961 locations |
+| fragment-temp-chain-5 | real delta audit | inspect new/removed full-corpus family IDs | no full-corpus family ID additions/removals after the latest rebase; no location growth |
+| fragment-temp-chain-6 | performance | release `NOSE_TIME=1` scans before/after | selected candidate path 14.2ms -> 9.1ms, normalize+extract 92.0ms -> 78.2ms; full candidate path 376.6ms -> 363.5ms, normalize+extract 3663.4ms -> 3340.6ms |
+| fragment-temp-chain-7 | release gates | run focused CLI regressions, full Rust suite, clippy, release build, compact all-cross core smoke | `cargo test` pass; clippy clean; release build clean; core smoke 629/629 positives and 0/1240 hard-negative false merges |
+
+Focused regressions:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_branch_temp_consumption_fragments_under_opaque_functions
+cargo test -p nose-cli exact_safe_foreach -- --nocapture
+Branch temp-chain return/throw/effect positives reported; JS/Python append temp chains and
+Go index temp chains reported; skipped-first-temp and prior-temp-read negatives excluded.
+```
+
+Core gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+positive recall: 629/629
+hard-negative false merges: 0/1240
+```
+
+This is still a focused unit-fragment expansion, not a real-corpus completeness win. The
+full-corpus candidate path moved down 3.5%, but this is the second fragment batch with
+limited real delta, so the next loop should prioritize evidence-backed real frontier
+misses and add more fragment shapes only when a real miss requires them.
+
 ## Real-corpus C u32 unsigned-cast byte-pack: batch 2026-06-06
 
 This batch was selected to correct the recent Java-heavy skew in the real frontier work.
