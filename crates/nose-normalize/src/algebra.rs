@@ -172,22 +172,34 @@ impl Rewriter<'_> {
                 )
             }
             // commutative but not associative: sort the two operands
-            Op::Eq | Op::Ne => {
-                let (l, lh) = self.rewrite(kids[0]);
-                let (r, rh) = self.rewrite(kids[1]);
-                let (a, ah, bb, bh) = if lh <= rh {
-                    (l, lh, r, rh)
-                } else {
-                    (r, rh, l, lh)
-                };
-                self.emit(NodeKind::BinOp, Payload::Op(op), span, &[a, bb], &[ah, bh])
-            }
+            Op::Eq | Op::Ne => self.emit_commutative_cmp(op, span, kids[0], kids[1]),
             _ => {
                 let (l, lh) = self.rewrite(kids[0]);
                 let (r, rh) = self.rewrite(kids[1]);
                 self.emit(NodeKind::BinOp, Payload::Op(op), span, &[l, r], &[lh, rh])
             }
         }
+    }
+
+    /// Emit a commutative-but-not-associative comparison (`==`/`!=`): rewrite both operands,
+    /// then order them by structural hash (ties keep source order) so `a == b` and `b == a`
+    /// converge. Shared by the direct `Eq`/`Ne` arm and the De-Morgan'd `!(a == b)` →
+    /// `a != b` arm, which differ only in the target opcode.
+    fn emit_commutative_cmp(
+        &mut self,
+        op: Op,
+        span: Span,
+        k0: NodeId,
+        k1: NodeId,
+    ) -> (NodeId, u64) {
+        let (l, lh) = self.rewrite(k0);
+        let (r, rh) = self.rewrite(k1);
+        let (a, ah, bb, bh) = if lh <= rh {
+            (l, lh, r, rh)
+        } else {
+            (r, rh, l, lh)
+        };
+        self.emit(NodeKind::BinOp, Payload::Op(op), span, &[a, bb], &[ah, bh])
     }
 
     /// Fold the integer-constant leaves of an `Add`/`Mul` chain into one constant. `*0` is
@@ -296,20 +308,7 @@ impl Rewriter<'_> {
                     }
                     Op::Eq | Op::Ne => {
                         let flip = if op == Op::Eq { Op::Ne } else { Op::Eq };
-                        let (l, lh) = self.rewrite(kids[0]);
-                        let (r, rh) = self.rewrite(kids[1]);
-                        let (a, ah, bb, bh) = if lh <= rh {
-                            (l, lh, r, rh)
-                        } else {
-                            (r, rh, l, lh)
-                        };
-                        self.emit(
-                            NodeKind::BinOp,
-                            Payload::Op(flip),
-                            span,
-                            &[a, bb],
-                            &[ah, bh],
-                        )
+                        self.emit_commutative_cmp(flip, span, kids[0], kids[1])
                     }
                     // Negate an order comparison on a total order, canonicalized to `<`/`<=`:
                     //   !(x < y)  = y <= x   !(x <= y) = y < x    (operands reflect)
