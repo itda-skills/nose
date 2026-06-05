@@ -2934,6 +2934,13 @@ impl<'a> Builder<'a> {
                     .get(1)
                     .is_some_and(|&lambda| self.lambda_body_is_static_runtime_err(lambda, env));
         }
+        if self.il.kind(expr) == NodeKind::If {
+            return self
+                .il
+                .children(expr)
+                .first()
+                .is_some_and(|&cond| self.expr_is_static_runtime_err(cond, env));
+        }
         if self.il.kind(expr) == NodeKind::Call && self.call_has_static_runtime_arg_err(expr, env) {
             return true;
         }
