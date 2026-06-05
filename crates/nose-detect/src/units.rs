@@ -6,6 +6,7 @@
 use nose_il::{
     stable_symbol_hash, Builtin, Il, Interner, Lang, LitClass, NodeId, NodeKind, Op, ParamSemantic,
     Payload, Symbol, UnitKind,
+    LoopKind,
 };
 use nose_normalize::{
     module_facts::{collect_module_mutations, mutating_method_name},
@@ -1848,6 +1849,7 @@ fn exact_statement_fragment_root(
         NodeKind::Assign => exact_index_assignment_fragment_root(il, node),
         NodeKind::ExprStmt => exact_expr_statement_fragment_root(il, node),
         NodeKind::If => exact_conditional_fragment_root(il, node),
+        NodeKind::Loop => exact_loop_effect_fragment_root(il, node),
         _ => false,
     }
 }
@@ -1910,6 +1912,71 @@ fn exact_index_assignment_fragment_root(il: &Il, node: NodeId) -> bool {
     }
     let kids = il.children(node);
     kids.len() == 2 && il.kind(kids[0]) == NodeKind::Index
+}
+
+fn exact_loop_effect_fragment_root(il: &Il, node: NodeId) -> bool {
+    if !matches!(il.node(node).payload, Payload::Loop(LoopKind::ForEach)) {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 3 || il.kind(kids[0]) != NodeKind::Var {
+        return false;
+    }
+    let Payload::Cid(iter_cid) = il.node(kids[0]).payload else {
+        return false;
+    };
+    foreach_append_effect_body_depends_on_iter(il, kids[2], iter_cid).unwrap_or(false)
+}
+
+fn foreach_append_effect_body_depends_on_iter(
+    il: &Il,
+    node: NodeId,
+    iter_cid: u32,
+) -> Option<bool> {
+    match il.kind(node) {
+        NodeKind::Block => {
+            let mut has_append = false;
+            for &child in il.children(node) {
+                has_append |= foreach_append_effect_body_depends_on_iter(il, child, iter_cid)?;
+            }
+            Some(has_append)
+        }
+        NodeKind::ExprStmt => {
+            let kids = il.children(node);
+            (kids.len() == 1 && append_effect_depends_on_iter(il, kids[0], iter_cid))
+                .then_some(true)
+        }
+        NodeKind::If => {
+            let kids = il.children(node);
+            if !(kids.len() == 2 || kids.len() == 3) {
+                return None;
+            }
+            let mut has_append = false;
+            for &branch in kids.iter().skip(1) {
+                if il.kind(branch) != NodeKind::Block {
+                    return None;
+                }
+                has_append |= foreach_append_effect_body_depends_on_iter(il, branch, iter_cid)?;
+            }
+            Some(has_append)
+        }
+        _ => None,
+    }
+}
+
+fn append_effect_depends_on_iter(il: &Il, node: NodeId, iter_cid: u32) -> bool {
+    if il.kind(node) != NodeKind::Call
+        || !matches!(il.node(node).payload, Payload::Builtin(Builtin::Append))
+    {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 {
+        return false;
+    }
+    let mut required = FxHashSet::default();
+    required.insert(iter_cid);
+    !node_mentions_any_cid(il, kids[0], &required) && node_mentions_any_cid(il, kids[1], &required)
 }
 
 fn top_level_statement_fragment_context_safe(

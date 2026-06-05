@@ -4809,6 +4809,56 @@ positive recall: 626/626
 hard-negative false merges: 0/1233
 ```
 
+## Fragment batch 10: exact ForEach append-effect fragments
+
+This batch tested the next loop-fragment boundary and rejected the unsafe general form.
+The first candidate predicate allowed any `ForEach` body that mentioned the iteration cid;
+real C/Go/Java scanning counterattacked it by connecting Guava `addAll` and `removeAll`
+through same-shaped loop call effects. That is not a sound Type-4 merge, so the accepted
+fragment is deliberately narrower: a direct function-body `ForEach` loop can become an
+exact `Block` fragment only when every loop-body effect is a single-item builtin append,
+the appended value depends on the iteration binding, the append receiver is not the
+iteration binding, and optional branch bodies contain only the same append-effect shape.
+The normal self-contained span, preceding mutation/alias/unknown-call, `exact_safe`, and
+value-size gates still apply.
+
+The three focused positives share one proof invariant: an append-effect loop contributes
+a per-element observable mutation whose value and guard are explicit in the value
+fingerprint. Adjacent hard negatives cover a preceding receiver mutation, a wrong append
+value, a wrong guard, a wrong append receiver/collection, and the key loop-count boundary
+where the loop body ignores the iteration value and must not merge with a single direct
+append.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-foreach-append-1 | candidate extraction | allow exact `ForEach` append-effect loops as dense fragments | 3 focused append-effect loop families reported as `Block` units |
+| fragment-foreach-append-2 | soundness boundary | reject general call effects after Guava `addAll`/`removeAll` false bridge; require builtin append values to depend on the iteration binding | wrong value/guard/receiver, preceding mutation, and unused-iteration loop negatives excluded |
+| fragment-foreach-append-3 | regression | full unit/CLI/equivalence suite, core smoke, clippy, duplication, docs lint | `cargo test` pass; core smoke 626/626 positives and 0/1233 hard-negative false merges |
+| fragment-foreach-append-4 | real delta | selected JS/Python/TS and C/Go/Java scans produced no new evidence-backed real family under the narrowed invariant | JS/Python/TS stayed at 66 families; C/Go/Java stayed at 940 families |
+| fragment-foreach-append-5 | performance | scan `bench/repos/flask bench/repos/axios bench/repos/rust` with `NOSE_TIME=1` | 335 files; normalize+extract 22.6ms, candidates 9.2ms, score 0.2ms; 66 semantic families |
+| fragment-foreach-append-6 | performance | scan `bench/repos/curl bench/repos/gin bench/repos/guava` with `NOSE_TIME=1` | 4357 files; normalize+extract 163.8ms, candidates 33.7ms, score 0.9ms; 940 semantic families |
+
+Focused regression:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_foreach_append_effect_fragments_under_opaque_functions
+3 exact ForEach append-effect fragment families found; wrong value/guard/receiver, mutation, and unused-iteration negatives excluded.
+```
+
+Core gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+positive recall: 626/626
+hard-negative false merges: 0/1233
+```
+
+The current real frontier still points next to `membership_contains` and
+`map_default_lookup`; this append-effect batch is a proof-boundary fragment expansion, not
+a real-corpus completeness win. Do not widen it back to arbitrary loop call effects
+without a fragment semantics contract for receiver identity, loop count, live-outs, and
+side-effect ordering.
+
 ## Fragment batch 9: exact non-overloadable index-assignment effects
 
 This batch opens a narrow assignment-effect fragment without introducing arbitrary

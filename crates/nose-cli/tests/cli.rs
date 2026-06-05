@@ -1115,6 +1115,158 @@ fn semantic_scan_reports_exact_safe_nested_conditional_effect_fragments_under_op
 }
 
 #[test]
+fn semantic_scan_reports_exact_safe_foreach_append_effect_fragments_under_opaque_functions() {
+    let dir = std::env::temp_dir().join(format!(
+        "nose_exact_loop_effect_fragments_{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+
+    let fixtures = [
+        (
+            "loop_push_square_a.js",
+            "function loopPushSquareLeft(xs, out) {\n  for (const x of xs) {\n    out.push(x * x);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "loop_push_square_b.js",
+            "function loopPushSquareRight(ys, dst) {\n  for (const y of ys) {\n    dst.push(y * y);\n  }\n  trace(ys);\n}\n",
+        ),
+        (
+            "loop_push_square_mutated.js",
+            "function loopPushSquareMutated(zs, out) {\n  out.push(0);\n  for (const z of zs) {\n    out.push(z * z);\n  }\n  audit(zs);\n}\n",
+        ),
+        (
+            "loop_push_square_wrong_receiver.js",
+            "function loopPushSquareWrongReceiver(xs, out) {\n  for (const x of xs) {\n    xs.push(x * x);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "loop_push_product_a.js",
+            "function loopPushProductLeft(xs, out) {\n  for (const x of xs) {\n    out.push((x + 1) * 2);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "loop_push_product_b.js",
+            "function loopPushProductRight(ys, dst) {\n  for (const y of ys) {\n    dst.push(2 * (1 + y));\n  }\n  trace(ys);\n}\n",
+        ),
+        (
+            "loop_push_product_neg.js",
+            "function loopPushProductWrong(zs, out) {\n  for (const z of zs) {\n    out.push((z + 2) * 2);\n  }\n  audit(zs);\n}\n",
+        ),
+        (
+            "loop_push_guard_a.js",
+            "function loopPushGuardLeft(xs, out) {\n  for (const x of xs) {\n    if (x > 0) out.push(x + 1);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "loop_push_guard_b.js",
+            "function loopPushGuardRight(ys, dst) {\n  for (const y of ys) {\n    if (0 < y) dst.push(1 + y);\n  }\n  trace(ys);\n}\n",
+        ),
+        (
+            "loop_push_guard_neg.js",
+            "function loopPushGuardWrong(zs, out) {\n  for (const z of zs) {\n    if (z >= 0) out.push(z + 1);\n  }\n  audit(zs);\n}\n",
+        ),
+        (
+            "loop_unused_effect.js",
+            "function loopUnusedEffect(xs, out) {\n  for (const unused of xs) {\n    out.push(1);\n  }\n  audit(xs);\n}\n",
+        ),
+        (
+            "direct_unused_effect.js",
+            "function directUnusedEffect(out) {\n  out.push(1);\n  audit(out);\n}\n",
+        ),
+    ];
+    for (name, src) in fixtures {
+        fs::write(dir.join(name), src).unwrap();
+    }
+
+    let out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "100",
+        "--min-tokens",
+        "100",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let json = scan_json(&out);
+    let families = scan_families(&json);
+
+    let assert_loop_family = |left: &str, right: &str, negative: &str| {
+        let family = families
+            .iter()
+            .find(|family| {
+                let locations = family["locations"].as_array().expect("locations");
+                let loop_files: Vec<&str> = locations
+                    .iter()
+                    .filter(|loc| loc["start_line"] == 2 && loc["end_line"] == 4)
+                    .filter_map(|loc| loc["file"].as_str())
+                    .collect();
+                loop_files.iter().any(|file| file.ends_with(left))
+                    && loop_files.iter().any(|file| file.ends_with(right))
+                    && locations.iter().all(|loc| loc["kind"] == "Block")
+                    && locations
+                        .iter()
+                        .filter_map(|loc| loc["file"].as_str())
+                        .all(|file| !file.ends_with(negative))
+            })
+            .unwrap_or_else(|| {
+                panic!("missing exact foreach append-effect fragment family {left}/{right}: {out}")
+            });
+        let locations = family["locations"].as_array().expect("locations");
+        assert!(
+            locations
+                .iter()
+                .filter(|loc| loc["file"].as_str().unwrap_or("").ends_with(left)
+                    || loc["file"].as_str().unwrap_or("").ends_with(right))
+                .all(|loc| loc["start_line"] == 2 && loc["end_line"] == 4),
+            "foreach append-effect fragments should report the loop span only: {family:?}"
+        );
+    };
+
+    let assert_no_pair = |left: &str, right: &str| {
+        let has_pair = families.iter().any(|family| {
+            let files: Vec<&str> = family["locations"]
+                .as_array()
+                .expect("locations")
+                .iter()
+                .filter_map(|loc| loc["file"].as_str())
+                .collect();
+            files.iter().any(|file| file.ends_with(left))
+                && files.iter().any(|file| file.ends_with(right))
+        });
+        assert!(
+            !has_pair,
+            "foreach append effect that ignores the iteration value must not merge with a single effect: {left}/{right}: {out}"
+        );
+    };
+
+    assert_loop_family(
+        "loop_push_square_a.js",
+        "loop_push_square_b.js",
+        "loop_push_square_mutated.js",
+    );
+    assert_no_pair(
+        "loop_push_square_a.js",
+        "loop_push_square_wrong_receiver.js",
+    );
+    assert_loop_family(
+        "loop_push_product_a.js",
+        "loop_push_product_b.js",
+        "loop_push_product_neg.js",
+    );
+    assert_loop_family(
+        "loop_push_guard_a.js",
+        "loop_push_guard_b.js",
+        "loop_push_guard_neg.js",
+    );
+    assert_no_pair("loop_unused_effect.js", "direct_unused_effect.js");
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn semantic_scan_reports_exact_safe_index_assignment_fragments_for_non_overloaded_languages() {
     let dir = std::env::temp_dir().join(format!(
         "nose_exact_index_assign_fragments_{}",
