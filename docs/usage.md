@@ -57,8 +57,7 @@ scanned 23 files · typescript 19 · javascript 4
 The first line — `scanned N files · <language breakdown>` — reports what was actually
 analyzed. A repo where `.gitignore` or `--exclude` pruned vendored deps, build output,
 or generated code scans far fewer files than sit on disk; the count makes that scope
-explicit instead of a silent gap (compare it to what you expected). The per-language
-breakdown is omitted under `--cache-dir`, which tracks only the total. (The *ignored*
+explicit instead of a silent gap (compare it to what you expected). The *ignored*
 count is intentionally not shown: tallying it means walking into the very trees
 `.gitignore` exists to skip — slow on exactly the large repos where it matters.)
 
@@ -97,6 +96,7 @@ Grouped by what they do. Anything here can also be set in [configuration](config
 | `--mode MODE` | one or more of `syntax`, `semantic`, `near`; comma-list or repeatable; when present, replaces the default |
 | `--threshold T` | acceptance similarity in `[0,1]` for the `near` channel; invalid unless `--mode` includes `near` |
 | `--exclude <glob>` | skip paths matching a gitignore-syntax glob (repeatable) |
+| `--ignore-file <file>` | suppress reviewed families using a structured ignore file with reason/owner/expiry metadata |
 
 ### Ranking
 
@@ -126,8 +126,14 @@ have nothing to extract and sink to the bottom, even at `sim 1.00`.
 | `--hotspots` | after the report, rank directories/modules by total duplicated lines (architecture view) |
 | `--format human\|json\|markdown\|sarif` | output format (default `human`) |
 
-**Workflow** (`--baseline`, `--write-baseline`, `--fail`, `--cache-dir`, `--config`)
-are covered in [continuous-integration](continuous-integration.md) and [configuration](configuration.md).
+`--format json` emits a versioned object with `schema_version`, `tool_version`,
+scan scope, ranking metadata, and a `families` array. The stable contract and
+compatibility rule are documented in [scan-json](scan-json.md).
+
+**Workflow** (`--baseline`, `--write-baseline`, `--new-only`, `--fail-on-new`,
+`--fail`, `--ignore-file`, `--cache-dir`, `--config`) is covered in
+[continuous-integration](continuous-integration.md) and [configuration](configuration.md).
+Structured suppressions are covered in [structured-ignores](structured-ignores.md).
 
 ### Scan Modes
 

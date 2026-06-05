@@ -27,8 +27,8 @@ mod value_graph;
 pub use commutative::{node_tag, node_tag_valued, subtree_hashes};
 pub use interp::{run_unit, Behavior, Value};
 pub use value_graph::{
-    value_fingerprint, value_fingerprint_lits, value_fingerprint_lits_with_context,
-    ValueFingerprintContext,
+    value_fingerprint, value_fingerprint_and_contracts, value_fingerprint_contracts,
+    value_fingerprint_lits, value_fingerprint_lits_with_context, ValueFingerprintContext,
 };
 
 use nose_il::{Il, IlBuilder, Interner, NodeId, NodeKind, Payload};

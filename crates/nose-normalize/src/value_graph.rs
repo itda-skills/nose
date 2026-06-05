@@ -168,6 +168,30 @@ pub fn value_fingerprint_lits_with_context(
     b.fingerprint_lits()
 }
 
+/// The pointer-length contracts the unit relied on to converge: deduped, sorted
+/// `(array_param_pos, length_param_pos)` pairs. The behavioral oracle binds
+/// `args[length_pos] = len(args[array_pos])` for each, so it interprets the unit under the
+/// SAME `n = len(array)` convention the value graph used to merge it. Empty when none.
+pub fn value_fingerprint_contracts(il: &Il, root: NodeId, interner: &Interner) -> Vec<(u32, u32)> {
+    value_fingerprint_and_contracts(il, root, interner).1
+}
+
+/// Both the value fingerprint AND the pointer-length contracts from a SINGLE build — the
+/// behavioral oracle needs both per unit, and building the value graph twice (once for each)
+/// doubled the per-unit cost.
+pub fn value_fingerprint_and_contracts(
+    il: &Il,
+    root: NodeId,
+    interner: &Interner,
+) -> (Vec<u64>, Vec<(u32, u32)>) {
+    let mut b = Builder::new(il, interner);
+    b.build_unit(root);
+    let fp = b.fingerprint_lits().0;
+    b.contracts.sort_unstable();
+    b.contracts.dedup();
+    (fp, b.contracts)
+}
+
 type ValueId = u32;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -266,6 +290,15 @@ struct Builder<'a> {
     /// compact coupled recurrences such as `s1 += f(s2); s2 += g(s1)`, which otherwise
     /// expand into a large raw expression DAG even though they are not clean reductions.
     loop_recurrence: Option<LoopRecurrenceScope>,
+    /// Pointer-length contracts the unit RELIED ON to converge: `(array_param_pos,
+    /// length_param_pos)` pairs recorded wherever `full_pointer_length_contract` fired (the
+    /// loop bound `n` was treated as `len(array)`, not data, and dropped from the
+    /// fingerprint). The behavioral oracle must interpret such a unit under the SAME contract
+    /// — binding `n = len(array)` — else it tests the function on inputs the contract forbids
+    /// (`n ≠ len`) and reports a spurious false merge. Gated this way so the binding only
+    /// fires where the value graph actually used the contract (it cannot mask a non-contract
+    /// false merge). Sorted+deduped on read for determinism.
+    contracts: Vec<(u32, u32)>,
 }
 
 #[derive(Clone)]
@@ -306,6 +339,7 @@ impl<'a> Builder<'a> {
             building: FxHashMap::default(),
             global_env: FxHashMap::default(),
             loop_recurrence: None,
+            contracts: Vec::new(),
         }
     }
 
@@ -1606,6 +1640,21 @@ impl<'a> Builder<'a> {
             let is_and = o == Op::And as u32;
             if (is_or || is_and) && args.len() == 2 {
                 if self.vty(args[0]) == Ty::Bool && self.vty(args[1]) == Ty::Bool {
+                    // LATTICE CANON on a total order — close the strict comparison from a
+                    // non-strict one plus an (in)equality, so a guard written as the
+                    // conjunction/disjunction converges with the strict comparison:
+                    //   (x ≤ y) ∧ (x ≠ y) → x < y     (dual of below)
+                    //   (x < y) ∨ (x = y) → x ≤ y
+                    // Sound for any total order (Lean `Compare.lean::le_and_ne_eq_lt`); on a
+                    // type error every comparison Errs identically on both sides. It composes
+                    // through the recursive `mk` fixpoint, so `not (a>b or a==b)` reaches `a<b`.
+                    if is_and {
+                        if let Some(v) = self.lattice_le_ne_to_lt(args[0], args[1]) {
+                            return v;
+                        }
+                    } else if let Some(v) = self.lattice_lt_eq_to_le(args[0], args[1]) {
+                        return v;
+                    }
                     if self.vhash[args[0] as usize] > self.vhash[args[1] as usize] {
                         args.swap(0, 1);
                     }
@@ -1823,6 +1872,51 @@ impl<'a> Builder<'a> {
         }
         let sum = self.mk(ValOp::Bin(Op::Add as u32), vec![x, y]);
         Some(self.mk(ValOp::Bin(mul), vec![sum, f]))
+    }
+
+    /// The operands of a comparison node `cmp`, if it has opcode `want`. `Le`/`Lt` are
+    /// ORDERED (operands kept in source order); `Eq`/`Ne` are COMMUTATIVE (operands
+    /// vhash-sorted), so callers compare them as an unordered pair.
+    fn cmp_operands(&self, v: ValueId, want: u32) -> Option<(ValueId, ValueId)> {
+        if let ValOp::Bin(o) = self.nodes[v as usize].op {
+            if o == want && self.nodes[v as usize].args.len() == 2 {
+                let a = &self.nodes[v as usize].args;
+                return Some((a[0], a[1]));
+            }
+        }
+        None
+    }
+
+    /// `(x ≤ y) ∧ (x ≠ y) → x < y`. The `≤` is ordered so it fixes `(x, y)`; the `≠` is
+    /// commutative so its operands match `{x, y}` either way. Sound on a total order
+    /// (Lean `Compare.lean::le_and_ne_eq_lt`); the post-normalize oracle re-checks it.
+    fn lattice_le_ne_to_lt(&mut self, a: ValueId, b: ValueId) -> Option<ValueId> {
+        let ne = Op::Ne as u32;
+        for (le_v, ne_v) in [(a, b), (b, a)] {
+            if let Some((x, y)) = self.cmp_operands(le_v, Op::Le as u32) {
+                if let Some((n0, n1)) = self.cmp_operands(ne_v, ne) {
+                    if (n0 == x && n1 == y) || (n0 == y && n1 == x) {
+                        return Some(self.mk(ValOp::Bin(Op::Lt as u32), vec![x, y]));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// `(x < y) ∨ (x = y) → x ≤ y` — the dual of [`lattice_le_ne_to_lt`] over `∨`.
+    fn lattice_lt_eq_to_le(&mut self, a: ValueId, b: ValueId) -> Option<ValueId> {
+        let eq = Op::Eq as u32;
+        for (lt_v, eq_v) in [(a, b), (b, a)] {
+            if let Some((x, y)) = self.cmp_operands(lt_v, Op::Lt as u32) {
+                if let Some((e0, e1)) = self.cmp_operands(eq_v, eq) {
+                    if (e0 == x && e1 == y) || (e0 == y && e1 == x) {
+                        return Some(self.mk(ValOp::Bin(Op::Le as u32), vec![x, y]));
+                    }
+                }
+            }
+        }
+        None
     }
 
     /// Build the value graph for a `Func`/`Method`/class unit. The unit root may
@@ -3022,6 +3116,12 @@ impl<'a> Builder<'a> {
                             if !self.full_pointer_length_contract(cmp, cv, bv) {
                                 let gv = self.indexed_bound_guard(cmp, bv);
                                 self.sinks.push((SinkKind::Cond, gv));
+                            } else if let (Some(arr), Some(len)) =
+                                (self.input_key(cv), self.input_key(bv))
+                            {
+                                // The bound `n` was dropped as "length of the array" — record
+                                // (array_pos, length_pos) so the oracle interprets under n=len.
+                                self.contracts.push((arr, len));
                             }
                         }
                         let zero = self.int_const(0);

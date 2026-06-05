@@ -2,6 +2,7 @@
 //! check the user-visible behavior (discovery, `scan` report, `--exclude`).
 
 use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
@@ -68,6 +69,123 @@ fn run(args: &[&str]) -> String {
     String::from_utf8(out.stdout).unwrap()
 }
 
+fn add_distinct_clone_family(dir: &Path) {
+    let d = dir.join("new");
+    fs::create_dir_all(&d).unwrap();
+    let body = |name: &str, acc: &str, it: &str| {
+        format!(
+            "def {name}(items):\n    {acc} = 1\n    for {it} in items:\n        if {it} < 10:\n            {acc} = {acc} * ({it} + 3)\n            {acc} = {acc} - {it}\n    return {acc}\n"
+        )
+    };
+    fs::write(d.join("fresh_a.py"), body("fresh_a", "total", "item")).unwrap();
+    fs::write(d.join("fresh_b.py"), body("fresh_b", "score", "value")).unwrap();
+}
+
+fn add_member_to_existing_family(dir: &Path) {
+    let d = dir.join("d");
+    fs::create_dir_all(&d).unwrap();
+    fs::write(
+        d.join("f.py"),
+        "def f(items):\n    sum = 0\n    for z in items:\n        if z > 0:\n            sum = sum + z * z\n    return sum\n",
+    )
+    .unwrap();
+}
+
+fn scan_json(out: &str) -> serde_json::Value {
+    serde_json::from_str(out).expect("scan should emit valid JSON")
+}
+
+fn scan_families(json: &serde_json::Value) -> &[serde_json::Value] {
+    json["families"]
+        .as_array()
+        .expect("scan JSON should contain families array")
+}
+
+fn assert_scan_json_v1_contract(json: &serde_json::Value) {
+    assert_eq!(json["schema_version"], 1);
+    assert!(
+        json["tool_version"].as_str().is_some_and(|s| !s.is_empty()),
+        "tool_version should be a non-empty string: {json}"
+    );
+    assert!(
+        json["scope"]["files"].is_number(),
+        "scope.files should be numeric: {json}"
+    );
+    assert!(
+        json["scope"]["languages"].as_array().is_some(),
+        "scope.languages should be an array: {json}"
+    );
+
+    let ranking = json["ranking"].as_object().expect("ranking object");
+    for key in ["sort", "total_families", "shown_families", "limit"] {
+        assert!(ranking.contains_key(key), "ranking.{key} missing: {json}");
+    }
+
+    let family = scan_families(json)
+        .first()
+        .expect("fixture should include a family");
+    let family = family.as_object().expect("family object");
+    for key in [
+        "family_id",
+        "value",
+        "members",
+        "files",
+        "modules",
+        "languages",
+        "mean_score",
+        "mean_lines",
+        "dup_lines",
+        "shared_lines",
+        "params",
+        "shared_weight",
+        "locations",
+        "mean_sem",
+        "scope",
+        "discount",
+    ] {
+        assert!(family.contains_key(key), "family.{key} missing: {json}");
+    }
+
+    let loc = family["locations"]
+        .as_array()
+        .and_then(|locations| locations.first())
+        .and_then(|location| location.as_object())
+        .expect("family.locations should contain location objects");
+    for key in ["file", "start_line", "end_line", "lang", "kind", "sem"] {
+        assert!(loc.contains_key(key), "location.{key} missing: {json}");
+    }
+}
+
+#[test]
+fn checked_in_scan_json_v1_example_matches_contract() {
+    let json = scan_json(include_str!("fixtures/scan-json-v1.json"));
+    assert_scan_json_v1_contract(&json);
+}
+
+#[test]
+fn scan_json_report_has_versioned_contract() {
+    let dir = make_project("json_contract");
+    let out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--min-tokens",
+        "12",
+        "--format",
+        "json",
+        "--top",
+        "1",
+    ]);
+    let json = scan_json(&out);
+    assert_scan_json_v1_contract(&json);
+    assert_eq!(json["tool_version"], env!("CARGO_PKG_VERSION"));
+    assert_eq!(json["scope"]["files"], 4);
+    assert_eq!(json["scope"]["languages"][0]["language"], "python");
+    assert_eq!(json["ranking"]["sort"], "extractability");
+    assert_eq!(json["ranking"]["shown_families"], 1);
+    assert_eq!(json["ranking"]["limit"], 1);
+    let _ = fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn scan_mode_syntax_reports_copy_paste_only() {
     let dir = make_mode_project("syntax");
@@ -111,9 +229,9 @@ fn scan_mode_syntax_min_tokens_controls_copy_paste_floor() {
         "--format",
         "json",
     ]);
-    assert_eq!(
-        out.trim(),
-        "[]",
+    let json = scan_json(&out);
+    assert!(
+        scan_families(&json).is_empty(),
         "a high syntax token floor suppresses the short copy-paste run: {out}"
     );
     let _ = fs::remove_dir_all(&dir);
@@ -210,9 +328,8 @@ fn scan_mode_semantic_rejects_unproved_regex_predicate_matches() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -285,9 +402,8 @@ fn scan_mode_semantic_allows_proved_js_static_builtins() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -2760,9 +2876,8 @@ fn scan_mode_semantic_preserves_js_typeof_operator() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -2816,9 +2931,8 @@ fn scan_mode_semantic_allows_safe_uninterpreted_calls() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -2871,9 +2985,8 @@ fn scan_mode_semantic_allows_safe_uninterpreted_method_calls() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -2925,9 +3038,8 @@ fn scan_mode_semantic_distinguishes_sequence_kinds() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -3408,9 +3520,8 @@ fn scan_mode_semantic_converges_cross_language_list_literals() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -3463,9 +3574,8 @@ fn scan_mode_semantic_preserves_js_object_keys() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -3522,9 +3632,8 @@ fn scan_mode_semantic_converges_cross_language_map_literals() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -3582,9 +3691,8 @@ fn scan_mode_semantic_captures_module_literal_bindings() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -3647,9 +3755,8 @@ fn scan_mode_semantic_preserves_python_dict_keys() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -3713,9 +3820,8 @@ fn scan_mode_semantic_preserves_ruby_hash_keys() {
         "--top",
         "0",
     ]);
-    let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
-    let semantic_families = semantic_json.as_array().expect("semantic JSON array");
+    let semantic_json = scan_json(&semantic);
+    let semantic_families = scan_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -4120,6 +4226,11 @@ fn baseline_hides_accepted_families() {
         .output()
         .expect("run");
     assert!(bl.exists(), "baseline file should be written");
+    let baseline_text = fs::read_to_string(&bl).expect("read baseline");
+    assert!(
+        baseline_text.contains("\"members\""),
+        "baseline should record member identities for changed/resolved comparison: {baseline_text}"
+    );
 
     // …then a re-run shows no *new* families.
     let after = run(&["scan", p, "--min-tokens", "12", "--baseline", bls]);
@@ -4127,6 +4238,142 @@ fn baseline_hides_accepted_families() {
         !after.contains("sites"),
         "baselined families must be hidden, got: {after}"
     );
+    let _ = fs::remove_file(&bl);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn new_only_json_marks_new_families_against_baseline() {
+    let dir = make_project("new_only");
+    let p = dir.to_str().unwrap();
+    let bl = std::env::temp_dir().join(format!("nose_new_only_bl_{}.json", std::process::id()));
+    let bls = bl.to_str().unwrap();
+
+    let baseline = Command::new(bin())
+        .args([
+            "scan",
+            p,
+            "--min-tokens",
+            "12",
+            "--baseline",
+            bls,
+            "--write-baseline",
+        ])
+        .output()
+        .expect("write baseline");
+    assert!(baseline.status.success());
+
+    add_distinct_clone_family(&dir);
+    let out = run(&[
+        "scan",
+        p,
+        "--min-tokens",
+        "12",
+        "--baseline",
+        bls,
+        "--new-only",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let json = scan_json(&out);
+    let families = scan_families(&json);
+    assert!(
+        !families.is_empty(),
+        "new-only scan should report the introduced family: {out}"
+    );
+    assert!(
+        out.contains("fresh_a.py") && out.contains("fresh_b.py") && !out.contains("a/f.py"),
+        "new-only JSON should include new sites, not accepted baseline sites: {out}"
+    );
+    assert_eq!(json["baseline"]["mode"], "new-only");
+    assert!(json["baseline"]["new_families"].as_u64().unwrap() >= 1);
+    assert!(json["baseline"]["unchanged_families"].as_u64().unwrap() >= 1);
+    assert_eq!(json["baseline"]["changed_families"], 0);
+    assert_eq!(json["baseline"]["resolved_families"], 0);
+    assert!(
+        families
+            .iter()
+            .all(|f| f["baseline_status"].as_str() == Some("new")),
+        "all reportable families should be marked new: {out}"
+    );
+
+    let _ = fs::remove_file(&bl);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn fail_on_new_fails_for_changed_family_and_passes_when_clean() {
+    let dir = make_project("fail_on_new");
+    let p = dir.to_str().unwrap();
+    let bl = std::env::temp_dir().join(format!("nose_fail_on_new_bl_{}.json", std::process::id()));
+    let bls = bl.to_str().unwrap();
+
+    let baseline = Command::new(bin())
+        .args([
+            "scan",
+            p,
+            "--min-tokens",
+            "12",
+            "--baseline",
+            bls,
+            "--write-baseline",
+        ])
+        .output()
+        .expect("write baseline");
+    assert!(baseline.status.success());
+
+    let clean = Command::new(bin())
+        .args([
+            "scan",
+            p,
+            "--min-tokens",
+            "12",
+            "--baseline",
+            bls,
+            "--fail-on-new",
+        ])
+        .output()
+        .expect("clean run");
+    assert!(
+        clean.status.success(),
+        "--fail-on-new should pass when every family is accepted"
+    );
+
+    add_member_to_existing_family(&dir);
+    let changed = Command::new(bin())
+        .args([
+            "scan",
+            p,
+            "--min-tokens",
+            "12",
+            "--baseline",
+            bls,
+            "--fail-on-new",
+            "--format",
+            "json",
+            "--top",
+            "0",
+        ])
+        .output()
+        .expect("changed run");
+    assert!(
+        !changed.status.success(),
+        "--fail-on-new should fail when a family changes"
+    );
+    let stdout = String::from_utf8(changed.stdout).unwrap();
+    let stderr = String::from_utf8(changed.stderr).unwrap();
+    let json = scan_json(&stdout);
+    assert_eq!(json["baseline"]["new_families"], 0);
+    assert_eq!(json["baseline"]["changed_families"], 1);
+    assert_eq!(json["baseline"]["resolved_families"], 0);
+    assert_eq!(scan_families(&json)[0]["baseline_status"], "changed");
+    assert!(
+        stderr.contains("--fail-on-new"),
+        "stderr should name the explicit gate: {stderr}"
+    );
+
     let _ = fs::remove_file(&bl);
     let _ = fs::remove_dir_all(&dir);
 }
@@ -4170,6 +4417,194 @@ fn inline_nose_ignore_suppresses_a_site() {
     assert!(
         run(&["scan", p, "--min-tokens", "12"]).contains("0 clone"),
         "the marked copy must be suppressed, leaving no family"
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn structured_ignore_suppresses_family_id_with_metadata() {
+    let dir = make_project("structured_ignore_id");
+    let p = dir.to_str().unwrap();
+    let before = run(&[
+        "scan",
+        p,
+        "--mode",
+        "semantic",
+        "--min-tokens",
+        "12",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let before_json = scan_json(&before);
+    let family_id = scan_families(&before_json)[0]["family_id"]
+        .as_str()
+        .expect("family_id should be exposed")
+        .to_string();
+    let ignore_file = std::env::temp_dir().join(format!(
+        "nose_structured_ignore_{}.json",
+        std::process::id()
+    ));
+    fs::write(
+        &ignore_file,
+        format!(
+            "{{\"ignores\":[{{\"family_id\":\"{family_id}\",\"reason\":\"generated-code\",\"note\":\"Generated from the same template.\",\"owner\":\"platform\",\"expires_at\":\"2099-01-01\"}}]}}\n"
+        ),
+    )
+    .unwrap();
+
+    let after = run(&[
+        "scan",
+        p,
+        "--mode",
+        "semantic",
+        "--min-tokens",
+        "12",
+        "--format",
+        "json",
+        "--top",
+        "0",
+        "--ignore-file",
+        ignore_file.to_str().unwrap(),
+    ]);
+    let after_json = scan_json(&after);
+    assert!(
+        scan_families(&after_json).is_empty(),
+        "the ignored family should be absent from active findings: {after}"
+    );
+    assert_eq!(after_json["ignore"]["active_entries"], 1);
+    assert_eq!(after_json["ignore"]["ignored_families"], 1);
+    assert_eq!(after_json["ignored_families"][0]["family_id"], family_id);
+    assert_eq!(
+        after_json["ignored_families"][0]["ignore"]["reason"],
+        "generated-code"
+    );
+    assert_eq!(
+        after_json["ignored_families"][0]["ignore"]["owner"],
+        "platform"
+    );
+
+    let _ = fs::remove_file(&ignore_file);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn default_structured_ignore_file_matches_paths() {
+    let dir = make_project("structured_ignore_paths");
+    fs::write(
+        dir.join("nose.ignore.json"),
+        "{\"ignores\":[{\"paths\":[\"a/**\"],\"reason\":\"template-copy\",\"note\":\"a/ is generated.\"}]}\n",
+    )
+    .unwrap();
+    let out = Command::new(bin())
+        .args([
+            "scan",
+            ".",
+            "--mode",
+            "semantic",
+            "--min-tokens",
+            "12",
+            "--format",
+            "json",
+            "--top",
+            "0",
+        ])
+        .current_dir(&dir)
+        .output()
+        .expect("run");
+    assert!(
+        out.status.success(),
+        "scan should succeed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    let json = scan_json(&stdout);
+    assert!(
+        scan_families(&json).is_empty(),
+        "path ignore should suppress the family: {stdout}"
+    );
+    assert_eq!(json["ignore"]["active_entries"], 1);
+    assert_eq!(json["ignore"]["ignored_families"], 1);
+    assert_eq!(
+        json["ignored_families"][0]["ignore"]["matched_paths"][0],
+        "./a/f.py"
+    );
+    assert_eq!(
+        json["ignored_families"][0]["ignore"]["selectors"]["paths"][0],
+        "a/**"
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn expired_structured_ignore_is_reported_but_not_applied() {
+    let dir = make_project("structured_ignore_expired");
+    fs::write(
+        dir.join("nose.ignore.json"),
+        "{\"ignores\":[{\"paths\":[\"a/**\"],\"reason\":\"temporary-waiver\",\"owner\":\"platform\",\"expires_at\":\"2000-01-01\"}]}\n",
+    )
+    .unwrap();
+    let out = Command::new(bin())
+        .args([
+            "scan",
+            ".",
+            "--mode",
+            "semantic",
+            "--min-tokens",
+            "12",
+            "--format",
+            "json",
+            "--top",
+            "0",
+        ])
+        .current_dir(&dir)
+        .output()
+        .expect("run");
+    assert!(out.status.success());
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    let json = scan_json(&stdout);
+    assert!(
+        !scan_families(&json).is_empty(),
+        "expired ignore must not suppress the family: {stdout}"
+    );
+    assert_eq!(json["ignore"]["active_entries"], 0);
+    assert_eq!(json["ignore"]["expired_entries"], 1);
+    assert_eq!(json["ignore"]["ignored_families"], 0);
+    assert_eq!(json["ignore"]["expired"][0]["reason"], "temporary-waiver");
+    assert!(
+        stderr.contains("expired on 2000-01-01") && stderr.contains("not applied"),
+        "stderr should explain the expired entry: {stderr}"
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn malformed_structured_ignore_file_fails_clearly() {
+    let dir = make_project("structured_ignore_bad");
+    let ignore_file = dir.join("bad-ignore.json");
+    fs::write(
+        &ignore_file,
+        "{\"ignores\":[{\"paths\":[\"a/**\"],\"note\":\"missing reason\"}]}\n",
+    )
+    .unwrap();
+    let out = Command::new(bin())
+        .args([
+            "scan",
+            dir.to_str().unwrap(),
+            "--min-tokens",
+            "12",
+            "--ignore-file",
+            ignore_file.to_str().unwrap(),
+        ])
+        .output()
+        .expect("run");
+    assert!(!out.status.success(), "malformed ignore files must fail");
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(
+        stderr.contains("parsing ignore file") || stderr.contains("validating ignore file"),
+        "error should name the ignore file problem: {stderr}"
     );
     let _ = fs::remove_dir_all(&dir);
 }
@@ -4398,10 +4833,14 @@ fn scan_reports_what_it_scanned() {
     );
     // The scope line must not corrupt machine-readable output.
     let json = run(&["scan", p, "--min-tokens", "12", "--format", "json"]);
+    let report = scan_json(&json);
     assert!(
-        json.trim_start().starts_with('[') && !json.contains("scanned"),
-        "json output stays pure: {json}"
+        json.trim_start().starts_with('{') && !json.contains("scanned"),
+        "json output stays a pure object without human text: {json}"
     );
+    assert_eq!(report["scope"]["files"], 4);
+    assert_eq!(report["scope"]["languages"][0]["language"], "python");
+    assert_eq!(report["scope"]["languages"][0]["files"], 4);
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -4502,8 +4941,8 @@ fn top_zero_shows_all_families() {
     let p = dir.to_str().unwrap();
     let count = |args: &[&str]| -> usize {
         let out = run(args);
-        let v: serde_json::Value = serde_json::from_str(&out).expect("valid JSON");
-        v.as_array().expect("JSON array").len()
+        let v = scan_json(&out);
+        scan_families(&v).len()
     };
 
     let all = count(&[

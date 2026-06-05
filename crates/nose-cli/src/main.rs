@@ -3,6 +3,7 @@
 mod baseline;
 mod cache;
 mod config;
+mod ignores;
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -154,6 +155,19 @@ enum Cmd {
         /// duplication — the way to adopt on a codebase that already has clones.
         #[arg(long, value_name = "FILE")]
         baseline: Option<PathBuf>,
+        /// Structured ignore file for intentionally suppressed families. Defaults
+        /// to `nose.ignore.json` when that file exists.
+        #[arg(long, value_name = "FILE")]
+        ignore_file: Option<PathBuf>,
+        /// Explicitly report only families that are new or changed compared with
+        /// `--baseline`. This is the default behavior when `--baseline` is present;
+        /// the flag makes CI intent readable in scripts.
+        #[arg(long, requires = "baseline", conflicts_with = "write_baseline")]
+        new_only: bool,
+        /// Exit non-zero only when the baseline comparison finds new or changed
+        /// families. Requires `--baseline` and implies new-only reporting.
+        #[arg(long, requires = "baseline", conflicts_with = "write_baseline")]
+        fail_on_new: bool,
         /// Write the current families to the `--baseline` file (accept today's state)
         /// and exit, instead of reporting.
         #[arg(long, requires = "baseline")]
@@ -268,7 +282,43 @@ enum Cmd {
         /// soundness/completeness report. Used by the value-add evaluator.
         #[arg(long)]
         json: bool,
+        /// CI soundness gate: exit non-zero if the false-merge count EXCEEDS this budget.
+        /// Use `--max-violations 0` on real code (the SOUND invariant); on the synthetic
+        /// Type-4 corpus use the characterized baseline (its residual is oracle-fidelity
+        /// artifacts — see experiments §A2), so a new real false merge from a future canon
+        /// pushes the count over budget and fails the gate.
+        #[arg(long)]
+        max_violations: Option<usize>,
+        /// Write the oracle's UNDER-MERGED groups (behavior-equal on the battery but
+        /// fingerprint-split — candidate MISSED clones) to a JSON file, sorted by structural
+        /// nearness. Feeds the detection campaign with oracle-discovered convergence leads
+        /// (vj ≥ 0.7 are the strongest: structurally near AND behavior-equal).
+        #[arg(long)]
+        leads: Option<PathBuf>,
     },
+    /// EXPERIMENT (leaps 2+3): measure a behavioral-equivalence ACCEPTANCE gate — group
+    /// interpretable units by their behavior on an input battery (two units are
+    /// "accepted" iff identical on every input) and, against a Type-4 manifest, report
+    /// the recall it recovers BEYOND exact-fingerprint matching and the hard-negative
+    /// false merges it would introduce. `--battery wide` is the leap-3 bounded checker
+    /// (a much larger structured input domain — does more checking kill the false merges?).
+    BehavioralGate {
+        /// Path to the generated Type-4 corpus `sources/` directory.
+        #[arg(required = true)]
+        paths: Vec<PathBuf>,
+        /// The Type-4 manifest.json with labeled positive/negative pairs.
+        #[arg(long)]
+        manifest: PathBuf,
+        /// Input battery: `standard` (leap 2) or `wide` (leap 3, larger domain).
+        #[arg(long, default_value = "standard")]
+        battery: BatteryKind,
+    },
+}
+
+#[derive(Clone, Copy, PartialEq, clap::ValueEnum)]
+enum BatteryKind {
+    Standard,
+    Wide,
 }
 
 #[derive(Clone, Copy, clap::ValueEnum)]
@@ -281,7 +331,7 @@ enum Format {
 enum ReportFormat {
     /// Ranked, human-readable terminal report.
     Human,
-    /// Machine-readable JSON (one object per family).
+    /// Machine-readable JSON report with a versioned top-level schema.
     Json,
     /// Markdown report (for PRs / issues / docs).
     Markdown,
@@ -383,6 +433,14 @@ enum SortKey {
 }
 
 impl SortKey {
+    fn json_name(self) -> &'static str {
+        match self {
+            SortKey::Extractability => "extractability",
+            SortKey::Value => "value",
+            SortKey::Sites => "sites",
+        }
+    }
+
     /// The ranking score for `f` under this key (higher = ranked first).
     fn score(self, f: &nose_detect::RefactorFamily) -> f64 {
         match self {
@@ -411,8 +469,7 @@ fn sort_name(s: SortKey) -> &'static str {
 /// `.gitignore` exists to skip, slow on exactly the big repos where it matters.)
 struct ScanScope {
     files: usize,
-    /// `(language name, file count)`, largest first. Empty on the `--cache-dir` path,
-    /// which tracks only the total count.
+    /// `(language name, file count)`, largest first.
     langs: Vec<(&'static str, usize)>,
 }
 
@@ -445,6 +502,255 @@ impl ScanScope {
             .collect::<Vec<_>>()
             .join(" · ");
         format!("scanned {} {unit} · {langs}", self.files)
+    }
+}
+
+const SCAN_JSON_SCHEMA_VERSION: u32 = 1;
+
+#[derive(serde::Serialize)]
+struct ScanJsonReport<'a> {
+    schema_version: u32,
+    tool_version: &'static str,
+    scope: ScanJsonScope<'a>,
+    ranking: ScanJsonRanking,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    baseline: Option<&'a BaselineSummary>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ignore: Option<ignores::IgnoreSummary<'a>>,
+    families: Vec<ScanJsonFamily<'a>>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    ignored_families: Vec<ScanJsonIgnoredFamily<'a>>,
+}
+
+#[derive(serde::Serialize)]
+struct ScanJsonScope<'a> {
+    files: usize,
+    languages: Vec<ScanJsonLanguage<'a>>,
+}
+
+#[derive(serde::Serialize)]
+struct ScanJsonLanguage<'a> {
+    language: &'a str,
+    files: usize,
+}
+
+#[derive(serde::Serialize)]
+struct ScanJsonRanking {
+    sort: &'static str,
+    total_families: usize,
+    shown_families: usize,
+    limit: Option<usize>,
+}
+
+#[derive(serde::Serialize)]
+struct ScanJsonFamily<'a> {
+    family_id: String,
+    #[serde(flatten)]
+    family: &'a nose_detect::RefactorFamily,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    baseline_status: Option<&'static str>,
+}
+
+#[derive(serde::Serialize)]
+struct ScanJsonIgnoredFamily<'a> {
+    family_id: String,
+    #[serde(flatten)]
+    family: &'a nose_detect::RefactorFamily,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    baseline_status: Option<&'static str>,
+    ignore: &'a ignores::IgnoreMatch,
+}
+
+struct ScanJsonInput<'a> {
+    scope: &'a ScanScope,
+    sort: SortKey,
+    top: usize,
+    families: &'a [nose_detect::RefactorFamily],
+    shown: &'a [&'a nose_detect::RefactorFamily],
+    baseline: Option<&'a BaselineComparison>,
+    ignore_set: Option<&'a ignores::IgnoreSet>,
+    ignored_families: &'a [IgnoredFamily],
+}
+
+impl<'a> ScanJsonReport<'a> {
+    fn new(input: ScanJsonInput<'a>) -> Self {
+        let statuses = input.baseline.map(|b| &b.statuses);
+        ScanJsonReport {
+            schema_version: SCAN_JSON_SCHEMA_VERSION,
+            tool_version: env!("CARGO_PKG_VERSION"),
+            scope: ScanJsonScope {
+                files: input.scope.files,
+                languages: input
+                    .scope
+                    .langs
+                    .iter()
+                    .map(|(language, files)| ScanJsonLanguage {
+                        language,
+                        files: *files,
+                    })
+                    .collect(),
+            },
+            ranking: ScanJsonRanking {
+                sort: input.sort.json_name(),
+                total_families: input.families.len(),
+                shown_families: input.shown.len(),
+                limit: (input.top != 0).then_some(input.top),
+            },
+            baseline: input.baseline.map(|b| &b.summary),
+            ignore: input
+                .ignore_set
+                .map(|set| set.summary(input.ignored_families.len())),
+            families: input
+                .shown
+                .iter()
+                .map(|family| ScanJsonFamily {
+                    family_id: baseline::family_id(family),
+                    family,
+                    baseline_status: statuses
+                        .and_then(|s| s.get(&baseline::family_key(family)))
+                        .map(BaselineStatus::as_str),
+                })
+                .collect(),
+            ignored_families: input
+                .ignored_families
+                .iter()
+                .map(|ignored| ScanJsonIgnoredFamily {
+                    family_id: baseline::family_id(&ignored.family),
+                    family: &ignored.family,
+                    baseline_status: statuses
+                        .and_then(|s| s.get(&baseline::family_key(&ignored.family)))
+                        .map(BaselineStatus::as_str),
+                    ignore: &ignored.ignore,
+                })
+                .collect(),
+        }
+    }
+}
+
+struct IgnoredFamily {
+    family: nose_detect::RefactorFamily,
+    ignore: ignores::IgnoreMatch,
+}
+
+#[derive(serde::Serialize)]
+struct BaselineSummary {
+    path: String,
+    mode: &'static str,
+    baseline_families: usize,
+    new_families: usize,
+    changed_families: usize,
+    unchanged_families: usize,
+    resolved_families: usize,
+}
+
+impl BaselineSummary {
+    fn line(&self) -> String {
+        format!(
+            "baseline: {} new · {} changed · {} unchanged · {} resolved",
+            self.new_families,
+            self.changed_families,
+            self.unchanged_families,
+            self.resolved_families
+        )
+    }
+}
+
+#[derive(Clone, Copy)]
+enum BaselineStatus {
+    New,
+    Changed,
+}
+
+impl BaselineStatus {
+    fn as_str(&self) -> &'static str {
+        match self {
+            BaselineStatus::New => "new",
+            BaselineStatus::Changed => "changed",
+        }
+    }
+}
+
+struct BaselineComparison {
+    summary: BaselineSummary,
+    statuses: std::collections::HashMap<u64, BaselineStatus>,
+}
+
+impl BaselineComparison {
+    fn new(
+        path: &std::path::Path,
+        baseline: &baseline::Baseline,
+        families: &[nose_detect::RefactorFamily],
+    ) -> Self {
+        let current_keys: std::collections::HashSet<u64> =
+            families.iter().map(baseline::family_key).collect();
+        let unchanged_families = baseline.keys.intersection(&current_keys).count();
+
+        let mut changed_current = std::collections::HashSet::new();
+        let mut changed_baseline = std::collections::HashSet::new();
+        for family in families {
+            let key = baseline::family_key(family);
+            if baseline.keys.contains(&key) {
+                continue;
+            }
+            let current_members: std::collections::HashSet<_> =
+                baseline::member_keys(family).into_iter().collect();
+            if baseline
+                .entries
+                .iter()
+                .filter(|entry| !current_keys.contains(&entry.key))
+                .any(|entry| {
+                    !entry.members.is_empty()
+                        && entry.members.iter().any(|m| current_members.contains(m))
+                })
+            {
+                changed_current.insert(key);
+                for entry in baseline
+                    .entries
+                    .iter()
+                    .filter(|entry| !current_keys.contains(&entry.key))
+                {
+                    if !entry.members.is_empty()
+                        && entry.members.iter().any(|m| current_members.contains(m))
+                    {
+                        changed_baseline.insert(entry.key);
+                    }
+                }
+            }
+        }
+
+        let mut statuses = std::collections::HashMap::new();
+        for family in families {
+            let key = baseline::family_key(family);
+            if baseline.keys.contains(&key) {
+                continue;
+            }
+            let status = if changed_current.contains(&key) {
+                BaselineStatus::Changed
+            } else {
+                BaselineStatus::New
+            };
+            statuses.insert(key, status);
+        }
+
+        let resolved_families = baseline
+            .keys
+            .iter()
+            .filter(|key| !current_keys.contains(key) && !changed_baseline.contains(key))
+            .count();
+        let changed_families = changed_current.len();
+        let new_families = statuses.len().saturating_sub(changed_families);
+        BaselineComparison {
+            summary: BaselineSummary {
+                path: path.display().to_string(),
+                mode: "new-only",
+                baseline_families: baseline.keys.len(),
+                new_families,
+                changed_families,
+                unchanged_families,
+                resolved_families,
+            },
+            statuses,
+        }
     }
 }
 
@@ -635,6 +941,9 @@ fn run() -> Result<()> {
             cache_dir,
             fail,
             baseline,
+            ignore_file,
+            new_only: _,
+            fail_on_new,
             write_baseline,
             threshold,
             format,
@@ -655,6 +964,8 @@ fn run() -> Result<()> {
             cache_dir,
             fail,
             baseline,
+            ignore_file,
+            fail_on_new,
             write_baseline,
             threshold,
             format,
@@ -681,7 +992,14 @@ fn run() -> Result<()> {
             paths,
             no_cfg_norm,
             json,
-        } => cmd_verify(paths, no_cfg_norm, json),
+            max_violations,
+            leads,
+        } => cmd_verify(paths, no_cfg_norm, json, max_violations, leads),
+        Cmd::BehavioralGate {
+            paths,
+            manifest,
+            battery,
+        } => cmd_behavioral_gate(paths, manifest, battery),
     }
 }
 
@@ -771,7 +1089,353 @@ fn verify_probes(corpus: &Corpus) -> Vec<nose_normalize::Value> {
     probes
 }
 
-fn cmd_verify(paths: Vec<PathBuf>, no_cfg_norm: bool, json: bool) -> Result<()> {
+/// Leap-3 "wide" battery: a much larger structured input domain than [`verify_battery`].
+/// Bounded equivalence checking is "interpret on enough inputs that two functions which
+/// differ anywhere differ HERE": more scalars (large, negative, boundary), more lists
+/// (sorted/reversed/duplicate/negative/singleton/empty), a wider arity slot, and more
+/// combinatorial rows. The leap-3 hypothesis: a finite battery merges some non-equivalent
+/// pairs (the §AK risk); a wider domain should drive those false merges toward zero while
+/// keeping the true positives. (Still not a proof — that is the SMT extension — but a much
+/// stronger bounded checker.)
+fn wide_battery(probes: &[nose_normalize::Value]) -> Vec<Vec<nose_normalize::Value>> {
+    use nose_normalize::Value;
+    let l = |xs: &[i64]| Value::List(xs.iter().copied().map(Value::Int).collect());
+    let pool = [
+        l(&[1, 2, 3, 4]),
+        Value::Int(3),
+        Value::Int(0),
+        Value::Int(-1),
+        l(&[5, 1, 4, 2, 8]),
+        Value::Int(7),
+        l(&[]),
+        Value::Int(2),
+        // wide additions: boundary/large/negative scalars and adversarial lists
+        Value::Int(-7),
+        Value::Int(100),
+        Value::Int(1),
+        l(&[2, 2, 2]),        // all-equal (separates min/max/dedup-sensitive)
+        l(&[0]),              // singleton zero (separates *-fold from +-fold, presence)
+        l(&[-3, -1, -2]),     // all-negative (separates abs/sign, min/max direction)
+        l(&[4, 3, 2, 1]),     // reversed (separates order-sensitive from order-free)
+        l(&[10, -10, 5, -5]), // mixed sign, zero-sum (separates sum from sum-abs)
+    ];
+    let n = pool.len();
+    const WIDTH: usize = 5;
+    const COUNT: usize = 243; // 3^5 — dense mixed-radix coverage over a low-entropy slice
+    let mut battery: Vec<Vec<Value>> = (0..COUNT)
+        .map(|e| {
+            (0..WIDTH)
+                .map(|j| {
+                    let radix = n.saturating_pow(j as u32).max(1);
+                    pool[(e / radix) % n].clone()
+                })
+                .collect()
+        })
+        .collect();
+    let fill = pool[0].clone();
+    for v in probes {
+        for p in 0..WIDTH {
+            let mut row = vec![fill.clone(); WIDTH];
+            row[p] = v.clone();
+            battery.push(row);
+        }
+    }
+    battery
+}
+
+/// Trailing `sources/<id>/<file>` key shared by the corpus path and the manifest path,
+/// so an interpreted unit can be matched to its manifest entry regardless of the prefix
+/// the corpus was scanned under.
+fn manifest_key(path: &str) -> String {
+    match path.rfind("sources/") {
+        Some(i) => path[i..].to_string(),
+        None => path.to_string(),
+    }
+}
+
+fn cmd_behavioral_gate(
+    paths: Vec<PathBuf>,
+    manifest: PathBuf,
+    battery_kind: BatteryKind,
+) -> Result<()> {
+    use nose_normalize::{run_unit, Behavior, NormalizeOptions, Value};
+    use std::collections::hash_map::DefaultHasher;
+    use std::collections::{HashMap, HashSet};
+    use std::hash::{Hash, Hasher};
+
+    let refs: Vec<&std::path::Path> = paths.iter().map(|p| p.as_path()).collect();
+    let corpus = nose_frontend::lower_corpus_many(&refs);
+    warn_if_empty(&corpus, &paths);
+    let opts = NormalizeOptions::default();
+    let oracle_opts = NormalizeOptions {
+        oracle: true,
+        ..opts
+    };
+    let battery = match battery_kind {
+        BatteryKind::Standard => verify_battery(&verify_probes(&corpus)),
+        BatteryKind::Wide => wide_battery(&verify_probes(&corpus)),
+    };
+
+    // One interpretable record per generated source file (each holds exactly one function).
+    struct U {
+        fp: Vec<u64>,
+        beh_hash: u64,
+        trivial: bool,
+    }
+    let mut units: HashMap<String, U> = HashMap::new();
+
+    for il in &corpus.files {
+        let n = nose_normalize::normalize(il, &corpus.interner, &opts);
+        let core = nose_normalize::normalize(il, &corpus.interner, &oracle_opts);
+        let mut core_func: HashMap<(u32, u32), nose_il::NodeId> = HashMap::new();
+        let mut stk = vec![core.root];
+        while let Some(x) = stk.pop() {
+            if core.kind(x) == nose_il::NodeKind::Func {
+                let s = core.node(x).span;
+                core_func.entry((s.start_byte, s.end_byte)).or_insert(x);
+            }
+            stk.extend(core.children(x).iter().copied());
+        }
+        for u in &n.units {
+            let root = u.root;
+            if n.kind(root) != nose_il::NodeKind::Func {
+                continue;
+            }
+            let span0 = n.node(root).span;
+            let Some(&core_root) = core_func.get(&(span0.start_byte, span0.end_byte)) else {
+                continue;
+            };
+            // Fingerprint + pointer-length contracts (n = len(array)) from one build.
+            let (fp, contracts) =
+                nose_normalize::value_fingerprint_and_contracts(&n, root, &corpus.interner);
+            if fp.is_empty() {
+                continue;
+            }
+            let mut beh: Vec<Behavior> = Vec::with_capacity(battery.len());
+            let mut ok = true;
+            for inputs in &battery {
+                let row = apply_contracts(inputs, &contracts);
+                match run_unit(&core, core_root, &row) {
+                    Some(b) => beh.push(b),
+                    None => {
+                        ok = false;
+                        break;
+                    }
+                }
+            }
+            if !ok {
+                continue;
+            }
+            // Trivial behavior (constant / all-Err) is coincidental, never evidence of a
+            // clone — exclude it from behavioral merging (matches the verify completeness gate).
+            let distinct: HashSet<&Value> = beh.iter().map(|b| &b.ret).collect();
+            let trivial = distinct.len() < 2
+                || beh
+                    .iter()
+                    .all(|b| matches!(b.ret, Value::Null | Value::Err));
+            let mut h = DefaultHasher::new();
+            beh.hash(&mut h);
+            units.insert(
+                manifest_key(&il.meta.path),
+                U {
+                    fp,
+                    beh_hash: h.finish(),
+                    trivial,
+                },
+            );
+        }
+    }
+
+    // Cross-reference the manifest's labeled pairs.
+    #[derive(serde::Deserialize)]
+    struct Side {
+        path: String,
+    }
+    #[derive(serde::Deserialize)]
+    struct Item {
+        left: Side,
+        right: Side,
+        semantic_status: String,
+        split: String,
+    }
+    #[derive(serde::Deserialize)]
+    struct Manifest {
+        items: Vec<Item>,
+    }
+    let m: Manifest = serde_json::from_str(&std::fs::read_to_string(&manifest)?)?;
+
+    // Tally, restricted to pairs where BOTH units are interpretable (the slice this gate
+    // can speak to). For each: did exact-fingerprint merge them? did the behavioral gate?
+    struct Tally {
+        pairs: usize,
+        fp_merge: usize,
+        beh_merge: usize,
+        beh_only: usize, // behavioral merge that fingerprint missed (the leap value / cost)
+    }
+    impl Tally {
+        fn new() -> Self {
+            Tally {
+                pairs: 0,
+                fp_merge: 0,
+                beh_merge: 0,
+                beh_only: 0,
+            }
+        }
+    }
+    let mut pos = Tally::new();
+    let mut neg = Tally::new();
+    let mut pos_heldout = 0usize;
+    let mut pos_heldout_beh_only = 0usize;
+    let mut uninterp_pairs = 0usize;
+
+    for it in &m.items {
+        let (lk, rk) = (manifest_key(&it.left.path), manifest_key(&it.right.path));
+        let (Some(lu), Some(ru)) = (units.get(&lk), units.get(&rk)) else {
+            uninterp_pairs += 1;
+            continue;
+        };
+        let positive = it.semantic_status == "equivalent";
+        let t = if positive { &mut pos } else { &mut neg };
+        t.pairs += 1;
+        let fp_merge = lu.fp == ru.fp;
+        // A behavioral merge requires identical behavior on EVERY battery input and a
+        // non-trivial behavior (constant/all-Err units never merge on behavior).
+        let beh_merge = !lu.trivial && !ru.trivial && lu.beh_hash == ru.beh_hash;
+        if fp_merge {
+            t.fp_merge += 1;
+        }
+        if beh_merge {
+            t.beh_merge += 1;
+        }
+        if beh_merge && !fp_merge {
+            t.beh_only += 1;
+            if positive && it.split == "heldout" {
+                pos_heldout_beh_only += 1;
+            }
+        }
+        if positive && it.split == "heldout" {
+            pos_heldout += 1;
+        }
+    }
+
+    let kind = match battery_kind {
+        BatteryKind::Standard => "standard (leap 2)",
+        BatteryKind::Wide => "wide (leap 3)",
+    };
+    println!("=== behavioral-equivalence acceptance gate — battery: {kind} ===");
+    println!("battery rows: {}", battery.len());
+    println!(
+        "manifest pairs: {} interpretable-both / {} excluded (a unit not interpretable)",
+        pos.pairs + neg.pairs,
+        uninterp_pairs
+    );
+    println!();
+    println!(
+        "POSITIVES (should merge), interpretable slice = {}",
+        pos.pairs
+    );
+    println!(
+        "  exact-fingerprint recall : {}/{} ({:.1}%)",
+        pos.fp_merge,
+        pos.pairs,
+        pct(pos.fp_merge, pos.pairs)
+    );
+    println!(
+        "  behavioral-gate recall   : {}/{} ({:.1}%)",
+        pos.beh_merge,
+        pos.pairs,
+        pct(pos.beh_merge, pos.pairs)
+    );
+    println!(
+        "  → RECOVERED beyond fingerprint (leap value): {} (heldout: {}/{})",
+        pos.beh_only, pos_heldout_beh_only, pos_heldout
+    );
+    println!();
+    println!(
+        "HARD NEGATIVES (must NOT merge), interpretable slice = {}",
+        neg.pairs
+    );
+    println!(
+        "  exact-fingerprint false merges: {}/{} ({:.1}%)",
+        neg.fp_merge,
+        neg.pairs,
+        pct(neg.fp_merge, neg.pairs)
+    );
+    println!(
+        "  behavioral-gate false merges  : {}/{} ({:.1}%)  ← the soundness cost",
+        neg.beh_merge,
+        neg.pairs,
+        pct(neg.beh_merge, neg.pairs)
+    );
+    println!("  → INTRODUCED beyond fingerprint: {}", neg.beh_only);
+    Ok(())
+}
+
+fn pct(a: usize, b: usize) -> f64 {
+    if b == 0 {
+        0.0
+    } else {
+        100.0 * a as f64 / b as f64
+    }
+}
+
+/// Rewrite a battery row to honor a unit's pointer-length contracts: set each length-param
+/// slot to the length of its array-param slot, so the oracle interprets `f(xs, n)` under
+/// `n = len(xs)` — the same convention the value graph used to merge it. Only applies when
+/// the array slot is actually a list (else the unit Errs identically regardless). Returns
+/// the row unchanged when there are no contracts (zero cost for the common case).
+fn apply_contracts(
+    row: &[nose_normalize::Value],
+    contracts: &[(u32, u32)],
+) -> Vec<nose_normalize::Value> {
+    use nose_normalize::Value;
+    let mut out = row.to_vec();
+    // A length param shared by several arrays (aligned `f(a, b, n)`) is the SHARED logical
+    // length: bind it to the MIN of those arrays' lengths, matching the `zip`-based form
+    // (`sum(x*y for x,y in zip(a,b))` stops at the shorter). For a single array this is just
+    // its length. Group contracts by length-position so the shared case is a min, not a
+    // last-write race.
+    let mut by_len: std::collections::BTreeMap<usize, Vec<usize>> =
+        std::collections::BTreeMap::new();
+    for &(arr_pos, len_pos) in contracts {
+        by_len
+            .entry(len_pos as usize)
+            .or_default()
+            .push(arr_pos as usize);
+    }
+    for (len_pos, arrs) in by_len {
+        if len_pos >= out.len() {
+            continue;
+        }
+        // If EVERY contracted array slot is a list, bind `n` to the MIN of their lengths (the
+        // shared logical length). If any slot is NOT a list, `len` is undefined — bind `n =
+        // Null` so `i < n` Errs and the unit Errs exactly as the `len(non-list)` form does,
+        // instead of running an empty loop and returning the init value.
+        let mut shared: Option<i64> = Some(i64::MAX);
+        for arr_pos in arrs {
+            match out.get(arr_pos) {
+                Some(Value::List(xs)) => {
+                    let l = xs.len() as i64;
+                    shared = shared.map(|s| s.min(l));
+                }
+                _ => shared = None,
+            }
+        }
+        out[len_pos] = match shared {
+            Some(l) if l != i64::MAX => Value::Int(l),
+            _ => Value::Null,
+        };
+    }
+    out
+}
+
+fn cmd_verify(
+    paths: Vec<PathBuf>,
+    no_cfg_norm: bool,
+    json: bool,
+    max_violations: Option<usize>,
+    leads: Option<PathBuf>,
+) -> Result<()> {
     use nose_normalize::{run_unit, Behavior, NormalizeOptions, Value};
     use std::collections::HashMap;
     use std::hash::{Hash, Hasher};
@@ -844,7 +1508,13 @@ fn cmd_verify(paths: Vec<PathBuf>, no_cfg_norm: bool, json: bool) -> Result<()> 
             // structure there, never on an empty value multiset — so distinct empty-fp
             // bodies "colliding" is not a product false merge. Exclude empty fingerprints
             // (only those — small non-empty ones stay, so completeness is unaffected).
-            let fp = nose_normalize::value_fingerprint(&n, root, &corpus.interner);
+            // Fingerprint AND pointer-length contracts from ONE value-graph build (the
+            // oracle needs both; building twice doubled the per-unit cost). The contract
+            // binds n = len(array) so the oracle interprets `f(xs,n)` under the same
+            // convention the value graph used to merge it; gated on the contract actually
+            // firing, so a non-contract false merge is still exposed by the free battery.
+            let (fp, contracts) =
+                nose_normalize::value_fingerprint_and_contracts(&n, root, &corpus.interner);
             if fp.is_empty() {
                 continue;
             }
@@ -852,7 +1522,8 @@ fn cmd_verify(paths: Vec<PathBuf>, no_cfg_norm: bool, json: bool) -> Result<()> 
             let mut beh = Vec::new();
             let mut ok = true;
             for inputs in &battery {
-                match run_unit(&core, core_root, inputs) {
+                let row = apply_contracts(inputs, &contracts);
+                match run_unit(&core, core_root, &row) {
                     Some(b) => beh.push(b),
                     None => {
                         ok = false;
@@ -870,7 +1541,8 @@ fn cmd_verify(paths: Vec<PathBuf>, no_cfg_norm: bool, json: bool) -> Result<()> 
                 let mut full_beh = Vec::with_capacity(battery.len());
                 let mut full_ok = true;
                 for inputs in &battery {
-                    match run_unit(&n, root, inputs) {
+                    let row = apply_contracts(inputs, &contracts);
+                    match run_unit(&n, root, &row) {
                         Some(b) => full_beh.push(b),
                         None => {
                             full_ok = false;
@@ -985,10 +1657,11 @@ fn cmd_verify(paths: Vec<PathBuf>, no_cfg_norm: bool, json: bool) -> Result<()> 
     }
     println!("\nSOUNDNESS — fingerprint-equal ⟹ behavior-equal:");
     println!("  fingerprint groups (≥2): {fp_groups}");
+    let n_violations = violations.len();
     if violations.is_empty() {
         println!("  SOUND: no false merges ✓");
     } else {
-        println!("  [!] {} VIOLATION(S) (false merges):", violations.len());
+        println!("  [!] {n_violations} VIOLATION(S) (false merges):");
         for (a, b, d) in violations.iter().take(20) {
             println!("    {a}  ≡?  {b}   ({d} differing inputs)");
         }
@@ -1094,6 +1767,31 @@ fn cmd_verify(paths: Vec<PathBuf>, no_cfg_norm: bool, json: bool) -> Result<()> 
     for (a, b, vj) in misses.iter().take(30) {
         println!("    vj={vj:.2}  {a}  ↮  {b}");
     }
+    // D1: export the under-merged pairs as detection leads — oracle-discovered candidates the
+    // detection campaign can turn into convergence proposals. Sorted by vj (already), so the
+    // strongest (structurally-near AND behavior-equal) come first.
+    if let Some(path) = &leads {
+        let items: Vec<_> = misses
+            .iter()
+            .map(|(a, b, vj)| {
+                serde_json::json!({ "a": a, "b": b, "vj": vj, "structurally_near": *vj >= 0.7 })
+            })
+            .collect();
+        let near = misses.iter().filter(|(_, _, vj)| *vj >= 0.7).count();
+        std::fs::write(
+            path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "under_merged_pairs": items.len(),
+                "structurally_near": near,
+                "leads": items,
+            }))?,
+        )?;
+        println!(
+            "\nLEADS: wrote {} under-merged pairs ({near} structurally-near) to {}",
+            misses.len(),
+            path.display()
+        );
+    }
 
     // --- Calibration: P(behavior-equal | value-Jaccard bin). The detector currently
     // trusts only an *exact* fingerprint match (vj = 1.0). This measures how safe it
@@ -1138,6 +1836,15 @@ fn cmd_verify(paths: Vec<PathBuf>, no_cfg_norm: bool, json: bool) -> Result<()> 
                 100.0 * eq[i] as f64 / tot[i] as f64
             );
         }
+    }
+    // CI soundness gate: fail if false merges exceed the budget. The independent oracle thus
+    // becomes a permanent regression gate on the detection campaign — a new canon that
+    // introduces a real false merge pushes the count over budget here.
+    if let Some(budget) = max_violations {
+        if n_violations > budget {
+            anyhow::bail!("verify gate: {n_violations} false merges exceed the budget of {budget}");
+        }
+        println!("\nGATE: {n_violations} ≤ {budget} false merges — OK ✓");
     }
     Ok(())
 }
@@ -1326,6 +2033,8 @@ struct ScanArgs {
     cache_dir: Option<PathBuf>,
     fail: bool,
     baseline: Option<PathBuf>,
+    ignore_file: Option<PathBuf>,
+    fail_on_new: bool,
     write_baseline: bool,
     threshold: Option<f64>,
     format: ReportFormat,
@@ -1436,9 +2145,14 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
     };
     let min_lines = args.min_lines.or(cfg.min_lines).unwrap_or(5);
     let min_tokens = args.min_tokens.or(cfg.min_tokens).unwrap_or(24);
+    let ignore_file = args.ignore_file.or(cfg.ignore_file);
     // Excludes are additive: config patterns plus any given on the command line.
     let mut exclude = cfg.exclude;
     exclude.extend(args.exclude.iter().cloned());
+    let ignore_set = ignores::load_for_scan(ignore_file.as_deref())?;
+    if let Some(ignore_set) = &ignore_set {
+        ignore_set.warn_expired();
+    }
 
     let opts = nose_detect::DetectOptions {
         threshold,
@@ -1458,23 +2172,20 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
     // With --cache-dir, build units per file through the on-disk cache (skips
     // parse/normalize/extract for unchanged files); otherwise lower the whole corpus.
     let (report, scope) = if let Some(dir) = &args.cache_dir {
-        let (units, streams, files) =
-            time_lower(|| cache::build_units_cached(&refs, &exclude, &opts, dir));
+        let cache::CachedUnits {
+            units,
+            streams,
+            files,
+            langs,
+        } = time_lower(|| cache::build_units_cached(&refs, &exclude, &opts, dir));
         if files == 0 {
             warn_no_files(&args.paths);
         }
-        // The cache path knows only the file count, not a per-language breakdown. It
-        // supplies both cached unit features and syntax streams, so every selected scan
-        // channel behaves the same as the non-cached path.
+        // The cache path supplies both cached unit features and syntax streams, so every
+        // selected scan channel behaves the same as the non-cached path.
         let report =
             nose_detect::detect_from_units(units, files, &streams, &opts, detector.as_ref()).0;
-        (
-            report,
-            ScanScope {
-                files,
-                langs: Vec::new(),
-            },
-        )
+        (report, ScanScope { files, langs })
     } else {
         let corpus = time_lower(|| nose_frontend::lower_corpus_filtered(&refs, &exclude));
         warn_if_empty(&corpus, &args.paths);
@@ -1541,7 +2252,7 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
             .then_with(|| family_anchor(a).cmp(&family_anchor(b)))
     });
     // Baseline: write the current state, or hide already-accepted families so only
-    // new duplication is reported and gated.
+    // new/changed duplication is reported and gated.
     if args.write_baseline {
         let path = args
             .baseline
@@ -1556,9 +2267,23 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
         );
         return Ok(());
     }
-    if let Some(path) = &args.baseline {
-        let known = baseline::load(path);
-        families.retain(|f| !known.contains(&baseline::family_key(f)));
+    let baseline_comparison = args.baseline.as_ref().map(|path| {
+        let accepted = baseline::load(path);
+        let comparison = BaselineComparison::new(path, &accepted, &families);
+        families.retain(|f| !accepted.keys.contains(&baseline::family_key(f)));
+        comparison
+    });
+    let mut ignored_families = Vec::new();
+    if let Some(ignore_set) = &ignore_set {
+        let mut active = Vec::with_capacity(families.len());
+        for family in families {
+            if let Some(ignore) = ignore_set.match_family(&family) {
+                ignored_families.push(IgnoredFamily { family, ignore });
+            } else {
+                active.push(family);
+            }
+        }
+        families = active;
     }
 
     // `--top 0` means "no limit": show every family (documented in docs/usage.md).
@@ -1567,16 +2292,39 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
 
     match args.format {
         ReportFormat::Json => {
-            println!("{}", serde_json::to_string_pretty(&shown)?);
+            let json = ScanJsonReport::new(ScanJsonInput {
+                scope: &scope,
+                sort,
+                top,
+                families: &families,
+                shown: &shown,
+                baseline: baseline_comparison.as_ref(),
+                ignore_set: ignore_set.as_ref(),
+                ignored_families: &ignored_families,
+            });
+            println!("{}", serde_json::to_string_pretty(&json)?);
         }
         ReportFormat::Markdown => {
             // Scope line first — tells the reader what was actually scanned (so a small
             // count from `.gitignore`/`--exclude` pruning is visible, not a silent gap).
             println!("{}\n", scope.summary());
-            print_refactor_markdown(&families, &shown, channels);
+            print_refactor_markdown(
+                &families,
+                &shown,
+                channels,
+                baseline_comparison.as_ref(),
+                ignore_set.as_ref(),
+                ignored_families.len(),
+            );
         }
         ReportFormat::Human => {
             println!("{}", scope.summary());
+            if let Some(comparison) = &baseline_comparison {
+                println!("{}", comparison.summary.line());
+            }
+            if let Some(ignore_set) = &ignore_set {
+                println!("{}", ignore_set.summary(ignored_families.len()).line());
+            }
             print_refactor_human(&families, &shown, sort, channels, args.diff, args.proposal)
         }
         ReportFormat::Sarif => println!("{}", refactor_sarif(&shown)?),
@@ -1586,6 +2334,28 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
     }
     // CI gate: report is already printed; a non-empty (filtered) family set is a
     // failure when --fail is set.
+    if let (true, Some(comparison)) = (
+        args.fail_on_new && !families.is_empty(),
+        baseline_comparison.as_ref(),
+    ) {
+        let mut new_families = 0usize;
+        let mut changed_families = 0usize;
+        for family in &families {
+            match comparison.statuses.get(&baseline::family_key(family)) {
+                Some(BaselineStatus::Changed) => changed_families += 1,
+                Some(BaselineStatus::New) => new_families += 1,
+                None => {}
+            }
+        }
+        let reportable_families = new_families + changed_families;
+        eprintln!(
+            "\nnose: {} new and {} changed {} found (--fail-on-new)",
+            new_families,
+            changed_families,
+            channels.report_label(reportable_families)
+        );
+        std::process::exit(1);
+    }
     if args.fail && !families.is_empty() {
         eprintln!(
             "\nnose: {} {} found (--fail)",
@@ -1685,6 +2455,7 @@ fn refactor_sarif(families: &[&nose_detect::RefactorFamily]) -> Result<String> {
                 "message": { "text": msg },
                 "locations": f.locations.first().map(phys).into_iter().collect::<Vec<_>>(),
                 "relatedLocations": f.locations.iter().skip(1).map(phys).collect::<Vec<_>>(),
+                "properties": { "family_id": baseline::family_id(f) },
             })
         })
         .collect();
@@ -1788,7 +2559,12 @@ fn print_refactor_human(
     // fanout is capped, with a pointer to the full machine-readable list.
     const SITE_CAP: usize = 30;
     for (i, f) in shown.iter().enumerate() {
-        println!("\n#{}  {}", i + 1, family_summary(f));
+        println!(
+            "\n#{}  id {} · {}",
+            i + 1,
+            baseline::family_id(f),
+            family_summary(f)
+        );
         println!("    → {}", family_hint(f));
         for l in f.locations.iter().take(SITE_CAP) {
             let name = l
@@ -2136,6 +2912,9 @@ fn print_refactor_markdown(
     all: &[nose_detect::RefactorFamily],
     shown: &[&nose_detect::RefactorFamily],
     mode: ScanChannels,
+    baseline: Option<&BaselineComparison>,
+    ignore_set: Option<&ignores::IgnoreSet>,
+    ignored_families: usize,
 ) {
     println!("# {}\n", mode.markdown_title());
     println!(
@@ -2144,14 +2923,21 @@ fn print_refactor_markdown(
         total_dup_lines(all),
         shown.len()
     );
+    if let Some(comparison) = baseline {
+        println!("{}\n", comparison.summary.line());
+    }
+    if let Some(ignore_set) = ignore_set {
+        println!("{}\n", ignore_set.summary(ignored_families).line());
+    }
     for (i, f) in shown.iter().enumerate() {
         let xlang = match family_langs(f) {
             s if s.is_empty() => String::new(),
             s => format!(" · cross-language: {s}"),
         };
         println!(
-            "## {}. {} sites, {} files, {} modules — ~{} dup lines ({}){}",
+            "## {}. `{}` — {} sites, {} files, {} modules — ~{} dup lines ({}){}",
             i + 1,
+            baseline::family_id(f),
             f.members,
             f.files,
             f.modules,
