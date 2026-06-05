@@ -355,11 +355,14 @@ pub(crate) fn extract(
             exact_fragment: false,
         })
         .collect();
-    if block_units {
+    let parents = if block_units {
         collect_block_units(il, il.root, &mut roots);
         let parents = build_parent_index(il);
         collect_exact_statement_fragment_units(il, il.root, &parents, interner, &mut roots);
-    }
+        Some(parents)
+    } else {
+        None
+    };
 
     let facts = StrictFacts::collect(il, interner);
     let value_context =
@@ -422,7 +425,9 @@ pub(crate) fn extract(
         let strict_exact_safe = strict_exact_safe_tree(il, interner, &facts, root);
         let exact_safe = strict_exact_safe
             || (exact_fragment
-                && strict_exact_self_field_assignment_fragment_safe(il, interner, &facts, root));
+                && parents.as_deref().is_some_and(|parents| {
+                    strict_exact_self_field_fragment_safe(il, interner, &facts, parents, root)
+                }));
         let safe_ms = UnitTimer::elapsed(safe_start);
         // The value graph is the semantic fingerprint (already sorted), with the
         // literal-only multiset for data-table detection. Computed before the size
@@ -1838,6 +1843,9 @@ fn exact_statement_fragment_root(
     if !subtree_spans_within(il, node, il.node(node).span) {
         return false;
     }
+    if exact_function_body_self_field_fragment_root(il, interner, parents, node) {
+        return true;
+    }
     if !top_level_statement_fragment_context_safe(il, node, parents, interner) {
         return false;
     }
@@ -1952,13 +1960,86 @@ fn exact_java_this_field(il: &Il, interner: &Interner, node: NodeId) -> bool {
         && matches!(il.node(receiver).payload, Payload::Name(name) if interner.resolve(name) == "this")
 }
 
-fn strict_exact_self_field_assignment_fragment_safe(
+fn exact_function_body_self_field_fragment_root(
+    il: &Il,
+    interner: &Interner,
+    parents: &[Option<NodeId>],
+    node: NodeId,
+) -> bool {
+    if il.kind(node) != NodeKind::Block {
+        return false;
+    }
+    let Some(func) = parent_of(parents, node) else {
+        return false;
+    };
+    if il.kind(func) != NodeKind::Func {
+        return false;
+    }
+    let kids = il.children(node);
+    kids.len() >= 2
+        && kids
+            .iter()
+            .all(|&child| exact_self_field_statement_fragment_root(il, interner, child))
+}
+
+fn exact_self_field_statement_fragment_root(il: &Il, interner: &Interner, node: NodeId) -> bool {
+    match il.kind(node) {
+        NodeKind::Assign => exact_self_field_assignment_fragment_root(il, interner, node),
+        NodeKind::If => {
+            let kids = il.children(node);
+            if !(kids.len() == 2 || kids.len() == 3) {
+                return false;
+            }
+            let mut has_field_assignment = false;
+            for &branch in kids.iter().skip(1) {
+                let Some(branch_has_field_assignment) =
+                    exact_self_field_statement_branch_root(il, interner, branch)
+                else {
+                    return false;
+                };
+                has_field_assignment |= branch_has_field_assignment;
+            }
+            has_field_assignment
+        }
+        _ => false,
+    }
+}
+
+fn exact_self_field_statement_branch_root(
+    il: &Il,
+    interner: &Interner,
+    node: NodeId,
+) -> Option<bool> {
+    if il.kind(node) != NodeKind::Block {
+        return None;
+    }
+    let kids = il.children(node);
+    if kids.is_empty() {
+        return Some(false);
+    }
+    if kids.len() != 1 {
+        return None;
+    }
+    Some(exact_self_field_statement_fragment_root(
+        il, interner, kids[0],
+    ))
+}
+
+fn strict_exact_self_field_fragment_safe(
     il: &Il,
     interner: &Interner,
     facts: &StrictFacts,
+    parents: &[Option<NodeId>],
     node: NodeId,
 ) -> bool {
     match il.kind(node) {
+        NodeKind::Block => {
+            let kids = il.children(node);
+            exact_function_body_self_field_fragment_root(il, interner, parents, node)
+                && kids.iter().all(|&child| {
+                    strict_exact_self_field_fragment_safe(il, interner, facts, parents, child)
+                })
+        }
         NodeKind::Assign => {
             let kids = il.children(node);
             kids.len() == 2
@@ -1976,7 +2057,7 @@ fn strict_exact_self_field_assignment_fragment_safe(
             let mut has_field_assignment = false;
             for &branch in kids.iter().skip(1) {
                 let Some(branch_has_field_assignment) =
-                    strict_exact_self_field_assignment_branch_safe(il, interner, facts, branch)
+                    strict_exact_self_field_branch_safe(il, interner, facts, parents, branch)
                 else {
                     return false;
                 };
@@ -1988,10 +2069,11 @@ fn strict_exact_self_field_assignment_fragment_safe(
     }
 }
 
-fn strict_exact_self_field_assignment_branch_safe(
+fn strict_exact_self_field_branch_safe(
     il: &Il,
     interner: &Interner,
     facts: &StrictFacts,
+    parents: &[Option<NodeId>],
     node: NodeId,
 ) -> Option<bool> {
     if il.kind(node) != NodeKind::Block {
@@ -2004,8 +2086,8 @@ fn strict_exact_self_field_assignment_branch_safe(
     if kids.len() != 1 {
         return None;
     }
-    Some(strict_exact_self_field_assignment_fragment_safe(
-        il, interner, facts, kids[0],
+    Some(strict_exact_self_field_fragment_safe(
+        il, interner, facts, parents, kids[0],
     ))
 }
 

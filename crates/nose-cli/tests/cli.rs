@@ -1724,6 +1724,143 @@ fn semantic_scan_reports_exact_safe_java_this_field_assignment_fragments() {
 }
 
 #[test]
+fn semantic_scan_reports_exact_safe_java_this_field_assignment_body_fragments() {
+    let dir = std::env::temp_dir().join(format!(
+        "nose_exact_this_field_body_fragments_{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+
+    let fixtures = [
+        (
+            "FieldBodyDirectA.java",
+            "class FieldBodyDirectA {\n  int value;\n  int limit;\n  void f(int v, int n) {\n    this.value = (v + 1) * (v + 1);\n    this.limit = n + 3;\n  }\n}\n",
+        ),
+        (
+            "FieldBodyDirectB.java",
+            "class FieldBodyDirectB {\n  int value;\n  int limit;\n  void f(int w, int m) {\n    this.value = (1 + w) * (1 + w);\n    this.limit = 3 + m;\n  }\n}\n",
+        ),
+        (
+            "FieldBodyDirectWrongValue.java",
+            "class FieldBodyDirectWrongValue {\n  int value;\n  int limit;\n  void f(int x, int m) {\n    this.value = (x + 1) * (x + 1);\n    this.limit = 4 + m;\n  }\n}\n",
+        ),
+        (
+            "FieldBodyConditionalA.java",
+            "class FieldBodyConditionalA {\n  int total;\n  int score;\n  void f(boolean enabled, int a, int b) {\n    this.total = a + b;\n    if (enabled) {\n      this.score = (a + b) * 2;\n    }\n  }\n}\n",
+        ),
+        (
+            "FieldBodyConditionalB.java",
+            "class FieldBodyConditionalB {\n  int total;\n  int score;\n  void f(boolean ready, int c, int d) {\n    this.total = d + c;\n    if (ready) {\n      this.score = 2 * (d + c);\n    }\n  }\n}\n",
+        ),
+        (
+            "FieldBodyConditionalWrongField.java",
+            "class FieldBodyConditionalWrongField {\n  int total;\n  int score;\n  int other;\n  void f(boolean ready, int c, int d) {\n    this.total = d + c;\n    if (ready) {\n      this.other = 2 * (d + c);\n    }\n  }\n}\n",
+        ),
+        (
+            "FieldBodyNestedA.java",
+            "class FieldBodyNestedA {\n  int base;\n  int score;\n  void f(boolean enabled, int a, int b) {\n    this.base = a + b;\n    if (enabled) {\n      if (a > 0) {\n        this.score = (a + b) * (a + b);\n      }\n    }\n  }\n}\n",
+        ),
+        (
+            "FieldBodyNestedB.java",
+            "class FieldBodyNestedB {\n  int base;\n  int score;\n  void f(boolean ready, int c, int d) {\n    this.base = d + c;\n    if (ready) {\n      if (0 < c) {\n        this.score = (d + c) * (d + c);\n      }\n    }\n  }\n}\n",
+        ),
+        (
+            "FieldBodyNestedWrongReceiver.java",
+            "class FieldBodyNestedWrongReceiverBox { int score; }\nclass FieldBodyNestedWrongReceiver {\n  int base;\n  int score;\n  void f(FieldBodyNestedWrongReceiverBox other, boolean ready, int c, int d) {\n    this.base = d + c;\n    if (ready) {\n      if (0 < c) {\n        other.score = (d + c) * (d + c);\n      }\n    }\n  }\n}\n",
+        ),
+    ];
+    for (name, src) in fixtures {
+        fs::write(dir.join(name), src).unwrap();
+    }
+
+    let out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-lines",
+        "100",
+        "--min-size",
+        "100",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let json = scan_json(&out);
+    let families = scan_families(&json);
+
+    let assert_body_family = |left: &str, right: &str, negative: &str| {
+        let family = families
+            .iter()
+            .find(|family| {
+                let locations = family["locations"].as_array().expect("locations");
+                let files: Vec<&str> = locations
+                    .iter()
+                    .filter_map(|loc| loc["file"].as_str())
+                    .collect();
+                files.iter().any(|file| file.ends_with(left))
+                    && files.iter().any(|file| file.ends_with(right))
+                    && locations.iter().all(|loc| loc["kind"] == "Block")
+                    && locations.iter().any(|loc| {
+                        loc["end_line"].as_u64().unwrap_or(0)
+                            > loc["start_line"].as_u64().unwrap_or(0) + 1
+                    })
+                    && files.iter().all(|file| !file.ends_with(negative))
+            })
+            .unwrap_or_else(|| {
+                panic!("missing exact this-field body fragment family {left}/{right}: {out}")
+            });
+        let locations = family["locations"].as_array().expect("locations");
+        assert!(
+            locations
+                .iter()
+                .filter(|loc| loc["file"].as_str().unwrap_or("").ends_with(left)
+                    || loc["file"].as_str().unwrap_or("").ends_with(right))
+                .all(|loc| loc["end_line"].as_u64().unwrap_or(0)
+                    <= loc["start_line"].as_u64().unwrap_or(0) + 7),
+            "this-field body fragments should stay tightly scoped: {family:?}"
+        );
+    };
+
+    let assert_no_pair = |left: &str, right: &str| {
+        let has_pair = families.iter().any(|family| {
+            let files: Vec<&str> = family["locations"]
+                .as_array()
+                .expect("locations")
+                .iter()
+                .filter_map(|loc| loc["file"].as_str())
+                .collect();
+            files.iter().any(|file| file.ends_with(left))
+                && files.iter().any(|file| file.ends_with(right))
+        });
+        assert!(
+            !has_pair,
+            "wrong-receiver field body must stay outside exact fragments: {left}/{right}: {out}"
+        );
+    };
+
+    assert_body_family(
+        "FieldBodyDirectA.java",
+        "FieldBodyDirectB.java",
+        "FieldBodyDirectWrongValue.java",
+    );
+    assert_body_family(
+        "FieldBodyConditionalA.java",
+        "FieldBodyConditionalB.java",
+        "FieldBodyConditionalWrongField.java",
+    );
+    assert_body_family(
+        "FieldBodyNestedA.java",
+        "FieldBodyNestedB.java",
+        "FieldBodyNestedWrongReceiver.java",
+    );
+    assert_no_pair("FieldBodyNestedA.java", "FieldBodyNestedWrongReceiver.java");
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn semantic_scan_reports_exact_safe_throw_fragments_under_opaque_functions() {
     let dir =
         std::env::temp_dir().join(format!("nose_exact_throw_fragments_{}", std::process::id()));

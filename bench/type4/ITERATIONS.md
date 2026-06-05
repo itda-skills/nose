@@ -4761,6 +4761,57 @@ Targeted coverage added
 `java_arrays_aslist_single_argument_respects_array_provenance`, plus the existing literal
 collection membership and typed-empty-domain regressions stayed green.
 
+## Fragment batch 13: exact Java self-field function-body blocks
+
+This batch keeps the batch-12 receiver invariant and widens only the unit boundary. A Java
+function-body `Block` can become an exact fragment when the body contains at least two
+statements and every body statement is a direct, conditional, or nested conditional
+`this.field = value` effect. The receiver is still the language-fixed `this`; arbitrary
+receivers, mixed-effect bodies, arbitrary statement windows, mutation outside those
+self-field sinks, and dynamic-property languages remain unsupported.
+
+The three focused positives share one proof invariant: the entire body computes a final
+field-state fingerprint from exact-safe guards and exact-safe RHS values. Adjacent hard
+negatives cover a wrong assigned value, a wrong target field, and a wrong receiver. This
+intentionally targets constructor-style clones in the real Java corpus without adding a
+free-variable/live-out fragment semantics for statement windows.
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-this-field-body-1 | candidate extraction | allow Java function-body `Block` fragments whose every statement is an exact Java self-field effect | 3 focused body-fragment families reported as multi-line `Block` units |
+| fragment-this-field-body-2 | soundness boundary | require every child statement to pass the Java `this.field` strict exact-safe proof; do not accept `other.field` or mixed effects | wrong value/field/receiver negatives excluded |
+| fragment-this-field-body-3 | focused regression | run focused self-field fragment tests | `cargo test -p nose-cli semantic_scan_reports_exact_safe_ -- --nocapture` pass; 13 tests |
+| fragment-this-field-body-4 | regression | run full test and lint gates after rebasing on `origin/main` | `cargo test` pass; `cargo build --release` pass; `cargo clippy --all-targets -- -D warnings` pass |
+| fragment-this-field-body-5 | core smoke | run compact all-cross smoke gate | 626/626 positives; 0/1233 hard-negative false merges; Raw nodes 0/68421 |
+| fragment-this-field-body-6 | real delta | scan selected C/Go/Java corpus and audit Java multi-line `this.field` block families | C/Go/Java 1063 -> 1153 semantic families; 134 sampled Java `this.field` multi-line `Block` families |
+| fragment-this-field-body-7 | performance | scan `bench/repos/flask bench/repos/axios bench/repos/rust` with `NOSE_TIME=1` | 335 files; normalize+extract 19.8ms, candidates 2.7ms, score 0.2ms; 66 semantic families |
+| fragment-this-field-body-8 | performance | scan `bench/repos/curl bench/repos/gin bench/repos/guava` with `NOSE_TIME=1` | 4357 files; normalize+extract 172.0ms, candidates 34.4ms, score 1.2ms; 1153 semantic families |
+
+Focused regression:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_java_this_field_assignment_body_fragments -- --nocapture
+3 exact Java self-field body fragment families found; wrong value, wrong field, and wrong
+receiver negatives excluded.
+```
+
+Core gate:
+
+```text
+GATE=core CROSS=all NOSE=target/release/nose scripts/type4-smoke.sh
+selected items: 1859/6728
+positive recall: 626/626
+hard-negative false merges: 0/1233
+Raw nodes: 0/68421
+```
+
+The real-repo increase is concentrated in Guava constructor and value-object bodies such as
+`this.key = key; this.value = value;`, graph test constructors assigning
+`this.allowsSelfLoops`, `this.nodeOrder`, and `this.edgeOrder`, and mirrored Android and
+non-Android Guava classes. The remaining open frontier is statement-window semantics:
+straight-line fragments inside larger mixed-effect bodies still need explicit free-var,
+live-out, receiver, and effect-boundary proof before they can be exact semantic units.
+
 ## Fragment batch 12: exact Java `this.field` assignment effects
 
 This batch opens the next assignment-effect fragment only where the receiver coordinate is
