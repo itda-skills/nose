@@ -501,20 +501,24 @@ fn eval_hn(h: &HardNeg) -> EvalPair {
     }
 }
 
+/// Build an [`EvalRegion`] from any schema region (`Region`/`PredRegion` share the field
+/// names): take the region's own repo or fall back to the pair's repo. A macro rather than a
+/// generic so it works over the two distinct schema types without a `RegionLike` trait.
+macro_rules! to_eval_region {
+    ($r:expr, $repo:expr) => {
+        EvalRegion {
+            repo: $r.repo.clone().unwrap_or_else(|| $repo.to_string()),
+            file: $r.file.clone(),
+            start: $r.start_line,
+            end: $r.end_line,
+        }
+    };
+}
+
 fn region(r: &Region, repo: &str) -> EvalRegion {
-    EvalRegion {
-        repo: r.repo.clone().unwrap_or_else(|| repo.to_string()),
-        file: r.file.clone(),
-        start: r.start_line,
-        end: r.end_line,
-    }
+    to_eval_region!(r, repo)
 }
 
 fn pred_region(r: &PredRegion, repo: &str) -> EvalRegion {
-    EvalRegion {
-        repo: r.repo.clone().unwrap_or_else(|| repo.to_string()),
-        file: r.file.clone(),
-        start: r.start_line,
-        end: r.end_line,
-    }
+    to_eval_region!(r, repo)
 }
