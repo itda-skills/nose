@@ -5659,6 +5659,82 @@ multi-language real frontier evidence; if none is found, keep fragment work tied
 shared proof invariant and avoid opening dynamic property or arbitrary statement-window
 semantics.
 
+## Fragment batch 28: exact ordered loop conditional-effect branch fragments
+
+This batch continues the non-Java branch-fragment direction rather than adding another
+Java-specific rule. A direct conditional branch may now contain exactly one exact `ForEach`
+effect loop and exactly one conditional direct-effect item. The loop reuses the existing
+exact loop-effect proof; the conditional item reuses the existing conditional-direct-effect
+proof. Return/throw conditionals, arbitrary statement windows, temp-chain expansion beyond
+existing loop proofs, loop/conditional/direct triples, and three-effect branches remain
+outside.
+
+The proof invariant is compositional and prefiltered. The parent branch body must have
+exactly two children, exactly one child `Loop`, and exactly one child `If`. The `Loop` must
+already satisfy the exact loop-effect helper, and the `If` must already satisfy the
+conditional-direct-effect helper. Swapping the loop/conditional order, changing a guard,
+changing a receiver, mutating the receiver before the parent branch, changing a loop temp
+RHS, changing a Go index expression, or adding a third effect remains a hard negative.
+
+The focused positives share one invariant and intentionally avoid Java:
+
+- JavaScript `ForEach` append loop followed by a conditional append effect;
+- Python conditional append effect followed by a temp-consumed `ForEach` append loop;
+- Go range index-assignment loop followed by a conditional index assignment.
+
+Baseline evidence:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_loop_conditional_effect_branch_fragments -- --nocapture
+baseline result before detector change: failed with 0 semantic families in the focused corpus.
+```
+
+| loop | pressure | change | measured result |
+|---|---|---|---:|
+| fragment-loop-cond-1 | candidate extraction | allow exact branch bodies with exactly one exact `ForEach` effect loop plus one conditional direct-effect item | 3 focused JS/Python/Go branch families reported as `Block` units |
+| fragment-loop-cond-2 | hard negatives | preserve loop/conditional order, guard value, receiver identity, receiver mutation boundaries, loop temp RHS, Go index/value identity, and the two-effect cap | swapped-order, wrong-guard, wrong-receiver, mutation, wrong-temp, wrong-index, and third-effect negatives excluded |
+| fragment-loop-cond-3 | performance guard | require exactly one `Loop` and one `If` before running recursive exact proofs | selected/full families and locations unchanged; full candidate median 295.7ms -> 300.5ms |
+| fragment-loop-cond-4 | regression | rerun conditional-only, conditional mixed, and two-loop focused tests | all focused regressions pass |
+| fragment-loop-cond-5 | release gates | run full Rust suite, clippy, compact all-cross core smoke, and docs/whitespace checks | `cargo test` pass; clippy clean; core smoke 634/634 positives and 0/1246 hard-negative false merges; docs lint clean |
+
+Focused regressions:
+
+```text
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_loop_conditional_effect_branch_fragments -- --nocapture
+JS, Python, and Go ordered loop conditional-effect branch positives reported; swapped-order,
+wrong-guard, wrong-receiver, mutation, wrong-temp, wrong-index, and third-effect negatives excluded.
+
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_conditional_effect_branch_fragments -- --nocapture
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_conditional_mixed_effect_branch_fragments -- --nocapture
+cargo test -p nose-cli semantic_scan_reports_exact_safe_ordered_foreach_effect_branch_fragments -- --nocapture
+Existing conditional-only, conditional mixed, and two-loop fragment boundaries still pass.
+```
+
+Real corpus and performance:
+
+```text
+NOSE_TIME=1 <baseline> scan prettier jest radash sympy black gorm nats-server --mode semantic --format json --top 0
+NOSE_TIME=1 target/release/nose scan prettier jest radash sympy black gorm nats-server --mode semantic --format json --top 0
+selected files: 10338
+families: 1199 before, 1199 after
+locations: 4389 before, 4389 after
+median normalize+extract over three alternating runs: 541.5ms before, 577.6ms after
+median candidates over three alternating runs: 35.6ms before, 30.2ms after
+
+NOSE_TIME=1 <baseline> scan bench/repos --mode semantic --format json --top 0
+NOSE_TIME=1 target/release/nose scan bench/repos --mode semantic --format json --top 0
+full files: 60748
+families: 7403 before, 7403 after
+locations: 32965 before, 32965 after
+median normalize+extract over three alternating runs: 3785.8ms before, 3775.1ms after
+median candidates over three alternating runs: 295.7ms before, 300.5ms after
+```
+
+This is a focused fragment expansion, not real-corpus evidence-backed closure. The full
+candidate delta is small, but the next loop should still watch candidate extraction before
+opening additional branch combinations. Language-balance remains explicit: prefer non-Java
+or multi-language evidence unless a Java-only lead clearly dominates on evidence and cost.
+
 ## Fragment batch 27: exact ordered conditional mixed-effect branch fragments
 
 This batch fills the next narrow combination on the same non-Java branch-fragment axis:

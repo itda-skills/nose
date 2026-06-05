@@ -1925,6 +1925,9 @@ fn empty_or_single_direct_exact_statement_block(
     if exact_ordered_conditional_mixed_effect_sequence_block(il, node) {
         return Some(true);
     }
+    if exact_ordered_loop_conditional_effect_sequence_block(il, interner, node) {
+        return Some(true);
+    }
     if kids.len() == 3 && exact_temp_chain_consumed_by_statement(il, kids[0], kids[1], kids[2]) {
         return Some(true);
     }
@@ -2036,6 +2039,36 @@ fn exact_ordered_conditional_mixed_effect_sequence_block(il: &Il, node: NodeId) 
     kids.iter().all(|&kid| match il.kind(kid) {
         NodeKind::If => exact_conditional_direct_effect_fragment_root(il, kid),
         NodeKind::ExprStmt | NodeKind::Assign => exact_direct_effect_statement_root(il, kid),
+        _ => false,
+    })
+}
+
+fn exact_ordered_loop_conditional_effect_sequence_block(
+    il: &Il,
+    interner: &Interner,
+    node: NodeId,
+) -> bool {
+    if il.kind(node) != NodeKind::Block {
+        return false;
+    }
+    let kids = il.children(node);
+    if kids.len() != 2 {
+        return false;
+    }
+    let loop_count = kids
+        .iter()
+        .filter(|&&kid| il.kind(kid) == NodeKind::Loop)
+        .count();
+    let conditional_count = kids
+        .iter()
+        .filter(|&&kid| il.kind(kid) == NodeKind::If)
+        .count();
+    if loop_count != 1 || conditional_count != 1 {
+        return false;
+    }
+    kids.iter().all(|&kid| match il.kind(kid) {
+        NodeKind::Loop => exact_loop_effect_fragment_root(il, interner, kid),
+        NodeKind::If => exact_conditional_direct_effect_fragment_root(il, kid),
         _ => false,
     })
 }
