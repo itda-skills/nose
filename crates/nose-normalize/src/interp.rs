@@ -169,13 +169,16 @@ impl<'a> Interp<'a> {
                     return Err(Unsupported);
                 }
                 let rhs = self.eval(kids[1], env)?;
+                if matches!(rhs, Value::Err) {
+                    return Ok(Flow::Err);
+                }
                 self.bind(kids[0], rhs, env)?;
                 Ok(Flow::Normal)
             }
             NodeKind::ExprStmt => {
                 if let Some(&e) = self.il.children(node).first() {
-                    if !self.exec_stmt_append(e, env)? {
-                        self.eval(e, env)?;
+                    if !self.exec_stmt_append(e, env)? && matches!(self.eval(e, env)?, Value::Err) {
+                        return Ok(Flow::Err);
                     }
                 }
                 Ok(Flow::Normal)
@@ -185,6 +188,9 @@ impl<'a> Interp<'a> {
                     Some(&e) => self.eval(e, env)?,
                     None => Value::Null,
                 };
+                if matches!(v, Value::Err) {
+                    return Ok(Flow::Err);
+                }
                 Ok(Flow::Ret(v))
             }
             NodeKind::Throw => {
@@ -1178,6 +1184,57 @@ mod tests {
         let seven = b.add(NodeKind::Lit, Payload::LitInt(7), sp, &[]);
         let handler_ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
         assert_eq!(run_try(body_ret, handler_ret, b, sp), Value::Int(1));
+    }
+
+    #[test]
+    fn try_handler_catches_return_expression_err() {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let zero = b.add(NodeKind::Lit, Payload::LitInt(0), sp, &[]);
+        let div = b.add(NodeKind::BinOp, Payload::Op(Op::Div), sp, &[one, zero]);
+        let body_ret = b.add(NodeKind::Return, Payload::None, sp, &[div]);
+        let seven = b.add(NodeKind::Lit, Payload::LitInt(7), sp, &[]);
+        let handler_ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
+        assert_eq!(run_try(body_ret, handler_ret, b, sp), Value::Int(7));
+    }
+
+    #[test]
+    fn try_handler_catches_assignment_expression_err() {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let var = b.add(NodeKind::Var, Payload::Cid(0), sp, &[]);
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let zero = b.add(NodeKind::Lit, Payload::LitInt(0), sp, &[]);
+        let div = b.add(NodeKind::BinOp, Payload::Op(Op::Div), sp, &[one, zero]);
+        let assign = b.add(NodeKind::Assign, Payload::None, sp, &[var, div]);
+        let seven = b.add(NodeKind::Lit, Payload::LitInt(7), sp, &[]);
+        let handler_ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
+        assert_eq!(run_try(assign, handler_ret, b, sp), Value::Int(7));
+    }
+
+    #[test]
+    fn expression_statement_err_stops_later_execution() {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let zero = b.add(NodeKind::Lit, Payload::LitInt(0), sp, &[]);
+        let div = b.add(NodeKind::BinOp, Payload::Op(Op::Div), sp, &[one, zero]);
+        let expr_stmt = b.add(NodeKind::ExprStmt, Payload::None, sp, &[div]);
+        let later = b.add(NodeKind::Lit, Payload::LitInt(9), sp, &[]);
+        let ret = b.add(NodeKind::Return, Payload::None, sp, &[later]);
+        let block = b.add(NodeKind::Block, Payload::None, sp, &[expr_stmt, ret]);
+        let func = b.add(NodeKind::Func, Payload::None, sp, &[block]);
+        let il = b.finish(
+            func,
+            FileMeta {
+                path: "t".into(),
+                lang: Lang::Python,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+        assert_eq!(run_unit(&il, func, &[]).expect("run_unit").ret, Value::Err);
     }
 
     /// Build `fn() { return base ** exp }` over integer literals and run it.

@@ -189,14 +189,15 @@ code `nose verify` stays sound (0 false merges). Its concrete model covers
 `range(stop)` and `range(start, stop[, step])`, including zero-step error behavior, so
 range-index loops are checked under the same bounded input semantics. Bare `throw`/`raise`
 statements execute as observable `Err` behavior and value-graph `Throw` sinks, not plain
-expression effects, while exception handlers remain outside the interpreter rather than
-guessed. Field reads are interpreted only after the same unit has written that field; an
-unwritten field access remains unsupported rather than invented. The value graph follows the
-same boundary: `self.x = v; return self.x` resolves the read to `v`, while an unproven field
-read stays field-shaped. The interpreter also models the simple `try`/handler form only when
-there is no `finally` and the handler is non-empty; the value graph mirrors the normal-return
-half of that boundary by skipping the handler after an unconditional try-body return. Richer
-exception control flow remains outside the oracle.
+expression effects. The interpreter models the simple `try`/handler form only when there is
+no `finally` and the handler is non-empty; the handler runs after an explicit throw or a
+runtime `Err` crossing a statement boundary, and stays skipped after a normal return. The
+value graph mirrors the normal-return half of that boundary by skipping the handler after an
+unconditional try-body return. Richer exception control flow remains outside the oracle.
+Field reads are interpreted only after the same unit has written that field; an unwritten
+field access remains unsupported rather than invented. The value graph follows the same
+boundary: `self.x = v; return self.x` resolves the read to `v`, while an unproven field read
+stays field-shaped.
 
 Out of scope (sound but not yet convergent, or genuinely hard): tree & mutual recursion
 (multiple / non-tail self-calls); list-tail catamorphisms `head ⊕ f(xs[1:])`, whose slice is
