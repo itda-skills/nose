@@ -365,10 +365,22 @@ fn switch_expr_value(node: TsNode) -> Option<TsNode> {
 
 fn lower_switch_rule_expr_body(lo: &mut Lowering, node: TsNode) -> NodeId {
     if node.kind() == "block" {
-        lower_block(lo, node)
+        lower_switch_yield_expr(lo, node).unwrap_or_else(|| lower_block(lo, node))
     } else {
         lower_expr(lo, node)
     }
+}
+
+fn lower_switch_yield_expr(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
+    Lowering::named_children(node)
+        .into_iter()
+        .find(|child| child.kind() == "yield_statement")
+        .and_then(|child| {
+            child
+                .child_by_field_name("value")
+                .or_else(|| child.named_child(0))
+        })
+        .map(|expr| lower_expr(lo, expr))
 }
 
 fn fold_switch_expr_labels(
@@ -966,6 +978,18 @@ mod tests {
             !raw.iter()
                 .any(|name| matches!(name.as_str(), "switch_expression" | "switch_rule")),
             "switch expression rules should lower without Raw nodes: {raw:?}"
+        );
+    }
+
+    #[test]
+    fn switch_expression_yield_blocks_lower_to_branch_values() {
+        let src = "class C { int f(int x){ return switch (x) { case 1 -> { yield 2; } default -> { yield 3; } }; } }";
+        assert_eq!(switch_case_rhs_ints(src), vec![1]);
+        assert_eq!(switch_expression_branch_ints(src), vec![2, 3]);
+        let raw = raw_names(src);
+        assert!(
+            !raw.iter().any(|name| name == "yield_statement"),
+            "switch expression yield blocks should lower without Raw yield_statement: {raw:?}"
         );
     }
 

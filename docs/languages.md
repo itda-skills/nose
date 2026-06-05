@@ -56,8 +56,9 @@ literal/wildcard/capture/qualified/OR/guarded `match` cases lowering to an if-ch
 channel send statements lowering to a tagged effect shape, or Go multi-label `switch` cases lowering to
 ORed scrutinee comparisons, or JS/TS stacked `switch` case labels sharing the following
 body, or C/Java `switch` labels lowering to real scrutinee comparisons instead of
-placeholder branches, or Java `switch` expression rules lowering to expression if-chains
-instead of `Raw`, or Ruby scrutinee-less `case` lowering its `when` predicates directly
-while preserving the `else` arm) is how a language becomes a first-class citizen —
+placeholder branches, or Java `switch` expression rules, including block `yield` bodies,
+lowering to expression if-chains instead of `Raw`, or Ruby scrutinee-less `case` lowering
+its `when` predicates directly while preserving the `else` arm) is how a language becomes a
+first-class citizen —
 see the [experiments](experiments.md) log and the convergence-test discipline in
 [`CONTRIBUTING`](../CONTRIBUTING.md).
