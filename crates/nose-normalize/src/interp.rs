@@ -631,7 +631,11 @@ impl<'a> Interp<'a> {
         // Evaluate the arguments in the CURRENT frame (call-by-value), left to right.
         let mut argv = Vec::with_capacity(kids.len().saturating_sub(1));
         for &a in &kids[1..] {
-            argv.push(self.eval(a, env)?);
+            let value = self.eval(a, env)?;
+            if matches!(value, Value::Err) {
+                return Ok(Value::Err);
+            }
+            argv.push(value);
         }
         // Bind them positionally to the callee's parameters in a fresh environment; locals
         // start empty, exactly like a real call.
@@ -1083,7 +1087,7 @@ fn un(op: Op, a: &Value) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nose_il::{FileId, FileMeta, IlBuilder, Interner, Lang, LitClass, Span};
+    use nose_il::{FileId, FileMeta, IlBuilder, Interner, Lang, LitClass, Span, Unit, UnitKind};
 
     /// Build `fn() { return len(<str literal>) }` and run it.
     fn run_len_of_string() -> Value {
@@ -1594,6 +1598,64 @@ mod tests {
     #[test]
     fn eager_builtin_argument_err_stops_execution() {
         assert_eq!(print_with_error_arg_then_return(), Value::Err);
+    }
+
+    fn self_call_with_error_arg_ignored_by_callee() -> Value {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let interner = Interner::new();
+        let func_name = interner.intern("f");
+        let done_param = b.add(NodeKind::Param, Payload::Cid(0), sp, &[]);
+        let ignored_param = b.add(NodeKind::Param, Payload::Cid(1), sp, &[]);
+        let done_var = b.add(NodeKind::Var, Payload::Cid(0), sp, &[]);
+        let seven = b.add(NodeKind::Lit, Payload::LitInt(7), sp, &[]);
+        let done_ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
+        let if_done = b.add(NodeKind::If, Payload::None, sp, &[done_var, done_ret]);
+        let callee = b.add(NodeKind::Var, Payload::Name(func_name), sp, &[]);
+        let true_value = b.add(NodeKind::Lit, Payload::LitBool(true), sp, &[]);
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let zero = b.add(NodeKind::Lit, Payload::LitInt(0), sp, &[]);
+        let div = b.add(NodeKind::BinOp, Payload::Op(Op::Div), sp, &[one, zero]);
+        let recursive_call = b.add(
+            NodeKind::Call,
+            Payload::None,
+            sp,
+            &[callee, true_value, div],
+        );
+        let recursive_ret = b.add(NodeKind::Return, Payload::None, sp, &[recursive_call]);
+        let body = b.add(
+            NodeKind::Block,
+            Payload::None,
+            sp,
+            &[if_done, recursive_ret],
+        );
+        let func = b.add(
+            NodeKind::Func,
+            Payload::None,
+            sp,
+            &[done_param, ignored_param, body],
+        );
+        let il = b.finish(
+            func,
+            FileMeta {
+                path: "t".into(),
+                lang: Lang::Python,
+            },
+            vec![Unit {
+                root: func,
+                kind: UnitKind::Function,
+                name: Some(func_name),
+            }],
+            Vec::new(),
+        );
+        run_unit(&il, func, &[Value::Bool(false), Value::Int(0)])
+            .expect("run_unit")
+            .ret
+    }
+
+    #[test]
+    fn self_call_argument_err_stops_execution() {
+        assert_eq!(self_call_with_error_arg_ignored_by_callee(), Value::Err);
     }
 
     fn run_any_all_with_error_predicate(all: bool) -> Value {
