@@ -204,7 +204,13 @@ fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
 fn is_type_decl(k: &str) -> bool {
     matches!(
         k,
-        "class_declaration" | "interface_declaration" | "enum_declaration" | "method_declaration"
+        "class_declaration"
+            | "interface_declaration"
+            | "enum_declaration"
+            | "record_declaration"
+            | "annotation_type_declaration"
+            | "method_declaration"
+            | "constructor_declaration"
     )
 }
 
@@ -581,6 +587,8 @@ fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         | "annotation"
         | "marker_annotation"
         | "annotation_argument_list"
+        | "annotation_type_element_declaration"
+        | "annotation_type_body"
         | "super_interfaces"
         | "extends_interfaces"
         | "type_list"
@@ -680,6 +688,34 @@ fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn raw_kinds(src: &str) -> Vec<String> {
+        let interner = Interner::new();
+        lower(FileId(0), "T.java", src.as_bytes(), &interner)
+            .expect("lower")
+            .nodes
+            .iter()
+            .filter(|n| n.kind == NodeKind::Raw)
+            .filter_map(|n| match n.payload {
+                Payload::Name(s) => Some(interner.resolve(s).to_string()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn local_record_and_annotation_declarations_do_not_fall_to_raw() {
+        // Local type declarations are type metadata in this IL. They should follow the
+        // same class-like lowering path as top-level declarations instead of surfacing
+        // as opaque statement Raw nodes.
+        let raw = raw_kinds(
+            "class C { void f(){ record Pair(int a, int b) {} @interface Local { String value(); } } }",
+        );
+        assert!(
+            raw.is_empty(),
+            "local type declarations should be erased/lowered, got {raw:?}"
+        );
+    }
 
     fn unary_ops(src: &str) -> Vec<Op> {
         let interner = Interner::new();

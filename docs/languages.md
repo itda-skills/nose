@@ -48,6 +48,8 @@ nose stats <paths…>
 A high Raw ratio for a construct means that construct isn't lowering to a
 meaningful IL shape, so clones involving it won't converge. Closing those gaps
 (e.g. the Go composite-literal/`slice_expression`/`type_assertion` work that took
-Go from 0.40% to 0.03%) is how a language becomes a first-class citizen — see the
+Go from 0.40% to 0.03%, or Java local record/annotation declarations being erased
+as type metadata instead of surfacing as opaque statements) is how a language
+becomes a first-class citizen — see the
 [experiments](experiments.md) log and the convergence-test discipline in
 [`CONTRIBUTING`](../CONTRIBUTING.md).
