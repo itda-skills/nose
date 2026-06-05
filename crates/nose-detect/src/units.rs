@@ -9,6 +9,7 @@ use nose_il::{
 };
 use nose_normalize::node_tag;
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::time::Instant;
 
 /// A unit ready for comparison. Self-contained (owns its features and location)
 /// so the detector can flatten units from many files into one vector. All feature
@@ -61,6 +62,92 @@ const SEED: u64 = 0x9E37_79B9_7F4A_7C15;
 const MAX_BLOCK_TOKENS: usize = 400;
 const EXACT_VALUE_MIN: usize = 4;
 
+struct UnitTimer {
+    enabled: bool,
+}
+
+impl UnitTimer {
+    fn new() -> Self {
+        Self {
+            enabled: std::env::var_os("NOSE_TIME_UNITS").is_some(),
+        }
+    }
+
+    fn start(&self) -> Option<Instant> {
+        self.enabled.then(Instant::now)
+    }
+
+    fn elapsed(start: Option<Instant>) -> Option<f64> {
+        start.map(|t| t.elapsed().as_secs_f64() * 1e3)
+    }
+
+    fn report_skip(
+        &self,
+        start: Option<Instant>,
+        kind: &UnitKind,
+        path: &str,
+        start_line: u32,
+        end_line: u32,
+        tokens: usize,
+        pre_ms: Option<f64>,
+        safe_ms: Option<f64>,
+        value_ms: Option<f64>,
+    ) {
+        let (Some(start), Some(pre_ms), Some(safe_ms), Some(value_ms)) =
+            (start, pre_ms, safe_ms, value_ms)
+        else {
+            return;
+        };
+        let total_ms = start.elapsed().as_secs_f64() * 1e3;
+        if total_ms >= 10.0 {
+            eprintln!(
+                "  [unit] skip {kind:?} {path}:{start_line}-{end_line} tokens={tokens} pre={pre_ms:.1}ms safe={safe_ms:.1}ms value={value_ms:.1}ms total={total_ms:.1}ms"
+            );
+        }
+    }
+
+    fn report_keep(&self, sample: UnitTimingSample<'_>) {
+        let (Some(start), Some(pre_ms), Some(safe_ms), Some(value_ms), Some(feature_start)) = (
+            sample.start,
+            sample.pre_ms,
+            sample.safe_ms,
+            sample.value_ms,
+            sample.feature_start,
+        ) else {
+            return;
+        };
+        let feature_ms = feature_start.elapsed().as_secs_f64() * 1e3;
+        let total_ms = start.elapsed().as_secs_f64() * 1e3;
+        if total_ms >= 10.0 {
+            eprintln!(
+                "  [unit] keep {:?} {} {}:{}-{} tokens={} value_atoms={} pre={pre_ms:.1}ms safe={safe_ms:.1}ms value={value_ms:.1}ms features={feature_ms:.1}ms total={total_ms:.1}ms",
+                sample.kind,
+                sample.name,
+                sample.path,
+                sample.start_line,
+                sample.end_line,
+                sample.tokens,
+                sample.value_atoms,
+            );
+        }
+    }
+}
+
+struct UnitTimingSample<'a> {
+    start: Option<Instant>,
+    feature_start: Option<Instant>,
+    kind: &'a UnitKind,
+    name: &'a str,
+    path: &'a str,
+    start_line: u32,
+    end_line: u32,
+    tokens: usize,
+    value_atoms: usize,
+    pre_ms: Option<f64>,
+    safe_ms: Option<f64>,
+    value_ms: Option<f64>,
+}
+
 #[inline]
 fn combine(a: u64, b: u64) -> u64 {
     (a.rotate_left(7) ^ b).wrapping_mul(SEED)
@@ -87,18 +174,32 @@ pub(crate) fn extract(
     }
 
     let facts = StrictFacts::collect(il, interner);
+    let value_context =
+        (roots.len() > 1).then(|| nose_normalize::ValueFingerprintContext::new(il, interner));
+    let unit_timer = UnitTimer::new();
     let mut out = Vec::new();
     for (root, kind, uname) in roots {
+        let unit_start = unit_timer.start();
         let span = il.node(root).span;
         let lines = span.line_count();
 
+        let pre_start = unit_timer.start();
         let mut pre = Vec::new();
         collect_pre(il, root, &mut pre);
+        let pre_ms = UnitTimer::elapsed(pre_start);
+        let safe_start = unit_timer.start();
         let exact_safe = strict_exact_safe_tree(il, interner, &facts, root);
+        let safe_ms = UnitTimer::elapsed(safe_start);
         // The value graph is the semantic fingerprint (already sorted), with the
         // literal-only multiset for data-table detection. Computed before the size
         // gate so the gate can consult semantic richness (below).
-        let (value, lits, returns) = nose_normalize::value_fingerprint_lits(il, root, interner);
+        let value_start = unit_timer.start();
+        let (value, lits, returns) = if let Some(context) = &value_context {
+            nose_normalize::value_fingerprint_lits_with_context(il, root, interner, context)
+        } else {
+            nose_normalize::value_fingerprint_lits(il, root, interner)
+        };
+        let value_ms = UnitTimer::elapsed(value_start);
 
         // Size gate. A short unit normally isn't a meaningful clone — EXCEPT a
         // frontend-tagged function whose body is behaviorally *dense*: a functional
@@ -123,9 +224,21 @@ pub(crate) fn extract(
         // units well above real fragment clones (≈40 tokens) so only the pathological
         // giants are skipped; functions/methods/classes are never capped.
         if kind == UnitKind::Block && pre.len() > MAX_BLOCK_TOKENS {
+            unit_timer.report_skip(
+                unit_start,
+                &kind,
+                &il.meta.path,
+                span.start_line,
+                span.end_line,
+                pre.len(),
+                pre_ms,
+                safe_ms,
+                value_ms,
+            );
             continue;
         }
 
+        let feature_start = unit_timer.start();
         let mut shapes = Vec::with_capacity(pre.len());
         let mut linear = Vec::with_capacity(pre.len());
         for &nid in &pre {
@@ -153,6 +266,24 @@ pub(crate) fn extract(
         };
         distinct.dedup();
         let minhash = crate::minhash::sign(&distinct, seeds);
+
+        let display_name = uname
+            .map(|s| interner.resolve(s).to_string())
+            .unwrap_or_else(|| "-".to_string());
+        unit_timer.report_keep(UnitTimingSample {
+            start: unit_start,
+            feature_start,
+            kind: &kind,
+            name: &display_name,
+            path: &il.meta.path,
+            start_line: span.start_line,
+            end_line: span.end_line,
+            tokens: pre.len(),
+            value_atoms: value.len(),
+            pre_ms,
+            safe_ms,
+            value_ms,
+        });
 
         out.push(UnitFeat {
             path: il.meta.path.clone(),
@@ -194,16 +325,30 @@ impl StrictFacts {
     }
 
     fn collect_immutable_bindings(&mut self, il: &Il, interner: &Interner) {
+        let top_level = top_level_statements(il);
+        let mut is_top_level = vec![false; il.nodes.len()];
+        for &stmt in &top_level {
+            if let Some(slot) = is_top_level.get_mut(stmt.0 as usize) {
+                *slot = true;
+            }
+        }
+
         let mut counts: FxHashMap<Symbol, usize> = FxHashMap::default();
-        for stmt in top_level_statements(il) {
+        for &stmt in &top_level {
             let Some(name) = assignment_name(il, stmt) else {
                 continue;
             };
             *counts.entry(name).or_insert(0) += 1;
         }
+        let candidate_names: FxHashSet<Symbol> = counts
+            .iter()
+            .filter_map(|(&name, &count)| (count == 1).then_some(name))
+            .collect();
+        let mutated_bindings =
+            collect_module_mutations(il, interner, &candidate_names, &is_top_level);
 
         let mut env: FxHashSet<u32> = FxHashSet::default();
-        for stmt in top_level_statements(il) {
+        for &stmt in &top_level {
             let kids = il.children(stmt);
             if kids.len() != 2 {
                 continue;
@@ -214,7 +359,7 @@ impl StrictFacts {
             if counts.get(&name).copied().unwrap_or(0) != 1 {
                 continue;
             }
-            if module_binding_mutated(il, interner, name) {
+            if mutated_bindings.contains(&name) {
                 continue;
             }
             let safe_literal = immutable_binding_safe(il, &env, &self.immutable_names, kids[1]);
@@ -267,48 +412,86 @@ fn assignment_name(il: &Il, stmt: NodeId) -> Option<Symbol> {
     il.cid_names.get(cid as usize).copied()
 }
 
-fn module_binding_mutated(il: &Il, interner: &Interner, name: Symbol) -> bool {
-    let top_level = top_level_statements(il);
-    il.nodes.iter().enumerate().any(|(idx, node)| {
-        let node_id = NodeId(idx as u32);
-        match il.kind(node_id) {
-            NodeKind::Call => call_mutates_binding(il, node_id, name).unwrap_or(false),
-            NodeKind::Field => {
-                field_mutates_binding(il, interner, node_id, name).unwrap_or(false)
-                    && matches!(node.payload, Payload::Name(_))
-            }
-            NodeKind::Assign if !top_level.contains(&node_id) => {
-                assignment_mutates_binding(il, node_id, name).unwrap_or(false)
-            }
-            _ => false,
-        }
-    })
-}
-
-fn assignment_mutates_binding(il: &Il, assign: NodeId, name: Symbol) -> Option<bool> {
-    let lhs = il.children(assign).first().copied()?;
-    Some(node_contains_symbol(il, lhs, name))
-}
-
-fn call_mutates_binding(il: &Il, call: NodeId, name: Symbol) -> Option<bool> {
-    if !matches!(il.node(call).payload, Payload::Builtin(Builtin::Append)) {
-        return Some(false);
-    }
-    let receiver = il.children(call).first().copied()?;
-    Some(node_refers_to_symbol(il, receiver, name))
-}
-
-fn field_mutates_binding(
+fn collect_module_mutations(
     il: &Il,
     interner: &Interner,
-    field: NodeId,
-    name: Symbol,
-) -> Option<bool> {
-    let Payload::Name(method) = il.node(field).payload else {
-        return Some(false);
-    };
-    if !matches!(
-        interner.resolve(method),
+    candidates: &FxHashSet<Symbol>,
+    is_top_level: &[bool],
+) -> FxHashSet<Symbol> {
+    let mut mutated = FxHashSet::default();
+    if candidates.is_empty() {
+        return mutated;
+    }
+    for (idx, node) in il.nodes.iter().enumerate() {
+        let node_id = NodeId(idx as u32);
+        match node.kind {
+            NodeKind::Call if matches!(node.payload, Payload::Builtin(Builtin::Append)) => {
+                if let Some(receiver) = il.children(node_id).first().copied() {
+                    mark_direct_symbol(il, receiver, candidates, &mut mutated);
+                }
+            }
+            NodeKind::Field => {
+                let Payload::Name(method) = node.payload else {
+                    continue;
+                };
+                if !mutating_method_name(interner.resolve(method)) {
+                    continue;
+                }
+                if let Some(receiver) = il.children(node_id).first().copied() {
+                    mark_direct_symbol(il, receiver, candidates, &mut mutated);
+                }
+            }
+            NodeKind::Assign if !is_top_level.get(idx).copied().unwrap_or(false) => {
+                if let Some(lhs) = il.children(node_id).first().copied() {
+                    collect_node_symbols(il, lhs, candidates, &mut mutated);
+                }
+            }
+            _ => {}
+        }
+    }
+    mutated
+}
+
+fn collect_node_symbols(
+    il: &Il,
+    node: NodeId,
+    candidates: &FxHashSet<Symbol>,
+    out: &mut FxHashSet<Symbol>,
+) {
+    if let Some(symbol) = node_symbol(il, node) {
+        if candidates.contains(&symbol) {
+            out.insert(symbol);
+        }
+    }
+    for &child in il.children(node) {
+        collect_node_symbols(il, child, candidates, out);
+    }
+}
+
+fn mark_direct_symbol(
+    il: &Il,
+    node: NodeId,
+    candidates: &FxHashSet<Symbol>,
+    out: &mut FxHashSet<Symbol>,
+) {
+    if let Some(symbol) = node_symbol(il, node) {
+        if candidates.contains(&symbol) {
+            out.insert(symbol);
+        }
+    }
+}
+
+fn node_symbol(il: &Il, node: NodeId) -> Option<Symbol> {
+    match il.node(node).payload {
+        Payload::Name(symbol) => Some(symbol),
+        Payload::Cid(cid) => il.cid_names.get(cid as usize).copied(),
+        _ => None,
+    }
+}
+
+fn mutating_method_name(method: &str) -> bool {
+    matches!(
+        method,
         "add"
             | "addAll"
             | "append"
@@ -333,30 +516,7 @@ fn field_mutates_binding(
             | "splice"
             | "unshift"
             | "set"
-    ) {
-        return Some(false);
-    }
-    let receiver = il.children(field).first().copied()?;
-    Some(node_refers_to_symbol(il, receiver, name))
-}
-
-fn node_refers_to_symbol(il: &Il, node: NodeId, name: Symbol) -> bool {
-    match il.node(node).payload {
-        Payload::Name(symbol) => symbol == name,
-        Payload::Cid(cid) => il
-            .cid_names
-            .get(cid as usize)
-            .is_some_and(|&symbol| symbol == name),
-        _ => false,
-    }
-}
-
-fn node_contains_symbol(il: &Il, node: NodeId, name: Symbol) -> bool {
-    node_refers_to_symbol(il, node, name)
-        || il
-            .children(node)
-            .iter()
-            .any(|&child| node_contains_symbol(il, child, name))
+    )
 }
 
 fn strict_exact_module_container_binding_safe(

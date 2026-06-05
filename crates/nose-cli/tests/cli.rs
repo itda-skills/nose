@@ -1551,6 +1551,49 @@ fn scan_mode_semantic_proves_set_membership_when_receiver_is_proven() {
 }
 
 #[test]
+fn scan_mode_semantic_handles_shadowed_callback_collection_name() {
+    let dir = std::env::temp_dir().join(format!(
+        "nose_shadowed_callback_collection_{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("shadowed_callback.js"),
+        r#"function clean(stdout, original) {
+  const words = stdout
+    ? stdout
+        .split("\n")
+        .filter((word, _, words) => {
+          const lowerCased = word.toLowerCase();
+          return lowerCased === word || !words.includes(lowerCased);
+        })
+        .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+    : [];
+  const removed = original.filter((word) => !words.includes(word));
+  return removed.length;
+}
+"#,
+    )
+    .unwrap();
+
+    let semantic = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let _: serde_json::Value =
+        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn scan_mode_semantic_proves_typed_typescript_map_key_membership() {
     let dir = std::env::temp_dir().join(format!("nose_typed_ts_map_key_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);

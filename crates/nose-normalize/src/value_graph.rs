@@ -25,6 +25,9 @@ use nose_il::{
     Symbol, UnitKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::sync::OnceLock;
+
+const LARGE_AC_EXPR_OPERANDS: usize = 64;
 
 /// Public entry: the value-graph fingerprint of the unit rooted at `root`
 /// (sorted multiset of `u64` value hashes). Equivalent computations → equal
@@ -44,6 +47,124 @@ pub fn value_fingerprint_lits(
 ) -> (Vec<u64>, Vec<u64>, Vec<u64>) {
     let mut b = Builder::new(il, interner);
     b.build_unit(root);
+    b.fingerprint_lits()
+}
+
+/// File-level facts that are independent of the unit currently being fingerprinted.
+///
+/// `units::extract` may fingerprint hundreds of block units from the same large file.
+/// Function binding proofs require scanning every function and building a
+/// literal-sensitive subtree hash for the whole IL, and opaque raw/lambda values need a
+/// structural subtree hash for the same file. Doing either once per unit turns a
+/// file-level proof into the dominant cost. This context keeps the reusable proof result
+/// and lazily shares structural subtree hashes. Each per-unit [`Builder`] still interns
+/// the corresponding lambda values into its own value arena, so value ids never cross
+/// builder boundaries.
+pub struct ValueFingerprintContext {
+    module: ModuleSeedContext,
+    function_bindings: Vec<(Symbol, u64)>,
+    subtree_hashes: OnceLock<Vec<u64>>,
+}
+
+impl ValueFingerprintContext {
+    pub fn new(il: &Il, interner: &Interner) -> Self {
+        let module = ModuleSeedContext::new(il, interner);
+        let subtree_hashes = OnceLock::new();
+        let function_bindings = {
+            let mut b = Builder::new(il, interner).with_shared_subtree_hashes(&subtree_hashes);
+            b.seed_module_value_bindings_from_context(&module, None);
+            b.collect_function_binding_hashes()
+        };
+        Self {
+            module,
+            function_bindings,
+            subtree_hashes,
+        }
+    }
+}
+
+struct ModuleSeedContext {
+    top_level: Vec<NodeId>,
+    assignment_counts: FxHashMap<Symbol, usize>,
+    assignment_deps: FxHashMap<Symbol, FxHashSet<Symbol>>,
+    mutated_bindings: FxHashSet<Symbol>,
+    unit_symbols: FxHashSet<Symbol>,
+}
+
+impl ModuleSeedContext {
+    fn new(il: &Il, interner: &Interner) -> Self {
+        let top_level = top_level_statements_for(il);
+        let mut is_top_level = vec![false; il.nodes.len()];
+        for &stmt in &top_level {
+            if let Some(slot) = is_top_level.get_mut(stmt.0 as usize) {
+                *slot = true;
+            }
+        }
+
+        let mut assignment_counts: FxHashMap<Symbol, usize> = FxHashMap::default();
+        for &stmt in &top_level {
+            if let Some(name) = assignment_name_in(il, stmt) {
+                *assignment_counts.entry(name).or_insert(0) += 1;
+            }
+        }
+        let mut assignment_deps: FxHashMap<Symbol, FxHashSet<Symbol>> = FxHashMap::default();
+        for &stmt in &top_level {
+            let Some(name) = assignment_name_in(il, stmt) else {
+                continue;
+            };
+            if let Some(&rhs) = il.children(stmt).get(1) {
+                let mut deps = FxHashSet::default();
+                collect_all_node_symbols(il, rhs, &mut deps);
+                assignment_deps.insert(name, deps);
+            }
+        }
+
+        let unit_symbols: FxHashSet<Symbol> =
+            il.units.iter().filter_map(|unit| unit.name).collect();
+        let candidate_names: FxHashSet<Symbol> = assignment_counts
+            .iter()
+            .filter_map(|(&name, &count)| {
+                (count == 1 && !unit_symbols.contains(&name)).then_some(name)
+            })
+            .collect();
+        let mutated_bindings =
+            collect_module_mutations(il, interner, &candidate_names, &is_top_level);
+
+        Self {
+            top_level,
+            assignment_counts,
+            assignment_deps,
+            mutated_bindings,
+            unit_symbols,
+        }
+    }
+
+    fn required_bindings_for(&self, il: &Il, root: NodeId) -> FxHashSet<Symbol> {
+        let mut required = FxHashSet::default();
+        collect_all_node_symbols(il, root, &mut required);
+        let mut stack: Vec<Symbol> = required.iter().copied().collect();
+        while let Some(name) = stack.pop() {
+            let Some(deps) = self.assignment_deps.get(&name) else {
+                continue;
+            };
+            for &dep in deps {
+                if self.assignment_counts.contains_key(&dep) && required.insert(dep) {
+                    stack.push(dep);
+                }
+            }
+        }
+        required
+    }
+}
+
+pub fn value_fingerprint_lits_with_context(
+    il: &Il,
+    root: NodeId,
+    interner: &Interner,
+    context: &ValueFingerprintContext,
+) -> (Vec<u64>, Vec<u64>, Vec<u64>) {
+    let mut b = Builder::new(il, interner).with_shared_subtree_hashes(&context.subtree_hashes);
+    b.build_unit_with_context(root, Some(context));
     b.fingerprint_lits()
 }
 
@@ -105,6 +226,9 @@ struct Builder<'a> {
     /// key unlowered `Raw` constructs and lambda bodies by content. Computed once per
     /// graph (the whole-IL pass is O(n)); `None` until first needed.
     subtree_hash: Option<Vec<u64>>,
+    /// Shared file-level subtree hashes supplied by [`ValueFingerprintContext`]. This
+    /// keeps contextual per-unit builders from recomputing the same whole-file pass.
+    shared_subtree_hashes: Option<&'a OnceLock<Vec<u64>>>,
     /// Literal-sensitive subtree hash used only for proven function binding identity.
     /// The ordinary structural hash intentionally abstracts literals for shape work;
     /// callee identity must distinguish `helper(x)+1` from `helper(x)+2`.
@@ -138,6 +262,12 @@ struct Builder<'a> {
     global_env: FxHashMap<Symbol, ValueId>,
 }
 
+#[derive(Default)]
+struct ReductionCache {
+    reductions: FxHashMap<(ValueId, ValueId), Option<(u32, ValueId)>>,
+    references: FxHashMap<(ValueId, ValueId), bool>,
+}
+
 impl<'a> Builder<'a> {
     fn new(il: &'a Il, interner: &'a Interner) -> Self {
         Builder {
@@ -150,6 +280,7 @@ impl<'a> Builder<'a> {
             opaque_ctr: 0,
             field_env: FxHashMap::default(),
             subtree_hash: None,
+            shared_subtree_hashes: None,
             valued_subtree_hash: None,
             vty: Vec::new(),
             param_ty: Vec::new(),
@@ -158,6 +289,11 @@ impl<'a> Builder<'a> {
             building: FxHashMap::default(),
             global_env: FxHashMap::default(),
         }
+    }
+
+    fn with_shared_subtree_hashes(mut self, hashes: &'a OnceLock<Vec<u64>>) -> Self {
+        self.shared_subtree_hashes = Some(hashes);
+        self
     }
 
     fn vty(&self, v: ValueId) -> Ty {
@@ -252,6 +388,13 @@ impl<'a> Builder<'a> {
     /// whole graph. Used to key unlowered constructs by *what they are* rather than by
     /// position — so two behaviorally-different `Raw` nodes stay DISTINCT.
     fn subtree_hash(&mut self, expr: NodeId) -> u64 {
+        if let Some(shared) = self.shared_subtree_hashes {
+            return shared
+                .get_or_init(|| crate::subtree_hashes(self.il, self.interner))
+                .get(expr.0 as usize)
+                .copied()
+                .unwrap_or(0);
+        }
         if self.subtree_hash.is_none() {
             self.subtree_hash = Some(crate::subtree_hashes(self.il, self.interner));
         }
@@ -716,6 +859,9 @@ impl<'a> Builder<'a> {
             return None;
         }
         let rhs = self.local_binding_initializer(cid)?;
+        if self.node_contains_cid(rhs, cid) {
+            return None;
+        }
         let value = self.eval(rhs, env);
         self.proven_collection_value(value)
     }
@@ -1222,13 +1368,18 @@ impl<'a> Builder<'a> {
             return None;
         };
         let method = self.interner.resolve(name);
+        let numeric_op = match (method, kids.len()) {
+            ("abs", 1) => Some((ABS_CODE, None)),
+            ("min", 2) => Some((MIN_CODE, kids.get(1).copied())),
+            ("max", 2) => Some((MAX_CODE, kids.get(1).copied())),
+            _ => None,
+        }?;
         let receiver = self.il.children(callee).first().copied()?;
         let receiver_value = self.eval_proven_numeric_expr(receiver, env)?;
-        match (method, kids.len()) {
-            ("abs", 1) => Some(self.mk(ValOp::Un(ABS_CODE), vec![receiver_value])),
-            ("min", 2) | ("max", 2) => {
-                let rhs = self.eval(kids[1], env);
-                let code = if method == "min" { MIN_CODE } else { MAX_CODE };
+        match numeric_op {
+            (ABS_CODE, None) => Some(self.mk(ValOp::Un(ABS_CODE), vec![receiver_value])),
+            (code, Some(rhs)) => {
+                let rhs = self.eval(rhs, env);
                 Some(self.mk(ValOp::Bin(code), vec![receiver_value, rhs]))
             }
             _ => None,
@@ -1495,11 +1646,7 @@ impl<'a> Builder<'a> {
                     }
                     if leaves.len() > 2 {
                         leaves.sort_unstable_by_key(|&v| self.vhash[v as usize]);
-                        let mut acc = leaves[0];
-                        for &n in &leaves[1..] {
-                            acc = self.intern_node(ValOp::Bin(o), vec![acc, n]);
-                        }
-                        return acc;
+                        return self.intern_ac_chain(o, &leaves);
                     }
                 }
             }
@@ -1529,18 +1676,39 @@ impl<'a> Builder<'a> {
         id
     }
 
-    /// Flatten an associative-commutative chain of value nodes into `out`.
-    fn flatten_into(&self, vid: ValueId, opc: u32, out: &mut Vec<ValueId>) {
-        if let ValOp::Bin(o) = self.nodes[vid as usize].op {
-            if o == opc {
-                let args = self.nodes[vid as usize].args.clone();
-                for a in args {
-                    self.flatten_into(a, opc, out);
-                }
-                return;
-            }
+    fn intern_ac_chain(&mut self, opc: u32, operands: &[ValueId]) -> ValueId {
+        debug_assert!(!operands.is_empty());
+        let mut acc = operands[0];
+        for &operand in &operands[1..] {
+            acc = self.intern_node(ValOp::Bin(opc), vec![acc, operand]);
         }
-        out.push(vid);
+        acc
+    }
+
+    /// Flatten an associative-commutative chain of value nodes into `out`.
+    fn flatten_into(&mut self, vid: ValueId, opc: u32, out: &mut Vec<ValueId>) {
+        let mut stack = vec![vid];
+        while let Some(value) = stack.pop() {
+            if let ValOp::Bin(o) = self.nodes[value as usize].op {
+                if o == opc {
+                    for &arg in self.nodes[value as usize].args.iter().rev() {
+                        stack.push(arg);
+                    }
+                    continue;
+                }
+            }
+            out.push(value);
+        }
+    }
+
+    fn collect_ac_expr_operands(&self, expr: NodeId, opc: u32, out: &mut Vec<NodeId>) {
+        if self.il.kind(expr) == NodeKind::BinOp && op_code(self.il.node(expr).payload) == opc {
+            for &child in self.il.children(expr) {
+                self.collect_ac_expr_operands(child, opc, out);
+            }
+        } else {
+            out.push(expr);
+        }
     }
 
     fn fresh_opaque(&mut self) -> ValueId {
@@ -1590,10 +1758,14 @@ impl<'a> Builder<'a> {
     /// be a `Func` (params + body) or a `Block` (class body of methods); for a
     /// `Block` we process its statements directly.
     fn build_unit(&mut self, root: NodeId) {
+        self.build_unit_with_context(root, None);
+    }
+
+    fn build_unit_with_context(&mut self, root: NodeId, context: Option<&ValueFingerprintContext>) {
         self.param_ty = crate::types::infer_param_types(self.il, root);
         self.param_semantic.clear();
         self.seed_param_semantics(root);
-        self.seed_immutable_bindings();
+        self.seed_immutable_bindings(root, context);
         let mut env: FxHashMap<u32, ValueId> = FxHashMap::default();
         match self.il.kind(root) {
             NodeKind::Func => {
@@ -1653,9 +1825,18 @@ impl<'a> Builder<'a> {
         self.flush_fields();
     }
 
-    fn seed_immutable_bindings(&mut self) {
-        self.seed_module_value_bindings();
-        self.seed_function_bindings();
+    fn seed_immutable_bindings(&mut self, root: NodeId, context: Option<&ValueFingerprintContext>) {
+        if let Some(context) = context {
+            let required = context.module.required_bindings_for(self.il, root);
+            self.seed_module_value_bindings_from_context(&context.module, Some(&required));
+        } else {
+            self.seed_module_value_bindings();
+        }
+        if let Some(context) = context {
+            self.seed_function_binding_hashes(&context.function_bindings);
+        } else {
+            self.seed_function_bindings();
+        }
     }
 
     fn seed_module_value_bindings(&mut self) {
@@ -1667,8 +1848,34 @@ impl<'a> Builder<'a> {
             *counts.entry(name).or_insert(0) += 1;
         }
 
+        let top_level = self.top_level_statements();
+        self.seed_module_value_bindings_from_parts(&top_level, &counts, None, None, None);
+    }
+
+    fn seed_module_value_bindings_from_context(
+        &mut self,
+        context: &ModuleSeedContext,
+        required_bindings: Option<&FxHashSet<Symbol>>,
+    ) {
+        self.seed_module_value_bindings_from_parts(
+            &context.top_level,
+            &context.assignment_counts,
+            Some(&context.mutated_bindings),
+            Some(&context.unit_symbols),
+            required_bindings,
+        );
+    }
+
+    fn seed_module_value_bindings_from_parts(
+        &mut self,
+        top_level: &[NodeId],
+        counts: &FxHashMap<Symbol, usize>,
+        mutated_bindings: Option<&FxHashSet<Symbol>>,
+        unit_symbols: Option<&FxHashSet<Symbol>>,
+        required_bindings: Option<&FxHashSet<Symbol>>,
+    ) {
         let mut env: FxHashMap<u32, ValueId> = FxHashMap::default();
-        for stmt in self.top_level_statements() {
+        for &stmt in top_level {
             let kids = self.il.children(stmt);
             if kids.len() != 2 {
                 continue;
@@ -1676,13 +1883,22 @@ impl<'a> Builder<'a> {
             let Some(name) = self.assignment_name(stmt) else {
                 continue;
             };
-            if self.unit_defines_symbol(name) {
+            if required_bindings.is_some_and(|required| !required.contains(&name)) {
+                continue;
+            }
+            let unit_defines_symbol = unit_symbols
+                .map(|symbols| symbols.contains(&name))
+                .unwrap_or_else(|| self.unit_defines_symbol(name));
+            if unit_defines_symbol {
                 continue;
             }
             if counts.get(&name).copied().unwrap_or(0) != 1 {
                 continue;
             }
-            if self.module_binding_mutated(name) {
+            let mutated = mutated_bindings
+                .map(|bindings| bindings.contains(&name))
+                .unwrap_or_else(|| self.module_binding_mutated(name));
+            if mutated {
                 continue;
             }
             let value = self.eval(kids[1], &env);
@@ -1705,18 +1921,16 @@ impl<'a> Builder<'a> {
     }
 
     fn top_level_statements(&self) -> Vec<NodeId> {
-        let mut out = Vec::new();
-        for &stmt in self.il.children(self.il.root) {
-            if self.il.kind(stmt) == NodeKind::Block {
-                out.extend(self.il.children(stmt).iter().copied());
-            } else {
-                out.push(stmt);
-            }
-        }
-        out
+        top_level_statements_for(self.il)
     }
 
     fn seed_function_bindings(&mut self) {
+        let bindings = self.collect_function_binding_hashes();
+        self.seed_function_binding_hashes(&bindings);
+    }
+
+    fn collect_function_binding_hashes(&mut self) -> Vec<(Symbol, u64)> {
+        let mut bindings = Vec::new();
         for unit in self.il.units.clone() {
             if !matches!(unit.kind, UnitKind::Function | UnitKind::Method) {
                 continue;
@@ -1726,9 +1940,16 @@ impl<'a> Builder<'a> {
             };
             if self.function_binding_safe(unit.root, unit.root) {
                 let hash = self.valued_subtree_hash(unit.root);
-                let value = self.mk(ValOp::Lambda(hash), vec![]);
-                self.global_env.insert(name, value);
+                bindings.push((name, hash));
             }
+        }
+        bindings
+    }
+
+    fn seed_function_binding_hashes(&mut self, bindings: &[(Symbol, u64)]) {
+        for &(name, hash) in bindings {
+            let value = self.mk(ValOp::Lambda(hash), vec![]);
+            self.global_env.insert(name, value);
         }
     }
 
@@ -2813,6 +3034,7 @@ impl<'a> Builder<'a> {
         // `a[i]*b[i]` vs `a[i]+b[i]`) stay distinct (the behavior axis). When the
         // update is not a clean reduction, thread the raw recurrence (still better
         // than a bare opaque `Loop` value reaching the sinks).
+        let mut reduction_cache = ReductionCache::default();
         for &cid in &carried {
             if iter_vars.contains(&cid) || induction.contains(&cid) {
                 continue; // iteration mechanics, not an accumulator
@@ -2821,7 +3043,10 @@ impl<'a> Builder<'a> {
                 continue;
             };
             let loopv = loop_vals[&cid];
-            match (env.get(&cid).copied(), self.as_reduction(newv, loopv)) {
+            match (
+                env.get(&cid).copied(),
+                self.as_reduction_cached(newv, loopv, &mut reduction_cache),
+            ) {
                 (Some(init), Some((op, contrib))) => {
                     // Selection reductions (min/max) carry no init; folds carry one.
                     let args = if is_selection_code(op) {
@@ -3009,6 +3234,31 @@ impl<'a> Builder<'a> {
     /// operator code and the canonical per-element `contrib` (with `acc` removed), or
     /// `None` if the update is not a single clean reduction step.
     fn as_reduction(&mut self, val: ValueId, loopv: ValueId) -> Option<(u32, ValueId)> {
+        let mut cache = ReductionCache::default();
+        self.as_reduction_cached(val, loopv, &mut cache)
+    }
+
+    fn as_reduction_cached(
+        &mut self,
+        val: ValueId,
+        loopv: ValueId,
+        cache: &mut ReductionCache,
+    ) -> Option<(u32, ValueId)> {
+        let key = (val, loopv);
+        if let Some(cached) = cache.reductions.get(&key).copied() {
+            return cached;
+        }
+        let result = self.as_reduction_uncached(val, loopv, cache);
+        cache.reductions.insert(key, result);
+        result
+    }
+
+    fn as_reduction_uncached(
+        &mut self,
+        val: ValueId,
+        loopv: ValueId,
+        cache: &mut ReductionCache,
+    ) -> Option<(u32, ValueId)> {
         // Guarded (filtered) reduction: `if cond { acc = acc ⊕ contrib }` merges to
         // `Phi(cond, ⊕(acc, contrib), acc)`. Canonicalize to `Reduce(⊕, init, cond ?
         // contrib : identity)` so a filtered loop converges with `sum(c for x if cond)`
@@ -3017,7 +3267,7 @@ impl<'a> Builder<'a> {
             let args = self.nodes[val as usize].args.clone();
             if args.len() == 3 && args[2] == loopv {
                 // (a) guarded accumulation: `if cond { acc = acc ⊕ contrib }`.
-                if let Some((op, contrib)) = self.as_reduction(args[1], loopv) {
+                if let Some((op, contrib)) = self.as_reduction_cached(args[1], loopv, cache) {
                     if let Some(id) = identity_of(op) {
                         let ident = self.int_const(id);
                         let guarded = self.mk(ValOp::Phi, vec![args[0], contrib, ident]);
@@ -3028,7 +3278,7 @@ impl<'a> Builder<'a> {
                 // the new value does not reference the old accumulator and the guard
                 // compares the two. `acc = max(acc, cand)` / `min`.
                 let cand = args[1];
-                if !self.references(cand, loopv) {
+                if !self.references_cached(cand, loopv, cache) {
                     if let Some(code) = self.selection_code(args[0], cand, loopv) {
                         return Some((code, cand));
                     }
@@ -3041,7 +3291,7 @@ impl<'a> Builder<'a> {
             // it with the negated guard so it converges with the loop form `if v>0:
             // acc+=v` (whose single-branch guard stays positive).
             if args.len() == 3 && args[1] == loopv {
-                if let Some((op, contrib)) = self.as_reduction(args[2], loopv) {
+                if let Some((op, contrib)) = self.as_reduction_cached(args[2], loopv, cache) {
                     if let Some(id) = identity_of(op) {
                         let ident = self.int_const(id);
                         let ncond = self.negate_guard(args[0]);
@@ -3057,8 +3307,8 @@ impl<'a> Builder<'a> {
             // then canonicalizes idioms such as `x < 0 ? -x : x` to `Abs(x)`.
             if args.len() == 3 {
                 if let (Some((then_op, then_contrib)), Some((else_op, else_contrib))) = (
-                    self.as_reduction(args[1], loopv),
-                    self.as_reduction(args[2], loopv),
+                    self.as_reduction_cached(args[1], loopv, cache),
+                    self.as_reduction_cached(args[2], loopv, cache),
                 ) {
                     if then_op == else_op {
                         let contrib =
@@ -3081,10 +3331,10 @@ impl<'a> Builder<'a> {
                 } else {
                     REDUCE_MIN
                 };
-                if a[0] == loopv && !self.references(a[1], loopv) {
+                if a[0] == loopv && !self.references_cached(a[1], loopv, cache) {
                     return Some((red, a[1]));
                 }
-                if a[1] == loopv && !self.references(a[0], loopv) {
+                if a[1] == loopv && !self.references_cached(a[0], loopv, cache) {
                     return Some((red, a[0]));
                 }
             }
@@ -3102,8 +3352,13 @@ impl<'a> Builder<'a> {
         }
         let pos = operands.iter().position(|&o| o == loopv)?;
         operands.remove(pos);
-        if operands.is_empty() || operands.iter().any(|&o| self.references(o, loopv)) {
+        if operands.is_empty() {
             return None;
+        }
+        for &operand in &operands {
+            if self.references_cached(operand, loopv, cache) {
+                return None;
+            }
         }
         operands.sort_by_key(|&v| self.vhash[v as usize]);
         let mut acc = operands[0];
@@ -4242,6 +4497,16 @@ impl<'a> Builder<'a> {
         false
     }
 
+    fn references_cached(&self, v: ValueId, target: ValueId, cache: &mut ReductionCache) -> bool {
+        let key = (v, target);
+        if let Some(&cached) = cache.references.get(&key) {
+            return cached;
+        }
+        let result = self.references(v, target);
+        cache.references.insert(key, result);
+        result
+    }
+
     fn eval(&mut self, expr: NodeId, env: &FxHashMap<u32, ValueId>) -> ValueId {
         let node = *self.il.node(expr);
         match node.kind {
@@ -4334,6 +4599,28 @@ impl<'a> Builder<'a> {
                     // rebuild canonically — so groupings/temps converge. EXCEPT `+` is only
                     // commutative on numeric operands; on strings/lists it is concat, which
                     // is ordered, so we keep source order there (sorting would be unsound).
+                    //
+                    // Very large generated formulas can arrive as deeply nested binary ASTs.
+                    // For those, collect same-op source operands first so one giant expression
+                    // pays for flatten/sort/rebuild once instead of once per nested pair.
+                    let mut expr_operands = Vec::new();
+                    for &k in &kids {
+                        self.collect_ac_expr_operands(k, op, &mut expr_operands);
+                    }
+                    if expr_operands.len() >= LARGE_AC_EXPR_OPERANDS {
+                        let mut operands = Vec::new();
+                        for k in expr_operands {
+                            let v = self.eval(k, env);
+                            self.flatten_into(v, op, &mut operands);
+                        }
+                        let do_sort = op != Op::Add as u32
+                            || operands.iter().all(|&v| !is_concat_ty(self.vty(v)));
+                        if do_sort {
+                            operands.sort_by_key(|&v| self.vhash[v as usize]);
+                        }
+                        return self.intern_ac_chain(op, &operands);
+                    }
+
                     let mut operands = Vec::new();
                     for k in kids {
                         let v = self.eval(k, env);
@@ -4697,6 +4984,117 @@ impl<'a> Builder<'a> {
             _ => 0,
         }
     }
+}
+
+fn top_level_statements_for(il: &Il) -> Vec<NodeId> {
+    let mut out = Vec::new();
+    for &stmt in il.children(il.root) {
+        if il.kind(stmt) == NodeKind::Block {
+            out.extend(il.children(stmt).iter().copied());
+        } else {
+            out.push(stmt);
+        }
+    }
+    out
+}
+
+fn assignment_name_in(il: &Il, stmt: NodeId) -> Option<Symbol> {
+    if il.kind(stmt) != NodeKind::Assign {
+        return None;
+    }
+    let kids = il.children(stmt);
+    if kids.len() != 2 || il.kind(kids[0]) != NodeKind::Var {
+        return None;
+    }
+    let Payload::Cid(cid) = il.node(kids[0]).payload else {
+        return None;
+    };
+    il.cid_names.get(cid as usize).copied()
+}
+
+fn node_symbol_in(il: &Il, node: NodeId) -> Option<Symbol> {
+    match il.node(node).payload {
+        Payload::Name(symbol) => Some(symbol),
+        Payload::Cid(cid) => il.cid_names.get(cid as usize).copied(),
+        _ => None,
+    }
+}
+
+fn collect_node_symbols(
+    il: &Il,
+    node: NodeId,
+    candidates: &FxHashSet<Symbol>,
+    out: &mut FxHashSet<Symbol>,
+) {
+    if let Some(symbol) = node_symbol_in(il, node) {
+        if candidates.contains(&symbol) {
+            out.insert(symbol);
+        }
+    }
+    for &child in il.children(node) {
+        collect_node_symbols(il, child, candidates, out);
+    }
+}
+
+fn collect_all_node_symbols(il: &Il, node: NodeId, out: &mut FxHashSet<Symbol>) {
+    if let Some(symbol) = node_symbol_in(il, node) {
+        out.insert(symbol);
+    }
+    for &child in il.children(node) {
+        collect_all_node_symbols(il, child, out);
+    }
+}
+
+fn mark_direct_symbol(
+    il: &Il,
+    node: NodeId,
+    candidates: &FxHashSet<Symbol>,
+    out: &mut FxHashSet<Symbol>,
+) {
+    if let Some(symbol) = node_symbol_in(il, node) {
+        if candidates.contains(&symbol) {
+            out.insert(symbol);
+        }
+    }
+}
+
+fn collect_module_mutations(
+    il: &Il,
+    interner: &Interner,
+    candidates: &FxHashSet<Symbol>,
+    is_top_level: &[bool],
+) -> FxHashSet<Symbol> {
+    let mut mutated = FxHashSet::default();
+    if candidates.is_empty() {
+        return mutated;
+    }
+    for (idx, node) in il.nodes.iter().enumerate() {
+        match node.kind {
+            NodeKind::Call if matches!(node.payload, Payload::Builtin(Builtin::Append)) => {
+                if let Some(receiver) = il.children(NodeId(idx as u32)).first().copied() {
+                    mark_direct_symbol(il, receiver, candidates, &mut mutated);
+                }
+            }
+            NodeKind::Field => {
+                let Payload::Name(method) = node.payload else {
+                    continue;
+                };
+                if !Builder::mutating_method_name(interner.resolve(method)) {
+                    continue;
+                }
+                if let Some(receiver) = il.children(NodeId(idx as u32)).first().copied() {
+                    mark_direct_symbol(il, receiver, candidates, &mut mutated);
+                }
+            }
+            NodeKind::Assign if !is_top_level.get(idx).copied().unwrap_or(false) => {
+                if let Some(lhs) = il.children(NodeId(idx as u32)).first().copied() {
+                    collect_node_symbols(il, lhs, candidates, &mut mutated);
+                }
+            }
+            _ => {}
+        }
+    }
+    mutated
 }
 
 fn collect_assigned(il: &Il, node: NodeId, out: &mut FxHashSet<u32>) {
