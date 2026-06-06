@@ -105,6 +105,10 @@ FAMILY_SHAPE_BUCKETS = ("whole-only", "all-fragment", "mixed")
 # ---------------------------------------------------------------------------
 # Binary identity (rule 3)
 # ---------------------------------------------------------------------------
+def nose_binary_path(nose: str) -> Path:
+    return Path(shutil.which(nose) or nose).resolve()
+
+
 def _git(args: list[str], cwd: Path) -> str:
     try:
         out = subprocess.run(
@@ -117,7 +121,7 @@ def _git(args: list[str], cwd: Path) -> str:
 
 def binary_identity(nose: str, build_ref: str | None) -> dict:
     """Everything needed to know *exactly* which binary produced a result."""
-    path = Path(shutil.which(nose) or nose).resolve()
+    path = nose_binary_path(nose)
     version = ""
     try:
         version = subprocess.run(
@@ -156,7 +160,7 @@ def scan_command(nose: str, scan: dict, cache_dir: Path | None) -> list[str]:
     `product_json_bytes` independent of where the corpus is checked out — the same repo
     canonicalizes identically whether it lives under the main worktree or elsewhere."""
     cmd = [
-        nose,
+        str(nose_binary_path(nose)),
         "scan",
         ".",
         "--mode",
@@ -897,6 +901,12 @@ def _with_runtime(output: dict) -> dict:
 
 
 def cmd_selftest(_args: argparse.Namespace) -> int:
+    cmd = scan_command(
+        "./target/release/nose", {"mode": "semantic", "format": "json", "top": 0}, None
+    )
+    if not Path(cmd[0]).is_absolute():
+        raise AssertionError(f"scan command did not absolutize nose path: {cmd[0]}")
+
     canon = canonicalize(_sample_scan_json(), Path("/tmp/nose-scan-regression-selftest"))
     _assert_eq(
         canon["recommended_surface_counts"],
