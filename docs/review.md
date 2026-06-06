@@ -65,6 +65,21 @@ touched, not that the change definitely belongs there. Review each flagged sibli
 | `--ignore-file <file>` | suppress accepted divergences (auto-reads `nose.ignore.json`) |
 | `--top N` | show at most N findings (`0` = all; default 30) |
 
+## Exact fragment context
+
+Semantic mode can flag exact sub-function fragments, not only whole functions or methods.
+Those small fragments are often too small to be default refactoring candidates, but they
+are useful review hazards when the changed lines touch one copy and skip another. Review
+output therefore carries the same stable fragment metadata as scan JSON:
+`is_fragment`, `fragment_kind`, `reason_code`, `span_lines`, `span_tokens`, and
+`enclosing_unit` when a containing function/method/class is recovered exactly.
+
+Human and SARIF output keep annotations anchored on the changed or not-updated fragment
+span, while the context text names the enclosing unit. JSON output includes the full
+fragment metadata for both `changed` and `not_updated` sites. `proof_facts` are not
+emitted; fragment `reason_code` explains the exact proof shape, not the broader
+family/actionability reasons planned in #11.
+
 ## Suppressing intentional divergences
 
 Some clones are *meant* to diverge (a fast path vs a clear path, a sync vs async variant).

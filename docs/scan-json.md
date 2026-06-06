@@ -140,6 +140,7 @@ schema version 1:
 | `mean_sem` | number | Mean value-graph size across members. |
 | `scope` | string | `prod`, `test`, or `mixed` test/production classification. |
 | `discount` | number | Refactor-worthiness discount for generated or type-heavy families. |
+| `recommended_surface` | string | Product placement hint: `default`, `review`, `hidden`, or `debug`. This is ranking/presentation policy, not detector exactness. |
 | `baseline_status` | string, optional | `new` or `changed` when this family is shown because of `--baseline`. |
 
 Each `locations[]` item has:
@@ -153,17 +154,40 @@ Each `locations[]` item has:
 | `kind` | string | Unit kind, such as `Function`, `Method`, `Class`, or `Block`. |
 | `name` | string, optional | Symbol name when the frontend can recover one. |
 | `sem` | integer | Value-graph size for the site. |
+| `span_lines` | integer | Inclusive source-line span for this location. |
+| `span_tokens` | integer | Normalized-token span used by the detector's size gates. |
+| `is_fragment` | boolean | `true` when this location is an exact sub-function fragment; `false` for whole units and syntax-channel copy-paste spans. |
+| `fragment_kind` | string, optional | Exact fragment proof shape, present only when `is_fragment` is `true`; examples include `direct-return`, `conditional-guard`, and `self-field-body`. |
+| `reason_code` | string, optional | Stable exact-fragment proof reason derived from `fragment_kind`, present only when `is_fragment` is `true`; examples include `exact-direct-return` and `exact-conditional-guard`. |
+| `enclosing_unit` | object, optional | Exact enclosing function/method/class recovered from the same extracted unit set when available. |
 
-### Fragment metadata gap
+### Fragment metadata
 
-Current schema v1 reports sub-function exact fragments as ordinary locations, usually with
-`locations[].kind == "Block"`. That is enough for compatibility, but not enough to explain
-whether a small exact fragment is a guarded return, ordered effect sequence, Java self-field
-body, proof-only guard, or review-hazard fragment. The
-[fragment output audit](fragment-output-audit.md) records the current pre-fragment-metadata
-behavior and recommends future stable fields such as `is_fragment`, `FragmentKind`,
-`reason_code`, enclosing unit metadata, and diagnostic `proof_facts`. Those fields would be
-additive to schema v1 unless their types or required meanings force a later schema version.
+Exact semantic fragments are reported as ordinary family locations plus additive metadata.
+`is_fragment` is always present; `fragment_kind`, `reason_code`, and `enclosing_unit` are
+present only when the detector has exact data to serialize. A fragment with no
+`enclosing_unit` is still a valid exact fragment; it only means no containing
+function/method/class was recovered without guessing.
+
+The optional `enclosing_unit` object has:
+
+| field | type | meaning |
+|---|---|---|
+| `file` | string | Enclosing unit path, rewritten with the same relative-path policy as `locations[].file`. |
+| `start_line` | integer | 1-based inclusive start line. |
+| `end_line` | integer | 1-based inclusive end line. |
+| `kind` | string | Enclosing `Function`, `Method`, or `Class`. |
+| `name` | string, optional | Enclosing symbol name when recoverable. |
+| `unit_key` | string | Stable key built from file, kind, span, and name for grouping/review context. |
+
+Do not confuse fragment `reason_code` with future family/actionability reason codes from
+[#11](https://github.com/corca-ai/nose/issues/11). Fragment `reason_code` answers why this
+sub-function fragment was accepted as exact-safe. Future family/actionability reason codes
+answer why a clone family is worth refactoring or reviewing. They intentionally do not
+share one field.
+
+`proof_facts` are not part of the stable scan JSON contract. They remain internal
+diagnostic facts unless a future schema explicitly adds an unstable diagnostics namespace.
 
 ## Compatibility
 

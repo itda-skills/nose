@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Per-language refactoring-ranking eval with bootstrap CIs and a dev/heldout split.
 
-Uses refactoring_families.v4.json (dev + heldout). Reports, per language and split:
+Uses refactoring_families.v5.json (dev + heldout). Reports, per language and split:
 precision@10 (baseline value-rank) and (anti-unification re-rank), each with a 95%
 bootstrap CI so a difference like "Rust 47% vs 38%" can be judged significant or
 noise; worthy-recall; and mean Raw-node ratio (the lowering confound). The CI is the
@@ -57,6 +57,13 @@ def refactorability(f):
     return r
 
 
+def scan_families(stdout):
+    payload = json.loads(stdout or "[]")
+    if isinstance(payload, dict):
+        return payload.get("families", [])
+    return payload
+
+
 def ci(flags, b=2000):
     """95% bootstrap CI for the mean of a 0/1 list; returns (lo, hi) in %."""
     if not flags:
@@ -90,7 +97,8 @@ def main():
         a["worthy"] += sum(x["worthy"] for x in labs)
         r = subprocess.run([str(NOSE), "scan", str(repo), "--format", "json", "--top", "1000000"],
                            cwd=ROOT, capture_output=True, text=True, timeout=300)
-        fams = sorted(json.loads(r.stdout or "[]"), key=lambda f: -f["value"])
+        r.check_returncode()
+        fams = sorted(scan_families(r.stdout), key=lambda f: -f["value"])
         top = fams[:40]
         for f in top:
             f["rv"] = f["value"] * refactorability(f)

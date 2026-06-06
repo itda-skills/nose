@@ -7,13 +7,15 @@ ranking implementation, or fragment families changed. Back to
 [review](review.md).
 
 The work was prompted by
-[issue #35](https://github.com/corca-ai/nose/issues/35) and feeds three follow-up
-contracts:
+[issue #35](https://github.com/corca-ai/nose/issues/35) and feeds the product
+surface work tracked in [#45](https://github.com/corca-ai/nose/issues/45):
 
-- [#33](https://github.com/corca-ai/nose/issues/33) should expose stable fragment
-  kind and diagnostic proof metadata.
+- [#33](https://github.com/corca-ai/nose/issues/33) exposed stable fragment kind
+  and internal proof metadata.
+- [#45](https://github.com/corca-ai/nose/issues/45) exposes the stable product
+  metadata while keeping proof facts internal.
 - [#11](https://github.com/corca-ai/nose/issues/11) should define stable
-  refactorability and actionability reason codes.
+  family-level refactorability and actionability reason codes.
 - [#23](https://github.com/corca-ai/nose/issues/23) should consume review-hazard
   metadata without treating every exact fragment as a direct extraction.
 
@@ -235,8 +237,9 @@ that need future `enclosing_unit` metadata if they ever move out of debug output
 
    Blocks with field writes, pointer writes, index assignment, receiver method
    calls, temp chains, and ordered effect sequences should not be promoted from
-   debug to default output unless #33 can expose a stable `FragmentKind` and a
-   clear diagnostic explanation of receiver/place/effect identity.
+   debug to default output unless the stable `fragment_kind` / `reason_code`
+   metadata and any future diagnostics can explain receiver/place/effect
+   identity clearly enough for users.
 
 7. Group by role, not only by fingerprint.
 
@@ -246,32 +249,37 @@ that need future `enclosing_unit` metadata if they ever move out of debug output
    fixture input/output pairs should be explainable as distinct roles even when
    the exact fingerprint matches.
 
-## Post-#33 Metadata Requirements
+## Stable Fragment Product Metadata
 
-These requirements are split between stable public fields and diagnostic facts.
-Per the issue decision, `proof_facts` should not become a public contract until
-#33 explicitly stabilizes and documents it.
+The product scan JSON now separates stable public fields from diagnostic facts.
+`proof_facts` are deliberately not public scan JSON; they remain internal unless
+a future diagnostics namespace explicitly documents them as unstable.
 
 ### Stable Public Fields
 
 - `is_fragment`: whether the location is a sub-function fragment rather than a
-  whole function/method/class.
-- `FragmentKind`: stable coarse kind, for example whole unit, control block,
-  guard return, guard throw, ordered effect sequence, foreach effect, index
-  assignment effect, Java self-field assignment, or pure expression return.
-- `reason_code`: stable actionability vocabulary coordinated with #11. It should
-  describe product placement, such as direct extraction candidate, overload
-  synchronization hazard, cross-language port hazard, test fixture/golden,
-  proof-only guard, or requires diagnostic proof.
+  whole function/method/class. It is serialized for every location.
+- `fragment_kind`: stable exact-fragment proof shape, such as direct return,
+  direct throw, conditional guard, loop effect, index assignment effect,
+  expression effect, or Java self-field body.
+- `reason_code`: stable exact-fragment proof reason derived from
+  `fragment_kind`, for example `exact-direct-return` or
+  `exact-conditional-guard`. This answers why the fragment was accepted as
+  exact-safe; it is not the broader actionability vocabulary from #11.
 - `enclosing_unit`: kind, name when available, file, start line, end line, and a
   stable unit key. This is required for review-hazard output and for grouping
   child fragments under parent findings.
 - `span_lines` and `span_tokens`: explicit span size without consumers
   recalculating from locations.
-- `family_size`, `scope`, and path role: production, test, fixture/golden,
-  generated/vendor when known, mixed prod/test, and module spread.
+- family-level `members`, `scope`, module/file spread, and path role:
+  production, test, fixture/golden, generated/vendor when known, mixed
+  prod/test, and module spread.
 - `recommended_surface`: a ranking-time result, not detector semantics:
   default, review, hidden, or debug.
+
+Future #11 family/actionability reason codes should live in a separate family
+field. They answer why a family is worth refactoring or reviewing, and must not
+share a field with exact-fragment proof reasons.
 
 ### Diagnostic Fields
 
@@ -293,8 +301,10 @@ Per the issue decision, `proof_facts` should not become a public contract until
 | refactor-worthy | yes, unless contained by a better parent or fixture-only | yes | optional detail |
 | review-hazard | only when span/spread is strong enough for standalone attention | yes | optional detail |
 | proof-only/noise | no | only when directly changed and grouped under context | yes |
-| unsupported/ambiguous | no until #33 metadata explains the proof | yes after #33 for changed regions | yes |
+| unsupported/ambiguous | no unless stable metadata explains the proof | yes when stable metadata gives enough context for changed regions | yes |
 
-The ranking implementation can remain unchanged until #33 and #11 provide the
-fields above. The important product decision is that exact semantic fragments
+The current product implementation keeps exact fragments visible in full
+machine-readable output while using `recommended_surface` and default ranking
+damping so tiny proof fragments do not read as first-class refactoring
+candidates. The important product decision remains: exact semantic fragments
 are evidence, not automatically refactoring candidates.
