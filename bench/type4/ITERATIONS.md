@@ -92,11 +92,41 @@ in `bench/type4/real_frontier.v1.json`.
 | C include typedef u16 | SQLite local/direct include typedef byte aliases | `u8` aliases may prove byte-buffer lanes only when typedef provenance is explicit | include-blind guesses remain rejected |
 | C u32 unsigned-cast byte-pack | SQLite cast-proven big-endian 32-bit decoders | four byte lanes are accepted only when the high lane has a proven unsigned 32-bit cast | uncasted high lane remains a hard negative |
 | Four unsupported-lead audit (#32/#34) | Java EnumSet, Java class-literal API chain, Ruby custom fetch receivers, Java single-arg collection factories | abstain unless receiver/domain/API-chain proof is explicit; a single factory argument is not a one-element literal without proof | three leads remain unsupported; one latent `Arrays.asList`/`of` false merge was fixed; real-corpus family-set diff stayed 0 |
+| Issue #36 frontier curation | Prioritizer rerun plus focused audits of SymPy, SQLAlchemy, Guava, RuboCop, ANTLR Python, and Alacritty Rust | priority hits, verifier leads, and implementation-ready Type-4 misses are separate evidence tiers | no same-invariant implementation batch is ready; one semantic-only SymPy lead is already covered by default output, and one Guava verifier lead is recorded as a hard negative |
 
-Current frontier state in `real_frontier.v1.json`: 18 items, 14 closed and 4 unsupported.
-The unsupported items are intentionally parked because they need stronger proof facts:
-Java EnumSet/method-level mismatch, Java `Arrays.asList` provenance in one audited case,
-JUnit reflection/API-chain purity, and Ruby custom receiver `fetch` semantics.
+Current frontier state in `real_frontier.v1.json`: 20 items: 14 closed, 4 unsupported,
+1 already-covered, and 1 hard-negative. The unsupported items are intentionally parked
+because they need stronger proof facts: Java EnumSet/method-level mismatch, Java
+`Arrays.asList` provenance in one audited case, JUnit reflection/API-chain purity, and
+Ruby custom receiver `fetch` semantics.
+
+The Issue #36 audit used current `main` (`target/release/nose` 0.5.0 at
+`0b57dd25a0e6cdb6f2742abad82585ca8c517e38`) and the pinned corpus from
+`bench/repos`. `bench/type4/prioritize_frontier.py --repos-root /Users/ak/prjs/cc/nose/bench/repos`
+was byte-identical to `FRONTIER_PRIORITIES.md`: `membership_contains` and
+`map_default_lookup` remain the top queue signals, but both still show 100% broad-probe
+coverage and no uncovered gap samples. Selected `nose verify` passes then separated
+actual evidence from queue noise:
+
+- SymPy and SQLAlchemy top Python repos still have verifier under-merges, but the strong
+  SymPy `rot90` lead is already reported by default `syntax,semantic` output, and the
+  SQLAlchemy leads are low-nearness oracle groups rather than a shared map-default or
+  membership proof.
+- Guava was audited instead of avoiding Java. Its `Sets.minSize`/`maxSize` verifier lead
+  is a concrete hard negative because `SetView.minSize()` and `SetView.maxSize()` may
+  differ, and whole-Guava verify was otherwise SOUND.
+- RuboCop was SOUND but produced only low-nearness leads unrelated to the map-default
+  receiver-provenance frontier already parked in `real_frontier.v1.json`.
+- ANTLR Python `dict.get(..., None)` and Alacritty Rust `TermMode::VI` `contains` samples
+  did not produce under-merged leads in selected scans. The Alacritty hits are dynamic
+  bitflag receiver calls, so they remain queue noise unless a future proof fact can prove
+  the receiver/domain and a concrete clone pair.
+
+Conclusion for #36: do not force a three-item recommendation. The audited evidence does
+not support a same-proof `real-miss` batch. The next useful handoff to #37 is to track
+these audited repos/axes as performance/output-regression samples while detector work
+continues only when a new candidate has a current semantic miss, a proof invariant, and an
+adjacent hard negative.
 
 ## Soundness Hardening
 
