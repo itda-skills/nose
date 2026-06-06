@@ -59,6 +59,24 @@ fn make_mode_project(tag: &str) -> PathBuf {
     dir
 }
 
+fn make_fragment_project(tag: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("nose_frag_{tag}_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(dir.join("a")).unwrap();
+    fs::create_dir_all(dir.join("b")).unwrap();
+    fs::write(
+        dir.join("a/f.py"),
+        "def first(xs):\n    total = 0\n    if xs:\n        return xs[0] + 1\n    return total\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("b/f.py"),
+        "def second(items):\n    acc = 10\n    if items:\n        return items[0] + 1\n    return acc\n",
+    )
+    .unwrap();
+    dir
+}
+
 fn run(args: &[&str]) -> String {
     let out = Command::new(bin()).args(args).output().expect("run nose");
     assert!(
@@ -154,6 +172,7 @@ fn assert_scan_json_v1_contract(json: &serde_json::Value) {
         "mean_sem",
         "scope",
         "discount",
+        "recommended_surface",
     ] {
         assert!(family.contains_key(key), "family.{key} missing: {json}");
     }
@@ -163,7 +182,17 @@ fn assert_scan_json_v1_contract(json: &serde_json::Value) {
         .and_then(|locations| locations.first())
         .and_then(|location| location.as_object())
         .expect("family.locations should contain location objects");
-    for key in ["file", "start_line", "end_line", "lang", "kind", "sem"] {
+    for key in [
+        "file",
+        "start_line",
+        "end_line",
+        "lang",
+        "kind",
+        "sem",
+        "span_lines",
+        "span_tokens",
+        "is_fragment",
+    ] {
         assert!(loc.contains_key(key), "location.{key} missing: {json}");
     }
 }
@@ -195,6 +224,54 @@ fn scan_json_report_has_versioned_contract() {
     assert_eq!(json["ranking"]["sort"], "extractability");
     assert_eq!(json["ranking"]["shown_families"], 1);
     assert_eq!(json["ranking"]["limit"], 1);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn scan_json_exposes_exact_fragment_metadata() {
+    let dir = make_fragment_project("json");
+
+    let out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--format",
+        "json",
+        "--top",
+        "0",
+        "--min-size",
+        "1",
+    ]);
+    let json = scan_json(&out);
+    let family = scan_families(&json)
+        .iter()
+        .find(|family| family["recommended_surface"] == "hidden")
+        .expect("tiny exact fragment family should be present");
+    assert_eq!(family["mean_lines"], 2);
+    let locs = family["locations"].as_array().expect("locations");
+    assert_eq!(locs.len(), 2);
+    for loc in locs {
+        assert_eq!(loc["kind"], "Block");
+        assert_eq!(loc["span_lines"], 2);
+        assert!(loc["span_tokens"].as_u64().is_some_and(|n| n > 0));
+        assert_eq!(loc["is_fragment"], true);
+        assert_eq!(loc["fragment_kind"], "conditional-guard");
+        assert_eq!(loc["reason_code"], "exact-conditional-guard");
+        assert!(
+            loc.get("proof_facts").is_none(),
+            "proof facts must not be stable scan JSON: {loc}"
+        );
+        let parent = &loc["enclosing_unit"];
+        assert_eq!(parent["kind"], "Function");
+        assert!(parent["name"]
+            .as_str()
+            .is_some_and(|name| { name == "first" || name == "second" }));
+        assert!(parent["unit_key"]
+            .as_str()
+            .is_some_and(|key| { key.contains(":Function:1-5:") }));
+    }
+
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -9998,6 +10075,44 @@ fn review_flags_a_clone_changed_in_one_copy_only() {
         !gated.status.success(),
         "--fail should exit non-zero when flagged"
     );
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn review_json_includes_fragment_context() {
+    let dir = make_fragment_project("review_json");
+    init_git_repo(&dir);
+
+    let a = dir.join("a/f.py");
+    let src = fs::read_to_string(&a).unwrap();
+    fs::write(&a, src.replace("return xs[0] + 1", "return xs[0] + 2")).unwrap();
+
+    let out = nose_review(&dir, &["--format", "json"]);
+    assert!(
+        out.status.success(),
+        "review JSON should succeed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let json: serde_json::Value = serde_json::from_slice(&out.stdout).expect("review JSON");
+    let finding = json["findings"]
+        .as_array()
+        .and_then(|findings| findings.first())
+        .expect("one fragment review finding");
+    for key in ["changed", "not_updated"] {
+        let site = finding[key]
+            .as_array()
+            .and_then(|sites| sites.first())
+            .unwrap_or_else(|| panic!("{key} should contain a site: {finding}"));
+        assert_eq!(site["is_fragment"], true);
+        assert_eq!(site["fragment_kind"], "conditional-guard");
+        assert_eq!(site["reason_code"], "exact-conditional-guard");
+        assert_eq!(site["span_lines"], 2);
+        assert_eq!(site["enclosing_unit"]["kind"], "Function");
+        assert!(site["enclosing_unit"]["unit_key"]
+            .as_str()
+            .is_some_and(|key| key.contains(":Function:1-5:")));
+    }
 
     let _ = fs::remove_dir_all(&dir);
 }

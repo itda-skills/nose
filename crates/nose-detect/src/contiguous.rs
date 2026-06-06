@@ -12,7 +12,7 @@
 //! source spans via per-token provenance, then clusters them into families.
 
 use crate::cluster::UnionFind;
-use crate::Loc;
+use crate::{LineSpan, Loc, LocInit};
 use nose_il::{Il, Interner, NodeId, UnitKind};
 use nose_normalize::node_tag_valued;
 use rustc_hash::FxHashMap;
@@ -139,15 +139,15 @@ fn extend(sa: &Stream, a: usize, sb: &Stream, b: usize) -> usize {
 fn loc(s: &Stream, lo: usize, hi: usize) -> Loc {
     let start = s.start[lo..hi].iter().copied().min().unwrap_or(0);
     let end = s.end[lo..hi].iter().copied().max().unwrap_or(0);
-    Loc {
+    Loc::new(LocInit {
         file: s.path.clone(),
-        start_line: start,
-        end_line: end,
+        source_span: LineSpan::new(start, end),
         lang: s.lang.name().to_string(),
         kind: UnitKind::Block,
         name: None,
         sem: hi - lo,
-    }
+        span_tokens: hi - lo,
+    })
 }
 
 /// Find maximal duplicated runs across all streams and cluster them into groups.

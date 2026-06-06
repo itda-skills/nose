@@ -79,11 +79,9 @@ main worktree or any other path you pass to `--repos-root`. Per repo we record a
   `members`, `location_count`, `mean_lines`, per-kind counts, and the sorted locations.
   `distinct_location_sets` is recorded so a true location-set collision would surface
   rather than collapse silently.
-- `fragment_kind_counts` / `reason_code_counts` — a **forward-compatible hook that is
-  inert today**: #33 has merged, but the product scan JSON still serializes only `kind`
-  per location, so these stay empty until a separate scan-JSON change exposes the fields
-  (then they light up with no code change here). Until then the kind + span buckets are
-  the interim output-quality view; they are where #35's buckets plug in.
+- `fragment_kind_counts` / `reason_code_counts` — exact-fragment metadata buckets from
+  product scan JSON. #45 makes these live for current output, so fragment/reason drift is
+  visible separately from generic `Block` counts.
 
 `baseline` runs each repo `runtime_repeats` times and asserts the canonical output is
 **identical across runs** on one binary — a determinism guard. A mismatch aborts before

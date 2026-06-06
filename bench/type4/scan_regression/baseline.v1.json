@@ -1,12 +1,12 @@
 {
   "binary": {
-    "binary_path": "/Users/ak/prjs/cc/nose/target/release/nose",
-    "build_ref": "main@0b57dd2",
-    "sha256": "c675b831b24dfed2942f64ca58764cf8e83d11a5e9139877aa30ea7988bb11f3",
-    "size_bytes": 13510272,
-    "source_dirty": true,
-    "source_git_describe": "v0.5.0-161-g0cf4317-dirty",
-    "source_git_sha": "0cf4317df8a0ecebccd18e4fddb8fca8a1e27da2",
+    "binary_path": "/Users/ak/prjs/cc/nose/.claude/worktrees/issue-45-productize-fragments/target/release/nose",
+    "build_ref": "issue-45@416325e",
+    "sha256": "afc8212b9480a812a3f5c52f3977f89c1905f130001ca53b4ee47820969b02de",
+    "size_bytes": 13549744,
+    "source_dirty": false,
+    "source_git_describe": "v0.5.0-175-ge4d381d",
+    "source_git_sha": "e4d381d82922c591330da297c82d5aa2cc3c6552",
     "version": "nose 0.5.0"
   },
   "generated_by": "bench/type4/scan_regression/scan_regression.py baseline",
@@ -795,7 +795,11 @@
             "span_bucket": "2-3"
           }
         },
-        "fragment_kind_counts": {},
+        "fragment_kind_counts": {
+          "conditional-guard": 17,
+          "direct-return": 1,
+          "expr-effect": 68
+        },
         "kind_counts": {
           "Block": 94,
           "Function": 12,
@@ -805,8 +809,12 @@
           "javascript": 1,
           "python": 64
         },
-        "product_json_bytes": 28210,
-        "reason_code_counts": {},
+        "product_json_bytes": 59246,
+        "reason_code_counts": {
+          "exact-conditional-guard": 17,
+          "exact-direct-return": 1,
+          "exact-expr-effect": 68
+        },
         "scope_files": 65,
         "shown_families": 45,
         "span_buckets": {
@@ -820,19 +828,19 @@
       },
       "runtime": {
         "phase_ms_median": {
-          "candidates": 2.2,
+          "candidates": 2.1,
           "cluster": 0.1,
           "contiguous": 0.0,
-          "discover": 3.4,
-          "groups": 0.1,
-          "lower": 13.3,
-          "normalize+extract": 9.2,
-          "parse+lower": 9.4,
+          "discover": 5.0,
+          "groups": 0.2,
+          "lower": 14.2,
+          "normalize+extract": 8.8,
+          "parse+lower": 9.2,
           "score": 0.2
         },
         "repeats": 5,
-        "wall_ms_median": 37.93,
-        "wall_ms_min": 37.19
+        "wall_ms_median": 38.96,
+        "wall_ms_min": 36.6
       }
     },
     "chi": {
@@ -911,15 +919,19 @@
             "span_bucket": "1"
           }
         },
-        "fragment_kind_counts": {},
+        "fragment_kind_counts": {
+          "expr-effect": 15
+        },
         "kind_counts": {
           "Block": 15
         },
         "languages": {
           "go": 78
         },
-        "product_json_bytes": 2776,
-        "reason_code_counts": {},
+        "product_json_bytes": 7717,
+        "reason_code_counts": {
+          "exact-expr-effect": 15
+        },
         "scope_files": 78,
         "shown_families": 4,
         "span_buckets": {
@@ -933,15 +945,15 @@
           "cluster": 0.0,
           "contiguous": 0.0,
           "discover": 3.4,
-          "groups": 0.0,
-          "lower": 12.5,
-          "normalize+extract": 7.2,
-          "parse+lower": 8.2,
+          "groups": 0.1,
+          "lower": 12.2,
+          "normalize+extract": 7.3,
+          "parse+lower": 8.1,
           "score": 0.2
         },
         "repeats": 5,
-        "wall_ms_median": 30.65,
-        "wall_ms_min": 29.64
+        "wall_ms_median": 31.49,
+        "wall_ms_min": 29.0
       }
     },
     "cmark": {
@@ -1362,7 +1374,10 @@
             "span_bucket": "1"
           }
         },
-        "fragment_kind_counts": {},
+        "fragment_kind_counts": {
+          "conditional-guard": 45,
+          "expr-effect": 2
+        },
         "kind_counts": {
           "Block": 171,
           "Function": 2,
@@ -1373,8 +1388,11 @@
           "python": 12,
           "ruby": 1
         },
-        "product_json_bytes": 21245,
-        "reason_code_counts": {},
+        "product_json_bytes": 43287,
+        "reason_code_counts": {
+          "exact-conditional-guard": 45,
+          "exact-expr-effect": 2
+        },
         "scope_files": 51,
         "shown_families": 17,
         "span_buckets": {
@@ -1386,19 +1404,19 @@
       },
       "runtime": {
         "phase_ms_median": {
-          "candidates": 1.7,
-          "cluster": 0.0,
+          "candidates": 1.5,
+          "cluster": 0.1,
           "contiguous": 0.0,
           "discover": 3.4,
           "groups": 0.1,
-          "lower": 21.5,
-          "normalize+extract": 22.1,
-          "parse+lower": 18.2,
+          "lower": 20.7,
+          "normalize+extract": 22.5,
+          "parse+lower": 17.3,
           "score": 0.2
         },
         "repeats": 5,
-        "wall_ms_median": 57.89,
-        "wall_ms_min": 54.03
+        "wall_ms_median": 57.51,
+        "wall_ms_min": 55.93
       }
     },
     "gin": {
@@ -1457,7 +1475,9 @@
             "span_bucket": "4-10"
           }
         },
-        "fragment_kind_counts": {},
+        "fragment_kind_counts": {
+          "expr-effect": 7
+        },
         "kind_counts": {
           "Block": 7,
           "Function": 2
@@ -1465,8 +1485,10 @@
         "languages": {
           "go": 98
         },
-        "product_json_bytes": 1926,
-        "reason_code_counts": {},
+        "product_json_bytes": 4403,
+        "reason_code_counts": {
+          "exact-expr-effect": 7
+        },
         "scope_files": 98,
         "shown_families": 3,
         "span_buckets": {
@@ -1477,19 +1499,19 @@
       },
       "runtime": {
         "phase_ms_median": {
-          "candidates": 1.6,
+          "candidates": 1.7,
           "cluster": 0.1,
           "contiguous": 0.0,
-          "discover": 4.9,
-          "groups": 0.0,
-          "lower": 19.1,
-          "normalize+extract": 13.3,
-          "parse+lower": 14.5,
-          "score": 0.3
+          "discover": 3.4,
+          "groups": 0.1,
+          "lower": 18.8,
+          "normalize+extract": 13.7,
+          "parse+lower": 15.4,
+          "score": 0.2
         },
         "repeats": 5,
-        "wall_ms_median": 46.48,
-        "wall_ms_min": 45.23
+        "wall_ms_median": 46.38,
+        "wall_ms_min": 44.43
       }
     },
     "junit5": {
@@ -4696,7 +4718,13 @@
             "span_bucket": "2-3"
           }
         },
-        "fragment_kind_counts": {},
+        "fragment_kind_counts": {
+          "conditional-guard": 35,
+          "direct-return": 10,
+          "expr-effect": 243,
+          "self-field-assign": 7,
+          "self-field-body": 17
+        },
         "kind_counts": {
           "Block": 312,
           "Class": 4,
@@ -4706,8 +4734,14 @@
           "java": 1724,
           "javascript": 1
         },
-        "product_json_bytes": 191816,
-        "reason_code_counts": {},
+        "product_json_bytes": 369736,
+        "reason_code_counts": {
+          "exact-conditional-guard": 35,
+          "exact-direct-return": 10,
+          "exact-expr-effect": 243,
+          "exact-self-field-assign": 7,
+          "exact-self-field-body": 17
+        },
         "scope_files": 1725,
         "shown_families": 172,
         "span_buckets": {
@@ -4721,19 +4755,19 @@
       },
       "runtime": {
         "phase_ms_median": {
-          "candidates": 8.2,
+          "candidates": 7.0,
           "cluster": 0.5,
           "contiguous": 0.0,
-          "discover": 9.1,
-          "groups": 0.5,
-          "lower": 50.4,
-          "normalize+extract": 40.9,
-          "parse+lower": 40.2,
+          "discover": 10.5,
+          "groups": 2.3,
+          "lower": 50.9,
+          "normalize+extract": 39.1,
+          "parse+lower": 41.9,
           "score": 0.4
         },
         "repeats": 5,
-        "wall_ms_median": 178.62,
-        "wall_ms_min": 168.15
+        "wall_ms_median": 180.12,
+        "wall_ms_min": 175.56
       }
     },
     "ky": {
@@ -4807,15 +4841,19 @@
             "span_bucket": "2-3"
           }
         },
-        "fragment_kind_counts": {},
+        "fragment_kind_counts": {
+          "conditional-guard": 2
+        },
         "kind_counts": {
           "Block": 10
         },
         "languages": {
           "typescript": 52
         },
-        "product_json_bytes": 2237,
-        "reason_code_counts": {},
+        "product_json_bytes": 3412,
+        "reason_code_counts": {
+          "exact-conditional-guard": 2
+        },
         "scope_files": 52,
         "shown_families": 4,
         "span_buckets": {
@@ -4826,19 +4864,19 @@
       },
       "runtime": {
         "phase_ms_median": {
-          "candidates": 0.7,
+          "candidates": 0.9,
           "cluster": 0.0,
           "contiguous": 0.0,
-          "discover": 3.4,
+          "discover": 3.3,
           "groups": 0.0,
-          "lower": 17.8,
-          "normalize+extract": 7.9,
+          "lower": 16.3,
+          "normalize+extract": 7.8,
           "parse+lower": 12.9,
           "score": 0.2
         },
         "repeats": 5,
-        "wall_ms_median": 35.43,
-        "wall_ms_min": 33.29
+        "wall_ms_median": 35.77,
+        "wall_ms_min": 32.95
       }
     },
     "liquid": {
@@ -4912,7 +4950,9 @@
             "span_bucket": "2-3"
           }
         },
-        "fragment_kind_counts": {},
+        "fragment_kind_counts": {
+          "conditional-guard": 6
+        },
         "kind_counts": {
           "Block": 6,
           "Method": 4
@@ -4920,8 +4960,10 @@
         "languages": {
           "ruby": 153
         },
-        "product_json_bytes": 2360,
-        "reason_code_counts": {},
+        "product_json_bytes": 4654,
+        "reason_code_counts": {
+          "exact-conditional-guard": 6
+        },
         "scope_files": 153,
         "shown_families": 4,
         "span_buckets": {
@@ -4937,15 +4979,15 @@
           "cluster": 0.1,
           "contiguous": 0.0,
           "discover": 3.4,
-          "groups": 0.0,
-          "lower": 14.4,
-          "normalize+extract": 11.0,
-          "parse+lower": 11.2,
+          "groups": 0.1,
+          "lower": 14.8,
+          "normalize+extract": 10.6,
+          "parse+lower": 11.4,
           "score": 0.2
         },
         "repeats": 5,
-        "wall_ms_median": 39.75,
-        "wall_ms_min": 39.15
+        "wall_ms_median": 40.33,
+        "wall_ms_min": 38.74
       }
     },
     "serde_json": {
@@ -5157,7 +5199,10 @@
             "span_bucket": "2-3"
           }
         },
-        "fragment_kind_counts": {},
+        "fragment_kind_counts": {
+          "direct-return": 5,
+          "expr-effect": 2
+        },
         "kind_counts": {
           "Block": 7,
           "Function": 26
@@ -5165,8 +5210,11 @@
         "languages": {
           "rust": 71
         },
-        "product_json_bytes": 7010,
-        "reason_code_counts": {},
+        "product_json_bytes": 10889,
+        "reason_code_counts": {
+          "exact-direct-return": 5,
+          "exact-expr-effect": 2
+        },
         "scope_files": 71,
         "shown_families": 12,
         "span_buckets": {
@@ -5178,19 +5226,19 @@
       },
       "runtime": {
         "phase_ms_median": {
-          "candidates": 1.9,
+          "candidates": 1.7,
           "cluster": 0.1,
           "contiguous": 0.0,
           "discover": 4.9,
-          "groups": 0.0,
-          "lower": 14.6,
-          "normalize+extract": 10.6,
-          "parse+lower": 9.6,
+          "groups": 0.1,
+          "lower": 14.2,
+          "normalize+extract": 10.7,
+          "parse+lower": 8.8,
           "score": 0.2
         },
         "repeats": 5,
-        "wall_ms_median": 38.11,
-        "wall_ms_min": 34.56
+        "wall_ms_median": 38.32,
+        "wall_ms_min": 37.09
       }
     }
   },

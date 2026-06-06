@@ -296,7 +296,8 @@ The seed lives in `bench/type4/`:
 - `schema.json` — pair-level manifest schema;
 - `scan_regression/` — the repeatable product-scan runtime/output-drift harness
   (`nose scan --mode semantic --format json --top 0`), with its own subset, recorded
-  baseline, and threshold docs; see `bench/type4/scan_regression/README.md`;
+  baseline, fragment/reason-code bucket drift, and threshold docs; see
+  `bench/type4/scan_regression/README.md`;
 - `README.md` — commands and current smoke numbers.
 
 The long-term direction is an adversarial semantic test factory: the generator creates

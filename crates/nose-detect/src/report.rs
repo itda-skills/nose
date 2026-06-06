@@ -115,6 +115,37 @@ impl RefactorFamily {
             * param_penalty
             * tightness
             * self.discount
+            * self.default_surface_weight()
+    }
+
+    /// Product placement for the default scan/review/debug surfaces. This is a
+    /// presentation/ranking decision, not detector semantics: exact fragments remain
+    /// present in `--top 0` JSON even when their default ranking is dampened.
+    pub fn recommended_surface(&self) -> &'static str {
+        let fragment_sites = self.locations.iter().filter(|l| l.is_fragment).count();
+        if fragment_sites == 0 {
+            return "default";
+        }
+        if fragment_sites < self.locations.len() {
+            return "default";
+        }
+        if self.mean_lines <= 3 {
+            "hidden"
+        } else if self.mean_lines <= 8 {
+            "review"
+        } else {
+            "default"
+        }
+    }
+
+    fn default_surface_weight(&self) -> f64 {
+        match self.recommended_surface() {
+            "default" => 1.0,
+            "review" => 0.35,
+            "hidden" => 0.05,
+            "debug" => 0.02,
+            _ => 1.0,
+        }
     }
 
     /// Divergent-edit **hazard**: how likely this family is to be edited inconsistently
@@ -166,7 +197,7 @@ fn module_of(file: &str) -> &str {
 }
 
 fn span_lines(l: &Loc) -> u32 {
-    l.end_line.saturating_sub(l.start_line) + 1
+    l.span_lines
 }
 
 /// Fraction of `b`'s lines that lie inside `a` (both in the same file). Used to
@@ -476,30 +507,47 @@ fn subsumes(outer: &RefactorFamily, inner: &RefactorFamily) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Metrics, Report};
+    use crate::{LineSpan, LocInit, Metrics, Report};
     use nose_il::UnitKind::{Class, Function};
 
     fn loc(file: &str, s: u32, e: u32, lang: &str) -> Loc {
-        Loc {
+        Loc::new(LocInit {
             file: file.into(),
-            start_line: s,
-            end_line: e,
+            source_span: LineSpan::new(s, e),
             lang: lang.into(),
             kind: Function,
             name: None,
             sem: 50,
-        }
+            span_tokens: 50,
+        })
     }
     /// A site with explicit kind / value-graph size / name (for discount tests).
     fn loc_k(file: &str, s: u32, e: u32, kind: nose_il::UnitKind, sem: usize) -> Loc {
-        Loc {
+        Loc::new(LocInit {
             file: file.into(),
-            start_line: s,
-            end_line: e,
+            source_span: LineSpan::new(s, e),
             lang: "rust".into(),
             kind,
             name: None,
             sem,
+            span_tokens: sem,
+        })
+    }
+
+    fn fragment_loc(file: &str, s: u32, e: u32) -> Loc {
+        Loc {
+            is_fragment: true,
+            fragment_kind: Some(crate::FragmentKind::ConditionalGuard),
+            reason_code: Some(crate::FragmentKind::ConditionalGuard.reason_code()),
+            ..Loc::new(LocInit {
+                file: file.into(),
+                source_span: LineSpan::new(s, e),
+                lang: "rust".into(),
+                kind: nose_il::UnitKind::Block,
+                name: None,
+                sem: 50,
+                span_tokens: 50,
+            })
         }
     }
     /// A family with the given locations and metrics, other fields at neutral values.
@@ -938,6 +986,34 @@ mod tests {
         assert_eq!(
             fmixed.value, fpure.value,
             "test↔prod duplication is not discounted"
+        );
+    }
+
+    #[test]
+    fn tiny_all_fragment_family_is_hidden_and_downranked() {
+        let whole = fam(
+            10.0,
+            2,
+            2,
+            0,
+            vec![loc("src/a.rs", 1, 2, "rust"), loc("src/b.rs", 1, 2, "rust")],
+        );
+        let fragment = fam(
+            10.0,
+            2,
+            2,
+            0,
+            vec![
+                fragment_loc("src/a.rs", 3, 4),
+                fragment_loc("src/b.rs", 3, 4),
+            ],
+        );
+
+        assert_eq!(whole.recommended_surface(), "default");
+        assert_eq!(fragment.recommended_surface(), "hidden");
+        assert!(
+            fragment.extractability() < whole.extractability(),
+            "tiny exact fragments remain present but should not outrank whole-unit candidates"
         );
     }
 

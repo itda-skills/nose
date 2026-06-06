@@ -33,11 +33,9 @@ Why this exists, and the rules it follows (from the issue #37 decision):
    (repo-relative) location set, because the product `family_id` is NOT unique (distinct
    families can share one id); family_id is compared as an attribute and is itself a
    drift signal. We also compare unit kind, mean_lines / span size, location count, and
-   product JSON byte size. There is a forward-compatible hook for
-   `fragment_kind` / `reason_code`, but it is INERT today: #33 has merged yet the product
-   scan JSON still serializes only `kind` per location, so those counts stay empty until
-   a separate scan-JSON change exposes the fields. Until then we bucket by unit `kind`
-   (e.g. `Block`) + span size as the interim view (#35).
+   product JSON byte size. `fragment_kind` / `reason_code` are counted from product
+   scan JSON when exact-fragment locations expose them, so #45 metadata changes become
+   visible as bucket drift instead of hiding inside generic `Block` counts.
 
 6. Durable artifacts live next to this script in `bench/type4/scan_regression/`:
    `subset.json` (the small subset), `baseline.v1.json` (the recorded baseline),
@@ -238,9 +236,8 @@ def _span_bucket(mean_lines: int) -> str:
 
 def _count_meta(obj: dict, key: str, sink: dict) -> None:
     """Count a forward-compatible metadata field (fragment_kind / reason_code) wherever
-    it appears. INERT today: although #33 has merged, the product scan JSON still
-    serializes only `kind` per location, so these stay empty until a separate scan-JSON
-    change exposes the fields — at which point this lights up with no code change."""
+    it appears. The product scan path emits these for exact-fragment locations; older
+    baselines that lack the fields naturally count as empty buckets."""
     val = obj.get(key)
     if isinstance(val, str):
         sink[val] = sink.get(val, 0) + 1
