@@ -35,13 +35,18 @@ at acceptance time (context-safety, exit).
 ### 2. The contract — `FragmentContract`
 
 A recognizer-independent description of one fragment: its free **inputs** (the canonical ids
-it reads), its **exit** (normal / return / throw), its observable **effect**, and the write
-**place** for heap-mutating shapes. Two fragments with the same contract are interchangeable
-to the oracle regardless of which predicate matched them.
+it reads), its **exit** (normal / return / throw), and its **effects** — an *ordered sequence*
+of observable effects, each paired with the write **place** for the receiver-bearing ones. The
+sequence is empty for a pure value/control sink (a direct return/throw), one entry for a
+single-statement write, and several — in execution order — for a multi-statement body (a
+conditional branch, a loop body, an ordered effect sequence). Two fragments with the same
+contract are interchangeable to the oracle regardless of which predicate matched them.
 
 The contract carries only what the oracle needs to build a runnable wrapper. That is the
 forcing function: **a contract that cannot be lowered into a wrapper is underspecified**, so
-the model cannot drift into describing fragments the oracle can't vouch for.
+the model cannot drift into describing fragments the oracle can't vouch for. The
+`writes_proven` check is the fail-closed gate over the effect sequence: every field write must
+resolve to a proven [`Place`] (an append/index write carries no such obligation).
 
 ### 3. The oracle — wrapper synthesis
 
@@ -54,7 +59,18 @@ battery whole functions use.
 
 Because `Behavior` already records effects and field state, **effects are preserved as
 observable behavior for free**: appending to a parameter list shows up in the effect trace,
-so two append fragments that append different values diverge without any special handling.
+so two append fragments that append different values diverge without any special handling. A
+multi-statement body is lowered by splicing its statements into the wrapper body in order, so
+an ordered effect sequence (e.g. two appends) is observed in order — swapping them diverges.
+
+The wrapper's parameters are the fragment's **free inputs**, computed binding-aware: a cid
+read from the enclosing scope is an input, but one *bound within* the fragment — a local
+assigned before use, a `for-each` loop variable, a nested lambda parameter — is not, because
+the interpreter binds it as the wrapper runs. (The binding model mirrors alpha-renaming's.)
+This is what lets loop- and temp-bearing bodies be modeled at all: treating a loop variable as
+a parameter would inflate the arity and feed it a battery value the loop immediately
+overwrites. Omitting a genuine input only ever under-reports — an unbound read makes the
+wrapper uninterpretable (fail-closed), never a false merge.
 
 ## The effect algebra
 
@@ -75,13 +91,14 @@ special case, but a consequence of the algebra.
 
 ## Place — receiver identity, fail-closed
 
-A write target resolves to a `Place`: `This`, `Param(cid)`, `LocalAlloc(id)`, a `Field` or
-`Index` path over another place, or `Unknown`. The cardinal rule is that **`Unknown` is the
-default**: any receiver that does not resolve to a proven place is `Unknown`, and a write that
-*requires* a proven place (a field write) through an `Unknown` receiver is rejected, never
-merged. An index write whose base is unproven (e.g. a Java instance field) still resolves —
-to `Index(Unknown, …)` — and stays safe, because an index write is observable in the effect
-trace and so carries no receiver-identity obligation.
+A receiver-bearing write resolves its target to a `Place`: `This`, `Param(cid)`,
+`LocalAlloc(id)`, a `Field` or `Index` path over another place, or `Unknown`. The cardinal
+rule is that **`Unknown` is the default**: any receiver that does not resolve to a proven place
+is `Unknown`, and a field write through an `Unknown` receiver is rejected, never merged. A
+`Place` is recorded on the contract *only* for effects that need this proof — i.e. field
+writes. An index write carries no place at all: it is observable in the effect trace (key and
+value are recorded), so its receiver identity is irrelevant to soundness, and conflating its
+target into the contract would mix proof with diagnostics.
 
 This folds the former Java `this.field` special case into the general model: `this.x = v`
 resolves to `Field(This, …)`, and the recognizer asserts the place is exact-safe.
@@ -96,6 +113,28 @@ contract path accept **exactly the same `(span, kind)` set** for migrated kinds,
 `debug_assert` in the collector cross-checks the forward direction on every accepted fragment
 across the whole fixture corpus. A migration step that changes which fragments are accepted
 fails the gate — that is what keeps the re-expression behavior-invariant.
+
+## Migrated kinds, and what remains
+
+The predicate path in `units.rs` is still the **production authority**: it decides which
+fragments are accepted. The contract path is an independent shadow recognizer, kept in lockstep
+by the differential gate above. Migrating a kind means re-expressing it on the contract path
+and adding it to that gate — it does **not** change production output.
+
+| `FragmentKind` | contract-migrated? |
+|---|---|
+| `DirectReturn`, `DirectThrow` | yes — value/control sinks |
+| `IndexAssignEffect`, `SelfFieldAssign`, `ExprEffect` | yes — single-effect writes |
+| `ConditionalGuard` | not yet — predicate-owned |
+| `LoopEffect` | not yet — predicate-owned |
+| `SelfFieldBody` | not yet — predicate-owned |
+
+The remaining three need substrate the migrated single-statement shapes did not: binding-aware
+free inputs (loop variables, branch-local temps), an ordered multi-effect sequence, and
+multi-statement wrapper lowering. Those capabilities are now in place (described above); the
+kinds migrate onto them one at a time, each behind the differential gate, in follow-up work.
+The interim "branch-local temp" and "ordered multi-effect" shapes are proof mechanisms *inside*
+those three kinds, not new `FragmentKind` variants or reason codes.
 
 ## What stays closed
 
