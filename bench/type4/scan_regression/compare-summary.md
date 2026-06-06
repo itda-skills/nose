@@ -1,15 +1,16 @@
 # Scan-regression compare summary
 
 > Investigation triggers, not merge blockers (issue #37, rule 7).
+> Artifact identity: current `source_git_describe` / `build_ref` name the checkout and binary that generated this report. If the report is committed after generation, those refs intentionally point at the generator commit, not at the later artifact commit.
 
 ## Binaries
 
 | | baseline | current |
 |---|---|---|
 | version | `nose 0.5.0` | `nose 0.5.0` |
-| sha256 | `00511c77fdb0f5878deed159594e9970e2e83914fc71035440324e435ecc212d` | `00511c77fdb0f5878deed159594e9970e2e83914fc71035440324e435ecc212d` |
-| source_git_describe | `v0.5.0-185-ga592075` | `v0.5.0-187-gef8f439` |
-| build_ref | `issue-51@a592075` | `issue-51@ef8f439` |
+| sha256 | `bdd103dfc3e3e3d26545c2aac04049dbeb5aa8250fb84567829ffcfe6040f079` | `bdd103dfc3e3e3d26545c2aac04049dbeb5aa8250fb84567829ffcfe6040f079` |
+| source_git_describe | `v0.5.0-188-gcb0c549` | `v0.5.0-189-g12ec95e` |
+| build_ref | `issue-51-generator@cb0c549` | `issue-51-generator@12ec95e` |
 
 **Note: identical binary sha256 — any output/runtime delta below is environment noise, not a code change.**
 
