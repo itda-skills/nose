@@ -34,10 +34,11 @@ Why this exists, and the rules it follows (from the issue #37 decision):
    families can share one id); family_id is compared as an attribute and is itself a
    drift signal. We also compare unit kind, mean_lines / span size, location count,
    product JSON byte size, fragment product-surface placement, all-fragment vs mixed
-   family shape, fragment span buckets, and enclosing-unit recovery. `fragment_kind` /
-   `reason_code` are counted from product scan JSON when exact-fragment locations expose
-   them, so #45 metadata changes become visible as bucket drift instead of hiding inside
-   generic `Block` counts.
+   family shape, fragment span buckets, enclosing-unit recovery, and family-local
+   `fragment_kind` / `reason_code` summaries. `fragment_kind` / `reason_code` are
+   counted from product scan JSON when exact-fragment locations expose them, so #45
+   metadata changes become visible as bucket drift instead of hiding inside generic
+   `Block` counts.
 
 6. Durable artifacts live next to this script in `bench/type4/scan_regression/`:
    `subset.json` (the small subset), `baseline.v1.json` (the recorded baseline),
@@ -371,6 +372,10 @@ def canonicalize(scan_json: dict, repo: Path) -> dict:
         family_shape, fragment_count = _family_shape(locs)
         _inc(family_shape_counts, family_shape)
         fam_kinds: dict[str, int] = {}
+        fam_fragment_kind_counts: dict[str, int] = {}
+        fam_reason_code_counts: dict[str, int] = {}
+        fam_fragment_kind_surface_counts: dict[str, int] = {}
+        fam_reason_code_surface_counts: dict[str, int] = {}
         fam_fragment_line_span_buckets: dict[str, int] = {}
         fam_fragment_token_span_buckets: dict[str, int] = {}
         fam_enclosing_recovery = {"recovered": 0, "missing": 0}
@@ -380,13 +385,17 @@ def canonicalize(scan_json: dict, repo: Path) -> dict:
             fam_kinds[k] = fam_kinds.get(k, 0) + 1
             _count_meta(loc, "fragment_kind", fragment_kind_counts)
             _count_meta(loc, "reason_code", reason_code_counts)
+            _count_meta(loc, "fragment_kind", fam_fragment_kind_counts)
+            _count_meta(loc, "reason_code", fam_reason_code_counts)
             if _is_fragment_location(loc):
                 fragment_kind = loc.get("fragment_kind")
                 if isinstance(fragment_kind, str):
                     _inc(fragment_kind_surface_counts, f"{fragment_kind}|{surface}")
+                    _inc(fam_fragment_kind_surface_counts, f"{fragment_kind}|{surface}")
                 reason_code = loc.get("reason_code")
                 if isinstance(reason_code, str):
                     _inc(reason_code_surface_counts, f"{reason_code}|{surface}")
+                    _inc(fam_reason_code_surface_counts, f"{reason_code}|{surface}")
 
                 line_span = _line_span_of(loc)
                 line_bucket = _span_bucket(line_span) if line_span is not None else "<missing>"
@@ -405,6 +414,8 @@ def canonicalize(scan_json: dict, repo: Path) -> dict:
                 _inc(fam_enclosing_recovery, recovery)
         _count_meta(fam, "fragment_kind", fragment_kind_counts)
         _count_meta(fam, "reason_code", reason_code_counts)
+        _count_meta(fam, "fragment_kind", fam_fragment_kind_counts)
+        _count_meta(fam, "reason_code", fam_reason_code_counts)
 
         mean_lines = int(fam.get("mean_lines", 0))
         bucket = _span_bucket(mean_lines)
@@ -424,6 +435,14 @@ def canonicalize(scan_json: dict, repo: Path) -> dict:
             "location_count": len(locs),
             "fragment_location_count": fragment_count,
             "kinds": dict(sorted(fam_kinds.items())),
+            "fragment_kind_counts": dict(sorted(fam_fragment_kind_counts.items())),
+            "reason_code_counts": dict(sorted(fam_reason_code_counts.items())),
+            "fragment_kind_surface_counts": dict(
+                sorted(fam_fragment_kind_surface_counts.items())
+            ),
+            "reason_code_surface_counts": dict(
+                sorted(fam_reason_code_surface_counts.items())
+            ),
             "fragment_line_span_buckets": dict(sorted(fam_fragment_line_span_buckets.items())),
             "fragment_token_span_buckets": dict(sorted(fam_fragment_token_span_buckets.items())),
             "enclosing_unit_recovery": dict(sorted(fam_enclosing_recovery.items())),
@@ -612,6 +631,10 @@ def compare_repo(repo_id: str, base: dict, cur: dict) -> dict:
             "family_shape",
             "fragment_location_count",
             "kinds",
+            "fragment_kind_counts",
+            "reason_code_counts",
+            "fragment_kind_surface_counts",
+            "reason_code_surface_counts",
             "fragment_line_span_buckets",
             "fragment_token_span_buckets",
             "enclosing_unit_recovery",
@@ -626,7 +649,7 @@ def compare_repo(repo_id: str, base: dict, cur: dict) -> dict:
     if added or removed:
         triggers.append(f"family set: +{len(added)} / -{len(removed)}")
     if changed:
-        triggers.append(f"{len(changed)} family(ies) changed shape")
+        triggers.append(f"{len(changed)} family(ies) changed shape/metadata")
 
     # Product JSON byte-size drift (rule 5).
     ba, ca = bo["product_json_bytes"], co["product_json_bytes"]
@@ -677,6 +700,12 @@ def compare_repo(repo_id: str, base: dict, cur: dict) -> dict:
 def render_summary(ident_base: dict, ident_cur: dict, results: list[dict], skipped: list[str]) -> str:
     lines = ["# Scan-regression compare summary", ""]
     lines.append("> Investigation triggers, not merge blockers (issue #37, rule 7).")
+    lines.append(
+        "> Artifact identity: current `source_git_describe` / `build_ref` name the "
+        "checkout and binary that generated this report. If the report is committed "
+        "after generation, those refs intentionally point at the generator commit, "
+        "not at the later artifact commit."
+    )
     lines.append("")
     lines.append("## Binaries")
     lines.append("")
@@ -893,6 +922,81 @@ def _sample_scan_json() -> dict:
     }
 
 
+def _balanced_swap_scan_json() -> dict:
+    return {
+        "schema_version": 1,
+        "tool_version": "nose test",
+        "scope": {"files": 4, "languages": [{"language": "python", "files": 4}]},
+        "ranking": {"total_families": 2, "shown_families": 2, "limit": None},
+        "families": [
+            {
+                "family_id": "hidden-guard",
+                "recommended_surface": "hidden",
+                "members": 2,
+                "files": 2,
+                "languages": 1,
+                "mean_lines": 2,
+                "locations": [
+                    {
+                        "file": "guard_a.py",
+                        "start_line": 4,
+                        "end_line": 5,
+                        "kind": "Block",
+                        "span_lines": 2,
+                        "span_tokens": 12,
+                        "is_fragment": True,
+                        "fragment_kind": "conditional-guard",
+                        "reason_code": "exact-conditional-guard",
+                    },
+                    {
+                        "file": "guard_b.py",
+                        "start_line": 4,
+                        "end_line": 5,
+                        "kind": "Block",
+                        "span_lines": 2,
+                        "span_tokens": 12,
+                        "is_fragment": True,
+                        "fragment_kind": "conditional-guard",
+                        "reason_code": "exact-conditional-guard",
+                    },
+                ],
+            },
+            {
+                "family_id": "hidden-return",
+                "recommended_surface": "hidden",
+                "members": 2,
+                "files": 2,
+                "languages": 1,
+                "mean_lines": 2,
+                "locations": [
+                    {
+                        "file": "return_a.py",
+                        "start_line": 8,
+                        "end_line": 9,
+                        "kind": "Block",
+                        "span_lines": 2,
+                        "span_tokens": 12,
+                        "is_fragment": True,
+                        "fragment_kind": "direct-return",
+                        "reason_code": "exact-direct-return",
+                    },
+                    {
+                        "file": "return_b.py",
+                        "start_line": 8,
+                        "end_line": 9,
+                        "kind": "Block",
+                        "span_lines": 2,
+                        "span_tokens": 12,
+                        "is_fragment": True,
+                        "fragment_kind": "direct-return",
+                        "reason_code": "exact-direct-return",
+                    },
+                ],
+            },
+        ],
+    }
+
+
 def _with_runtime(output: dict) -> dict:
     return {
         "output": output,
@@ -953,6 +1057,29 @@ def cmd_selftest(_args: argparse.Namespace) -> int:
         {"missing": 1, "recovered": 2},
         "enclosing-unit recovery counts",
     )
+    hidden_family = next(
+        f for f in canon["families"].values() if f["family_id"] == "hidden-frag"
+    )
+    _assert_eq(
+        hidden_family["fragment_kind_counts"],
+        {"conditional-guard": 2},
+        "family-local fragment kind counts",
+    )
+    _assert_eq(
+        hidden_family["reason_code_counts"],
+        {"exact-conditional-guard": 2},
+        "family-local reason code counts",
+    )
+    _assert_eq(
+        hidden_family["fragment_kind_surface_counts"],
+        {"conditional-guard|hidden": 2},
+        "family-local fragment kind by surface counts",
+    )
+    _assert_eq(
+        hidden_family["reason_code_surface_counts"],
+        {"exact-conditional-guard|hidden": 2},
+        "family-local reason code by surface counts",
+    )
 
     surface_changed = json.loads(json.dumps(canon))
     surface_changed["recommended_surface_counts"]["hidden"] += 1
@@ -964,8 +1091,38 @@ def cmd_selftest(_args: argparse.Namespace) -> int:
     first_family = next(iter(family_changed["families"].values()))
     first_family["recommended_surface"] = "review"
     result = compare_repo("sample", _with_runtime(canon), _with_runtime(family_changed))
-    if not any("family(ies) changed shape" in t for t in result["triggers"]):
+    if not any("family(ies) changed shape/metadata" in t for t in result["triggers"]):
         raise AssertionError(f"family-level surface drift was not reported: {result['triggers']}")
+
+    balanced = _balanced_swap_scan_json()
+    swapped = json.loads(json.dumps(balanced))
+    for loc in swapped["families"][0]["locations"]:
+        loc["fragment_kind"] = "direct-return"
+        loc["reason_code"] = "exact-direct-return"
+    for loc in swapped["families"][1]["locations"]:
+        loc["fragment_kind"] = "conditional-guard"
+        loc["reason_code"] = "exact-conditional-guard"
+    balanced_canon = canonicalize(balanced, Path("/tmp/nose-scan-regression-selftest"))
+    swapped_canon = canonicalize(swapped, Path("/tmp/nose-scan-regression-selftest"))
+    _assert_eq(
+        swapped_canon["fragment_kind_surface_counts"],
+        balanced_canon["fragment_kind_surface_counts"],
+        "balanced swap global fragment kind by surface counts",
+    )
+    _assert_eq(
+        swapped_canon["reason_code_surface_counts"],
+        balanced_canon["reason_code_surface_counts"],
+        "balanced swap global reason code by surface counts",
+    )
+    result = compare_repo(
+        "balanced-swap",
+        _with_runtime(balanced_canon),
+        _with_runtime(swapped_canon),
+    )
+    if not any("family(ies) changed shape/metadata" in t for t in result["triggers"]):
+        raise AssertionError(
+            f"family-local fragment metadata drift was not reported: {result['triggers']}"
+        )
 
     print("selftest OK")
     return 0

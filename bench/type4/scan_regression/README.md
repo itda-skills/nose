@@ -86,9 +86,10 @@ main worktree or any other path you pass to `--repos-root`. Per repo we record a
   `family_id` is not unique; distinct families can share one id, so keying on it would
   silently drop a family): `family_id` (kept as an attribute and a drift signal),
   `members`, `location_count`, `mean_lines`, `recommended_surface`, family shape,
-  fragment count, per-kind counts, fragment-only span buckets, enclosing-unit recovery,
-  and the sorted locations. `distinct_location_sets` is recorded so a true location-set
-  collision would surface rather than collapse silently.
+  fragment count, per-kind counts, family-local fragment kind/reason-code counts,
+  family-local kind/reason-by-surface counts, fragment-only span buckets,
+  enclosing-unit recovery, and the sorted locations. `distinct_location_sets` is
+  recorded so a true location-set collision would surface rather than collapse silently.
 - `fragment_kind_counts` / `reason_code_counts` — exact-fragment metadata buckets from
   product scan JSON. #45 makes these live for current output, so fragment/reason drift is
   visible separately from generic `Block` counts.
@@ -104,6 +105,13 @@ main worktree or any other path you pass to `--repos-root`. Per repo we record a
 These #51 C1 metrics are computed by the harness from stable scan JSON. They do not add
 new scan JSON fields and do not change detector acceptance, ranking, or `--top 0`
 visibility.
+
+Family-local fragment metadata is intentional. Global fragment/reason buckets catch
+overall distribution drift, but they cannot catch a balanced swap where two families keep
+the same `recommended_surface` and the repo-wide buckets stay identical while each
+family's exact proof shape changes. The per-family records therefore include
+`fragment_kind_counts`, `reason_code_counts`, `fragment_kind_surface_counts`, and
+`reason_code_surface_counts`, and `compare` treats those as family drift.
 
 `baseline` runs each repo `runtime_repeats` times and asserts the canonical output is
 **identical across runs** on one binary — a determinism guard. A mismatch aborts before
@@ -123,6 +131,16 @@ comparison, record the baseline and run `compare` **on the same machine**: build
 baseline, the summary says so explicitly and any delta is environment noise. The
 committed `baseline.v1.json` runtime numbers are a snapshot from one machine; the
 **output drift** in it is portable, the **runtime** is not.
+
+## Compare summary identity
+
+`compare-summary.md` is a committed generated report. Its `current` `source_git_describe`
+and `build_ref` identify the checkout and binary that generated the report, not
+necessarily the later commit that stores the markdown. This avoids a self-referential
+hash: if the report recorded the artifact commit itself, committing the report would
+change the commit hash it claims to contain. For committed summaries, use an explicit
+generator label such as `issue-51-generator@<sha>` or `main@<sha>` and treat that as the
+reproducible input identity.
 
 Cache performance is a **separate** mode that never feeds the baseline:
 
