@@ -453,6 +453,212 @@ fn java_stream_flat_map_converges_with_python_comprehension() {
 }
 
 #[test]
+fn rust_vec_new_builder_loop_converges_with_flat_map() {
+    // `out = Vec::new()`-seeded builder loops now enter the exact channel like `[]`-seeded
+    // ones: `Vec::new()` is the empty vector (the value graph already models it as an empty
+    // Seq), so the exact-safe gate recognizes it. A nested flatten builder loop converges with
+    // `.flat_map(|xs| xs.iter().map(...))`; a changed inner element stays a hard negative.
+    let i = Interner::new();
+    let builder = "pub fn f(xss: &[Vec<i64>]) -> Vec<i64> { let mut out = Vec::new(); for xs in xss { for y in xs { out.push(*y); } } out }";
+    let flat = "pub fn f(xss: &[Vec<i64>]) -> Vec<i64> { xss.iter().flat_map(|xs| xs.iter().map(|y| *y)).collect() }";
+    let changed = "pub fn f(xss: &[Vec<i64>]) -> Vec<i64> { xss.iter().flat_map(|xs| xs.iter().map(|y| y + 1)).collect() }";
+    let bfp = value_fp(&i, builder, Lang::Rust);
+    assert_eq!(
+        bfp,
+        value_fp(&i, flat, Lang::Rust),
+        "rust Vec::new() builder loop must converge with flat_map"
+    );
+    assert_ne!(
+        bfp,
+        value_fp(&i, changed, Lang::Rust),
+        "a changed inner element (y + 1) stays a hard negative"
+    );
+}
+
+#[test]
+fn rust_recursion_converges_with_iteration_via_return_unwrap() {
+    // Numeric structural recursion `fac(n) = n*fac(n-1)` (base 1) converges with its
+    // accumulator loop — now in Rust too. Rust lowers `return e;` wrapped in `ExprStmt`, which
+    // used to hide the bare-`Return` shape `recursion::recognize` matches on; desugar now
+    // unwraps `ExprStmt(Return|Throw)`, so the recursion→iteration canon fires uniformly and
+    // converges cross-language with the Python loop. The sum monoid stays a hard negative.
+    let i = Interner::new();
+    let py_loop = "def fac(n):\n    acc = 1\n    while n != 0:\n        acc = acc * n\n        n = n - 1\n    return acc\n";
+    let rust_rec = "pub fn fac(n: i64) -> i64 { if n == 0 { return 1; } return n * fac(n - 1); }";
+    let rust_loop = "pub fn fac(mut n: i64) -> i64 { let mut acc = 1; while n != 0 { acc = acc * n; n = n - 1; } return acc; }";
+    let sum_loop = "def g(n):\n    acc = 0\n    while n != 0:\n        acc = acc + n\n        n = n - 1\n    return acc\n";
+    let fold_fp = value_fp(&i, py_loop, Lang::Python);
+    assert_eq!(
+        fold_fp,
+        value_fp(&i, rust_rec, Lang::Rust),
+        "rust recursion must converge cross-language with the python accumulator loop"
+    );
+    assert_eq!(
+        value_fp(&i, rust_rec, Lang::Rust),
+        value_fp(&i, rust_loop, Lang::Rust),
+        "rust recursion must converge with the rust accumulator loop"
+    );
+    assert_ne!(
+        fold_fp,
+        value_fp(&i, sum_loop, Lang::Python),
+        "the sum monoid (acc + n, base 0) must stay a hard negative"
+    );
+}
+
+#[test]
+fn ruby_shovel_builder_loop_converges_with_comprehension() {
+    // Ruby builds a list with `out = []; xs.each { |x| out << e }` — `<<` lowers to `Shl`.
+    // Recognizing `out << e` as the per-element build (scoped to Ruby AND the empty-Seq seed,
+    // so integer `a << b` shift never enters) makes it converge with the Python comprehension.
+    let i = Interner::new();
+    let py_comp = "def f(xs):\n    return [x * x for x in xs]\n";
+    let ruby_build = "def f(xs)\n  out = []\n  xs.each { |x| out << x * x }\n  out\nend\n";
+    let ruby_diff = "def f(xs)\n  out = []\n  xs.each { |x| out << x + 1 }\n  out\nend\n";
+    let comp_fp = value_fp(&i, py_comp, Lang::Python);
+    assert_eq!(
+        comp_fp,
+        value_fp(&i, ruby_build, Lang::Ruby),
+        "ruby << builder loop must converge with the python comprehension"
+    );
+    assert_ne!(
+        comp_fp,
+        value_fp(&i, ruby_diff, Lang::Ruby),
+        "a different per-element contribution must stay distinct"
+    );
+}
+
+#[test]
+fn java_arraylist_add_builder_loop_converges_with_comprehension() {
+    // Java builds a list with `List<T> out = new ArrayList<>(); for (…) out.add(e); return out`.
+    // Modeling `new ArrayList<>()` as the empty `array` Seq and `out.add(e)` as the per-element
+    // build (scoped by the empty-Seq seed — so overloaded `.add` on a Set/BigInteger never
+    // enters) makes the Java builder loop converge with the Python comprehension. A different
+    // contribution stays a hard negative.
+    let i = Interner::new();
+    let py_comp = "def f(xs):\n    return [x * x for x in xs]\n";
+    let java_build = "import java.util.*;\nclass C { static List<Integer> f(int[] xs) { List<Integer> out = new ArrayList<>(); for (int x : xs) { out.add(x * x); } return out; } }\n";
+    let java_build_diff = "import java.util.*;\nclass C { static List<Integer> f(int[] xs) { List<Integer> out = new ArrayList<>(); for (int x : xs) { out.add(x + 1); } return out; } }\n";
+    let comp_fp = value_fp(&i, py_comp, Lang::Python);
+    assert_eq!(
+        comp_fp,
+        value_fp(&i, java_build, Lang::Java),
+        "java ArrayList+add builder loop must converge with the python comprehension"
+    );
+    assert_ne!(
+        comp_fp,
+        value_fp(&i, java_build_diff, Lang::Java),
+        "a different per-element contribution must stay distinct"
+    );
+}
+
+#[test]
+fn go_functional_append_builder_loop_converges_with_comprehension() {
+    // Go builds a list with `out := []T{}; for … { out = append(out, e) }` — a FUNCTIONAL
+    // append (reassignment), not the effect-form `out.append(e)` of Python/JS. Recognizing the
+    // `r = append(r, e)` reassign as the same per-element `Map` build (and excluding the builder
+    // var from numeric loop-carried seeding) makes the Go builder loop converge with the Python
+    // comprehension. The changed-contribution form stays a hard negative.
+    let i = Interner::new();
+    let py_comp = "def f(xs):\n    return [x * x for x in xs]\n";
+    let go_build = "package p\nfunc f(xs []int) []int {\n\tout := []int{}\n\tfor _, x := range xs {\n\t\tout = append(out, x*x)\n\t}\n\treturn out\n}\n";
+    let go_build_diff = "package p\nfunc f(xs []int) []int {\n\tout := []int{}\n\tfor _, x := range xs {\n\t\tout = append(out, x+1)\n\t}\n\treturn out\n}\n";
+    let comp_fp = value_fp(&i, py_comp, Lang::Python);
+    assert_eq!(
+        comp_fp,
+        value_fp(&i, go_build, Lang::Go),
+        "go functional-append builder loop must converge with the python comprehension"
+    );
+    assert_ne!(
+        comp_fp,
+        value_fp(&i, go_build_diff, Lang::Go),
+        "a different per-element contribution must stay distinct"
+    );
+}
+
+#[test]
+fn go_slice_literal_converges_with_array_but_struct_stays_distinct() {
+    // A Go slice literal `[]int{1,2,3}` is an ordered sequence — it converges with a Python
+    // list / JS array. A Go STRUCT literal `Point{1,2,3}` is a record, NOT a collection, and
+    // must stay distinct (no `Point{1,2,3}` ≡ `[1,2,3]` false merge). Tagging composite
+    // literals by type (slice/array → `array`, map → `composite_literal`, struct → `go_struct`)
+    // removes the old blanket tag that collapsed all three to one value.
+    let i = Interner::new();
+    let py_list = "def f():\n    return [1, 2, 3]\n";
+    let go_slice = "package p\nfunc f() []int { return []int{1, 2, 3} }\n";
+    let go_struct =
+        "package p\ntype Point struct{ x, y, z int }\nfunc f() Point { return Point{1, 2, 3} }\n";
+    let list_fp = value_fp(&i, py_list, Lang::Python);
+    assert_eq!(
+        list_fp,
+        value_fp(&i, go_slice, Lang::Go),
+        "go slice literal must converge with the python list literal"
+    );
+    assert_ne!(
+        list_fp,
+        value_fp(&i, go_struct, Lang::Go),
+        "a go struct literal must stay distinct from a list (it is a record, not a collection)"
+    );
+}
+
+#[test]
+fn pure_method_recursion_converges_with_iteration() {
+    // Ruby `def` and Java methods are admitted to the recursion→iteration canon when their
+    // body has no receiver/field access (a pure numeric fold), so `fac(n) = n*fac(n-1)`
+    // converges cross-language with the accumulator loop. The sum monoid stays a hard negative.
+    let i = Interner::new();
+    let py_loop = "def fac(n):\n    acc = 1\n    while n != 0:\n        acc = acc * n\n        n = n - 1\n    return acc\n";
+    let java_rec =
+        "class C { static int fac(int n) { if (n == 0) { return 1; } return n * fac(n - 1); } }";
+    let ruby_rec = "def fac(n)\n  return 1 if n == 0\n  n * fac(n - 1)\nend\n";
+    let sum_loop = "def g(n):\n    acc = 0\n    while n != 0:\n        acc = acc + n\n        n = n - 1\n    return acc\n";
+    let fold = value_fp(&i, py_loop, Lang::Python);
+    assert_eq!(
+        fold,
+        value_fp_named(&i, java_rec, Lang::Java, "fac"),
+        "java pure method recursion must converge with the accumulator loop"
+    );
+    assert_eq!(
+        fold,
+        value_fp_named(&i, ruby_rec, Lang::Ruby, "fac"),
+        "ruby method recursion must converge with the accumulator loop"
+    );
+    assert_ne!(
+        fold,
+        value_fp(&i, sum_loop, Lang::Python),
+        "the sum monoid (acc + n, base 0) must stay a hard negative"
+    );
+}
+
+#[test]
+fn flatmap_identity_converges_with_inner_map_and_flatten_loop() {
+    // `xss.flatMap(xs => xs)` (identity inner) is `flatten`, equal to the explicit
+    // inner-identity-map `xss.flatMap(xs => xs.map(y => y))` and to the nested builder loop —
+    // the monad law `flatMap id = join` (`map id = id` on each sublist, so every emitted
+    // element is unchanged). A changed inner element stays a hard negative.
+    let i = Interner::new();
+    let identity = "function f(xss){ return xss.flatMap(xs => xs); }";
+    let inner_map = "function f(xss){ return xss.flatMap(xs => xs.map(y => y)); }";
+    let builder = "function f(xss){ const out = []; for (const xs of xss) { for (const y of xs) { out.push(y); } } return out; }";
+    let changed = "function f(xss){ return xss.flatMap(xs => xs.map(y => y + 1)); }";
+    let id_fp = value_fp(&i, identity, Lang::JavaScript);
+    assert_eq!(
+        id_fp,
+        value_fp(&i, inner_map, Lang::JavaScript),
+        "flatMap(id) must converge with flatMap(x => x.map(y => y))"
+    );
+    assert_eq!(
+        id_fp,
+        value_fp(&i, builder, Lang::JavaScript),
+        "flatMap(id) must converge with the nested builder loop (flatten)"
+    );
+    assert_ne!(
+        id_fp,
+        value_fp(&i, changed, Lang::JavaScript),
+        "a changed inner element (y + 1) must stay distinct (hard negative)"
+    );
+}
+
+#[test]
 fn ruby_select_reduce_converges_with_guarded_loop() {
     // Ruby `select { p }.reduce(init) { |a, x| ... }` is the same filtered fold as
     // a guarded `each` accumulator loop. The changed seed remains a hard negative.

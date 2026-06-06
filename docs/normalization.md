@@ -21,7 +21,10 @@
 > `Some(value)`/`None` callbacks and guarded `Vec::new()`/`push` builders, first-class
 > **flat-map** modeling for Python
 > multi-clause comprehensions, JS `.flatMap`, pure Java `Arrays.stream(...).flatMap(...map...)`,
-> equivalent nested list-builder loops, and pure inner-Map aggregate consumers such as
+> equivalent nested list-builder loops, **identity flat-map `flatMap(λx. x)` canonicalized to
+> the modeled element-stream inner (the monad law `flatMap id = join`; proven in
+> `normalize.value_graph.flatmap_identity`), so it converges with the nested builder loop and
+> the explicit inner-identity-map form**, and pure inner-Map aggregate consumers such as
 > sum/max/any over flat-map streams versus nested reduction loops when the contribution
 > uses the outer element (kept distinct from nested-list comprehensions, Java stream
 > `map` returning streams, wrong reduction seeds, outer-cardinality-only cases, and
@@ -60,6 +63,10 @@
 > (commutative + associative; identities `0`/`1`) with the base returning that identity
 > literal; the interpreter now executes self-recursion so `nose verify` interprets the
 > pre-canon recursive form and validates the rewrite (see *Recursion → iteration* below).
+> `desugar` unwraps `ExprStmt(Return|Throw)` to the bare statement, so languages whose
+> `return`/`throw` are expressions (Rust, …) present the same bare-`Return` shape the
+> recognizer matches — recursion→iteration now fires uniformly for standalone functions in
+> those languages too (it previously fired only where returns were already bare, e.g. Python).
 > Soundness enforced by the independent interpreter oracle + canon-preservation check
 > (`nose verify`) and Lean proof obligations (`formal/obligations`, incl.
 > `NoseAlgebra.distrib_sound`, `NoseFunctor.filter_fusion`,

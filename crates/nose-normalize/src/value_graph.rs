@@ -2800,16 +2800,86 @@ impl<'a> Builder<'a> {
     /// If `e` is a single-item `append(r, item)` to an ACTIVE builder var `r`, record the
     /// per-element contribution under the current path guard and return true (the append IS
     /// the build, not an effect). A multi-item form spoils the builder.
-    fn try_record_append(&mut self, e: NodeId, env: &mut FxHashMap<u32, ValueId>) -> bool {
-        if self.il.kind(e) != NodeKind::Call
-            || !matches!(self.il.node(e).payload, Payload::Builtin(Builtin::Append))
+    /// Recognize the two effect-append shapes to a var `r`, returning `(r_cid, item_args)`:
+    ///   • the canonical `Append(Var r, items…)` — Python/JS `.append`/`.push`, lowered by idioms;
+    ///   • Java's `r.add(item…)` List method call — `Call(Field("add", Var r), items…)`.
+    /// The caller spoils on `!= 1` item. The Java `.add` is recognized only structurally here;
+    /// it becomes a *build* only via `builder_candidates`' empty-Seq-seed gate, which is satisfied
+    /// only by `[]` / `new ArrayList<>()` — so overloaded `.add` (BigInteger, Set, `.add(i, x)`)
+    /// never enters the Map build.
+    fn list_append_parts(&self, e: NodeId) -> Option<(u32, Vec<NodeId>)> {
+        // Ruby `r << item` appends to a list (`<<` lowers to `Shl`, a BinOp not a Call). Scoped
+        // to Ruby and — via `builder_candidates`' empty-Seq-seed gate — to a `[]`-seeded builder,
+        // so integer `a << b` shift (`a` is not a list-builder) never enters the Map build.
+        if self.il.meta.lang == Lang::Ruby
+            && self.il.kind(e) == NodeKind::BinOp
+            && matches!(self.il.node(e).payload, Payload::Op(Op::Shl))
         {
-            return false;
+            if let [recv, item] = self.il.children(e) {
+                if let (NodeKind::Var, Payload::Cid(c)) =
+                    (self.il.kind(*recv), self.il.node(*recv).payload)
+                {
+                    return Some((c, vec![*item]));
+                }
+            }
+            return None;
+        }
+        if self.il.kind(e) != NodeKind::Call {
+            return None;
         }
         let kids = self.il.children(e).to_vec();
-        let Some(&target) = kids.first() else {
+        let &first = kids.first()?;
+        if matches!(self.il.node(e).payload, Payload::Builtin(Builtin::Append)) {
+            let (NodeKind::Var, Payload::Cid(c)) =
+                (self.il.kind(first), self.il.node(first).payload)
+            else {
+                return None;
+            };
+            return Some((c, kids[1..].to_vec()));
+        }
+        if self.il.kind(first) == NodeKind::Field {
+            if let Payload::Name(s) = self.il.node(first).payload {
+                if self.interner.resolve(s) == "add" {
+                    if let Some(&recv) = self.il.children(first).first() {
+                        if let (NodeKind::Var, Payload::Cid(c)) =
+                            (self.il.kind(recv), self.il.node(recv).payload)
+                        {
+                            return Some((c, kids[1..].to_vec()));
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn try_record_append(&mut self, e: NodeId, env: &mut FxHashMap<u32, ValueId>) -> bool {
+        let Some((c, items)) = self.list_append_parts(e) else {
             return false;
         };
+        if !self.building.contains_key(&c) {
+            return false;
+        }
+        if items.len() != 1 {
+            self.building.insert(c, None); // multi-item append — not a clean map
+            return true;
+        }
+        let contrib = self.eval(items[0], env);
+        let guard = self.path_cond();
+        self.building.insert(c, Some((contrib, guard)));
+        true
+    }
+
+    /// Go's functional append `r = append(r, item)` (an `Assign` whose RHS is `Append(r, …)`
+    /// over the same var) to an ACTIVE builder var `r` is the same single-item build as the
+    /// effect-form `r.append(item)`: record the per-element contribution under the path guard.
+    /// A multi-item `append(r, a, b)` spoils the builder, like the effect form.
+    fn try_record_reassign_append(
+        &mut self,
+        target: NodeId,
+        rhs: NodeId,
+        env: &mut FxHashMap<u32, ValueId>,
+    ) -> bool {
         let (NodeKind::Var, Payload::Cid(c)) = (self.il.kind(target), self.il.node(target).payload)
         else {
             return false;
@@ -2817,11 +2887,25 @@ impl<'a> Builder<'a> {
         if !self.building.contains_key(&c) {
             return false;
         }
-        if kids.len() != 2 {
+        if self.il.kind(rhs) != NodeKind::Call
+            || !matches!(self.il.node(rhs).payload, Payload::Builtin(Builtin::Append))
+        {
+            return false;
+        }
+        let rkids = self.il.children(rhs).to_vec();
+        // The append's receiver must be the same var being reassigned (`r = append(r, …)`).
+        let same_receiver = rkids.first().is_some_and(|&f| {
+            self.il.kind(f) == NodeKind::Var
+                && matches!(self.il.node(f).payload, Payload::Cid(fc) if fc == c)
+        });
+        if !same_receiver {
+            return false;
+        }
+        if rkids.len() != 2 {
             self.building.insert(c, None); // multi-item append — not a clean map
             return true;
         }
-        let contrib = self.eval(kids[1], env);
+        let contrib = self.eval(rkids[1], env);
         let guard = self.path_cond();
         self.building.insert(c, Some((contrib, guard)));
         true
@@ -2837,23 +2921,51 @@ impl<'a> Builder<'a> {
         let mut spoiled: FxHashSet<u32> = FxHashSet::default();
         let mut stack = vec![body];
         while let Some(n) = stack.pop() {
+            // Go functional append `r = append(r, item)`: count it as r's single build append
+            // and a single build mention (mirroring the effect form's one receiver mention),
+            // then scan ONLY `item` — the two r occurrences (assign target + append receiver)
+            // are the build, not other uses that would disqualify r.
+            if self.il.kind(n) == NodeKind::Assign {
+                if let [tgt, rhs] = self.il.children(n) {
+                    if let (NodeKind::Var, Payload::Cid(c)) =
+                        (self.il.kind(*tgt), self.il.node(*tgt).payload)
+                    {
+                        if self.il.kind(*rhs) == NodeKind::Call
+                            && matches!(
+                                self.il.node(*rhs).payload,
+                                Payload::Builtin(Builtin::Append)
+                            )
+                        {
+                            let rk = self.il.children(*rhs);
+                            let same = rk.first().is_some_and(|&f| {
+                                self.il.kind(f) == NodeKind::Var
+                                    && matches!(self.il.node(f).payload, Payload::Cid(fc) if fc == c)
+                            });
+                            if same {
+                                *mentions.entry(c).or_insert(0) += 1;
+                                if rk.len() == 2 {
+                                    *appends.entry(c).or_insert(0) += 1;
+                                    stack.push(rk[1]);
+                                } else {
+                                    spoiled.insert(c);
+                                }
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
             if let (NodeKind::Var, Payload::Cid(c)) = (self.il.kind(n), self.il.node(n).payload) {
                 *mentions.entry(c).or_insert(0) += 1;
             }
-            if self.il.kind(n) == NodeKind::Call
-                && matches!(self.il.node(n).payload, Payload::Builtin(Builtin::Append))
-            {
-                let k = self.il.children(n);
-                if let Some(&t) = k.first() {
-                    if let (NodeKind::Var, Payload::Cid(c)) =
-                        (self.il.kind(t), self.il.node(t).payload)
-                    {
-                        if k.len() == 2 {
-                            *appends.entry(c).or_insert(0) += 1;
-                        } else {
-                            spoiled.insert(c);
-                        }
-                    }
+            // An effect-form append — `r.append/push(item)` (canonical) or Java `r.add(item)` —
+            // counts as r's build append (the receiver mention is counted by the generic Var
+            // scan above / below as the node's children are walked).
+            if let Some((c, items)) = self.list_append_parts(n) {
+                if items.len() == 1 {
+                    *appends.entry(c).or_insert(0) += 1;
+                } else {
+                    spoiled.insert(c);
                 }
             }
             // A `d[k] = v` assignment is a DICT build for `d` — counted like an append, so
@@ -3526,6 +3638,13 @@ impl<'a> Builder<'a> {
             NodeKind::Assign => {
                 let kids = self.il.children(stmt).to_vec();
                 if kids.len() == 2 {
+                    // Go-style functional append `r = append(r, item)` to an ACTIVE builder var
+                    // IS the per-element build (the reassignment is the append), exactly like
+                    // the effect-form `r.append(item)`. Record the contribution so the loop
+                    // becomes `Map(elem, contrib)` instead of an opaque reassign.
+                    if self.try_record_reassign_append(kids[0], kids[1], env) {
+                        return;
+                    }
                     let rhs = self.eval(kids[1], env);
                     if self.il.kind(kids[0]) == NodeKind::Var {
                         if let Payload::Cid(c) = self.il.node(kids[0]).payload {
@@ -3870,7 +3989,21 @@ impl<'a> Builder<'a> {
 
         let mut assigned = FxHashSet::default();
         collect_assigned(self.il, body, &mut assigned);
-        let mut carried: Vec<u32> = assigned.iter().copied().collect();
+        // List-builder vars (incl. Go's `r = append(r, …)`, which makes `r` assigned) are
+        // activated as builders, NOT seeded as numeric loop-carried recurrences — otherwise a
+        // Go builder var would be both a `Loop` placeholder and a `Map` build and collapse. The
+        // seed (empty-collection) check reads the PRE-loop `env` (the real `[]` seed; the body's
+        // reassignment would otherwise hide it). Builders are excluded from `carried`.
+        let builder_cands = self.builder_candidates(body, env);
+        let builder_set: FxHashSet<u32> = builder_cands.iter().copied().collect();
+        for &c in &builder_cands {
+            self.building.insert(c, None);
+        }
+        let mut carried: Vec<u32> = assigned
+            .iter()
+            .copied()
+            .filter(|c| !builder_set.contains(c))
+            .collect();
         carried.sort_unstable();
 
         // Seed each loop-carried variable with a symbolic "previous iteration" value
@@ -3903,12 +4036,8 @@ impl<'a> Builder<'a> {
         // effects) and the carried recurrences — so indexed iteration (`while i<len`,
         // `for i in range(len)`, multi-collection `a[i]*b[i]`) matches value iteration,
         // even when the accumulation is conditional (filter+reduce) not a clean fold.
-        // Activate local list-builder vars so their in-loop `append`s record a per-element
-        // contribution instead of an opaque effect (finalized to a `Map` below).
-        let builder_cands = self.builder_candidates(body, &body_env);
-        for &c in &builder_cands {
-            self.building.insert(c, None);
-        }
+        // (List-builder vars were activated above, before `carried`, so a Go functional-append
+        // builder is excluded from numeric recurrence seeding.)
         let sink_start = self.sinks.len();
         let outer_recurrence = self.loop_recurrence.replace(LoopRecurrenceScope {
             loop_values: loop_vals.clone(),
@@ -6804,6 +6933,21 @@ impl<'a> Builder<'a> {
                                 .eval_lambda_body(l, &elems, env)
                                 .unwrap_or_else(|| self.fresh_opaque()),
                             None => self.fresh_opaque(),
+                        };
+                        // proof-obligation: normalize.value_graph.flatmap_identity
+                        // `flatMap(λx. x)` (identity inner: the lambda returns the outer
+                        // element unchanged) ≡ `flatMap(λx. map(λy. y, x))` ≡ flatten — the
+                        // monad law `flatMap id = join` / `concatMap id = concat`. Canonicalize
+                        // the identity inner to the modeled element-stream inner `Map[Elem(x)]`
+                        // so it converges with the nested builder loop and the explicit
+                        // inner-identity-map form. Sound: `map id = id` on the sublist, so every
+                        // emitted element is unchanged. A non-identity inner (`x.map(y=>y+1)`,
+                        // changed element) does not equal `outer_elem`, so it is left intact.
+                        let inner = if inner == outer_elem {
+                            let elem = self.elem(outer_elem);
+                            self.mk(ValOp::Hof(HoFKind::Map as u32), vec![elem])
+                        } else {
+                            inner
                         };
                         let mut args = vec![outer_elem, inner];
                         if let Some(p) = carried_pred {

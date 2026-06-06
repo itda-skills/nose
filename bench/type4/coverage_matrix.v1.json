@@ -1,0 +1,398 @@
+{
+  "grid": {
+    "async_sync_twin": {
+      "c": "n/a",
+      "go": "n/a",
+      "java": "n/a",
+      "javascript": "none",
+      "python": "none",
+      "ruby": "n/a",
+      "rust": "none",
+      "typescript": "none"
+    },
+    "c_u16_be_byte_pack": {
+      "c": "covered",
+      "go": "n/a",
+      "java": "n/a",
+      "javascript": "n/a",
+      "python": "n/a",
+      "ruby": "n/a",
+      "rust": "n/a",
+      "typescript": "n/a"
+    },
+    "c_u32_be_byte_pack": {
+      "c": "covered",
+      "go": "n/a",
+      "java": "n/a",
+      "javascript": "n/a",
+      "python": "n/a",
+      "ruby": "n/a",
+      "rust": "n/a",
+      "typescript": "n/a"
+    },
+    "class_literal_equality": {
+      "c": "n/a",
+      "go": "n/a",
+      "java": "unsupported",
+      "javascript": "n/a",
+      "python": "n/a",
+      "ruby": "n/a",
+      "rust": "n/a",
+      "typescript": "n/a"
+    },
+    "collection_empty_check": {
+      "c": "covered",
+      "go": "covered",
+      "java": "covered",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "covered",
+      "rust": "covered",
+      "typescript": "covered"
+    },
+    "different_algorithm_same_result": {
+      "c": "out",
+      "go": "out",
+      "java": "out",
+      "javascript": "out",
+      "python": "out",
+      "ruby": "out",
+      "rust": "out",
+      "typescript": "out"
+    },
+    "extract_method_inline": {
+      "c": "none",
+      "go": "none",
+      "java": "none",
+      "javascript": "none",
+      "python": "none",
+      "ruby": "none",
+      "rust": "none",
+      "typescript": "none"
+    },
+    "filter_fusion": {
+      "c": "none",
+      "go": "none",
+      "java": "none",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "covered",
+      "rust": "covered",
+      "typescript": "covered"
+    },
+    "flat_map": {
+      "c": "none",
+      "go": "none",
+      "java": "none",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "covered",
+      "rust": "covered",
+      "typescript": "covered"
+    },
+    "identity_value_soundness": {
+      "c": "none",
+      "go": "none",
+      "java": "none",
+      "javascript": "none",
+      "python": "none",
+      "ruby": "none",
+      "rust": "none",
+      "typescript": "none"
+    },
+    "immutable_binding": {
+      "c": "covered",
+      "go": "covered",
+      "java": "covered",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "covered",
+      "rust": "covered",
+      "typescript": "covered"
+    },
+    "import_identity": {
+      "c": "none",
+      "go": "covered",
+      "java": "covered",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "none",
+      "rust": "covered",
+      "typescript": "covered"
+    },
+    "java_integer_low_bit_toggle": {
+      "c": "n/a",
+      "go": "n/a",
+      "java": "covered",
+      "javascript": "n/a",
+      "python": "n/a",
+      "ruby": "n/a",
+      "rust": "n/a",
+      "typescript": "n/a"
+    },
+    "java_statically_false_loop": {
+      "c": "n/a",
+      "go": "n/a",
+      "java": "covered",
+      "javascript": "n/a",
+      "python": "n/a",
+      "ruby": "n/a",
+      "rust": "n/a",
+      "typescript": "n/a"
+    },
+    "loop_extent_soundness": {
+      "c": "none",
+      "go": "none",
+      "java": "hard-negative",
+      "javascript": "none",
+      "python": "none",
+      "ruby": "none",
+      "rust": "none",
+      "typescript": "none"
+    },
+    "map_default_lookup": {
+      "c": "n/a",
+      "go": "covered",
+      "java": "covered",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "covered",
+      "rust": "covered",
+      "typescript": "covered"
+    },
+    "map_fusion": {
+      "c": "none",
+      "go": "none",
+      "java": "none",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "covered",
+      "rust": "covered",
+      "typescript": "covered"
+    },
+    "membership_contains": {
+      "c": "n/a",
+      "go": "covered",
+      "java": "covered",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "covered",
+      "rust": "covered",
+      "typescript": "covered"
+    },
+    "null_option_presence": {
+      "c": "covered",
+      "go": "covered",
+      "java": "covered",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "covered",
+      "rust": "covered",
+      "typescript": "covered"
+    },
+    "numeric_clamp": {
+      "c": "none",
+      "go": "none",
+      "java": "none",
+      "javascript": "none",
+      "python": "covered",
+      "ruby": "none",
+      "rust": "none",
+      "typescript": "none"
+    },
+    "numeric_minmax_abs": {
+      "c": "covered",
+      "go": "covered",
+      "java": "covered",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "covered",
+      "rust": "none",
+      "typescript": "covered"
+    },
+    "own_property_guard": {
+      "c": "n/a",
+      "go": "n/a",
+      "java": "n/a",
+      "javascript": "covered",
+      "python": "n/a",
+      "ruby": "n/a",
+      "rust": "n/a",
+      "typescript": "covered"
+    },
+    "partial_subdag_overlap": {
+      "c": "none",
+      "go": "none",
+      "java": "none",
+      "javascript": "none",
+      "python": "none",
+      "ruby": "none",
+      "rust": "none",
+      "typescript": "none"
+    },
+    "property_type_guard": {
+      "c": "n/a",
+      "go": "n/a",
+      "java": "n/a",
+      "javascript": "covered",
+      "python": "n/a",
+      "ruby": "n/a",
+      "rust": "n/a",
+      "typescript": "covered"
+    },
+    "proven_callee_identity": {
+      "c": "covered",
+      "go": "covered",
+      "java": "covered",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "covered",
+      "rust": "covered",
+      "typescript": "covered"
+    },
+    "python_docstring_noop": {
+      "c": "n/a",
+      "go": "n/a",
+      "java": "n/a",
+      "javascript": "n/a",
+      "python": "covered",
+      "ruby": "n/a",
+      "rust": "n/a",
+      "typescript": "n/a"
+    },
+    "recursion_iteration_extended": {
+      "c": "none",
+      "go": "none",
+      "java": "none",
+      "javascript": "none",
+      "python": "none",
+      "ruby": "none",
+      "rust": "none",
+      "typescript": "none"
+    },
+    "recursion_tail_numeric": {
+      "c": "none",
+      "go": "covered",
+      "java": "covered",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "covered",
+      "rust": "covered",
+      "typescript": "covered"
+    },
+    "reduce_minmax_anyall": {
+      "c": "none",
+      "go": "none",
+      "java": "covered",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "covered",
+      "rust": "covered",
+      "typescript": "covered"
+    },
+    "representation_choice": {
+      "c": "none",
+      "go": "none",
+      "java": "none",
+      "javascript": "none",
+      "python": "none",
+      "ruby": "none",
+      "rust": "none",
+      "typescript": "none"
+    },
+    "statement_window_fragment": {
+      "c": "none",
+      "go": "none",
+      "java": "none",
+      "javascript": "none",
+      "python": "none",
+      "ruby": "none",
+      "rust": "none",
+      "typescript": "none"
+    },
+    "string_prefix_suffix": {
+      "c": "n/a",
+      "go": "covered",
+      "java": "covered",
+      "javascript": "covered",
+      "python": "covered",
+      "ruby": "covered",
+      "rust": "covered",
+      "typescript": "covered"
+    },
+    "total_order_compare": {
+      "c": "covered",
+      "go": "none",
+      "java": "none",
+      "javascript": "none",
+      "python": "none",
+      "ruby": "none",
+      "rust": "none",
+      "typescript": "none"
+    },
+    "typed_concat_soundness": {
+      "c": "none",
+      "go": "none",
+      "java": "none",
+      "javascript": "none",
+      "python": "none",
+      "ruby": "none",
+      "rust": "none",
+      "typescript": "none"
+    },
+    "value_domain_algebra": {
+      "c": "out",
+      "go": "out",
+      "java": "out",
+      "javascript": "out",
+      "python": "out",
+      "ruby": "out",
+      "rust": "out",
+      "typescript": "out"
+    }
+  },
+  "languages": [
+    "c",
+    "go",
+    "java",
+    "javascript",
+    "typescript",
+    "python",
+    "ruby",
+    "rust"
+  ],
+  "per_language": {
+    "c": {
+      "applicable": 23,
+      "covered": 8
+    },
+    "go": {
+      "applicable": 24,
+      "covered": 10
+    },
+    "java": {
+      "applicable": 27,
+      "covered": 14
+    },
+    "javascript": {
+      "applicable": 27,
+      "covered": 16
+    },
+    "python": {
+      "applicable": 26,
+      "covered": 16
+    },
+    "ruby": {
+      "applicable": 24,
+      "covered": 13
+    },
+    "rust": {
+      "applicable": 25,
+      "covered": 13
+    },
+    "typescript": {
+      "applicable": 27,
+      "covered": 16
+    }
+  }
+}
