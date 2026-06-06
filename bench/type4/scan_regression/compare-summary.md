@@ -7,9 +7,9 @@
 | | baseline | current |
 |---|---|---|
 | version | `nose 0.5.0` | `nose 0.5.0` |
-| sha256 | `c675b831b24dfed2942f64ca58764cf8e83d11a5e9139877aa30ea7988bb11f3` | `c675b831b24dfed2942f64ca58764cf8e83d11a5e9139877aa30ea7988bb11f3` |
-| source_git_describe | `v0.5.0-161-g0cf4317-dirty` | `v0.5.0-161-g0cf4317-dirty` |
-| build_ref | `main@0b57dd2` | `` |
+| sha256 | `afc8212b9480a812a3f5c52f3977f89c1905f130001ca53b4ee47820969b02de` | `afc8212b9480a812a3f5c52f3977f89c1905f130001ca53b4ee47820969b02de` |
+| source_git_describe | `v0.5.0-175-ge4d381d` | `v0.5.0-175-ge4d381d-dirty` |
+| build_ref | `issue-45@416325e` | `` |
 
 **Note: identical binary sha256 — any output/runtime delta below is environment noise, not a code change.**
 
