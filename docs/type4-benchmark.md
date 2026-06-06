@@ -288,7 +288,8 @@ The seed lives in `bench/type4/`:
 
 - `proposals.v1.json` — LLM-planned semantic proposal cards;
 - `capabilities.v1.json` — current surface-by-surface proof-fact capability matrix;
-- `ITERATIONS.md` — the first ten coverage-expansion iterations and smoke results;
+- `ITERATIONS.md` — compact decision log for coverage expansion, real-corpus batches,
+  fragment-unit work, smoke results, and remaining frontier;
 - `generate.py` — deterministic source/manifest generator for all supported surfaces;
 - `select_cases.py` — coverage-preserving compaction for routine gates;
 - `eval_manifest.py` — compares `nose scan --mode semantic` output against the manifest;
