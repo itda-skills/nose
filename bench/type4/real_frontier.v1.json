@@ -139,6 +139,86 @@
       "notes": "Not suitable for a soundness-preserving Type-4 detector batch without shared proof facts for Java reflection/JUnit APIs. Re-verified 2026-06-06: the real duplicate is a syntactic Type-1/Type-2 clone that syntax/near mode already reports; semantic mode correctly abstains on the opaque getType() chain."
     },
     {
+      "case_id": "python-sympy-rot90-default-covered",
+      "status": "already-covered",
+      "candidate_axis": "python_control_flow_equivalence / default_output_covered",
+      "repo": "sympy",
+      "language": "python",
+      "locations": [
+        {
+          "path": "sympy/matrices/common.py",
+          "span": "2372-2415",
+          "snippet": "def rot90(self, k=1): mod = k%4; if mod == 0: return self; if mod == 1: return self[::-1, ::].T; if mod == 2: return self[::-1, ::-1]; if mod == 3: return self[::, ::-1].T"
+        },
+        {
+          "path": "sympy/matrices/matrixbase.py",
+          "span": "2646-2690",
+          "snippet": "def rot90(self, k: int=1) -> Self: mod = k%4; if/elif mod == 0..3 returns the same rotations; else: assert False"
+        }
+      ],
+      "semantic_claim": "Both methods implement the same four-way rotation by `k % 4`; type annotations, `if` versus `elif`, and the unreachable `else: assert False` do not change the returned matrix for the covered integer inputs.",
+      "evidence": "Selected `nose verify` over the two SymPy matrix files is SOUND and writes one structurally-near under-merged pair at vj=0.88 for common.py:2372 and matrixbase.py:2646. Manual source audit confirms identical branch results for mod values 0, 1, 2, and 3.",
+      "detector": {
+        "current_detector_miss": true,
+        "binary_path": "/Users/ak/prjs/cc/nose/target/release/nose",
+        "nose_version": "nose 0.5.0",
+        "build_ref": "0b57dd25a0e6cdb6f2742abad82585ca8c517e38",
+        "baseline_command": "/Users/ak/prjs/cc/nose/target/release/nose verify /Users/ak/prjs/cc/nose/bench/repos/sympy/sympy/matrices/common.py /Users/ak/prjs/cc/nose/bench/repos/sympy/sympy/matrices/matrixbase.py --max-violations 999 --leads /tmp/nose-issue36-sympy-rot90-leads.json",
+        "baseline_result": "SOUND; completeness 7/8; one under-merged lead at vj=0.8809523809523809.",
+        "semantic_scan_result": "`--mode semantic --format json --top 0 --min-lines 1 --min-size 1` reports no family containing both method starts.",
+        "default_scan_result": "`--mode syntax,semantic --format json --top 0 --min-lines 1 --min-size 1` reports family 3225a572821dfef2 containing matrixbase.py:2646-2690 and common.py:2372-2415."
+      },
+      "proof_invariant": "A future semantic-only closure would need a narrow Python control-flow proof that a complete `if`/`elif` ladder over the same local discriminator is equivalent to sequential guard-return `if` statements when every guard returns and the final `else` is unreachable. This is not an implementation-ready Type-4 batch here because the default product output already reports the pair.",
+      "hard_negative_siblings": [
+        "a reachable final `else` that returns a different value instead of asserting unreachable",
+        "one branch returning a different slice or transposition",
+        "a guard that mutates `mod`, `k`, or `self` before a later guard",
+        "a non-returning first branch that can fall through into later effects"
+      ],
+      "batch": "2026-06-06-issue36-frontier-curation",
+      "notes": "Issue #36 audit record. This is a semantic-only under-merge but not a recommended detector batch because `nose scan` default output already covers the refactoring candidate through syntax/semantic mode."
+    },
+    {
+      "case_id": "java-guava-setview-minmax-size-hard-negative",
+      "status": "hard-negative",
+      "candidate_axis": "collection_size_bound / verifier-lead-rejection",
+      "repo": "guava",
+      "language": "java",
+      "locations": [
+        {
+          "path": "android/guava/src/com/google/common/collect/Sets.java",
+          "span": "794-796",
+          "snippet": "static int minSize(Set<?> set) { return set instanceof SetView ? ((SetView<?>) set).minSize() : set.size(); }"
+        },
+        {
+          "path": "android/guava/src/com/google/common/collect/Sets.java",
+          "span": "810-812",
+          "snippet": "static int maxSize(Set<?> set) { return set instanceof SetView ? ((SetView<?>) set).maxSize() : set.size(); }"
+        }
+      ],
+      "semantic_claim": "These helpers are not exact Type-4 clones. They agree for ordinary `Set` receivers but intentionally differ for `SetView`, where `minSize()` and `maxSize()` are different abstract bounds.",
+      "evidence": "Whole-Guava `nose verify` is SOUND and emits this pair as an under-merged oracle lead at vj=0.43, but source audit shows a concrete hard-negative sibling: any `SetView` implementation whose lower and upper bounds differ makes the two methods return different values. The current semantic/default scans report no family for the pair.",
+      "detector": {
+        "current_detector_miss": false,
+        "binary_path": "/Users/ak/prjs/cc/nose/target/release/nose",
+        "nose_version": "nose 0.5.0",
+        "build_ref": "0b57dd25a0e6cdb6f2742abad82585ca8c517e38",
+        "baseline_command": "/Users/ak/prjs/cc/nose/target/release/nose verify /Users/ak/prjs/cc/nose/bench/repos/guava/android/guava/src/com/google/common/collect/Sets.java --max-violations 999 --leads /tmp/nose-issue36-guava-sets-leads.json",
+        "baseline_result": "SOUND; completeness 0/1; one low-nearness oracle lead at vj=0.42857142857142855.",
+        "semantic_scan_result": "`--mode semantic --format json --top 0 --min-lines 1 --min-size 1` reports 0 families containing both starts.",
+        "default_scan_result": "`--mode syntax,semantic --format json --top 0 --min-lines 1 --min-size 1` reports 0 families containing both starts."
+      },
+      "proof_invariant": "Any future size-bound or method-name abstraction must preserve method identity when the receiver domain can dispatch to different abstract operations. `SetView.minSize()` and `SetView.maxSize()` are separate semantic coordinates even though the non-SetView fallback is the same `set.size()` call.",
+      "hard_negative_siblings": [
+        "a `SetView` whose `minSize()` returns 0 while `maxSize()` returns the backing set size",
+        "a subclass where `minSize()` is cheap lower-bound metadata and `maxSize()` is an upper-bound over a different backing set",
+        "renaming or normalizing `min*` and `max*` methods before receiver-domain proof",
+        "collapsing both helpers to `set.size()` without proving the receiver is not a `SetView`"
+      ],
+      "batch": "2026-06-06-issue36-frontier-curation",
+      "notes": "Issue #36 Java audit record. This rejects a real-corpus verifier lead rather than proposing detector work; it is useful as an adjacent hard negative for any future Java collection-size-bound axis."
+    },
+    {
       "case_id": "python-docstring-sympy-dirac-delta",
       "status": "closed",
       "candidate_axis": "python_docstring_noop",
