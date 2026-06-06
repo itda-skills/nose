@@ -19,7 +19,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::{ReportFormat, ScanMode};
-use nose_detect::{Loc, RefactorFamily};
+use nose_detect::{EnclosingUnit, FragmentKind, Loc, RefactorFamily};
 
 pub(crate) struct ReviewArgs {
     pub paths: Vec<PathBuf>,
@@ -54,6 +54,13 @@ struct Site {
     start_line: u32,
     end_line: u32,
     lang: String,
+    kind: nose_il::UnitKind,
+    span_lines: u32,
+    span_tokens: usize,
+    is_fragment: bool,
+    fragment_kind: Option<FragmentKind>,
+    reason_code: Option<&'static str>,
+    enclosing_unit: Option<EnclosingUnit>,
 }
 
 pub(crate) fn cmd_review(args: ReviewArgs) -> Result<()> {
@@ -150,12 +157,24 @@ pub(crate) fn cmd_review(args: ReviewArgs) -> Result<()> {
 fn repo_relative(fam: &RefactorFamily, base_prefix: &Path) -> RefactorFamily {
     let mut fam = fam.clone();
     for loc in &mut fam.locations {
-        loc.file = canonical(Path::new(&loc.file))
-            .strip_prefix(base_prefix)
-            .map(|p| p.to_string_lossy().into_owned())
-            .unwrap_or_else(|_| loc.file.clone());
+        repo_relative_loc(loc, base_prefix);
     }
     fam
+}
+
+fn repo_relative_loc(loc: &mut Loc, base_prefix: &Path) {
+    loc.file = repo_relative_file(&loc.file, base_prefix);
+    if let Some(parent) = &mut loc.enclosing_unit {
+        parent.file = repo_relative_file(&parent.file, base_prefix);
+        parent.refresh_unit_key();
+    }
+}
+
+fn repo_relative_file(file: &str, base_prefix: &Path) -> String {
+    canonical(Path::new(file))
+        .strip_prefix(base_prefix)
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| file.to_string())
 }
 
 fn to_site(loc: &Loc) -> Site {
@@ -165,6 +184,13 @@ fn to_site(loc: &Loc) -> Site {
         start_line: loc.start_line,
         end_line: loc.end_line,
         lang: loc.lang.clone(),
+        kind: loc.kind,
+        span_lines: loc.span_lines,
+        span_tokens: loc.span_tokens,
+        is_fragment: loc.is_fragment,
+        fragment_kind: loc.fragment_kind,
+        reason_code: loc.reason_code,
+        enclosing_unit: loc.enclosing_unit.clone(),
     }
 }
 
@@ -379,6 +405,38 @@ fn site_label(s: &Site) -> String {
     }
 }
 
+fn fragment_context(s: &Site) -> Option<String> {
+    if !s.is_fragment {
+        return None;
+    }
+    let kind = s
+        .fragment_kind
+        .map(|k| {
+            k.reason_code()
+                .strip_prefix("exact-")
+                .unwrap_or(k.reason_code())
+                .to_string()
+        })
+        .unwrap_or_else(|| "fragment".to_string());
+    let reason = s.reason_code.unwrap_or("unknown");
+    let parent = s.enclosing_unit.as_ref().map(|p| {
+        let name = p
+            .name
+            .as_deref()
+            .filter(|n| !n.is_empty())
+            .map(|n| format!(" `{n}`"))
+            .unwrap_or_default();
+        format!(
+            " in {:?}{name} {}:{}-{}",
+            p.kind, p.file, p.start_line, p.end_line
+        )
+    });
+    Some(format!(
+        "{kind} fragment ({reason}){}",
+        parent.unwrap_or_default()
+    ))
+}
+
 fn print_review_human(flagged: &[Divergence], base: &str, changed_files: usize, top: usize) {
     let plural = |n: usize, s: &str| {
         if n == 1 {
@@ -420,6 +478,9 @@ fn print_review_human(flagged: &[Divergence], base: &str, changed_files: usize, 
         );
         for s in &d.not_updated {
             println!("    not updated: {}", site_label(s));
+            if let Some(context) = fragment_context(s) {
+                println!("      context: {context}");
+            }
         }
         println!("    → review whether the change should also apply to the sibling(s)\n");
     }
@@ -434,6 +495,13 @@ fn review_json(flagged: &[Divergence], base: &str, changed_files: usize) -> Resu
         json!({
             "file": s.file, "name": s.name,
             "start_line": s.start_line, "end_line": s.end_line, "lang": s.lang,
+            "kind": s.kind,
+            "span_lines": s.span_lines,
+            "span_tokens": s.span_tokens,
+            "is_fragment": s.is_fragment,
+            "fragment_kind": s.fragment_kind,
+            "reason_code": s.reason_code,
+            "enclosing_unit": s.enclosing_unit,
         })
     };
     let items: Vec<_> = flagged
@@ -461,7 +529,9 @@ fn review_json(flagged: &[Divergence], base: &str, changed_files: usize) -> Resu
 fn review_sarif(flagged: &[Divergence]) -> Result<String> {
     use serde_json::json;
     let phys = |s: &Site| {
+        let message = fragment_context(s).unwrap_or_else(|| site_label(s));
         json!({
+            "message": { "text": message },
             "physicalLocation": {
                 "artifactLocation": { "uri": s.file },
                 "region": { "startLine": s.start_line, "endLine": s.end_line }

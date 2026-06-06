@@ -802,6 +802,7 @@ struct ScanJsonFamily<'a> {
     family_id: String,
     #[serde(flatten)]
     family: &'a nose_detect::RefactorFamily,
+    recommended_surface: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     baseline_status: Option<&'static str>,
 }
@@ -811,6 +812,7 @@ struct ScanJsonIgnoredFamily<'a> {
     family_id: String,
     #[serde(flatten)]
     family: &'a nose_detect::RefactorFamily,
+    recommended_surface: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     baseline_status: Option<&'static str>,
     ignore: &'a ignores::IgnoreMatch,
@@ -861,6 +863,7 @@ impl<'a> ScanJsonReport<'a> {
                 .map(|family| ScanJsonFamily {
                     family_id: baseline::family_id(family),
                     family,
+                    recommended_surface: family.recommended_surface(),
                     baseline_status: statuses
                         .and_then(|s| s.get(&baseline::family_key(family)))
                         .map(BaselineStatus::as_str),
@@ -872,6 +875,7 @@ impl<'a> ScanJsonReport<'a> {
                 .map(|ignored| ScanJsonIgnoredFamily {
                     family_id: baseline::family_id(&ignored.family),
                     family: &ignored.family,
+                    recommended_surface: ignored.family.recommended_surface(),
                     baseline_status: statuses
                         .and_then(|s| s.get(&baseline::family_key(&ignored.family)))
                         .map(BaselineStatus::as_str),
@@ -2428,6 +2432,14 @@ fn relativize(file: &str, cwd: &std::path::Path) -> String {
         .unwrap_or_else(|| file.to_string())
 }
 
+fn relativize_loc(loc: &mut nose_detect::Loc, cwd: &std::path::Path) {
+    loc.file = relativize(&loc.file, cwd);
+    if let Some(parent) = &mut loc.enclosing_unit {
+        parent.file = relativize(&parent.file, cwd);
+        parent.refresh_unit_key();
+    }
+}
+
 /// Stderr notice that discovery found nothing — so a mistyped path or unsupported
 /// tree doesn't masquerade as "no duplication found".
 fn warn_no_files(paths: &[PathBuf]) {
@@ -2526,7 +2538,7 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
     if let Ok(cwd) = std::env::current_dir() {
         for f in &mut families {
             for l in &mut f.locations {
-                l.file = relativize(&l.file, &cwd);
+                relativize_loc(l, &cwd);
             }
         }
     }
@@ -3568,14 +3580,17 @@ mod tests {
         let locations = names
             .iter()
             .enumerate()
-            .map(|(i, n)| Loc {
-                file: format!("m{i}/f.rs"),
-                start_line: 1,
-                end_line: 10,
-                lang: "rust".into(),
-                kind,
-                name: n.map(|s| s.to_string()),
-                sem: 50,
+            .map(|(i, n)| {
+                Loc::new(
+                    format!("m{i}/f.rs"),
+                    1,
+                    10,
+                    "rust".into(),
+                    kind,
+                    n.map(|s| s.to_string()),
+                    50,
+                    50,
+                )
             })
             .collect();
         RefactorFamily {
@@ -3618,14 +3633,17 @@ mod tests {
         let f2 = write("c.rs", "BBB\nshared1\nshared2\n");
         let missing = dir.join("missing.rs").to_string_lossy().to_string();
 
-        let mk = |file: String| Loc {
-            file,
-            start_line: 1,
-            end_line: 3,
-            lang: "rust".into(),
-            kind: nose_il::UnitKind::Function,
-            name: None,
-            sem: 50,
+        let mk = |file: String| {
+            Loc::new(
+                file,
+                1,
+                3,
+                "rust".into(),
+                nose_il::UnitKind::Function,
+                None,
+                50,
+                50,
+            )
         };
         // locs[1] (the first compared pair) is unreadable; locs[2] reads and differs
         // from the representative by one parameter line.

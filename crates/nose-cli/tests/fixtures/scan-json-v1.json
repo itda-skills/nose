@@ -38,7 +38,10 @@
           "lang": "python",
           "kind": "Function",
           "name": "f",
-          "sem": 8
+          "sem": 8,
+          "span_lines": 5,
+          "span_tokens": 8,
+          "is_fragment": false
         },
         {
           "file": "b/f.py",
@@ -47,12 +50,16 @@
           "lang": "python",
           "kind": "Function",
           "name": "f",
-          "sem": 8
+          "sem": 8,
+          "span_lines": 5,
+          "span_tokens": 8,
+          "is_fragment": false
         }
       ],
       "mean_sem": 8.0,
       "scope": "prod",
-      "discount": 1.0
+      "discount": 1.0,
+      "recommended_surface": "default"
     }
   ]
 }

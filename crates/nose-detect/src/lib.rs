@@ -363,6 +363,29 @@ where
 }
 
 #[derive(Serialize, Clone)]
+pub struct EnclosingUnit {
+    pub file: String,
+    pub start_line: u32,
+    pub end_line: u32,
+    pub kind: nose_il::UnitKind,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    pub unit_key: String,
+}
+
+impl EnclosingUnit {
+    pub fn refresh_unit_key(&mut self) {
+        self.unit_key = unit_key(
+            &self.file,
+            self.kind,
+            self.name.as_deref(),
+            self.start_line,
+            self.end_line,
+        );
+    }
+}
+
+#[derive(Serialize, Clone)]
 pub struct Loc {
     pub file: String,
     pub start_line: u32,
@@ -378,6 +401,49 @@ pub struct Loc {
     /// or data/match table has a near-empty one and can only match on *shape* —
     /// the signal the refactor ranking uses to discount structural-only families.
     pub sem: usize,
+    /// Explicit source-line span so consumers do not have to recalculate inclusive
+    /// ranges. Kept for every location, not only fragments.
+    pub span_lines: u32,
+    /// Stable normalized-token span used by the detector's size gates.
+    pub span_tokens: usize,
+    /// Whether this location is an exact sub-function fragment rather than a whole
+    /// function/method/class location.
+    pub is_fragment: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fragment_kind: Option<FragmentKind>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason_code: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enclosing_unit: Option<EnclosingUnit>,
+}
+
+impl Loc {
+    pub fn new(
+        file: String,
+        start_line: u32,
+        end_line: u32,
+        lang: String,
+        kind: nose_il::UnitKind,
+        name: Option<String>,
+        sem: usize,
+        span_tokens: usize,
+    ) -> Self {
+        Loc {
+            file,
+            start_line,
+            end_line,
+            lang,
+            kind,
+            name,
+            sem,
+            span_lines: line_span(start_line, end_line),
+            span_tokens,
+            is_fragment: false,
+            fragment_kind: None,
+            reason_code: None,
+            enclosing_unit: None,
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -413,7 +479,8 @@ pub struct Report {
     pub metrics: Metrics,
 }
 
-fn loc_of(u: &UnitFeat) -> Loc {
+fn loc_of(u: &UnitFeat, enclosing_unit: Option<EnclosingUnit>) -> Loc {
+    let fragment_kind = u.fragment_kind;
     Loc {
         file: u.path.clone(),
         start_line: u.start_line,
@@ -422,7 +489,108 @@ fn loc_of(u: &UnitFeat) -> Loc {
         kind: u.kind,
         name: u.name.clone(),
         sem: u.value.len(),
+        span_lines: line_span(u.start_line, u.end_line),
+        span_tokens: u.token_count,
+        is_fragment: fragment_kind.is_some(),
+        fragment_kind,
+        reason_code: fragment_kind.map(FragmentKind::reason_code),
+        enclosing_unit,
     }
+}
+
+fn line_span(start_line: u32, end_line: u32) -> u32 {
+    end_line.saturating_sub(start_line) + 1
+}
+
+fn unit_kind_name(kind: nose_il::UnitKind) -> &'static str {
+    match kind {
+        nose_il::UnitKind::Function => "Function",
+        nose_il::UnitKind::Method => "Method",
+        nose_il::UnitKind::Class => "Class",
+        nose_il::UnitKind::Block => "Block",
+    }
+}
+
+fn unit_key(
+    file: &str,
+    kind: nose_il::UnitKind,
+    name: Option<&str>,
+    start_line: u32,
+    end_line: u32,
+) -> String {
+    format!(
+        "{}:{}:{}-{}:{}",
+        file,
+        unit_kind_name(kind),
+        start_line,
+        end_line,
+        name.unwrap_or("")
+    )
+}
+
+fn can_enclose_fragment(u: &UnitFeat) -> bool {
+    u.fragment_kind.is_none()
+        && matches!(
+            u.kind,
+            nose_il::UnitKind::Function | nose_il::UnitKind::Method | nose_il::UnitKind::Class
+        )
+}
+
+fn contains_span(parent: &UnitFeat, child: &UnitFeat) -> bool {
+    parent.path == child.path
+        && parent.start_line <= child.start_line
+        && parent.end_line >= child.end_line
+        && (parent.start_line < child.start_line || parent.end_line > child.end_line)
+}
+
+fn enclosing_unit_of(parent: &UnitFeat) -> EnclosingUnit {
+    let mut unit = EnclosingUnit {
+        file: parent.path.clone(),
+        start_line: parent.start_line,
+        end_line: parent.end_line,
+        kind: parent.kind,
+        name: parent.name.clone(),
+        unit_key: String::new(),
+    };
+    unit.refresh_unit_key();
+    unit
+}
+
+fn enclosing_units(units: &[UnitFeat]) -> Vec<Option<EnclosingUnit>> {
+    let mut by_file: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (idx, unit) in units.iter().enumerate() {
+        by_file.entry(unit.path.as_str()).or_default().push(idx);
+    }
+
+    let mut out = vec![None; units.len()];
+    for indices in by_file.values() {
+        let mut parents: Vec<usize> = indices
+            .iter()
+            .copied()
+            .filter(|&idx| can_enclose_fragment(&units[idx]))
+            .collect();
+        parents.sort_by_key(|&idx| {
+            (
+                line_span(units[idx].start_line, units[idx].end_line),
+                units[idx].start_line,
+                units[idx].end_line,
+            )
+        });
+
+        for &idx in indices {
+            if units[idx].fragment_kind.is_none() {
+                continue;
+            }
+            if let Some(parent) = parents
+                .iter()
+                .copied()
+                .find(|&parent_idx| contains_span(&units[parent_idx], &units[idx]))
+            {
+                out[idx] = Some(enclosing_unit_of(&units[parent]));
+            }
+        }
+    }
+    out
 }
 
 /// Two units from the same file where one span contains the other (e.g. a method
@@ -641,12 +809,14 @@ pub fn detect_from_units(
     let raw_groups = uf.groups(units.len());
     clk.lap("cluster");
 
+    let enclosing = enclosing_units(&units);
+
     // Build pair output (sorted by score desc).
     let mut duplicates: Vec<DupPair> = accepted
         .iter()
         .map(|&(i, j, s)| DupPair {
-            left: loc_of(&units[i]),
-            right: loc_of(&units[j]),
+            left: loc_of(&units[i], enclosing[i].clone()),
+            right: loc_of(&units[j], enclosing[j].clone()),
             score: round3(s),
             cross_language: units[i].lang != units[j].lang,
         })
@@ -676,7 +846,10 @@ pub fn detect_from_units(
             let score = if n == 0 { 0.0 } else { sum / n as f64 };
             Group {
                 score: round3(score),
-                members: members.iter().map(|&m| loc_of(&units[m])).collect(),
+                members: members
+                    .iter()
+                    .map(|&m| loc_of(&units[m], enclosing[m].clone()))
+                    .collect(),
             }
         })
         .collect();
