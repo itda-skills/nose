@@ -9520,8 +9520,23 @@ fn abstraction_mode_reports_numeric_literal_witness() {
     let family = family_with_all(&abstraction, &["a/sum.py", "b/sum.py"])
         .unwrap_or_else(|| panic!("abstraction mode should report the pair: {abstraction}"));
     let witness = &family["abstraction_witness"];
+    assert_eq!(witness["claim"], "weak-refactoring-template");
+    assert_eq!(witness["basis"], "family");
+    assert_eq!(witness["members_checked"], 2);
     assert_eq!(witness["reason_code"], "type-parametric");
+    assert_eq!(witness["template_format"], "normalized-il-preorder");
     assert_eq!(witness["holes"][0]["kind"], "literal");
+    assert_eq!(witness["holes"][0]["role"], "leaf");
+    assert_eq!(
+        witness["holes"][0]["observed"]
+            .as_array()
+            .map(|values| values.len()),
+        Some(2)
+    );
+    assert!(
+        witness["holes"][0]["template_index"].as_u64().is_some(),
+        "hole should point back into the normalized template: {witness}"
+    );
     assert_eq!(witness["holes"][0]["left"], "int-literal");
     assert_eq!(witness["holes"][0]["right"], "float-literal");
     assert!(
@@ -9573,9 +9588,13 @@ fn abstraction_mode_reports_same_class_literal_without_numeric_caveat() {
             panic!("abstraction mode should report the literal pair: {abstraction}")
         });
     let witness = &family["abstraction_witness"];
+    assert_eq!(witness["basis"], "family");
+    assert_eq!(witness["members_checked"], 2);
     assert_eq!(witness["reason_code"], "literal-abstracted");
+    assert_eq!(witness["holes"][0]["role"], "leaf");
     assert_eq!(witness["holes"][0]["left"], "int-literal");
     assert_eq!(witness["holes"][0]["right"], "int-literal");
+    assert_eq!(witness["holes"][0]["observed"][0], "int-literal");
     assert!(
         witness["caveats"].as_array().is_some_and(|c| c.is_empty()),
         "same-class literal abstraction should not invent a numeric-domain caveat: {witness}"

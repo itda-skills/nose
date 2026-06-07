@@ -308,6 +308,15 @@ and pack ecosystem.
   narrow `near` subset. It emits typed literal-hole witnesses and caveats for
   refactoring-template candidates, but does not feed `semantic`, `verify`, or exact
   kernel admission.
+- The abstraction witness policy is now separated from unit feature extraction as
+  a small internal witness kernel. The current accepted hole remains literal-only,
+  but the model records claim class, family evidence basis, checked member count,
+  template format, hole role, template index, and observed literal classes so future
+  type/domain/operator witnesses have a single owner.
+- Abstraction scan output now requires family-wide hole agreement: every reported
+  family member must fit the same normalized IL template with the same literal-leaf
+  hole position. Mixed connected components are not given a weak witness merely
+  because one representative pair looked actionable.
 
 ## Phase 0: documentation and vocabulary (landed)
 

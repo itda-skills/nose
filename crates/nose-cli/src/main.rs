@@ -1124,10 +1124,13 @@ fn abstraction_witness_summary(witness: &nose_detect::AbstractionWitness) -> Str
     let holes = witness
         .holes
         .iter()
-        .map(|hole| format!("{} {}->{}", hole.kind, hole.left, hole.right))
+        .map(|hole| format!("{} {} {}->{}", hole.kind, hole.role, hole.left, hole.right))
         .collect::<Vec<_>>()
         .join(", ");
-    format!("{} · {} · {}", witness.reason_code, holes, caveats)
+    format!(
+        "{}:{} · {} · {} · {}",
+        witness.basis, witness.members_checked, witness.reason_code, holes, caveats
+    )
 }
 
 /// Lines you'd actually delete by extracting one shared copy. For same-language

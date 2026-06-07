@@ -201,17 +201,21 @@ reason, not exact-fragment proof.
 `abstraction_witness` is present only for the hidden experimental
 `scan --mode abstraction[:T]` surface. It is a sibling claim to `semantic`, not a
 relaxed semantic clone verdict: the family is a refactoring-template candidate whose
-representative pair has identical normalized structure except for one supported literal
-leaf. Operator swaps, call-shape differences, and multi-hole diffs do not receive a
-witness.
+members have identical normalized structure except for one shared supported literal
+leaf position. Operator swaps, call-shape differences, and multi-hole or inconsistent
+family diffs do not receive a witness.
 
 The object has:
 
 | field | type | meaning |
 |---|---|---|
+| `claim` | string | Claim class for this object. Current value: `weak-refactoring-template`. |
+| `basis` | string | Scope of evidence used to build the witness. Current scan output value: `family`, meaning every reported family member was checked against the same template hole. |
+| `members_checked` | integer | Number of family members checked when building the witness. |
 | `reason_code` | string | Stable weak-template reason. Current values are `type-parametric` for int/float literal holes and `literal-abstracted` for same-class int, float, or string literal holes. |
+| `template_format` | string | Encoding used by `template`. Current value: `normalized-il-preorder`. |
 | `template` | array of strings | Pre-order normalized IL template tokens with `<hole 1: literal>` at the abstracted leaf. This is intentionally internal and machine-oriented, not source text. |
-| `holes` | array | Typed hole metadata for the representative pair. v1 emits exactly one hole. |
+| `holes` | array | Typed hole metadata for the family witness. v1 emits exactly one hole. |
 | `caveats` | array of strings | Caveats attached to the weak claim. `numeric-domain-sensitive` is emitted for int/float literal holes. |
 
 Each `holes[]` item has:
@@ -219,9 +223,12 @@ Each `holes[]` item has:
 | field | type | meaning |
 |---|---|---|
 | `index` | integer | 1-based hole index in the template. |
+| `template_index` | integer | 0-based index into the `template` array, so tooling can join the hole metadata back to the machine template. |
 | `kind` | string | Hole kind; currently `literal`. |
+| `role` | string | Structural role of the hole. Current value: `leaf`. |
 | `left` | string | Left representative leaf class, such as `int-literal`, `float-literal`, or `string-literal`. |
 | `right` | string | Right representative leaf class. |
+| `observed` | array of strings | Unique literal classes observed at this hole across the checked family. |
 | `left_line` | integer | Source line for the left representative leaf when known. |
 | `right_line` | integer | Source line for the right representative leaf when known. |
 

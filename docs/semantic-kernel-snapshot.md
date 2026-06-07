@@ -45,9 +45,9 @@ matches must be fail-closed and false merges are bugs.
 
 An experimental `abstraction` scan mode now exists as a weak sibling surface over
 `near`, not as an exact semantic relaxation. It keeps only same-language candidates
-whose normalized IL differs by exactly one supported literal leaf and emits an
-`abstraction_witness` with a typed hole, a reason code, and caveats such as
-`numeric-domain-sensitive`.
+whose family-wide normalized IL differs by exactly one shared supported literal leaf
+position and emits an `abstraction_witness` with a typed hole, a reason code, checked
+member count, observed literal classes, and caveats such as `numeric-domain-sensitive`.
 
 ## Implemented facade contracts
 

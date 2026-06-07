@@ -147,6 +147,10 @@ claim is weaker than `semantic`: it reports a refactoring-template witness with 
 typed hole and caveats such as `numeric-domain-sensitive`; it does not say the two
 copies are behavior-equivalent. Use `--format json --top 0` to consume the
 `abstraction_witness` field documented in [scan-json](scan-json.md#abstraction-witnesses).
+The witness is built from normalized IL, not line-level `--show proposal` text; its
+template is machine-oriented today and carries typed hole metadata for tooling. A
+reported abstraction family must share one literal-leaf hole position across all
+members; mixed families with different changed positions are left unwitnessed.
 When `near:T` and `abstraction:T` are combined in one scan, they share one fuzzy
 acceptance threshold; giving different inline values is rejected instead of silently
 choosing the last one.
