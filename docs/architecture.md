@@ -65,8 +65,9 @@ source ──tree-sitter──▶ raw IL ──normalize──▶ canonical IL �
    scores candidates with structural alignment (RANSAC) plus weighted shape/value
    Jaccard and accepts above the inline `near:T` threshold (default `near:0.70`), and
    `syntax` emits duplicated runs above the line/token floors. Experimental
-   `abstraction` then filters accepted near-style pairs to same-language, single
-   supported literal-leaf holes and attaches a weak witness instead of an exact claim.
+   `abstraction` then checks same-language near-style families for one shared
+   supported literal-leaf hole position and attaches a weak witness instead of an
+   exact claim.
 6. **Cluster & rank**: union-find over accepted pairs/runs forms clone groups, which
    are grouped into **families** and sorted by refactoring value (removable lines
    × similarity × cross-module/-file/-language spread). See [usage](usage.md) for how the

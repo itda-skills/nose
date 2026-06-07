@@ -62,8 +62,8 @@ pub struct RefactorFamily {
     /// `extractability` so the default ranking honors it too.
     pub discount: f64,
     /// Experimental weak-claim witness for `abstraction` mode. This records a typed
-    /// template and caveats for near candidates that share structure but differ by one
-    /// supported literal leaf. It is not a semantic-equivalence proof.
+    /// template and caveats for near families that share structure but differ by one
+    /// supported literal leaf position. It is not a semantic-equivalence proof.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub abstraction_witness: Option<AbstractionWitness>,
 }

@@ -6,6 +6,7 @@
 //! → scoring/acceptance → union-find clustering. The [`Detector`] trait makes the unit
 //! scorer pluggable so simhash / tf-idf / graph variants can be compared later.
 
+mod abstraction;
 mod align;
 mod cluster;
 mod contiguous;
@@ -559,7 +560,11 @@ pub struct DupPair {
 
 #[derive(Serialize, Clone, PartialEq, Eq, Debug)]
 pub struct AbstractionWitness {
+    pub claim: &'static str,
+    pub basis: &'static str,
+    pub members_checked: u32,
     pub reason_code: &'static str,
+    pub template_format: &'static str,
     pub template: Vec<String>,
     pub holes: Vec<AbstractionHole>,
     pub caveats: Vec<&'static str>,
@@ -568,9 +573,12 @@ pub struct AbstractionWitness {
 #[derive(Serialize, Clone, PartialEq, Eq, Debug)]
 pub struct AbstractionHole {
     pub index: u32,
+    pub template_index: u32,
     pub kind: &'static str,
+    pub role: &'static str,
     pub left: &'static str,
     pub right: &'static str,
+    pub observed: Vec<&'static str>,
     pub left_line: u32,
     pub right_line: u32,
 }
@@ -964,27 +972,6 @@ pub fn detect_from_units(
         e.0 += s;
         e.1 += 1;
     }
-    let mut abstraction_by_root: rustc_hash::FxHashMap<
-        usize,
-        (f64, usize, usize, AbstractionWitness),
-    > = rustc_hash::FxHashMap::default();
-    if opts.abstraction_witnesses {
-        for &(i, j, s) in &accepted {
-            if let Some(witness) = units::abstraction_witness(&units[i], &units[j]) {
-                let root = uf.find(i);
-                let replace =
-                    abstraction_by_root
-                        .get(&root)
-                        .is_none_or(|(best_score, best_i, best_j, _)| {
-                            s.total_cmp(best_score).is_gt()
-                                || (s == *best_score && (i, j) < (*best_i, *best_j))
-                        });
-                if replace {
-                    abstraction_by_root.insert(root, (s, i, j, witness));
-                }
-            }
-        }
-    }
     let groups: Vec<Group> = raw_groups
         .iter()
         .map(|members| {
@@ -1010,9 +997,11 @@ pub fn detect_from_units(
             Group {
                 score: round3(score),
                 members: locs,
-                abstraction_witness: abstraction_by_root
-                    .get(&root)
-                    .map(|(_, _, _, witness)| witness.clone()),
+                abstraction_witness: if opts.abstraction_witnesses {
+                    units::abstraction_family_witness(members.iter().map(|&m| &units[m]))
+                } else {
+                    None
+                },
             }
         })
         .collect();
