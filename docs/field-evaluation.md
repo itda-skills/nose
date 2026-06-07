@@ -1,13 +1,11 @@
 # Field evaluation
 
-*Part of the [home](home.md) wiki. The quantitative counterpart is [benchmark](benchmark.md); the
-self-review on nose's own source is [dogfooding](dogfooding.md).*
-
 This page records a qualitative, read-only pass over several unrelated real
 codebases. The project names are intentionally anonymized: the point is whether
 nose's findings are useful in realistic repositories, not to publish details of
 local workspaces used during development. No project other than nose was
-modified.
+modified. The quantitative counterpart is [benchmark](benchmark.md); the self-review on
+nose's own source is [dogfooding](dogfooding.md).
 
 ## Projects exercised
 

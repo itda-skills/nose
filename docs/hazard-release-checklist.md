@@ -2,7 +2,7 @@
 
 > **One page, everything in one place:** what to do for the [hazard ranking](hazard-ranking.md)
 > every time you cut a new nose version. The general release process (version bump,
-> [`CHANGELOG`](../CHANGELOG.md), [`CONTRIBUTING`](../CONTRIBUTING.md)) is separate; this
+> [CHANGELOG](../CHANGELOG.md), [CONTRIBUTING](../CONTRIBUTING.md)) is separate; this
 > page is the hazard-specific obligation that is easy to forget.
 
 **Why this exists.** `hazard()`'s weights are *calibrated against mined data whose
@@ -34,7 +34,7 @@ When in doubt, refresh — it costs minutes (cached clones).
 
 ## The refresh procedure
 
-Tooling lives in [`eval/hazard/`](../eval/hazard/); methodology in
+Tooling lives in [eval/hazard/](../eval/hazard/); methodology in
 [hazard-benchmark](hazard-benchmark.md).
 
 ```sh
@@ -59,12 +59,14 @@ Compare `tune.py` output against the previous `nose_ver` recorded in
 [RESULTS.md](../eval/hazard/RESULTS.md):
 
 - **Weights stable** (same signs, similar relative magnitudes; best candidate-formula AUC
-  unchanged) → the formula still holds. Just bump the `nose_ver` line in `RESULTS.md`.
+  unchanged) → the formula still holds. Just bump the `nose_ver` line in
+  [RESULTS.md](../eval/hazard/RESULTS.md).
 - **Weights drift** (a sign flips, or a different candidate formula now wins) → **re-calibrate**:
   1. Pick the new best candidate formula (or add one) in `tune.py`.
   2. Update the formula constants in `crates/nose-detect/src/report.rs` (`hazard()`).
-  3. Update [hazard-ranking › Score design](hazard-ranking.md#score-design), `RESULTS.md`,
-     and add an [experiments](experiments.md) entry (next `§` letter).
+  3. Update [hazard-ranking › Score design](hazard-ranking.md#score-design),
+     [RESULTS.md](../eval/hazard/RESULTS.md), and add an [experiments](experiments.md)
+     entry (next `§` letter).
 
 ## Acceptance — the hazard part of the release is done when
 
@@ -82,8 +84,8 @@ Compare `tune.py` output against the previous `nose_ver` recorded in
 | The score (`hazard()`, `SortKey::Hazard`) | `crates/nose-detect/src/report.rs`, `crates/nose-cli/src/main.rs` |
 | The formula + evidence | [hazard-ranking › Score design](hazard-ranking.md#score-design) |
 | Evaluation criteria, dataset, versioning model | [hazard-benchmark](hazard-benchmark.md) |
-| Mining + tuning tooling | [`eval/hazard/`](../eval/hazard/) (`mine.py`, `run_corpus.sh`, `analyze.py`, `tune.py`) |
-| Current measured numbers | [`eval/hazard/RESULTS.md`](../eval/hazard/RESULTS.md) |
+| Mining + tuning tooling | [eval/hazard/](../eval/hazard/) (`mine.py`, `run_corpus.sh`, `analyze.py`, `tune.py`) |
+| Current measured numbers | [eval/hazard/RESULTS.md](../eval/hazard/RESULTS.md) |
 | The measured log | [experiments › §BG](experiments.md) |
 | Cached corpus clones + raw events | `/tmp/hazard-mine/` (not committed) |
 

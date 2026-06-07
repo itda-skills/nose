@@ -150,7 +150,7 @@ pre-divergence signals rank actual harm only weakly, around the ~0.60 AUC ceilin
 
 **Phase 2 — git-history and post-divergence harm signals.** Because nose matches Type-4,
 it can link siblings across revisions where textual tools (NiCad/CCFinder/iClones) lose
-them. The pipeline now exists in [`eval/hazard`](../eval/hazard/) and is summarized in
+them. The pipeline now exists in [eval/hazard](../eval/hazard/) and is summarized in
 [RESULTS.md](../eval/hazard/RESULTS.md):
 
 - the original automatic G2 bug-linked label was audited and rejected as only ~11% precise;
@@ -202,7 +202,7 @@ No change to detection, normalization, or the value graph.
 **Phase 2 — git-history realized divergence + calibration. ✅ Measured, not promoted.**
 
 The mining, gold-label, git-history, and cognitive-complexity rounds are recorded in
-[`eval/hazard/RESULTS.md`](../eval/hazard/RESULTS.md). They did not produce a static harm
+[eval/hazard/RESULTS.md](../eval/hazard/RESULTS.md). They did not produce a static harm
 ranker strong enough to replace `extractability` or reweight `hazard()`. Keep `hazard()`
 as an opt-in divergence-propensity sort; build future harm work around realized diffs and
 review-oriented post-divergence features.

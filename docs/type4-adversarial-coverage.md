@@ -1,7 +1,7 @@
 # Type-4 focused cases
 
-Back to [home](home.md). This page describes the small focused-case library that supports
-the Type-4 target-packet workflow.
+This page describes the small focused-case library that supports the Type-4 target-packet
+workflow.
 
 ## Current role
 
@@ -94,7 +94,7 @@ The output is a draft packet skeleton for manual curation. Before committing it,
 human evidence in `real_frontier.v1.json`, classify the proof invariant, record adjacent hard
 negatives, and add a focused gate.
 
-## Relationship To Existing Type-4 Tools
+## Relationship to existing Type-4 tools
 
 - `bench/type4/generate.py` creates evidence-carrying synthetic pairs.
 - `scripts/type4-smoke.sh` runs generated positives, hard negatives, verifier leads, stats,

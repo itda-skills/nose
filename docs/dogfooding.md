@@ -1,11 +1,9 @@
 # Dogfooding nose on nose — a critical review
 
-*Part of the [home](home.md) wiki. The third-party counterpart is [field-evaluation](field-evaluation.md);
-the duplication gate that grew out of this lives in [`CONTRIBUTING`](../CONTRIBUTING.md).*
-
 Goal: honestly assess whether `nose scan crates` produces *real* design-level
 refactoring opportunities on its own codebase, act on the genuine ones, and record
-where the tool is weak.
+where the tool is weak. The third-party counterpart is [field evaluation](field-evaluation.md);
+the duplication gate that grew out of this lives in [CONTRIBUTING](../CONTRIBUTING.md).
 
 Original review command: `nose scan crates --exclude tests` (6 Rust crates, 8-language
 frontends). Result at the start of this review: 34 candidate families, ~662 duplicated
@@ -13,7 +11,7 @@ lines (the arc below took it to 23 / ~411). The numbers are a dated snapshot of 
 review pass; re-running on today's larger codebase reports more, since the crates have
 since grown.
 
-The current CI gate is [`scripts/check-duplication.sh`](../scripts/check-duplication.sh):
+The current CI gate is [scripts/check-duplication.sh](../scripts/check-duplication.sh):
 it runs `nose scan crates --exclude tests --mode near --min-value 40` and compares the
 substantial near-duplicate count with the accepted budget recorded in that script.
 

@@ -4,7 +4,7 @@ Real projects shouldn't carry 200-character command lines. Put a `nose.toml`
 (or `.nose.toml`) in the directory where you invoke nose and it is read
 automatically. The config supplies defaults for supported scan settings; most CLI flags
 override those defaults, while `exclude` globs are additive. Anything unset falls back to
-the built-in default. Back to [home](home.md).
+the built-in default.
 
 ## `nose.toml`
 
@@ -22,6 +22,11 @@ ignore-file = "nose.ignore.json"
 
 Pass an alternate file with `--config <file>`. A malformed config is a **hard
 error** — a silently-ignored typo'd setting would be worse than a crash.
+
+Put stable project policy in `nose.toml`: excludes, scan modes, ranking, size/value
+thresholds, report limits, and the structured-ignore file. Keep one-off workflow choices on
+the command line: output format, `--show` views, baselines, cache location, and CI failure
+mode.
 
 ### Keys
 

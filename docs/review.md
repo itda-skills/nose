@@ -6,12 +6,11 @@ slips through — you fix one copy and never learn the others exist, because the
 renamed or restructured enough that grep and your IDE can't find them. `review` finds the
 siblings for you and asks: *should this change have gone there too?*
 
-Where [`scan`](usage.md) is stateless (point it at any source, no history), `review` needs
+Where [scan](usage.md) is stateless (point it at any source, no history), `review` needs
 a **git repository** — it compares the working tree to a ref. It shares scan's detection
 channels, size gates, excludes, and config loading; scan-only config/report shaping such as
 `sort`, `min-value`, `min-members`, baselines, config `top`, and config `ignore-file` does
-not carry over. For the standard clone taxonomy see [clone-types](clone-types.md). Back to
-[home](home.md).
+not carry over. For the standard clone taxonomy see [clone types](clone-types.md).
 
 ## Quick start
 
@@ -56,7 +55,7 @@ touched, not that the change definitely belongs there. Review each flagged sibli
 
 ## Flags
 
-`review` shares the detection flags with [`scan`](usage.md): `--mode`
+The review command shares the detection flags with [scan](usage.md): `--mode`
 (`syntax`/`semantic`/`near[:T]`), `--min-size`, advanced `--min-lines`, `--exclude`,
 `--config`.
 

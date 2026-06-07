@@ -1,12 +1,12 @@
 # Formal soundness obligations
 
-Back to [home](home.md). The runtime soundness check is described in
-[benchmark](benchmark.md); the rewrite pipeline is in [normalization](normalization.md).
+The runtime soundness check is described in [benchmark](benchmark.md); the rewrite pipeline
+is in [normalization](normalization.md).
 
 nose uses Lean 4 as a proof-obligation registry for semantic contracts whose soundness
 should not depend only on corpus coverage. The registry lives under
-[`formal/obligations`](../formal/obligations). Reusable Lean models live under
-[`formal/lib`](../formal/lib), and each obligation directory contains:
+[formal/obligations](../formal/obligations). Reusable Lean models live under
+[formal/lib](../formal/lib), and each obligation directory contains:
 
 - `meta.toml` — the id, status, related Rust files/symbols, theorem names, assumptions, and
   optional counterexample theorem names.

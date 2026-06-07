@@ -7,7 +7,7 @@ directory, read the list, refactor from the top.
 
 This page takes you from install to a report you can act on in a few minutes. When
 you want the exact flag for something, the [usage](usage.md) reference has all of
-them. Back to [home](home.md).
+them.
 
 ## Install
 

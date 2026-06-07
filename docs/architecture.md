@@ -3,7 +3,7 @@
 nose lowers every language into one normalized intermediate language (IL),
 designed so that semantically-equivalent code converges toward identical
 structure, then finds and ranks duplication on top of it. The IL is **not** the
-deliverable — it's the substrate. Back to [home](home.md).
+deliverable — it's the substrate.
 
 ## North star
 

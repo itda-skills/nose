@@ -1,9 +1,7 @@
-# Semantic normalization roadmap (hard / high-value)
+# Semantic normalization
 
-*Part of the [home](home.md) wiki. Normalization is step 2 of the pipeline in
-[architecture](architecture.md); the experiments that validated these passes are in
-[experiments](experiments.md).*
-
+Normalization is step 2 of the pipeline in [architecture](architecture.md); the
+experiments that validated these passes are in [experiments](experiments.md).
 
 > **Status (all three tracks landed):** Track 1 — dataflow copy/expr propagation
 > (`dataflow.rs`) + value-graph/GVN (`value_graph.rs`, the detection substrate;
@@ -232,13 +230,13 @@ converge with hand-written iteration.
 
 Both schemes require exactly one self-call (a same-named call inside a standalone function);
 anything else is left untouched. The proof obligations
-[`normalize.recursion.tail`](../formal/obligations/normalize/recursion/tail/Proof.lean)
+[normalize.recursion.tail](../formal/obligations/normalize/recursion/tail/Proof.lean)
 and
-[`normalize.recursion.structural_fold`](../formal/obligations/normalize/recursion/structural_fold/Proof.lean)
+[normalize.recursion.structural_fold](../formal/obligations/normalize/recursion/structural_fold/Proof.lean)
 record the tail-loop equivalence, the numeric `+`/`*` fold laws, and boundary
 counterexamples for cyclic tail-call bindings, subtraction, and wrong identities.
 **Soundness** is checked, not assumed: the interpreter
-([`interp`](../crates/nose-normalize/src/interp.rs)) now executes self-recursion, so
+([interp](../crates/nose-normalize/src/interp.rs)) now executes self-recursion, so
 `nose verify` interprets the original recursion *and* the rewritten loop and flags any
 behavioral difference (when the recursion terminates on the input battery — a guard like
 `n == 0` that loops forever on negatives is excluded on both sides, identically). On real

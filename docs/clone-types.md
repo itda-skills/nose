@@ -15,8 +15,8 @@ The four types:
 
 This page states what nose does for each — including where it stops. The scan modes are
 detector channels, not perfect taxonomy buckets: the default combines `syntax` and
-`semantic`, and `near` is the opt-in fuzzy Type-3 surface. Back to [home](home.md);
-the engine is in [architecture](architecture.md).
+`semantic`, and `near` is the opt-in fuzzy Type-3 surface. The engine is described in
+[architecture](architecture.md).
 
 ## Type-1 — fully
 

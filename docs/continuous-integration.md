@@ -2,7 +2,7 @@
 
 nose is built to run in CI as a duplication gate. The pieces below turn the
 report from [usage](usage.md) into a pass/fail check that flags only *new* duplication
-and runs fast on every push. Back to [home](home.md).
+and runs fast on every push.
 
 ## The `--fail-on any` gate
 
@@ -38,6 +38,10 @@ If a wrapper needs to support multiple installed nose versions, have it query
 `nose capabilities` first instead of scraping `--help`; the JSON contract is
 documented in [capabilities](capabilities.md).
 
+Use `--fail-on any` for a greenfield or low-noise gate. Use `--baseline` plus
+`--fail-on new` when adopting nose on an existing codebase, so old accepted duplication stays
+visible in the baseline while new or changed families fail the build.
+
 ## Local CI mirror
 
 For nose itself, use the repository scripts before opening or updating a PR:
@@ -65,7 +69,7 @@ Before merge or release-sensitive work, run the full local CI mirror:
 The full gate mirrors the GitHub Actions jobs: format, clippy, rustdoc warnings,
 release build/tests, the self-hosted duplication gate, MSRV check, supply-chain
 checks, docs wiki connectivity, the formal obligation registry, and Lean soundness proofs
-via [`check-lean-proofs.sh`](../scripts/check-lean-proofs.sh).
+via [check-lean-proofs.sh](../scripts/check-lean-proofs.sh).
 
 ## Baselines — incremental adoption
 
@@ -155,4 +159,4 @@ much faster. Point it at a directory your CI caches between runs.
 nose scan src --cache-dir .nose-cache --fail-on any
 ```
 
-See [`CONTRIBUTING`](../CONTRIBUTING.md) for the full gate list.
+See [CONTRIBUTING](../CONTRIBUTING.md) for the full gate list.

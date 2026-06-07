@@ -2,7 +2,6 @@
 
 How nose's quality is measured, and the headline numbers. The blow-by-blow log of
 individual experiments is in [experiments](experiments.md); this page is the methodology.
-Back to [home](home.md).
 
 There are two distinct questions, measured separately:
 
@@ -20,8 +19,8 @@ declared semantics, not whether a reported family is worth refactoring.
 
 The active gold set is `bench/labels/refactoring_families.v5.json` (105 repos, ~9.5k
 families, each judged *worthy / not-worthy* of refactoring by a 3-persona LLM panel with
-tie-break/arbiter escalation — see [`bench/labels/README`](../bench/labels/README.md) and
-its `RUBRIC.md`). The corpus has a **dev / held-out** split (`bench/goldens/corpus.json`),
+tie-break/arbiter escalation — see [bench/labels/README.md](../bench/labels/README.md) and
+its [RUBRIC.md](../bench/labels/RUBRIC.md)). The corpus has a **dev / held-out** split (`bench/goldens/corpus.json`),
 so a change has to generalize, not just fit the dev repos; tune only on dev.
 
 ```sh

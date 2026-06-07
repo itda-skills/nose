@@ -1,12 +1,12 @@
 # Type-4 frontier evidence platform
 
 How nose chooses its **next** Type-4 expansion target by corpus evidence rather than by
-language/API habit or raw hit count. Back to [type4-benchmark](type4-benchmark.md); the
-substrate that fragment work migrates onto is [fragment-contracts](fragment-contracts.md).
+language/API habit or raw hit count. It sits beside the [Type-4 benchmark factory](type4-benchmark.md);
+the substrate that fragment work migrates onto is [fragment contracts](fragment-contracts.md).
 
 The platform is `bench/type4/frontier_platform.py`, a companion to the prevalence ranker
 `prioritize_frontier.py` (which is left byte-stable so its
-[`FRONTIER_PRIORITIES.md`](../bench/type4/FRONTIER_PRIORITIES.md) stays reproducible). It
+[FRONTIER_PRIORITIES.md](../bench/type4/FRONTIER_PRIORITIES.md) stays reproducible). It
 emits `bench/type4/frontier_platform.v1.json` and a markdown report describing the same
 data.
 
@@ -73,7 +73,7 @@ Categories are **not** frontier statuses; they live only in the platform output:
 ## New axes (`frontier_axes.py`)
 
 New corpus-driven candidate axes do **not** go into `prioritize_frontier.py` (frozen so its
-`FRONTIER_PRIORITIES.md` stays reproducible). They live in `bench/type4/frontier_axes.py` as
+[FRONTIER_PRIORITIES.md](../bench/type4/FRONTIER_PRIORITIES.md) stays reproducible). They live in `bench/type4/frontier_axes.py` as
 `EXTRA_CANDIDATES`, and `frontier_platform.py` unions them with the prioritizer axes for
 scanning, ranking, and validation. Each new axis must be a genuine *semantic invariant*
 (never a language-specific API spelling) and carry controlled-vocabulary `EXTRA_CURATED`
@@ -84,7 +84,7 @@ conclusion cannot silently drift when an axis is added or removed.
 
 The first extra axis is `numeric_clamp` — `min(max(x, lo), hi)` clamp composition, a real
 frontier packet whose identity and hard negatives are machine-checked in
-[`formal/obligations/normalize/value_graph/clamp/Proof.lean`](../formal/obligations/normalize/value_graph/clamp/Proof.lean).
+[formal/obligations/normalize/value_graph/clamp/Proof.lean](../formal/obligations/normalize/value_graph/clamp/Proof.lean).
 The proof-backed integer min/max composition slice now canonicalizes when `lo <= hi` is
 established by literal bounds or an exiting inverse guard. The surface bridge also covers
 two-comparison ternary clamps and proven numeric Rust `.clamp` forms while keeping unproven

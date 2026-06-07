@@ -2,7 +2,7 @@
 
 > Status: **criteria plus measured v1 limits.** This page defines *how we measure whether
 > [hazard ranking](hazard-ranking.md) is good* and how the labeled dataset is built. The
-> first mining/gold-label pipeline now lives in [`eval/hazard`](../eval/hazard/), with
+> first mining/gold-label pipeline now lives in [eval/hazard](../eval/hazard/), with
 > measured results in [eval/hazard/RESULTS.md](../eval/hazard/RESULTS.md) and
 > [experiments §BG](experiments.md). The original automatic G2 label was rejected after
 > audit; current claims distinguish divergence propensity from actual harm.

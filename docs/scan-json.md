@@ -4,8 +4,7 @@
 dashboards, editor integrations, and baselines that need clone families as data.
 For the command context see [usage](usage.md); for CI-oriented formats see
 [continuous-integration](continuous-integration.md). Tools can discover supported
-scan JSON schema versions with [capabilities](capabilities.md). Back to
-[home](home.md).
+scan JSON schema versions with [capabilities](capabilities.md).
 
 ## Version 1
 
@@ -39,7 +38,7 @@ The top-level value is always an object:
 ```
 
 A checked-in example lives at
-[`crates/nose-cli/tests/fixtures/scan-json-v1.json`](../crates/nose-cli/tests/fixtures/scan-json-v1.json)
+[crates/nose-cli/tests/fixtures/scan-json-v1.json](../crates/nose-cli/tests/fixtures/scan-json-v1.json)
 and is read by the CLI test suite. `tool_version` is shown above as the `<version>`
 placeholder: it always reports the installed binary's own version, so the example does not
 pin a release.

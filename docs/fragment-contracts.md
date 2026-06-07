@@ -2,8 +2,9 @@
 
 How nose models **exact sub-function semantic fragments** — the return/throw/effect
 shapes it lifts out of larger function bodies — as a shared substrate rather than an
-accumulating set of ad-hoc predicates. Back to [architecture](architecture.md); the
-benchmark that drives the frontier is [type4-benchmark](type4-benchmark.md).
+accumulating set of ad-hoc predicates. This extends the extraction step in
+[architecture](architecture.md); the benchmark that drives the frontier is
+[type4-benchmark](type4-benchmark.md).
 
 ## Why a substrate
 
@@ -16,8 +17,9 @@ so opaque surrounding code can never smuggle in unproven semantics.
 Historically each admissible shape was a standalone boolean predicate in
 `nose-detect/src/units.rs`. That found sound cases but trended toward a case matrix: the
 *reason* a fragment was accepted lived only in whichever predicate matched it, and nothing
-verified a fragment's behavior the way [`nose verify`](architecture.md) verifies whole
-functions. The substrate replaces the implicit predicate web with three explicit pieces.
+verified a fragment's behavior the way [nose verify](benchmark.md#soundness--the-behavioral-oracle)
+verifies whole functions. The substrate replaces the implicit predicate web with three
+explicit pieces.
 
 ## The three pieces
 
@@ -53,9 +55,10 @@ resolve to a proven [`Place`] (an append/index write carries no such obligation)
 The contract path can verify a fragment through the *same* independent behavior machinery as
 a whole function. It does **not** add a new interpreter path. Instead the contract is lowered
 into a synthetic single-function IL — free inputs become parameters, the fragment subtree is
-deep-copied into the body — and handed to the existing [`run_unit`](architecture.md)
-interpreter. The production scan still uses the predicate path described below; the contract
-path is kept in lockstep by differential tests and proof obligations.
+deep-copied into the body — and handed to the existing
+[interpreter](../crates/nose-normalize/src/interp.rs). The production scan still uses the
+predicate path described below; the contract path is kept in lockstep by differential tests
+and proof obligations.
 
 Because `Behavior` already records effects and field state, **effects are preserved as
 observable behavior for free**: appending to a parameter list shows up in the effect trace,
@@ -88,11 +91,11 @@ A field write is the one case where the interpreter does **not** observe the rec
 field-state map is keyed by name), so a field write is exact-safe only when its receiver is a
 proven place. This is exactly why a fixed `this` is the only admitted field receiver — not a
 special case, but a consequence of the algebra. The boundary is registered as
-[`detect.fragment.effect_place`](../formal/obligations/detect/fragment/effect_place/Proof.lean);
+[detect.fragment.effect_place](../formal/obligations/detect/fragment/effect_place/Proof.lean);
 free-input extraction and wrapper synthesis are tracked by
-[`detect.fragment.free_inputs`](../formal/obligations/detect/fragment/free_inputs/Proof.lean)
+[detect.fragment.free_inputs](../formal/obligations/detect/fragment/free_inputs/Proof.lean)
 and
-[`detect.fragment.wrapper_synthesis`](../formal/obligations/detect/fragment/wrapper_synthesis/Proof.lean).
+[detect.fragment.wrapper_synthesis](../formal/obligations/detect/fragment/wrapper_synthesis/Proof.lean).
 
 ## Place — receiver identity, fail-closed
 

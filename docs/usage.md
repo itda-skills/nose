@@ -4,7 +4,7 @@ The complete command and flag reference for `nose`. New here? Start with
 [getting-started](getting-started.md) — it walks through a first scan and how to
 read the report. For settings you'd commit to a repo see
 [configuration](configuration.md); for CI use see
-[continuous-integration](continuous-integration.md). Back to [home](home.md).
+[continuous integration](continuous-integration.md).
 
 ## Install
 
@@ -21,6 +21,16 @@ cargo build --release
 nose is a single self-contained binary — no runtime, services, or network; point
 it at source files. The examples below write `nose`, which works the same as a
 from-source `./target/release/nose`.
+
+## Command map
+
+| You want to... | Use |
+|---|---|
+| Find refactoring candidates in a tree | `nose scan <paths...>` |
+| Catch a missed sibling edit in a diff or PR | `nose review --base <ref>` |
+| Ask what an installed binary supports | `nose capabilities` |
+| Inspect lowering coverage for a language | `nose stats <paths...>` |
+| Debug why two snippets do or do not converge | `nose il <file> --normalized` |
 
 ## `nose scan`
 

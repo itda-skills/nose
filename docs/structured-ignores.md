@@ -4,7 +4,6 @@ Structured ignores suppress reviewed clone families without losing the decision
 context. Use them when a finding is intentional, generated, framework-imposed, or
 owned by a team that is not ready to refactor it yet. For command basics see
 [usage](usage.md); for CI gates see [continuous-integration](continuous-integration.md).
-Back to [home](home.md).
 
 ## Inline marker vs structured file — which to use
 

@@ -1,14 +1,13 @@
 # nose — experiment log
 
-*Part of the [home](home.md) wiki. The methodology and headline numbers are summarized
-in [benchmark](benchmark.md); the passes these experiments shaped are in [normalization](normalization.md)
-and [architecture](architecture.md).*
-
 A **curated** record of what we tried and what we learned — distilled to the durable
 findings, the shipped techniques, and the dead ends worth not re-walking. The full
 blow-by-blow (every intermediate baseline and rejected parameter sweep) lives in git
 history; this page keeps the lessons. Sections are lettered chronologically (A…BF);
 other docs and code comments cite them as `§<letter>`, so the letters are stable anchors.
+The methodology and headline numbers are summarized in [benchmark](benchmark.md); the passes
+these experiments shaped are in [normalization](normalization.md) and
+[architecture](architecture.md).
 
 The current user-facing `nose scan` command has three channels (`syntax`, `semantic`,
 `near`), described in [usage](usage.md); all share one lower → normalize → feature
@@ -766,4 +765,4 @@ not the weights, so we mined ground truth before implementing.
   nose-derived (stamped `nose_ver`). Only *detection* changes force a re-mine+re-tune;
   ranking changes (this work) do not. Refresh = `run_corpus.sh` + `tune.py` (minutes,
   cached clones); per-release steps in [hazard-release-checklist](hazard-release-checklist.md).
-  Full numbers in `eval/hazard/RESULTS.md`.
+  Full numbers in [eval/hazard/RESULTS.md](../eval/hazard/RESULTS.md).

@@ -3,8 +3,7 @@
 `nose capabilities` emits the stable machine-readable contract for the installed
 binary. Use it from installers, editor integrations, CI wrappers, and doctor
 commands before invoking `nose scan`. For the human command guide see
-[usage](usage.md); for scan result JSON see [scan-json](scan-json.md). Back to
-[home](home.md).
+[usage](usage.md); for scan result JSON see [scan-json](scan-json.md).
 
 ## Why this is not help text
 
@@ -14,6 +13,10 @@ and ordering to improve readability. Tools should not scrape it.
 `nose capabilities` is an integration interface. It is JSON-only, has its own
 `schema_version`, and reports what the binary supports as data: stable commands,
 scan modes, output formats, schema versions, config keys, and capability flags.
+
+Integration rule: branch on `schema_version`, ignore unknown fields, and test capability
+flags before passing optional scan arguments. A wrapper that does this can run against older
+and newer nose binaries without scraping help text or guessing from the package version.
 
 ## Example
 

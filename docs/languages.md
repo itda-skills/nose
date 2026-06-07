@@ -1,8 +1,8 @@
 # Languages
 
 nose parses each language with tree-sitter and lowers it into one shared IL, so
-clones are found *across* languages, not just within one. Back to [home](home.md); the
-lowering machinery is described in [architecture](architecture.md).
+clones are found *across* languages, not just within one. The lowering machinery is
+described in [architecture](architecture.md).
 
 ## Supported languages
 
@@ -63,4 +63,4 @@ lowering to expression if-chains instead of `Raw`, or Ruby scrutinee-less `case`
 its `when` predicates directly while preserving the `else` arm) is how a language becomes a
 first-class citizen —
 see the [experiments](experiments.md) log and the convergence-test discipline in
-[`CONTRIBUTING`](../CONTRIBUTING.md).
+[CONTRIBUTING](../CONTRIBUTING.md).

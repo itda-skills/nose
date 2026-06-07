@@ -2,9 +2,9 @@
 
 This document records the *why* behind nose's direction: what the product fundamentally is,
 who actually consumes it, and how those two facts decide where engineering effort goes. It is
-the strategic companion to the operational wiki ([docs/home.md](docs/home.md)); the
-[architecture](docs/architecture.md), [normalization](docs/normalization.md), and
-[formal-soundness](docs/formal-soundness.md) pages describe *how* the machine works.
+the strategic companion to the operational [documentation home](home.md); the
+[architecture](architecture.md), [normalization](normalization.md), and
+[formal soundness](formal-soundness.md) pages describe *how* the machine works.
 
 It is intentionally short and opinionated. When a roadmap decision is unclear, this is the
 document it should be checked against.
@@ -29,7 +29,7 @@ approximation. This is enforced by, in layers:
 - a **static** safety gate (`strict_exact_safe_tree`, `crates/nose-detect/src/units.rs`) on
   the accept path — no interpreter in the hot path, fully deterministic;
 - **per-rule Lean obligations** for the proof-sensitive canonicalizations
-  ([formal-soundness](docs/formal-soundness.md));
+  ([formal soundness](formal-soundness.md));
 - an **offline** interpreter oracle (`nose verify`) used as a differential-testing harness —
   *not* a runtime acceptance gate;
 - **adversarial per-rule batteries** that defend the guarantee as the rule set grows (this is
@@ -65,7 +65,7 @@ What nose owes consumer 1:
 - **High recall** — surface the candidates; the agent filters cheaply.
 - **Good-enough, deterministic ranking** — to triage and save the agent's tokens, not to be
   a perfect worth-it oracle.
-- **Rich machine-readable evidence** — the [scan-json](docs/scan-json.md) output should carry
+- **Rich machine-readable evidence** — the [scan JSON](scan-json.md) output should carry
   *why* two units are equivalent, *what* differs, exact locations, and the behavior contract,
   so the agent can decide and act without re-deriving the analysis.
 - **Speed.**
@@ -86,7 +86,7 @@ A gate that cries wolf gets disabled. So the requirement is inverted from a sear
   therefore *harmful* here.
 
 This requirement **is the sound core.** The CI-gate product and the moat are the same thing.
-The [`review`](docs/review.md) signal — a clone copy fixed while its siblings were missed in a
+The [review](review.md) signal — a clone copy fixed while its siblings were missed in a
 diff — is a natural high-precision, actionable gate trigger.
 
 ### One core, two operating points
@@ -195,8 +195,8 @@ swept axes; the real-corpus 0-violation gate remains `nose verify bench/repos`).
 
 The battery has already paid off — it surfaced a systematic **`exact_safe` language
 asymmetry** (recursion / builder loops / java stream-reduce admitted to the exact channel in
-some languages but not others — `bench/type4/coverage_leads.md`), the concrete next implement
-queue for *even* cross-language coverage.
+some languages but not others — [bench/type4/coverage_leads.md](../bench/type4/coverage_leads.md)),
+the concrete next implementation queue for *even* cross-language coverage.
 
 ## 5. Decisive measurements (run before betting heavily)
 
@@ -214,6 +214,6 @@ Cheap experiments that turn direction into data:
 
 ---
 
-*See also: [architecture](docs/architecture.md) · [normalization](docs/normalization.md) ·
-[formal-soundness](docs/formal-soundness.md) · [clone-types](docs/clone-types.md) ·
-[scan-json](docs/scan-json.md) · [review](docs/review.md).*
+*See also: [architecture](architecture.md) · [normalization](normalization.md) ·
+[formal soundness](formal-soundness.md) · [clone types](clone-types.md) ·
+[scan JSON](scan-json.md) · [review](review.md).*

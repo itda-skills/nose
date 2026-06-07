@@ -4,7 +4,7 @@
 eight languages — plus the `<script>` logic inside Vue, Svelte, and HTML — by
 lowering every language into one normalized intermediate language (IL) and
 ranking duplicated code by how much it's worth refactoring. The repository
-[`README`](../README.md) is the one-screen overview; this wiki is the full guide.
+[README](../README.md) is the one-screen overview; this wiki is the full guide.
 
 Every wiki page lives in `docs/` and links to its neighbours with relative links, so the
 docs browse cleanly on GitHub and in any Markdown viewer. Root project docs are linked
@@ -14,6 +14,15 @@ where relevant. The pages are grouped by what you're here to do.
 
 - [getting-started](getting-started.md) — install, run your first scan, and learn
   to read the report in a few minutes. **The friendly on-ramp; read this first.**
+
+## Fast paths
+
+- **Trying nose locally:** install from [getting-started](getting-started.md), then run
+  `nose scan <path>` and read the first few ranked families.
+- **Adding a repo gate:** start with [continuous integration](continuous-integration.md),
+  then commit shared defaults from [configuration](configuration.md).
+- **Building an integration:** use [capabilities](capabilities.md) before invoking a binary
+  and parse [scan JSON](scan-json.md), not human output.
 
 ## Using nose
 
@@ -39,7 +48,7 @@ of nose's machine-readable output.
 
 You want to *change* nose or understand how it works inside.
 
-- [design & direction](../design.md) — the *why* behind the roadmap: the sound core as the moat, the two (non-human) consumers, and what that decides. **Check roadmap calls against this.**
+- [design & direction](design.md) — the *why* behind the roadmap: the sound core as the moat, the two (non-human) consumers, and what that decides. **Check roadmap calls against this.**
 - [architecture](architecture.md) — the crates and the lower → normalize → detect → rank pipeline.
 - [normalization](normalization.md) — the passes that make behaviorally-equivalent code converge (the hard part).
 - [fragment-contracts](fragment-contracts.md) — how exact sub-function fragments are modeled: classification, contract, the wrapper-synthesis behavior oracle, the effect algebra, and fail-closed receiver identity.
@@ -56,5 +65,5 @@ You want to *change* nose or understand how it works inside.
 - [dogfooding](dogfooding.md) — nose run on its own source, and what its findings taught us.
 
 The contributor workflow and quality gates live in
-[`CONTRIBUTING`](../CONTRIBUTING.md); release history is in
-[`CHANGELOG`](../CHANGELOG.md).
+[CONTRIBUTING](../CONTRIBUTING.md); release history is in
+[CHANGELOG](../CHANGELOG.md).

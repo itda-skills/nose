@@ -1,7 +1,8 @@
 # Type-4 benchmark factory
 
-The plan and executable seed for a Type-4 benchmark that matches nose's exact semantic
-goal. Back to [benchmark](benchmark.md) and [architecture](architecture.md).
+The executable benchmark factory for nose's exact semantic goal. It complements the product
+quality [benchmark](benchmark.md) and exercises the engine described in
+[architecture](architecture.md).
 
 ## Goal
 
@@ -205,7 +206,7 @@ candidate keeps its own proposal id, focused positives, hard-negatives, and befo
 result, and the acceptance gate runs once per batch. Do **not** batch unrelated
 soundness-risk changes — if one candidate regresses or needs a different semantic contract,
 split it out before accepting. This Definition of Done is enforced in
-[`bench/type4/README.md`](../bench/type4/README.md); the smoke gate is
+[bench/type4/README.md](../bench/type4/README.md); the smoke gate is
 `scripts/type4-smoke.sh`, and frontier deltas are stored as JSON so recall changes and
 false-merge regressions are auditable. A loop that adds only proposal cards or generated
 examples is a coverage-expansion loop, not a co-evolution loop.
@@ -291,7 +292,7 @@ only evidence-backed pairs enter the Type-4 gold set.
 
 ## Current implementation shape
 
-The detailed file inventory lives in [`bench/type4/README.md`](../bench/type4/README.md).
+The detailed file inventory lives in [bench/type4/README.md](../bench/type4/README.md).
 The stable roles are:
 
 - synthetic generation and manifest evaluation:
