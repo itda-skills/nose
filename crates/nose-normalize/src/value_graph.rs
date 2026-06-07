@@ -54,7 +54,7 @@ use nose_semantics::{
     exact_static_membership_predicate_operator, free_function_builtin_contract,
     go_zero_map_default_kind, go_zero_map_entry_contract_for_node,
     go_zero_map_literal_contract_for_node, go_zero_map_lookup_contract, import_fact_evidence_rhs,
-    imported_literal_producer_evidence_at_span, imported_namespace_symbol,
+    imported_literal_snapshot_evidence_at_span, imported_namespace_symbol,
     library_api_contract_evidence_at_call_span, library_api_contract_evidence_for_call,
     library_api_free_name_shadow_safe, library_free_name_collection_factory_contracts,
     library_free_name_map_factory_contracts, library_imported_collection_factory_contracts,
@@ -73,11 +73,12 @@ use nose_semantics::{
     BuiltinArgContract, CardinalityPredicate, CardinalityThreshold, ComparisonLaw, DomainEvidence,
     GoZeroMapDefaultKind, ImportFactKind, ImportedNamespaceFunctionSemantic,
     IndexMembershipThreshold, IteratorAdapterReceiverContract, JavaMapFactoryKind,
-    LibraryApiCalleeContract, LibraryApiEvidenceStatus, LibraryCollectionFactoryResult,
-    LibraryMapFactoryResult, MapKeyViewKind, MethodBuiltinArgs, MethodReceiverContract,
-    MethodSemanticContract, ReductionBuiltinContract, ScalarIntegerMethod, SeqSurfaceContract,
-    StaticIndexMembershipKind, SEQ_VALUE_COLLECTION, SEQ_VALUE_MAP, SEQ_VALUE_OWN_PROPERTY_GUARD,
-    SEQ_VALUE_PAIR, SEQ_VALUE_RECORD_GUARD, SEQ_VALUE_TUPLE, SEQ_VALUE_UNTAGGED,
+    LibraryApiCalleeContract, LibraryApiEvidenceStatus, LibraryApiSpanEvidenceQuery,
+    LibraryCollectionFactoryResult, LibraryMapFactoryResult, MapKeyViewKind, MethodBuiltinArgs,
+    MethodReceiverContract, MethodSemanticContract, ReductionBuiltinContract, ScalarIntegerMethod,
+    SeqSurfaceContract, StaticIndexMembershipKind, SEQ_VALUE_COLLECTION, SEQ_VALUE_MAP,
+    SEQ_VALUE_OWN_PROPERTY_GUARD, SEQ_VALUE_PAIR, SEQ_VALUE_RECORD_GUARD, SEQ_VALUE_TUPLE,
+    SEQ_VALUE_UNTAGGED,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::sync::OnceLock;
@@ -927,7 +928,24 @@ impl<'a> Builder<'a> {
                 else {
                     return false;
                 };
-                s.is_import_binding_value(callee, module, exported)
+                let receiver = match s.nodes[callee as usize].op {
+                    ValOp::Field(_) => s.nodes[callee as usize].args.first().copied(),
+                    _ => None,
+                };
+                match s.library_api_evidence_for_value_call(
+                    value,
+                    callee,
+                    receiver,
+                    contract.id,
+                    contract.callee,
+                    1,
+                ) {
+                    LibraryApiEvidenceStatus::Admitted => true,
+                    LibraryApiEvidenceStatus::Rejected => false,
+                    LibraryApiEvidenceStatus::Missing => {
+                        s.is_import_binding_value(callee, module, exported)
+                    }
+                }
             })
         })
     }
@@ -967,8 +985,20 @@ impl<'a> Builder<'a> {
                 else {
                     return None;
                 };
-                self.is_imported_java_util_name(receiver, expected_receiver)
-                    .then_some(contract)
+                match self.library_api_evidence_for_value_call(
+                    value,
+                    args[0],
+                    Some(receiver),
+                    contract.id,
+                    contract.callee,
+                    args.len().saturating_sub(1),
+                ) {
+                    LibraryApiEvidenceStatus::Admitted => Some(contract),
+                    LibraryApiEvidenceStatus::Rejected => None,
+                    LibraryApiEvidenceStatus::Missing => self
+                        .is_imported_java_util_name(receiver, expected_receiver)
+                        .then_some(contract),
+                }
             })?;
         // A single argument to a varargs collection factory (`Arrays.asList(x)`,
         // `List.of(x)`, `Set.of(x)`) is ambiguous: when `x` is an array it is spread
@@ -1393,9 +1423,25 @@ impl<'a> Builder<'a> {
         else {
             return None;
         };
-        let provider_proven = self.imported_literal_producer_proven(value, NodeKind::Call);
-        if !provider_proven && !self.is_imported_java_util_name(callee.args[0], expected_receiver) {
-            return None;
+        let api_status = self.library_api_evidence_for_value_call(
+            value,
+            args[0],
+            Some(callee.args[0]),
+            contract.id,
+            contract.callee,
+            args.len().saturating_sub(1),
+        );
+        let snapshot_proven = self.imported_literal_snapshot_proven(value, NodeKind::Call);
+        match api_status {
+            LibraryApiEvidenceStatus::Admitted => {}
+            LibraryApiEvidenceStatus::Rejected => return None,
+            LibraryApiEvidenceStatus::Missing => {
+                if !snapshot_proven
+                    && !self.is_imported_java_util_name(callee.args[0], expected_receiver)
+                {
+                    return None;
+                }
+            }
         }
         let LibraryMapFactoryResult::JavaFactory { kind } = contract.result else {
             return None;
@@ -1414,7 +1460,7 @@ impl<'a> Builder<'a> {
         if kind == JavaMapFactoryKind::OfEntries {
             let mut canonical_entries = Vec::with_capacity(args.len().saturating_sub(1));
             for entry in args.iter().skip(1).copied() {
-                let kv = self.proven_java_map_entry_pair(entry, provider_proven)?;
+                let kv = self.proven_java_map_entry_pair(entry, snapshot_proven)?;
                 canonical_entries.push(self.mk(ValOp::Seq(SEQ_VALUE_PAIR), kv));
             }
             return Some(self.mk(ValOp::Seq(SEQ_VALUE_MAP), canonical_entries));
@@ -1425,7 +1471,7 @@ impl<'a> Builder<'a> {
     fn proven_java_map_entry_pair(
         &self,
         value: ValueId,
-        provider_proven: bool,
+        snapshot_proven: bool,
     ) -> Option<Vec<ValueId>> {
         let node = &self.nodes[value as usize];
         if !matches!(node.op, ValOp::Call(0)) || node.args.len() != 3 {
@@ -1447,15 +1493,60 @@ impl<'a> Builder<'a> {
         if callee.args.len() != 1 {
             return None;
         }
-        if !provider_proven && !self.is_imported_java_util_name(callee.args[0], expected_receiver) {
-            return None;
+        match self.library_api_evidence_for_value_call(
+            value,
+            args[0],
+            Some(callee.args[0]),
+            contract.id,
+            contract.callee,
+            2,
+        ) {
+            LibraryApiEvidenceStatus::Admitted => {}
+            LibraryApiEvidenceStatus::Rejected => return None,
+            LibraryApiEvidenceStatus::Missing => {
+                if !snapshot_proven
+                    && !self.is_imported_java_util_name(callee.args[0], expected_receiver)
+                {
+                    return None;
+                }
+            }
         }
         Some(args[1..].to_vec())
     }
 
-    fn imported_literal_producer_proven(&self, value: ValueId, kind: NodeKind) -> bool {
+    fn imported_literal_snapshot_proven(&self, value: ValueId, kind: NodeKind) -> bool {
         self.node_span[value as usize]
-            .is_some_and(|span| imported_literal_producer_evidence_at_span(self.il, span, kind))
+            .is_some_and(|span| imported_literal_snapshot_evidence_at_span(self.il, span, kind))
+    }
+
+    fn library_api_evidence_for_value_call(
+        &self,
+        value: ValueId,
+        callee: ValueId,
+        receiver: Option<ValueId>,
+        id: nose_semantics::LibraryApiContractId,
+        callee_contract: LibraryApiCalleeContract,
+        arg_count: usize,
+    ) -> LibraryApiEvidenceStatus {
+        library_api_contract_evidence_at_call_span(
+            self.il,
+            self.interner,
+            LibraryApiSpanEvidenceQuery {
+                call_span: self.node_span[value as usize],
+                callee_span: self.library_api_value_span(callee),
+                receiver_span: receiver.and_then(|receiver| self.library_api_value_span(receiver)),
+                id,
+                callee: callee_contract,
+                arg_count,
+            },
+        )
+    }
+
+    fn library_api_value_span(&self, value: ValueId) -> Option<Span> {
+        match self.nodes[value as usize].op {
+            ValOp::ImportBinding { .. } | ValOp::ImportNamespace { .. } => None,
+            _ => self.node_span[value as usize],
+        }
     }
 
     fn eval_js_like_constructed_collection_or_map(
@@ -1702,12 +1793,15 @@ impl<'a> Builder<'a> {
                 .and_then(|&receiver| self.node_span[receiver as usize]);
             match library_api_contract_evidence_at_call_span(
                 self.il,
-                self.node_span[value as usize],
-                self.node_span[args[0] as usize],
-                receiver_span,
-                contract.id,
-                contract.callee,
-                1,
+                self.interner,
+                LibraryApiSpanEvidenceQuery {
+                    call_span: self.node_span[value as usize],
+                    callee_span: self.node_span[args[0] as usize],
+                    receiver_span,
+                    id: contract.id,
+                    callee: contract.callee,
+                    arg_count: 1,
+                },
             ) {
                 LibraryApiEvidenceStatus::Admitted => {}
                 LibraryApiEvidenceStatus::Rejected => return None,
@@ -4231,8 +4325,30 @@ impl<'a> Builder<'a> {
                     self.param_domain = saved_param_domain;
                 }
                 NodeKind::Block => self.process_container(c, env),
+                NodeKind::Assign => self.process_container_assignment(c, env),
                 _ => self.process_stmt(c, env),
             }
+        }
+    }
+
+    fn process_container_assignment(&mut self, stmt: NodeId, env: &mut FxHashMap<u32, ValueId>) {
+        let binding = self.il.children(stmt).first().copied().and_then(|lhs| {
+            match (self.il.kind(lhs), self.il.node(lhs).payload) {
+                (NodeKind::Var, Payload::Cid(cid)) => self
+                    .il
+                    .cid_names
+                    .get(cid as usize)
+                    .copied()
+                    .map(|name| (cid, name)),
+                _ => None,
+            }
+        });
+        self.process_stmt(stmt, env);
+        let Some((cid, name)) = binding else {
+            return;
+        };
+        if let Some(&value) = env.get(&cid) {
+            self.global_env.insert(name, value);
         }
     }
 
@@ -6872,6 +6988,7 @@ impl<'a> Builder<'a> {
 
     fn eval_product_call(
         &mut self,
+        expr: NodeId,
         kids: &[NodeId],
         env: &FxHashMap<u32, ValueId>,
     ) -> Option<ValueId> {
@@ -6886,14 +7003,26 @@ impl<'a> Builder<'a> {
             self.il.meta.lang,
             self.interner.resolve(name),
             kids.len().saturating_sub(1),
-        )?
-        .result;
+        )?;
         let base = *self.il.children(callee).first()?;
-        if !self.is_import_namespace_expr(base, contract.module, env) {
-            return None;
+        match library_api_contract_evidence_for_call(
+            self.il,
+            self.interner,
+            expr,
+            contract.id,
+            contract.callee,
+            kids.len().saturating_sub(1),
+        ) {
+            LibraryApiEvidenceStatus::Admitted => {}
+            LibraryApiEvidenceStatus::Rejected => return None,
+            LibraryApiEvidenceStatus::Missing => {
+                if !self.is_import_namespace_expr(base, contract.result.module, env) {
+                    return None;
+                }
+            }
         }
         let ImportedNamespaceFunctionSemantic::ProductReduction { op, identity } =
-            contract.semantic;
+            contract.result.semantic;
         let coll = self.eval(*kids.get(1)?, env);
         let (coll_op, args) = {
             let n = &self.nodes[coll as usize];
@@ -7778,7 +7907,7 @@ impl<'a> Builder<'a> {
                 if let Some(r) = self.eval_count_call(&kids, env) {
                     return r;
                 }
-                if let Some(r) = self.eval_product_call(&kids, env) {
+                if let Some(r) = self.eval_product_call(expr, &kids, env) {
                     return r;
                 }
                 if let Some(r) = self.eval_proven_integer_method_call(&kids, env) {
@@ -8462,8 +8591,9 @@ mod tests {
     };
     use nose_semantics::{
         import_fact_tag, library_api_callee_contract_hash, library_api_contract_id_hash,
+        library_imported_collection_factory_contract, library_java_collection_factory_contract,
         library_js_like_map_constructor_contract, library_js_like_set_constructor_contract,
-        FIRST_PARTY_PACK_ID,
+        LibraryApiContractId, FIRST_PARTY_PACK_ID,
     };
 
     fn sp(line: u32) -> Span {
@@ -8504,6 +8634,100 @@ mod tests {
             dependencies,
             status: EvidenceStatus::Asserted,
         }
+    }
+
+    fn imported_binding_symbol(module: &str, exported: &str) -> EvidenceKind {
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
+            module_hash: stable_symbol_hash(module),
+            exported_hash: stable_symbol_hash(exported),
+        })
+    }
+
+    fn imported_namespace_symbol_kind(module: &str) -> EvidenceKind {
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+            module_hash: stable_symbol_hash(module),
+        })
+    }
+
+    fn push_imported_binding_use(
+        il: &mut Il,
+        binding_id: u32,
+        binding_span: Span,
+        occurrence_id: u32,
+        occurrence_span: Span,
+        module: &str,
+        exported: &str,
+    ) {
+        let symbol = imported_binding_symbol(module, exported);
+        il.evidence.push(evidence(
+            binding_id,
+            EvidenceAnchor::binding(binding_span, stable_symbol_hash(exported)),
+            symbol,
+        ));
+        il.evidence.push(evidence_with_dependencies(
+            occurrence_id,
+            EvidenceAnchor::node(occurrence_span, NodeKind::Var),
+            symbol,
+            vec![EvidenceId(binding_id)],
+        ));
+    }
+
+    fn push_imported_namespace_use(
+        il: &mut Il,
+        binding_id: u32,
+        binding_span: Span,
+        occurrence_id: u32,
+        occurrence_span: Span,
+        module: &str,
+    ) {
+        let symbol = imported_namespace_symbol_kind(module);
+        il.evidence.push(evidence(
+            binding_id,
+            EvidenceAnchor::binding(binding_span, stable_symbol_hash(module)),
+            symbol,
+        ));
+        il.evidence.push(evidence_with_dependencies(
+            occurrence_id,
+            EvidenceAnchor::node(occurrence_span, NodeKind::Var),
+            symbol,
+            vec![EvidenceId(binding_id)],
+        ));
+    }
+
+    fn collection_sequence_evidence(id: u32, span: Span) -> EvidenceRecord {
+        evidence(
+            id,
+            EvidenceAnchor::sequence(span),
+            EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
+        )
+    }
+
+    fn library_api_contract_evidence(
+        id: u32,
+        call_span: Span,
+        contract_id: LibraryApiContractId,
+        callee: LibraryApiCalleeContract,
+        arity: u16,
+        dependencies: Vec<EvidenceId>,
+    ) -> EvidenceRecord {
+        evidence_with_dependencies(
+            id,
+            EvidenceAnchor::node(call_span, NodeKind::Call),
+            EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
+                contract_hash: library_api_contract_id_hash(contract_id),
+                callee_hash: library_api_callee_contract_hash(callee),
+                arity,
+            }),
+            dependencies,
+        )
+    }
+
+    fn eval_proven_collection_op(il: &Il, interner: &Interner, call: NodeId) -> Option<ValOp> {
+        let mut builder = Builder::new(il, interner);
+        let raw = builder.eval(call, &FxHashMap::default());
+        builder
+            .proven_collection_value(raw)
+            .map(|value| builder.nodes[value as usize].op.clone())
     }
 
     #[derive(Clone, Copy)]
@@ -8756,6 +8980,175 @@ mod tests {
     }
 
     #[test]
+    fn imported_collection_factory_value_graph_uses_library_api_evidence() {
+        let interner = Interner::new();
+        let mut b = IlBuilder::new(FileId(0));
+        let local = interner.intern("deque");
+        let lhs = b.add(NodeKind::Var, Payload::Name(local), sp(60), &[]);
+        let rhs = b.add(NodeKind::Seq, Payload::None, sp(60), &[]);
+        let import = b.add(NodeKind::Assign, Payload::None, sp(60), &[lhs, rhs]);
+        let callee = b.add(NodeKind::Var, Payload::Name(local), sp(61), &[]);
+        let item = b.add(NodeKind::Lit, Payload::LitInt(1), sp(62), &[]);
+        let seq = b.add(
+            NodeKind::Seq,
+            Payload::Name(interner.intern("array")),
+            sp(63),
+            &[item],
+        );
+        let call = b.add(NodeKind::Call, Payload::None, sp(64), &[callee, seq]);
+        let root = b.add(NodeKind::Block, Payload::None, sp(60), &[import, call]);
+        let mut il = finish_test_il(b, root, Lang::Python);
+        let contract =
+            library_imported_collection_factory_contract(Lang::Python, "collections", "deque")
+                .expect("deque contract");
+        push_imported_binding_use(&mut il, 0, sp(60), 1, sp(61), "collections", "deque");
+        il.evidence.push(collection_sequence_evidence(2, sp(63)));
+        il.evidence.push(library_api_contract_evidence(
+            3,
+            sp(64),
+            contract.id,
+            contract.callee,
+            1,
+            vec![EvidenceId(1)],
+        ));
+        let admitted = eval_proven_collection_op(&il, &interner, call)
+            .expect("admitted LibraryApi evidence should prove the factory");
+        assert!(matches!(admitted, ValOp::Seq(SEQ_VALUE_COLLECTION)));
+
+        let wrong = library_js_like_set_constructor_contract(Lang::JavaScript, "Set").unwrap();
+        il.evidence.pop();
+        il.evidence.push(library_api_contract_evidence(
+            3,
+            sp(64),
+            wrong.id,
+            wrong.callee,
+            1,
+            vec![EvidenceId(1)],
+        ));
+        let mut builder = Builder::new(&il, &interner);
+        let raw = builder.eval(call, &FxHashMap::default());
+        assert!(builder.proven_collection_value(raw).is_none());
+    }
+
+    #[test]
+    fn java_collection_factory_value_graph_uses_library_api_evidence() {
+        let interner = Interner::new();
+        let mut b = IlBuilder::new(FileId(0));
+        let local = interner.intern("List");
+        let lhs = b.add(NodeKind::Var, Payload::Name(local), sp(70), &[]);
+        let rhs = b.add(NodeKind::Seq, Payload::None, sp(70), &[]);
+        let import = b.add(NodeKind::Assign, Payload::None, sp(70), &[lhs, rhs]);
+        let receiver = b.add(NodeKind::Var, Payload::Name(local), sp(71), &[]);
+        let callee = b.add(
+            NodeKind::Field,
+            Payload::Name(interner.intern("of")),
+            sp(72),
+            &[receiver],
+        );
+        let left = b.add(NodeKind::Lit, Payload::LitInt(1), sp(73), &[]);
+        let right = b.add(NodeKind::Lit, Payload::LitInt(2), sp(74), &[]);
+        let call = b.add(
+            NodeKind::Call,
+            Payload::None,
+            sp(75),
+            &[callee, left, right],
+        );
+        let root = b.add(NodeKind::Block, Payload::None, sp(70), &[import, call]);
+        let mut il = finish_test_il(b, root, Lang::Java);
+        let contract = library_java_collection_factory_contract(Lang::Java, "List", "of")
+            .expect("List.of contract");
+        push_imported_binding_use(&mut il, 0, sp(70), 1, sp(71), "java.util", "List");
+        il.evidence.push(library_api_contract_evidence(
+            2,
+            sp(75),
+            contract.id,
+            contract.callee,
+            2,
+            vec![EvidenceId(1)],
+        ));
+        let admitted = eval_proven_collection_op(&il, &interner, call)
+            .expect("admitted LibraryApi evidence should prove the Java factory");
+        assert!(matches!(admitted, ValOp::Seq(SEQ_VALUE_COLLECTION)));
+    }
+
+    #[test]
+    fn namespace_collection_factory_value_graph_uses_library_api_evidence_after_seed() {
+        let interner = Interner::new();
+        let mut b = IlBuilder::new(FileId(0));
+        let local = interner.intern("collections");
+        let namespace_tag = interner.intern(import_fact_tag(ImportFactKind::Namespace));
+        let lhs = b.add(NodeKind::Var, Payload::Cid(0), sp(80), &[]);
+        let module = b.add(
+            NodeKind::Lit,
+            Payload::LitStr(stable_symbol_hash("collections")),
+            sp(80),
+            &[],
+        );
+        let rhs = b.add(
+            NodeKind::Seq,
+            Payload::Name(namespace_tag),
+            sp(80),
+            &[module],
+        );
+        let import = b.add(NodeKind::Assign, Payload::None, sp(80), &[lhs, rhs]);
+        let receiver = b.add(NodeKind::Var, Payload::Name(local), sp(81), &[]);
+        let callee = b.add(
+            NodeKind::Field,
+            Payload::Name(interner.intern("deque")),
+            sp(82),
+            &[receiver],
+        );
+        let item = b.add(NodeKind::Lit, Payload::LitInt(1), sp(83), &[]);
+        let seq = b.add(
+            NodeKind::Seq,
+            Payload::Name(interner.intern("array")),
+            sp(84),
+            &[item],
+        );
+        let call = b.add(NodeKind::Call, Payload::None, sp(85), &[callee, seq]);
+        let root = b.add(NodeKind::Module, Payload::None, sp(80), &[import, call]);
+        let mut il = b.finish(
+            root,
+            FileMeta {
+                path: "t.py".into(),
+                lang: Lang::Python,
+            },
+            Vec::new(),
+            vec![local],
+        );
+        let contract =
+            library_imported_collection_factory_contract(Lang::Python, "collections", "deque")
+                .expect("deque contract");
+        il.evidence.push(evidence(
+            0,
+            EvidenceAnchor::sequence(sp(80)),
+            EvidenceKind::Import(ImportEvidenceKind::Namespace {
+                module_hash: stable_symbol_hash("collections"),
+            }),
+        ));
+        push_imported_namespace_use(&mut il, 1, sp(80), 2, sp(81), "collections");
+        il.evidence.push(collection_sequence_evidence(3, sp(84)));
+        il.evidence.push(library_api_contract_evidence(
+            4,
+            sp(85),
+            contract.id,
+            contract.callee,
+            1,
+            vec![EvidenceId(2)],
+        ));
+        let mut builder = Builder::new(&il, &interner);
+        builder.seed_module_value_bindings();
+        let raw = builder.eval(call, &FxHashMap::default());
+        let admitted = builder
+            .proven_collection_value(raw)
+            .expect("namespace LibraryApi evidence should survive seeded import values");
+        assert!(matches!(
+            builder.nodes[admitted as usize].op,
+            ValOp::Seq(SEQ_VALUE_COLLECTION)
+        ));
+    }
+
+    #[test]
     fn record_guard_value_tag_requires_guard_evidence() {
         let interner = Interner::new();
         let mut b = IlBuilder::new(FileId(0));
@@ -8867,11 +9260,7 @@ mod tests {
                 name_hash: stable_symbol_hash("Set"),
             }),
         ));
-        il.evidence.push(evidence(
-            2,
-            EvidenceAnchor::sequence(sp(72)),
-            EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
-        ));
+        il.evidence.push(collection_sequence_evidence(2, sp(72)));
         (il, call)
     }
 
@@ -8888,14 +9277,12 @@ mod tests {
         ));
 
         let wrong = library_js_like_map_constructor_contract(Lang::JavaScript, "Map").unwrap();
-        il.evidence.push(evidence_with_dependencies(
+        il.evidence.push(library_api_contract_evidence(
             3,
-            EvidenceAnchor::node(sp(73), NodeKind::Call),
-            EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
-                contract_hash: library_api_contract_id_hash(wrong.id),
-                callee_hash: library_api_callee_contract_hash(wrong.callee),
-                arity: 1,
-            }),
+            sp(73),
+            wrong.id,
+            wrong.callee,
+            1,
             vec![EvidenceId(0), EvidenceId(1)],
         ));
         let mut builder = Builder::new(&il, &interner);
@@ -8907,14 +9294,12 @@ mod tests {
 
         let (mut il, call) = js_new_set_il(&interner);
         let set = library_js_like_set_constructor_contract(Lang::JavaScript, "Set").unwrap();
-        il.evidence.push(evidence_with_dependencies(
+        il.evidence.push(library_api_contract_evidence(
             3,
-            EvidenceAnchor::node(sp(73), NodeKind::Call),
-            EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
-                contract_hash: library_api_contract_id_hash(set.id),
-                callee_hash: library_api_callee_contract_hash(set.callee),
-                arity: 1,
-            }),
+            sp(73),
+            set.id,
+            set.callee,
+            1,
             vec![EvidenceId(0), EvidenceId(1)],
         ));
         let mut builder = Builder::new(&il, &interner);
