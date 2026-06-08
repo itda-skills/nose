@@ -768,3 +768,30 @@ not the weights, so we mined ground truth before implementing.
   ranking changes (this work) do not. Refresh = `run_corpus.sh` + `tune.py` (minutes,
   cached clones); per-release steps in [hazard-release-checklist](hazard-release-checklist.md).
   Full numbers in [eval/hazard/RESULTS.md](../eval/hazard/RESULTS.md).
+
+## BH. Scan performance — normalize proof lookup, not path exclusions
+
+Profiling real corpora across Rust (`nose-normalize`, `nose-detect`), TypeScript
+(`moonlight-server`, `moonlight-web`, `tex`), Python (`episteme2-app`), and Go
+(`sah-cli`) showed that semantic/near scans were bottlenecked in the shared
+`normalize+extract` path, not in JS-specific parsing or candidate scoring. Large generated
+JS bundles can dominate an unscoped scan, but the product fix is not a built-in generated-path
+exclusion; benchmark scoping used only the existing `--exclude`/config mechanism.
+
+The hot path was `desugar` repeatedly re-scanning the whole IL to prove parameter-domain
+facts for method/property idiom recognition. Replacing that with a per-file
+`ParamDomainIndex` kept the exact same proof policy while removing repeated O(nodes)
+lookups. Additional behavior-preserving cleanup reserved rebuild arena capacity, avoided
+per-node child `Vec` copies in common rebuild loops, reused file-local scope facts in value
+fingerprinting, and skipped no-op recursion/dataflow/algebra/cfg-orientation rebuilds.
+
+Representative output JSON was byte-equivalent to `origin/main` after canonical sorting
+(`nose-normalize`, `nose-detect`, `moonlight-server`, `tex`, `sah-cli`, and
+`craken-cli`; earlier matrix runs also covered `episteme2-app` and scoped
+`moonlight-web`). After rebasing onto `origin/main@42545f2`, representative
+`NOSE_TIME` deltas for `normalize+extract` were: `nose-normalize` semantic
+1452ms→228ms (6.4x), near 1457ms→236ms (6.2x); `tex` semantic 445ms→64ms
+(7.0x); `moonlight-server` semantic 48ms→27ms (1.8x); `sah-cli` semantic
+12ms→9ms (1.3x). Whole-pipeline speedups are lower where parse/lower now
+dominates; this moves the next performance frontier toward lower/parse and remaining
+multi-pass normalization overhead rather than file selection policy.
