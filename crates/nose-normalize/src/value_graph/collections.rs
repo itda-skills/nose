@@ -897,26 +897,17 @@ impl<'a> Builder<'a> {
         let ValOp::Field(method) = callee.op else {
             return false;
         };
-        let Some(contract) = library_map_get_contract_by_hash(self.il.meta.lang, method, 1) else {
-            return false;
-        };
         if callee.args.len() != 1 {
             return false;
         }
-        match self.library_api_evidence_for_value_call(
-            value,
-            args[0],
-            Some(callee.args[0]),
-            contract.id,
-            contract.callee,
-            1,
-        ) {
-            LibraryApiEvidenceStatus::Admitted => {}
-            LibraryApiEvidenceStatus::Rejected | LibraryApiEvidenceStatus::Missing => {
-                return false;
-            }
-        }
-        if callee.args.len() != 1 {
+        if admitted_map_get_at_call_span(
+            self.il,
+            self.interner,
+            self.library_api_span_call(value, args[0], Some(callee.args[0]), 1),
+            method,
+        )
+        .is_none()
+        {
             return false;
         }
         let receiver = callee.args[0];

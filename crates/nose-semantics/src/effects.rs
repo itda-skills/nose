@@ -2,9 +2,8 @@
 
 use crate::evidence::{unique_asserted_evidence_at, EvidenceResolution};
 use crate::{
-    js_like_lang, library_api_contract_evidence_for_call, library_method_call_contract,
-    ChannelEligibility, LibraryApiEvidenceStatus, MethodBuiltinArgs, MethodSemanticContract,
-    FIRST_PARTY_PACK_ID,
+    admitted_library_method_call_at_call, js_like_lang, ChannelEligibility,
+    LibraryApiCalleeContract, MethodBuiltinArgs, MethodSemanticContract, FIRST_PARTY_PACK_ID,
 };
 use nose_il::{
     stable_symbol_hash, Builtin, EffectEvidenceKind, EvidenceAnchor, EvidenceKind, EvidenceStatus,
@@ -583,35 +582,26 @@ pub fn admitted_builder_append_method_call_args(
         return None;
     }
     let kids = il.children(node);
-    let [callee, item] = kids else {
+    let [_callee, item] = kids else {
         return None;
     };
-    if il.kind(*callee) != NodeKind::Field {
-        return None;
-    }
-    let Payload::Name(method) = il.node(*callee).payload else {
+    let admitted = admitted_library_method_call_at_call(il, interner, node)?;
+    let receiver = admitted.receiver?;
+    let LibraryApiCalleeContract::Method { method, .. } = admitted.contract.callee else {
         return None;
     };
-    let receiver = *il.children(*callee).first()?;
-    let method_text = interner.resolve(method);
-    let arg_count = kids.len().saturating_sub(1);
-    let effect = builder_append_method_contract(il.meta.lang, method_text, arg_count)?;
+    let effect = builder_append_method_contract(il.meta.lang, method, admitted.arg_count)?;
     if effect.effect != EffectEvidenceKind::BuilderAppendCall
         || effect.receiver != MethodEffectReceiverContract::ActiveCollectionBuilder
     {
         return None;
     }
-    let api = library_method_call_contract(il.meta.lang, method_text, arg_count)?;
-    if api.result.semantic != MethodSemanticContract::Builtin(Builtin::Append)
-        || api.result.args != MethodBuiltinArgs::ReceiverThenAll
+    if admitted.contract.result.semantic != MethodSemanticContract::Builtin(Builtin::Append)
+        || admitted.contract.result.args != MethodBuiltinArgs::ReceiverThenAll
     {
         return None;
     }
-    match library_api_contract_evidence_for_call(il, interner, node, api.id, api.callee, arg_count)
-    {
-        LibraryApiEvidenceStatus::Admitted => Some((receiver, *item)),
-        LibraryApiEvidenceStatus::Rejected | LibraryApiEvidenceStatus::Missing => None,
-    }
+    Some((receiver, *item))
 }
 
 /// `(receiver, value)` of a source method call licensed by the first-party

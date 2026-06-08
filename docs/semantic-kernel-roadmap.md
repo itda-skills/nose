@@ -586,6 +586,12 @@ and pack ecosystem.
   iterator identity adapters, Java static collection adapters, Rust `Some(...)`,
   Rust map factory receiver proof, static index-membership, and Rust scalar
   integer methods where the source `Call` node is still available.
+- The value-graph span-query resolver cleanup moved value-level CSE consumers
+  that no longer carry a source `Call` node behind dedicated `nose-semantics`
+  admitted span resolvers. Free-name/imported collection factories,
+  Java/Ruby/Rust collection factories, free-name/Java map factories, Java map
+  entries, map `get`, and map-key view/wrapper calls now resolve contract
+  identity and `LibraryApi` occurrence evidence in one place.
 - The detect strict exact safety gate was split from unit extraction into
   `crates/nose-detect/src/strict_exact.rs`, reducing `units.rs` to extraction,
   fragment classification, and feature orchestration while keeping proof-policy
@@ -712,10 +718,12 @@ Remaining in this phase:
   Option/scalar/`Vec::new`, and first-party factory/constructor calls instead of
   locally recombining raw selector parsing with evidence admission. Value-graph
   direct factory/constructor eval and provider literal export safety now share
-  those resolvers where they still operate on source call nodes; value-level
-  span-query paths remain a separate cleanup. Lowered sequence-surface consumers
-  are now evidence-only where covered. Remaining API work is promise receiver
-  proof, explicit async/sync
+  those resolvers where they still operate on source call nodes; selected
+  value-level span-query paths now use dedicated span resolvers for
+  free-name/imported collection factories, Java/Ruby/Rust collection factories,
+  free-name/Java map factories, Java map entries, map-get, and map-key
+  view/wrapper calls. Lowered sequence-surface consumers are now evidence-only
+  where covered. Remaining API work is promise receiver proof, explicit async/sync
   protocol convergence contracts, and ecosystem APIs only after demand,
   receiver, and effect obligations are expressible.
 - Continue import/module proof migration beyond the removed raw import payloads

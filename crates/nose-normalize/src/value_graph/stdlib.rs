@@ -33,35 +33,13 @@ impl<'a> Builder<'a> {
     /// shadows the builtin.
     pub(super) fn proven_free_name_collection_factory(&self, value: ValueId) -> Option<ValueId> {
         self.collection_factory_seq(value, |s, callee| {
-            let node = &s.nodes[callee as usize];
-            let ValOp::Input(key) = node.op else {
-                return false;
-            };
-            let Some(contract) = library_free_name_collection_factory_contracts(s.il.meta.lang)
-                .find(|contract| {
-                    let LibraryApiCalleeContract::FreeName { name, .. } = contract.callee else {
-                        return false;
-                    };
-                    key == s.free_name_input_key(name)
-                })
-            else {
-                return false;
-            };
-            let LibraryApiCalleeContract::FreeName { name, .. } = contract.callee else {
-                return false;
-            };
-            s.is_free_name_value(callee, name)
-                && matches!(
-                    s.library_api_evidence_for_value_call(
-                        value,
-                        callee,
-                        None,
-                        contract.id,
-                        contract.callee,
-                        1,
-                    ),
-                    LibraryApiEvidenceStatus::Admitted
-                )
+            admitted_free_name_collection_factory_at_call_span(
+                s.il,
+                s.interner,
+                s.library_api_span_call(value, callee, None, 1),
+                |name| s.is_free_name_value(callee, name),
+            )
+            .is_some()
         })
     }
 
@@ -69,27 +47,16 @@ impl<'a> Builder<'a> {
     /// factory (the non-free-name part of the former python recognizer).
     pub(super) fn proven_python_deque_collection_value(&self, value: ValueId) -> Option<ValueId> {
         self.collection_factory_seq(value, |s, callee| {
-            library_imported_collection_factory_contracts(s.il.meta.lang).any(|contract| {
-                let LibraryApiCalleeContract::ImportedBinding { .. } = contract.callee else {
-                    return false;
-                };
-                let receiver = match s.nodes[callee as usize].op {
-                    ValOp::Field(_) => s.nodes[callee as usize].args.first().copied(),
-                    _ => None,
-                };
-                match s.library_api_evidence_for_value_call(
-                    value,
-                    callee,
-                    receiver,
-                    contract.id,
-                    contract.callee,
-                    1,
-                ) {
-                    LibraryApiEvidenceStatus::Admitted => true,
-                    LibraryApiEvidenceStatus::Rejected => false,
-                    LibraryApiEvidenceStatus::Missing => false,
-                }
-            })
+            let receiver = match s.nodes[callee as usize].op {
+                ValOp::Field(_) => s.nodes[callee as usize].args.first().copied(),
+                _ => None,
+            };
+            admitted_imported_collection_factory_at_call_span(
+                s.il,
+                s.interner,
+                s.library_api_span_call(value, callee, receiver, 1),
+            )
+            .is_some()
         })
     }
 
@@ -108,7 +75,8 @@ impl<'a> Builder<'a> {
             return None;
         }
         let args = node.args.clone();
-        let callee = &self.nodes[args[0] as usize];
+        let callee_value = args[0];
+        let callee = &self.nodes[callee_value as usize];
         let ValOp::Field(method) = callee.op else {
             return None;
         };
@@ -116,30 +84,17 @@ impl<'a> Builder<'a> {
             return None;
         }
         let receiver = callee.args[0];
-        let contract = ["List", "Set", "Arrays"]
-            .into_iter()
-            .find_map(|receiver_name| {
-                let contract = library_java_collection_factory_contract_by_hash(
-                    self.il.meta.lang,
-                    receiver_name,
-                    method,
-                )?;
-                let LibraryApiCalleeContract::JavaUtilStaticMember { .. } = contract.callee else {
-                    return None;
-                };
-                match self.library_api_evidence_for_value_call(
-                    value,
-                    args[0],
-                    Some(receiver),
-                    contract.id,
-                    contract.callee,
-                    args.len().saturating_sub(1),
-                ) {
-                    LibraryApiEvidenceStatus::Admitted => Some(contract),
-                    LibraryApiEvidenceStatus::Rejected => None,
-                    LibraryApiEvidenceStatus::Missing => None,
-                }
-            })?;
+        let admitted = admitted_java_collection_factory_at_call_span(
+            self.il,
+            self.interner,
+            self.library_api_span_call(
+                value,
+                callee_value,
+                Some(receiver),
+                args.len().saturating_sub(1),
+            ),
+            method,
+        )?;
         // A single argument to a varargs collection factory (`Arrays.asList(x)`,
         // `List.of(x)`, `Set.of(x)`) is ambiguous: when `x` is an array it is spread
         // into the element list, but when `x` is a single object it is the sole
@@ -149,7 +104,7 @@ impl<'a> Builder<'a> {
         // must refuse, or an array-typed field and a list-typed field of the same name
         // would false-merge. Multi-argument factories are always a literal element list.
         if args.len() == 2 {
-            let single_arg_spreads_array = match contract.result {
+            let single_arg_spreads_array = match admitted.contract.result {
                 LibraryCollectionFactoryResult::VariadicElements {
                     single_arg_spreads_array,
                 } => single_arg_spreads_array,
@@ -190,29 +145,24 @@ impl<'a> Builder<'a> {
             let ValOp::Field(method) = callee.op else {
                 return false;
             };
-            let Some(contract) =
-                library_ruby_set_factory_contract_by_hash(s.il.meta.lang, "Set", method, 1)
-            else {
+            if callee.args.len() != 1 {
+                return false;
+            }
+            let receiver_value = callee.args[0];
+            let Some(admitted) = admitted_ruby_set_factory_at_call_span(
+                s.il,
+                s.interner,
+                s.library_api_span_call(value, callee_value, Some(receiver_value), 1),
+                method,
+            ) else {
                 return false;
             };
             let LibraryApiCalleeContract::RubyRequireStaticMember { receiver, .. } =
-                contract.callee
+                admitted.contract.callee
             else {
                 return false;
             };
-            callee.args.len() == 1
-                && s.is_free_name_value(callee.args[0], receiver)
-                && matches!(
-                    s.library_api_evidence_for_value_call(
-                        value,
-                        callee_value,
-                        Some(callee.args[0]),
-                        contract.id,
-                        contract.callee,
-                        1,
-                    ),
-                    LibraryApiEvidenceStatus::Admitted
-                )
+            s.is_free_name_value(receiver_value, receiver)
         })
     }
 
@@ -231,23 +181,15 @@ impl<'a> Builder<'a> {
             return None;
         }
         let args = node.args.clone();
-        let contract = library_rust_vec_macro_factory_contract(self.il.meta.lang, "vec")?;
-        let LibraryApiCalleeContract::RustMacro { name, .. } = contract.callee else {
+        let admitted = admitted_rust_vec_macro_factory_at_call_span(
+            self.il,
+            self.interner,
+            self.library_api_span_call(value, args[0], None, args.len().saturating_sub(1)),
+        )?;
+        let LibraryApiCalleeContract::RustMacro { name, .. } = admitted.contract.callee else {
             return None;
         };
-        if !self.is_free_name_value(args[0], name)
-            || !matches!(
-                self.library_api_evidence_for_value_call(
-                    value,
-                    args[0],
-                    None,
-                    contract.id,
-                    contract.callee,
-                    args.len().saturating_sub(1),
-                ),
-                LibraryApiEvidenceStatus::Admitted
-            )
-        {
+        if !self.is_free_name_value(args[0], name) {
             return None;
         }
         Some(self.mk(ValOp::Seq(SEQ_VALUE_COLLECTION), args[1..].to_vec()))
@@ -430,32 +372,17 @@ impl<'a> Builder<'a> {
         ) {
             return None;
         }
-        let entry_tag =
-            library_free_name_map_factory_contracts(self.il.meta.lang).find_map(|contract| {
-                let LibraryApiCalleeContract::FreeName { name, .. } = contract.callee else {
-                    return None;
-                };
-                if !self.is_free_name_value(callee, name)
-                    || !matches!(
-                        self.library_api_evidence_for_value_call(
-                            value,
-                            callee,
-                            None,
-                            contract.id,
-                            contract.callee,
-                            1,
-                        ),
-                        LibraryApiEvidenceStatus::Admitted
-                    )
-                {
-                    return None;
-                }
-                match contract.result {
-                    LibraryMapFactoryResult::EntrySequence { entry_seq_tag } => Some(entry_seq_tag),
-                    LibraryMapFactoryResult::JavaFactory { .. } => None,
-                }
-            })?;
-        self.map_factory_from_seq(seq, entry_tag)
+        let admitted = admitted_free_name_map_factory_at_call_span(
+            self.il,
+            self.interner,
+            self.library_api_span_call(value, callee, None, 1),
+            |name| self.is_free_name_value(callee, name),
+        )?;
+        let LibraryMapFactoryResult::EntrySequence { entry_seq_tag } = admitted.contract.result
+        else {
+            return None;
+        };
+        self.map_factory_from_seq(seq, entry_seq_tag)
     }
 
     /// Canonicalize a collection sequence of 2-element entries to the canonical map shape.
@@ -485,31 +412,26 @@ impl<'a> Builder<'a> {
             return None;
         }
         let args = node.args.clone();
-        let callee = &self.nodes[args[0] as usize];
+        let callee_value = args[0];
+        let callee = &self.nodes[callee_value as usize];
         let ValOp::Field(method) = callee.op else {
             return None;
         };
         if callee.args.len() != 1 {
             return None;
         }
-        let contract = library_java_map_factory_contract_by_hash(self.il.meta.lang, "Map", method)?;
-        let LibraryApiCalleeContract::JavaUtilStaticMember { .. } = contract.callee else {
-            return None;
-        };
-        let api_status = self.library_api_evidence_for_value_call(
-            value,
-            args[0],
-            Some(callee.args[0]),
-            contract.id,
-            contract.callee,
-            args.len().saturating_sub(1),
-        );
-        match api_status {
-            LibraryApiEvidenceStatus::Admitted => {}
-            LibraryApiEvidenceStatus::Rejected => return None,
-            LibraryApiEvidenceStatus::Missing => return None,
-        }
-        let LibraryMapFactoryResult::JavaFactory { kind } = contract.result else {
+        let admitted = admitted_java_map_factory_at_call_span(
+            self.il,
+            self.interner,
+            self.library_api_span_call(
+                value,
+                callee_value,
+                Some(callee.args[0]),
+                args.len().saturating_sub(1),
+            ),
+            method,
+        )?;
+        let LibraryMapFactoryResult::JavaFactory { kind } = admitted.contract.result else {
             return None;
         };
         if kind == JavaMapFactoryKind::Of {
@@ -595,69 +517,31 @@ impl<'a> Builder<'a> {
         let ValOp::Field(method) = callee.op else {
             return None;
         };
-        let contract = library_java_map_entry_contract_by_hash(self.il.meta.lang, "Map", method)?;
-        let LibraryApiCalleeContract::JavaUtilStaticMember { .. } = contract.callee else {
-            return None;
-        };
         if callee.args.len() != 1 {
             return None;
         }
-        match self.library_api_evidence_for_value_call(
-            value,
-            args[0],
-            Some(callee.args[0]),
-            contract.id,
-            contract.callee,
-            2,
-        ) {
-            LibraryApiEvidenceStatus::Admitted => {}
-            LibraryApiEvidenceStatus::Rejected => return None,
-            LibraryApiEvidenceStatus::Missing => return None,
-        }
+        admitted_java_map_entry_at_call_span(
+            self.il,
+            self.interner,
+            self.library_api_span_call(value, args[0], Some(callee.args[0]), 2),
+            method,
+        )?;
         Some(args[1..].to_vec())
     }
 
-    pub(super) fn library_api_evidence_for_value_call(
+    pub(super) fn library_api_span_call(
         &self,
         value: ValueId,
         callee: ValueId,
         receiver: Option<ValueId>,
-        id: nose_semantics::LibraryApiContractId,
-        callee_contract: LibraryApiCalleeContract,
         arg_count: usize,
-    ) -> LibraryApiEvidenceStatus {
-        library_api_contract_evidence_at_call_span(
-            self.il,
-            self.interner,
-            LibraryApiSpanEvidenceQuery {
-                call_span: self.node_span[value as usize],
-                callee_span: self.library_api_value_span(callee),
-                receiver_span: self.library_api_receiver_query_span(value, callee, receiver),
-                id,
-                callee: callee_contract,
-                arg_count,
-            },
-        )
-    }
-
-    pub(super) fn library_api_evidence_admitted(
-        &self,
-        call: NodeId,
-        id: nose_semantics::LibraryApiContractId,
-        callee: LibraryApiCalleeContract,
-        arg_count: usize,
-    ) -> bool {
-        matches!(
-            library_api_contract_evidence_for_call(
-                self.il,
-                self.interner,
-                call,
-                id,
-                callee,
-                arg_count,
-            ),
-            LibraryApiEvidenceStatus::Admitted
-        )
+    ) -> LibraryApiSpanCall {
+        LibraryApiSpanCall {
+            call_span: self.node_span[value as usize],
+            callee_span: self.library_api_value_span(callee),
+            receiver_span: self.library_api_receiver_query_span(value, callee, receiver),
+            arg_count,
+        }
     }
 
     pub(super) fn library_api_value_span(&self, value: ValueId) -> Option<Span> {
@@ -844,26 +728,20 @@ impl<'a> Builder<'a> {
         let ValOp::Field(method) = callee.op else {
             return None;
         };
-        let contract = library_map_get_contract_by_hash(
-            self.il.meta.lang,
-            method,
-            args.len().saturating_sub(1),
-        )?;
         if callee.args.len() != 1 {
             return None;
         }
-        match self.library_api_evidence_for_value_call(
-            value,
-            args[0],
-            Some(callee.args[0]),
-            contract.id,
-            contract.callee,
-            args.len().saturating_sub(1),
-        ) {
-            LibraryApiEvidenceStatus::Admitted => {}
-            LibraryApiEvidenceStatus::Rejected => return None,
-            LibraryApiEvidenceStatus::Missing => return None,
-        }
+        admitted_map_get_at_call_span(
+            self.il,
+            self.interner,
+            self.library_api_span_call(
+                value,
+                args[0],
+                Some(callee.args[0]),
+                args.len().saturating_sub(1),
+            ),
+            method,
+        )?;
         let map = callee.args[0];
         let map = if self.is_param_value(map, DomainEvidence::Map) {
             map
@@ -892,21 +770,17 @@ impl<'a> Builder<'a> {
             let ValOp::Field(method) = callee.op else {
                 return None;
             };
-            let contract = library_map_key_view_contract_by_hash(self.il.meta.lang, method, 0)?;
-            if contract.result.kind != accepted || callee.args.len() != 1 {
+            if callee.args.len() != 1 {
                 return None;
             }
-            match self.library_api_evidence_for_value_call(
-                value,
-                args[0],
-                Some(callee.args[0]),
-                contract.id,
-                contract.callee,
-                0,
-            ) {
-                LibraryApiEvidenceStatus::Admitted => {}
-                LibraryApiEvidenceStatus::Rejected => return None,
-                LibraryApiEvidenceStatus::Missing => return None,
+            let admitted = admitted_map_key_view_at_call_span(
+                self.il,
+                self.interner,
+                self.library_api_span_call(value, args[0], Some(callee.args[0]), 0),
+                method,
+            )?;
+            if admitted.contract.result.kind != accepted {
+                return None;
             }
             let map = callee.args[0];
             return if self.is_param_value(map, DomainEvidence::Map) {
@@ -920,40 +794,20 @@ impl<'a> Builder<'a> {
             let ValOp::Field(method) = callee.op else {
                 return None;
             };
-            let contract = library_map_key_view_wrapper_contract_by_hash(
-                self.il.meta.lang,
-                "Array",
-                method,
-                1,
-            )?;
             if accepted != MapKeyViewKind::Collection || callee.args.len() != 1 {
                 return None;
             }
-            let receiver_span = callee
-                .args
-                .first()
-                .and_then(|&receiver| self.node_span[receiver as usize]);
-            match library_api_contract_evidence_at_call_span(
+            admitted_map_key_view_wrapper_at_call_span(
                 self.il,
                 self.interner,
-                LibraryApiSpanEvidenceQuery {
-                    call_span: self.node_span[value as usize],
-                    callee_span: self.node_span[args[0] as usize],
-                    receiver_span,
-                    id: contract.id,
-                    callee: contract.callee,
-                    arg_count: 1,
-                },
-            ) {
-                LibraryApiEvidenceStatus::Admitted => {}
-                LibraryApiEvidenceStatus::Rejected => return None,
-                LibraryApiEvidenceStatus::Missing => return None,
-            }
+                self.library_api_span_call(value, args[0], callee.args.first().copied(), 1),
+                "Array",
+                method,
+            )?;
             return self.proven_map_key_view_value_matching(args[1], MapKeyViewKind::Iterator);
         }
         None
     }
-
     pub(super) fn proven_map_key_view_expr(
         &mut self,
         expr: NodeId,
@@ -969,28 +823,8 @@ impl<'a> Builder<'a> {
         kids: &[NodeId],
         env: &FxHashMap<u32, ValueId>,
     ) -> Option<ValueId> {
-        let &callee = kids.first()?;
-        let Payload::Name(name) = self.il.node(callee).payload else {
-            return None;
-        };
-        let method = self.interner.resolve(name);
-        if self.il.kind(callee) != NodeKind::Field {
-            return None;
-        }
-        let callee_kids = self.il.children(callee);
-        let receiver = callee_kids.first().copied();
-
-        let contract =
-            library_method_call_contract(self.il.meta.lang, method, kids.len().saturating_sub(1))?;
-        if !self.library_api_evidence_admitted(
-            expr,
-            contract.id,
-            contract.callee,
-            kids.len().saturating_sub(1),
-        ) {
-            return None;
-        }
-        let result = contract.result;
+        let admitted = admitted_library_method_call_at_call(self.il, self.interner, expr)?;
+        let result = admitted.contract.result;
         if result.semantic != MethodSemanticContract::Builtin(Builtin::Contains) {
             return None;
         }
@@ -1005,7 +839,7 @@ impl<'a> Builder<'a> {
             )
             && kids.len() == 2
         {
-            let receiver = receiver?;
+            let receiver = admitted.receiver?;
             let element = self.eval(kids[1], env);
             if matches!(
                 result.receiver,
@@ -1034,7 +868,7 @@ impl<'a> Builder<'a> {
             }
             None
         } else if result.args == MethodBuiltinArgs::GoSliceContains && kids.len() == 3 {
-            let receiver = receiver?;
+            let receiver = admitted.receiver?;
             let MethodReceiverContract::ImportedNamespace(module) = result.receiver else {
                 return None;
             };
@@ -1065,19 +899,8 @@ impl<'a> Builder<'a> {
         if kids.len() != 2 {
             return None;
         }
-        let callee = kids[0];
-        if self.il.kind(callee) != NodeKind::Field {
-            return None;
-        }
-        let Payload::Name(name) = self.il.node(callee).payload else {
-            return None;
-        };
-        let method = self.interner.resolve(name);
-        let contract = library_method_call_contract(self.il.meta.lang, method, 1)?;
-        if !self.library_api_evidence_admitted(expr, contract.id, contract.callee, 1) {
-            return None;
-        }
-        let result = contract.result;
+        let admitted = admitted_library_method_call_at_call(self.il, self.interner, expr)?;
+        let result = admitted.contract.result;
         if result.semantic != MethodSemanticContract::Builtin(Builtin::Contains)
             || result.args != MethodBuiltinArgs::FirstThenReceiver
             || !matches!(
@@ -1089,7 +912,7 @@ impl<'a> Builder<'a> {
         {
             return None;
         }
-        let receiver = self.il.children(callee).first().copied()?;
+        let receiver = admitted.receiver?;
         let key = self.eval(kids[1], env);
         let receiver_value = self.eval(receiver, env);
         let map = if self.is_map_param_expr(receiver) {
@@ -1110,27 +933,8 @@ impl<'a> Builder<'a> {
         if kids.len() != 3 {
             return None;
         }
-        let callee = kids[0];
-        if self.il.kind(callee) != NodeKind::Field {
-            return None;
-        }
-        let Payload::Name(name) = self.il.node(callee).payload else {
-            return None;
-        };
-        let contract = library_method_call_contract(
-            self.il.meta.lang,
-            self.interner.resolve(name),
-            kids.len().saturating_sub(1),
-        )?;
-        if !self.library_api_evidence_admitted(
-            expr,
-            contract.id,
-            contract.callee,
-            kids.len().saturating_sub(1),
-        ) {
-            return None;
-        }
-        let result = contract.result;
+        let admitted = admitted_library_method_call_at_call(self.il, self.interner, expr)?;
+        let result = admitted.contract.result;
         if result.semantic != MethodSemanticContract::Builtin(Builtin::GetOrDefault)
             || result.receiver != MethodReceiverContract::ExactMap
             || !matches!(
@@ -1140,7 +944,7 @@ impl<'a> Builder<'a> {
         {
             return None;
         }
-        let receiver = self.il.children(callee).first().copied()?;
+        let receiver = admitted.receiver?;
         let receiver_value = self.eval(receiver, env);
         let map = if self.is_map_param_expr(receiver) {
             receiver_value
@@ -1238,17 +1042,11 @@ impl<'a> Builder<'a> {
         kids: &[NodeId],
         env: &FxHashMap<u32, ValueId>,
     ) -> Option<ValueId> {
-        if kids.len() != 3 || self.il.kind(kids[0]) != NodeKind::Var {
+        if kids.len() != 3 {
             return None;
         }
-        let Payload::Name(name) = self.il.node(kids[0]).payload else {
-            return None;
-        };
-        let method = self.interner.resolve(name);
-        let contract = library_free_function_builtin_contract(self.il.meta.lang, method, 2)?;
-        if !self.library_api_evidence_admitted(expr, contract.id, contract.callee, 2) {
-            return None;
-        }
+        let admitted = admitted_free_function_builtin_at_call(self.il, self.interner, expr)?;
+        let contract = admitted.contract;
         let op = match (contract.result.builtin, contract.result.args) {
             (Builtin::Min, BuiltinArgContract::All) => MIN_CODE,
             (Builtin::Max, BuiltinArgContract::All) => MAX_CODE,

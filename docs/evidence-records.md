@@ -568,9 +568,12 @@ callers:
 - value-graph direct API eval paths and provider literal export safety share the
   same admitted occurrence resolver layer where they still have the source
   `Call` node. This includes direct factory/constructor eval, static
-  index-membership, and Rust scalar integer method calls. Value-level CSE paths
-  that query by source span still use shared occurrence evidence admission, but
-  their span-query resolver boundary is tracked as a separate cleanup;
+  index-membership, Rust scalar integer method calls, and builder append API
+  admission. Value-level CSE paths that only retain source spans now also go
+  through span-query resolvers for free-name/imported collection factories,
+  Java/Ruby/Rust collection factories, free-name/Java map factories, Java map
+  entries, map `get`, and map-key view/wrapper calls. The value graph no longer
+  locally recombines those contract rows with `LibraryApi` span evidence;
 - value-graph consumers that query by source span re-check the original source
   `Call` node shape and its evidence dependencies when that call can be
   recovered. This preserves receiver-method precision when value-graph CSE has

@@ -422,14 +422,15 @@ migrated.
 - Selected value-graph library consumers now call shared admitted occurrence
   resolvers in `nose-semantics` for method, imported-namespace function,
   iterator-adapter, Rust Option/`Vec::new`, direct factory/constructor eval,
-  static index-membership, and Rust scalar integer method calls instead of
-  recombining raw selector parsing with evidence admission locally. Normalize
-  idiom canonicalization uses the same resolver layer for supported
-  free-function builtins, generic method contracts, map `get`, map-key views,
-  iterator/static collection adapters, Rust `Some(...)`, and Rust map factory
-  receiver proof. Value-level CSE paths that query by call span still use the
-  shared evidence admission substrate and remain a separate resolver-boundary
-  cleanup.
+  static index-membership, Rust scalar integer method calls, and builder append
+  API admission instead of recombining raw selector parsing with evidence
+  admission locally. Normalize idiom canonicalization uses the same resolver
+  layer for supported free-function builtins, generic method contracts, map
+  `get`, map-key views, iterator/static collection adapters, Rust `Some(...)`,
+  and Rust map factory receiver proof. Value-level CSE paths that query by call
+  span now use span-query resolvers for free-name/imported collection
+  factories, Java/Ruby/Rust collection factories, free-name/Java map factories,
+  Java map entries, map `get`, and map-key view/wrapper calls.
 - Java stream source adapters are split by proof through library API contracts:
   `receiver.stream()` requires an exact iterable receiver, while
   `Arrays.stream(xs)` requires the `java.util.Arrays` import binding and no local

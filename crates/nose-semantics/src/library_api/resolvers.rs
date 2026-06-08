@@ -13,6 +13,23 @@ pub struct AdmittedLibraryApiCall<C> {
     pub arg_count: usize,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct LibraryApiSpanCall {
+    pub call_span: Option<Span>,
+    pub callee_span: Option<Span>,
+    pub receiver_span: Option<Span>,
+    pub arg_count: usize,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct AdmittedLibraryApiSpanCall<C> {
+    pub contract: C,
+    pub call_span: Option<Span>,
+    pub callee_span: Option<Span>,
+    pub receiver_span: Option<Span>,
+    pub arg_count: usize,
+}
+
 pub fn admitted_library_method_call_at_call(
     il: &Il,
     interner: &Interner,
@@ -57,6 +74,17 @@ pub fn admitted_map_get_at_call(
         arg_count,
         contract,
     )
+}
+
+pub fn admitted_map_get_at_call_span(
+    il: &Il,
+    interner: &Interner,
+    occurrence: LibraryApiSpanCall,
+    method_hash: u64,
+) -> Option<AdmittedLibraryApiSpanCall<LibraryMapGetContract>> {
+    let contract =
+        library_map_get_contract_by_hash(il.meta.lang, method_hash, occurrence.arg_count)?;
+    admitted_library_span_call(il, interner, occurrence, contract)
 }
 
 pub fn admitted_regex_test_at_call(
@@ -151,6 +179,33 @@ pub fn admitted_map_key_view_at_call(
     )
 }
 
+pub fn admitted_map_key_view_at_call_span(
+    il: &Il,
+    interner: &Interner,
+    occurrence: LibraryApiSpanCall,
+    method_hash: u64,
+) -> Option<AdmittedLibraryApiSpanCall<LibraryMapKeyViewContract>> {
+    let contract =
+        library_map_key_view_contract_by_hash(il.meta.lang, method_hash, occurrence.arg_count)?;
+    admitted_library_span_call(il, interner, occurrence, contract)
+}
+
+pub fn admitted_map_key_view_wrapper_at_call_span(
+    il: &Il,
+    interner: &Interner,
+    occurrence: LibraryApiSpanCall,
+    receiver: &str,
+    method_hash: u64,
+) -> Option<AdmittedLibraryApiSpanCall<LibraryMapKeyViewWrapperContract>> {
+    let contract = library_map_key_view_wrapper_contract_by_hash(
+        il.meta.lang,
+        receiver,
+        method_hash,
+        occurrence.arg_count,
+    )?;
+    admitted_library_span_call(il, interner, occurrence, contract)
+}
+
 pub fn admitted_map_key_view_wrapper_at_call(
     il: &Il,
     interner: &Interner,
@@ -179,6 +234,22 @@ pub fn admitted_free_name_collection_factory_at_call(
     admitted_library_call(il, interner, call, callee, None, arg_count, contract)
 }
 
+pub fn admitted_free_name_collection_factory_at_call_span(
+    il: &Il,
+    interner: &Interner,
+    occurrence: LibraryApiSpanCall,
+    mut matches_name: impl FnMut(&str) -> bool,
+) -> Option<AdmittedLibraryApiSpanCall<LibraryCollectionFactoryContract>> {
+    library_free_name_collection_factory_contracts(il.meta.lang).find_map(|contract| {
+        let LibraryApiCalleeContract::FreeName { name, .. } = contract.callee else {
+            return None;
+        };
+        matches_name(name)
+            .then(|| admitted_library_span_call(il, interner, occurrence, contract))
+            .flatten()
+    })
+}
+
 pub fn admitted_imported_collection_factory_at_call(
     il: &Il,
     interner: &Interner,
@@ -189,6 +260,15 @@ pub fn admitted_imported_collection_factory_at_call(
     library_imported_collection_factory_contracts(il.meta.lang).find_map(|contract| {
         admitted_library_call(il, interner, call, callee, None, arg_count, contract)
     })
+}
+
+pub fn admitted_imported_collection_factory_at_call_span(
+    il: &Il,
+    interner: &Interner,
+    occurrence: LibraryApiSpanCall,
+) -> Option<AdmittedLibraryApiSpanCall<LibraryCollectionFactoryContract>> {
+    library_imported_collection_factory_contracts(il.meta.lang)
+        .find_map(|contract| admitted_library_span_call(il, interner, occurrence, contract))
 }
 
 pub fn admitted_ruby_set_factory_at_call(
@@ -211,6 +291,16 @@ pub fn admitted_ruby_set_factory_at_call(
     )
 }
 
+pub fn admitted_ruby_set_factory_at_call_span(
+    il: &Il,
+    interner: &Interner,
+    occurrence: LibraryApiSpanCall,
+    method_hash: u64,
+) -> Option<AdmittedLibraryApiSpanCall<LibraryCollectionFactoryContract>> {
+    let contract = library_ruby_set_factory_contract_by_hash(il.meta.lang, "Set", method_hash, 1)?;
+    admitted_library_span_call(il, interner, occurrence, contract)
+}
+
 pub fn admitted_rust_vec_macro_factory_at_call(
     il: &Il,
     interner: &Interner,
@@ -220,6 +310,15 @@ pub fn admitted_rust_vec_macro_factory_at_call(
     let arg_count = args.len();
     let contract = library_rust_vec_macro_factory_contract(il.meta.lang, "vec")?;
     admitted_library_call(il, interner, call, callee, None, arg_count, contract)
+}
+
+pub fn admitted_rust_vec_macro_factory_at_call_span(
+    il: &Il,
+    interner: &Interner,
+    occurrence: LibraryApiSpanCall,
+) -> Option<AdmittedLibraryApiSpanCall<LibraryCollectionFactoryContract>> {
+    let contract = library_rust_vec_macro_factory_contract(il.meta.lang, "vec")?;
+    admitted_library_span_call(il, interner, occurrence, contract)
 }
 
 pub fn admitted_java_collection_factory_at_call(
@@ -239,6 +338,19 @@ pub fn admitted_java_collection_factory_at_call(
         arg_count,
         contract,
     )
+}
+
+pub fn admitted_java_collection_factory_at_call_span(
+    il: &Il,
+    interner: &Interner,
+    occurrence: LibraryApiSpanCall,
+    method_hash: u64,
+) -> Option<AdmittedLibraryApiSpanCall<LibraryCollectionFactoryContract>> {
+    ["List", "Set", "Arrays"].into_iter().find_map(|receiver| {
+        let contract =
+            library_java_collection_factory_contract_by_hash(il.meta.lang, receiver, method_hash)?;
+        admitted_library_span_call(il, interner, occurrence, contract)
+    })
 }
 
 pub fn admitted_java_collection_constructor_at_call(
@@ -272,6 +384,22 @@ pub fn admitted_free_name_map_factory_at_call(
     admitted_library_call(il, interner, call, callee, None, arg_count, contract)
 }
 
+pub fn admitted_free_name_map_factory_at_call_span(
+    il: &Il,
+    interner: &Interner,
+    occurrence: LibraryApiSpanCall,
+    mut matches_name: impl FnMut(&str) -> bool,
+) -> Option<AdmittedLibraryApiSpanCall<LibraryMapFactoryContract>> {
+    library_free_name_map_factory_contracts(il.meta.lang).find_map(|contract| {
+        let LibraryApiCalleeContract::FreeName { name, .. } = contract.callee else {
+            return None;
+        };
+        matches_name(name)
+            .then(|| admitted_library_span_call(il, interner, occurrence, contract))
+            .flatten()
+    })
+}
+
 pub fn admitted_java_map_factory_at_call(
     il: &Il,
     interner: &Interner,
@@ -291,6 +419,16 @@ pub fn admitted_java_map_factory_at_call(
     )
 }
 
+pub fn admitted_java_map_factory_at_call_span(
+    il: &Il,
+    interner: &Interner,
+    occurrence: LibraryApiSpanCall,
+    method_hash: u64,
+) -> Option<AdmittedLibraryApiSpanCall<LibraryMapFactoryContract>> {
+    let contract = library_java_map_factory_contract_by_hash(il.meta.lang, "Map", method_hash)?;
+    admitted_library_span_call(il, interner, occurrence, contract)
+}
+
 pub fn admitted_java_map_entry_at_call(
     il: &Il,
     interner: &Interner,
@@ -308,6 +446,16 @@ pub fn admitted_java_map_entry_at_call(
         arg_count,
         contract,
     )
+}
+
+pub fn admitted_java_map_entry_at_call_span(
+    il: &Il,
+    interner: &Interner,
+    occurrence: LibraryApiSpanCall,
+    method_hash: u64,
+) -> Option<AdmittedLibraryApiSpanCall<LibraryMapEntryFactoryContract>> {
+    let contract = library_java_map_entry_contract_by_hash(il.meta.lang, "Map", method_hash)?;
+    admitted_library_span_call(il, interner, occurrence, contract)
 }
 
 pub fn admitted_js_like_map_constructor_at_call(
@@ -456,6 +604,36 @@ fn admitted_library_call<C: LibraryApiContractParts>(
         callee,
         receiver,
         arg_count,
+    })
+}
+
+fn admitted_library_span_call<C: LibraryApiContractParts>(
+    il: &Il,
+    interner: &Interner,
+    occurrence: LibraryApiSpanCall,
+    contract: C,
+) -> Option<AdmittedLibraryApiSpanCall<C>> {
+    matches!(
+        library_api_contract_evidence_at_call_span(
+            il,
+            interner,
+            LibraryApiSpanEvidenceQuery {
+                call_span: occurrence.call_span,
+                callee_span: occurrence.callee_span,
+                receiver_span: occurrence.receiver_span,
+                id: contract.contract_id(),
+                callee: contract.callee_contract(),
+                arg_count: occurrence.arg_count,
+            },
+        ),
+        LibraryApiEvidenceStatus::Admitted
+    )
+    .then_some(AdmittedLibraryApiSpanCall {
+        contract,
+        call_span: occurrence.call_span,
+        callee_span: occurrence.callee_span,
+        receiver_span: occurrence.receiver_span,
+        arg_count: occurrence.arg_count,
     })
 }
 
