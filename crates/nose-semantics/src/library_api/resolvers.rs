@@ -31,6 +31,116 @@ pub fn admitted_library_method_call_at_call(
     )
 }
 
+pub fn admitted_map_get_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> Option<AdmittedLibraryApiCall<LibraryMapGetContract>> {
+    let (callee, receiver, method, arg_count) = receiver_method_call_parts(il, interner, call)?;
+    let contract = library_map_get_contract(il.meta.lang, method, arg_count)?;
+    admitted_library_call(
+        il,
+        interner,
+        call,
+        callee,
+        Some(receiver),
+        arg_count,
+        contract,
+    )
+}
+
+pub fn admitted_regex_test_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> Option<AdmittedLibraryApiCall<LibraryRegexTestContract>> {
+    let (callee, receiver, method, arg_count) = receiver_method_call_parts(il, interner, call)?;
+    let contract = library_regex_test_contract(il.meta.lang, method, arg_count)?;
+    admitted_library_call(
+        il,
+        interner,
+        call,
+        callee,
+        Some(receiver),
+        arg_count,
+        contract,
+    )
+}
+
+pub fn admitted_js_array_is_array_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> Option<AdmittedLibraryApiCall<LibraryStaticGlobalMethodContract>> {
+    let (callee, receiver, method, arg_count) = receiver_method_call_parts(il, interner, call)?;
+    let receiver_name = node_name(il, interner, receiver)?;
+    let contract =
+        library_js_array_is_array_contract(il.meta.lang, receiver_name, method, arg_count)?;
+    admitted_library_call(
+        il,
+        interner,
+        call,
+        callee,
+        Some(receiver),
+        arg_count,
+        contract,
+    )
+}
+
+pub fn admitted_static_index_membership_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> Option<AdmittedLibraryApiCall<LibraryStaticIndexMembershipContract>> {
+    let (callee, receiver, method, arg_count) = receiver_method_call_parts(il, interner, call)?;
+    let contract = library_static_index_membership_contract(il.meta.lang, method, arg_count)?;
+    admitted_library_call(
+        il,
+        interner,
+        call,
+        callee,
+        Some(receiver),
+        arg_count,
+        contract,
+    )
+}
+
+pub fn admitted_map_key_view_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> Option<AdmittedLibraryApiCall<LibraryMapKeyViewContract>> {
+    let (callee, receiver, method, arg_count) = receiver_method_call_parts(il, interner, call)?;
+    let contract = library_map_key_view_contract(il.meta.lang, method, arg_count)?;
+    admitted_library_call(
+        il,
+        interner,
+        call,
+        callee,
+        Some(receiver),
+        arg_count,
+        contract,
+    )
+}
+
+pub fn admitted_map_key_view_wrapper_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> Option<AdmittedLibraryApiCall<LibraryMapKeyViewWrapperContract>> {
+    let (callee, receiver, method, arg_count) = receiver_method_call_parts(il, interner, call)?;
+    let contract = library_map_key_view_wrapper_contract(il.meta.lang, "Array", method, arg_count)?;
+    admitted_library_call(
+        il,
+        interner,
+        call,
+        callee,
+        Some(receiver),
+        arg_count,
+        contract,
+    )
+}
+
 pub fn admitted_imported_namespace_function_at_call(
     il: &Il,
     interner: &Interner,
@@ -156,6 +266,66 @@ trait LibraryApiContractParts: Copy {
 }
 
 impl LibraryApiContractParts for LibraryMethodCallContract {
+    fn contract_id(self) -> LibraryApiContractId {
+        self.id
+    }
+
+    fn callee_contract(self) -> LibraryApiCalleeContract {
+        self.callee
+    }
+}
+
+impl LibraryApiContractParts for LibraryMapGetContract {
+    fn contract_id(self) -> LibraryApiContractId {
+        self.id
+    }
+
+    fn callee_contract(self) -> LibraryApiCalleeContract {
+        self.callee
+    }
+}
+
+impl LibraryApiContractParts for LibraryRegexTestContract {
+    fn contract_id(self) -> LibraryApiContractId {
+        self.id
+    }
+
+    fn callee_contract(self) -> LibraryApiCalleeContract {
+        self.callee
+    }
+}
+
+impl LibraryApiContractParts for LibraryStaticGlobalMethodContract {
+    fn contract_id(self) -> LibraryApiContractId {
+        self.id
+    }
+
+    fn callee_contract(self) -> LibraryApiCalleeContract {
+        self.callee
+    }
+}
+
+impl LibraryApiContractParts for LibraryStaticIndexMembershipContract {
+    fn contract_id(self) -> LibraryApiContractId {
+        self.id
+    }
+
+    fn callee_contract(self) -> LibraryApiCalleeContract {
+        self.callee
+    }
+}
+
+impl LibraryApiContractParts for LibraryMapKeyViewContract {
+    fn contract_id(self) -> LibraryApiContractId {
+        self.id
+    }
+
+    fn callee_contract(self) -> LibraryApiCalleeContract {
+        self.callee
+    }
+}
+
+impl LibraryApiContractParts for LibraryMapKeyViewWrapperContract {
     fn contract_id(self) -> LibraryApiContractId {
         self.id
     }

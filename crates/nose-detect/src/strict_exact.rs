@@ -11,27 +11,28 @@ use nose_il::{
 use nose_normalize::module_facts::collect_module_mutations;
 use nose_semantics::{
     admitted_builtin_semantics_at_call, admitted_hof_api_at_node,
-    asserted_unshadowed_global_symbol, construct_syntax_proof, direct_function_call_target_at_call,
+    admitted_iterator_identity_adapter_at_call, admitted_js_array_is_array_at_call,
+    admitted_library_method_call_at_call, admitted_map_get_at_call, admitted_map_key_view_at_call,
+    admitted_map_key_view_wrapper_at_call, admitted_regex_test_at_call,
+    admitted_rust_option_none_sentinel_at_node, admitted_rust_vec_new_factory_at_call,
+    admitted_static_index_membership_at_call, asserted_unshadowed_global_symbol,
+    construct_syntax_proof, direct_function_call_target_at_call,
     exact_static_membership_predicate_operator, go_zero_map_default_kind,
     go_zero_map_entry_contract_for_node, go_zero_map_literal_contract_for_node,
     go_zero_map_lookup_contract, library_api_contract_evidence_for_call,
-    library_api_contract_evidence_for_node, library_free_name_collection_factory_contract,
-    library_free_name_map_factory_contract, library_imported_collection_factory_contracts,
-    library_iterator_identity_adapter_contract, library_java_collection_constructor_contract,
+    library_free_name_collection_factory_contract, library_free_name_map_factory_contract,
+    library_imported_collection_factory_contracts, library_java_collection_constructor_contract,
     library_java_collection_factory_contract, library_java_map_entry_contract,
-    library_java_map_factory_contract, library_js_array_is_array_contract,
-    library_js_like_map_constructor_contract, library_js_like_set_constructor_contract,
-    library_map_get_contract, library_map_key_view_contract, library_map_key_view_wrapper_contract,
-    library_method_call_contract, library_regex_test_contract, library_ruby_set_factory_contract,
-    library_rust_option_none_sentinel_contract, library_rust_vec_macro_factory_contract,
-    library_rust_vec_new_factory_contract, library_static_index_membership_contract,
-    nullish_global_contract, own_property_guard_for_node, record_shape_guard_for_node, semantics,
-    seq_surface_contract_for_node, source_comprehension_at_node, source_fact_at_node,
-    source_operator_at_node, typeof_operator_contract, DomainRequirement, IndexMembershipThreshold,
-    JavaMapFactoryKind, LibraryApiCalleeContract, LibraryApiEvidenceStatus,
-    LibraryCollectionFactoryResult, LibraryMapFactoryResult, LibraryMapGetContract,
-    LibraryMethodCallContract, MapKeyViewKind, MethodBuiltinArgs, MethodReceiverContract,
-    MethodSemanticContract, ReceiverDomainEvidenceIndex, StaticIndexMembershipKind,
+    library_java_map_factory_contract, library_js_like_map_constructor_contract,
+    library_js_like_set_constructor_contract, library_ruby_set_factory_contract,
+    library_rust_vec_macro_factory_contract, nullish_global_contract, own_property_guard_for_node,
+    record_shape_guard_for_node, semantics, seq_surface_contract_for_node,
+    source_comprehension_at_node, source_fact_at_node, source_operator_at_node,
+    typeof_operator_contract, DomainRequirement, IndexMembershipThreshold, JavaMapFactoryKind,
+    LibraryApiCalleeContract, LibraryApiEvidenceStatus, LibraryCollectionFactoryResult,
+    LibraryMapFactoryResult, LibraryMethodCallContract, MapKeyViewKind, MethodBuiltinArgs,
+    MethodReceiverContract, MethodSemanticContract, ReceiverDomainEvidenceIndex,
+    StaticIndexMembershipKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -456,28 +457,12 @@ fn strict_exact_static_index_membership_parts(
     if kids.len() != 2 || il.kind(kids[0]) != NodeKind::Field {
         return None;
     }
-    let Payload::Name(method) = il.node(kids[0]).payload else {
-        return None;
-    };
-    let method = interner.resolve(method);
-    let receiver = *il.children(kids[0]).first()?;
+    let admitted = admitted_static_index_membership_at_call(il, interner, node)?;
+    let receiver = admitted.receiver?;
     if !strict_exact_static_non_float_collection(il, interner, receiver) {
         return None;
     }
-    let contract = library_static_index_membership_contract(il.meta.lang, method, kids.len() - 1)?;
-    match library_api_contract_evidence_for_call(
-        il,
-        interner,
-        node,
-        contract.id,
-        contract.callee,
-        kids.len().saturating_sub(1),
-    ) {
-        LibraryApiEvidenceStatus::Admitted => {}
-        LibraryApiEvidenceStatus::Rejected => return None,
-        LibraryApiEvidenceStatus::Missing => return None,
-    }
-    match contract.result.kind {
+    match admitted.contract.result.kind {
         StaticIndexMembershipKind::IndexOf => Some((kids[1], receiver)),
         StaticIndexMembershipKind::FindIndex => {
             let element = strict_exact_lambda_eq_param_element(il, interner, facts, kids[1])?;
@@ -627,17 +612,7 @@ fn strict_exact_nullish_global_safe(il: &Il, interner: &Interner, node: NodeId) 
 }
 
 fn strict_exact_rust_option_none_safe(il: &Il, interner: &Interner, node: NodeId) -> bool {
-    let (NodeKind::Var, Payload::Name(name)) = (il.kind(node), il.node(node).payload) else {
-        return false;
-    };
-    let name = interner.resolve(name);
-    let Some(contract) = library_rust_option_none_sentinel_contract(il.meta.lang, name) else {
-        return false;
-    };
-    matches!(
-        library_api_contract_evidence_for_node(il, interner, node, contract.id, contract.callee, 0,),
-        LibraryApiEvidenceStatus::Admitted
-    )
+    admitted_rust_option_none_sentinel_at_node(il, interner, node).is_some()
 }
 
 fn strict_exact_safe_seq(il: &Il, interner: &Interner, node: NodeId) -> bool {
@@ -795,32 +770,13 @@ fn library_api_evidence_required(
     )
 }
 
-fn call_arg_count(il: &Il, node: NodeId) -> usize {
-    il.children(node).len().saturating_sub(1)
-}
-
 fn admitted_method_call_contract(
     il: &Il,
     interner: &Interner,
     node: NodeId,
-    method: &str,
 ) -> Option<(LibraryMethodCallContract, usize)> {
-    let arg_count = call_arg_count(il, node);
-    let contract = library_method_call_contract(il.meta.lang, method, arg_count)?;
-    library_api_evidence_required(il, interner, node, contract.id, contract.callee, arg_count)
-        .then_some((contract, arg_count))
-}
-
-fn admitted_map_get_contract(
-    il: &Il,
-    interner: &Interner,
-    node: NodeId,
-    method: &str,
-) -> Option<(LibraryMapGetContract, usize)> {
-    let arg_count = call_arg_count(il, node);
-    let contract = library_map_get_contract(il.meta.lang, method, arg_count)?;
-    library_api_evidence_required(il, interner, node, contract.id, contract.callee, arg_count)
-        .then_some((contract, arg_count))
+    let admitted = admitted_library_method_call_at_call(il, interner, node)?;
+    Some((admitted.contract, admitted.arg_count))
 }
 
 fn field_receiver(il: &Il, callee: NodeId) -> Option<NodeId> {
@@ -835,19 +791,10 @@ fn strict_exact_regex_test_safe(
     _callee: NodeId,
     method: &str,
 ) -> Option<bool> {
-    let contract = library_regex_test_contract(
-        il.meta.lang,
-        method,
-        il.children(node).len().saturating_sub(1),
-    )?;
-    if !library_api_evidence_required(
-        il,
-        interner,
-        node,
-        contract.id,
-        contract.callee,
-        il.children(node).len().saturating_sub(1),
-    ) {
+    if method != "test" {
+        return None;
+    }
+    if admitted_regex_test_at_call(il, interner, node).is_none() {
         return Some(false);
     }
     Some(strict_exact_call_args_safe(il, interner, facts, node))
@@ -858,27 +805,10 @@ fn strict_exact_js_array_is_array_safe(
     interner: &Interner,
     facts: &StrictFacts,
     node: NodeId,
-    callee: NodeId,
+    _callee: NodeId,
     method: &str,
 ) -> bool {
-    let Some(receiver) = field_receiver(il, callee) else {
-        return false;
-    };
-    let (NodeKind::Var, Payload::Name(receiver_name)) =
-        (il.kind(receiver), il.node(receiver).payload)
-    else {
-        return false;
-    };
-    let arg_count = call_arg_count(il, node);
-    let Some(contract) = library_js_array_is_array_contract(
-        il.meta.lang,
-        interner.resolve(receiver_name),
-        method,
-        arg_count,
-    ) else {
-        return false;
-    };
-    if !library_api_evidence_required(il, interner, node, contract.id, contract.callee, arg_count) {
+    if method != "isArray" || admitted_js_array_is_array_at_call(il, interner, node).is_none() {
         return false;
     }
     strict_exact_call_args_safe(il, interner, facts, node)
@@ -890,10 +820,9 @@ pub(crate) fn strict_exact_collection_contains_call_safe(
     facts: &StrictFacts,
     node: NodeId,
     callee: NodeId,
-    method: &str,
+    _method: &str,
 ) -> bool {
-    let Some((contract, _arg_count)) = admitted_method_call_contract(il, interner, node, method)
-    else {
+    let Some((contract, _arg_count)) = admitted_method_call_contract(il, interner, node) else {
         return false;
     };
     let result = contract.result;
@@ -936,10 +865,9 @@ fn strict_exact_map_contains_call_safe(
     facts: &StrictFacts,
     node: NodeId,
     callee: NodeId,
-    method: &str,
+    _method: &str,
 ) -> bool {
-    let Some((contract, _arg_count)) = admitted_method_call_contract(il, interner, node, method)
-    else {
+    let Some((contract, _arg_count)) = admitted_method_call_contract(il, interner, node) else {
         return false;
     };
     let result = contract.result;
@@ -969,10 +897,9 @@ fn strict_exact_map_get_call_safe(
     callee: NodeId,
     method: &str,
 ) -> bool {
-    let Some((_contract, _arg_count)) = admitted_map_get_contract(il, interner, node, method)
-    else {
+    if method != "get" || admitted_map_get_at_call(il, interner, node).is_none() {
         return false;
-    };
+    }
     let Some(receiver) = field_receiver(il, callee) else {
         return false;
     };
@@ -986,10 +913,9 @@ fn strict_exact_map_get_default_call_safe(
     facts: &StrictFacts,
     node: NodeId,
     callee: NodeId,
-    method: &str,
+    _method: &str,
 ) -> bool {
-    let Some((contract, _arg_count)) = admitted_method_call_contract(il, interner, node, method)
-    else {
+    let Some((contract, _arg_count)) = admitted_method_call_contract(il, interner, node) else {
         return false;
     };
     let result = contract.result;
@@ -1084,24 +1010,18 @@ fn strict_exact_iterator_identity_adapter_call_safe(
     callee: NodeId,
     method: &str,
 ) -> bool {
-    let kids = il.children(node);
-    let Some(arg_count) = kids.len().checked_sub(1) else {
-        return false;
-    };
-    let Some(contract) =
-        library_iterator_identity_adapter_contract(il.meta.lang, method, arg_count)
-    else {
-        return false;
-    };
-    if !library_api_evidence_required(il, interner, node, contract.id, contract.callee, arg_count) {
+    if method.is_empty() {
         return false;
     }
-    if il.kind(callee) != NodeKind::Field {
-        return false;
-    }
-    let Some(&receiver) = il.children(callee).first() else {
+    let Some(admitted) = admitted_iterator_identity_adapter_at_call(il, interner, node) else {
         return false;
     };
+    let Some(receiver) = admitted.receiver else {
+        return false;
+    };
+    if admitted.callee != callee {
+        return false;
+    }
     strict_exact_iterator_receiver_safe(il, interner, facts, receiver)
         && strict_exact_call_args_safe(il, interner, facts, node)
 }
@@ -1238,21 +1158,14 @@ fn strict_exact_map_key_view_safe_matching(
     if kids.len() != 1 || il.kind(kids[0]) != NodeKind::Field {
         return false;
     }
-    let Payload::Name(method) = il.node(kids[0]).payload else {
+    let Some(admitted) = admitted_map_key_view_at_call(il, interner, node) else {
         return false;
     };
-    let Some(contract) = library_map_key_view_contract(il.meta.lang, interner.resolve(method), 0)
-    else {
-        return false;
-    };
-    if !library_api_evidence_required(il, interner, node, contract.id, contract.callee, 0) {
-        return false;
-    }
-    let result = contract.result;
+    let result = admitted.contract.result;
     if !accepts(result.kind) {
         return false;
     }
-    let Some(&receiver) = il.children(kids[0]).first() else {
+    let Some(receiver) = admitted.receiver else {
         return false;
     };
     strict_exact_proven_map_receiver_safe(il, interner, facts, receiver)
@@ -1277,17 +1190,9 @@ fn strict_exact_map_key_view_collection_safe(
     if kids.len() != 2 || il.kind(kids[0]) != NodeKind::Field {
         return false;
     }
-    let Payload::Name(method) = il.node(kids[0]).payload else {
+    let Some(_admitted) = admitted_map_key_view_wrapper_at_call(il, interner, node) else {
         return false;
     };
-    let Some(contract) =
-        library_map_key_view_wrapper_contract(il.meta.lang, "Array", interner.resolve(method), 1)
-    else {
-        return false;
-    };
-    if !library_api_evidence_required(il, interner, node, contract.id, contract.callee, 1) {
-        return false;
-    }
     strict_exact_map_key_view_safe_matching(il, interner, facts, kids[1], |kind| {
         kind == MapKeyViewKind::Iterator
     })
@@ -1508,18 +1413,7 @@ fn strict_exact_rust_vec_new_safe(il: &Il, interner: &Interner, node: NodeId) ->
     if !semantics(il.meta.lang).stdlib().rust_vec_new_factory() || il.kind(node) != NodeKind::Call {
         return false;
     }
-    let kids = il.children(node);
-    if kids.len() != 1 || il.kind(kids[0]) != NodeKind::Var {
-        return false;
-    }
-    let Payload::Name(name) = il.node(kids[0]).payload else {
-        return false;
-    };
-    library_rust_vec_new_factory_contract(il.meta.lang, interner.resolve(name)).is_some_and(
-        |contract| {
-            library_api_evidence_required(il, interner, node, contract.id, contract.callee, 0)
-        },
-    )
+    admitted_rust_vec_new_factory_at_call(il, interner, node).is_some()
 }
 
 fn strict_exact_rust_std_collection_factory_safe(
@@ -1920,7 +1814,7 @@ mod tests {
         IlBuilder, Lang, LibraryApiEvidenceKind, Span, Unit, UnitKind,
     };
     use nose_semantics::{
-        library_api_callee_contract_hash, library_api_contract_id_hash,
+        library_api_callee_contract_hash, library_api_contract_id_hash, library_map_get_contract,
         library_method_call_contract, FIRST_PARTY_PACK_ID,
     };
 
@@ -1965,6 +1859,26 @@ mod tests {
                 contract_hash: library_api_contract_id_hash(contract.id),
                 callee_hash: library_api_callee_contract_hash(contract.callee),
                 arity: arity as u16,
+            }),
+            dependencies,
+        )
+    }
+
+    fn map_get_library_api_evidence(
+        id: u32,
+        lang: Lang,
+        method: &str,
+        call_span: Span,
+        dependencies: Vec<EvidenceId>,
+    ) -> EvidenceRecord {
+        let contract = library_map_get_contract(lang, method, 1).expect("map get contract");
+        evidence(
+            id,
+            EvidenceAnchor::node(call_span, NodeKind::Call),
+            EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
+                contract_hash: library_api_contract_id_hash(contract.id),
+                callee_hash: library_api_callee_contract_hash(contract.callee),
+                arity: 1,
             }),
             dependencies,
         )
@@ -2057,6 +1971,62 @@ mod tests {
                 &il, &interner, &facts, call, callee, "includes"
             ),
             "binding-domain evidence must be visible at the receiver use site"
+        );
+    }
+
+    #[test]
+    fn map_get_method_requires_library_api_occurrence_evidence() {
+        let interner = Interner::new();
+        let map = interner.intern("m");
+        let mut b = IlBuilder::new(FileId(0));
+        let receiver = b.add(NodeKind::Var, Payload::Cid(0), sp(40), &[]);
+        let callee = b.add(
+            NodeKind::Field,
+            Payload::Name(interner.intern("get")),
+            sp(41),
+            &[receiver],
+        );
+        let key = b.add(
+            NodeKind::Lit,
+            Payload::LitStr(stable_symbol_hash("ready")),
+            sp(42),
+            &[],
+        );
+        let call = b.add(NodeKind::Call, Payload::None, sp(43), &[callee, key]);
+        let root = b.add(NodeKind::Block, Payload::None, sp(39), &[call]);
+        let mut il = b.finish(
+            root,
+            FileMeta {
+                path: "t.ts".into(),
+                lang: Lang::TypeScript,
+            },
+            Vec::new(),
+            vec![map],
+        );
+        il.evidence.push(evidence(
+            0,
+            EvidenceAnchor::node(sp(40), NodeKind::Var),
+            EvidenceKind::Domain(nose_il::DomainEvidence::Map),
+            Vec::new(),
+        ));
+
+        let facts = StrictFacts::collect(&il, &interner);
+        assert!(
+            !strict_exact_map_get_call_safe(&il, &interner, &facts, call, callee, "get"),
+            "receiver domain plus method spelling must not admit map-get semantics"
+        );
+
+        il.evidence.push(map_get_library_api_evidence(
+            1,
+            Lang::TypeScript,
+            "get",
+            sp(43),
+            vec![EvidenceId(0)],
+        ));
+        let facts = StrictFacts::collect(&il, &interner);
+        assert!(
+            strict_exact_map_get_call_safe(&il, &interner, &facts, call, callee, "get"),
+            "admitted map-get occurrence evidence should open the exact-safe API path"
         );
     }
 

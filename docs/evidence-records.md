@@ -552,6 +552,12 @@ callers:
   proofs. Other factory and constructor contract rows still name API
   identity/result semantics while local consumers prove their current `Symbol`,
   `Import`, `Source`, `Domain`, and `SequenceSurface` obligations;
+- strict exact consumers share the same admitted occurrence resolver layer for
+  selected method, map-get, map-key-view, regex, JS static/global, static-index,
+  iterator-adapter, Rust Option sentinel, and Rust `Vec::new` paths instead of
+  locally recombining selector strings with evidence checks. Opaque same-callee
+  exact identity remains separate: it can keep identical calls comparable, but
+  it does not assign cross-language or library semantics;
 - value-graph consumers that query by source span re-check the original source
   `Call` node shape and its evidence dependencies when that call can be
   recovered. This preserves receiver-method precision when value-graph CSE has

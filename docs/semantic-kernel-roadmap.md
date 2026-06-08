@@ -694,11 +694,12 @@ Remaining in this phase:
   Python builtin/import-backed, Rust free-name/path, Ruby require-backed, Java
   `java.util`, and regex calls now additionally share `LibraryApi` occurrence
   evidence, as do generic Python/Go free-function builtins and selected
-  receiver-method families. Selected value-graph consumers now call shared
-  `nose-semantics` admitted occurrence resolvers for method,
-  imported-namespace function, iterator-adapter, and Rust Option/`Vec::new`
-  calls instead of locally recombining raw selector parsing with evidence
-  admission. Lowered sequence-surface consumers are now evidence-only where
+  receiver-method families. Selected value-graph and strict exact consumers now
+  call shared `nose-semantics` admitted occurrence resolvers for method,
+  map-get, map-key-view, regex, JS static/global, static-index,
+  iterator-adapter, and Rust Option/`Vec::new` calls instead of locally
+  recombining raw selector parsing with evidence admission. Lowered
+  sequence-surface consumers are now evidence-only where
   covered. Remaining API work is promise receiver proof, explicit async/sync
   protocol convergence contracts, and ecosystem APIs only after demand,
   receiver, and effect obligations are expressible.
