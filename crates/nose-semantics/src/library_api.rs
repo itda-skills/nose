@@ -2327,10 +2327,7 @@ pub(crate) fn library_api_dependency_id_for_canonical_builtin_call(
         let Some(id) = library_api_contract_id_from_hash(contract_hash) else {
             continue;
         };
-        let Some(record_builtin) = library_api_contract_id_builtin_result(id) else {
-            continue;
-        };
-        if record_builtin != builtin {
+        if !library_api_record_models_canonical_builtin(il, record, id, builtin) {
             return None;
         }
         if record.status != EvidenceStatus::Asserted || !il.evidence_dependencies_asserted(record) {
@@ -2343,6 +2340,74 @@ pub(crate) fn library_api_dependency_id_for_canonical_builtin_call(
         }
     }
     found
+}
+
+fn library_api_record_models_canonical_builtin(
+    il: &Il,
+    record: &EvidenceRecord,
+    id: LibraryApiContractId,
+    builtin: Builtin,
+) -> bool {
+    if library_api_contract_id_builtin_result(id) == Some(builtin) {
+        return true;
+    }
+    library_api_record_models_rust_map_get_default(il, record, id, builtin)
+}
+
+fn library_api_record_models_rust_map_get_default(
+    il: &Il,
+    record: &EvidenceRecord,
+    id: LibraryApiContractId,
+    builtin: Builtin,
+) -> bool {
+    if il.meta.lang != Lang::Rust || builtin != Builtin::GetOrDefault {
+        return false;
+    }
+    let EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
+        callee_hash, arity, ..
+    }) = record.kind
+    else {
+        return false;
+    };
+    if id
+        != LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
+            Builtin::ValueOrDefault,
+        ))
+        || arity != 1
+    {
+        return false;
+    }
+    let Some(LibraryApiCalleeContract::Method {
+        receiver: MethodReceiverContract::RustMapGetOrExactOption,
+        ..
+    }) = library_api_callee_contract_for_hash(il.meta.lang, id, callee_hash)
+    else {
+        return false;
+    };
+    evidence_depends_on_library_api_contract(il, record, LibraryApiContractId::MapGet)
+}
+
+fn evidence_depends_on_library_api_contract(
+    il: &Il,
+    record: &EvidenceRecord,
+    expected_id: LibraryApiContractId,
+) -> bool {
+    record.dependencies.iter().any(|&id| {
+        let Some(dependency) = il.evidence_record_by_id(id) else {
+            return false;
+        };
+        if dependency.status != EvidenceStatus::Asserted
+            || !il.evidence_dependencies_asserted(dependency)
+        {
+            return false;
+        }
+        let EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract { contract_hash, .. }) =
+            dependency.kind
+        else {
+            return false;
+        };
+        library_api_contract_id_from_hash(contract_hash) == Some(expected_id)
+    })
 }
 
 fn library_api_contract_id_builtin_result(id: LibraryApiContractId) -> Option<Builtin> {

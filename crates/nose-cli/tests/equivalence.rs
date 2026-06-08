@@ -839,10 +839,11 @@ fn js_object_length_and_computed_keys_stay_outside_exact_collection_contracts() 
 }
 
 #[test]
-fn pure_method_recursion_converges_with_iteration() {
-    // Ruby `def` and Java methods are admitted to the recursion→iteration canon when their
-    // body has no receiver/field access (a pure numeric fold), so `fac(n) = n*fac(n-1)`
-    // converges cross-language with the accumulator loop. The sum monoid stays a hard negative.
+fn method_recursion_requires_explicit_call_target_evidence() {
+    // Method bodies are not admitted from a bare same-name call. Java static/private/final
+    // dispatch and Ruby top-level method lookup need exact source/pack target evidence before
+    // recursion→iteration can treat `fac(...)` as direct self-recursion. Free-function recursion
+    // remains covered by `rust_recursion_converges_with_iteration_via_return_unwrap`.
     let i = Interner::new();
     let py_loop = "def fac(n):\n    acc = 1\n    while n != 0:\n        acc = acc * n\n        n = n - 1\n    return acc\n";
     let java_rec =
@@ -850,15 +851,15 @@ fn pure_method_recursion_converges_with_iteration() {
     let ruby_rec = "def fac(n)\n  return 1 if n == 0\n  n * fac(n - 1)\nend\n";
     let sum_loop = "def g(n):\n    acc = 0\n    while n != 0:\n        acc = acc + n\n        n = n - 1\n    return acc\n";
     let fold = value_fp(&i, py_loop, Lang::Python);
-    assert_eq!(
+    assert_ne!(
         fold,
         value_fp_named(&i, java_rec, Lang::Java, "fac"),
-        "java pure method recursion must converge with the accumulator loop"
+        "java method recursion must stay closed without direct call-target evidence"
     );
-    assert_eq!(
+    assert_ne!(
         fold,
         value_fp_named(&i, ruby_rec, Lang::Ruby, "fac"),
-        "ruby method recursion must converge with the accumulator loop"
+        "ruby method recursion must stay closed without direct call-target evidence"
     );
     assert_ne!(
         fold,

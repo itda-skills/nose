@@ -7,11 +7,12 @@
 //! approve exact clone matches directly.
 
 use nose_il::{
-    contains_js_identifier, stable_symbol_hash, Builtin, EffectEvidenceKind, EvidenceAnchor,
-    EvidenceEmitter, EvidenceId, EvidenceKind, EvidenceRecord, EvidenceStatus, GuardEvidenceKind,
-    HoFKind, Il, ImportEvidenceKind, Interner, Lang, LibraryApiEvidenceKind, LitClass, NodeId,
-    NodeKind, Op, ParamSemantic, Payload, PlaceEvidenceKind, SequenceSurfaceKind, SourceCallKind,
-    SourceCastKind, SourceComprehensionKind, SourceFactKind, SourceLiteralKind, SourceOperatorKind,
+    contains_js_identifier, stable_symbol_hash, Builtin, CallTargetEvidenceKind,
+    EffectEvidenceKind, EvidenceAnchor, EvidenceEmitter, EvidenceId, EvidenceKind, EvidenceRecord,
+    EvidenceStatus, GuardEvidenceKind, HoFKind, Il, ImportEvidenceKind, Interner, Lang,
+    LibraryApiEvidenceKind, LitClass, NodeId, NodeKind, Op, ParamSemantic, Payload,
+    PlaceEvidenceKind, SequenceSurfaceKind, SourceCallKind, SourceCastKind,
+    SourceComprehensionKind, SourceFactKind, SourceLiteralKind, SourceOperatorKind,
     SourceProtocolKind, Span, Symbol, SymbolEvidenceKind,
 };
 use rustc_hash::FxHashMap;

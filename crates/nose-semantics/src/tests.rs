@@ -1290,6 +1290,83 @@ fn canonical_builtin_admission_requires_language_core_or_library_api_evidence() 
 }
 
 #[test]
+fn rust_map_get_unwrap_or_canonical_builtin_uses_map_get_dependency() {
+    let mut b = IlBuilder::new(FileId(0));
+    let map = b.add(NodeKind::Var, Payload::Cid(0), sp(38), &[]);
+    let key = b.add(NodeKind::Var, Payload::Cid(1), sp(39), &[]);
+    let default = b.add(NodeKind::Lit, Payload::LitInt(0), sp(40), &[]);
+    let (mut il, call) = canonical_builtin_call_il(
+        Lang::Rust,
+        Builtin::GetOrDefault,
+        &[map, key, default],
+        b,
+        map,
+    );
+    let map_get = library_map_get_contract(Lang::Rust, "get", 1).expect("Rust map get contract");
+    let unwrap_or =
+        library_method_call_contract(Lang::Rust, "unwrap_or", 1).expect("Rust unwrap_or contract");
+
+    il.evidence.push(library_api_record(
+        10,
+        sp(39),
+        map_get.id,
+        map_get.callee,
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    il.evidence.push(library_api_record(
+        11,
+        il.node(call).span,
+        unwrap_or.id,
+        unwrap_or.callee,
+        EvidenceStatus::Asserted,
+        &[10],
+    ));
+
+    assert!(admitted_builtin_semantics_at_call(
+        &il,
+        call,
+        Builtin::GetOrDefault
+    ));
+    assert!(!admitted_builtin_semantics_at_call(
+        &il,
+        call,
+        Builtin::ValueOrDefault
+    ));
+}
+
+#[test]
+fn rust_value_default_contract_alone_does_not_admit_map_default_builtin() {
+    let mut b = IlBuilder::new(FileId(0));
+    let value = b.add(NodeKind::Var, Payload::Cid(0), sp(38), &[]);
+    let default = b.add(NodeKind::Lit, Payload::LitInt(0), sp(39), &[]);
+    let (mut il, call) = canonical_builtin_call_il(
+        Lang::Rust,
+        Builtin::GetOrDefault,
+        &[value, default],
+        b,
+        value,
+    );
+    let unwrap_or =
+        library_method_call_contract(Lang::Rust, "unwrap_or", 1).expect("Rust unwrap_or contract");
+
+    il.evidence.push(library_api_record(
+        10,
+        il.node(call).span,
+        unwrap_or.id,
+        unwrap_or.callee,
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+
+    assert!(!admitted_builtin_semantics_at_call(
+        &il,
+        call,
+        Builtin::GetOrDefault
+    ));
+}
+
+#[test]
 fn canonical_builtin_admission_fails_closed_on_bad_library_api_evidence() {
     let contract = library_free_function_builtin_contract(Lang::Python, "len", 1)
         .expect("Python len contract");

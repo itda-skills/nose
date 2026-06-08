@@ -413,6 +413,11 @@ pub enum LibraryApiEvidenceKind {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
+pub enum CallTargetEvidenceKind {
+    DirectFunction { target_span: Span, name_hash: u64 },
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub enum SequenceSurfaceKind {
     Untagged,
     Collection,
@@ -436,6 +441,7 @@ pub enum EvidenceKind {
     Place(PlaceEvidenceKind),
     Effect(EffectEvidenceKind),
     LibraryApi(LibraryApiEvidenceKind),
+    CallTarget(CallTargetEvidenceKind),
     SequenceSurface(SequenceSurfaceKind),
 }
 

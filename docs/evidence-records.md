@@ -66,6 +66,7 @@ The current implemented kinds are:
 | `Place` | fixed receiver/place facts currently covering `SelfReceiver` and `SelfField` |
 | `Effect` | observable effect and mutation-risk facts currently covering canonical builder append calls, non-overloadable index writes, fixed self-field writes, binding writes, receiver-mutating calls, and opaque argument escapes |
 | `LibraryApi` | proof that a specific API occurrence matches a language/API contract coordinate, currently for selected call, property, and sentinel occurrences across JS-like static/global/static-index APIs, selected Python/Rust/Ruby/Java/regex APIs, generic Python/Go free-function builtins, and selected receiver-method families |
+| `CallTarget` | proof that a specific user call occurrence resolves to a direct in-file callable unit target |
 | `SequenceSurface` | lowered aggregate surface such as collection, tuple, map, pair, import proof, guard surfaces, Go composite map literals, or Go map entries |
 
 `LibraryApi` evidence is an occurrence fact, not the whole contract. It records
@@ -77,6 +78,18 @@ the remaining obligations. Existing evidence kinds such as `Symbol`,
 contract decides whether the facts are enough to admit an exact or value-graph
 path. A future external pack schema may expose library API contracts, but
 providers still emit facts and contracts rather than exact-clone verdicts.
+
+`CallTarget` evidence is the occurrence proof for user-defined calls. A raw
+callee spelling such as `f(...)` is only a selector that a producer may inspect;
+recursion normalization and the interpreter oracle consume only
+`CallTarget::DirectFunction` records anchored to the exact `Call` node and
+matching the target function span. The first-party producer currently emits this
+fact only for unique top-level in-file `Function` units when neither the current
+lexical scope nor any enclosing lexical scope has a parameter, assignment
+target, loop-pattern binding, or nested function definition that shadows the
+callee name. Duplicate function names, lexical shadowing, nested/non-top-level
+functions, methods without an explicit target proof, computed callees, and
+missing or conflicting evidence stay closed.
 
 Current first-party `LibraryApi` callee coordinates are intentionally specific:
 
@@ -291,6 +304,12 @@ narrow first-party language-core lowering: Go map lookup-ok `Contains`, Go
 `Keys`, C `UnsignedCast32` with `Source(Cast(CUnsigned32))`, or canonical
 `Append` with `Effect(BuilderAppendCall)`. Raw or unadmitted builtin payloads
 stay opaque in the value graph and closed in exact/oracle consumers.
+When a receiver obligation makes an API result more specific than the selector
+alone, the dependency chain must prove that specialization. For example, Rust
+`unwrap_or` is an option defaulting API in isolation, but the canonical
+`GetOrDefault(map, key, default)` builtin is admitted only when the same
+`unwrap_or` occurrence has the Rust `RustMapGetOrExactOption` receiver contract
+and depends on an admitted `MapGet` occurrence for the exact receiver.
 
 Imported API occurrence evidence is not a broad name guess. A call-site
 `Symbol(ImportedBinding)` or `Symbol(ImportedNamespace)` dependency must itself

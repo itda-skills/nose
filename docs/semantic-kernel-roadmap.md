@@ -513,10 +513,21 @@ and pack ecosystem.
   as Go map lookup-ok `Contains`, Go `Enumerate`, Python dict-comprehension
   `DictEntry`, JS-like `Keys`, C source-proven `UnsignedCast32`, and
   effect-proven append remain raw-payload eligible.
+- Rust `get(key).unwrap_or(default)` now admits the canonical map
+  `GetOrDefault` builtin through the exact `unwrap_or` `LibraryApi` occurrence
+  plus its admitted nested `MapGet` dependency, instead of treating
+  `ValueOrDefault` selector semantics as sufficient for map defaulting.
 - Raw `Seq` spelling no longer feeds value-graph sequence tags. Missing
   `SequenceSurface` or guard evidence now produces the untagged value instead of
   a spelling hash, so internal-looking payload names such as `record_guard` or
   `own_property_guard` cannot become semantic proof channels.
+- Raw user-call spelling no longer proves direct recursion or in-file call
+  execution. `nose-il` now has `CallTarget::DirectFunction` evidence, the
+  first-party normalize producer emits it only for unique top-level in-file
+  function targets with no current or enclosing lexical shadowing, and
+  recursion/interpreter consumers require that occurrence proof.
+  Method/dynamic-dispatch target proof remains a future pack/source extension
+  rather than a same-name fallback.
 - C byte-pack proof moved onto evidence-backed alias and cast records. Local
   typedefs and direct quote includes emit `Type(CTypeAlias)` evidence, included
   aliases depend on `Import(CQuoteInclude)`, alias-based `Domain(ByteArray)` and

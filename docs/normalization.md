@@ -254,16 +254,20 @@ converge with hand-written iteration.
   with the base case returning exactly that identity literal. Short-circuit `and`/`or` are
   excluded: their early-exit skips later `HEAD`s the accumulator loop still evaluates.
 
-Both schemes require exactly one self-call (a same-named call inside a standalone function);
-anything else is left untouched. The proof obligations
+Both schemes require exactly one self-call, and self-call identity is evidence-backed:
+the call occurrence must carry `CallTarget::DirectFunction` evidence that points at the
+enclosing function or method unit. A raw callee spelling is not enough. Anything else is
+left untouched.
+The proof obligations
 [normalize.recursion.tail](../formal/obligations/normalize/recursion/tail/Proof.lean)
 and
 [normalize.recursion.structural_fold](../formal/obligations/normalize/recursion/structural_fold/Proof.lean)
 record the tail-loop equivalence, the numeric `+`/`*` fold laws, and boundary
 counterexamples for cyclic tail-call bindings, subtraction, and wrong identities.
 **Soundness** is checked, not assumed: the interpreter
-([interp](../crates/nose-normalize/src/interp.rs)) now executes self-recursion, so
-`nose verify` interprets the original recursion *and* the rewritten loop and flags any
+([interp](../crates/nose-normalize/src/interp.rs)) executes user-defined calls only when
+`CallTarget` evidence resolves the exact occurrence to an in-file function or method root, so
+`nose verify` interprets proven original recursion *and* the rewritten loop and flags any
 behavioral difference (when the recursion terminates on the input battery — a guard like
 `n == 0` that loops forever on negatives is excluded on both sides, identically). On real
 code `nose verify` stays sound (0 false merges). Its concrete model covers

@@ -21,9 +21,9 @@ pub use ident::{
 };
 pub use intern::{stable_symbol_hash, symbol_index, Interner, Symbol, FNV_OFFSET_BASIS, FNV_PRIME};
 pub use node::{
-    Builtin, CTypeTarget, DomainEvidence, EffectEvidenceKind, EvidenceAnchor, EvidenceEmitter,
-    EvidenceId, EvidenceKind, EvidenceProvenance, EvidenceRecord, EvidenceStatus,
-    GuardEvidenceKind, HoFKind, ImportEvidenceKind, JsRecordGuardComparison,
+    Builtin, CTypeTarget, CallTargetEvidenceKind, DomainEvidence, EffectEvidenceKind,
+    EvidenceAnchor, EvidenceEmitter, EvidenceId, EvidenceKind, EvidenceProvenance, EvidenceRecord,
+    EvidenceStatus, GuardEvidenceKind, HoFKind, ImportEvidenceKind, JsRecordGuardComparison,
     JsRecordGuardNullCheck, LibraryApiEvidenceKind, LitClass, LoopKind, Node, NodeId, NodeKind, Op,
     ParamSemantic, Payload, PlaceEvidenceKind, SequenceSurfaceKind, SourceCallKind, SourceCastKind,
     SourceComprehensionKind, SourceFactKind, SourceLiteralKind, SourceOperatorKind,

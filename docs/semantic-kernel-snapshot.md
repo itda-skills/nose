@@ -154,7 +154,10 @@ migrated.
   narrow syntax-owned lowerings for Go map lookup-ok `Contains`, Go
   `Enumerate`, Python dict-comprehension `DictEntry`, JS-like `Keys`, C
   `UnsignedCast32` with source-cast evidence, and append calls with
-  `Effect(BuilderAppendCall)`. Raw builtin payloads remain opaque or exact-closed.
+  `Effect(BuilderAppendCall)`. Receiver-dependent specializations also stay
+  proof-chain-gated: Rust `unwrap_or` canonicalizes to map `GetOrDefault` only
+  when its admitted method occurrence depends on an admitted Rust map `get`
+  occurrence. Raw builtin payloads remain opaque or exact-closed.
 - Method contracts carry receiver obligations such as exact collection, exact
   protocol, exact option, exact string, exact primitive integer, exact map literal,
   imported namespace, or unshadowed global.
@@ -409,9 +412,11 @@ migrated.
 - Map lookup surfaces that return a value/option are now explicit library API contracts for
   Java/Rust/JS-like `get(key)` plus an exact-map receiver requirement. Python
   `dict.get(key, default)`, Java `getOrDefault`, and Ruby `fetch` still use the
-  `GetOrDefault` method contract. Ruby `fetch(key) { fallback }` carries a
-  separate zero-arg-lambda fallback argument contract, so block fallback demand
-  is not inferred from the selector name in normalize/detect.
+  `GetOrDefault` method contract. Rust `get(key).unwrap_or(default)` is modeled
+  as `GetOrDefault` only through the nested `MapGet` dependency on the
+  `unwrap_or` occurrence. Ruby `fetch(key) { fallback }` carries a separate
+  zero-arg-lambda fallback argument contract, so block fallback demand is not
+  inferred from the selector name in normalize/detect.
 - JS-like static array `indexOf`/`findIndex` membership surfaces are explicit
   `LibraryApi` occurrence contracts, including the static non-float literal
   collection requirement and accepted `-1`/`0` threshold comparisons through
@@ -439,6 +444,13 @@ migrated.
   from other languages, including JS `min(...)`, locally shadowed Python names,
   and manually constructed calls without admitted occurrence evidence stay
   exact-closed.
+- User-defined direct calls now consume `CallTarget` evidence. The first-party
+  producer admits only unique top-level in-file function targets with no
+  current or enclosing lexical shadowing by parameters, assignments, loop
+  patterns, or nested function definitions; recursion normalization and the
+  interpreter oracle no longer treat same raw callee spelling as call-target
+  proof. Method and dynamic-dispatch targets require explicit pack/source
+  evidence.
 - JS-like `typeof` exact-safety now consumes a language- and arity-constrained
   operator contract plus `Source::Operator(Typeof)` evidence at the call span.
   A raw `Call(Var("typeof"), arg)` shape, same-named function from another

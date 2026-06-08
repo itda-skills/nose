@@ -161,6 +161,28 @@ pub fn source_comprehension_at_node(il: &Il, node: NodeId) -> Option<SourceCompr
     }
 }
 
+pub fn direct_function_call_target_at_call(il: &Il, call: NodeId, target_root: NodeId) -> bool {
+    if il.kind(call) != NodeKind::Call || il.kind(target_root) != NodeKind::Func {
+        return false;
+    }
+    let call_span = il.node(call).span;
+    let target_span = il.node(target_root).span;
+    match unique_asserted_evidence_at(
+        il,
+        |anchor| matches!(anchor, EvidenceAnchor::Node { span, kind } if span == call_span && kind == NodeKind::Call),
+        |evidence| match evidence {
+            EvidenceKind::CallTarget(target) => Some(target),
+            _ => None,
+        },
+    ) {
+        EvidenceResolution::Found(CallTargetEvidenceKind::DirectFunction {
+            target_span: proven_span,
+            ..
+        }) => proven_span == target_span,
+        EvidenceResolution::Ambiguous | EvidenceResolution::Missing => false,
+    }
+}
+
 pub fn admitted_hof_api_at_node(il: &Il, node: NodeId, kind: HoFKind) -> bool {
     if il.kind(node) != NodeKind::HoF || il.node(node).payload != Payload::HoF(kind) {
         return false;
