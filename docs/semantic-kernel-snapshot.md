@@ -52,8 +52,9 @@ still being migrated toward it.
   source-fact, operator, effect, fragment, module, stdlib, builtin, method-call,
   property, async, iterator-adapter, builder-append, and factory contracts. The
   public crate surface remains a flat facade, while internal evidence/source/domain
-  proof helpers, library API contract identities, and library API
-  occurrence/admission logic are split into focused modules.
+  proof helpers, effect/place helpers, library API contract identities, negative
+  API guard rows, and library API occurrence/admission logic are split into
+  focused modules.
 - `nose-frontend` owns tree-sitter parsing, per-language lowering, embedded
   `<script>` extraction, source/domain/import/symbol/type/guard/place/effect/API/
   sequence evidence emission, and Raw-node coverage.
@@ -354,9 +355,10 @@ migrated.
   lower the call to canonical `Builtin::Append`, and attach
   `Effect(BuilderAppendCall)` through explicit same-span language/API evidence
   before exact fragments can treat it as an append effect. Value-graph active
-  list-builder recognition consumes an explicit
-  first-party method-effect contract row whose obligations include language,
-  method, arity, `BuilderAppendCall`, and an active collection-builder receiver.
+  list builders require emitted effect evidence, an admitted same-span
+  `LibraryApi(MethodCall(Builtin(Append)))` occurrence, or the first-party
+  builder-append method-effect row, always under active-builder receiver context;
+  selectors outside those rows never reopen the path by themselves.
   Active map-builder recognition similarly consumes an index-write contract row:
   Python `d[k] = v` requires `Effect(BindingWrite)` plus an active map-builder
   receiver seeded by an explicit map surface, while other languages need their

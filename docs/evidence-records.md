@@ -277,10 +277,13 @@ escape helper for that call, so a modeled API such as an imported stdlib
 predicate is not treated as arbitrary mutation risk merely because it takes an
 argument.
 
-Builder and map-builder value laws consume separate contract rows. A
-method-effect row for list builders names the language, selector, arity,
-required `Effect(BuilderAppendCall)`, and active-builder receiver obligation.
-An index-write row for map builders names the language, required write evidence,
+Builder and map-builder value laws consume emitted or admitted evidence, not raw
+selectors. A method-effect row for list builders names the producer-side
+language, selector, arity, required `Effect(BuilderAppendCall)`, and
+active-builder receiver obligation. Value-graph list-builder recognition
+requires that effect record, an admitted same-span append `LibraryApi`
+occurrence, or the method-effect row itself under active-builder context. An
+index-write row for map builders names the language, required write evidence,
 and active-map-builder receiver obligation. `BindingWrite` alone remains a
 mutation-risk fact; it admits a map-builder contribution only when a matching
 index-write contract and explicit active map seed are also present.

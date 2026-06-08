@@ -61,8 +61,9 @@ use nose_il::{
     NodeKind, Op, Payload, SourceCastKind, SourceComprehensionKind, SourceFactKind, Span, Symbol,
 };
 use nose_semantics::{
-    admitted_builtin_semantics_at_call, asserted_unshadowed_global_symbol, binding_write_target,
-    builder_append_call_args, builder_append_method_contract, builtin_tag, construct_syntax_proof,
+    admitted_builder_append_method_call_args, admitted_builtin_semantics_at_call,
+    asserted_unshadowed_global_symbol, binding_write_target, builder_append_call_args, builtin_tag,
+    construct_syntax_proof, contracted_builder_append_method_call_args,
     domain_evidence_for_param as semantic_domain_evidence_for_param,
     exact_non_overloadable_index_assignment_parts, exact_static_membership_predicate_operator,
     go_zero_map_default_kind, go_zero_map_entry_contract_for_node,
@@ -85,16 +86,17 @@ use nose_semantics::{
     map_builder_index_write_contract, nullish_global_contract, opaque_argument_escape_args,
     own_property_guard_for_node, receiver_mutation_call_receiver, record_shape_guard_for_node,
     reduction_builtin_contract, semantics, seq_surface_contract_for_node,
-    source_comprehension_at_node, source_operator_at_node, BuiltinArgContract, CBytePackWidth,
+    source_comprehension_at_node, source_operator_at_node,
+    unproven_membership_like_method_contract, BuiltinArgContract, CBytePackWidth,
     CardinalityPredicate, CardinalityThreshold, ComparisonLaw, DomainEvidence, DomainRequirement,
     GoZeroMapDefaultKind, ImportFactKind, ImportedNamespaceFunctionSemantic,
     IndexMembershipThreshold, IndexWriteReceiverContract, IteratorAdapterReceiverContract,
     JavaMapFactoryKind, LibraryApiCalleeContract, LibraryApiEvidenceStatus,
     LibraryApiSpanEvidenceQuery, LibraryCollectionFactoryResult, LibraryMapFactoryResult,
-    MapKeyViewKind, MethodBuiltinArgs, MethodEffectReceiverContract, MethodReceiverContract,
-    MethodSemanticContract, ReductionBuiltinContract, ScalarIntegerMethod, SeqSurfaceContract,
-    StaticIndexMembershipKind, ValueDomain, ValueLaw, SEQ_VALUE_COLLECTION, SEQ_VALUE_MAP,
-    SEQ_VALUE_OWN_PROPERTY_GUARD, SEQ_VALUE_PAIR, SEQ_VALUE_RECORD_GUARD, SEQ_VALUE_UNTAGGED,
+    MapKeyViewKind, MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract,
+    ReductionBuiltinContract, ScalarIntegerMethod, SeqSurfaceContract, StaticIndexMembershipKind,
+    ValueDomain, ValueLaw, SEQ_VALUE_COLLECTION, SEQ_VALUE_MAP, SEQ_VALUE_OWN_PROPERTY_GUARD,
+    SEQ_VALUE_PAIR, SEQ_VALUE_RECORD_GUARD, SEQ_VALUE_UNTAGGED,
 };
 use ops::*;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -618,22 +620,12 @@ impl<'a> Builder<'a> {
         let Payload::Name(name) = self.il.node(callee).payload else {
             return false;
         };
-        matches!(
+        unproven_membership_like_method_contract(
+            self.il.meta.lang,
             self.interner.resolve(name),
-            "Contains"
-                | "contains"
-                | "containsKey"
-                | "containsValue"
-                | "contains_key"
-                | "contains_value"
-                | "has"
-                | "has_key?"
-                | "include?"
-                | "includes"
-                | "key?"
-                | "member?"
-                | "__contains__"
+            kids.len().saturating_sub(1),
         )
+        .is_some()
     }
 
     fn admitted_builtin_call(&self, node: NodeId, builtin: Builtin) -> bool {

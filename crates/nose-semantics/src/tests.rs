@@ -3,8 +3,8 @@ use nose_il::{
     EvidenceAnchor, EvidenceEmitter, EvidenceId, EvidenceKind, EvidenceProvenance, EvidenceRecord,
     EvidenceStatus, FileId, FileMeta, GuardEvidenceKind, IlBuilder, ImportEvidenceKind, Interner,
     JsRecordGuardComparison, JsRecordGuardNullCheck, LibraryApiEvidenceKind, ParamSemantic,
-    SequenceSurfaceKind, SourceCastKind, SourceFactKind, Span, Symbol, SymbolEvidenceKind, Unit,
-    UnitKind,
+    PlaceEvidenceKind, SequenceSurfaceKind, SourceCastKind, SourceFactKind, Span, Symbol,
+    SymbolEvidenceKind, Unit, UnitKind,
 };
 
 mod js_symbol_guards;
@@ -3937,6 +3937,20 @@ fn builder_append_contracts_are_language_and_arity_constrained() {
     assert!(builder_append_method_contract(Lang::TypeScript, "push", 1).is_some());
     assert!(builder_append_method_contract(Lang::Python, "append", 1).is_some());
     assert!(builder_append_method_contract(Lang::Ruby, "push", 1).is_none());
+}
+
+#[test]
+fn unproven_membership_like_guard_is_negative_api_policy() {
+    let guard = unproven_membership_like_method_contract(Lang::TypeScript, "includes", 1)
+        .expect("includes guard");
+    assert_eq!(guard.pack_id, FIRST_PARTY_PACK_ID);
+    assert_eq!(guard.id, ApiGuardContractId::UnprovenMembershipLikeCall);
+    assert_eq!(guard.lang, Lang::TypeScript);
+    assert_eq!(guard.method, "includes");
+    assert_eq!(guard.arg_count, 1);
+    assert_eq!(guard.channel, ChannelEligibility::ExactProven);
+    assert!(unproven_membership_like_method_contract(Lang::Java, "containsKey", 1).is_some());
+    assert!(unproven_membership_like_method_contract(Lang::Python, "custom", 1).is_none());
 }
 
 #[test]

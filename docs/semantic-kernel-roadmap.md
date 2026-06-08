@@ -487,21 +487,23 @@ and pack ecosystem.
   risky exact paths; they do not prove a same-named API's exact semantics.
 - Active aggregate builders now require contract-backed append/write proof plus
   surface shape. Exact append evidence is still required for exact-fragment
-  append effects; value-graph list-builder recognition may also use a
-  language-scoped builder-append method contract once the receiver is already
-  proven to be an active local builder seeded by an explicit collection surface.
-  Map-builder recognition requires write evidence plus an explicit map seed.
-  Raw selectors, raw index assignment, untagged sequences, and tuple values no
-  longer prove builder semantics by themselves. Python set literals now emit
+  append effects. Value-graph list-builder contributions require either exact
+  append evidence or admitted same-span append API occurrence evidence plus the
+  language-scoped builder-append method-effect row; a row-only path is also
+  allowed, but only under active-builder context. Map-builder recognition
+  requires write evidence plus an explicit map seed. Raw selectors outside those
+  rows, raw index assignment, untagged sequences, and tuple values no longer
+  prove builder semantics by themselves. Python set literals now emit
   `SequenceSurface(Collection)` so supported module-set membership remains
   covered, while direct/module tuple literals stay closed until a factory, typed
   receiver, or other contract supplies membership-collection evidence.
 - First-party method-effect policy moved from bool selector helpers into
-  explicit contract rows. Receiver-mutation producers now consume
-  language/method/arity/effect rows, value-graph list builders consume
-  builder-append rows with active-builder receiver obligations, and Python
-  dict-builder loops consume a separate map-builder index-write row plus
-  `Effect(BindingWrite)` and an explicit map seed. JS-like `undefined`
+  explicit contract rows. Receiver-mutation and builder-append producers now
+  consume language/method/arity/effect rows, value-graph list builders consume
+  effect evidence, admitted append API occurrence evidence, or active-builder
+  row evidence under those rows, and Python dict-builder loops consume a
+  separate map-builder index-write row plus `Effect(BindingWrite)` and an
+  explicit map seed. JS-like `undefined`
   value-graph nullish evaluation is now evidence-only: the frontend-proven
   `Symbol(UnshadowedGlobal("undefined"))` record is required, and raw spelling
   plus file-scope fallback no longer opens the exact nullish value path.
@@ -561,11 +563,12 @@ and pack ecosystem.
   fragment classification, and feature orchestration while keeping proof-policy
   tests next to the strict exact module.
 - The `nose-semantics` production facade is now physically split as well:
-  evidence/source/domain proof helpers live in `evidence.rs`, library API
-  contract identities and result wrappers live in `library_api/contracts.rs`,
-  library API occurrence evidence/admission logic lives in `library_api.rs`, and
-  `lib.rs` preserves the existing flat public facade while shedding the mixed
-  9k-line implementation body.
+  evidence/source/domain proof helpers live in `evidence.rs`, effect/place proof
+  helpers live in `effects.rs`, negative API guard policy lives in
+  `api_guards.rs`, library API contract identities and result wrappers live in
+  `library_api/contracts.rs`, library API occurrence evidence/admission logic
+  lives in `library_api.rs`, and `lib.rs` preserves the existing flat public
+  facade while shedding the mixed 9k-line implementation body.
 - The same code-quality pass split the CLI end-to-end test target into a small
   `tests/cli.rs` harness plus topic modules, and moved the Type-4 generator's
   axis metadata/model/aggregate helpers under `bench/type4/type4gen/` while

@@ -479,7 +479,7 @@ fn source_comprehension_admits_internal_python_filter_hof_only_in_context() {
 }
 
 #[test]
-fn builder_append_candidate_requires_contract_and_seed_context() {
+fn builder_append_candidate_requires_contract_or_effect_and_seed_context() {
     let interner = Interner::new();
     let mut b = IlBuilder::new(FileId(0));
     let receiver = b.add(NodeKind::Var, Payload::Cid(1), sp(1), &[]);
@@ -493,15 +493,45 @@ fn builder_append_candidate_requires_contract_and_seed_context() {
     let call = b.add(NodeKind::Call, Payload::None, sp(4), &[field, item]);
     let stmt = b.add(NodeKind::ExprStmt, Payload::None, sp(4), &[call]);
     let body = b.add(NodeKind::Block, Payload::None, sp(4), &[stmt]);
-    let il = finish_test_il(b, body, Lang::JavaScript);
+    let mut il = finish_test_il(b, body, Lang::JavaScript);
 
+    let mut builder = Builder::new(&il, &interner);
+    let seed = builder.mk(ValOp::Seq(SEQ_VALUE_COLLECTION), vec![]);
+    let mut env = FxHashMap::default();
+    env.insert(1, seed);
+    let candidates = builder.builder_candidates(body, &env);
+    assert!(candidates
+        .iter()
+        .any(|candidate| candidate.cid == 1 && candidate.kind == BuilderKind::List));
+
+    let mut api_il = il.clone();
+    api_il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(sp(1), NodeKind::Var),
+        EvidenceKind::Domain(DomainEvidence::Collection),
+    ));
+    push_method_call_library_api_evidence(&mut api_il, &interner, 1, call, "push", 1);
+    let mut builder = Builder::new(&api_il, &interner);
+    let seed = builder.mk(ValOp::Seq(SEQ_VALUE_COLLECTION), vec![]);
+    let mut env = FxHashMap::default();
+    env.insert(1, seed);
+    let candidates = builder.builder_candidates(body, &env);
+    assert!(candidates
+        .iter()
+        .any(|candidate| candidate.cid == 1 && candidate.kind == BuilderKind::List));
+
+    il.evidence.push(evidence(
+        2,
+        EvidenceAnchor::node(sp(4), NodeKind::Call),
+        EvidenceKind::Effect(EffectEvidenceKind::BuilderAppendCall),
+    ));
     let mut builder = Builder::new(&il, &interner);
     let seed = builder.mk(ValOp::Input(0), vec![]);
     let mut env = FxHashMap::default();
     env.insert(1, seed);
     assert!(
         builder.builder_candidates(body, &env).is_empty(),
-        "a builder-append method contract without a collection seed must not prove a list builder"
+        "append-effect evidence without a collection seed must not prove a list builder"
     );
 
     let mut builder = Builder::new(&il, &interner);

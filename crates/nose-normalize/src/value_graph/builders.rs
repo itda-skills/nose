@@ -80,36 +80,19 @@ impl<'a> Builder<'a> {
     /// per-element contribution under the current path guard and return true (the append IS
     /// the build, not an effect). A multi-item form spoils the builder.
     /// Recognize a single-item builder append to a var `r`, returning `(r_cid, item_args)`.
-    /// Exact append-effect evidence is sufficient. For the local active-builder value law,
-    /// a language-scoped builder-append method contract is also sufficient once the caller
-    /// proves that `r` is an active builder seeded by an explicit collection surface.
+    /// Exact append-effect evidence or an admitted append method occurrence is required;
+    /// an active-builder receiver alone does not prove that a raw method selector has
+    /// builder-append semantics.
     pub(super) fn list_append_parts(&self, e: NodeId) -> Option<(u32, Vec<NodeId>)> {
         let (receiver, item) = builder_append_call_args(self.il, self.interner, e)
-            .or_else(|| self.contextual_builder_append_method_args(e))?;
+            .or_else(|| admitted_builder_append_method_call_args(self.il, self.interner, e))
+            .or_else(|| contracted_builder_append_method_call_args(self.il, self.interner, e))?;
         let (NodeKind::Var, Payload::Cid(c)) =
             (self.il.kind(receiver), self.il.node(receiver).payload)
         else {
             return None;
         };
         Some((c, vec![item]))
-    }
-
-    pub(super) fn contextual_builder_append_method_args(
-        &self,
-        node: NodeId,
-    ) -> Option<(NodeId, NodeId)> {
-        if !matches!(self.il.node(node).payload, Payload::None) {
-            return None;
-        }
-        let (receiver, method, item) = self.single_arg_field_call_parts(node)?;
-        let contract =
-            builder_append_method_contract(self.il.meta.lang, self.interner.resolve(method), 1)?;
-        if contract.effect != EffectEvidenceKind::BuilderAppendCall
-            || contract.receiver != MethodEffectReceiverContract::ActiveCollectionBuilder
-        {
-            return None;
-        }
-        Some((receiver, item))
     }
 
     pub(super) fn single_arg_field_call_parts(
