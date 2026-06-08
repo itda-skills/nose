@@ -24,7 +24,11 @@ preserved as raw source-backed protocol anchors rather than ordinary calls,
 values, or sequence tags. Python comprehension lowering now records whether a
 HOF came from a list comprehension, set comprehension, dict comprehension, or
 generator expression, and exact/value consumers use that surface evidence before
-applying materialization or demand-sensitive laws.
+applying materialization or demand-sensitive laws. Admitted builtin and HOF
+operations now also have internal demand profiles for the currently supported
+eager, short-circuit, append, nullish-default, reduction, and per-element
+callback evaluation shapes; these profiles describe how an already-admitted
+operation is consumed, not which source API is admitted.
 Library/API identity is consolidated through internal `LibraryApiContract` rows
 for factory, constructor, selected property/non-factory method/view surfaces,
 and selected non-call sentinels, with occurrence evidence covering selected
@@ -49,12 +53,12 @@ still being migrated toward it.
 - `nose-il` defines a compact shared IL, `Lang`, `Builtin`, `HoFKind`, operators,
   literals, source spans, units, and pack-facing internal `EvidenceRecord` facts.
 - `nose-semantics` defines the first-party semantic profile facade: language,
-  source-fact, operator, effect, fragment, module, stdlib, builtin, method-call,
-  property, async, iterator-adapter, builder-append, and factory contracts. The
-  public crate surface remains a flat facade, while internal evidence/source/domain
-  proof helpers, effect/place helpers, library API contract identities, negative
-  API guard rows, and library API occurrence/admission logic are split into
-  focused modules.
+  source-fact, operator, demand, effect, fragment, module, stdlib, builtin,
+  method-call, property, async, iterator-adapter, builder-append, and factory
+  contracts. The public crate surface remains a flat facade, while internal
+  evidence/source/domain proof helpers, demand profiles, effect/place helpers,
+  library API contract identities, negative API guard rows, and library API
+  occurrence/admission logic are split into focused modules.
 - `nose-frontend` owns tree-sitter parsing, per-language lowering, embedded
   `<script>` extraction, source/domain/import/symbol/type/guard/place/effect/API/
   sequence evidence emission, and Raw-node coverage.
@@ -605,8 +609,11 @@ Semantic knowledge still appears in several forms outside the facade:
   boolean, factor, large-formula, and structural-recursion gates;
 - named value-graph rule modules that still consume internal `Builder` facts
   instead of versioned `LawPack` records;
-- hard-coded oracle evaluation rules for eager calls, short-circuit operators,
-  HOFs, nullish defaulting, recursion, and effect traces;
+- oracle evaluation rules for admitted eager calls, short-circuit quantifiers,
+  append mutation, nullish defaulting, reductions, and HOF callback execution
+  now consume internal demand profiles, but broader lazy, async, generator,
+  channel, repeated, and call-by-need demand/effect semantics are still not a
+  shared external contract language;
 - remaining library/API proof gates that do not yet have occurrence records.
   `LibraryApi` occurrence evidence now covers selected JS-like static/global
   APIs and static-index membership, JS/TS/Java property builtins, Python
@@ -651,9 +658,11 @@ language.
 - Library semantics are still compiled into engine/first-party facade code.
   Internal `LibraryApiContract` rows exist, but they are not yet versioned
   external pack manifest contracts.
-- Evaluation strategy is not a shared model. Eager, short-circuit, pull-lazy,
-  call-by-need, async, and observable behavior are not represented by a common
-  demand/effect abstraction.
+- Evaluation strategy is only partially shared. Internal demand profiles now
+  cover the currently admitted eager, short-circuit, append, nullish-default,
+  reduction, and HOF callback shapes, but pull-lazy, call-by-need, async,
+  generator, channel, and richer observable-effect behavior are not represented
+  by a common pack-facing demand/effect abstraction.
 - External extension points do not exist. New languages and libraries must be
   added inside the main crates.
 - Report output does not yet expose semantic provenance such as pack id, contract

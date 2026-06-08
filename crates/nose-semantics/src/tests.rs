@@ -2989,6 +2989,10 @@ fn builtin_contracts_preserve_current_special_demand_split() {
     }
     assert_eq!(builtin_demand(Builtin::Reduce), BuiltinDemand::Reduce);
     assert_eq!(
+        builtin_demand_profile(Builtin::Reduce),
+        BuiltinDemandProfile::FoldReduction
+    );
+    assert_eq!(
         builtin_demand(Builtin::Any),
         BuiltinDemand::AnyAll { all: false }
     );
@@ -2996,12 +3000,30 @@ fn builtin_contracts_preserve_current_special_demand_split() {
         builtin_demand(Builtin::All),
         BuiltinDemand::AnyAll { all: true }
     );
+    assert_eq!(
+        builtin_demand_profile(Builtin::All),
+        BuiltinDemandProfile::ShortCircuitQuantifier { all: true }
+    );
     assert_eq!(builtin_demand(Builtin::Append), BuiltinDemand::Append);
+    assert_eq!(
+        builtin_demand_profile(Builtin::Append),
+        BuiltinDemandProfile::AppendMutation
+    );
     assert_eq!(
         builtin_demand(Builtin::ValueOrDefault),
         BuiltinDemand::ValueOrDefault
     );
+    assert_eq!(
+        builtin_demand_profile(Builtin::ValueOrDefault),
+        BuiltinDemandProfile::NullishDefault
+    );
     assert_eq!(builtin_demand(Builtin::Len), BuiltinDemand::Eager);
+    assert_eq!(
+        builtin_demand_profile(Builtin::Len),
+        BuiltinDemandProfile::Eager {
+            contract: EagerBuiltinContract::Len
+        }
+    );
     assert_eq!(
         eager_builtin_contract(Builtin::Len),
         Some(EagerBuiltinContract::Len)
@@ -3016,7 +3038,21 @@ fn builtin_contracts_preserve_current_special_demand_split() {
         Some(ReductionBuiltinContract::Bool { all: false })
     );
     assert_eq!(reduction_builtin_contract(Builtin::Print), None);
-    assert_eq!(hof_contract(HoFKind::FilterMap), HofContract::FilterMap);
+    assert_eq!(
+        hof_contract(HoFKind::FilterMap),
+        HofContract {
+            kind: HoFKind::FilterMap,
+            demand: HofDemandProfile::FilterMap {
+                callback: CallbackDemandProfile::unary_element(CallbackResultDemand::OptionalValue)
+            }
+        }
+    );
+    assert_eq!(
+        hof_contract(HoFKind::Reduce).demand,
+        HofDemandProfile::Reduce {
+            callback: CallbackDemandProfile::left_fold()
+        }
+    );
 }
 
 #[test]

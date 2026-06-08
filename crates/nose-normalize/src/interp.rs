@@ -20,10 +20,10 @@
 
 use nose_il::{stable_symbol_hash, Builtin, Il, Interner, LoopKind, NodeId, NodeKind, Op, Payload};
 use nose_semantics::{
-    admitted_builtin_semantics_at_call, builtin_demand, direct_function_call_target_at_call,
-    eager_builtin_contract, exact_java_this_field, exact_java_this_var,
-    exact_self_field_write_assignment, hof_contract, BuiltinDemand, EagerBuiltinContract,
-    HofContract,
+    admitted_builtin_semantics_at_call, builtin_demand_profile,
+    direct_function_call_target_at_call, exact_java_this_field, exact_java_this_var,
+    exact_self_field_write_assignment, hof_contract, BuiltinDemandProfile, EagerBuiltinContract,
+    HofDemandProfile,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -614,15 +614,17 @@ impl<'a> Interp<'a> {
         }
         let kids = self.il.children(node).to_vec();
         let mut args = Vec::new();
-        match builtin_demand(b) {
-            BuiltinDemand::Reduce => return self.eval_reduce_call(&kids, env),
-            BuiltinDemand::AnyAll { all } => return self.eval_any_all_call(all, &kids, env),
-            BuiltinDemand::Append => return self.eval_append(&kids, env),
-            BuiltinDemand::ValueOrDefault => {
+        let eager_contract = match builtin_demand_profile(b) {
+            BuiltinDemandProfile::FoldReduction => return self.eval_reduce_call(&kids, env),
+            BuiltinDemandProfile::ShortCircuitQuantifier { all } => {
+                return self.eval_any_all_call(all, &kids, env);
+            }
+            BuiltinDemandProfile::AppendMutation => return self.eval_append(&kids, env),
+            BuiltinDemandProfile::NullishDefault => {
                 return self.eval_value_or_default_call(&kids, env);
             }
-            BuiltinDemand::Eager => {}
-        }
+            BuiltinDemandProfile::Eager { contract } => contract,
+        };
         for &k in &kids {
             let arg = self.eval(k, env)?;
             if matches!(arg, Value::Err) {
@@ -630,7 +632,7 @@ impl<'a> Interp<'a> {
             }
             args.push(arg);
         }
-        match eager_builtin_contract(b).ok_or(Unsupported)? {
+        match eager_contract {
             EagerBuiltinContract::Len => match args.first() {
                 Some(Value::List(xs)) => Ok(Value::Int(xs.len() as i64)),
                 // A string is the free monoid over opaque piece hashes; its character
@@ -946,8 +948,8 @@ impl<'a> Interp<'a> {
             _ => return Ok(Value::Err),
         };
         let f = kids[1];
-        match hof_contract(kind) {
-            HofContract::Map => {
+        match hof_contract(kind).demand {
+            HofDemandProfile::Map { .. } => {
                 let mut out = Vec::new();
                 for x in coll {
                     let value = self.apply(f, &[x], env)?;
@@ -958,7 +960,7 @@ impl<'a> Interp<'a> {
                 }
                 Ok(Value::List(out))
             }
-            HofContract::FlatMap => {
+            HofDemandProfile::FlatMap { .. } => {
                 let mut out = Vec::new();
                 for x in coll {
                     match self.apply(f, &[x], env)? {
@@ -969,7 +971,7 @@ impl<'a> Interp<'a> {
                 }
                 Ok(Value::List(out))
             }
-            HofContract::FilterMap => {
+            HofDemandProfile::FilterMap { .. } => {
                 let mut out = Vec::new();
                 for x in coll {
                     match self.apply(f, &[x], env)? {
@@ -980,7 +982,7 @@ impl<'a> Interp<'a> {
                 }
                 Ok(Value::List(out))
             }
-            HofContract::Filter => {
+            HofDemandProfile::Filter { .. } => {
                 let mut out = Vec::new();
                 for x in coll {
                     let keep = self.apply(f, std::slice::from_ref(&x), env)?;
@@ -993,7 +995,7 @@ impl<'a> Interp<'a> {
                 }
                 Ok(Value::List(out))
             }
-            HofContract::Reduce => {
+            HofDemandProfile::Reduce { .. } => {
                 let mut it = coll.into_iter();
                 let mut acc = match it.next() {
                     Some(v) => v,

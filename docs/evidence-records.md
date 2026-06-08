@@ -34,10 +34,12 @@ precondition.
   scan JSON schema.
 - Do not certify external pack claims. nose validates record shape and fails
   closed; providers own their claims, and users own opt-in decisions.
-- Do not model demand evidence or every place/effect family in this slice. The
-  current place/effect records cover the first exact-fragment substrate plus
-  conservative binding-write, receiver-mutation, and opaque-argument-escape
-  risk facts needed to keep binding/import safety fail-closed.
+- Do not model demand as evidence records or cover every place/effect family in
+  this slice. Demand profiles are internal contracts for already-admitted
+  operations; they are not source proof records. The current place/effect records
+  cover the first exact-fragment substrate plus conservative binding-write,
+  receiver-mutation, and opaque-argument-escape risk facts needed to keep
+  binding/import safety fail-closed.
 
 ## Record Shape
 

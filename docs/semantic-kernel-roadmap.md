@@ -235,6 +235,12 @@ and pack ecosystem.
   prove append fragments by name; first-party language/library paths must first
   prove the receiver or active-builder contract and lower the call to
   `Builtin::Append`.
+- The first demand contract module now names the currently supported builtin and
+  HOF evaluation profiles: eager builtin calls, explicit reductions,
+  short-circuit quantifiers, append mutation, nullish defaulting, and per-element
+  callback demand for map/flat-map/filter-map/filter/reduce. The oracle consumes
+  those profiles for admitted operations instead of matching local demand enums,
+  while API admission remains evidence/contract-row gated.
 - Primitive operator gates now enter through `OperatorSemantics` contracts for
   comparison transforms, comparison laws, cardinality thresholds, static
   `indexOf`/`findIndex` thresholds, and source membership operators. Algebra,
@@ -749,11 +755,13 @@ different APIs.
 - Model effect visibility under demand: skipped effects, delayed effects,
   per-element callback effects, async scheduling, yields, and stream emissions.
 - Refactor oracle and value graph to consume demand rules instead of local
-  hard-coded evaluation behavior.
+  hard-coded evaluation behavior. The oracle has started consuming internal
+  builtin/HOF demand profiles; value-graph demand consumers and the pack-facing
+  schema remain open.
 - Keep expanding lazy iterator/generator/channel hard negatives before enabling
   new exact laws. The first Python generator/list/set and Go channel/goroutine
-  hard negatives are now in place, but the shared demand/effect abstraction is
-  still future work.
+  hard negatives are now in place, but pull-lazy, repeated, call-by-need,
+  async/generator/channel, and effect-visibility contracts are still future work.
 
 ## Phase 6: ecosystem packs
 

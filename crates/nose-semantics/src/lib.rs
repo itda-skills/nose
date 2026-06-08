@@ -17,12 +17,14 @@ use nose_il::{
 use rustc_hash::FxHashMap;
 
 mod api_guards;
+mod demand;
 mod effects;
 mod evidence;
 mod library_api;
 mod type_domain;
 
 pub use api_guards::*;
+pub use demand::*;
 pub(crate) use effects::asserted_effect_at_node;
 pub use effects::*;
 pub use evidence::*;
@@ -1893,123 +1895,6 @@ impl StdlibSemantics {
 pub enum ImportedMapFactoryContract {
     JavaMap,
     RustStdMap,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum BuiltinDemand {
-    Eager,
-    Reduce,
-    AnyAll { all: bool },
-    Append,
-    ValueOrDefault,
-}
-
-pub fn builtin_demand(builtin: Builtin) -> BuiltinDemand {
-    match builtin {
-        Builtin::Reduce => BuiltinDemand::Reduce,
-        Builtin::Any => BuiltinDemand::AnyAll { all: false },
-        Builtin::All => BuiltinDemand::AnyAll { all: true },
-        Builtin::Append => BuiltinDemand::Append,
-        Builtin::ValueOrDefault => BuiltinDemand::ValueOrDefault,
-        _ => BuiltinDemand::Eager,
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum EagerBuiltinContract {
-    Len,
-    IsEmpty,
-    IsNull,
-    IsNotNull,
-    StartsWith,
-    EndsWith,
-    Contains,
-    Join,
-    Abs,
-    UnsignedCast32,
-    Sum,
-    Min,
-    Max,
-    Range,
-    Zip,
-    Enumerate,
-    Keys,
-    Print,
-    DictEntry,
-    GetOrDefault,
-}
-
-pub fn eager_builtin_contract(builtin: Builtin) -> Option<EagerBuiltinContract> {
-    Some(match builtin {
-        Builtin::Len => EagerBuiltinContract::Len,
-        Builtin::IsEmpty => EagerBuiltinContract::IsEmpty,
-        Builtin::IsNull => EagerBuiltinContract::IsNull,
-        Builtin::IsNotNull => EagerBuiltinContract::IsNotNull,
-        Builtin::StartsWith => EagerBuiltinContract::StartsWith,
-        Builtin::EndsWith => EagerBuiltinContract::EndsWith,
-        Builtin::Contains => EagerBuiltinContract::Contains,
-        Builtin::Join => EagerBuiltinContract::Join,
-        Builtin::Abs => EagerBuiltinContract::Abs,
-        Builtin::UnsignedCast32 => EagerBuiltinContract::UnsignedCast32,
-        Builtin::Sum => EagerBuiltinContract::Sum,
-        Builtin::Min => EagerBuiltinContract::Min,
-        Builtin::Max => EagerBuiltinContract::Max,
-        Builtin::Range => EagerBuiltinContract::Range,
-        Builtin::Zip => EagerBuiltinContract::Zip,
-        Builtin::Enumerate => EagerBuiltinContract::Enumerate,
-        Builtin::Keys => EagerBuiltinContract::Keys,
-        Builtin::Print => EagerBuiltinContract::Print,
-        Builtin::DictEntry => EagerBuiltinContract::DictEntry,
-        Builtin::GetOrDefault => EagerBuiltinContract::GetOrDefault,
-        Builtin::Reduce
-        | Builtin::Any
-        | Builtin::All
-        | Builtin::Append
-        | Builtin::ValueOrDefault => return None,
-    })
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum ReductionBuiltinContract {
-    Len,
-    Sum,
-    ExplicitFold,
-    Selection { max: bool },
-    Bool { all: bool },
-    Join,
-}
-
-pub fn reduction_builtin_contract(builtin: Builtin) -> Option<ReductionBuiltinContract> {
-    Some(match builtin {
-        Builtin::Len => ReductionBuiltinContract::Len,
-        Builtin::Sum => ReductionBuiltinContract::Sum,
-        Builtin::Reduce => ReductionBuiltinContract::ExplicitFold,
-        Builtin::Min => ReductionBuiltinContract::Selection { max: false },
-        Builtin::Max => ReductionBuiltinContract::Selection { max: true },
-        Builtin::Any => ReductionBuiltinContract::Bool { all: false },
-        Builtin::All => ReductionBuiltinContract::Bool { all: true },
-        Builtin::Join => ReductionBuiltinContract::Join,
-        _ => return None,
-    })
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum HofContract {
-    Map,
-    FlatMap,
-    FilterMap,
-    Filter,
-    Reduce,
-}
-
-pub fn hof_contract(kind: HoFKind) -> HofContract {
-    match kind {
-        HoFKind::Map => HofContract::Map,
-        HoFKind::FlatMap => HofContract::FlatMap,
-        HoFKind::FilterMap => HofContract::FilterMap,
-        HoFKind::Filter => HofContract::Filter,
-        HoFKind::Reduce => HofContract::Reduce,
-    }
 }
 
 /// The value-graph call tag for a canonical builtin. Tag `0` is reserved for
