@@ -351,9 +351,10 @@ migrated.
 - Builder append contracts are separate from arbitrary method calls. A selector
   such as `push`, `append`, or `add` is not proof by itself. First-party
   frontend/normalize paths must prove the receiver or active-builder contract,
-  lower the call to canonical `Builtin::Append`, and emit
-  `Effect(BuilderAppendCall)` before exact fragments can treat it as an append
-  effect. Value-graph active list-builder recognition consumes an explicit
+  lower the call to canonical `Builtin::Append`, and attach
+  `Effect(BuilderAppendCall)` through explicit same-span language/API evidence
+  before exact fragments can treat it as an append effect. Value-graph active
+  list-builder recognition consumes an explicit
   first-party method-effect contract row whose obligations include language,
   method, arity, `BuilderAppendCall`, and an active collection-builder receiver.
   Active map-builder recognition similarly consumes an index-write contract row:

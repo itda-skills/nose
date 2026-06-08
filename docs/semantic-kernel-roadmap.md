@@ -428,7 +428,8 @@ and pack ecosystem.
   because one representative pair looked actionable.
 - Exact-fragment place/effect gates became evidence-authoritative for the
   producer-covered substrate. First-party normalize refreshes now upsert
-  `Effect(BuilderAppendCall)` for canonical append calls,
+  `Effect(BuilderAppendCall)` for canonical append calls only when a same-span
+  append `LibraryApi` proof licenses the canonical form,
   `Effect(NonOverloadableIndexWrite)` for C/Go/Java index assignments, and Java
   self receiver/field/write `Place`/`Effect` records after canonical rewrites.
   Exact fragment consumers no longer reopen append/index/self-field admission

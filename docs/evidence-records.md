@@ -307,9 +307,12 @@ Admission currently comes from either a same-span admitted
 `LibraryApi` occurrence record whose contract id maps to that builtin, or a
 narrow first-party language-core lowering: Go map lookup-ok `Contains`, Go
 `range` `Enumerate`, Python dict-comprehension `DictEntry`, JS-like `for-in`
-`Keys`, C `UnsignedCast32` with `Source(Cast(CUnsigned32))`, or canonical
-`Append` with `Effect(BuilderAppendCall)`. Raw or unadmitted builtin payloads
-stay opaque in the value graph and closed in exact/oracle consumers.
+`Keys`, or C `UnsignedCast32` with `Source(Cast(CUnsigned32))`. Canonical
+`Append` still needs `Effect(BuilderAppendCall)`, and the first-party normalize
+producer emits that effect only when the same call also has the same-span
+`LibraryApi` proof for the append API; the effect record depends on that API
+record. Raw or unadmitted builtin payloads stay opaque in the value graph and
+closed in exact/oracle consumers.
 When a receiver obligation makes an API result more specific than the selector
 alone, the dependency chain must prove that specialization. For example, Rust
 `unwrap_or` is an option defaulting API in isolation, but the canonical
@@ -374,10 +377,12 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `Boolean` proof;
 - first-party lowering and normalize refreshes emit `Place(SelfReceiver)` for
   Java `this`, `Place(SelfField)` for Java `this.field`,
-  `Effect(SelfFieldWrite)` for Java `this.field = ...`,
-  `Effect(NonOverloadableIndexWrite)` for C/Go/Java index writes, and
-  `Effect(BuilderAppendCall)` for canonical `Builtin::Append`. They also emit
-  mutation-risk effects: `Effect(BindingWrite)` for assignment nodes,
+  `Effect(SelfFieldWrite)` for Java `this.field = ...`, and
+  `Effect(NonOverloadableIndexWrite)` for C/Go/Java index writes. Normalize also
+  emits `Effect(BuilderAppendCall)` for canonical `Builtin::Append` only when a
+  same-span append `LibraryApi` record licenses that canonical form, and records
+  the API evidence as a dependency. They also emit mutation-risk effects:
+  `Effect(BindingWrite)` for assignment nodes,
   `Effect(ReceiverMutation)` for calls admitted by the first-party
   language-scoped mutating-method policy, and
   `Effect(OpaqueArgumentEscape)` for ordinary calls with arguments. The shared

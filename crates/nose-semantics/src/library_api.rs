@@ -2299,7 +2299,12 @@ pub(crate) fn language_core_builtin_at_call(il: &Il, call: NodeId, builtin: Buil
     }
 }
 
-pub(crate) fn library_api_dependency_id_for_canonical_builtin_call(
+/// The asserted same-span `LibraryApi` evidence record that licenses a canonical builtin call.
+///
+/// Normalization may rewrite a source/library call to `Payload::Builtin`, but the payload is only
+/// an operation shape. Producers of downstream evidence can use this helper to preserve the
+/// original source/API proof as a dependency instead of treating the canonical payload as proof.
+pub fn library_api_dependency_id_for_canonical_builtin_call(
     il: &Il,
     call: NodeId,
     builtin: Builtin,

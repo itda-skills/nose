@@ -930,28 +930,39 @@ fn normalized_binding_membership_op(case: BindingMembershipCase) -> ValOp {
     let includes = interner.intern("includes");
     let array = interner.intern("array");
     let mut b = IlBuilder::new(FileId(0));
-    let ((root_children, seq_span), call_span) = match case {
+    let ((root_children, seq_span), call_span, mutation_span) = match case {
         BindingMembershipCase::Visible => {
             let (assign, seq_span) = binding_assignment(&mut b, xs, array, 10);
             let (call, call_span) = binding_membership_call(&mut b, xs, item_name, includes, 12);
-            ((vec![assign, call], seq_span), call_span)
+            ((vec![assign, call], seq_span), call_span, None)
         }
         BindingMembershipCase::Late => {
             let (call, call_span) = binding_membership_call(&mut b, xs, item_name, includes, 12);
             let (assign, seq_span) = binding_assignment(&mut b, xs, array, 20);
-            ((vec![call, assign], seq_span), call_span)
+            ((vec![call, assign], seq_span), call_span, None)
         }
         BindingMembershipCase::MutatedVisible => {
             let (assign, seq_span) = binding_assignment(&mut b, xs, array, 20);
             let append = binding_append(&mut b, xs, 22);
             let (call, call_span) = binding_membership_call(&mut b, xs, item_name, includes, 23);
-            ((vec![assign, append, call], seq_span), call_span)
+            (
+                (vec![assign, append, call], seq_span),
+                call_span,
+                Some(sp(22)),
+            )
         }
     };
     let body = b.add(NodeKind::Block, Payload::None, sp(9), &root_children);
     let root = b.add(NodeKind::Func, Payload::None, sp(8), &[body]);
     let mut il = finish_test_il(b, root, Lang::TypeScript);
     il.evidence.push(collection_sequence_evidence(0, seq_span));
+    if let Some(span) = mutation_span {
+        il.evidence.push(evidence(
+            1,
+            EvidenceAnchor::node(span, NodeKind::Call),
+            EvidenceKind::Effect(EffectEvidenceKind::BuilderAppendCall),
+        ));
+    }
     let normalized = crate::normalize(
         &il,
         &interner,

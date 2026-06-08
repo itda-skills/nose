@@ -4,12 +4,11 @@
 
 use crate::type_domain_aliases::TypeDomainAliases;
 use nose_il::{
-    stable_symbol_hash, Builtin, DomainEvidence, EffectEvidenceKind, EvidenceAnchor,
-    EvidenceEmitter, EvidenceId, EvidenceKind, EvidenceProvenance, EvidenceRecord, EvidenceStatus,
-    FileId, FileMeta, Il, IlBuilder, ImportEvidenceKind, Interner, Lang, LibraryApiEvidenceKind,
-    LitClass, LoopKind, NodeId, NodeKind, Op, Payload, PlaceEvidenceKind, SequenceSurfaceKind,
-    SourceCallKind, SourceFactKind, SourceProtocolKind, Span, Symbol, SymbolEvidenceKind, Unit,
-    UnitKind,
+    stable_symbol_hash, DomainEvidence, EffectEvidenceKind, EvidenceAnchor, EvidenceEmitter,
+    EvidenceId, EvidenceKind, EvidenceProvenance, EvidenceRecord, EvidenceStatus, FileId, FileMeta,
+    Il, IlBuilder, ImportEvidenceKind, Interner, Lang, LibraryApiEvidenceKind, LitClass, LoopKind,
+    NodeId, NodeKind, Op, Payload, PlaceEvidenceKind, SequenceSurfaceKind, SourceCallKind,
+    SourceFactKind, SourceProtocolKind, Span, Symbol, SymbolEvidenceKind, Unit, UnitKind,
 };
 use nose_semantics::{
     library_api_callee_contract_hash, library_api_contract_id_hash,
@@ -138,13 +137,6 @@ impl<'a> Lowering<'a> {
                 }
             }
             NodeKind::Call => {
-                if matches!(payload, Payload::Builtin(Builtin::Append)) && children.len() == 2 {
-                    self.record_evidence(
-                        EvidenceAnchor::node(span, kind),
-                        EvidenceKind::Effect(EffectEvidenceKind::BuilderAppendCall),
-                        "effect_builder_append",
-                    );
-                }
                 if matches!(payload, Payload::None) {
                     self.record_call_mutation_evidence(span, kind, children);
                     self.record_library_api_evidence_for_call(span, children);
@@ -2696,6 +2688,7 @@ pub(crate) fn common_bin_op(text: &str) -> Option<Op> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nose_il::Builtin;
 
     fn sp() -> Span {
         Span::new(FileId(0), 0, 1, 1, 1)
@@ -4371,7 +4364,7 @@ def f(value, other):\n    return Values([\"red\", \"blue\"]).__contains__(value)
                 && record.kind
                     == EvidenceKind::Effect(EffectEvidenceKind::NonOverloadableIndexWrite)
         }));
-        assert!(lo.evidence.iter().any(|record| {
+        assert!(!lo.evidence.iter().any(|record| {
             record.anchor == EvidenceAnchor::node(sp_at(7), NodeKind::Call)
                 && record.kind == EvidenceKind::Effect(EffectEvidenceKind::BuilderAppendCall)
         }));
