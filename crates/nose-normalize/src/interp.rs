@@ -20,8 +20,8 @@
 
 use nose_il::{Builtin, Il, LoopKind, NodeId, NodeKind, Op, Payload, Symbol};
 use nose_semantics::{
-    builtin_demand, eager_builtin_contract, hof_contract, BuiltinDemand, EagerBuiltinContract,
-    HofContract,
+    admitted_builtin_semantics_at_call, builtin_demand, eager_builtin_contract, hof_contract,
+    BuiltinDemand, EagerBuiltinContract, HofContract,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -639,6 +639,9 @@ impl<'a> Interp<'a> {
             Payload::Builtin(b) => b,
             _ => return self.eval_user_call(node, env), // self-recursion, else opaque
         };
+        if !admitted_builtin_semantics_at_call(self.il, node, b) {
+            return Err(Unsupported);
+        }
         let kids = self.il.children(node).to_vec();
         let mut args = Vec::new();
         match builtin_demand(b) {
@@ -851,6 +854,7 @@ impl<'a> Interp<'a> {
     fn exec_stmt_append(&mut self, e: NodeId, env: &mut FxHashMap<u32, Value>) -> R<Option<Flow>> {
         if self.il.kind(e) != NodeKind::Call
             || !matches!(self.il.node(e).payload, Payload::Builtin(Builtin::Append))
+            || !admitted_builtin_semantics_at_call(self.il, e, Builtin::Append)
         {
             return Ok(None);
         }
@@ -1304,8 +1308,154 @@ fn un(op: Op, a: &Value) -> Value {
 mod tests {
     use super::*;
     use nose_il::{
-        FileId, FileMeta, HoFKind, IlBuilder, Interner, Lang, LitClass, Span, Unit, UnitKind,
+        stable_symbol_hash, EffectEvidenceKind, EvidenceAnchor, EvidenceEmitter, EvidenceKind,
+        EvidenceProvenance, EvidenceRecord, EvidenceStatus, FileId, FileMeta, HoFKind, IlBuilder,
+        Interner, Lang, LibraryApiEvidenceKind, LitClass, SourceCastKind, SourceFactKind, Span,
+        Unit, UnitKind,
     };
+    use nose_semantics::{
+        library_api_callee_contract_hash, library_api_contract_id_hash, LibraryApiCalleeContract,
+        LibraryApiContractId, LibraryApiShadowPolicy, MethodSemanticContract, FIRST_PARTY_PACK_ID,
+    };
+
+    fn run_admitted_unit(mut il: Il, root: NodeId, args: &[Value]) -> Option<Behavior> {
+        admit_test_builtin_calls(&mut il);
+        run_unit(&il, root, args)
+    }
+
+    fn admit_test_builtin_calls(il: &mut Il) {
+        let mut seen_library_records = Vec::new();
+        let mut next_id = 1000;
+        for idx in 0..il.nodes.len() {
+            let node = NodeId(idx as u32);
+            let (NodeKind::Call, Payload::Builtin(builtin)) =
+                (il.kind(node), il.node(node).payload)
+            else {
+                continue;
+            };
+            let span = il.node(node).span;
+            if matches!(builtin, Builtin::Append) {
+                il.evidence.push(test_effect_record(
+                    next_id,
+                    span,
+                    EffectEvidenceKind::BuilderAppendCall,
+                ));
+                next_id += 1;
+            } else if let Some(contract_id) = test_library_contract_id_for_builtin(builtin) {
+                if seen_library_records
+                    .iter()
+                    .any(|&(seen_span, seen_builtin)| seen_span == span && seen_builtin == builtin)
+                {
+                    continue;
+                }
+                seen_library_records.push((span, builtin));
+                il.evidence.push(test_library_api_record(
+                    next_id,
+                    span,
+                    contract_id,
+                    test_callee_contract(),
+                ));
+                next_id += 1;
+            } else if matches!(builtin, Builtin::UnsignedCast32) {
+                il.evidence.push(test_source_record(
+                    next_id,
+                    span,
+                    SourceFactKind::Cast(SourceCastKind::CUnsigned32),
+                ));
+                next_id += 1;
+            }
+        }
+    }
+
+    fn test_library_contract_id_for_builtin(builtin: Builtin) -> Option<LibraryApiContractId> {
+        match builtin {
+            Builtin::Len
+            | Builtin::Print
+            | Builtin::Range
+            | Builtin::Sum
+            | Builtin::Min
+            | Builtin::Max
+            | Builtin::Abs
+            | Builtin::Zip
+            | Builtin::Enumerate
+            | Builtin::Any
+            | Builtin::All => Some(LibraryApiContractId::FreeFunctionBuiltin(builtin)),
+            Builtin::IsEmpty
+            | Builtin::StartsWith
+            | Builtin::EndsWith
+            | Builtin::Contains
+            | Builtin::GetOrDefault
+            | Builtin::ValueOrDefault
+            | Builtin::IsNull
+            | Builtin::IsNotNull
+            | Builtin::Join
+            | Builtin::Reduce => Some(LibraryApiContractId::MethodCall(
+                MethodSemanticContract::Builtin(builtin),
+            )),
+            Builtin::Append | Builtin::Keys | Builtin::DictEntry | Builtin::UnsignedCast32 => None,
+        }
+    }
+
+    fn test_callee_contract() -> LibraryApiCalleeContract {
+        LibraryApiCalleeContract::FreeName {
+            name: "__test_builtin__",
+            shadow: LibraryApiShadowPolicy::None,
+        }
+    }
+
+    fn test_library_api_record(
+        id: u32,
+        span: Span,
+        contract_id: LibraryApiContractId,
+        callee: LibraryApiCalleeContract,
+    ) -> EvidenceRecord {
+        EvidenceRecord {
+            id: nose_il::EvidenceId(id),
+            anchor: EvidenceAnchor::node(span, NodeKind::Call),
+            kind: EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
+                contract_hash: library_api_contract_id_hash(contract_id),
+                callee_hash: library_api_callee_contract_hash(callee),
+                arity: 0,
+            }),
+            provenance: EvidenceProvenance {
+                emitter: EvidenceEmitter::FirstParty,
+                pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+                rule_hash: Some(stable_symbol_hash("interp-test")),
+            },
+            dependencies: Vec::new(),
+            status: EvidenceStatus::Asserted,
+        }
+    }
+
+    fn test_effect_record(id: u32, span: Span, effect: EffectEvidenceKind) -> EvidenceRecord {
+        EvidenceRecord {
+            id: nose_il::EvidenceId(id),
+            anchor: EvidenceAnchor::node(span, NodeKind::Call),
+            kind: EvidenceKind::Effect(effect),
+            provenance: EvidenceProvenance {
+                emitter: EvidenceEmitter::FirstParty,
+                pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+                rule_hash: Some(stable_symbol_hash("interp-test")),
+            },
+            dependencies: Vec::new(),
+            status: EvidenceStatus::Asserted,
+        }
+    }
+
+    fn test_source_record(id: u32, span: Span, fact: SourceFactKind) -> EvidenceRecord {
+        EvidenceRecord {
+            id: nose_il::EvidenceId(id),
+            anchor: EvidenceAnchor::source_span(span),
+            kind: EvidenceKind::Source(fact),
+            provenance: EvidenceProvenance {
+                emitter: EvidenceEmitter::FirstParty,
+                pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+                rule_hash: Some(stable_symbol_hash("interp-test")),
+            },
+            dependencies: Vec::new(),
+            status: EvidenceStatus::Asserted,
+        }
+    }
 
     /// Build `fn() { return len(<str literal>) }` and run it.
     fn run_len_of_string() -> Value {
@@ -1324,7 +1474,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -1333,6 +1483,32 @@ mod tests {
         // unknown, so `len(str)` must be `Err` (matching the documented contract and the
         // sibling `IsEmpty`), not a hardcoded `Int(1)`.
         assert_eq!(run_len_of_string(), Value::Err);
+    }
+
+    #[test]
+    fn builtin_calls_require_admission_for_oracle_execution() {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let xs = b.add(NodeKind::Seq, Payload::None, sp, &[one]);
+        let call = b.add(NodeKind::Call, Payload::Builtin(Builtin::Len), sp, &[xs]);
+        let ret = b.add(NodeKind::Return, Payload::None, sp, &[call]);
+        let func = b.add(NodeKind::Func, Payload::None, sp, &[ret]);
+        let il = b.finish(
+            func,
+            FileMeta {
+                path: "t".into(),
+                lang: Lang::Python,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+
+        assert!(run_unit(&il, func, &[]).is_none());
+        assert_eq!(
+            run_admitted_unit(il, func, &[]).expect("admitted run").ret,
+            Value::Int(1)
+        );
     }
 
     fn run_value_or_default(value: NodeId, default: NodeId, mut b: IlBuilder, sp: Span) -> Value {
@@ -1353,7 +1529,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -1409,7 +1585,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -1457,7 +1633,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -1492,7 +1668,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).map(|behavior| behavior.ret)
+        run_admitted_unit(il, func, &[]).map(|behavior| behavior.ret)
     }
 
     #[test]
@@ -1518,7 +1694,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -1554,7 +1730,10 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        (run_unit(&il, func, &[]).expect("run_unit"), field_key)
+        (
+            run_admitted_unit(il, func, &[]).expect("run_unit"),
+            field_key,
+        )
     }
 
     #[test]
@@ -1595,7 +1774,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit")
+        run_admitted_unit(il, func, &[]).expect("run_unit")
     }
 
     #[test]
@@ -1632,7 +1811,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit")
+        run_admitted_unit(il, func, &[]).expect("run_unit")
     }
 
     #[test]
@@ -1688,7 +1867,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("receiver field writes should interpret")
+        run_admitted_unit(il, func, &[]).expect("receiver field writes should interpret")
     }
 
     #[test]
@@ -1714,7 +1893,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -1790,7 +1969,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -1831,7 +2010,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -1866,7 +2045,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[Value::Err]).expect("run_unit")
+        run_admitted_unit(il, func, &[Value::Err]).expect("run_unit")
     }
 
     #[test]
@@ -1903,7 +2082,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit")
+        run_admitted_unit(il, func, &[]).expect("run_unit")
     }
 
     #[test]
@@ -1948,7 +2127,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit")
+        run_admitted_unit(il, func, &[]).expect("run_unit")
     }
 
     #[test]
@@ -1980,7 +2159,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit")
+        run_admitted_unit(il, func, &[]).expect("run_unit")
     }
 
     #[test]
@@ -2017,7 +2196,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit")
+        run_admitted_unit(il, func, &[]).expect("run_unit")
     }
 
     #[test]
@@ -2061,7 +2240,7 @@ mod tests {
             Vec::new(),
         );
         assert_eq!(
-            run_unit(&il, func, &[]).expect("run_unit").ret,
+            run_admitted_unit(il, func, &[]).expect("run_unit").ret,
             Value::Int(7)
         );
     }
@@ -2087,7 +2266,10 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        assert_eq!(run_unit(&il, func, &[]).expect("run_unit").ret, Value::Err);
+        assert_eq!(
+            run_admitted_unit(il, func, &[]).expect("run_unit").ret,
+            Value::Err
+        );
     }
 
     fn seq_with_error_item_value() -> Value {
@@ -2108,7 +2290,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -2139,7 +2321,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -2191,7 +2373,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -2234,7 +2416,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -2274,7 +2456,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -2305,7 +2487,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -2355,7 +2537,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -2397,7 +2579,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -2449,7 +2631,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit")
+        run_admitted_unit(il, func, &[]).expect("run_unit")
     }
 
     #[test]
@@ -2505,8 +2687,8 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(
-            &il,
+        run_admitted_unit(
+            il,
             func,
             &[
                 Value::List(vec![Value::Int(1), Value::Int(2)]),
@@ -2582,12 +2764,8 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(
-            &il,
-            func,
-            &[Value::List(vec![Value::Int(1), Value::Int(2)])],
-        )
-        .expect("run_unit")
+        run_admitted_unit(il, func, &[Value::List(vec![Value::Int(1), Value::Int(2)])])
+            .expect("run_unit")
     }
 
     #[test]
@@ -2621,7 +2799,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -2656,7 +2834,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit")
+        run_admitted_unit(il, func, &[]).expect("run_unit")
     }
 
     #[test]
@@ -2695,7 +2873,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[Value::List(Vec::new())]).expect("run_unit")
+        run_admitted_unit(il, func, &[Value::List(Vec::new())]).expect("run_unit")
     }
 
     #[test]
@@ -2728,7 +2906,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit")
+        run_admitted_unit(il, func, &[]).expect("run_unit")
     }
 
     #[test]
@@ -2786,7 +2964,7 @@ mod tests {
             }],
             Vec::new(),
         );
-        run_unit(&il, func, &[Value::Bool(false), Value::Int(0)])
+        run_admitted_unit(il, func, &[Value::Bool(false), Value::Int(0)])
             .expect("run_unit")
             .ret
     }
@@ -2843,7 +3021,7 @@ mod tests {
             ],
             Vec::new(),
         );
-        run_unit(&il, f_func, &[Value::Int(3)])
+        run_admitted_unit(il, f_func, &[Value::Int(3)])
             .expect("run_unit")
             .ret
     }
@@ -2882,7 +3060,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -2926,7 +3104,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -2952,7 +3130,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]
@@ -2991,7 +3169,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        run_unit(&il, func, &[]).expect("run_unit").ret
+        run_admitted_unit(il, func, &[]).expect("run_unit").ret
     }
 
     #[test]

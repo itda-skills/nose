@@ -1445,6 +1445,49 @@ fn c_unsigned_cast_builtin_admission_requires_source_cast_evidence() {
     ));
 }
 
+fn add_with_len_rhs_il() -> (Il, NodeId) {
+    let mut b = IlBuilder::new(FileId(0));
+    let px = b.add(NodeKind::Param, Payload::Cid(0), sp(50), &[]);
+    let py = b.add(NodeKind::Param, Payload::Cid(1), sp(51), &[]);
+    let x = b.add(NodeKind::Var, Payload::Cid(0), sp(52), &[]);
+    let y = b.add(NodeKind::Var, Payload::Cid(1), sp(53), &[]);
+    let len = b.add(NodeKind::Call, Payload::Builtin(Builtin::Len), sp(54), &[y]);
+    let add = b.add(NodeKind::BinOp, Payload::Op(Op::Add), sp(55), &[x, len]);
+    let ret = b.add(NodeKind::Return, Payload::None, sp(56), &[add]);
+    let root = b.add(NodeKind::Func, Payload::None, sp(57), &[px, py, ret]);
+    (finish_il(b, root, Lang::Python), len)
+}
+
+#[test]
+fn value_domain_inference_requires_admitted_builtin_result_domains() {
+    let (mut il, len) = add_with_len_rhs_il();
+    assert_eq!(
+        semantics(Lang::Python)
+            .operators()
+            .infer_param_value_domains(&il, il.root),
+        vec![ValueDomain::Unknown, ValueDomain::Unknown],
+        "raw canonical Len payload must not prove a numeric result domain"
+    );
+
+    let contract = library_free_function_builtin_contract(Lang::Python, "len", 1)
+        .expect("Python len contract");
+    il.evidence.push(library_api_record(
+        10,
+        il.node(len).span,
+        contract.id,
+        contract.callee,
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    assert_eq!(
+        semantics(Lang::Python)
+            .operators()
+            .infer_param_value_domains(&il, il.root),
+        vec![ValueDomain::Number, ValueDomain::Unknown],
+        "admitted Python len can contribute its numeric result domain"
+    );
+}
+
 fn java_list_of_import_evidence_il(
     interner: &Interner,
     import_in_root: bool,

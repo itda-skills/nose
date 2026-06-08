@@ -91,7 +91,10 @@ pub fn synthesize_wrapper(
         kind: UnitKind::Function,
         name: None,
     }];
-    let synth = b.finish(func, meta, units, Vec::new());
+    let mut synth = b.finish(func, meta, units, il.cid_names.clone());
+    // Copied fragment nodes keep their original spans, so their semantic evidence
+    // remains valid for interpreter admission in the wrapper.
+    synth.evidence = il.evidence.clone();
     debug_assert!(
         synth.validate().is_ok(),
         "synthesized fragment wrapper must be a valid arena"

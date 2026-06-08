@@ -50,7 +50,10 @@ still being migrated toward it.
   literals, source spans, units, and pack-facing internal `EvidenceRecord` facts.
 - `nose-semantics` defines the first-party semantic profile facade: language,
   source-fact, operator, effect, fragment, module, stdlib, builtin, method-call,
-  property, async, iterator-adapter, builder-append, and factory contracts.
+  property, async, iterator-adapter, builder-append, and factory contracts. The
+  public crate surface remains a flat facade, while internal evidence/source/domain
+  proof helpers and library API occurrence/admission logic are split into focused
+  modules.
 - `nose-frontend` owns tree-sitter parsing, per-language lowering, embedded
   `<script>` extraction, source/domain/import/symbol/type/guard/place/effect/API/
   sequence evidence emission, and Raw-node coverage.
@@ -144,7 +147,8 @@ migrated.
   builtin payload is only a normalized operation shape; it is not itself proof
   that a language/library API has that meaning. Value-graph builtin folding,
   builtin fallback tags, range/len/zip/enumerate loop patterns, strict-exact
-  builtin calls, function-binding safety, and mutation-risk blocking now consume
+  builtin calls, function-binding safety, mutation-risk blocking, value-domain
+  builtin result inference, and interpreter-oracle builtin execution now consume
   builtin semantics through `admitted_builtin_semantics_at_call`. That helper
   admits same-span `LibraryApi` occurrence evidence after desugaring, plus the
   narrow syntax-owned lowerings for Go map lookup-ok `Contains`, Go
@@ -361,10 +365,11 @@ migrated.
   canonical tags. Strict exact gates, value-graph sequence lowering, and
   sibling-module literal export checks consume this contract only through
   matching `SequenceSurface` evidence rather than raw tag spelling or local
-  string allowlists. Untagged `Seq` remains an internal grouping surface and
-  does not itself prove exact collection semantics; the older Python empty
-  sequence collection case is handled only by the explicit collection profile
-  path.
+  string allowlists. Missing surface evidence now lowers to the untagged
+  sequence value in the value graph, not a spelling-derived raw hash. Untagged
+  `Seq` remains an internal grouping surface and does not itself prove exact
+  collection semantics; the older Python empty sequence collection case is
+  handled only by the explicit collection profile path.
 - Collection reductions such as Rust `Iterator::count()` and Java
   `Stream.count()` are admitted through library method contracts plus exact
   protocol receiver proof, not through a bare method-name check.

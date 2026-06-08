@@ -202,7 +202,9 @@ membership, map-entry-list shape, imported-literal eligibility, or a canonical
 value-graph tag. Consumers resolve the tag only when a matching
 `SequenceSurface` record exists at the same sequence anchor and its dependencies
 remain asserted. Missing, conflicting, ambiguous, or wrong-kind surface evidence
-keeps the exact/value-graph path closed.
+keeps the exact/value-graph path closed. In the value graph, a missing surface
+record produces the untagged sequence value rather than a raw spelling-derived
+hash, so a payload name cannot become a semantic proof channel by coincidence.
 
 Qualified global identity is also evidence, not a selector guess. The current
 first-party JS/TS producer emits `QualifiedGlobal` only for selected static paths
@@ -279,15 +281,16 @@ demand/effect obligations.
 
 Canonical `Payload::Builtin` calls are not proof by themselves. They are the
 shared operation shape after syntax/lowering/desugaring has erased a concrete
-callee, so value-graph, strict-exact, function-binding, and mutation-risk
-consumers must first ask `nose-semantics` whether that call is admitted for the
-specific builtin. Admission currently comes from either a same-span admitted
+callee, so value-graph, strict-exact, function-binding, mutation-risk,
+value-domain inference, and interpreter-oracle consumers must first ask
+`nose-semantics` whether that call is admitted for the specific builtin.
+Admission currently comes from either a same-span admitted
 `LibraryApi` occurrence record whose contract id maps to that builtin, or a
 narrow first-party language-core lowering: Go map lookup-ok `Contains`, Go
 `range` `Enumerate`, Python dict-comprehension `DictEntry`, JS-like `for-in`
 `Keys`, C `UnsignedCast32` with `Source(Cast(CUnsigned32))`, or canonical
 `Append` with `Effect(BuilderAppendCall)`. Raw or unadmitted builtin payloads
-stay opaque in the value graph and closed in exact consumers.
+stay opaque in the value graph and closed in exact/oracle consumers.
 
 Imported API occurrence evidence is not a broad name guess. A call-site
 `Symbol(ImportedBinding)` or `Symbol(ImportedNamespace)` dependency must itself

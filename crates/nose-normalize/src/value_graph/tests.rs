@@ -1417,6 +1417,66 @@ fn import_binding_value_requires_sequence_evidence() {
     assert!(builder.is_import_binding_value(proven, "collections", "deque"));
 }
 
+fn seq_value_tag_for(
+    interner: &Interner,
+    raw_tag: &str,
+    lang: Lang,
+    evidence_records: Vec<EvidenceRecord>,
+) -> u64 {
+    let mut b = IlBuilder::new(FileId(0));
+    let seq = b.add(
+        NodeKind::Seq,
+        Payload::Name(interner.intern(raw_tag)),
+        sp(44),
+        &[],
+    );
+    let root = b.add(NodeKind::Block, Payload::None, sp(44), &[seq]);
+    let mut il = finish_test_il(b, root, lang);
+    il.evidence.extend(evidence_records);
+
+    let mut builder = Builder::new(&il, interner);
+    let value = builder.eval(seq, &FxHashMap::default());
+    let ValOp::Seq(tag) = builder.nodes[value as usize].op else {
+        panic!("expected a sequence value op");
+    };
+    tag
+}
+
+#[test]
+fn raw_sequence_name_tags_without_surface_evidence_are_untagged() {
+    let interner = Interner::new();
+
+    for raw_tag in ["array", "record_guard", "own_property_guard"] {
+        let value_tag = seq_value_tag_for(&interner, raw_tag, Lang::JavaScript, Vec::new());
+        assert_eq!(
+            value_tag, SEQ_VALUE_UNTAGGED,
+            "raw Seq({raw_tag:?}) must not enter the value graph as a semantic tag"
+        );
+        assert_ne!(
+            value_tag,
+            interner.symbol_hash(interner.intern(raw_tag)),
+            "raw Seq({raw_tag:?}) must not fall back to its spelling hash"
+        );
+    }
+}
+
+#[test]
+fn admitted_sequence_surface_controls_sequence_value_tag() {
+    let interner = Interner::new();
+    let tag = seq_value_tag_for(
+        &interner,
+        "array",
+        Lang::JavaScript,
+        vec![evidence(
+            0,
+            EvidenceAnchor::sequence(sp(44)),
+            EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
+        )],
+    );
+
+    assert_eq!(tag, SEQ_VALUE_COLLECTION);
+}
+
 #[test]
 fn namespace_member_import_binding_requires_proven_namespace_value() {
     let interner = Interner::new();

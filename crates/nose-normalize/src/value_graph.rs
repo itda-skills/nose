@@ -8735,20 +8735,19 @@ impl<'a> Builder<'a> {
                 return if record_shape_guard_for_node(self.il, self.interner, node) {
                     SEQ_VALUE_RECORD_GUARD
                 } else {
-                    self.interner.symbol_hash(tag)
+                    SEQ_VALUE_UNTAGGED
                 };
             }
             if self.interner.resolve(tag) == "own_property_guard" {
                 return if own_property_guard_for_node(self.il, self.interner, node) {
                     SEQ_VALUE_OWN_PROPERTY_GUARD
                 } else {
-                    self.interner.symbol_hash(tag)
+                    SEQ_VALUE_UNTAGGED
                 };
             }
         }
         match (self.seq_surface(node), self.il.node(node).payload) {
             (Some(contract), _) => contract.value_tag,
-            (None, Payload::Name(s)) => self.interner.symbol_hash(s),
             _ => SEQ_VALUE_UNTAGGED,
         }
     }

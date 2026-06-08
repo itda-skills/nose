@@ -506,12 +506,17 @@ and pack ecosystem.
 - Raw canonical `Payload::Builtin` admission now goes through
   `admitted_builtin_semantics_at_call` before value-graph folding, builtin
   fallback tagging, range/len/zip/enumerate loop patterns, strict-exact builtin
-  calls, function-binding safety, or mutation-risk blocking can consume builtin
+  calls, function-binding safety, mutation-risk blocking, value-domain builtin
+  result inference, or interpreter-oracle builtin execution can consume builtin
   semantics. Same-span `LibraryApi` occurrence evidence admits post-desugar
   library builtins, while only narrow syntax-owned language-core lowerings such
   as Go map lookup-ok `Contains`, Go `Enumerate`, Python dict-comprehension
   `DictEntry`, JS-like `Keys`, C source-proven `UnsignedCast32`, and
   effect-proven append remain raw-payload eligible.
+- Raw `Seq` spelling no longer feeds value-graph sequence tags. Missing
+  `SequenceSurface` or guard evidence now produces the untagged value instead of
+  a spelling hash, so internal-looking payload names such as `record_guard` or
+  `own_property_guard` cannot become semantic proof channels.
 - C byte-pack proof moved onto evidence-backed alias and cast records. Local
   typedefs and direct quote includes emit `Type(CTypeAlias)` evidence, included
   aliases depend on `Import(CQuoteInclude)`, alias-based `Domain(ByteArray)` and
@@ -526,6 +531,11 @@ and pack ecosystem.
   files while continuing this migration. `nose-semantics/src/lib.rs` and
   `nose-normalize/src/value_graph.rs` are both back under 10k lines, with their
   moved tests kept adjacent as Rust test modules.
+- The `nose-semantics` production facade is now physically split as well:
+  evidence/source/domain proof helpers live in `evidence.rs`, library API
+  contract/evidence/admission logic lives in `library_api.rs`, and `lib.rs`
+  preserves the existing flat public facade while shedding the mixed 9k-line
+  implementation body.
 - The same code-quality pass split the CLI end-to-end test target into a small
   `tests/cli.rs` harness plus topic modules, and moved the Type-4 generator's
   axis metadata/model/aggregate helpers under `bench/type4/type4gen/` while
