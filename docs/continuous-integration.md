@@ -73,15 +73,18 @@ via [check-lean-proofs.sh](../scripts/check-lean-proofs.sh).
 
 ## External review bots
 
-CodeRabbit is disabled for this repository with the root `.coderabbit.yaml`. The
-file opts out of inherited CodeRabbit settings and disables automatic review,
-incremental review, review file scope, chat auto-replies, finishing touches,
-pre-merge checks, issue enrichment, and knowledge-base retention for nose.
+CodeRabbit repository activity is disabled with the root `.coderabbit.yaml`. The
+file opts out of inherited CodeRabbit settings, turns off automatic and
+incremental review, leaves no keyword/label trigger for review opt-in, excludes
+all paths from review scope, disables review statuses, summaries, chat
+auto-replies, finishing touches, pre-merge checks, issue enrichment, knowledge
+base retention, external knowledge sources, and built-in review tools.
 
-The CodeRabbit GitHub App is installed at the `corca-ai` organization level. Fully
-removing repository access requires an organization owner to change the app
-installation from "all repositories" to a selected-repositories installation that
-excludes `corca-ai/nose`, or to uninstall CodeRabbit from the organization.
+That YAML is the repository-owned control. The CodeRabbit GitHub App is installed
+at the `corca-ai` organization level, so fully removing app access still requires
+an organization owner to change the app installation from "all repositories" to a
+selected-repositories installation that excludes `corca-ai/nose`, or to uninstall
+CodeRabbit from the organization.
 
 ## Baselines — incremental adoption
 
