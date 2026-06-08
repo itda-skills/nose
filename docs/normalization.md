@@ -199,6 +199,12 @@ downstream value-graph.
   values take `-1`, and the branch split avoids overflow at both signed extremes.
   It deliberately does not apply to overloadable or coercive operator surfaces.
 
+  Interprocedural pure-helper inlining also lives in the value graph. A call to
+  a pure in-file helper can beta-substitute the helper body only when the call
+  occurrence carries `CallTarget::DirectFunction` evidence for the exact target
+  unit. The callee spelling is not a proof channel; missing, ambiguous, or
+  conflicting target evidence leaves the call opaque.
+
 ## Track 2 — Algebraic expression canonicalization (E-graph)
 
 Generalize the current commutative-operand sort into a principled canonicalizer

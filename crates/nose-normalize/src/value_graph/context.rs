@@ -1,6 +1,7 @@
 //! File-level value-graph context and immutable module seeding.
 
 use super::*;
+use nose_il::UnitKind;
 
 /// File-level facts that are independent of the unit currently being fingerprinted.
 ///

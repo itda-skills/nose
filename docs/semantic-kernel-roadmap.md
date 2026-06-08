@@ -525,7 +525,8 @@ and pack ecosystem.
   execution. `nose-il` now has `CallTarget::DirectFunction` evidence, the
   first-party normalize producer emits it only for unique top-level in-file
   function targets with no current or enclosing lexical shadowing, and
-  recursion/interpreter consumers require that occurrence proof.
+  recursion, interpreter, and value-graph pure-inline consumers require that
+  occurrence proof.
   Method/dynamic-dispatch target proof remains a future pack/source extension
   rather than a same-name fallback.
 - C byte-pack proof moved onto evidence-backed alias and cast records. Local

@@ -81,7 +81,8 @@ providers still emit facts and contracts rather than exact-clone verdicts.
 
 `CallTarget` evidence is the occurrence proof for user-defined calls. A raw
 callee spelling such as `f(...)` is only a selector that a producer may inspect;
-recursion normalization and the interpreter oracle consume only
+recursion normalization, the interpreter oracle, and value-graph pure helper
+inlining consume only
 `CallTarget::DirectFunction` records anchored to the exact `Call` node and
 matching the target function span. The first-party producer currently emits this
 fact only for unique top-level in-file `Function` units when neither the current

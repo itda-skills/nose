@@ -448,9 +448,9 @@ migrated.
   producer admits only unique top-level in-file function targets with no
   current or enclosing lexical shadowing by parameters, assignments, loop
   patterns, or nested function definitions; recursion normalization and the
-  interpreter oracle no longer treat same raw callee spelling as call-target
-  proof. Method and dynamic-dispatch targets require explicit pack/source
-  evidence.
+  interpreter oracle, plus value-graph pure helper inlining, no longer treat
+  same raw callee spelling as call-target proof. Method and dynamic-dispatch
+  targets require explicit pack/source evidence.
 - JS-like `typeof` exact-safety now consumes a language- and arity-constrained
   operator contract plus `Source::Operator(Typeof)` evidence at the call span.
   A raw `Call(Var("typeof"), arg)` shape, same-named function from another

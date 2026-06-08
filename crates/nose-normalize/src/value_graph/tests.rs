@@ -1,10 +1,11 @@
 use super::*;
 use nose_il::{
-    EffectEvidenceKind, EvidenceAnchor, EvidenceEmitter, EvidenceId, EvidenceKind,
-    EvidenceProvenance, EvidenceRecord, EvidenceStatus, FileId, FileMeta, GuardEvidenceKind,
-    IlBuilder, ImportEvidenceKind, JsRecordGuardComparison, JsRecordGuardNullCheck, Lang,
-    LibraryApiEvidenceKind, LitClass, ParamSemantic, SequenceSurfaceKind, SourceCallKind,
-    SourceComprehensionKind, SourceFactKind, Span, SymbolEvidenceKind, Unit, UnitKind,
+    CallTargetEvidenceKind, EffectEvidenceKind, EvidenceAnchor, EvidenceEmitter, EvidenceId,
+    EvidenceKind, EvidenceProvenance, EvidenceRecord, EvidenceStatus, FileId, FileMeta,
+    GuardEvidenceKind, IlBuilder, ImportEvidenceKind, JsRecordGuardComparison,
+    JsRecordGuardNullCheck, Lang, LibraryApiEvidenceKind, LitClass, ParamSemantic,
+    SequenceSurfaceKind, SourceCallKind, SourceComprehensionKind, SourceFactKind, Span,
+    SymbolEvidenceKind, Unit, UnitKind,
 };
 use nose_semantics::{
     library_api_callee_contract_hash, library_api_contract_id_hash,
@@ -139,6 +140,106 @@ fn const_bool_lambda(builder: &mut IlBuilder, param_cid: u32, value: bool, span:
     builder.add(NodeKind::Lambda, Payload::None, span, &[param, block])
 }
 
+fn pure_inline_caller_il(interner: &Interner, with_target_evidence: bool) -> (Il, NodeId) {
+    let helper_name = interner.intern("base");
+    let caller_name = interner.intern("price");
+    let mut b = IlBuilder::new(FileId(0));
+
+    let helper_param = b.add(NodeKind::Param, Payload::Cid(0), sp(1), &[]);
+    let helper_arg = b.add(NodeKind::Var, Payload::Cid(0), sp(2), &[]);
+    let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp(3), &[]);
+    let add = b.add(
+        NodeKind::BinOp,
+        Payload::Op(Op::Add),
+        sp(4),
+        &[helper_arg, one],
+    );
+    let helper_ret = b.add(NodeKind::Return, Payload::None, sp(5), &[add]);
+    let helper_body = b.add(NodeKind::Block, Payload::None, sp(6), &[helper_ret]);
+    let helper = b.add(
+        NodeKind::Func,
+        Payload::None,
+        sp(7),
+        &[helper_param, helper_body],
+    );
+
+    let caller_param = b.add(NodeKind::Param, Payload::Cid(0), sp(10), &[]);
+    let callee = b.add(NodeKind::Var, Payload::Name(helper_name), sp(11), &[]);
+    let caller_arg = b.add(NodeKind::Var, Payload::Cid(0), sp(12), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(13), &[callee, caller_arg]);
+    let two = b.add(NodeKind::Lit, Payload::LitInt(2), sp(14), &[]);
+    let mul = b.add(NodeKind::BinOp, Payload::Op(Op::Mul), sp(15), &[call, two]);
+    let caller_ret = b.add(NodeKind::Return, Payload::None, sp(16), &[mul]);
+    let caller_body = b.add(NodeKind::Block, Payload::None, sp(17), &[caller_ret]);
+    let caller = b.add(
+        NodeKind::Func,
+        Payload::None,
+        sp(18),
+        &[caller_param, caller_body],
+    );
+    let module = b.add(NodeKind::Module, Payload::None, sp(19), &[helper, caller]);
+    let mut il = b.finish(
+        module,
+        FileMeta {
+            path: "t".into(),
+            lang: Lang::Python,
+        },
+        vec![
+            Unit {
+                root: helper,
+                kind: UnitKind::Function,
+                name: Some(helper_name),
+            },
+            Unit {
+                root: caller,
+                kind: UnitKind::Function,
+                name: Some(caller_name),
+            },
+        ],
+        Vec::new(),
+    );
+    if with_target_evidence {
+        il.evidence.push(evidence(
+            0,
+            EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+            EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectFunction {
+                target_span: il.node(helper).span,
+                name_hash: interner.symbol_hash(helper_name),
+            }),
+        ));
+    }
+    (il, caller)
+}
+
+fn pure_inline_direct_il(interner: &Interner) -> (Il, NodeId) {
+    let caller_name = interner.intern("price");
+    let mut b = IlBuilder::new(FileId(0));
+    let param = b.add(NodeKind::Param, Payload::Cid(0), sp(20), &[]);
+    let arg = b.add(NodeKind::Var, Payload::Cid(0), sp(21), &[]);
+    let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp(22), &[]);
+    let add = b.add(NodeKind::BinOp, Payload::Op(Op::Add), sp(23), &[arg, one]);
+    let two = b.add(NodeKind::Lit, Payload::LitInt(2), sp(24), &[]);
+    let mul = b.add(NodeKind::BinOp, Payload::Op(Op::Mul), sp(25), &[add, two]);
+    let ret = b.add(NodeKind::Return, Payload::None, sp(26), &[mul]);
+    let body = b.add(NodeKind::Block, Payload::None, sp(27), &[ret]);
+    let caller = b.add(NodeKind::Func, Payload::None, sp(28), &[param, body]);
+    let module = b.add(NodeKind::Module, Payload::None, sp(29), &[caller]);
+    let il = b.finish(
+        module,
+        FileMeta {
+            path: "t".into(),
+            lang: Lang::Python,
+        },
+        vec![Unit {
+            root: caller,
+            kind: UnitKind::Function,
+            name: Some(caller_name),
+        }],
+        Vec::new(),
+    );
+    (il, caller)
+}
+
 fn push_source_comprehension(il: &mut Il, id: u32, span: Span, kind: SourceComprehensionKind) {
     il.evidence.push(evidence(
         id,
@@ -153,6 +254,27 @@ fn push_source_cast(il: &mut Il, id: u32, span: Span, kind: SourceCastKind) {
         EvidenceAnchor::source_span(span),
         EvidenceKind::Source(SourceFactKind::Cast(kind)),
     ));
+}
+
+#[test]
+fn pure_inline_consumes_call_target_evidence_not_raw_callee_name() {
+    let interner = Interner::new();
+    let (direct_il, direct_root) = pure_inline_direct_il(&interner);
+    let direct = value_fingerprint(&direct_il, direct_root, &interner);
+
+    let (raw_call_il, raw_call_root) = pure_inline_caller_il(&interner, false);
+    assert_ne!(
+        direct,
+        value_fingerprint(&raw_call_il, raw_call_root, &interner),
+        "a raw callee spelling must not prove a pure inline target"
+    );
+
+    let (proven_call_il, proven_call_root) = pure_inline_caller_il(&interner, true);
+    assert_eq!(
+        direct,
+        value_fingerprint(&proven_call_il, proven_call_root, &interner),
+        "explicit CallTarget evidence should admit pure helper beta-substitution"
+    );
 }
 
 #[test]
