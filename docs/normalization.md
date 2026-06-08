@@ -63,8 +63,8 @@ experiments that validated these passes are in [experiments](experiments.md).
 > merge with `append(b); append(a)`),
 > C byte-buffer `u16`/`u32` big-endian packing (`(a[0]<<8)+a[1]` ≡ `(a[0]<<8)|a[1]`
 > only under a byte-array parameter proof, including same-file and direct local-include
-> `typedef unsigned char` aliases; `u32` additionally requires an explicit unsigned
-> 32-bit cast proof on the high lane), Java `Arrays.asList(arrayParam)` membership over the
+> `typedef unsigned char <alias>` proofs; `u32` additionally requires an explicit unsigned
+> 32-bit cast or alias proof on the high lane), Java `Arrays.asList(arrayParam)` membership over the
 > proven array element domain, plus Java primitive-integer low-bit toggle selection
 > (`x%2==0 ? x+1 : x-1` ≡ `x^1`).
 > Also landed: **recursion → iteration** (`recursion.rs`) — tail recursion → `while`, and numeric

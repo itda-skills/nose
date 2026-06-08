@@ -41,6 +41,17 @@ struct LibraryApiEvidencePlan {
     result_domain: Option<DomainEvidence>,
 }
 
+pub(crate) struct ParamSemanticAlias {
+    pub alias: String,
+    pub semantic: ParamSemantic,
+    pub evidence: Option<EvidenceId>,
+}
+
+pub(crate) struct Unsigned32Alias {
+    pub alias: String,
+    pub evidence: Option<EvidenceId>,
+}
+
 /// Mutable state threaded through a single file's lowering.
 pub(crate) struct Lowering<'a> {
     pub b: IlBuilder,
@@ -49,8 +60,8 @@ pub(crate) struct Lowering<'a> {
     pub interner: &'a Interner,
     pub units: Vec<Unit>,
     pub evidence: Vec<EvidenceRecord>,
-    pub param_semantic_aliases: Vec<(String, ParamSemantic)>,
-    pub unsigned_32_aliases: Vec<String>,
+    pub param_semantic_aliases: Vec<ParamSemanticAlias>,
+    pub unsigned_32_aliases: Vec<Unsigned32Alias>,
 }
 
 impl<'a> Lowering<'a> {
@@ -880,10 +891,20 @@ impl<'a> Lowering<'a> {
     }
 
     pub(crate) fn record_param_semantic(&mut self, span: Span, semantic: ParamSemantic) {
-        self.record_evidence(
+        self.record_param_semantic_with_dependencies(span, semantic, Vec::new());
+    }
+
+    pub(crate) fn record_param_semantic_with_dependencies(
+        &mut self,
+        span: Span,
+        semantic: ParamSemantic,
+        dependencies: Vec<EvidenceId>,
+    ) {
+        self.record_evidence_with_dependencies(
             EvidenceAnchor::param(span),
             EvidenceKind::Domain(DomainEvidence::from_param_semantic(semantic)),
             "param_semantic",
+            dependencies,
         );
     }
 
@@ -928,19 +949,54 @@ impl<'a> Lowering<'a> {
     }
 
     pub(crate) fn record_param_semantic_alias(&mut self, local: &str, semantic: ParamSemantic) {
+        self.record_param_semantic_alias_with_evidence(local, semantic, None);
+    }
+
+    pub(crate) fn record_param_semantic_alias_with_evidence(
+        &mut self,
+        local: &str,
+        semantic: ParamSemantic,
+        evidence: Option<EvidenceId>,
+    ) {
         let alias = normalize_type_text(local);
+        self.record_param_semantic_alias_inner(alias, semantic, evidence);
+    }
+
+    pub(crate) fn record_param_semantic_alias_exact_with_evidence(
+        &mut self,
+        local: &str,
+        semantic: ParamSemantic,
+        evidence: Option<EvidenceId>,
+    ) {
+        let alias = local.trim().to_string();
+        self.record_param_semantic_alias_inner(alias, semantic, evidence);
+    }
+
+    fn record_param_semantic_alias_inner(
+        &mut self,
+        alias: String,
+        semantic: ParamSemantic,
+        evidence: Option<EvidenceId>,
+    ) {
         if alias.is_empty() {
             return;
         }
-        if let Some((_, existing)) = self
+        if let Some(existing) = self
             .param_semantic_aliases
             .iter_mut()
-            .find(|(known, _)| known == &alias)
+            .find(|known| known.alias == alias)
         {
-            *existing = semantic;
+            existing.semantic = semantic;
+            if evidence.is_some() {
+                existing.evidence = evidence;
+            }
             return;
         }
-        self.param_semantic_aliases.push((alias, semantic));
+        self.param_semantic_aliases.push(ParamSemanticAlias {
+            alias,
+            semantic,
+            evidence,
+        });
     }
 
     pub(crate) fn clear_param_semantic_alias(&mut self, local: &str) {
@@ -949,26 +1005,40 @@ impl<'a> Lowering<'a> {
             return;
         }
         self.param_semantic_aliases
-            .retain(|(known, _)| known != &alias);
+            .retain(|known| known.alias != alias);
     }
 
-    pub(crate) fn record_unsigned_32_alias(&mut self, local: &str) {
-        let alias = normalize_type_text(local);
-        if alias.is_empty() || self.unsigned_32_aliases.iter().any(|known| known == &alias) {
+    pub(crate) fn record_unsigned_32_alias_with_evidence(
+        &mut self,
+        local: &str,
+        evidence: Option<EvidenceId>,
+    ) {
+        let alias = local.trim().to_string();
+        if alias.is_empty() {
             return;
         }
-        self.unsigned_32_aliases.push(alias);
+        if let Some(existing) = self
+            .unsigned_32_aliases
+            .iter_mut()
+            .find(|known| known.alias == alias)
+        {
+            if evidence.is_some() {
+                existing.evidence = evidence;
+            }
+            return;
+        }
+        self.unsigned_32_aliases
+            .push(Unsigned32Alias { alias, evidence });
     }
 
     pub(crate) fn param_semantic_from_text(&self, text: &str) -> Option<ParamSemantic> {
         param_semantic_from_text(text).or_else(|| {
             let t = normalize_type_text(text);
-            self.param_semantic_aliases
-                .iter()
-                .find_map(|(alias, semantic)| {
-                    (t.contains(&format!(":{alias}[")) || t.contains(&format!(":{alias}<")))
-                        .then_some(*semantic)
-                })
+            self.param_semantic_aliases.iter().find_map(|known| {
+                (t.contains(&format!(":{}[", known.alias))
+                    || t.contains(&format!(":{}<", known.alias)))
+                .then_some(known.semantic)
+            })
         })
     }
 
@@ -1438,9 +1508,7 @@ fn record_post_lower_free_name_library_api(il: &mut Il, interner: &Interner, cal
     let Some((id, callee_contract, rule, result_domain)) = contract else {
         return false;
     };
-    if il.meta.lang == Lang::Python
-        && post_lower_has_raw_marker(il, interner, "python_wildcard_import")
-    {
+    if il.meta.lang == Lang::Python && post_lower_has_python_wildcard_import_evidence(il) {
         return false;
     }
     let mut dependencies = Vec::new();
@@ -2164,10 +2232,13 @@ fn post_lower_source_call_evidence_id(
     })
 }
 
-fn post_lower_has_raw_marker(il: &Il, interner: &Interner, marker: &str) -> bool {
-    il.nodes.iter().any(|node| {
-        node.kind == NodeKind::Raw
-            && matches!(node.payload, Payload::Name(symbol) if interner.resolve(symbol) == marker)
+fn post_lower_has_python_wildcard_import_evidence(il: &Il) -> bool {
+    il.evidence.iter().any(|record| {
+        record.status == EvidenceStatus::Asserted
+            && matches!(
+                record.kind,
+                EvidenceKind::Import(ImportEvidenceKind::Wildcard { .. })
+            )
     })
 }
 
@@ -3433,6 +3504,11 @@ def f(value, other):\n    return Values([\"red\", \"blue\"]).__contains__(value)
             &interner,
         )
         .expect("python lowering should succeed");
+        assert!(wildcard_py.evidence.iter().any(|record| matches!(
+            record.kind,
+            EvidenceKind::Import(ImportEvidenceKind::Wildcard { module_hash })
+                if module_hash == stable_symbol_hash("custom")
+        )));
         assert_eq!(
             library_api_evidence_count_in_records(
                 &wildcard_py.evidence,

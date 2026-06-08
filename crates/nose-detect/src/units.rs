@@ -32,8 +32,8 @@ use nose_semantics::{
     library_rust_vec_new_factory_contract, library_static_index_membership_contract,
     nullish_global_contract, opaque_argument_escape_args, own_property_guard_for_node,
     receiver_mutation_call_receiver, record_shape_guard_for_node, semantics,
-    seq_surface_contract_for_node, source_comprehension_at_node, source_operator_at_node,
-    typeof_operator_contract, unshadowed_global_symbol, DomainRequirement,
+    seq_surface_contract_for_node, source_comprehension_at_node, source_fact_at_node,
+    source_operator_at_node, typeof_operator_contract, unshadowed_global_symbol, DomainRequirement,
     IndexMembershipThreshold, JavaMapFactoryKind, LibraryApiCalleeContract,
     LibraryApiEvidenceStatus, LibraryCollectionFactoryResult, LibraryMapFactoryResult,
     LibraryMapGetContract, LibraryMethodCallContract, MapKeyViewKind, MethodBuiltinArgs,
@@ -1407,12 +1407,14 @@ fn strict_exact_typeof_operator_safe(
     let (NodeKind::Var, Payload::Name(name)) = (il.kind(callee), il.node(callee).payload) else {
         return false;
     };
-    typeof_operator_contract(
+    let Some(contract) = typeof_operator_contract(
         il.meta.lang,
         interner.resolve(name),
         il.children(node).len().saturating_sub(1),
-    )
-    .is_some()
+    ) else {
+        return false;
+    };
+    source_fact_at_node(il, node, contract.required_source_fact)
         && strict_exact_call_args_safe(il, interner, facts, node)
 }
 
@@ -2575,17 +2577,16 @@ fn collect_exact_statement_fragment_units(
     if il.kind(node) == NodeKind::Lambda {
         return;
     }
-    if let Some(kind) = exact_statement_fragment_root(il, node, parents, interner) {
-        // The predicate path is the production authority; for kinds that have migrated
-        // onto the contract substrate, the independent contract recognizer must agree
-        // (issue #33 differential gate). The corpus-level set-equality check lives in
-        // `fragment::recognize`; this asserts the forward direction on every accepted
-        // fragment, including real scans in debug builds.
+    if let Some(contract) =
+        crate::fragment::recognize::recognize_contract(il, node, parents, interner)
+    {
+        let kind = contract.kind;
+        // The contract path is the production authority. Keep the old predicate
+        // matrix as a debug-only differential guard while it remains in-tree.
         debug_assert!(
-            !crate::fragment::recognize::MIGRATED.contains(&kind)
-                || crate::fragment::recognize::recognize_contract(il, node, parents, interner)
-                    .is_some_and(|contract| contract.kind == kind),
-            "contract path must agree with predicate path on migrated fragment kind {kind:?}"
+            exact_statement_fragment_root(il, node, parents, interner)
+                .is_some_and(|predicate_kind| predicate_kind == kind),
+            "predicate path must agree with contract-first fragment production for {kind:?}"
         );
         push_or_upgrade_exact_fragment_root(out, node, kind);
     }
@@ -3968,7 +3969,7 @@ mod tests {
         stable_symbol_hash, EvidenceAnchor, EvidenceEmitter, EvidenceId, EvidenceKind,
         EvidenceProvenance, EvidenceRecord, EvidenceStatus, FileId, FileMeta, IlBuilder,
         ImportEvidenceKind, LibraryApiEvidenceKind, SequenceSurfaceKind, SourceCallKind,
-        SourceFactKind, Span, SymbolEvidenceKind, UnitKind,
+        SourceFactKind, SourceOperatorKind, Span, SymbolEvidenceKind, UnitKind,
     };
     use nose_semantics::{
         library_api_callee_contract_hash, library_api_contract_id_hash,
@@ -4090,6 +4091,29 @@ mod tests {
         (il, call)
     }
 
+    fn js_typeof_call_il(interner: &Interner) -> (Il, NodeId) {
+        let mut b = IlBuilder::new(FileId(0));
+        let callee = b.add(
+            NodeKind::Var,
+            Payload::Name(interner.intern("typeof")),
+            sp(42),
+            &[],
+        );
+        let arg = b.add(NodeKind::Lit, Payload::LitInt(1), sp(43), &[]);
+        let call = b.add(NodeKind::Call, Payload::None, sp(44), &[callee, arg]);
+        let root = b.add(NodeKind::Block, Payload::None, sp(44), &[call]);
+        let il = b.finish(
+            root,
+            FileMeta {
+                path: "t.ts".into(),
+                lang: Lang::TypeScript,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+        (il, call)
+    }
+
     fn raw_array_seq_il(interner: &Interner) -> (Il, NodeId) {
         let mut b = IlBuilder::new(FileId(0));
         let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp(60), &[]);
@@ -4165,6 +4189,28 @@ mod tests {
         assert!(strict_exact_membership_collection_safe(
             &il, &interner, &facts, seq
         ));
+    }
+
+    #[test]
+    fn strict_exact_typeof_requires_source_operator_evidence() {
+        let interner = Interner::new();
+        let (mut il, call) = js_typeof_call_il(&interner);
+        let facts = StrictFacts::collect(&il, &interner);
+
+        assert!(
+            !strict_exact_safe_tree(&il, &interner, &facts, call),
+            "Call(Var(\"typeof\"), arg) must not be exact-safe by spelling alone"
+        );
+
+        il.evidence.push(evidence(
+            0,
+            EvidenceAnchor::source_span(sp(44)),
+            EvidenceKind::Source(SourceFactKind::Operator(SourceOperatorKind::Typeof)),
+            Vec::new(),
+        ));
+        let facts = StrictFacts::collect(&il, &interner);
+
+        assert!(strict_exact_safe_tree(&il, &interner, &facts, call));
     }
 
     #[test]
@@ -4659,6 +4705,47 @@ mod tests {
 
     fn lowered_java_method_unit(src: &str, interner: &Interner) -> UnitFeat {
         lowered_java_unit(src, interner, UnitKind::Method, "f")
+    }
+
+    fn lowered_fragment_units(src: &str, lang: Lang, interner: &Interner) -> Vec<UnitFeat> {
+        let raw =
+            nose_frontend::lower_source(FileId(0), "fragment", src.as_bytes(), lang, interner)
+                .expect("lower source");
+        let il =
+            nose_normalize::normalize(&raw, interner, &nose_normalize::NormalizeOptions::default());
+        let seeds = crate::minhash::seeds(64);
+        extract(
+            &il,
+            interner,
+            &seeds,
+            99,
+            999,
+            true,
+            ExtractFeatures {
+                shape_features: false,
+                abstraction_witnesses: false,
+            },
+        )
+        .into_iter()
+        .filter(|unit| unit.fragment_kind.is_some())
+        .collect()
+    }
+
+    #[test]
+    fn exact_fragment_collector_produces_contract_recognized_direct_return() {
+        let interner = Interner::new();
+        let fragments = lowered_fragment_units(
+            "function f(x) { console.log(x); return (x + 1) * (x + 2); }\n",
+            Lang::JavaScript,
+            &interner,
+        );
+
+        assert!(
+            fragments
+                .iter()
+                .any(|unit| unit.fragment_kind == Some(FragmentKind::DirectReturn)),
+            "contract-first collector should still produce the exact direct-return fragment"
+        );
     }
 
     #[test]

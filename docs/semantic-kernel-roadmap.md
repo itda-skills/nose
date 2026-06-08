@@ -490,6 +490,27 @@ and pack ecosystem.
   value-graph nullish evaluation is now evidence-only: the frontend-proven
   `Symbol(UnshadowedGlobal("undefined"))` record is required, and raw spelling
   plus file-scope fallback no longer opens the exact nullish value path.
+- JS-like `typeof` strict exact safety now requires source-operator evidence at
+  the call span in addition to the language/arity/name contract, so raw
+  `Call(Var("typeof"), arg)` shapes no longer prove the JS unary operator.
+  Python wildcard imports now emit `Import::Wildcard` evidence; post-lower
+  free-name API evidence uses that record as the ambiguity boundary instead of
+  scanning a raw `python_wildcard_import` marker.
+- Raw HOF value-graph admission now requires either source-comprehension proof
+  for the supported Python comprehension surfaces or admitted HOF library/API
+  occurrence evidence. Set comprehensions and synthetic raw `HoF` payloads stay
+  closed; source-proven comprehension internals can still compose their filter
+  HOFs within the proven surface.
+- C byte-pack proof moved onto evidence-backed alias and cast records. Local
+  typedefs and direct quote includes emit `Type(CTypeAlias)` evidence, included
+  aliases depend on `Import(CQuoteInclude)`, alias-based `Domain(ByteArray)` and
+  `Source(Cast(CUnsigned32))` facts depend on the type proof, and value-graph
+  byte-pack laws consume a first-party C byte-pack contract instead of a bare
+  language bool.
+- Exact-fragment production is now contract-first: the collector uses
+  `fragment::recognize::recognize_contract` as the production authority, while
+  the old predicate matrix remains as a debug/differential guard until it can be
+  deleted or reduced.
 
 ## Phase 0: documentation and vocabulary (landed)
 
@@ -523,10 +544,10 @@ Remaining in this phase:
 - Continue replacing proof-sensitive `Lang`/selector checks that are still local
   to normalize, detect, and import proof.
 - Move the next raw fallback cluster behind pack-shaped contracts/evidence:
-  JS-like `typeof` source/operator proof, Python wildcard-import ambiguity,
-  JS/TS guard recognizer dependencies, per-language type-domain producers,
-  C include/typedef/cast evidence for byte-pack laws, raw `HoF` node admission,
-  and exact-fragment production currently driven by the predicate matrix.
+  JS/TS guard recognizer dependencies, per-language type-domain producers
+  beyond the first C alias slice, broader C type-system evidence beyond current
+  byte-pack aliases, and remaining exact-fragment predicate code that is now
+  differential/debug support rather than production authority.
 - Keep behavior-changing recall reductions documented when missing evidence
   blocks exact convergence.
 - Preserve the current precision gates while moving more first-party surfaces

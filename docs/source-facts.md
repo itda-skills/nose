@@ -78,7 +78,8 @@ The pack-facing vocabulary should cover at least these classes.
 |---|---|
 | Symbol and import | resolved import binding, namespace import, unshadowed language global, qualified global/member API path, version range |
 | Receiver and domain | array, collection, map, option, string, primitive integer, byte array, promise-like receiver |
-| Operator | strict equality, loose equality, identity equality, value equality, type membership, language membership |
+| Operator | strict equality, loose equality, identity equality, value equality, JS/TS `typeof`, type membership, language membership |
+| Cast | C unsigned 32-bit cast syntax, future language-specific numeric/reference casts |
 | Literal and surface | regex literal, string literal, map/object literal, tuple/list/array surface, computed property key |
 | Call/protocol shape | constructor call, ordinary function call, method call, property access, macro-like call, async `await` boundary, generator `yield` boundary, Rust `?` error propagation, Go goroutine/defer/channel/select boundaries |
 | Comprehension surface | Python list comprehension, set comprehension, dict comprehension, generator expression |
@@ -95,7 +96,8 @@ fall back to a side-table mirror when source evidence is missing.
 
 - JS/TS lowering emits source facts for construct syntax, async `await`
   boundaries, generator `yield` boundaries, regex literals, strict equality,
-  strict inequality, loose equality, loose inequality, and `instanceof`.
+  strict inequality, loose equality, loose inequality, unary `typeof`, and
+  `instanceof`.
 - Python lowering emits source facts for async `await` boundaries, generator
   `yield` boundaries, list/set/dict/generator comprehension surfaces, value
   equality/inequality, and identity equality/inequality.
@@ -104,6 +106,10 @@ fall back to a side-table mirror when source evidence is missing.
   surfaces remain raw protocol anchors; `v, ok := <-ch` preserves both the
   receive value and the status projection without modeling them as ordinary
   values.
+- C lowering emits source facts for explicit unsigned 32-bit byte-lane casts.
+  Direct casts such as `(unsigned int)a[0]` are dependency-free source facts;
+  alias casts such as `(u32)a[0]` or `(word)a[0]` depend on the corresponding
+  exact-spelling C type-alias evidence.
 - Rust lowering emits source facts for macro invocation syntax, `.await`, async
   blocks, and `?` error propagation.
 - JS/TS, Python, and Rust `await` lowering preserves `Raw("await", value)`

@@ -1696,6 +1696,7 @@ fn lower_unary(lo: &mut Lowering, node: TsNode) -> NodeId {
             let arg = arg_node
                 .map(|a| lower_expr(lo, a))
                 .unwrap_or_else(|| lo.empty_block(span));
+            lo.record_source_fact(span, SourceFactKind::Operator(SourceOperatorKind::Typeof));
             lo.add(NodeKind::Call, Payload::None, span, &[callee, arg])
         }
         // `void` and `delete` have JS-specific side-effect/value semantics that strict
@@ -2006,6 +2007,18 @@ mod tests {
             .count()
     }
 
+    fn source_operator_evidence_count(il: &Il, operator: SourceOperatorKind) -> usize {
+        il.evidence
+            .iter()
+            .filter(|record| {
+                matches!(
+                    record.kind,
+                    EvidenceKind::Source(SourceFactKind::Operator(actual)) if actual == operator
+                )
+            })
+            .count()
+    }
+
     fn library_api_evidence_count(
         il: &Il,
         contract_hash: u64,
@@ -2280,6 +2293,15 @@ mod tests {
                 "shadowed {name} should not get global evidence"
             );
         }
+    }
+
+    #[test]
+    fn js_typeof_unary_emits_source_operator_evidence() {
+        let il = lower_js("function real(value) { return typeof value === \"string\"; }");
+        assert_eq!(
+            source_operator_evidence_count(&il, SourceOperatorKind::Typeof),
+            1
+        );
     }
 
     #[test]

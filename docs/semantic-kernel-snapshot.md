@@ -10,7 +10,7 @@ semantic-kernel facade, receiver-aware field state, sequence-surface contracts,
 proof-backed append fragment evidence, operator-law contracts, typed import
 facts, source-fact gates for construct/macro/literal/operator provenance,
 receiver-domain evidence resolution, and a shared evidence-record substrate for
-source, domain, import, symbol-identity, guard,
+source, domain, import, symbol-identity, type-alias, guard,
 place/effect, mutation-risk effect, selected library API occurrence,
 value-domain/law contracts, and sequence-surface facts.
 JS/TS, Python, and Rust `await` expressions are preserved as raw async protocol
@@ -52,7 +52,7 @@ still being migrated toward it.
   source-fact, operator, effect, fragment, module, stdlib, builtin, method-call,
   property, async, iterator-adapter, builder-append, and factory contracts.
 - `nose-frontend` owns tree-sitter parsing, per-language lowering, embedded
-  `<script>` extraction, source/domain/import/symbol/guard/place/effect/API/
+  `<script>` extraction, source/domain/import/symbol/type/guard/place/effect/API/
   sequence evidence emission, and Raw-node coverage.
 - `nose-normalize` owns desugaring, alpha-renaming, recursion normalization,
   immutable binding-domain evidence inference, dataflow, CFG/algebra
@@ -83,8 +83,8 @@ migrated.
   channel eligibility. `ChannelEligibility` describes where a fact may be used;
   first-party/default status is pack provenance, not an analysis channel.
 - `Il::evidence` is now the shared internal substrate for source, domain, import,
-  symbol-identity, guard, place/effect, selected library API occurrence, and
-  sequence-surface proof facts. Records carry ids, stable source anchors, kind,
+  symbol-identity, type-alias, guard, place/effect, selected library API
+  occurrence, and sequence-surface proof facts. Records carry ids, stable source anchors, kind,
   provenance, dependencies, and asserted/ambiguous status. Lookups in
   `nose-semantics` fail closed on ambiguous, conflicting, or dependency-broken
   evidence. Source-origin and parameter-domain proof is now evidence-only;
@@ -122,9 +122,11 @@ migrated.
   generator `yield` boundaries, list/set/dict/generator comprehension surfaces,
   value equality/inequality, and identity equality/inequality facts. Go emits
   protocol facts for `go`, `defer`, channel send/receive, receive-status
-  projection, `select`, and select cases/defaults. Rust emits macro invocation
-  syntax for selected macro-backed APIs plus async/error protocol facts for
-  `.await`, `async {}`, and `?`. These are stored directly as
+  projection, `select`, and select cases/defaults. C emits source-cast facts
+  for explicit unsigned 32-bit byte-lane casts, with alias-based casts depending
+  on C type-alias evidence. Rust emits macro invocation syntax for selected
+  macro-backed APIs plus async/error protocol facts for `.await`, `async {}`,
+  and `?`. These are stored directly as
   `EvidenceRecord::Source`; there is no source-fact side-table fallback.
   Normalize and detect consume source facts only where a semantic contract
   requires that exact source surface. Current JS/TS/Python/Rust `await` nodes,
@@ -162,6 +164,15 @@ migrated.
   receiver uses that occur after it. The current mutation-risk producers are
   conservative and language-scoped; they invalidate exact assumptions but do not
   prove exact library semantics.
+- C byte-buffer and unsigned-cast alias proof is now evidence-backed. Local
+  typedefs and direct quote includes emit `Type(CTypeAlias)` evidence for the
+  currently supported exact-spelling `unsigned char` and unsigned 32-bit
+  aliases; included aliases depend on `Import(CQuoteInclude)`. Alias-based
+  `Domain(ByteArray)` parameter facts and `Source(Cast(CUnsigned32))` facts
+  depend on those type records. The C u16/u32 byte-pack value-graph laws consume
+  the first-party C byte-pack contract, byte-array domain proof, and source-cast
+  proof where the u32 high lane requires it; raw `UnsignedCast32` payloads stay
+  opaque without source-cast evidence.
 - Property builtin contracts are language-constrained occurrence contracts, not
   selector guesses. JS/TS/Vue/Svelte/HTML and Java `length` reads are admitted
   only when a `LibraryApi(PropertyBuiltin(Len))` record is anchored to the
@@ -310,12 +321,15 @@ migrated.
   own row or the separate non-overloadable-index evidence path. Raw selectors,
   raw index assignment, raw tuple values, and untagged sequence values no longer
   reopen collection/map builder semantics by themselves.
-- Exact fragment surface proofs for Java `this.field`, Java `return this`,
-  non-overloadable C/Go/Java index assignment, and single-item builder append
-  calls are now shared through `nose-semantics`; predicate and contract paths
-  consume the same IL-level proof helpers. Raw selector-only append calls stay
-  exact-closed as append effects, though they may still participate in the
-  separate opaque-call policy as generic `Other` effect context.
+- Exact fragment production is now contract-first: the collector admits
+  statement fragments through `fragment::recognize::recognize_contract`, while
+  the older predicate matrix remains as a debug/differential guard. Surface
+  proofs for Java `this.field`, Java `return this`, non-overloadable C/Go/Java
+  index assignment, and single-item builder append calls are shared through
+  `nose-semantics`, and contract recognizers consume the same IL-level proof
+  helpers. Raw selector-only append calls stay exact-closed as append effects,
+  though they may still participate in the separate opaque-call policy as
+  generic `Other` effect context.
 - Value-graph and oracle same-unit field state are receiver-aware: a cached write
   is keyed by receiver/place plus field name, so `a.x = v` can satisfy `a.x`
   but not `b.x`, and final field-write sinks preserve the receiver identity.
@@ -409,8 +423,9 @@ migrated.
   and manually constructed calls without admitted occurrence evidence stay
   exact-closed.
 - JS-like `typeof` exact-safety now consumes a language- and arity-constrained
-  operator contract. A same-named function from another language or unresolved
-  provider is not treated as the JS operator.
+  operator contract plus `Source::Operator(Typeof)` evidence at the call span.
+  A raw `Call(Var("typeof"), arg)` shape, same-named function from another
+  language, or unresolved provider is not treated as the JS operator.
 - JS-like `Array.isArray(...)` exact-safety now consumes a static-global method
   contract and requires the `Array` global to be unshadowed.
 - JS-like record-shape guards that use `Boolean(value)` as the non-null/truthy
@@ -496,12 +511,17 @@ Semantic knowledge still appears in several forms outside the facade:
 
 - direct `Lang` checks and local recognizers in strict exact gates and value-graph
   rules that have not yet been expressed as shared contracts;
-- source operator provenance now exists for selected JS/TS and Python
-  equality-shaped surfaces, but consumption is limited to narrow contracts such
-  as JS-like static membership callbacks. General equality dispatch, report
-  provenance, and external pack manifests remain open;
+- source provenance now exists for selected JS/TS and Python equality-shaped
+  surfaces, JS-like unary `typeof`, Python comprehension surfaces, and C
+  unsigned-cast syntax. Consumption is still limited to narrow contracts such as
+  JS-like static membership callbacks, the strict `typeof` exact gate, Python
+  HOF/comprehension admission, and C byte-pack casts. General equality
+  dispatch, report provenance, and external pack manifests remain open;
 - language-specific import, symbol, or module proof mechanics that are still
   local to frontend, normalize, detect, or value-graph callers;
+- C quote-include and typedef alias proof now has `Import`/`Type` evidence for
+  the current byte-pack alias forms, but broader type-system evidence and
+  external C pack manifests remain open;
 - JS/TS record-shape and own-property guards now have dedicated `Guard` evidence
   records consumed by strict exact and value-graph paths. The recognizers are
   still first-party JS/TS lowering code, and broader guard families, richer

@@ -46,7 +46,8 @@ use crate::module_facts::{
 };
 use nose_il::{
     stable_symbol_hash, Builtin, EffectEvidenceKind, HoFKind, Il, Interner, Lang, LoopKind, NodeId,
-    NodeKind, Op, Payload, SourceComprehensionKind, Span, Symbol, UnitKind,
+    NodeKind, Op, Payload, SourceCastKind, SourceComprehensionKind, SourceFactKind, Span, Symbol,
+    UnitKind,
 };
 use nose_semantics::{
     asserted_unshadowed_global_symbol, binding_write_target, builder_append_call_args,
@@ -74,15 +75,16 @@ use nose_semantics::{
     own_property_guard_evidence_at_span, receiver_mutation_call_receiver,
     record_shape_guard_for_node, reduction_builtin_contract, semantics,
     seq_surface_contract_for_node, source_comprehension_at_node, source_operator_at_node,
-    BuiltinArgContract, CardinalityPredicate, CardinalityThreshold, ComparisonLaw, DomainEvidence,
-    DomainRequirement, GoZeroMapDefaultKind, ImportFactKind, ImportedNamespaceFunctionSemantic,
-    IndexMembershipThreshold, IndexWriteReceiverContract, IteratorAdapterReceiverContract,
-    JavaMapFactoryKind, LibraryApiCalleeContract, LibraryApiEvidenceStatus,
-    LibraryApiSpanEvidenceQuery, LibraryCollectionFactoryResult, LibraryMapFactoryResult,
-    MapKeyViewKind, MethodBuiltinArgs, MethodEffectReceiverContract, MethodReceiverContract,
-    MethodSemanticContract, ReductionBuiltinContract, ScalarIntegerMethod, SeqSurfaceContract,
-    StaticIndexMembershipKind, ValueDomain, ValueLaw, SEQ_VALUE_COLLECTION, SEQ_VALUE_MAP,
-    SEQ_VALUE_OWN_PROPERTY_GUARD, SEQ_VALUE_PAIR, SEQ_VALUE_RECORD_GUARD, SEQ_VALUE_UNTAGGED,
+    BuiltinArgContract, CBytePackWidth, CardinalityPredicate, CardinalityThreshold, ComparisonLaw,
+    DomainEvidence, DomainRequirement, GoZeroMapDefaultKind, ImportFactKind,
+    ImportedNamespaceFunctionSemantic, IndexMembershipThreshold, IndexWriteReceiverContract,
+    IteratorAdapterReceiverContract, JavaMapFactoryKind, LibraryApiCalleeContract,
+    LibraryApiEvidenceStatus, LibraryApiSpanEvidenceQuery, LibraryCollectionFactoryResult,
+    LibraryMapFactoryResult, MapKeyViewKind, MethodBuiltinArgs, MethodEffectReceiverContract,
+    MethodReceiverContract, MethodSemanticContract, ReductionBuiltinContract, ScalarIntegerMethod,
+    SeqSurfaceContract, StaticIndexMembershipKind, ValueDomain, ValueLaw, SEQ_VALUE_COLLECTION,
+    SEQ_VALUE_MAP, SEQ_VALUE_OWN_PROPERTY_GUARD, SEQ_VALUE_PAIR, SEQ_VALUE_RECORD_GUARD,
+    SEQ_VALUE_UNTAGGED,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
@@ -434,6 +436,12 @@ enum BuilderKind {
 struct BuilderCandidate {
     cid: u32,
     kind: BuilderKind,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum HofAdmission {
+    SourceComprehension,
+    LibraryApi,
 }
 
 struct Builder<'a> {
@@ -5936,12 +5944,9 @@ impl<'a> Builder<'a> {
     }
 
     fn c_u16_be_byte_pack_pattern(&mut self, left: ValueId, right: ValueId) -> Option<ValueId> {
-        if !semantics(self.il.meta.lang)
+        let _contract = semantics(self.il.meta.lang)
             .operators()
-            .c_integer_byte_pack_contracts()
-        {
-            return None;
-        }
+            .c_integer_byte_pack_contract(CBytePackWidth::U16)?;
         for (shifted, low) in [(left, right), (right, left)] {
             // `else continue`, not `?`: the operands may sort either way by value-hash, so a
             // miss on the first ordering must fall through to the second, not abort the fn.
@@ -5965,11 +5970,10 @@ impl<'a> Builder<'a> {
     }
 
     fn c_u32_be_byte_pack_pattern(&mut self, operands: &[ValueId]) -> Option<ValueId> {
-        if !semantics(self.il.meta.lang)
+        let contract = semantics(self.il.meta.lang)
             .operators()
-            .c_integer_byte_pack_contracts()
-            || operands.len() != 4
-        {
+            .c_integer_byte_pack_contract(CBytePackWidth::U32)?;
+        if operands.len() != 4 {
             return None;
         }
         let mut base = None;
@@ -5986,8 +5990,12 @@ impl<'a> Builder<'a> {
             if shift != expected_shift {
                 return None;
             }
-            if index == 0 && !unsigned_cast {
-                return None;
+            if index == 0 {
+                match contract.required_high_lane_cast {
+                    Some(SourceFactKind::Cast(SourceCastKind::CUnsigned32)) if unsigned_cast => {}
+                    Some(_) => return None,
+                    None => {}
+                }
             }
             if seen[index as usize] {
                 return None;
@@ -6562,6 +6570,26 @@ impl<'a> Builder<'a> {
             Payload::HoF(kind) => nose_semantics::admitted_hof_api_at_node(self.il, node, kind),
             _ => false,
         }
+    }
+
+    fn hof_value_admission(&self, node: NodeId, kind: HoFKind) -> Option<HofAdmission> {
+        match source_comprehension_at_node(self.il, node) {
+            Some(
+                SourceComprehensionKind::PythonDictComprehension
+                | SourceComprehensionKind::PythonGeneratorExpression
+                | SourceComprehensionKind::PythonListComprehension,
+            ) => Some(HofAdmission::SourceComprehension),
+            Some(SourceComprehensionKind::PythonSetComprehension) => None,
+            None if nose_semantics::admitted_hof_api_at_node(self.il, node, kind) => {
+                Some(HofAdmission::LibraryApi)
+            }
+            None => None,
+        }
+    }
+
+    fn source_salted_opaque(&mut self, expr: NodeId, tag: u64) -> ValueId {
+        let salt = self.source_salted_hash(expr, tag);
+        self.mk(ValOp::Opaque(salt), vec![])
     }
 
     fn eval_len_value(&mut self, value: ValueId) -> Option<ValueId> {
@@ -7445,6 +7473,7 @@ impl<'a> Builder<'a> {
         &mut self,
         coll_node: Option<NodeId>,
         env: &FxHashMap<u32, ValueId>,
+        allow_internal_python_filter: bool,
     ) -> (Vec<ValueId>, Option<ValueId>) {
         let Some(c) = coll_node else {
             return (Vec::new(), None);
@@ -7454,7 +7483,16 @@ impl<'a> Builder<'a> {
         {
             return (self.elem_bindings(Some(c), env), None);
         }
-        let cv = self.eval(c, env);
+        let cv = if allow_internal_python_filter
+            && self.il.meta.lang == Lang::Python
+            && self.il.kind(c) == NodeKind::HoF
+            && source_comprehension_at_node(self.il, c).is_none()
+            && matches!(self.il.node(c).payload, Payload::HoF(HoFKind::Filter))
+        {
+            self.eval_hof_value(c, HoFKind::Filter, env, true)
+        } else {
+            self.eval(c, env)
+        };
         if let ValOp::Hof(k) = self.nodes[cv as usize].op {
             if k == HoFKind::Map as u32 && self.nodes[cv as usize].args.len() == 2 {
                 let args = self.nodes[cv as usize].args.clone();
@@ -7462,6 +7500,109 @@ impl<'a> Builder<'a> {
             }
         }
         (vec![self.elem(cv)], None)
+    }
+
+    fn eval_hof_value(
+        &mut self,
+        expr: NodeId,
+        kind: HoFKind,
+        env: &FxHashMap<u32, ValueId>,
+        allow_internal_python_filter: bool,
+    ) -> ValueId {
+        let kids = self.il.children(expr).to_vec();
+        match kind {
+            // `xs.map(λx. body)` / a comprehension -> the per-element value over a
+            // canonical `Elem(xs)`, so `[x*x for x in xs]` and `xs.map(x=>x*x)`
+            // converge regardless of the lambda's syntax. `map_source` resolves
+            // the collection to its element stream and any carried predicate.
+            HoFKind::Map => {
+                let (elems, carried_pred) =
+                    self.map_source(kids.first().copied(), env, allow_internal_python_filter);
+                let fallback = elems
+                    .first()
+                    .copied()
+                    .unwrap_or_else(|| self.fresh_opaque());
+                let contrib = match kids.get(1) {
+                    Some(&lambda) => self
+                        .eval_lambda_body(lambda, &elems, env)
+                        .unwrap_or(fallback),
+                    None => fallback,
+                };
+                match carried_pred {
+                    Some(predicate) => self.mk(ValOp::Hof(kind as u32), vec![contrib, predicate]),
+                    None => self.mk(ValOp::Hof(kind as u32), vec![contrib]),
+                }
+            }
+            HoFKind::FlatMap => {
+                let (elems, carried_pred) =
+                    self.map_source(kids.first().copied(), env, allow_internal_python_filter);
+                let outer_elem = elems
+                    .first()
+                    .copied()
+                    .unwrap_or_else(|| self.fresh_opaque());
+                let inner = match kids.get(1) {
+                    Some(&lambda) => self
+                        .eval_lambda_body(lambda, &elems, env)
+                        .unwrap_or_else(|| self.fresh_opaque()),
+                    None => self.fresh_opaque(),
+                };
+                // proof-obligation: normalize.value_graph.flatmap_identity
+                // `flatMap(λx. x)` (identity inner: the lambda returns the outer
+                // element unchanged) ≡ `flatMap(λx. map(λy. y, x))` ≡ flatten.
+                let inner = if inner == outer_elem {
+                    let elem = self.elem(outer_elem);
+                    self.mk(ValOp::Hof(HoFKind::Map as u32), vec![elem])
+                } else {
+                    inner
+                };
+                let mut args = vec![outer_elem, inner];
+                if let Some(predicate) = carried_pred {
+                    args.push(predicate);
+                }
+                self.mk(ValOp::Hof(kind as u32), args)
+            }
+            HoFKind::FilterMap => {
+                let (elems, carried_pred) =
+                    self.map_source(kids.first().copied(), env, allow_internal_python_filter);
+                let Some((contrib, own_pred)) = kids
+                    .get(1)
+                    .and_then(|&lambda| self.eval_filter_map_lambda_body(lambda, &elems, env))
+                else {
+                    let args: Vec<ValueId> = kids.iter().map(|&kid| self.eval(kid, env)).collect();
+                    return self.mk(ValOp::Hof(kind as u32), args);
+                };
+                match self.and_preds(own_pred, carried_pred) {
+                    Some(predicate) => {
+                        self.mk(ValOp::Hof(HoFKind::Map as u32), vec![contrib, predicate])
+                    }
+                    None => self.mk(ValOp::Hof(HoFKind::Map as u32), vec![contrib]),
+                }
+            }
+            HoFKind::Filter => {
+                // `filter(p, coll)` ≡ the identity map with a predicate. This keeps the
+                // element stream attached, lets nested filters fuse, and matches filtered
+                // comprehensions/builders without letting raw HOF payloads bypass proof.
+                let (elems, carried_pred) =
+                    self.map_source(kids.first().copied(), env, allow_internal_python_filter);
+                let elem = elems
+                    .first()
+                    .copied()
+                    .unwrap_or_else(|| self.fresh_opaque());
+                let own_pred = kids
+                    .get(1)
+                    .and_then(|&lambda| self.eval_lambda_body(lambda, &elems, env));
+                match self.and_preds(own_pred, carried_pred) {
+                    Some(predicate) => {
+                        self.mk(ValOp::Hof(HoFKind::Map as u32), vec![elem, predicate])
+                    }
+                    None => self.mk(ValOp::Hof(HoFKind::Map as u32), vec![elem]),
+                }
+            }
+            _ => {
+                let args: Vec<ValueId> = kids.iter().map(|&kid| self.eval(kid, env)).collect();
+                self.mk(ValOp::Hof(kind as u32), args)
+            }
+        }
     }
 
     /// Conjoin two optional predicates (a filter's own predicate and one carried up through
@@ -8313,6 +8454,15 @@ impl<'a> Builder<'a> {
                         return r;
                     }
                 }
+                if matches!(node.payload, Payload::Builtin(Builtin::UnsignedCast32))
+                    && !nose_semantics::source_fact_at_node(
+                        self.il,
+                        expr,
+                        SourceFactKind::Cast(SourceCastKind::CUnsigned32),
+                    )
+                {
+                    return self.source_salted_opaque(expr, 0x5543_3332);
+                }
                 if let Some(r) = self.eval_count_call(expr, &kids, env) {
                     return r;
                 }
@@ -8375,109 +8525,17 @@ impl<'a> Builder<'a> {
             NodeKind::HoF => {
                 let kind = match node.payload {
                     Payload::HoF(h) => h,
-                    _ => HoFKind::Map,
+                    _ => return self.source_salted_opaque(expr, 0x484F_465F),
                 };
-                let kids = self.il.children(expr).to_vec();
-                match kind {
-                    // `xs.map(λx. body)` / a comprehension → the per-element value over a
-                    // canonical `Elem(xs)`, so `[x*x for x in xs]` and `xs.map(x=>x*x)`
-                    // converge regardless of the (opaque) lambda's syntax. `map_source`
-                    // resolves the collection to its element stream and ANY predicate it
-                    // carries (a filtered collection is a `Hof(Map, [elem, pred])`, see the
-                    // `Filter` arm below) — that carried predicate is map/filter FUSION:
-                    // `map(h, filter(p, xs))` ≡ `filtered-map h@p`, so `[h(y) for y in
-                    // [x for x in xs if p]]` and `[h(x) for x in xs if p]` converge.
-                    HoFKind::Map => {
-                        let (elems, carried_pred) = self.map_source(kids.first().copied(), env);
-                        let fallback = elems
-                            .first()
-                            .copied()
-                            .unwrap_or_else(|| self.fresh_opaque());
-                        let contrib = match kids.get(1) {
-                            Some(&l) => self.eval_lambda_body(l, &elems, env).unwrap_or(fallback),
-                            None => fallback,
-                        };
-                        match carried_pred {
-                            Some(p) => self.mk(ValOp::Hof(kind as u32), vec![contrib, p]),
-                            None => self.mk(ValOp::Hof(kind as u32), vec![contrib]),
-                        }
-                    }
-                    HoFKind::FlatMap => {
-                        let (elems, carried_pred) = self.map_source(kids.first().copied(), env);
-                        let outer_elem = elems
-                            .first()
-                            .copied()
-                            .unwrap_or_else(|| self.fresh_opaque());
-                        let inner = match kids.get(1) {
-                            Some(&l) => self
-                                .eval_lambda_body(l, &elems, env)
-                                .unwrap_or_else(|| self.fresh_opaque()),
-                            None => self.fresh_opaque(),
-                        };
-                        // proof-obligation: normalize.value_graph.flatmap_identity
-                        // `flatMap(λx. x)` (identity inner: the lambda returns the outer
-                        // element unchanged) ≡ `flatMap(λx. map(λy. y, x))` ≡ flatten — the
-                        // monad law `flatMap id = join` / `concatMap id = concat`. Canonicalize
-                        // the identity inner to the modeled element-stream inner `Map[Elem(x)]`
-                        // so it converges with the nested builder loop and the explicit
-                        // inner-identity-map form. Sound: `map id = id` on the sublist, so every
-                        // emitted element is unchanged. A non-identity inner (`x.map(y=>y+1)`,
-                        // changed element) does not equal `outer_elem`, so it is left intact.
-                        let inner = if inner == outer_elem {
-                            let elem = self.elem(outer_elem);
-                            self.mk(ValOp::Hof(HoFKind::Map as u32), vec![elem])
-                        } else {
-                            inner
-                        };
-                        let mut args = vec![outer_elem, inner];
-                        if let Some(p) = carried_pred {
-                            args.push(p);
-                        }
-                        self.mk(ValOp::Hof(kind as u32), args)
-                    }
-                    HoFKind::FilterMap => {
-                        let (elems, carried_pred) = self.map_source(kids.first().copied(), env);
-                        let Some((contrib, own_pred)) = kids
-                            .get(1)
-                            .and_then(|&l| self.eval_filter_map_lambda_body(l, &elems, env))
-                        else {
-                            let a: Vec<ValueId> = kids.iter().map(|&k| self.eval(k, env)).collect();
-                            return self.mk(ValOp::Hof(kind as u32), a);
-                        };
-                        match self.and_preds(own_pred, carried_pred) {
-                            Some(p) => self.mk(ValOp::Hof(HoFKind::Map as u32), vec![contrib, p]),
-                            None => self.mk(ValOp::Hof(HoFKind::Map as u32), vec![contrib]),
-                        }
-                    }
-                    HoFKind::Filter => {
-                        // `filter(p, coll)` ≡ the *identity map with a predicate*:
-                        // `Hof(Map, [Elem(coll), pred])`. Representing a filter this way
-                        // (rather than the old `Hof(Filter, [pred])`, which stored ONLY the
-                        // predicate and lost the element stream) makes `Filter` carry its
-                        // element — so nested filters FUSE: `filter(q, filter(p, xs))` and
-                        // `filter(p∧q, xs)` both reduce to `Hof(Map, [Elem(xs), p∧q])`. It
-                        // also unifies a standalone filter with the filtered-loop builder
-                        // (`r=[]; for x: if p: r.append(x)` → the same node) and the filtered
-                        // comprehension `[x for x in xs if p]`
-                        // (`normalize.value_graph.functor`).
-                        let (elems, carried_pred) = self.map_source(kids.first().copied(), env);
-                        let elem = elems
-                            .first()
-                            .copied()
-                            .unwrap_or_else(|| self.fresh_opaque());
-                        let own_pred = kids
-                            .get(1)
-                            .and_then(|&l| self.eval_lambda_body(l, &elems, env));
-                        match self.and_preds(own_pred, carried_pred) {
-                            Some(p) => self.mk(ValOp::Hof(HoFKind::Map as u32), vec![elem, p]),
-                            None => self.mk(ValOp::Hof(HoFKind::Map as u32), vec![elem]),
-                        }
-                    }
-                    _ => {
-                        let a: Vec<ValueId> = kids.iter().map(|&k| self.eval(k, env)).collect();
-                        self.mk(ValOp::Hof(kind as u32), a)
-                    }
-                }
+                let Some(admission) = self.hof_value_admission(expr, kind) else {
+                    return self.source_salted_opaque(expr, 0x484F_465F);
+                };
+                self.eval_hof_value(
+                    expr,
+                    kind,
+                    env,
+                    admission == HofAdmission::SourceComprehension,
+                )
             }
             NodeKind::Seq => {
                 if let Some(value) = self.import_fact_value(expr) {
@@ -8998,7 +9056,7 @@ mod tests {
         EvidenceProvenance, EvidenceRecord, EvidenceStatus, FileId, FileMeta, GuardEvidenceKind,
         IlBuilder, ImportEvidenceKind, JsRecordGuardComparison, JsRecordGuardNullCheck, Lang,
         LibraryApiEvidenceKind, LitClass, ParamSemantic, SequenceSurfaceKind, SourceCallKind,
-        SourceFactKind, Span, SymbolEvidenceKind, Unit, UnitKind,
+        SourceComprehensionKind, SourceFactKind, Span, SymbolEvidenceKind, Unit, UnitKind,
     };
     use nose_semantics::{
         library_api_callee_contract_hash, library_api_contract_id_hash,
@@ -9115,6 +9173,167 @@ mod tests {
             EvidenceAnchor::sequence(span),
             EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
         )
+    }
+
+    fn identity_lambda(builder: &mut IlBuilder, param_cid: u32, span: Span) -> NodeId {
+        let param = builder.add(NodeKind::Param, Payload::Cid(param_cid), span, &[]);
+        let value = builder.add(NodeKind::Var, Payload::Cid(param_cid), span, &[]);
+        let ret = builder.add(NodeKind::Return, Payload::None, span, &[value]);
+        let block = builder.add(NodeKind::Block, Payload::None, span, &[ret]);
+        builder.add(NodeKind::Lambda, Payload::None, span, &[param, block])
+    }
+
+    fn const_bool_lambda(
+        builder: &mut IlBuilder,
+        param_cid: u32,
+        value: bool,
+        span: Span,
+    ) -> NodeId {
+        let param = builder.add(NodeKind::Param, Payload::Cid(param_cid), span, &[]);
+        let value = builder.add(NodeKind::Lit, Payload::LitBool(value), span, &[]);
+        let ret = builder.add(NodeKind::Return, Payload::None, span, &[value]);
+        let block = builder.add(NodeKind::Block, Payload::None, span, &[ret]);
+        builder.add(NodeKind::Lambda, Payload::None, span, &[param, block])
+    }
+
+    fn push_source_comprehension(il: &mut Il, id: u32, span: Span, kind: SourceComprehensionKind) {
+        il.evidence.push(evidence(
+            id,
+            EvidenceAnchor::source_span(span),
+            EvidenceKind::Source(SourceFactKind::Comprehension(kind)),
+        ));
+    }
+
+    fn push_source_cast(il: &mut Il, id: u32, span: Span, kind: SourceCastKind) {
+        il.evidence.push(evidence(
+            id,
+            EvidenceAnchor::source_span(span),
+            EvidenceKind::Source(SourceFactKind::Cast(kind)),
+        ));
+    }
+
+    #[test]
+    fn c_unsigned_cast32_value_graph_requires_source_cast_evidence() {
+        let interner = Interner::new();
+        let mut b = IlBuilder::new(FileId(0));
+        let base = b.add(NodeKind::Var, Payload::Cid(1), sp(1), &[]);
+        let zero = b.add(NodeKind::Lit, Payload::LitInt(0), sp(2), &[]);
+        let index = b.add(NodeKind::Index, Payload::None, sp(2), &[base, zero]);
+        let cast = b.add(
+            NodeKind::Call,
+            Payload::Builtin(Builtin::UnsignedCast32),
+            sp(3),
+            &[index],
+        );
+        let mut il = finish_test_il(b, cast, Lang::C);
+
+        let mut builder = Builder::new(&il, &interner);
+        let value = builder.eval(cast, &FxHashMap::default());
+        assert!(
+            matches!(builder.nodes[value as usize].op, ValOp::Opaque(_)),
+            "raw UnsignedCast32 payload must not prove a C unsigned cast"
+        );
+
+        push_source_cast(&mut il, 0, sp(3), SourceCastKind::CUnsigned32);
+        let mut builder = Builder::new(&il, &interner);
+        let value = builder.eval(cast, &FxHashMap::default());
+        assert!(
+            matches!(builder.nodes[value as usize].op, ValOp::Call(tag) if tag == builtin_tag(Builtin::UnsignedCast32)),
+            "source-proven C unsigned 32-bit casts should retain the byte-pack cast value"
+        );
+    }
+
+    #[test]
+    fn raw_hof_value_graph_requires_source_or_api_admission() {
+        let interner = Interner::new();
+        let mut b = IlBuilder::new(FileId(0));
+        let coll = b.add(NodeKind::Var, Payload::Cid(1), sp(1), &[]);
+        let lambda = identity_lambda(&mut b, 2, sp(2));
+        let hof = b.add(
+            NodeKind::HoF,
+            Payload::HoF(HoFKind::Map),
+            sp(3),
+            &[coll, lambda],
+        );
+        let mut il = finish_test_il(b, hof, Lang::Python);
+
+        let mut builder = Builder::new(&il, &interner);
+        let value = builder.eval(hof, &FxHashMap::default());
+        assert!(
+            matches!(builder.nodes[value as usize].op, ValOp::Opaque(_)),
+            "raw HOF payloads must stay opaque without source or API proof"
+        );
+
+        push_source_comprehension(
+            &mut il,
+            0,
+            sp(3),
+            SourceComprehensionKind::PythonListComprehension,
+        );
+        let mut builder = Builder::new(&il, &interner);
+        let value = builder.eval(hof, &FxHashMap::default());
+        assert!(
+            matches!(builder.nodes[value as usize].op, ValOp::Hof(k) if k == HoFKind::Map as u32),
+            "a source-proven Python list comprehension should still enter HOF value semantics"
+        );
+
+        let mut set_il = il.clone();
+        set_il.evidence.clear();
+        push_source_comprehension(
+            &mut set_il,
+            0,
+            sp(3),
+            SourceComprehensionKind::PythonSetComprehension,
+        );
+        let mut builder = Builder::new(&set_il, &interner);
+        let value = builder.eval(hof, &FxHashMap::default());
+        assert!(
+            matches!(builder.nodes[value as usize].op, ValOp::Opaque(_)),
+            "set comprehension proof must not reuse list-like HOF value semantics"
+        );
+    }
+
+    #[test]
+    fn source_comprehension_admits_internal_python_filter_hof_only_in_context() {
+        let interner = Interner::new();
+        let mut b = IlBuilder::new(FileId(0));
+        let coll = b.add(NodeKind::Var, Payload::Cid(1), sp(1), &[]);
+        let pred = const_bool_lambda(&mut b, 2, true, sp(2));
+        let filter = b.add(
+            NodeKind::HoF,
+            Payload::HoF(HoFKind::Filter),
+            sp(3),
+            &[coll, pred],
+        );
+        let mapper = identity_lambda(&mut b, 3, sp(4));
+        let map = b.add(
+            NodeKind::HoF,
+            Payload::HoF(HoFKind::Map),
+            sp(5),
+            &[filter, mapper],
+        );
+        let mut il = finish_test_il(b, map, Lang::Python);
+        push_source_comprehension(
+            &mut il,
+            0,
+            sp(5),
+            SourceComprehensionKind::PythonListComprehension,
+        );
+
+        let mut builder = Builder::new(&il, &interner);
+        let value = builder.eval(filter, &FxHashMap::default());
+        assert!(
+            matches!(builder.nodes[value as usize].op, ValOp::Opaque(_)),
+            "an internal filter HOF remains closed when evaluated as its own unproven surface"
+        );
+
+        let mut builder = Builder::new(&il, &interner);
+        let value = builder.eval(map, &FxHashMap::default());
+        let node = &builder.nodes[value as usize];
+        assert!(
+            matches!(node.op, ValOp::Hof(k) if k == HoFKind::Map as u32) && node.args.len() == 2,
+            "a proven Python comprehension should admit its internal filter and carry the predicate"
+        );
     }
 
     #[test]

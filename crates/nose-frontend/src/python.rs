@@ -9,8 +9,9 @@
 
 use crate::lower::Lowering;
 use nose_il::{
-    Builtin, FileId, HoFKind, Il, Interner, Lang, LitClass, LoopKind, NodeId, NodeKind, Op,
-    Payload, SourceComprehensionKind, SourceFactKind, SourceOperatorKind, Span, UnitKind,
+    stable_symbol_hash, Builtin, EvidenceAnchor, EvidenceKind, FileId, HoFKind, Il,
+    ImportEvidenceKind, Interner, Lang, LitClass, LoopKind, NodeId, NodeKind, Op, Payload,
+    SourceComprehensionKind, SourceFactKind, SourceOperatorKind, Span, UnitKind,
 };
 use tree_sitter::Node as TsNode;
 
@@ -120,6 +121,13 @@ fn lower_static_import(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
     if let Some(rest) = text.strip_prefix("from ") {
         let (module, names) = rest.split_once(" import ")?;
         if names.trim() == "*" {
+            lo.record_evidence(
+                EvidenceAnchor::source_span(span),
+                EvidenceKind::Import(ImportEvidenceKind::Wildcard {
+                    module_hash: stable_symbol_hash(module.trim()),
+                }),
+                "python_wildcard_import",
+            );
             return Some(lo.raw("python_wildcard_import", span, &[]));
         }
         for part in names.split(',').map(str::trim).filter(|p| !p.is_empty()) {

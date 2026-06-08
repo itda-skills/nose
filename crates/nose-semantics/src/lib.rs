@@ -11,7 +11,7 @@ use nose_il::{
     EvidenceEmitter, EvidenceId, EvidenceKind, EvidenceRecord, EvidenceStatus, GuardEvidenceKind,
     HoFKind, Il, ImportEvidenceKind, Interner, Lang, LibraryApiEvidenceKind, LitClass, NodeId,
     NodeKind, Op, ParamSemantic, Payload, PlaceEvidenceKind, SequenceSurfaceKind, SourceCallKind,
-    SourceComprehensionKind, SourceFactKind, SourceLiteralKind, SourceOperatorKind,
+    SourceCastKind, SourceComprehensionKind, SourceFactKind, SourceLiteralKind, SourceOperatorKind,
     SourceProtocolKind, Span, Symbol, SymbolEvidenceKind,
 };
 use rustc_hash::FxHashMap;
@@ -122,6 +122,7 @@ fn evidence_at_span<T: Copy + Eq>(
 pub fn source_fact_at_node(il: &Il, node: NodeId, kind: SourceFactKind) -> bool {
     match kind {
         SourceFactKind::Operator(operator) => source_operator_at_node(il, node) == Some(operator),
+        SourceFactKind::Cast(cast) => source_cast_at_node(il, node) == Some(cast),
         SourceFactKind::Call(call) => source_call_at_node(il, node) == Some(call),
         SourceFactKind::Protocol(protocol) => source_protocol_at_node(il, node) == Some(protocol),
         SourceFactKind::Literal(literal) => source_literal_at_node(il, node) == Some(literal),
@@ -138,6 +139,17 @@ pub fn source_operator_at_node(il: &Il, node: NodeId) -> Option<SourceOperatorKi
         _ => None,
     }) {
         EvidenceResolution::Found(operator) => Some(operator),
+        EvidenceResolution::Ambiguous | EvidenceResolution::Missing => None,
+    }
+}
+
+pub fn source_cast_at_node(il: &Il, node: NodeId) -> Option<SourceCastKind> {
+    let span = il.node(node).span;
+    match evidence_at_span(il, span, |evidence| match evidence {
+        EvidenceKind::Source(SourceFactKind::Cast(cast)) => Some(cast),
+        _ => None,
+    }) {
+        EvidenceResolution::Found(cast) => Some(cast),
         EvidenceResolution::Ambiguous | EvidenceResolution::Missing => None,
     }
 }
@@ -1766,6 +1778,7 @@ pub enum OperatorEvidence {
     PrimitiveTotalOrder,
     StaticCardinalityThreshold,
     JsLikeStaticIndexMembershipThreshold,
+    CIntegerBytePack,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -1821,6 +1834,21 @@ pub enum MembershipOperatorReceiverContract {
 pub struct MembershipOperatorContract {
     pub operator: Op,
     pub receiver: MembershipOperatorReceiverContract,
+    pub channel: ChannelEligibility,
+    pub evidence: OperatorEvidence,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CBytePackWidth {
+    U16,
+    U32,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct CIntegerBytePackContract {
+    pub width: CBytePackWidth,
+    pub base_domain: DomainRequirement,
+    pub required_high_lane_cast: Option<SourceFactKind>,
     pub channel: ChannelEligibility,
     pub evidence: OperatorEvidence,
 }
@@ -2252,9 +2280,22 @@ impl OperatorSemantics {
     }
 
     /// C unsigned byte/word packing contracts are currently first-party only for
-    /// the C lowering, where explicit unsigned facts are recovered by the frontend.
-    pub fn c_integer_byte_pack_contracts(self) -> bool {
-        self.lang == Lang::C
+    /// the C lowering, where explicit byte-buffer and unsigned-cast facts are
+    /// recovered by the frontend.
+    pub fn c_integer_byte_pack_contract(
+        self,
+        width: CBytePackWidth,
+    ) -> Option<CIntegerBytePackContract> {
+        (self.lang == Lang::C).then_some(CIntegerBytePackContract {
+            width,
+            base_domain: DomainRequirement::ByteArray,
+            required_high_lane_cast: match width {
+                CBytePackWidth::U16 => None,
+                CBytePackWidth::U32 => Some(SourceFactKind::Cast(SourceCastKind::CUnsigned32)),
+            },
+            channel: ChannelEligibility::ExactProven,
+            evidence: OperatorEvidence::CIntegerBytePack,
+        })
     }
 }
 
@@ -4087,6 +4128,7 @@ pub fn map_get_contract_by_hash(
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct TypeofOperatorContract {
     pub name: &'static str,
+    pub required_source_fact: SourceFactKind,
 }
 
 pub fn typeof_operator_contract(
@@ -4094,8 +4136,10 @@ pub fn typeof_operator_contract(
     name: &str,
     arg_count: usize,
 ) -> Option<TypeofOperatorContract> {
-    (js_like_lang(lang) && name == "typeof" && arg_count == 1)
-        .then_some(TypeofOperatorContract { name: "typeof" })
+    (js_like_lang(lang) && name == "typeof" && arg_count == 1).then_some(TypeofOperatorContract {
+        name: "typeof",
+        required_source_fact: SourceFactKind::Operator(SourceOperatorKind::Typeof),
+    })
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -11607,10 +11651,17 @@ mod tests {
                 profile.operators().primitive_order_comparisons(),
                 matches!(lang, Lang::C | Lang::Go | Lang::Java)
             );
-            assert_eq!(
-                profile.operators().c_integer_byte_pack_contracts(),
-                lang == Lang::C
-            );
+            let byte_pack = profile
+                .operators()
+                .c_integer_byte_pack_contract(CBytePackWidth::U32);
+            assert_eq!(byte_pack.is_some(), lang == Lang::C);
+            if let Some(contract) = byte_pack {
+                assert_eq!(contract.base_domain, DomainRequirement::ByteArray);
+                assert_eq!(
+                    contract.required_high_lane_cast,
+                    Some(SourceFactKind::Cast(SourceCastKind::CUnsigned32))
+                );
+            }
             assert_eq!(
                 profile.effects().non_overloadable_index_assignment(),
                 matches!(lang, Lang::C | Lang::Go | Lang::Java)
@@ -12878,7 +12929,10 @@ mod tests {
         );
         assert_eq!(
             typeof_operator_contract(Lang::TypeScript, "typeof", 1),
-            Some(TypeofOperatorContract { name: "typeof" })
+            Some(TypeofOperatorContract {
+                name: "typeof",
+                required_source_fact: SourceFactKind::Operator(SourceOperatorKind::Typeof),
+            })
         );
         assert_eq!(typeof_operator_contract(Lang::Python, "typeof", 1), None);
         assert_eq!(
@@ -13519,7 +13573,8 @@ mod tests {
     fn source_fact_evidence_requires_live_dependencies() {
         let mut b = IlBuilder::new(FileId(0));
         let call = b.add(NodeKind::Call, Payload::None, sp(10), &[]);
-        let root = b.add(NodeKind::Block, Payload::None, sp(10), &[call]);
+        let cast = b.add(NodeKind::Call, Payload::None, sp(11), &[]);
+        let root = b.add(NodeKind::Block, Payload::None, sp(10), &[call, cast]);
         let mut il = finish_il(b, root, Lang::Rust);
         il.evidence.push(evidence_with_dependencies(
             0,
@@ -13534,6 +13589,19 @@ mod tests {
             &il,
             call,
             SourceFactKind::Call(SourceCallKind::MacroInvocation),
+        ));
+        il.evidence.push(evidence_with_dependencies(
+            1,
+            EvidenceAnchor::source_span(sp(11)),
+            EvidenceKind::Source(SourceFactKind::Cast(SourceCastKind::CUnsigned32)),
+            EvidenceStatus::Asserted,
+            vec![EvidenceId(100)],
+        ));
+        assert_eq!(source_cast_at_node(&il, cast), None);
+        assert!(!source_fact_at_node(
+            &il,
+            cast,
+            SourceFactKind::Cast(SourceCastKind::CUnsigned32),
         ));
     }
 

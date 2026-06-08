@@ -14,8 +14,9 @@ precondition.
 
 ## Goal
 
-- Give source, domain, import, symbol-identity, guard, place/effect, selected
-  library API occurrence, and sequence-surface proof facts one shared shape.
+- Give source, domain, import, symbol-identity, type-alias, guard,
+  place/effect, selected library API occurrence, and sequence-surface proof
+  facts one shared shape.
 - Make facts carry stable ids, anchors, provenance, dependencies, and status.
 - Keep exact matching fail-closed when evidence is missing, ambiguous, or
   conflicting.
@@ -56,10 +57,11 @@ The current implemented kinds are:
 
 | kind | purpose |
 |---|---|
-| `Source` | construct syntax, Rust macro invocation syntax, async/generator/error and Go concurrency/channel protocol boundary syntax, Python comprehension surface provenance, regex literal provenance, and source operator family |
+| `Source` | construct syntax, Rust macro invocation syntax, async/generator/error and Go concurrency/channel protocol boundary syntax, Python comprehension surface provenance, C unsigned-cast syntax, regex literal provenance, and source operator family including JS-like unary `typeof` |
 | `Domain` | parameter, receiver-expression, or value/binding domain such as collection, map, option, string, integer, or byte array |
-| `Import` | static import binding/namespace proof, Java wildcard import proof, Ruby `require` module proof, and imported-literal snapshot provenance |
+| `Import` | static import binding/namespace proof, Python wildcard-import ambiguity proof, Java wildcard import proof, C quote-include proof, Ruby `require` module proof, and imported-literal snapshot provenance |
 | `Symbol` | resolved or proven symbol identity, with record kinds for unshadowed globals, static imported binding/namespace aliases, and selected qualified global API paths |
+| `Type` | type alias proof, currently exact-spelling C aliases to unsigned 8-bit and supported unsigned 32-bit integer forms |
 | `Guard` | multi-obligation guard proof facts such as JS/TS record-shape and own-property guard contracts |
 | `Place` | fixed receiver/place facts currently covering `SelfReceiver` and `SelfField` |
 | `Effect` | observable effect and mutation-risk facts currently covering canonical builder append calls, non-overloadable index writes, fixed self-field writes, binding writes, receiver-mutating calls, and opaque argument escapes |
@@ -91,6 +93,10 @@ Current first-party `LibraryApi` callee coordinates are intentionally specific:
 - `JavaUtilStaticMember` names selected Java `java.util` static factory/adaptor
   calls and depends on matching Java import-binding evidence plus source-origin
   local type shadow checks.
+- Python wildcard imports emit `Import::Wildcard` evidence. For current
+  first-party Python free-name API producers, any asserted wildcard import keeps
+  unqualified builtin/free-name library occurrence evidence closed because a
+  provider module may supply a same-named binding.
 - `JavaUtilConstructor` names selected Java `java.util` constructors and depends
   on construct-syntax evidence plus exact import-binding evidence or earlier
   Java wildcard import evidence. Wildcard proof is constrained by Java name
@@ -335,6 +341,15 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   same call does not also have admitted `LibraryApi` evidence. Self-field
   place/write evidence records include dependencies that link the write proof
   back to the receiver proof;
+- C lowering emits `Import(CQuoteInclude)` for admitted direct quote includes
+  that provide byte-pack aliases, and `Type(CTypeAlias)` for local or included
+  exact-spelling `unsigned char` and supported unsigned 32-bit aliases used by
+  current byte-pack surfaces. Included alias `Type` evidence depends on the
+  quote-include proof.
+  Alias-based `Domain(ByteArray)` parameter evidence and
+  `Source(Cast(CUnsigned32))` cast evidence depend on the relevant `Type`
+  evidence; direct `unsigned char *` parameters and direct unsigned 32-bit casts
+  remain dependency-free;
 - first-party lowering emits `LibraryApi` evidence for selected API occurrences
   that remain as raw nodes: JS-like `Array.from(...)`, `Array.isArray(...)`,
   `Boolean(...)`, `new Map(...)`, `new Set(...)`, and static
@@ -357,7 +372,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   depend on the relevant `QualifiedGlobal`, `UnshadowedGlobal`,
   import-backed call-site `Symbol`, `Import::Require`, construct-syntax
   `Source`, `SequenceSurface`, or regex-literal `Source` evidence. Calls
-  collapsed into specialized guard surfaces emit their guard evidence instead.
+  collapsed into specialized guard surfaces emit their guard evidence instead;
+  strict exact operators such as JS/TS `typeof` consume source-operator evidence
+  at their exact-fragment gate instead of emitting `LibraryApi` evidence.
   Shadowed roots, unsupported arities, unsupported static paths, unresolved
   free-name/path factories, and Ruby require-backed APIs without require
   evidence do not emit API occurrence evidence;
@@ -410,8 +427,8 @@ The first migrated consumers are the shared semantic helpers and their direct
 callers:
 
 - source-fact lookup for construct syntax, async/generator/error and Go
-  concurrency/channel protocol boundaries, Python comprehension surfaces, regex
-  literal, and operator provenance;
+  concurrency/channel protocol boundaries, Python comprehension surfaces, C
+  unsigned-cast syntax, regex literal, and operator provenance;
 - receiver-domain lookup used by post-desugar semantic/value-graph
   membership/property/map/integer gates and strict exact receiver gates.
   Consumers ask `nose-semantics` whether a receiver satisfies a
@@ -483,15 +500,20 @@ callers:
   `SequenceSurface(GoCompositeMapLiteral)` and `SequenceSurface(GoMapEntry)`,
   so `composite_literal`/`keyed_element` tag spelling alone no longer admits the
   exact map-default path;
+- C byte-pack value-graph laws consume the first-party C byte-pack contract,
+  `Domain(ByteArray)` base evidence, and source-cast evidence for the unsigned
+  high lane where required. Raw `UnsignedCast32` builtin payloads without
+  `Source(Cast(CUnsigned32))` evidence stay opaque;
 - exact-fragment append, non-overloadable index-write, and self-field-write
   gates now require exact `Effect`/`Place` evidence. Missing, ambiguous,
   conflicting, or dependency-broken evidence keeps the exact path closed;
 - immutable binding-domain inference, module facts, imported literal
-  replacement, value-graph binding safety, imported binding use indexing, and
-  exact-fragment context blocking consume shared mutation-risk helpers for
-  `BindingWrite`, `ReceiverMutation`, and `OpaqueArgumentEscape` instead of
-  each re-scanning raw assignment shapes, raw method selectors, or call
-  arguments independently.
+  replacement, value-graph binding safety, and imported binding use indexing
+  consume shared mutation-risk helpers for `BindingWrite`, `ReceiverMutation`,
+  and `OpaqueArgumentEscape` instead of each re-scanning raw method selectors
+  or call arguments independently. Exact-fragment context blocking still has a
+  local assignment-shape invalidation slice; call mutation risk in that path
+  uses the shared helpers.
 
 Broader field/place/effect facts, promise receiver proof, async/sync and
 Go-channel protocol convergence, unmodeled stdlib/ecosystem APIs, broader

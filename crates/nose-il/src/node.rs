@@ -312,6 +312,22 @@ pub enum ImportEvidenceKind {
         exported_hash: u64,
         root_kind: NodeKind,
     },
+    CQuoteInclude {
+        include_hash: u64,
+    },
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
+pub enum CTypeTarget {
+    UnsignedInteger { bits: u16 },
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
+pub enum TypeEvidenceKind {
+    CTypeAlias {
+        alias_hash: u64,
+        target: CTypeTarget,
+    },
 }
 
 /// Kernel-facing proof that a source-level symbol denotes a specific global or
@@ -415,6 +431,7 @@ pub enum EvidenceKind {
     Domain(DomainEvidence),
     Import(ImportEvidenceKind),
     Symbol(SymbolEvidenceKind),
+    Type(TypeEvidenceKind),
     Guard(GuardEvidenceKind),
     Place(PlaceEvidenceKind),
     Effect(EffectEvidenceKind),
@@ -437,10 +454,16 @@ pub struct EvidenceRecord {
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub enum SourceFactKind {
     Operator(SourceOperatorKind),
+    Cast(SourceCastKind),
     Call(SourceCallKind),
     Protocol(SourceProtocolKind),
     Literal(SourceLiteralKind),
     Comprehension(SourceComprehensionKind),
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
+pub enum SourceCastKind {
+    CUnsigned32,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
@@ -454,6 +477,7 @@ pub enum SourceOperatorKind {
     IdentityEquality,
     IdentityInequality,
     TypeMembership,
+    Typeof,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]

@@ -40,7 +40,7 @@ source ──tree-sitter──▶ raw IL ──normalize──▶ canonical IL �
    walks the CST and emits raw IL using a small, desugared core node set. Every
    node copies its source span, so every match traces back to exact lines.
    Frontends also emit semantic evidence records when that core IL would
-   otherwise erase exact source, domain, import, symbol, guard, place/effect,
+   otherwise erase exact source, domain, import, symbol, type, guard, place/effect,
    library API, or sequence-surface distinctions needed by semantic contracts,
    then tag syntactic unit boundaries (function/method/class/block), which gives
    detection accurate boundaries for free.
