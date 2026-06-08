@@ -25,16 +25,6 @@
 //! canon under another name must be registered in that script's REQUIRED_OBLIGATIONS, or it
 //! skips the gate (the gap that let `.then`/`pure_inline` slip).
 //!
-//! proof-obligation: normalize.control_flow.guard_returns
-//! proof-obligation: normalize.value_graph.algebra
-//! proof-obligation: normalize.value_graph.bool_reduce
-//! proof-obligation: normalize.value_graph.clamp
-//! proof-obligation: normalize.value_graph.compare
-//! proof-obligation: normalize.value_graph.field_writes
-//! proof-obligation: normalize.value_graph.free_monoid
-//! proof-obligation: normalize.value_graph.functor
-//! proof-obligation: normalize.value_graph.min_max
-
 mod api;
 mod builders;
 mod canonicalize;

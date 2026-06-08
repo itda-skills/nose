@@ -1,3 +1,10 @@
+//! Value interning and proof-backed value canonicalization.
+//!
+//! proof-obligation: normalize.value_graph.algebra
+//! proof-obligation: normalize.value_graph.clamp
+//! proof-obligation: normalize.value_graph.compare
+//! proof-obligation: normalize.value_graph.min_max
+
 use super::*;
 
 impl<'a> Builder<'a> {

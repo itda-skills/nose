@@ -1,4 +1,7 @@
 //! Statement, block, loop, and local-reduction processing for value-graph construction.
+//!
+//! proof-obligation: normalize.control_flow.guard_returns
+//! proof-obligation: normalize.value_graph.bool_reduce
 
 use super::*;
 

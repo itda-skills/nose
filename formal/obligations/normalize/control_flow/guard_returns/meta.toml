@@ -5,7 +5,7 @@ summary = "Guard-return, dead-code-after-return, and ternary-return control-flow
 
 [rust]
 files = [
-  "crates/nose-normalize/src/value_graph.rs",
+  "crates/nose-normalize/src/value_graph/sinks.rs",
   "crates/nose-normalize/src/value_graph/control.rs",
   "crates/nose-normalize/src/cfg_norm.rs",
 ]

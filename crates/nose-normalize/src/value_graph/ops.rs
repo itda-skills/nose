@@ -1,4 +1,6 @@
 //! Low-level value-graph op codes and tree scans.
+//!
+//! proof-obligation: normalize.value_graph.compare
 
 use super::ValOp;
 use crate::combine;

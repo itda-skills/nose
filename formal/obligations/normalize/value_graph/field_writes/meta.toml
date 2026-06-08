@@ -5,7 +5,7 @@ summary = "Value-graph field writes are interpreted as final receiver+field stat
 
 [rust]
 files = [
-  "crates/nose-normalize/src/value_graph.rs",
+  "crates/nose-normalize/src/value_graph/model.rs",
   "crates/nose-normalize/src/value_graph/field_state.rs",
   "crates/nose-normalize/src/interp.rs",
 ]

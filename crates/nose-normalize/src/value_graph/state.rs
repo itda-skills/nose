@@ -1,3 +1,7 @@
+//! Builder initialization, value-domain gates, and evidence-backed state helpers.
+//!
+//! proof-obligation: normalize.value_graph.free_monoid
+
 use super::*;
 
 impl<'a> Builder<'a> {

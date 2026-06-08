@@ -1,4 +1,6 @@
 //! Evidence-gated same-unit field state for value-graph construction.
+//!
+//! proof-obligation: normalize.value_graph.field_writes
 
 use super::*;
 use nose_semantics::{

@@ -1,4 +1,6 @@
 //! Collection, higher-order, and evidence-gated library value evaluation.
+//!
+//! proof-obligation: normalize.value_graph.functor
 
 use super::*;
 

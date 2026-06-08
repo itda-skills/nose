@@ -1,3 +1,7 @@
+//! Path-conditioned sink emission for value-graph returns, throws, and effects.
+//!
+//! proof-obligation: normalize.control_flow.guard_returns
+
 use super::*;
 
 impl<'a> Builder<'a> {
