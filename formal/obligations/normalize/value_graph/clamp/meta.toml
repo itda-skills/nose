@@ -8,6 +8,8 @@ rule_module = true
 files = [
   "crates/nose-normalize/src/value_graph/rules/clamp.rs",
   "crates/nose-normalize/src/value_graph.rs",
+  "crates/nose-normalize/src/value_graph/ops.rs",
+  "crates/nose-normalize/src/value_graph/stdlib.rs",
   "crates/nose-semantics/src/lib.rs",
 ]
 symbols = [
