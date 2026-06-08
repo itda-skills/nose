@@ -296,7 +296,9 @@ The detailed file inventory lives in [bench/type4/README.md](../bench/type4/READ
 The stable roles are:
 
 - synthetic generation and manifest evaluation:
-  `generate.py`, `select_cases.py`, `eval_manifest.py`, and `schema.json`;
+  `generate.py`, `type4gen/`, `select_cases.py`, `eval_manifest.py`, and
+  `schema.json`. `generate.py` remains the stable CLI/import entry point, while
+  `type4gen/` owns generator model/config, axis metadata, and aggregate emitters;
 - coverage matrix and proof-fact capability tracking:
   `coverage_matrix.v1.json`, `coverage_evidence.v1.json`, `coverage_matrix.py`, and
   `capabilities.v1.json`;

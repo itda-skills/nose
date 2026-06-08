@@ -517,6 +517,10 @@ and pack ecosystem.
   files while continuing this migration. `nose-semantics/src/lib.rs` and
   `nose-normalize/src/value_graph.rs` are both back under 10k lines, with their
   moved tests kept adjacent as Rust test modules.
+- The same code-quality pass split the CLI end-to-end test target into a small
+  `tests/cli.rs` harness plus topic modules, and moved the Type-4 generator's
+  axis metadata/model/aggregate helpers under `bench/type4/type4gen/` while
+  preserving `bench/type4/generate.py` as the stable CLI/import entry point.
 
 ## Phase 0: documentation and vocabulary (landed)
 
