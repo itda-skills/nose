@@ -9,15 +9,21 @@
 
 use nose_il::{Builtin, HoFKind, Il, Interner, NodeId, NodeKind, Payload};
 use nose_semantics::{
-    asserted_unshadowed_global_symbol, imported_namespace_symbol,
-    library_api_contract_evidence_for_call, library_free_function_builtin_contract,
-    library_free_name_map_factory_contract, library_iterator_identity_adapter_contract,
-    library_map_get_contract, library_map_key_view_contract, library_method_call_contract,
-    library_rust_option_some_constructor_contract, library_static_collection_adapter_contract,
-    seq_surface_contract_for_node, BuiltinArgContract, DomainRequirement, LibraryApiCalleeContract,
-    LibraryApiEvidenceStatus, LibraryMapFactoryResult, MapKeyViewKind, MethodBuiltinArgs,
-    MethodCallContract, MethodReceiverContract, MethodSemanticContract,
+    admitted_free_function_builtin_at_call, admitted_free_name_map_factory_at_call,
+    admitted_iterator_identity_adapter_at_call, admitted_library_method_call_at_call,
+    admitted_map_get_at_call, admitted_map_key_view_at_call,
+    admitted_rust_option_some_constructor_at_call, admitted_static_collection_adapter_at_call,
+    asserted_unshadowed_global_symbol, imported_namespace_symbol, seq_surface_contract_for_node,
+    BuiltinArgContract, DomainRequirement, LibraryMapFactoryResult, MapKeyViewKind,
+    MethodBuiltinArgs, MethodCallContract, MethodReceiverContract, MethodSemanticContract,
     ReceiverDomainEvidenceIndex, SEQ_VALUE_MAP,
+};
+
+#[cfg(test)]
+use nose_semantics::{
+    library_free_function_builtin_contract, library_free_name_map_factory_contract,
+    library_iterator_identity_adapter_contract, library_map_get_contract,
+    library_map_key_view_contract, library_method_call_contract,
 };
 
 /// The result of inspecting a `Call`: it canonicalizes to a builtin, to a
@@ -51,11 +57,9 @@ pub(crate) fn canon_call_with_domains(
     call_id: NodeId,
 ) -> CallCanon {
     let kids = old.children(call_id);
-    if kids.is_empty() {
+    let Some((_callee, args)) = kids.split_first() else {
         return CallCanon::None;
-    }
-    let callee = kids[0];
-    let args = &kids[1..];
+    };
     // Every plain builtin recognition returns the same shape — a `CallCanon::Builtin`
     // carrying either the single first argument or all arguments. `builtin!(Op, first)` and
     // `builtin!(Op, all)` name those two cases so the recognition arms stay one line each.
@@ -73,67 +77,24 @@ pub(crate) fn canon_call_with_domains(
             }
         };
     }
-    let cn = old.node(callee);
-    match cn.kind {
-        NodeKind::Var => {
-            if let Payload::Name(s) = cn.payload {
-                if let Some(contract) = library_free_function_builtin_contract(
-                    old.meta.lang,
-                    interner.resolve(s),
-                    args.len(),
-                ) {
-                    if !library_api_evidence_admitted(
-                        old,
-                        interner,
-                        call_id,
-                        contract.id,
-                        contract.callee,
-                        args.len(),
-                    ) {
-                        return CallCanon::None;
-                    }
-                    match contract.result.args {
-                        BuiltinArgContract::First => builtin!(contract.result.builtin, first),
-                        BuiltinArgContract::All => builtin!(contract.result.builtin, all),
-                    }
-                }
-            }
+    if let Some(admitted) = admitted_free_function_builtin_at_call(old, interner, call_id) {
+        let contract = admitted.contract;
+        match contract.result.args {
+            BuiltinArgContract::First => builtin!(contract.result.builtin, first),
+            BuiltinArgContract::All => builtin!(contract.result.builtin, all),
         }
-        NodeKind::Field => {
-            if let Payload::Name(s) = cn.payload {
-                let fname = interner.resolve(s);
-                let base = old.children(callee).first().copied();
-                if let Some(contract) =
-                    library_method_call_contract(old.meta.lang, fname, args.len())
-                {
-                    if !library_api_evidence_admitted(
-                        old,
-                        interner,
-                        call_id,
-                        contract.id,
-                        contract.callee,
-                        args.len(),
-                    ) {
-                        return CallCanon::None;
-                    }
-                    let Some(base) = base else {
-                        return CallCanon::None;
-                    };
-                    let Some(proven) = prove_method_receiver(
-                        old,
-                        interner,
-                        domains,
-                        contract.result.receiver,
-                        base,
-                        args,
-                    ) else {
-                        return CallCanon::None;
-                    };
-                    return apply_method_contract(old, interner, contract.result, proven, args);
-                }
-            }
-        }
-        _ => {}
+    }
+    if let Some(admitted) = admitted_library_method_call_at_call(old, interner, call_id) {
+        let Some(base) = admitted.receiver else {
+            return CallCanon::None;
+        };
+        let contract = admitted.contract.result;
+        let Some(proven) =
+            prove_method_receiver(old, interner, domains, contract.receiver, base, args)
+        else {
+            return CallCanon::None;
+        };
+        return apply_method_contract(old, interner, contract, proven, args);
     }
     CallCanon::None
 }
@@ -449,34 +410,13 @@ fn unwrap_iter(old: &Il, interner: &Interner, node: NodeId) -> NodeId {
         let call_kids = old.children(node);
         if let Some(&callee) = call_kids.first() {
             if old.kind(callee) == NodeKind::Field {
-                if let Payload::Name(s) = old.node(callee).payload {
-                    let method = interner.resolve(s);
-                    if let Some(&base) = old.children(callee).first() {
-                        if let Some(arg) = static_collection_adapter_arg(
-                            old, interner, node, base, method, call_kids,
-                        ) {
-                            return arg;
-                        }
-                    }
-                    if library_iterator_identity_adapter_contract(
-                        old.meta.lang,
-                        method,
-                        call_kids.len() - 1,
-                    )
-                    .is_some_and(|contract| {
-                        library_api_evidence_admitted(
-                            old,
-                            interner,
-                            node,
-                            contract.id,
-                            contract.callee,
-                            call_kids.len() - 1,
-                        )
-                    }) {
-                        if let Some(&base) = old.children(callee).first() {
-                            return unwrap_iter(old, interner, base);
-                        }
-                    }
+                if let Some(arg) = static_collection_adapter_arg(old, interner, node, call_kids) {
+                    return arg;
+                }
+                if let Some(base) = admitted_iterator_identity_adapter_at_call(old, interner, node)
+                    .and_then(|admitted| admitted.receiver)
+                {
+                    return unwrap_iter(old, interner, base);
                 }
             }
         }
@@ -512,58 +452,30 @@ fn exact_protocol_receiver(
     if old.kind(callee) != NodeKind::Field {
         return false;
     }
-    let Payload::Name(method) = old.node(callee).payload else {
-        return false;
-    };
-    let method = interner.resolve(method);
     let Some(&receiver) = old.children(callee).first() else {
         return false;
     };
-    if let Some(arg) = static_collection_adapter_arg(old, interner, node, receiver, method, kids) {
+    if let Some(arg) = static_collection_adapter_arg(old, interner, node, kids) {
         return exact_collection_receiver(old, interner, domains, arg);
     }
-    if let Some(contract) = library_method_call_contract(old.meta.lang, method, kids.len() - 1) {
+    let admitted_method = admitted_library_method_call_at_call(old, interner, node);
+    if let Some(admitted) = admitted_method {
+        let contract = admitted.contract;
         if contract.result.semantic == MethodSemanticContract::Builtin(Builtin::Zip)
             && contract.result.receiver == MethodReceiverContract::ExactProtocolPairArgument
             && contract.result.args == MethodBuiltinArgs::RustZip
-            && library_api_evidence_admitted(
-                old,
-                interner,
-                node,
-                contract.id,
-                contract.callee,
-                kids.len() - 1,
-            )
         {
             return exact_protocol_receiver(old, interner, domains, receiver)
                 && exact_protocol_receiver(old, interner, domains, kids[1]);
         }
     }
-    if library_iterator_identity_adapter_contract(old.meta.lang, method, kids.len() - 1)
-        .is_some_and(|contract| {
-            library_api_evidence_admitted(
-                old,
-                interner,
-                node,
-                contract.id,
-                contract.callee,
-                kids.len() - 1,
-            )
-        })
-    {
+    if admitted_iterator_identity_adapter_at_call(old, interner, node).is_some() {
         return exact_protocol_receiver(old, interner, domains, receiver);
     }
-    if let Some(contract) = library_method_call_contract(old.meta.lang, method, kids.len() - 1) {
+    if let Some(admitted) = admitted_method {
+        let contract = admitted.contract;
         if matches!(contract.result.semantic, MethodSemanticContract::HoF(_))
-            && kids.len() >= 2
-            && library_api_evidence_admitted(
-                old,
-                interner,
-                node,
-                contract.id,
-                contract.callee,
-                kids.len() - 1,
-            )
+            && admitted.arg_count >= 1
         {
             return exact_protocol_receiver(old, interner, domains, receiver);
         }
@@ -579,44 +491,10 @@ fn static_collection_adapter_arg(
     old: &Il,
     interner: &Interner,
     call: NodeId,
-    receiver: NodeId,
-    method: &str,
     call_kids: &[NodeId],
 ) -> Option<NodeId> {
-    let receiver_name = name_of(old, interner, receiver)?;
-    let contract = library_static_collection_adapter_contract(
-        old.meta.lang,
-        receiver_name,
-        method,
-        call_kids.len().saturating_sub(1),
-    )?;
-    match library_api_contract_evidence_for_call(
-        old,
-        interner,
-        call,
-        contract.id,
-        contract.callee,
-        call_kids.len().saturating_sub(1),
-    ) {
-        LibraryApiEvidenceStatus::Admitted => {}
-        LibraryApiEvidenceStatus::Rejected => return None,
-        LibraryApiEvidenceStatus::Missing => return None,
-    }
+    admitted_static_collection_adapter_at_call(old, interner, call)?;
     call_kids.get(1).copied()
-}
-
-fn library_api_evidence_admitted(
-    old: &Il,
-    interner: &Interner,
-    call: NodeId,
-    id: nose_semantics::LibraryApiContractId,
-    callee: LibraryApiCalleeContract,
-    arg_count: usize,
-) -> bool {
-    matches!(
-        library_api_contract_evidence_for_call(old, interner, call, id, callee, arg_count),
-        LibraryApiEvidenceStatus::Admitted
-    )
 }
 
 fn exact_set_param(domains: &ReceiverDomainEvidenceIndex<'_>, node: NodeId) -> bool {
@@ -666,19 +544,7 @@ fn exact_option_receiver(
     if old.kind(node) != NodeKind::Call {
         return false;
     }
-    let kids = old.children(node);
-    if kids.len() != 2 || old.kind(kids[0]) != NodeKind::Var {
-        return false;
-    }
-    let Payload::Name(name) = old.node(kids[0]).payload else {
-        return false;
-    };
-    let Some(contract) =
-        library_rust_option_some_constructor_contract(old.meta.lang, interner.resolve(name), 1)
-    else {
-        return false;
-    };
-    library_api_evidence_admitted(old, interner, node, contract.id, contract.callee, 1)
+    admitted_rust_option_some_constructor_at_call(old, interner, node).is_some()
 }
 
 fn exact_string_receiver(
@@ -729,33 +595,16 @@ fn rust_std_map_factory_call(old: &Il, interner: &Interner, node: NodeId) -> boo
         return false;
     }
     let kids = old.children(node);
-    if kids.len() != 2 || old.kind(kids[0]) != NodeKind::Var || old.kind(kids[1]) != NodeKind::Seq {
+    if kids.len() != 2 || old.kind(kids[1]) != NodeKind::Seq {
         return false;
     }
-    let Payload::Name(callee) = old.node(kids[0]).payload else {
+    let Some(admitted) = admitted_free_name_map_factory_at_call(old, interner, node) else {
         return false;
     };
-    let callee = interner.resolve(callee);
-    let Some(contract) = library_free_name_map_factory_contract(old.meta.lang, callee) else {
+    let LibraryMapFactoryResult::EntrySequence { entry_seq_tag } = admitted.contract.result else {
         return false;
     };
-    let LibraryApiCalleeContract::FreeName { .. } = contract.callee else {
-        return false;
-    };
-    let LibraryMapFactoryResult::EntrySequence { entry_seq_tag } = contract.result else {
-        return false;
-    };
-    matches!(
-        library_api_contract_evidence_for_call(
-            old,
-            interner,
-            node,
-            contract.id,
-            contract.callee,
-            1,
-        ),
-        LibraryApiEvidenceStatus::Admitted
-    ) && map_factory_entries_match_surface(old, interner, kids[1], entry_seq_tag)
+    map_factory_entries_match_surface(old, interner, kids[1], entry_seq_tag)
 }
 
 fn map_factory_entries_match_surface(
@@ -771,16 +620,6 @@ fn map_factory_entries_match_surface(
     })
 }
 
-fn name_of<'a>(old: &Il, interner: &'a Interner, id: NodeId) -> Option<&'a str> {
-    let n = old.node(id);
-    if n.kind == NodeKind::Var {
-        if let Payload::Name(s) = n.payload {
-            return Some(interner.resolve(s));
-        }
-    }
-    None
-}
-
 fn map_like_literal(old: &Il, interner: &Interner, id: NodeId) -> bool {
     if old.kind(id) != NodeKind::Seq {
         return false;
@@ -794,17 +633,11 @@ fn map_get_call_parts(old: &Il, interner: &Interner, id: NodeId) -> Option<(Node
         return None;
     }
     let kids = old.children(id);
-    if kids.len() != 2 || old.kind(kids[0]) != NodeKind::Field {
+    if kids.len() != 2 {
         return None;
     }
-    let Payload::Name(method) = old.node(kids[0]).payload else {
-        return None;
-    };
-    let contract = library_map_get_contract(old.meta.lang, interner.resolve(method), 1)?;
-    if !library_api_evidence_admitted(old, interner, id, contract.id, contract.callee, 1) {
-        return None;
-    }
-    let receiver = *old.children(kids[0]).first()?;
+    let admitted = admitted_map_get_at_call(old, interner, id)?;
+    let receiver = admitted.receiver?;
     Some((receiver, kids[1]))
 }
 
@@ -812,22 +645,12 @@ fn key_set_receiver(old: &Il, interner: &Interner, id: NodeId) -> Option<NodeId>
     if old.kind(id) != NodeKind::Call {
         return None;
     }
-    let kids = old.children(id);
-    if kids.len() != 1 || old.kind(kids[0]) != NodeKind::Field {
-        return None;
-    }
-    let Payload::Name(method) = old.node(kids[0]).payload else {
-        return None;
-    };
-    let contract = library_map_key_view_contract(old.meta.lang, interner.resolve(method), 0)?;
-    if !library_api_evidence_admitted(old, interner, id, contract.id, contract.callee, 0) {
-        return None;
-    }
-    let contract = contract.result;
+    let admitted = admitted_map_key_view_at_call(old, interner, id)?;
+    let contract = admitted.contract.result;
     if contract.kind != MapKeyViewKind::Collection {
         return None;
     }
-    old.children(kids[0]).first().copied()
+    admitted.receiver
 }
 
 fn zero_arg_lambda_body(old: &Il, lambda: NodeId) -> Option<NodeId> {

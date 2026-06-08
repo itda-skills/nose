@@ -31,6 +31,16 @@ pub fn admitted_library_method_call_at_call(
     )
 }
 
+pub fn admitted_free_function_builtin_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> Option<AdmittedLibraryApiCall<LibraryFreeFunctionBuiltinContract>> {
+    let (callee, name, arg_count) = free_name_call_parts(il, interner, call)?;
+    let contract = library_free_function_builtin_contract(il.meta.lang, name, arg_count)?;
+    admitted_library_call(il, interner, call, callee, None, arg_count, contract)
+}
+
 pub fn admitted_map_get_at_call(
     il: &Il,
     interner: &Interner,
@@ -94,6 +104,24 @@ pub fn admitted_static_index_membership_at_call(
 ) -> Option<AdmittedLibraryApiCall<LibraryStaticIndexMembershipContract>> {
     let (callee, receiver, method, arg_count) = receiver_method_call_parts(il, interner, call)?;
     let contract = library_static_index_membership_contract(il.meta.lang, method, arg_count)?;
+    admitted_library_call(
+        il,
+        interner,
+        call,
+        callee,
+        Some(receiver),
+        arg_count,
+        contract,
+    )
+}
+
+pub fn admitted_scalar_integer_method_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> Option<AdmittedLibraryApiCall<LibraryScalarIntegerMethodContract>> {
+    let (callee, receiver, method, arg_count) = receiver_method_call_parts(il, interner, call)?;
+    let contract = library_scalar_integer_method_contract(il.meta.lang, method, arg_count)?;
     admitted_library_call(
         il,
         interner,
@@ -328,6 +356,26 @@ pub fn admitted_iterator_identity_adapter_at_call(
     )
 }
 
+pub fn admitted_static_collection_adapter_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> Option<AdmittedLibraryApiCall<LibraryStaticCollectionAdapterContract>> {
+    let (callee, receiver, method, arg_count) = receiver_method_call_parts(il, interner, call)?;
+    let receiver_name = node_name(il, interner, receiver)?;
+    let contract =
+        library_static_collection_adapter_contract(il.meta.lang, receiver_name, method, arg_count)?;
+    admitted_library_call(
+        il,
+        interner,
+        call,
+        callee,
+        Some(receiver),
+        arg_count,
+        contract,
+    )
+}
+
 pub fn admitted_rust_option_and_then_at_call(
     il: &Il,
     interner: &Interner,
@@ -426,6 +474,16 @@ impl LibraryApiContractParts for LibraryMethodCallContract {
     }
 }
 
+impl LibraryApiContractParts for LibraryFreeFunctionBuiltinContract {
+    fn contract_id(self) -> LibraryApiContractId {
+        self.id
+    }
+
+    fn callee_contract(self) -> LibraryApiCalleeContract {
+        self.callee
+    }
+}
+
 impl LibraryApiContractParts for LibraryMapGetContract {
     fn contract_id(self) -> LibraryApiContractId {
         self.id
@@ -466,6 +524,16 @@ impl LibraryApiContractParts for LibraryStaticIndexMembershipContract {
     }
 }
 
+impl LibraryApiContractParts for LibraryScalarIntegerMethodContract {
+    fn contract_id(self) -> LibraryApiContractId {
+        self.id
+    }
+
+    fn callee_contract(self) -> LibraryApiCalleeContract {
+        self.callee
+    }
+}
+
 impl LibraryApiContractParts for LibraryMapKeyViewContract {
     fn contract_id(self) -> LibraryApiContractId {
         self.id
@@ -497,6 +565,16 @@ impl LibraryApiContractParts for LibraryImportedNamespaceFunctionContract {
 }
 
 impl LibraryApiContractParts for LibraryIteratorIdentityAdapterContract {
+    fn contract_id(self) -> LibraryApiContractId {
+        self.id
+    }
+
+    fn callee_contract(self) -> LibraryApiCalleeContract {
+        self.callee
+    }
+}
+
+impl LibraryApiContractParts for LibraryStaticCollectionAdapterContract {
     fn contract_id(self) -> LibraryApiContractId {
         self.id
     }

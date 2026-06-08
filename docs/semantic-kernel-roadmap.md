@@ -579,6 +579,13 @@ and pack ecosystem.
   `nose-semantics` test root into domain/symbol evidence, LibraryApi evidence,
   LibraryApi contract, and effect/place test modules before adding more
   occurrence-admission coverage.
+- The idiom/value-graph resolver cleanup moved supported normalize idiom
+  canonicalization and direct value-graph API consumers behind shared
+  `nose-semantics` admitted occurrence resolvers. This covers free-function
+  builtins, generic receiver-method contracts, map `get`, map-key views,
+  iterator identity adapters, Java static collection adapters, Rust `Some(...)`,
+  Rust map factory receiver proof, static index-membership, and Rust scalar
+  integer methods where the source `Call` node is still available.
 - The detect strict exact safety gate was split from unit extraction into
   `crates/nose-detect/src/strict_exact.rs`, reducing `units.rs` to extraction,
   fragment classification, and feature orchestration while keeping proof-policy
@@ -698,16 +705,17 @@ Remaining in this phase:
   Python builtin/import-backed, Rust free-name/path, Ruby require-backed, Java
   `java.util`, and regex calls now additionally share `LibraryApi` occurrence
   evidence, as do generic Python/Go free-function builtins and selected
-  receiver-method families. Selected value-graph and strict exact consumers now
-  call shared `nose-semantics` admitted occurrence resolvers for method,
-  map-get, map-key-view, regex, JS static/global, static-index,
-  iterator-adapter, Rust Option/`Vec::new`, and first-party factory/constructor
-  calls instead of locally recombining raw selector parsing with evidence
-  admission. Value-graph direct factory/constructor eval and provider literal
-  export safety now share those resolvers where they still operate on source
-  call nodes; value-level span-query paths remain a separate cleanup. Lowered
-  sequence-surface consumers are now evidence-only where covered. Remaining API
-  work is promise receiver proof, explicit async/sync
+  receiver-method families. Selected normalize idiom, value-graph, and strict
+  exact consumers now call shared `nose-semantics` admitted occurrence resolvers
+  for method, free-function builtin, map-get, map-key-view, regex, JS
+  static/global, static-index, iterator/static collection adapter, Rust
+  Option/scalar/`Vec::new`, and first-party factory/constructor calls instead of
+  locally recombining raw selector parsing with evidence admission. Value-graph
+  direct factory/constructor eval and provider literal export safety now share
+  those resolvers where they still operate on source call nodes; value-level
+  span-query paths remain a separate cleanup. Lowered sequence-surface consumers
+  are now evidence-only where covered. Remaining API work is promise receiver
+  proof, explicit async/sync
   protocol convergence contracts, and ecosystem APIs only after demand,
   receiver, and effect obligations are expressible.
 - Continue import/module proof migration beyond the removed raw import payloads

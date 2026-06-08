@@ -559,11 +559,18 @@ callers:
   selector strings with evidence checks. Opaque same-callee exact identity
   remains separate: it can keep identical calls comparable, but it does not
   assign cross-language or library semantics;
-- value-graph direct factory/constructor eval paths and provider literal export
-  safety share the same admitted occurrence resolver layer where they still have
-  the source `Call` node. Value-level CSE paths that query by source span still
-  use shared occurrence evidence admission, but their span-query resolver
-  boundary is tracked as a separate cleanup;
+- normalize idiom canonicalization shares the admitted occurrence resolver layer
+  for supported free-function builtins, generic receiver-method contracts, map
+  `get`, map-key views, iterator identity adapters, Java `Arrays.stream`, Rust
+  `Some(...)`, and Rust map factory receiver proof instead of locally
+  recombining selector strings with `LibraryApi` evidence checks. Test fixtures
+  may still use row constructors to mint synthetic evidence records;
+- value-graph direct API eval paths and provider literal export safety share the
+  same admitted occurrence resolver layer where they still have the source
+  `Call` node. This includes direct factory/constructor eval, static
+  index-membership, and Rust scalar integer method calls. Value-level CSE paths
+  that query by source span still use shared occurrence evidence admission, but
+  their span-query resolver boundary is tracked as a separate cleanup;
 - value-graph consumers that query by source span re-check the original source
   `Call` node shape and its evidence dependencies when that call can be
   recovered. This preserves receiver-method precision when value-graph CSE has

@@ -585,24 +585,12 @@ impl<'a> Builder<'a> {
         node: NodeId,
         env: &FxHashMap<u32, ValueId>,
     ) -> Option<(ValueId, ValueId)> {
-        let (receiver, method, arg) = self.single_arg_field_call_parts(node)?;
-        let method = self.interner.resolve(method);
+        let (receiver, _method, arg) = self.single_arg_field_call_parts(node)?;
         if !self.is_static_non_float_collection_expr(receiver) {
             return None;
         }
-        let contract = library_static_index_membership_contract(self.il.meta.lang, method, 1)?;
-        match library_api_contract_evidence_for_call(
-            self.il,
-            self.interner,
-            node,
-            contract.id,
-            contract.callee,
-            1,
-        ) {
-            LibraryApiEvidenceStatus::Admitted => {}
-            LibraryApiEvidenceStatus::Rejected => return None,
-            LibraryApiEvidenceStatus::Missing => return None,
-        }
+        let contract =
+            admitted_static_index_membership_at_call(self.il, self.interner, node)?.contract;
         match contract.result.kind {
             StaticIndexMembershipKind::IndexOf => {
                 let element = self.eval(arg, env);

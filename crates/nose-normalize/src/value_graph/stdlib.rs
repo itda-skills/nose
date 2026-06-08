@@ -1195,34 +1195,12 @@ impl<'a> Builder<'a> {
         kids: &[NodeId],
         env: &FxHashMap<u32, ValueId>,
     ) -> Option<ValueId> {
-        let &callee = kids.first()?;
-        if self.il.kind(callee) != NodeKind::Field {
-            return None;
-        }
-        let Payload::Name(name) = self.il.node(callee).payload else {
-            return None;
-        };
-        let method = self.interner.resolve(name);
-        let arg_count = kids.len().saturating_sub(1);
-        let contract =
-            library_scalar_integer_method_contract(self.il.meta.lang, method, arg_count)?;
-        if !matches!(
-            library_api_contract_evidence_for_call(
-                self.il,
-                self.interner,
-                call,
-                contract.id,
-                contract.callee,
-                arg_count,
-            ),
-            LibraryApiEvidenceStatus::Admitted
-        ) {
-            return None;
-        }
+        let admitted = admitted_scalar_integer_method_at_call(self.il, self.interner, call)?;
+        let contract = admitted.contract;
         if contract.result.receiver != MethodReceiverContract::ExactInteger {
             return None;
         }
-        let receiver = self.il.children(callee).first().copied()?;
+        let receiver = admitted.receiver?;
         let receiver_value = self.eval_proven_integer_expr(receiver, env)?;
         match contract.result.semantic {
             ScalarIntegerMethod::Abs => Some(self.mk(ValOp::Un(ABS_CODE), vec![receiver_value])),
