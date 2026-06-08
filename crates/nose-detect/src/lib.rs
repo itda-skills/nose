@@ -31,7 +31,7 @@ pub fn file_stream(il: &Il, interner: &Interner) -> Stream {
     contiguous::stream(il, interner)
 }
 
-use nose_il::{Corpus, Il, Interner};
+use nose_il::{Corpus, Il, Interner, NodeKind};
 use nose_normalize::NormalizeOptions;
 use rayon::prelude::*;
 use serde::Serialize;
@@ -787,6 +787,9 @@ impl StageTimer {
 /// may pass a throwaway per-file interner — which is exactly what makes caching a
 /// file's units by its source-content hash sound.
 pub fn units_of_file(il: &Il, interner: &Interner, opts: &DetectOptions) -> Vec<UnitFeat> {
+    if raw_il_is_empty_module(il) {
+        return Vec::new();
+    }
     let norm_opts = NormalizeOptions {
         cfg_norm: opts.cfg_norm,
         dce: opts.dce,
@@ -831,19 +834,23 @@ pub fn detect_with_dump(
         .par_iter()
         .map(|il| {
             let units = if opts.structural {
-                let n = nose_normalize::normalize(il, &corpus.interner, &norm_opts);
-                units::extract(
-                    &n,
-                    &corpus.interner,
-                    &seeds,
-                    opts.min_lines,
-                    opts.min_tokens,
-                    opts.block_units,
-                    units::ExtractFeatures {
-                        shape_features: opts.shape_features,
-                        abstraction_witnesses: opts.abstraction_witnesses,
-                    },
-                )
+                if raw_il_is_empty_module(il) {
+                    Vec::new()
+                } else {
+                    let n = nose_normalize::normalize(il, &corpus.interner, &norm_opts);
+                    units::extract(
+                        &n,
+                        &corpus.interner,
+                        &seeds,
+                        opts.min_lines,
+                        opts.min_tokens,
+                        opts.block_units,
+                        units::ExtractFeatures {
+                            shape_features: opts.shape_features,
+                            abstraction_witnesses: opts.abstraction_witnesses,
+                        },
+                    )
+                }
             } else {
                 Vec::new()
             };
@@ -873,6 +880,10 @@ pub fn detect_with_dump(
     // (candidates/score/groups/contiguous), so no lap here — a single outer lap would
     // mislabel the whole call (group scoring dwarfs contiguous) as "contiguous".
     detect_from_units(units, corpus.files.len(), &streams, opts, detector)
+}
+
+fn raw_il_is_empty_module(il: &Il) -> bool {
+    il.units.is_empty() && il.kind(il.root) == NodeKind::Module && il.children(il.root).is_empty()
 }
 
 /// Run candidate-generation → scoring → clustering over already-built `units` (the

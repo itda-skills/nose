@@ -67,15 +67,11 @@ fn extract_scripts(src: &[u8]) -> (Vec<(usize, usize)>, bool) {
 
 /// Does a `<script …>` opening tag select TypeScript?
 fn open_tag_is_ts(tag: &[u8]) -> bool {
-    let lower: String = tag
-        .iter()
-        .map(|&b| b.to_ascii_lowercase() as char)
-        .collect();
-    lower.contains("lang=\"ts\"")
-        || lower.contains("lang='ts'")
-        || lower.contains("lang=ts")
-        || lower.contains("lang=\"tsx\"")
-        || lower.contains("typescript")
+    contains_ci(tag, b"lang=\"ts\"")
+        || contains_ci(tag, b"lang='ts'")
+        || contains_ci(tag, b"lang=ts")
+        || contains_ci(tag, b"lang=\"tsx\"")
+        || contains_ci(tag, b"typescript")
 }
 
 /// Replace every byte outside `keep` with a space, preserving `\n`/`\r` so line
@@ -98,4 +94,8 @@ fn find_ci(hay: &[u8], needle: &[u8], from: usize) -> Option<usize> {
     }
     (from..=hay.len() - needle.len())
         .find(|&i| hay[i..i + needle.len()].eq_ignore_ascii_case(needle))
+}
+
+fn contains_ci(hay: &[u8], needle: &[u8]) -> bool {
+    find_ci(hay, needle, 0).is_some()
 }

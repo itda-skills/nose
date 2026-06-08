@@ -50,6 +50,16 @@ pub fn discover_paths(root: &Path, exclude: &[String]) -> Vec<(String, Lang)> {
     use ignore::overrides::OverrideBuilder;
     use ignore::{WalkBuilder, WalkState};
     use std::sync::Mutex;
+
+    // A file path on the command line does not need a directory walker. This keeps
+    // explicit fixture/file scans cheap while leaving configured excludes on the
+    // existing walker path, where their gitignore semantics are already defined.
+    if exclude.is_empty() && root.is_file() {
+        return Lang::from_file_path(root)
+            .map(|lang| vec![(root.to_string_lossy().to_string(), lang)])
+            .unwrap_or_default();
+    }
+
     // Honor .gitignore *within* the target tree (skips node_modules, build dirs)
     // but not gitignores in parent directories outside it — pointing the tool at
     // a path that happens to sit under an ignored dir should still scan it.
@@ -76,8 +86,8 @@ pub fn discover_paths(root: &Path, exclude: &[String]) -> Vec<(String, Lang)> {
         Box::new(move |result| {
             if let Ok(entry) = result {
                 if entry.file_type().is_some_and(|t| t.is_file()) {
-                    let path = entry.path().to_string_lossy().to_string();
-                    if let Some(lang) = Lang::from_path(&path) {
+                    if let Some(lang) = Lang::from_file_path(entry.path()) {
+                        let path = entry.path().to_string_lossy().to_string();
                         out.lock().unwrap().push((path, lang));
                     }
                 }
@@ -86,6 +96,44 @@ pub fn discover_paths(root: &Path, exclude: &[String]) -> Vec<(String, Lang)> {
         })
     });
     out.into_inner().unwrap()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    fn temp_dir(tag: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("nose_frontend_{tag}_{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn discover_paths_accepts_direct_supported_file() {
+        let dir = temp_dir("direct_supported_file");
+        let file = dir.join("sample.py");
+        fs::write(&file, "def f():\n    return 1\n").unwrap();
+
+        let paths = discover_paths(&file, &[]);
+
+        assert_eq!(
+            paths,
+            vec![(file.to_string_lossy().to_string(), Lang::Python)]
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn discover_paths_ignores_direct_unsupported_file() {
+        let dir = temp_dir("direct_unsupported_file");
+        let file = dir.join("README.txt");
+        fs::write(&file, "not source\n").unwrap();
+
+        assert!(discover_paths(&file, &[]).is_empty());
+        let _ = fs::remove_dir_all(&dir);
+    }
 }
 
 /// Discover, read, and lower every supported file under `root`, in parallel.

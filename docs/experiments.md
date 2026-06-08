@@ -807,3 +807,40 @@ and `episteme2` ~6–7ms→~2ms; Go corpora stayed at 0ms. Two tempting follow-u
 rejected after output checks: skipping import resolution for `syntax`-only scans changed
 `moonlight-server` syntax families, and caching pure-inline registries changed one
 Python near-family. Both are behavior changes, not safe speedups.
+
+## BI. Language profile pass — file roots, not language-specific exclusions
+
+A follow-up language-by-language semantic scan profiled Python, JavaScript, TypeScript,
+Go, Rust, Java, C, Ruby, and embedded-script containers on local corpus repos. The goal
+was to avoid repeating the earlier JS-specific trap: large bundles can be expensive, but
+the product should not learn new built-in file/path exclusions. The safe optimization was
+in discovery mechanics instead:
+
+- direct file roots now bypass `ignore`'s directory walker when no `--exclude`/config
+  excludes are active;
+- directory discovery now checks `Path::extension()` before allocating a path string, so
+  unsupported files do not pay string allocation just to be rejected;
+- embedded `<script>` tag TypeScript detection uses case-insensitive byte search instead
+  of allocating a lowercase copy of the tag;
+- semantic extraction skips normalization only for a raw IL that is exactly an empty
+  module, preserving top-level block extraction for files that have executable statements.
+
+The representative before/after medians below used `NOSE_TIME=1 nose scan --mode semantic
+--top 0 --format json`, five repetitions after the change, and the same corpus inputs as
+the baseline run:
+
+| language | files | baseline wall | after wall | result |
+|---|---:|---:|---:|---|
+| python | 128 | 79.7ms | 79.1ms | stable |
+| javascript | 5 | 110.7ms | 114.3ms | stable/noisy; generated-bundle cost remains a scoping issue |
+| typescript | 263 | 133.0ms | 126.6ms | small common-path win |
+| go | 54 | 53.3ms | 52.4ms | stable |
+| rust | 37 | 500.7ms | 464.9ms | small common-path win; output diff was only shifted line numbers in edited Rust files |
+| java | 13 | 89.0ms | 4.5ms | file-root discovery fixed the benchmark-shape overhead |
+| c | 1241 | 546.7ms | 532.9ms | small common-path win |
+| ruby | 1722 | 249.3ms | 220.6ms | small common-path win |
+| embedded | 61 | 381.2ms | 26.8ms | file-root discovery fixed the benchmark-shape overhead |
+
+Canonical JSON output was unchanged for Python, JavaScript, TypeScript, Go, Java, C, Ruby,
+and embedded. Rust matched after removing line-number fields; the only diff came from this
+branch adding lines to a Rust source file included in the profiling input.

@@ -2,6 +2,7 @@
 //! space can be traced back to the exact original bytes/lines (sourcemap-style).
 
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 /// Index into [`crate::Corpus::files`].
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
@@ -139,5 +140,12 @@ impl Lang {
             return None; // no '.' in path
         }
         Lang::from_extension(ext)
+    }
+
+    /// Detect language from a filesystem path without allocating a path string.
+    pub fn from_file_path(path: &Path) -> Option<Lang> {
+        path.extension()
+            .and_then(|ext| ext.to_str())
+            .and_then(Lang::from_extension)
     }
 }
