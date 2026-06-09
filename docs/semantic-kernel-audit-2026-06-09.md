@@ -2,7 +2,9 @@
 
 Back to [semantic-kernel](semantic-kernel.md). Current implementation status is
 in [semantic-kernel-snapshot](semantic-kernel-snapshot.md); remaining work is
-tracked in [semantic-kernel-roadmap](semantic-kernel-roadmap.md).
+tracked in [semantic-kernel-roadmap](semantic-kernel-roadmap.md). The later
+closeout for the #150-#157 foundation tranche is in
+[semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).
 
 This audit closes issue #150. It assumes PR #147 is merged and asks whether any
 remaining first-party semantic consumer still opens exact semantics from raw
@@ -162,27 +164,19 @@ semantic meaning.
   also require exact receiver identity; dynamic-dispatch records do not prove a
   single concrete target by themselves.
 
-## Remaining Backlog
+## Closeout Update
 
-These are not #150 fixes; they are the next independent work items.
+This audit's follow-up queue was completed in the #109 foundation tranche:
 
-| priority | owner | remaining pocket | why it remains |
-|---|---|---|---|
-| P0 | #151 | Pack extension API v0 | First-party producers still call compiled Rust helper functions directly. The external boundary needs stable fact, contract, dependency, and channel-eligibility schemas before those producers can be expressed as packs. |
-| P0 | #153 | Demand/effect substrate | Lazy, repeated, async, generator, channel, observable, and callback effect visibility cannot be represented by the current first-party demand profiles. Exact laws for those surfaces must remain closed. |
-| P0 | #155 | Call-target and dispatch evidence | The shared vocabulary and resolver now cover direct functions, direct methods, imported functions/members, and dynamic-dispatch facts. Remaining work is broader producer coverage for method/imported/module targets, trait/interface dispatch, and overload-specific target proof. |
-| P0 | #156 | Type/domain evidence expansion | The shared vocabulary now covers richer scalar, protocol, record, future/result, and nominal domains. Remaining work is broader producer coverage for constructor result domains, field/property domains, protocol receiver facts with demand/effect obligations, and versioned library domains. |
-| P1 | #154 | Async and Promise receiver proof | `crates/nose-normalize/src/value_graph/rules/promise_then.rs` has a JS-like `.then` contract but returns fail-closed until Promise-like receiver proof exists. This should depend on #153 and #156. |
-| P1 | #152 | Pack loading, provenance, and opt-in trust | The internal provenance/trust model exists, but there is no loadable pack runtime, manifest validation, user opt-in path, or report-level pack provenance. |
-| P1 | #157 | Pack conformance harness and ecosystem workflow | The first-party regression suite covers many hard negatives, but external pack providers need a defined conformance fixture layout and workflow. |
-| P2 | #153/#156 | Guard, sequence, and aggregate surfaces | JS/TS record/own-property guards and selected sequence surfaces are evidence-backed where covered, but richer guard clauses, nested aggregate surfaces, iterator materialization, map-entry variants, and protocol-specific aggregate facts need versioned records. |
-| P2 | #153/#157 | LawPack-facing value laws | Named value-graph rules and formal-obligation metadata exist, but reduction, parity/toggle, byte-pack, and ecosystem laws remain local first-party code rather than pack-facing law contracts. |
+- #151 defined the provider-facing extension API v0.
+- #152 added local metadata loading, opt-in trust plumbing, and scan JSON pack
+  provenance.
+- #153 added the internal demand/effect substrate.
+- #154 added Promise receiver proof for the supported first-party `.then`
+  surface.
+- #155 expanded call-target and dispatch evidence.
+- #156 expanded type/domain evidence.
+- #157 added the semantic pack conformance harness and provider/user workflow.
 
-## Follow-up Guidance
-
-Start #151 and #153 first. #151 defines the extension shape that producers will
-target; #153 defines the semantic axes that prevent lazy, async, and callback
-APIs from being squeezed into unsafe API rows. #155 and #156 should then expand
-the evidence vocabulary consumed by both. #154 should stay closed until those
-receiver/demand pieces exist. #152 and #157 should follow the API shape from
-#151 and feed conformance requirements back into it early.
+The next issue map is recorded in
+[semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).
