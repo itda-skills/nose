@@ -5,8 +5,8 @@
 //! orchestration in `units.rs`; proof policy lives here.
 
 use nose_il::{
-    Builtin, HoFKind, Il, Interner, LitClass, NodeId, NodeKind, Op, Payload,
-    SourceComprehensionKind, Symbol,
+    Builtin, CallTargetEvidenceKind, HoFKind, Il, Interner, LitClass, NodeId, NodeKind, Op,
+    Payload, SourceComprehensionKind, Symbol,
 };
 use nose_normalize::module_facts::collect_module_mutations;
 use nose_semantics::{
@@ -21,16 +21,18 @@ use nose_semantics::{
     admitted_regex_test_at_call, admitted_ruby_set_factory_at_call,
     admitted_rust_option_none_sentinel_at_node, admitted_rust_vec_macro_factory_at_call,
     admitted_rust_vec_new_factory_at_call, admitted_static_index_membership_at_call,
-    asserted_unshadowed_global_symbol, construct_syntax_proof, direct_function_call_target_at_call,
+    asserted_unshadowed_global_symbol, call_target_evidence_status_at_call, construct_syntax_proof,
+    direct_function_call_target_at_call, direct_method_call_target_at_call,
     exact_static_membership_predicate_operator, go_zero_map_default_kind,
     go_zero_map_entry_contract_for_node, go_zero_map_literal_contract_for_node,
     go_zero_map_lookup_contract, nullish_global_contract, own_property_guard_for_node,
     record_shape_guard_for_node, semantics, seq_surface_contract_for_node,
     source_comprehension_at_node, source_fact_at_node, source_operator_at_node,
-    typeof_operator_contract, DomainRequirement, IndexMembershipThreshold, JavaMapFactoryKind,
-    LibraryCollectionFactoryResult, LibraryMapFactoryResult, LibraryMethodCallContract,
-    MapKeyViewKind, MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract,
-    ReceiverDomainEvidenceIndex, StaticIndexMembershipKind,
+    typeof_operator_contract, CallTargetEvidenceStatus, DomainRequirement,
+    IndexMembershipThreshold, JavaMapFactoryKind, LibraryCollectionFactoryResult,
+    LibraryMapFactoryResult, LibraryMethodCallContract, MapKeyViewKind, MethodBuiltinArgs,
+    MethodReceiverContract, MethodSemanticContract, ReceiverDomainEvidenceIndex,
+    StaticIndexMembershipKind,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -60,6 +62,12 @@ impl<'a> StrictFacts<'a> {
         self.function_roots
             .iter()
             .any(|&root| direct_function_call_target_at_call(il, call, root))
+    }
+
+    fn direct_method_target_at_call(&self, il: &Il, interner: &Interner, call: NodeId) -> bool {
+        self.function_roots
+            .iter()
+            .any(|&root| direct_method_call_target_at_call(il, interner, call, root))
     }
 
     fn receiver_satisfies_domain(&self, receiver: NodeId, requirement: DomainRequirement) -> bool {
@@ -696,7 +704,7 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
         return true;
     }
     if il.kind(callee) != NodeKind::Field {
-        return strict_exact_callee_identity(il, facts, node, callee)
+        return strict_exact_callee_identity(il, interner, facts, node, callee)
             && strict_exact_call_args_safe(il, interner, facts, node);
     }
     let Payload::Name(name) = il.node(callee).payload else {
@@ -729,7 +737,7 @@ fn strict_exact_safe_call(il: &Il, interner: &Interner, facts: &StrictFacts, nod
     // Opaque exact method identity: this keeps same-callee calls eligible as exact clones
     // without assigning semantic meaning to the method name. Cross-language/builtin
     // convergence still has to pass the proof-backed contracts above or in normalization.
-    strict_exact_callee_identity(il, facts, node, callee)
+    strict_exact_callee_identity(il, interner, facts, node, callee)
         && strict_exact_call_args_safe(il, interner, facts, node)
 }
 
@@ -1584,20 +1592,55 @@ fn strict_exact_call_args_safe(
 
 fn strict_exact_callee_identity(
     il: &Il,
+    interner: &Interner,
     facts: &StrictFacts,
     call: NodeId,
     callee: NodeId,
 ) -> bool {
+    let target_status = call_target_evidence_status_at_call(il, interner, call);
     match il.kind(callee) {
-        NodeKind::Var => {
-            strict_exact_safe_var(il, facts, callee)
-                || facts.direct_function_target_at_call(il, call)
-        }
+        NodeKind::Var => match target_status {
+            CallTargetEvidenceStatus::Rejected => false,
+            CallTargetEvidenceStatus::Admitted(CallTargetEvidenceKind::ImportedFunction {
+                ..
+            }) => true,
+            CallTargetEvidenceStatus::Admitted(CallTargetEvidenceKind::DirectFunction {
+                ..
+            }) => facts.direct_function_target_at_call(il, call),
+            CallTargetEvidenceStatus::Admitted(
+                CallTargetEvidenceKind::DirectMethod { .. }
+                | CallTargetEvidenceKind::ImportedMember { .. }
+                | CallTargetEvidenceKind::DynamicDispatch { .. },
+            ) => false,
+            CallTargetEvidenceStatus::Missing => {
+                strict_exact_safe_var(il, facts, callee)
+                    || facts.direct_function_target_at_call(il, call)
+            }
+        },
         NodeKind::Field => {
-            matches!(il.node(callee).payload, Payload::Name(_))
-                && il.children(callee).first().is_some_and(|&receiver| {
-                    strict_exact_callee_receiver_identity(il, facts, receiver)
-                })
+            let exact_receiver = il.children(callee).first().is_some_and(|&receiver| {
+                strict_exact_callee_receiver_identity(il, facts, receiver)
+            });
+            if !matches!(il.node(callee).payload, Payload::Name(_)) {
+                return false;
+            }
+            match target_status {
+                CallTargetEvidenceStatus::Rejected => false,
+                CallTargetEvidenceStatus::Admitted(CallTargetEvidenceKind::ImportedMember {
+                    ..
+                }) => true,
+                CallTargetEvidenceStatus::Admitted(CallTargetEvidenceKind::DirectMethod {
+                    ..
+                }) => exact_receiver && facts.direct_method_target_at_call(il, interner, call),
+                CallTargetEvidenceStatus::Admitted(CallTargetEvidenceKind::DynamicDispatch {
+                    ..
+                }) => exact_receiver,
+                CallTargetEvidenceStatus::Admitted(
+                    CallTargetEvidenceKind::DirectFunction { .. }
+                    | CallTargetEvidenceKind::ImportedFunction { .. },
+                ) => false,
+                CallTargetEvidenceStatus::Missing => exact_receiver,
+            }
         }
         _ => false,
     }
@@ -1691,6 +1734,20 @@ mod tests {
                 callee_hash: library_api_callee_contract_hash(contract.callee),
                 arity: 1,
             }),
+            dependencies,
+        )
+    }
+
+    fn call_target_evidence(
+        id: u32,
+        call_span: Span,
+        target: CallTargetEvidenceKind,
+        dependencies: Vec<EvidenceId>,
+    ) -> EvidenceRecord {
+        evidence(
+            id,
+            EvidenceAnchor::node(call_span, NodeKind::Call),
+            EvidenceKind::CallTarget(target),
             dependencies,
         )
     }
@@ -1883,6 +1940,196 @@ mod tests {
         ));
         let facts = StrictFacts::collect(&il, &interner);
         assert!(strict_exact_safe_tree(&il, &interner, &facts, call));
+    }
+
+    #[test]
+    fn imported_function_call_target_opens_opaque_exact_identity() {
+        let interner = Interner::new();
+        let prod = interner.intern("prod");
+        let mut b = IlBuilder::new(FileId(0));
+        let callee = b.add(NodeKind::Var, Payload::Name(prod), sp(80), &[]);
+        let arg = b.add(NodeKind::Lit, Payload::LitInt(2), sp(81), &[]);
+        let call = b.add(NodeKind::Call, Payload::None, sp(82), &[callee, arg]);
+        let root = b.add(NodeKind::Block, Payload::None, sp(79), &[call]);
+        let mut il = b.finish(
+            root,
+            FileMeta {
+                path: "t.py".into(),
+                lang: Lang::Python,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+
+        let facts = StrictFacts::collect(&il, &interner);
+        assert!(
+            !strict_exact_safe_tree(&il, &interner, &facts, call),
+            "same local function spelling must not prove imported call identity"
+        );
+
+        il.evidence.push(call_target_evidence(
+            0,
+            sp(82),
+            CallTargetEvidenceKind::ImportedFunction {
+                module_hash: stable_symbol_hash("math"),
+                exported_hash: stable_symbol_hash("prod"),
+                local_hash: interner.symbol_hash(prod),
+            },
+            Vec::new(),
+        ));
+        let facts = StrictFacts::collect(&il, &interner);
+        assert!(strict_exact_safe_tree(&il, &interner, &facts, call));
+    }
+
+    #[test]
+    fn ambiguous_call_target_evidence_blocks_parameter_callee_fallback() {
+        let interner = Interner::new();
+        let mut b = IlBuilder::new(FileId(0));
+        let callee_param = b.add(NodeKind::Param, Payload::Cid(0), sp(90), &[]);
+        let value_param = b.add(NodeKind::Param, Payload::Cid(1), sp(91), &[]);
+        let callee = b.add(NodeKind::Var, Payload::Cid(0), sp(92), &[]);
+        let value = b.add(NodeKind::Var, Payload::Cid(1), sp(93), &[]);
+        let call = b.add(NodeKind::Call, Payload::None, sp(94), &[callee, value]);
+        let root = b.add(
+            NodeKind::Func,
+            Payload::None,
+            sp(89),
+            &[callee_param, value_param, call],
+        );
+        let mut il = b.finish(
+            root,
+            FileMeta {
+                path: "t.py".into(),
+                lang: Lang::Python,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+
+        let facts = StrictFacts::collect(&il, &interner);
+        assert!(strict_exact_safe_tree(&il, &interner, &facts, call));
+
+        il.evidence.push(call_target_evidence(
+            0,
+            sp(94),
+            CallTargetEvidenceKind::ImportedFunction {
+                module_hash: stable_symbol_hash("math"),
+                exported_hash: stable_symbol_hash("prod"),
+                local_hash: stable_symbol_hash("prod"),
+            },
+            Vec::new(),
+        ));
+        il.evidence.push(call_target_evidence(
+            1,
+            sp(94),
+            CallTargetEvidenceKind::ImportedFunction {
+                module_hash: stable_symbol_hash("statistics"),
+                exported_hash: stable_symbol_hash("prod"),
+                local_hash: stable_symbol_hash("prod"),
+            },
+            Vec::new(),
+        ));
+        let facts = StrictFacts::collect(&il, &interner);
+        assert!(
+            !strict_exact_safe_tree(&il, &interner, &facts, call),
+            "conflicting call-target evidence must not reopen opaque callee identity"
+        );
+    }
+
+    #[test]
+    fn imported_member_call_target_opens_static_member_identity() {
+        let interner = Interner::new();
+        let mut b = IlBuilder::new(FileId(0));
+        let receiver = b.add(
+            NodeKind::Var,
+            Payload::Name(interner.intern("math")),
+            sp(100),
+            &[],
+        );
+        let callee = b.add(
+            NodeKind::Field,
+            Payload::Name(interner.intern("prod")),
+            sp(101),
+            &[receiver],
+        );
+        let arg = b.add(NodeKind::Lit, Payload::LitInt(3), sp(102), &[]);
+        let call = b.add(NodeKind::Call, Payload::None, sp(103), &[callee, arg]);
+        let root = b.add(NodeKind::Block, Payload::None, sp(99), &[call]);
+        let mut il = b.finish(
+            root,
+            FileMeta {
+                path: "t.py".into(),
+                lang: Lang::Python,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+
+        let facts = StrictFacts::collect(&il, &interner);
+        assert!(
+            !strict_exact_safe_tree(&il, &interner, &facts, call),
+            "namespace/member spelling without proof is not exact call identity"
+        );
+
+        il.evidence.push(call_target_evidence(
+            0,
+            sp(103),
+            CallTargetEvidenceKind::ImportedMember {
+                module_hash: stable_symbol_hash("math"),
+                exported_hash: stable_symbol_hash("math"),
+                member_hash: interner.symbol_hash(interner.intern("prod")),
+            },
+            Vec::new(),
+        ));
+        let facts = StrictFacts::collect(&il, &interner);
+        assert!(strict_exact_safe_tree(&il, &interner, &facts, call));
+    }
+
+    #[test]
+    fn direct_method_call_target_does_not_skip_receiver_identity() {
+        let interner = Interner::new();
+        let mut b = IlBuilder::new(FileId(0));
+        let method_body = b.add(NodeKind::Block, Payload::None, sp(110), &[]);
+        let method = b.add(NodeKind::Func, Payload::None, sp(111), &[method_body]);
+        let receiver = b.add(
+            NodeKind::Var,
+            Payload::Name(interner.intern("worker")),
+            sp(112),
+            &[],
+        );
+        let callee = b.add(
+            NodeKind::Field,
+            Payload::Name(interner.intern("run")),
+            sp(113),
+            &[receiver],
+        );
+        let call = b.add(NodeKind::Call, Payload::None, sp(114), &[callee]);
+        let root = b.add(NodeKind::Module, Payload::None, sp(109), &[method, call]);
+        let mut il = b.finish(
+            root,
+            FileMeta {
+                path: "t.ts".into(),
+                lang: Lang::TypeScript,
+            },
+            Vec::new(),
+            Vec::new(),
+        );
+        il.evidence.push(call_target_evidence(
+            0,
+            sp(114),
+            CallTargetEvidenceKind::DirectMethod {
+                target_span: il.node(method).span,
+                receiver_type_hash: stable_symbol_hash("Worker"),
+                method_hash: interner.symbol_hash(interner.intern("run")),
+            },
+            Vec::new(),
+        ));
+
+        let facts = StrictFacts::collect(&il, &interner);
+        assert!(
+            !strict_exact_safe_tree(&il, &interner, &facts, call),
+            "direct method target proof does not prove the receiver value identity"
+        );
     }
 
     #[test]

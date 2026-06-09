@@ -462,9 +462,11 @@ migrated.
   Java map entries, map `get`, and map-key view/wrapper calls.
 - Opaque exact callee identity remains separate from library/API admission. A
   parameter callee or proof-backed immutable/imported callee may keep an exact
-  same-callee call comparable as an opaque value operation, while same-spelled
-  file-local functions still require `CallTarget` evidence and library semantics
-  still require admitted API occurrence evidence.
+  same-callee call comparable as an opaque value operation. Same-spelled
+  file-local functions still require `CallTarget::DirectFunction` evidence,
+  imported function/member calls can enter opaque identity only through explicit
+  `CallTarget::ImportedFunction` or `CallTarget::ImportedMember` records, and
+  library semantics still require admitted API occurrence evidence.
 - Java stream source adapters are split by proof through library API contracts:
   `receiver.stream()` requires an exact iterable receiver, while
   `Arrays.stream(xs)` requires the `java.util.Arrays` import binding and no local
@@ -537,14 +539,19 @@ migrated.
   from other languages, including JS `min(...)`, locally shadowed Python names,
   and manually constructed calls without admitted occurrence evidence stay
   exact-closed.
-- User-defined direct calls now consume `CallTarget` evidence. The first-party
-  producer admits only unique top-level in-file function targets with no
-  current or enclosing lexical shadowing by parameters, assignments, loop
-  patterns, or nested function definitions; recursion normalization and the
-  interpreter oracle, value-graph pure helper inlining, and strict exact
-  direct-function callee gates no longer treat same raw callee spelling as
-  call-target proof. Method and dynamic-dispatch targets require explicit
-  pack/source evidence.
+- User-defined and imported opaque call identity now consume `CallTarget`
+  evidence. The first-party producer admits only `DirectFunction` records for
+  unique top-level in-file function targets with no current or enclosing lexical
+  shadowing by parameters, assignments, loop patterns, or nested function
+  definitions; recursion normalization and the interpreter oracle, value-graph
+  pure helper inlining, and strict exact direct-function callee gates no longer
+  treat same raw callee spelling as call-target proof. The shared resolver also
+  understands `DirectMethod`, `ImportedFunction`, `ImportedMember`, and
+  `DynamicDispatch` records. Strict exact admits imported function/member
+  identity only through explicit evidence, requires exact receiver identity for
+  direct methods, treats dynamic-dispatch records as non-concrete by themselves,
+  and closes on selector mismatch, dependency-broken records, or conflicting
+  target evidence.
 - JS-like `typeof` exact-safety now consumes a language- and arity-constrained
   operator contract plus `Source::Operator(Typeof)` evidence at the call span.
   A raw `Call(Var("typeof"), arg)` shape, same-named function from another

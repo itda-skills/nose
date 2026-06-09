@@ -70,7 +70,7 @@ The current implemented kinds are:
 | `Place` | fixed receiver/place facts currently covering `SelfReceiver` and `SelfField` |
 | `Effect` | observable effect and mutation-risk facts currently covering canonical builder append calls, non-overloadable index writes, fixed self-field writes, binding writes, receiver-mutating calls, and opaque argument escapes |
 | `LibraryApi` | proof that a specific API occurrence matches a language/API contract coordinate, currently for selected call, property, and sentinel occurrences across JS-like static/global/static-index APIs, selected Python/Rust/Ruby/Java/regex APIs, generic Python/Go free-function builtins, and selected receiver-method families |
-| `CallTarget` | proof that a specific user call occurrence resolves to a direct in-file callable unit target |
+| `CallTarget` | proof that a specific call occurrence resolves to an explicit function, method, imported function/member, or dispatch-family target identity |
 | `SequenceSurface` | lowered aggregate surface such as collection, tuple, map, pair, import proof, guard surfaces, Go composite map literals, or Go map entries |
 
 `LibraryApi` evidence is an occurrence fact, not the whole contract. It records
@@ -86,18 +86,33 @@ exact or value-graph path. A future external pack schema may expose library API
 contracts, but providers still emit facts and contracts rather than exact-clone
 verdicts.
 
-`CallTarget` evidence is the occurrence proof for user-defined calls. A raw
-callee spelling such as `f(...)` is only a selector that a producer may inspect;
-recursion normalization, the interpreter oracle, value-graph pure helper
-inlining, and strict exact direct-function callee gates consume only
-`CallTarget::DirectFunction` records anchored to the exact `Call` node and
-matching the target function span. The first-party producer currently emits this
-fact only for unique top-level in-file `Function` units when neither the current
-lexical scope nor any enclosing lexical scope has a parameter, assignment
-target, loop-pattern binding, or nested function definition that shadows the
-callee name. Duplicate function names, lexical shadowing, nested/non-top-level
-functions, methods without an explicit target proof, computed callees, and
-missing or conflicting evidence stay closed.
+`CallTarget` evidence is occurrence proof for call target identity. A raw callee
+spelling such as `f(...)`, `obj.f(...)`, or `ns.f(...)` is only a selector that a
+producer may inspect; consumers must require an asserted, dependency-closed,
+unambiguous `CallTarget` record anchored to the exact `Call` node. The current
+vocabulary separates concrete exact identity from broader dispatch facts:
+
+- `DirectFunction` names a unique in-file function target by function span and
+  selector hash. Recursion normalization, the interpreter oracle, value-graph
+  pure helper inlining, and strict exact direct-function gates consume this
+  variant only when the target function itself is exact-safe.
+- `DirectMethod` names a concrete in-file method/function target plus receiver
+  type and method selector hashes. Strict exact still separately requires the
+  receiver expression to have exact identity before treating the call as opaque
+  same-target identity.
+- `ImportedFunction` and `ImportedMember` name imported function/member
+  coordinates. They prove opaque call identity only; standard-library or
+  ecosystem semantics still require `LibraryApi` occurrence evidence.
+- `DynamicDispatch` names a protocol/dispatch family and method selector, but it
+  does not by itself prove one concrete implementation target.
+
+The first-party producer currently emits `DirectFunction` only for unique
+top-level in-file `Function` units when neither the current lexical scope nor
+any enclosing lexical scope has a parameter, assignment target, loop-pattern
+binding, or nested function definition that shadows the callee name. Duplicate
+function names, lexical shadowing, nested/non-top-level functions, methods
+without explicit target proof, computed callees, selector mismatches,
+dependency-broken records, and conflicting evidence stay closed.
 
 Current first-party `LibraryApi` callee coordinates are intentionally specific:
 

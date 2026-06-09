@@ -150,10 +150,12 @@ semantic meaning.
 
 - `crates/nose-detect/src/strict_exact.rs::strict_exact_callee_identity` keeps
   exact same-callee calls eligible when the callee itself is exact-safe or when a
-  `CallTarget::DirectFunction` fact proves a direct local function target. This
-  is deliberately not library/API semantics: the call only remains an opaque
-  same-call value, and cross-language or builtin convergence must still use
-  admitted semantic contracts.
+  concrete `CallTarget` fact proves a direct local, imported function, or
+  imported member target. This is deliberately not library/API semantics: the
+  call only remains an opaque same-call value, and cross-language or builtin
+  convergence must still use admitted semantic contracts. Direct method records
+  also require exact receiver identity; dynamic-dispatch records do not prove a
+  single concrete target by themselves.
 
 ## Remaining Backlog
 
@@ -163,7 +165,7 @@ These are not #150 fixes; they are the next independent work items.
 |---|---|---|---|
 | P0 | #151 | Pack extension API v0 | First-party producers still call compiled Rust helper functions directly. The external boundary needs stable fact, contract, dependency, and channel-eligibility schemas before those producers can be expressed as packs. |
 | P0 | #153 | Demand/effect substrate | Lazy, repeated, async, generator, channel, observable, and callback effect visibility cannot be represented by the current first-party demand profiles. Exact laws for those surfaces must remain closed. |
-| P0 | #155 | Call-target and dispatch evidence | Direct function call target proof is unique-top-level and in-file. Method dispatch, imported/local module targets, trait/interface dispatch, overload resolution, and dynamic dispatch need explicit evidence rather than same-name fallback. |
+| P0 | #155 | Call-target and dispatch evidence | The shared vocabulary and resolver now cover direct functions, direct methods, imported functions/members, and dynamic-dispatch facts. Remaining work is broader producer coverage for method/imported/module targets, trait/interface dispatch, and overload-specific target proof. |
 | P0 | #156 | Type/domain evidence expansion | Receiver/domain proof covers current parameter, binding, and selected API-result facts. Broader type aliases, constructor result domains, field/property domains, protocol receiver facts, and versioned library domains still need evidence vocabulary. |
 | P1 | #154 | Async and Promise receiver proof | `crates/nose-normalize/src/value_graph/rules/promise_then.rs` has a JS-like `.then` contract but returns fail-closed until Promise-like receiver proof exists. This should depend on #153 and #156. |
 | P1 | #152 | Pack loading, provenance, and opt-in trust | The internal provenance/trust model exists, but there is no loadable pack runtime, manifest validation, user opt-in path, or report-level pack provenance. |
