@@ -755,6 +755,27 @@ fn promise_then_chain_stays_opaque_without_receiver_proof() {
 }
 
 #[test]
+fn proven_promise_then_chains_converge_without_sync_erasure() {
+    let i = Interner::new();
+    let chained =
+        "function f() {\n  return Promise.resolve(1).then(x => x + 1).then(z => z * 2);\n}\n";
+    let single = "function f() {\n  return Promise.resolve(1).then(x => (x + 1) * 2);\n}\n";
+    assert_eq!(
+        value_fp(&i, chained, Lang::TypeScript),
+        value_fp(&i, single, Lang::TypeScript),
+        "supported Promise.resolve(...).then(...) chains should converge through proven Promise receiver evidence"
+    );
+
+    let promise_return = "function f() {\n  return Promise.resolve(1).then(x => x + 1);\n}\n";
+    let sync_return = "function f() {\n  return 1 + 1;\n}\n";
+    assert_ne!(
+        value_fp(&i, promise_return, Lang::TypeScript),
+        value_fp(&i, sync_return, Lang::TypeScript),
+        "Promise continuations keep a Promise boundary and must not converge with synchronous payloads"
+    );
+}
+
+#[test]
 fn go_slice_literal_converges_with_array_but_struct_stays_distinct() {
     // A Go slice literal `[]int{1,2,3}` is an ordered sequence — it converges with a Python
     // list / JS array. A Go STRUCT literal `Point{1,2,3}` is a record, NOT a collection, and

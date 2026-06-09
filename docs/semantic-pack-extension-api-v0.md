@@ -153,7 +153,7 @@ schema:
 | `Source` | construct syntax, macro invocation, regex literal, equality/operator family, ranges, patterns, async/generator/error and Go channel/concurrency protocol boundaries, Python comprehension surfaces |
 | `Symbol` | unshadowed language global, imported binding, imported namespace, qualified global path |
 | `Import` | binding import, namespace import, wildcard import, Ruby require, C quote include, imported literal snapshot |
-| `Domain` | array, collection, set, map, option, string, integer, number, byte array |
+| `Domain` | array, collection, set, map, option, promise-like, string, integer, number, byte array |
 | `Type` | currently C type-alias proofs for exact byte-pack surfaces |
 | `Guard` | JS/TS record-shape and own-property guard facts |
 | `Place` | fixed receiver/place facts such as self receiver and self field |
@@ -267,10 +267,11 @@ close exact admission.
 
 Domain/type contracts state what is proven about a value or receiver:
 
-- `Array`, `Collection`, `Set`, `Map`, `Option`, `String`, `Integer`, `Number`,
-  `ByteArray`, or future protocol-specific domains;
+- `Array`, `Collection`, `Set`, `Map`, `Option`, `PromiseLike`, `String`,
+  `Integer`, `Number`, `ByteArray`, or future protocol-specific domains;
 - binding-domain proof for immutable local/module values;
-- result-domain proof for admitted factories;
+- result-domain proof for admitted factories and protocol-producing APIs such as
+  Promise-like producers;
 - type-alias proof for current C byte-pack surfaces.
 
 Domain evidence can satisfy receiver-domain preconditions. It is not a proof
@@ -292,8 +293,9 @@ must name:
 
 Examples of valid coordinates include `Python math.prod`, Rust
 `std::collections::HashMap::from`, Java `java.util.Map.of`, JS-like
-`Array.isArray`, JS regex-literal `.test`, or a language-scoped receiver method
-whose receiver domain is proven. `method named map` is not a valid coordinate.
+`Array.isArray`, JS regex-literal `.test`, JS-like `Promise.resolve`, or a
+language-scoped receiver method whose receiver domain is proven. `method named
+map` or `method named then` is not a valid coordinate.
 
 ### Demand, Effect, And Place Contracts
 

@@ -50,6 +50,8 @@ pub(super) fn library_api_contract_result_domain_for_arity(
         ),
         LibraryApiContractId::RustOptionSomeConstructor => Some(DomainEvidence::Option),
         LibraryApiContractId::ScalarIntegerMethod(_) => Some(DomainEvidence::Integer),
+        LibraryApiContractId::PromiseFactory(_) => Some(DomainEvidence::PromiseLike),
+        LibraryApiContractId::PromiseThen => Some(DomainEvidence::PromiseLike),
         LibraryApiContractId::MethodCall(MethodSemanticContract::HoF(_)) => {
             Some(DomainEvidence::Collection)
         }
@@ -98,6 +100,7 @@ fn library_api_contract_ids() -> Vec<LibraryApiContractId> {
         LibraryApiContractId::RegexTest,
         LibraryApiContractId::JsLikeStaticIndexMembership(StaticIndexMembershipKind::IndexOf),
         LibraryApiContractId::JsLikeStaticIndexMembership(StaticIndexMembershipKind::FindIndex),
+        LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve),
         LibraryApiContractId::PromiseThen,
         LibraryApiContractId::IteratorIdentityAdapter,
         LibraryApiContractId::StaticCollectionAdapter,
@@ -369,6 +372,11 @@ fn library_api_callee_contracts_for_id(
             .filter(|contract| contract.result.kind == kind)
             .map(|contract| contract.callee)
             .collect(),
+        LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve) => {
+            library_promise_resolve_contract(lang, "Promise", "resolve", 1)
+                .map(|contract| vec![contract.callee])
+                .unwrap_or_default()
+        }
         LibraryApiContractId::PromiseThen => library_promise_then_contract(lang, "then", 1)
             .map(|contract| vec![contract.callee])
             .unwrap_or_default(),

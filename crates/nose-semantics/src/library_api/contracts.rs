@@ -9,10 +9,10 @@ use crate::{
     IteratorIdentityAdapterContract, JavaCollectionConstructorKind, JavaCollectionFactoryKind,
     JavaMapFactoryKind, MapGetContract, MapKeyViewContract, MapKeyViewKind,
     MapKeyViewWrapperContract, MethodCallContract, MethodReceiverContract, MethodSemanticContract,
-    PromiseThenContract, RegexTestContract, ScalarIntegerMethod, ScalarIntegerMethodContract,
-    StaticCollectionAdapterContract, StaticGlobalFunctionContract, StaticGlobalMethodContract,
-    StaticIndexMembershipContract, StaticIndexMembershipKind,
-    StaticIndexMembershipReceiverContract,
+    PromiseFactoryContract, PromiseFactoryKind, PromiseThenContract, RegexTestContract,
+    ScalarIntegerMethod, ScalarIntegerMethodContract, StaticCollectionAdapterContract,
+    StaticGlobalFunctionContract, StaticGlobalMethodContract, StaticIndexMembershipContract,
+    StaticIndexMembershipKind, StaticIndexMembershipReceiverContract,
 };
 use nose_il::{stable_symbol_hash, Builtin, DomainEvidence, Lang, SourceFactKind, Span};
 
@@ -45,6 +45,7 @@ pub enum LibraryApiContractId {
     RegexTest,
     JsLikeStaticIndexMembership(StaticIndexMembershipKind),
     ImportedNamespaceFunction(ImportedNamespaceFunctionSemantic),
+    PromiseFactory(PromiseFactoryKind),
     PromiseThen,
     IteratorIdentityAdapter,
     StaticCollectionAdapter,
@@ -121,6 +122,9 @@ fn library_api_contract_id_key(id: LibraryApiContractId) -> String {
                 imported_namespace_function_semantic_key(semantic)
             )
         }
+        LibraryApiContractId::PromiseFactory(kind) => {
+            format!("js_like.promise.factory.{}", promise_factory_kind_key(kind))
+        }
         LibraryApiContractId::PromiseThen => "js_like.promise.then".into(),
         LibraryApiContractId::IteratorIdentityAdapter => "iterator.identity_adapter".into(),
         LibraryApiContractId::StaticCollectionAdapter => "static.collection_adapter".into(),
@@ -179,6 +183,12 @@ fn imported_namespace_function_semantic_key(semantic: ImportedNamespaceFunctionS
         ImportedNamespaceFunctionSemantic::ProductReduction { op, identity } => {
             format!("product_reduction.{}.{}", op as u32, identity)
         }
+    }
+}
+
+fn promise_factory_kind_key(kind: PromiseFactoryKind) -> &'static str {
+    match kind {
+        PromiseFactoryKind::Resolve => "resolve",
     }
 }
 
@@ -550,6 +560,13 @@ pub struct LibraryImportedNamespaceFunctionContract {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct LibraryPromiseFactoryContract {
+    pub id: LibraryApiContractId,
+    pub callee: LibraryApiCalleeContract,
+    pub result: PromiseFactoryContract,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryPromiseThenContract {
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
@@ -629,6 +646,7 @@ pub struct LibraryReceiverMethodApiContract {
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub rule: &'static str,
+    pub result_domain: Option<DomainEvidence>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

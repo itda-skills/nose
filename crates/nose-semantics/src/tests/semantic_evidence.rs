@@ -33,6 +33,7 @@ fn domain_evidence_preserves_param_semantic_boundaries() {
     assert!(DomainEvidence::Set.is_collection_or_set());
     assert!(DomainEvidence::Map.is_map());
     assert!(DomainEvidence::Option.is_option());
+    assert!(DomainEvidence::PromiseLike.is_promise_like());
     assert!(DomainEvidence::String.is_string());
     assert!(DomainEvidence::ByteArray.is_byte_array());
     assert!(DomainEvidence::Integer.is_integer());
@@ -46,6 +47,12 @@ fn domain_evidence_preserves_param_semantic_boundaries() {
     assert!(DomainRequirement::SetOrMap.accepts(DomainEvidence::Set));
     assert!(DomainRequirement::SetOrMap.accepts(DomainEvidence::Map));
     assert!(!DomainRequirement::SetOrMap.accepts(DomainEvidence::Collection));
+    assert!(DomainRequirement::PromiseLike.accepts(DomainEvidence::PromiseLike));
+    assert!(!DomainRequirement::PromiseLike.accepts(DomainEvidence::String));
+    assert_eq!(
+        ValueDomain::from_domain_evidence(DomainEvidence::PromiseLike),
+        None
+    );
 }
 
 #[test]

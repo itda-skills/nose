@@ -2,12 +2,13 @@
 
 use crate::evidence::{unique_asserted_evidence_at, EvidenceResolution};
 use crate::{
-    admitted_library_method_call_at_call, js_like_lang, ChannelEligibility,
-    LibraryApiCalleeContract, MethodBuiltinArgs, MethodSemanticContract, FIRST_PARTY_PACK_ID,
+    admitted_library_method_call_at_call, js_like_lang, library_api_contract_id_hash,
+    ChannelEligibility, LibraryApiCalleeContract, LibraryApiContractId, MethodBuiltinArgs,
+    MethodSemanticContract, PromiseFactoryKind, FIRST_PARTY_PACK_ID,
 };
 use nose_il::{
     stable_symbol_hash, Builtin, EffectEvidenceKind, EvidenceAnchor, EvidenceKind, EvidenceStatus,
-    Il, Interner, Lang, NodeId, NodeKind, Payload, PlaceEvidenceKind,
+    Il, Interner, Lang, LibraryApiEvidenceKind, NodeId, NodeKind, Payload, PlaceEvidenceKind,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -389,13 +390,16 @@ pub(crate) fn asserted_effect_at_node(il: &Il, node: NodeId, wanted: EffectEvide
     })
 }
 
-fn asserted_library_api_at_node(il: &Il, node: NodeId) -> bool {
+fn asserted_library_api_suppresses_opaque_escape_at_node(il: &Il, node: NodeId) -> bool {
     let span = il.node(node).span;
     let kind = il.kind(node);
     il.evidence.iter().any(|record| {
+        let EvidenceKind::LibraryApi(api) = record.kind else {
+            return false;
+        };
         record.status == EvidenceStatus::Asserted
             && il.evidence_dependencies_asserted(record)
-            && matches!(record.kind, EvidenceKind::LibraryApi(_))
+            && library_api_suppresses_opaque_argument_escape(api)
             && matches!(
                 record.anchor,
                 EvidenceAnchor::Node {
@@ -404,6 +408,15 @@ fn asserted_library_api_at_node(il: &Il, node: NodeId) -> bool {
                 } if anchor_span == span && anchor_kind == kind
             )
     })
+}
+
+fn library_api_suppresses_opaque_argument_escape(api: LibraryApiEvidenceKind) -> bool {
+    let LibraryApiEvidenceKind::Contract { contract_hash, .. } = api;
+    contract_hash != library_api_contract_id_hash(LibraryApiContractId::PromiseThen)
+        && contract_hash
+            != library_api_contract_id_hash(LibraryApiContractId::PromiseFactory(
+                PromiseFactoryKind::Resolve,
+            ))
 }
 
 fn place_evidence_for_node(il: &Il, node: NodeId) -> EvidenceResolution<PlaceEvidenceKind> {
@@ -669,7 +682,7 @@ pub fn opaque_argument_escape_args(il: &Il, node: NodeId) -> Option<&[NodeId]> {
     if !asserted_effect_at_node(il, node, EffectEvidenceKind::OpaqueArgumentEscape) {
         return None;
     }
-    if asserted_library_api_at_node(il, node) {
+    if asserted_library_api_suppresses_opaque_escape_at_node(il, node) {
         return None;
     }
     if il.kind(node) != NodeKind::Call {

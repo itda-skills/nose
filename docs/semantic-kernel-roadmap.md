@@ -605,11 +605,20 @@ and pack ecosystem.
 - The node-level/API resolver cleanup moved property builtin field admission,
   Rust `Some` callee-node admission, HOF receiver proof in desugaring, and
   promise `.then` contract lookup behind shared admitted occurrence resolvers.
-  Promise continuation semantics still remain fail-closed until Promise-like
-  receiver proof exists. The same cleanup preserved the separate opaque callee
+  Promise continuation semantics remained fail-closed until Promise-like
+  receiver proof existed. The same cleanup preserved the separate opaque callee
   identity policy: parameter callees and proof-backed immutable/imported callees
   may be exact as opaque value calls, but they do not gain library/API semantics
   without admitted occurrence evidence.
+- The Promise receiver-proof slice added `Domain(PromiseLike)` and JS-like
+  `Promise.resolve` as first-party contract evidence. Admitted `.then(lambda)`
+  calls can now reduce only when receiver proof is present and the settled value
+  is recoverable from `Promise.resolve(non-thenable-safe value)` or a supported
+  admitted `.then` chain. The value graph keeps the result behind a Promise
+  boundary, so Promise-returning code does not merge with synchronous payloads.
+  Arbitrary `.then` methods, custom thenables, shadowed `Promise`, unsafe
+  `Promise.resolve(obj)` assimilation, and missing or ambiguous proof remain
+  exact-closed.
 - The detect strict exact safety gate was split from unit extraction into
   `crates/nose-detect/src/strict_exact.rs`, reducing `units.rs` to extraction,
   fragment classification, and feature orchestration while keeping proof-policy
@@ -755,12 +764,12 @@ Remaining in this phase:
   free-name/imported collection factories, Java/Ruby/Rust collection factories,
   free-name/Java map factories, Java map entries, map-get, and map-key
   view/wrapper calls. Node-level property builtins, Rust `Some` callee checks,
-  HOF receiver proof, and Promise `.then` contract lookup also go through shared
-  resolvers, with Promise continuation reduction still closed until receiver
-  proof exists. Lowered sequence-surface consumers are now evidence-only where
-  covered. Remaining API work is promise receiver proof, explicit async/sync
-  protocol convergence contracts, and ecosystem APIs only after demand,
-  receiver, and effect obligations are expressible.
+  HOF receiver proof, Promise `resolve`, and Promise `.then` contract lookup
+  also go through shared resolvers. Lowered sequence-surface consumers are now
+  evidence-only where covered. Remaining API work is broader thenable
+  assimilation, explicit async/sync protocol convergence contracts, and
+  ecosystem APIs only after demand, receiver, and effect obligations are
+  expressible.
 - Continue import/module proof migration beyond the removed raw import payloads
   and evidence-only import identity path. Value-graph import identity and
   imported-symbol exact proof are now evidence-only, imported literal replacement
@@ -837,8 +846,8 @@ different APIs.
 - Refactor oracle and value graph to consume demand rules instead of local
   hard-coded evaluation behavior. The oracle consumes internal builtin
   demand/effect profiles; value-graph Python generator exception timing consumes
-  source-backed HOF demand/effect profiles; and Promise `.then` has an
-  async-continuation profile while remaining closed on missing receiver proof.
+  source-backed HOF demand/effect profiles; and supported Promise `.then` chains
+  consume the async-continuation profile while preserving a Promise boundary.
   The pack-facing schema and most protocol-specific consumers remain open.
 - Keep expanding lazy iterator/generator/channel hard negatives before enabling
   new exact laws. The first Python generator/list/set and Go channel/goroutine

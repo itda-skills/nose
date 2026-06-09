@@ -37,8 +37,13 @@ describe how an already-admitted operation is consumed, not which source API is
 admitted. HOF callback timing comes from an explicit source or API demand source,
 not from the raw HOF kind alone.
 Promise `.then` carries an async-continuation demand/effect profile in its
-contract row, but the value-graph rule remains closed until Promise-like
-receiver proof exists.
+contract row. Exact value-graph reduction is open only for admitted
+Promise-like receivers whose settled value can be recovered from supported
+first-party producers: currently JS-like `Promise.resolve(value)` with an
+unshadowed `Promise.resolve` proof and a non-thenable-safe value, plus admitted
+`.then(lambda)` chains over that boundary. Selector-only `.then(...)`, custom
+thenables, shadowed `Promise`, unsafe `Promise.resolve(obj)` arguments, and
+missing or ambiguous receiver proof stay closed.
 Library/API identity is consolidated through internal `LibraryApiContract` rows
 for factory, constructor, selected property/non-factory method/view surfaces,
 and selected non-call sentinels, with occurrence evidence covering selected
@@ -246,8 +251,9 @@ migrated.
   a proven collection/HOF value and raw HOF calls carry admitted `LibraryApi`
   occurrence evidence. JS object `.length` remains a property read, not
   collection cardinality.
-- Promise `.then` has a JS-like library API contract, but exact beta-reduction
-  is closed until a pack/frontend can prove a Promise-like receiver.
+- Promise `.then` has a JS-like library API contract. Exact beta-reduction also
+  requires Promise-like receiver proof and a supported settled-value producer;
+  arbitrary `.then` methods and unsupported thenables remain opaque.
 - Rust iterator identity adapters (`iter`, `into_iter`, `collect`, `to_vec`,
   `copied`, `cloned`) are language-, arity-, and receiver-proof constrained
   through `LibraryApiContract` and admitted `LibraryApi` occurrence evidence.
@@ -286,13 +292,14 @@ migrated.
   construct-syntax, or regex-literal proof. Selected producer-covered result
   calls emit dependent `Domain` evidence for the result receiver:
   collection-like factories as `Collection`, set factories/constructors as
-  `Set`, map factories as `Map`, and JS-like one-argument `Array.from` as
-  `Array`. Java `Arrays.asList(x)` with exactly one argument is excluded because
+  `Set`, map factories as `Map`, JS-like one-argument `Array.from` as
+  `Array`, and JS-like `Promise.resolve` plus admitted Promise `.then` as
+  `PromiseLike`. Java `Arrays.asList(x)` with exactly one argument is excluded because
   array-spread versus single-element provenance is ambiguous without additional
   proof. `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`, `math.prod`,
-  `Arrays.stream`, map `get`, iterator adapters, promise `.then`, and generic
-  method contracts do not emit result-domain evidence under the current
-  vocabulary. Entry-shape, mutation, demand, and exact-safety obligations remain
+  `Arrays.stream`, map `get`, iterator adapters, and generic method contracts do
+  not emit result-domain evidence under the current vocabulary. Entry-shape,
+  mutation, demand, and exact-safety obligations remain
   separate contract checks at the consumer.
 - Selected non-factory library/API surfaces also consume `LibraryApiContract`
   rows before normalize, value-graph, or strict exact paths assign semantics.
@@ -441,9 +448,10 @@ migrated.
   locally. Normalize idiom canonicalization uses the same resolver layer for
   supported free-function builtins, generic method contracts, HOF receiver
   proof, map `get`, map-key views, iterator/static collection adapters, Rust
-  `Some(...)`, and Rust map factory receiver proof. Promise `.then` contract
-  lookup is resolver-owned, but continuation reduction remains fail-closed until
-  explicit Promise-like receiver proof exists. Value-level CSE paths that query
+  `Some(...)`, Rust map factory receiver proof, Promise `resolve`, and Promise
+  `.then` contract lookup. Promise continuation reduction remains fail-closed
+  unless a supported settled value can be recovered and the final value remains
+  behind a Promise boundary. Value-level CSE paths that query
   by call span now use span-query resolvers for free-name/imported collection
   factories, Java/Ruby/Rust collection factories, free-name/Java map factories,
   Java map entries, map `get`, and map-key view/wrapper calls.
@@ -670,9 +678,9 @@ Semantic knowledge still appears in several forms outside the facade:
   Rust Option/scalar APIs, Ruby `require "set"; Set.new(...)`, Java `java.util`
   static factories/adapters and selected empty constructors, JS regex literals,
   generic Python/Go free-function builtins, and selected receiver-method
-  families. Promise receiver proof, async/sync protocol convergence, ecosystem
-  APIs, and broader protocol/API evidence paths still rely on contract rows plus
-  local proof or remain exact-closed. Raw Python async-looking field names such
+  families. Broader thenable assimilation, async/sync protocol convergence,
+  ecosystem APIs, and broader protocol/API evidence paths still rely on contract
+  rows plus local proof or remain exact-closed. Raw Python async-looking field names such
   as `aread` no longer rewrite to sync names without an explicit protocol/API
   evidence path, JS/TS/Python/Rust `await` expressions no longer erase to their
   operand without async protocol proof, JS/TS/Python `yield` no longer erases to
@@ -728,8 +736,10 @@ language.
 Several older convergence expectations are intentionally disabled or narrowed in
 this worktree because the required evidence is not yet modeled:
 
-- JS-like `.then(lambda)` does not converge with `await` code until Promise-like
-  receiver proof exists.
+- JS-like `.then(lambda)` does not converge with `await` code yet. Supported
+  `Promise.resolve(...).then(...)` chains can reduce behind a Promise boundary,
+  but await scheduling, exception, and effect equivalence are not modeled as the
+  same async protocol.
 - JS/TS, Python, and Rust `await value` does not converge with plain `value`
   until language/runtime-specific async protocol, demand, scheduling, exception,
   and effect obligations are modeled. Rust `async {}` and `?` are similarly

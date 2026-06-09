@@ -232,7 +232,10 @@ pub fn library_api_receiver_dependencies_for_call_with_cache(
             let receiver_node = method_callee_receiver(il, interner, callee_node, method)?;
             iterator_adapter_receiver_dependency_ids(il, interner, receiver_node, receiver, cache)
         }
-        LibraryApiCalleeContract::AsyncMethod { .. } => None,
+        LibraryApiCalleeContract::AsyncMethod { method, receiver } => {
+            let receiver_node = method_callee_receiver(il, interner, callee_node, method)?;
+            async_receiver_dependency_ids(il, interner, receiver_node, receiver, cache)
+        }
         LibraryApiCalleeContract::StaticIndexMembershipMethod { method, receiver } => {
             let receiver_node = method_callee_receiver(il, interner, callee_node, method)?;
             static_index_membership_receiver_dependency_id(il, interner, receiver_node, receiver)
@@ -486,7 +489,10 @@ fn library_api_dependencies_match_callee(
             library_api_receiver_dependencies_for_call(il, interner, node, callee)
                 .is_some_and(|dependencies| dependency_ids_are_present(record, &dependencies))
         }
-        LibraryApiCalleeContract::AsyncMethod { .. } => false,
+        LibraryApiCalleeContract::AsyncMethod { .. } => {
+            library_api_receiver_dependencies_for_call(il, interner, node, callee)
+                .is_some_and(|dependencies| dependency_ids_are_present(record, &dependencies))
+        }
     }
 }
 
@@ -910,7 +916,14 @@ fn library_api_dependencies_match_callee_at_span(
                         })
                 })
         }
-        LibraryApiCalleeContract::AsyncMethod { .. } => false,
+        LibraryApiCalleeContract::AsyncMethod { method, receiver } => {
+            callee_span.is_some_and(|span| field_method_at_span(il, interner, span, method))
+                && receiver_span.is_some_and(|span| {
+                    async_receiver_dependencies_at_span(il, interner, span, receiver).is_some_and(
+                        |dependencies| dependency_ids_are_present(record, &dependencies),
+                    )
+                })
+        }
     }
 }
 
@@ -974,6 +987,33 @@ fn iterator_adapter_receiver_dependency_ids(
     }
 }
 
+fn async_receiver_dependency_ids(
+    il: &Il,
+    interner: &Interner,
+    receiver: NodeId,
+    contract: AsyncReceiverContract,
+    cache: &mut LibraryApiDependencyCache,
+) -> Option<Vec<EvidenceId>> {
+    match contract {
+        AsyncReceiverContract::ExactPromiseLike => domain_dependency_id_for_receiver_requirement(
+            il,
+            interner,
+            receiver,
+            DomainRequirement::PromiseLike,
+            cache,
+        )
+        .or_else(|| {
+            library_api_dependency_id_for_receiver_domain_requirement(
+                il,
+                interner,
+                receiver,
+                DomainRequirement::PromiseLike,
+            )
+        })
+        .map(|id| vec![id]),
+    }
+}
+
 fn method_receiver_dependencies_at_span(
     il: &Il,
     interner: &Interner,
@@ -994,6 +1034,17 @@ fn iterator_adapter_receiver_dependencies_at_span(
     let receiver = node_at_span(il, receiver_span)?;
     let mut cache = LibraryApiDependencyCache::default();
     iterator_adapter_receiver_dependency_ids(il, interner, receiver, contract, &mut cache)
+}
+
+fn async_receiver_dependencies_at_span(
+    il: &Il,
+    interner: &Interner,
+    receiver_span: Span,
+    contract: AsyncReceiverContract,
+) -> Option<Vec<EvidenceId>> {
+    let receiver = node_at_span(il, receiver_span)?;
+    let mut cache = LibraryApiDependencyCache::default();
+    async_receiver_dependency_ids(il, interner, receiver, contract, &mut cache)
 }
 
 fn node_at_span(il: &Il, span: Span) -> Option<NodeId> {
@@ -1195,6 +1246,16 @@ fn domain_dependency_id_for_receiver(
     cache: &mut LibraryApiDependencyCache,
 ) -> Option<EvidenceId> {
     let requirement = method_receiver_domain_requirement(contract)?;
+    domain_dependency_id_for_receiver_requirement(il, interner, receiver, requirement, cache)
+}
+
+fn domain_dependency_id_for_receiver_requirement(
+    il: &Il,
+    interner: &Interner,
+    receiver: NodeId,
+    requirement: DomainRequirement,
+    cache: &mut LibraryApiDependencyCache,
+) -> Option<EvidenceId> {
     let mut found = None;
     for record in &il.evidence {
         let EvidenceKind::Domain(domain) = record.kind else {
@@ -1643,6 +1704,15 @@ fn library_api_dependency_id_for_receiver_domain_call(
     contract: MethodReceiverContract,
 ) -> Option<EvidenceId> {
     let requirement = method_receiver_domain_requirement(contract)?;
+    library_api_dependency_id_for_receiver_domain_requirement(il, interner, call, requirement)
+}
+
+fn library_api_dependency_id_for_receiver_domain_requirement(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+    requirement: DomainRequirement,
+) -> Option<EvidenceId> {
     library_api_dependency_id_for_call_contract(il, interner, call, |id, callee, arity| {
         library_api_contract_result_domain_for_arity(id, callee, arity)
             .is_some_and(|domain| requirement.accepts(domain))

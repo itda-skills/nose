@@ -22,14 +22,15 @@ use nose_semantics::{
     library_js_array_is_array_contract, library_js_boolean_coercion_contract,
     library_js_like_map_constructor_contract, library_js_like_set_constructor_contract,
     library_map_factory_result_domain, library_map_key_view_wrapper_contract,
-    library_map_key_view_wrapper_result_domain, library_property_builtin_contract,
-    library_receiver_method_api_contract, library_regex_test_contract,
-    library_ruby_set_factory_contract, library_rust_option_none_sentinel_contract,
-    library_rust_option_some_constructor_contract, library_rust_vec_macro_factory_contract,
-    library_rust_vec_new_factory_contract, library_static_collection_adapter_contract,
-    library_static_index_membership_contract, module_binding_mutating_method_contract,
-    qualified_global_symbol_contract, sequence_surface_kind_for_tag, type_domain_from_source_text,
-    ImportFactKind, LibraryApiCalleeContract, LibraryApiContractId, LibraryApiDependencyCache,
+    library_map_key_view_wrapper_result_domain, library_promise_resolve_contract,
+    library_property_builtin_contract, library_receiver_method_api_contract,
+    library_regex_test_contract, library_ruby_set_factory_contract,
+    library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
+    library_rust_vec_macro_factory_contract, library_rust_vec_new_factory_contract,
+    library_static_collection_adapter_contract, library_static_index_membership_contract,
+    module_binding_mutating_method_contract, qualified_global_symbol_contract,
+    sequence_surface_kind_for_tag, type_domain_from_source_text, ImportFactKind,
+    LibraryApiCalleeContract, LibraryApiContractId, LibraryApiDependencyCache,
     MethodReceiverContract, StaticIndexMembershipReceiverContract,
 };
 use tree_sitter::Node as TsNode;
@@ -313,6 +314,21 @@ impl<'a> Lowering<'a> {
                             contract.result.receiver,
                             "library_api_map_key_view_wrapper",
                             Some(library_map_key_view_wrapper_result_domain(contract)),
+                        )
+                    },
+                )
+            })
+            .or_else(|| {
+                library_promise_resolve_contract(self.lang, receiver, method, arg_count).map(
+                    |contract| {
+                        (
+                            contract.id,
+                            contract.callee,
+                            contract.result.qualified_path,
+                            true,
+                            contract.result.receiver,
+                            "library_api_promise_resolve",
+                            Some(contract.result.result_domain),
                         )
                     },
                 )
@@ -1877,7 +1893,7 @@ fn record_post_lower_receiver_method_library_api(
     ) else {
         return false;
     };
-    post_lower_library_api_evidence_id(
+    let api = post_lower_library_api_evidence_id(
         il,
         call,
         contract.id,
@@ -1886,6 +1902,7 @@ fn record_post_lower_receiver_method_library_api(
         contract.rule,
         dependencies,
     );
+    post_lower_record_library_api_result_domain(il, call, contract.result_domain, api);
     true
 }
 
@@ -3314,6 +3331,35 @@ mod tests {
             sp_at(93),
             DomainEvidence::Array,
             &from_api,
+        ));
+
+        let promise = lo.unshadowed_global_var("Promise", sp_at(95));
+        let resolve_callee = lo.add(
+            NodeKind::Field,
+            Payload::Name(interner.intern("resolve")),
+            sp_at(96),
+            &[promise],
+        );
+        lo.record_qualified_global_symbol(sp_at(96), NodeKind::Field, "Promise.resolve");
+        let value = lo.int_lit("1", sp_at(97));
+        lo.add(
+            NodeKind::Call,
+            Payload::None,
+            sp_at(98),
+            &[resolve_callee, value],
+        );
+        let resolve_contract =
+            library_promise_resolve_contract(Lang::JavaScript, "Promise", "resolve", 1).unwrap();
+        let resolve_api = library_api_evidence_ids_in_records(
+            &lo.evidence,
+            library_api_contract_id_hash(resolve_contract.id),
+            library_api_callee_contract_hash(resolve_contract.callee),
+        );
+        assert!(result_domain_depends_on_api(
+            &lo.evidence,
+            sp_at(98),
+            DomainEvidence::PromiseLike,
+            &resolve_api,
         ));
 
         let boolean = lo.unshadowed_global_var("Boolean", sp_at(100));
