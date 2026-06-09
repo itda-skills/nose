@@ -284,8 +284,10 @@ converge with hand-written iteration.
 
 Both schemes require exactly one self-call, and self-call identity is evidence-backed:
 the call occurrence must carry `CallTarget::DirectFunction` evidence that points at the
-enclosing function or method unit. A raw callee spelling is not enough. Anything else is
-left untouched.
+enclosing function unit. A raw callee spelling is not enough. Anything else is
+left untouched. Broader call-target records such as `DirectMethod`,
+`ImportedFunction`, `ImportedMember`, and `DynamicDispatch` are available to exact
+callee-identity consumers, but they do not currently authorize recursion rewrites.
 The proof obligations
 [normalize.recursion.tail](../formal/obligations/normalize/recursion/tail/Proof.lean)
 and
@@ -294,7 +296,7 @@ record the tail-loop equivalence, the numeric `+`/`*` fold laws, and boundary
 counterexamples for cyclic tail-call bindings, subtraction, and wrong identities.
 **Soundness** is checked, not assumed: the interpreter
 ([interp](../crates/nose-normalize/src/interp.rs)) executes user-defined calls only when
-`CallTarget` evidence resolves the exact occurrence to an in-file function or method root, so
+`CallTarget::DirectFunction` evidence resolves the exact occurrence to an in-file function root, so
 `nose verify` interprets proven original recursion *and* the rewritten loop and flags any
 behavioral difference (when the recursion terminates on the input battery — a guard like
 `n == 0` that loops forever on negatives is excluded on both sides, identically). On real

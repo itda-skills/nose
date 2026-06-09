@@ -205,7 +205,145 @@ pub fn direct_function_call_target_at_call(il: &Il, call: NodeId, target_root: N
             target_span: proven_span,
             ..
         }) => proven_span == target_span,
+        EvidenceResolution::Found(
+            CallTargetEvidenceKind::DirectMethod { .. }
+            | CallTargetEvidenceKind::ImportedFunction { .. }
+            | CallTargetEvidenceKind::ImportedMember { .. }
+            | CallTargetEvidenceKind::DynamicDispatch { .. },
+        ) => false,
         EvidenceResolution::Ambiguous | EvidenceResolution::Missing => false,
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CallTargetEvidenceStatus {
+    Missing,
+    Admitted(CallTargetEvidenceKind),
+    Rejected,
+}
+
+pub fn call_target_evidence_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> Option<CallTargetEvidenceKind> {
+    match call_target_evidence_status_at_call(il, interner, call) {
+        CallTargetEvidenceStatus::Admitted(target) => Some(target),
+        CallTargetEvidenceStatus::Missing | CallTargetEvidenceStatus::Rejected => None,
+    }
+}
+
+pub fn call_target_evidence_status_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> CallTargetEvidenceStatus {
+    if il.kind(call) != NodeKind::Call {
+        return CallTargetEvidenceStatus::Missing;
+    }
+    let call_span = il.node(call).span;
+    let target = match unique_asserted_evidence_at(
+        il,
+        |anchor| matches!(anchor, EvidenceAnchor::Node { span, kind } if span == call_span && kind == NodeKind::Call),
+        |evidence| match evidence {
+            EvidenceKind::CallTarget(target) => Some(target),
+            _ => None,
+        },
+    ) {
+        EvidenceResolution::Found(target) => target,
+        EvidenceResolution::Ambiguous => return CallTargetEvidenceStatus::Rejected,
+        EvidenceResolution::Missing => return CallTargetEvidenceStatus::Missing,
+    };
+    if call_target_matches_call_shape(il, interner, call, target) {
+        CallTargetEvidenceStatus::Admitted(target)
+    } else {
+        CallTargetEvidenceStatus::Rejected
+    }
+}
+
+pub fn imported_function_call_target_at_call(il: &Il, interner: &Interner, call: NodeId) -> bool {
+    matches!(
+        call_target_evidence_at_call(il, interner, call),
+        Some(CallTargetEvidenceKind::ImportedFunction { .. })
+    )
+}
+
+pub fn imported_member_call_target_at_call(il: &Il, interner: &Interner, call: NodeId) -> bool {
+    matches!(
+        call_target_evidence_at_call(il, interner, call),
+        Some(CallTargetEvidenceKind::ImportedMember { .. })
+    )
+}
+
+pub fn direct_method_call_target_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+    target_root: NodeId,
+) -> bool {
+    if il.kind(call) != NodeKind::Call || il.kind(target_root) != NodeKind::Func {
+        return false;
+    }
+    matches!(
+        call_target_evidence_at_call(il, interner, call),
+        Some(CallTargetEvidenceKind::DirectMethod { target_span, .. })
+            if target_span == il.node(target_root).span
+    )
+}
+
+fn call_target_matches_call_shape(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+    target: CallTargetEvidenceKind,
+) -> bool {
+    let Some(&callee) = il.children(call).first() else {
+        return false;
+    };
+    match target {
+        CallTargetEvidenceKind::DirectFunction { name_hash, .. }
+        | CallTargetEvidenceKind::ImportedFunction {
+            local_hash: name_hash,
+            ..
+        } => var_selector_matches_if_available(il, interner, callee, name_hash),
+        CallTargetEvidenceKind::DirectMethod { method_hash, .. }
+        | CallTargetEvidenceKind::DynamicDispatch { method_hash, .. } => {
+            field_selector_matches(il, interner, callee, method_hash)
+        }
+        CallTargetEvidenceKind::ImportedMember { member_hash, .. } => {
+            field_selector_matches(il, interner, callee, member_hash)
+        }
+    }
+}
+
+fn var_selector_matches_if_available(
+    il: &Il,
+    interner: &Interner,
+    callee: NodeId,
+    expected_hash: u64,
+) -> bool {
+    if il.kind(callee) != NodeKind::Var {
+        return false;
+    }
+    match il.node(callee).payload {
+        Payload::Name(name) => interner.symbol_hash(name) == expected_hash,
+        Payload::Cid(_) => true,
+        _ => false,
+    }
+}
+
+fn field_selector_matches(
+    il: &Il,
+    interner: &Interner,
+    callee: NodeId,
+    expected_hash: u64,
+) -> bool {
+    if il.kind(callee) != NodeKind::Field {
+        return false;
+    }
+    match il.node(callee).payload {
+        Payload::Name(name) => interner.symbol_hash(name) == expected_hash,
+        _ => false,
     }
 }
 

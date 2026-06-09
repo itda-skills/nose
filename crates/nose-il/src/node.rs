@@ -419,7 +419,40 @@ pub enum LibraryApiEvidenceKind {
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub enum CallTargetEvidenceKind {
+    /// A call to a file-local function unit proven by lexical binding/scope
+    /// evidence. This is opaque call identity, not a library semantic contract.
     DirectFunction { target_span: Span, name_hash: u64 },
+    /// A call to a file-local method/function body whose receiver dispatch has
+    /// been proven by a language producer. Exact consumers must still prove the
+    /// receiver expression is exact-safe before treating the call as opaque
+    /// same-target identity.
+    DirectMethod {
+        target_span: Span,
+        receiver_type_hash: u64,
+        method_hash: u64,
+    },
+    /// A call through a local binding proven to denote a specific imported
+    /// function coordinate. This records target identity only; library semantics
+    /// still require `LibraryApi` evidence.
+    ImportedFunction {
+        module_hash: u64,
+        exported_hash: u64,
+        local_hash: u64,
+    },
+    /// A static/member call where the receiver/member pair is proven to denote a
+    /// specific imported coordinate, such as an imported namespace member.
+    ImportedMember {
+        module_hash: u64,
+        exported_hash: u64,
+        member_hash: u64,
+    },
+    /// A method dispatch proof that names a protocol/dispatch family but does
+    /// not prove one concrete implementation target. By itself this is not exact
+    /// opaque call identity.
+    DynamicDispatch {
+        protocol_hash: u64,
+        method_hash: u64,
+    },
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]

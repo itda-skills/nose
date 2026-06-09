@@ -567,8 +567,12 @@ and pack ecosystem.
   function targets with no current or enclosing lexical shadowing, and
   recursion, interpreter, value-graph pure-inline, and strict exact
   direct-function callee consumers require that occurrence proof.
-  Method/dynamic-dispatch target proof remains a future pack/source extension
-  rather than a same-name fallback.
+  The follow-up call-target slice expanded the vocabulary to `DirectMethod`,
+  `ImportedFunction`, `ImportedMember`, and `DynamicDispatch`, added a shared
+  fail-closed resolver, and taught strict exact to admit imported function/member
+  opaque identity only through explicit evidence. Direct methods still require
+  exact receiver identity, and dynamic-dispatch records do not by themselves
+  prove one concrete target.
 - C byte-pack proof moved onto evidence-backed alias and cast records. Local
   typedefs and direct quote includes emit `Type(CTypeAlias)` evidence, included
   aliases depend on `Import(CQuoteInclude)`, alias-based `Domain(ByteArray)` and
@@ -778,9 +782,9 @@ Remaining in this phase:
   `nose-semantics` helper, and selected JS/TS `QualifiedGlobal` paths are covered
   with same-span root dependencies, but general qualified-member resolution,
   namespace export identity, provider/export dependency manifests, richer
-  scope/rebinding facts, opaque call receiver identity for module-defined locals
-  versus imported namespaces, and manifest-level cross-module dependency evidence
-  are not.
+  scope/rebinding facts, broader producer coverage for module-defined local
+  functions/methods and imported namespace members, and manifest-level
+  cross-module dependency evidence are not.
 - Generalize dedicated guard evidence beyond the first JS/TS record-shape and
   own-property contracts, including richer source-clause records, API dependency
   validation, subject/place identity, and truthiness/null semantics.

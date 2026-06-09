@@ -1,12 +1,14 @@
 use super::*;
 use nose_il::{
-    EvidenceAnchor, EvidenceEmitter, EvidenceId, EvidenceKind, EvidenceProvenance, EvidenceRecord,
-    EvidenceStatus, FileId, FileMeta, GuardEvidenceKind, IlBuilder, ImportEvidenceKind, Interner,
-    JsRecordGuardComparison, JsRecordGuardNullCheck, LibraryApiEvidenceKind, ParamSemantic,
-    PlaceEvidenceKind, SequenceSurfaceKind, SourceCastKind, SourceFactKind, SourcePatternKind,
-    SourceRangeKind, Span, Symbol, SymbolEvidenceKind, Unit, UnitKind,
+    CallTargetEvidenceKind, EvidenceAnchor, EvidenceEmitter, EvidenceId, EvidenceKind,
+    EvidenceProvenance, EvidenceRecord, EvidenceStatus, FileId, FileMeta, GuardEvidenceKind,
+    IlBuilder, ImportEvidenceKind, Interner, JsRecordGuardComparison, JsRecordGuardNullCheck,
+    LibraryApiEvidenceKind, ParamSemantic, PlaceEvidenceKind, SequenceSurfaceKind, SourceCastKind,
+    SourceFactKind, SourcePatternKind, SourceRangeKind, Span, Symbol, SymbolEvidenceKind, Unit,
+    UnitKind,
 };
 
+mod call_targets;
 mod effects_and_places;
 mod js_symbol_guards;
 mod library_api_contracts;
