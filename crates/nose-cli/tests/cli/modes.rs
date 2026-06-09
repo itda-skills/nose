@@ -160,6 +160,55 @@ fn combined_fuzzy_modes_reject_conflicting_thresholds() {
 }
 
 #[test]
+fn detect_threshold_rejects_nan() {
+    let dir = make_mode_project("detect_nan_threshold");
+    let out = Command::new(bin())
+        .args([
+            "detect",
+            dir.to_str().unwrap(),
+            "--threshold",
+            "NaN",
+            "--candidates",
+        ])
+        .output()
+        .expect("run nose");
+    assert!(
+        !out.status.success(),
+        "detect --threshold NaN must be rejected instead of disabling every comparison"
+    );
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(
+        stderr.contains("threshold must be a finite number in [0,1]"),
+        "stderr should explain the invalid threshold: {stderr}"
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn detect_rejects_zero_lsh_parameters() {
+    let dir = make_mode_project("detect_zero_lsh");
+    for (flag, message) in [
+        ("--minhash-k", "minhash-k must be positive"),
+        ("--bands", "bands must be positive"),
+    ] {
+        let out = Command::new(bin())
+            .args(["detect", dir.to_str().unwrap(), "--candidates", flag, "0"])
+            .output()
+            .expect("run nose");
+        assert!(
+            !out.status.success(),
+            "{flag} 0 must be rejected instead of disabling LSH candidates"
+        );
+        let stderr = String::from_utf8(out.stderr).unwrap();
+        assert!(
+            stderr.contains(message),
+            "stderr should explain the invalid {flag}: {stderr}"
+        );
+    }
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn abstraction_mode_reports_numeric_literal_witness() {
     let dir = std::env::temp_dir().join(format!("nose_abstraction_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);

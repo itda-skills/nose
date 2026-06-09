@@ -66,7 +66,7 @@ Grouped by what they do. Config-backed scan defaults are listed in
 | `--sort KEY` | ranking: `extractability` (default), `value`, `sites`, or `hazard` (experimental; see [Ranking](#ranking)) |
 | `--top N` | show only the top N families (default 30; `--top 0` = all) |
 | `--min-members N` | only families with at least N duplicated sites (default 2) |
-| `--min-value V` | hide families below this refactoring value (noise floor on large repos) |
+| `--min-value V` | hide families below this finite non-negative refactoring value (noise floor on large repos) |
 | `--min-size N` | ignore units or syntax copy-paste runs smaller than this size, in IL tokens (default 24) |
 | `--mode MODE` | one or more of `syntax`, `semantic`, `near[:T]`; comma-list or repeatable; when present, replaces the default. Experimental `abstraction[:T]` is accepted but not a stable capabilities mode. |
 | `--exclude <glob>` | skip paths matching a gitignore-syntax glob (repeatable) |

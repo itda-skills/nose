@@ -123,6 +123,35 @@ fn min_value_filters_low_value_families() {
 }
 
 #[test]
+fn min_value_rejects_nan() {
+    let dir = make_project("minval_nan");
+    let out = Command::new(bin())
+        .args([
+            "scan",
+            dir.to_str().unwrap(),
+            "--min-size",
+            "12",
+            "--min-value",
+            "NaN",
+            "--fail-on",
+            "any",
+        ])
+        .output()
+        .expect("run scan");
+
+    assert!(
+        !out.status.success(),
+        "--min-value NaN must be rejected instead of filtering every family out"
+    );
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(
+        stderr.contains("min-value must be a finite non-negative number"),
+        "stderr should explain the invalid value: {stderr}"
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn hotspots_lists_modules() {
     let dir = make_project("hot");
     let out = run(&[
@@ -335,6 +364,73 @@ fn baseline_hides_accepted_families() {
     assert!(
         !after.contains("sites"),
         "baselined families must be hidden, got: {after}"
+    );
+    let _ = fs::remove_file(&bl);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn missing_baseline_file_fails_clearly() {
+    let dir = make_project("baseline_missing");
+    let p = dir.to_str().unwrap();
+    let bl =
+        std::env::temp_dir().join(format!("nose_missing_baseline_{}.json", std::process::id()));
+    let _ = fs::remove_file(&bl);
+
+    let out = Command::new(bin())
+        .args([
+            "scan",
+            p,
+            "--min-size",
+            "12",
+            "--baseline",
+            bl.to_str().unwrap(),
+        ])
+        .output()
+        .expect("run scan");
+
+    assert!(
+        !out.status.success(),
+        "an explicitly requested missing baseline must fail, not behave like an empty baseline"
+    );
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(
+        stderr.contains("reading baseline"),
+        "stderr should identify the missing baseline: {stderr}"
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn malformed_baseline_file_fails_clearly() {
+    let dir = make_project("baseline_malformed");
+    let p = dir.to_str().unwrap();
+    let bl = std::env::temp_dir().join(format!(
+        "nose_malformed_baseline_{}.json",
+        std::process::id()
+    ));
+    fs::write(&bl, "{ not json\n").unwrap();
+
+    let out = Command::new(bin())
+        .args([
+            "scan",
+            p,
+            "--min-size",
+            "12",
+            "--baseline",
+            bl.to_str().unwrap(),
+        ])
+        .output()
+        .expect("run scan");
+
+    assert!(
+        !out.status.success(),
+        "a malformed baseline must fail, not behave like an empty baseline"
+    );
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(
+        stderr.contains("parsing baseline"),
+        "stderr should identify the malformed baseline: {stderr}"
     );
     let _ = fs::remove_file(&bl);
     let _ = fs::remove_dir_all(&dir);

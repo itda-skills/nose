@@ -39,7 +39,7 @@ the built-in default". Keys are kebab-case and live under the `[scan]` table.
 | `exclude` | list of globs | `[]` | `--exclude` |
 | `mode` | list of `syntax`\|`semantic`\|`near[:T]` | `["syntax", "semantic"]` | `--mode` |
 | `sort` | `extractability`\|`value`\|`sites`\|`hazard` | `extractability` | `--sort` |
-| `min-value` | float | `0.0` | `--min-value` |
+| `min-value` | finite non-negative float | `0.0` | `--min-value` |
 | `min-members` | int | `2` | `--min-members` |
 | `min-size` | int (IL tokens) | `24` | `--min-size` |
 | `min-lines` | int (advanced) | `5` | `--min-lines` |

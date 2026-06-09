@@ -6,6 +6,7 @@
 //! sorted — invariant to line moves and member order, but sensitive to *which*
 //! sites form the family (adding/removing a copy is legitimately a new family).
 
+use anyhow::{Context, Result};
 use nose_detect::RefactorFamily;
 use std::collections::HashSet;
 use std::path::Path;
@@ -37,8 +38,14 @@ pub(crate) fn format_key(key: u64) -> String {
 }
 
 pub(crate) fn parse_key(s: &str) -> Option<u64> {
-    let s = s.strip_prefix("0x").unwrap_or(s);
-    u64::from_str_radix(s, 16).ok()
+    let hex = s
+        .strip_prefix("0x")
+        .or_else(|| s.strip_prefix("0X"))
+        .unwrap_or(s);
+    if hex.len() != 16 || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+    u64::from_str_radix(hex, 16).ok()
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -91,29 +98,33 @@ struct MemberEntry {
     name: Option<String>,
 }
 
-/// Load the set of accepted family keys (empty if the file is absent/unreadable).
-pub(crate) fn load(path: &Path) -> Baseline {
-    let Ok(bytes) = std::fs::read(path) else {
-        return Baseline {
-            keys: HashSet::new(),
-            entries: Vec::new(),
-        };
-    };
-    let entries: Vec<Entry> = serde_json::from_slice(&bytes).unwrap_or_default();
+/// Load the set of accepted family keys. A missing or malformed baseline is a hard
+/// error because `--baseline` is a CI ratchet artifact, not an optional hint.
+pub(crate) fn load(path: &Path) -> Result<Baseline> {
+    let bytes =
+        std::fs::read(path).with_context(|| format!("reading baseline {}", path.display()))?;
+    let entries: Vec<Entry> = serde_json::from_slice(&bytes)
+        .with_context(|| format!("parsing baseline {}", path.display()))?;
     let entries: Vec<BaselineEntry> = entries
         .iter()
-        .filter_map(|e| {
-            let key = parse_key(&e.key)?;
+        .enumerate()
+        .map(|(index, e)| {
+            let key = parse_key(&e.key).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "baseline {} entry[{index}].key must be 16 hex digits, optionally prefixed with 0x",
+                    path.display()
+                )
+            })?;
             let members = e
                 .members
                 .iter()
                 .map(|m| member_key(&m.file, &m.name))
                 .collect();
-            Some(BaselineEntry { key, members })
+            Ok(BaselineEntry { key, members })
         })
-        .collect();
+        .collect::<Result<Vec<_>>>()?;
     let keys = entries.iter().map(|e| e.key).collect();
-    Baseline { keys, entries }
+    Ok(Baseline { keys, entries })
 }
 
 /// Write `families` as the accepted baseline, sorted by key for stable git diffs.

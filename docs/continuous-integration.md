@@ -127,6 +127,10 @@ families as `resolved`, and unmatched current families as `new`. Regenerate the
 baseline deliberately (re-run `--write-baseline`) when you've paid down duplication
 and want the lower bar locked in — it's a ratchet.
 
+When `--baseline` is present, the file must exist and parse as a valid baseline.
+Missing or malformed baselines are hard errors; otherwise a CI ratchet could
+silently compare against an empty accepted state.
+
 With `--format json`, the top-level `baseline` object carries those counts and each
 reported family gets `baseline_status: "new"` or `"changed"`.
 

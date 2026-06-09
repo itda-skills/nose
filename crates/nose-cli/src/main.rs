@@ -70,7 +70,7 @@ enum Cmd {
         min_tokens: usize,
         /// Acceptance threshold in `[0,1]`. Defaults: 0.86 on the strict research
         /// path, 0.70 with --candidates. Lower for recall, raise for precision.
-        #[arg(long)]
+        #[arg(long, value_parser = parse_threshold)]
         threshold: Option<f64>,
         /// Candidate mode: disable the behavioral-precision gates and default the
         /// threshold to 0.70. Surfaces near-duplicate FAMILIES (locale classes,
@@ -79,10 +79,10 @@ enum Cmd {
         #[arg(long)]
         candidates: bool,
         /// MinHash signature length (LSH).
-        #[arg(long, default_value_t = 128)]
+        #[arg(long, default_value_t = 128, value_parser = parse_minhash_k)]
         minhash_k: usize,
         /// LSH band count (more bands → catches lower-similarity candidates).
-        #[arg(long, default_value_t = 32)]
+        #[arg(long, default_value_t = 32, value_parser = parse_bands)]
         bands: usize,
         /// Disable control-flow normalization (ablation).
         #[arg(long)]
@@ -128,7 +128,7 @@ enum Cmd {
         min_members: Option<usize>,
         /// Hide families whose refactoring value is below this (noise floor on
         /// large repos). 0 shows every family. [default: 0]
-        #[arg(long)]
+        #[arg(long, value_parser = parse_min_value)]
         min_value: Option<f64>,
         /// Rank families by: `extractability` (how cleanly it folds into one helper —
         /// the default), `value` (raw duplicated volume), `sites` (most copies), or
@@ -465,6 +465,63 @@ fn paths_as_refs(paths: &[PathBuf]) -> Vec<&std::path::Path> {
 
 fn parse_scan_mode(s: &str) -> std::result::Result<ScanMode, String> {
     s.parse()
+}
+
+fn parse_positive_usize(s: &str, label: &str) -> std::result::Result<usize, String> {
+    let value = s
+        .parse::<usize>()
+        .map_err(|_| format!("{label} must be positive"))?;
+    if value == 0 {
+        Err(format!("{label} must be positive"))
+    } else {
+        Ok(value)
+    }
+}
+
+fn parse_minhash_k(s: &str) -> std::result::Result<usize, String> {
+    parse_positive_usize(s, "minhash-k")
+}
+
+fn parse_bands(s: &str) -> std::result::Result<usize, String> {
+    parse_positive_usize(s, "bands")
+}
+
+const THRESHOLD_ERROR: &str = "threshold must be a finite number in [0,1]";
+
+fn valid_threshold(value: f64) -> bool {
+    value.is_finite() && (0.0..=1.0).contains(&value)
+}
+
+fn parse_threshold(s: &str) -> std::result::Result<f64, String> {
+    let value = s.parse::<f64>().map_err(|_| THRESHOLD_ERROR.to_string())?;
+    if valid_threshold(value) {
+        Ok(value)
+    } else {
+        Err(THRESHOLD_ERROR.to_string())
+    }
+}
+
+const MIN_VALUE_ERROR: &str = "min-value must be a finite non-negative number";
+
+fn valid_min_value(value: f64) -> bool {
+    value.is_finite() && value >= 0.0
+}
+
+fn parse_min_value(s: &str) -> std::result::Result<f64, String> {
+    let value = s.parse::<f64>().map_err(|_| MIN_VALUE_ERROR.to_string())?;
+    if valid_min_value(value) {
+        Ok(value)
+    } else {
+        Err(MIN_VALUE_ERROR.to_string())
+    }
+}
+
+fn validate_min_value(value: f64) -> Result<f64> {
+    if valid_min_value(value) {
+        Ok(value)
+    } else {
+        anyhow::bail!("{MIN_VALUE_ERROR}")
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -2727,7 +2784,7 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
     let cfg = config::load_scan(args.config.as_deref())?;
     let top = args.top.or(cfg.top).unwrap_or(30);
     let min_members = args.min_members.or(cfg.min_members).unwrap_or(2);
-    let min_value = args.min_value.or(cfg.min_value).unwrap_or(0.0);
+    let min_value = validate_min_value(args.min_value.or(cfg.min_value).unwrap_or(0.0))?;
     let sort = args.sort.or(cfg.sort).unwrap_or(SortKey::Extractability);
     let channels = ScanChannels::resolve(args.mode, cfg.mode)?;
     let threshold = channels.threshold();
@@ -2866,12 +2923,14 @@ fn cmd_scan(args: ScanArgs) -> Result<()> {
         );
         return Ok(());
     }
-    let baseline_comparison = args.baseline.as_ref().map(|path| {
-        let accepted = baseline::load(path);
+    let baseline_comparison = if let Some(path) = args.baseline.as_ref() {
+        let accepted = baseline::load(path)?;
         let comparison = BaselineComparison::new(path, &accepted, &families);
         families.retain(|f| !accepted.keys.contains(&baseline::family_key(f)));
-        comparison
-    });
+        Some(comparison)
+    } else {
+        None
+    };
     let mut ignored_families = Vec::new();
     if let Some(ignore_set) = &ignore_set {
         let mut active = Vec::with_capacity(families.len());
