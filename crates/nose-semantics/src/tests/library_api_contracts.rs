@@ -483,6 +483,25 @@ fn library_non_factory_api_contracts_carry_identity_and_result_obligations() {
         })
     );
     assert_eq!(
+        library_promise_resolve_contract(Lang::TypeScript, "Promise", "resolve", 1),
+        Some(LibraryPromiseFactoryContract {
+            id: LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve),
+            callee: LibraryApiCalleeContract::StaticGlobalMethod {
+                receiver: "Promise",
+                method: "resolve",
+                qualified_path: "Promise.resolve",
+                requires_unshadowed_receiver: true,
+            },
+            result: PromiseFactoryContract {
+                receiver: "Promise",
+                method: "resolve",
+                qualified_path: "Promise.resolve",
+                kind: PromiseFactoryKind::Resolve,
+                result_domain: DomainEvidence::PromiseLike,
+            },
+        })
+    );
+    assert_eq!(
         library_iterator_identity_adapter_contract(Lang::Rust, "collect", 0),
         Some(LibraryIteratorIdentityAdapterContract {
             id: LibraryApiContractId::IteratorIdentityAdapter,
@@ -1063,6 +1082,32 @@ fn promise_then_contract_requires_js_like_surface_and_receiver_proof() {
 }
 
 #[test]
+fn promise_resolve_contract_requires_js_like_static_global_surface() {
+    assert_eq!(
+        promise_resolve_contract(Lang::JavaScript, "Promise", "resolve", 1),
+        Some(PromiseFactoryContract {
+            receiver: "Promise",
+            method: "resolve",
+            qualified_path: "Promise.resolve",
+            kind: PromiseFactoryKind::Resolve,
+            result_domain: DomainEvidence::PromiseLike,
+        })
+    );
+    assert_eq!(
+        promise_resolve_contract(Lang::TypeScript, "Promise", "resolve", 2),
+        None
+    );
+    assert_eq!(
+        promise_resolve_contract(Lang::TypeScript, "Promise", "reject", 1),
+        None
+    );
+    assert_eq!(
+        promise_resolve_contract(Lang::Python, "Promise", "resolve", 1),
+        None
+    );
+}
+
+#[test]
 fn iterator_identity_adapters_are_rust_and_receiver_proof_constrained() {
     assert_eq!(
         iterator_identity_adapter_contract(Lang::Rust, "iter", 0),
@@ -1419,6 +1464,21 @@ fn js_static_builtin_contracts_are_language_and_arity_constrained() {
         Some(StaticGlobalSymbolContract {
             name: "undefined",
             requires_unshadowed: true,
+        })
+    );
+    assert_eq!(
+        static_global_symbol_contract(Lang::TypeScript, "Promise"),
+        Some(StaticGlobalSymbolContract {
+            name: "Promise",
+            requires_unshadowed: true,
+        })
+    );
+    assert_eq!(
+        qualified_global_symbol_contract(Lang::JavaScript, "Promise.resolve"),
+        Some(QualifiedGlobalSymbolContract {
+            path: "Promise.resolve",
+            root: "Promise",
+            requires_unshadowed_root: true,
         })
     );
     assert_eq!(static_global_symbol_contract(Lang::Python, "Math"), None);

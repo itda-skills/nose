@@ -151,6 +151,7 @@ pub enum DomainEvidence {
     Map,
     Number,
     Option,
+    PromiseLike,
     Set,
     String,
 }
@@ -203,6 +204,10 @@ impl DomainEvidence {
 
     pub fn is_option(self) -> bool {
         self == DomainEvidence::Option
+    }
+
+    pub fn is_promise_like(self) -> bool {
+        self == DomainEvidence::PromiseLike
     }
 
     pub fn is_string(self) -> bool {

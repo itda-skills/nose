@@ -141,11 +141,12 @@ Current first-party `LibraryApi` callee coordinates are intentionally specific:
   `length`. It is anchored to the `Field` node and depends on receiver proof
   such as `Domain`, `SequenceSurface`, or nested admitted `LibraryApi`
   evidence. It does not infer semantics from a property spelling alone.
-- `Method` and `IteratorAdapterMethod` name language-scoped receiver methods by
+- `Method`, `AsyncMethod`, and `IteratorAdapterMethod` name language-scoped receiver methods by
   exact method string and arity. They depend on receiver proof such as
   `Domain`, `SequenceSurface`, imported-namespace or unshadowed-global `Symbol`,
   or nested admitted `LibraryApi` evidence for factory/result calls. They do not
-  infer semantics from a selector spelling alone.
+  infer semantics from a selector spelling alone. The current `AsyncMethod`
+  row is JS-like Promise `.then`; it requires PromiseLike receiver proof.
 
 ## Consumption Rules
 
@@ -471,12 +472,12 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `std::collections::{HashSet,BTreeSet}::from`, Java `Set.of`, Ruby `Set.new`,
   and JS-like `new Set` as `Set`; Rust
   `std::collections::{HashMap,BTreeMap}::from`, Java `Map.of`/`Map.ofEntries`,
-  and JS-like `new Map` as `Map`; and JS-like one-argument `Array.from` as
-  `Array`. `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`,
-  `math.prod`, `Arrays.stream`, map `get`, iterator adapters, promise `.then`,
-  and generic method contracts do not emit `Domain` records because their
-  results are not simple container receiver domains under the current
-  vocabulary;
+  and JS-like `new Map` as `Map`; JS-like one-argument `Array.from` as
+  `Array`; and JS-like `Promise.resolve` plus admitted Promise `.then` results
+  as `PromiseLike`. `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`,
+  `math.prod`, `Arrays.stream`, map `get`, iterator adapters, and generic
+  method contracts do not emit `Domain` records because their results are not
+  simple receiver domains under the current vocabulary;
 - lowered `Seq` surfaces emit `SequenceSurface` evidence, including Go map
   literal and Go map-entry surfaces where those tags carry first-party meaning.
 
@@ -573,9 +574,10 @@ callers:
   they still have the source `Call` or `Field` node. This includes direct
   factory/constructor eval, property builtins such as JS/TS/Java `.length`, Rust
   `Some` callee-node checks, static index-membership, Rust scalar integer method
-  calls, and builder append API admission. Promise `.then` contract lookup also
-  goes through a resolver, but it remains fail-closed until the receiver has
-  explicit Promise-like evidence. Value-level CSE paths that only retain source
+  calls, builder append API admission, Promise `resolve`, and Promise `.then`
+  contract lookup. Promise continuation reduction additionally requires a
+  recoverable supported settled value and preserves a Promise boundary in the
+  value graph. Value-level CSE paths that only retain source
   spans now also go through span-query resolvers for free-name/imported
   collection factories, Java/Ruby/Rust collection factories, free-name/Java map
   factories, Java map entries, map `get`, and map-key view/wrapper calls. The
@@ -624,7 +626,7 @@ callers:
   local assignment-shape invalidation slice; call mutation risk in that path
   uses the shared helpers.
 
-Broader field/place/effect facts, promise receiver proof, async/sync and
+Broader field/place/effect facts, thenable assimilation, async/sync and
 Go-channel protocol convergence, unmodeled stdlib/ecosystem APIs, broader
 inferred receiver-expression domain evidence, field/property/setter/proxy place
 facts, pack-facing demand/effect rows for lazy generators, set/dict

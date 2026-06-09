@@ -156,6 +156,12 @@ Guiding constraints for every pass:
   Rust Option pattern predicates likewise stay closed unless the selector has
   admitted `Some`/`None` API evidence and the pattern surface has Rust
   tuple-struct wildcard source evidence.
+  Supported JS-like `Promise.resolve(...).then(...)` continuations can reduce in
+  the value graph only after admitted Promise API evidence and PromiseLike
+  receiver proof. The reduced value remains wrapped in a Promise boundary, so it
+  does not merge with synchronous code that computes the same payload; custom
+  thenables, unsafe `Promise.resolve(obj)` assimilation, and selector-only
+  `.then` calls stay opaque.
   Lowered aggregate surfaces now pass through a `SeqSurfaceContract`: arrays/slices can
   enter collection membership, maps/objects enter map/object value semantics, Go
   `composite_literal` map surfaces are consumed only by the Go zero-map contract, JS object

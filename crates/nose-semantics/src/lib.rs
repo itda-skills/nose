@@ -2413,6 +2413,20 @@ pub enum AsyncReceiverContract {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PromiseFactoryKind {
+    Resolve,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct PromiseFactoryContract {
+    pub receiver: &'static str,
+    pub method: &'static str,
+    pub qualified_path: &'static str,
+    pub kind: PromiseFactoryKind,
+    pub result_domain: DomainEvidence,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct PromiseThenContract {
     pub receiver: AsyncReceiverContract,
     pub demand: DemandEffectProfile,
@@ -2424,6 +2438,16 @@ pub fn promise_then_contract(
     arg_count: usize,
 ) -> Option<PromiseThenContract> {
     library_promise_then_contract(lang, method, arg_count).map(|contract| contract.result)
+}
+
+pub fn promise_resolve_contract(
+    lang: Lang,
+    receiver: &str,
+    method: &str,
+    arg_count: usize,
+) -> Option<PromiseFactoryContract> {
+    library_promise_resolve_contract(lang, receiver, method, arg_count)
+        .map(|contract| contract.result)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -2972,6 +2996,7 @@ pub fn static_global_symbol_contract(lang: Lang, name: &str) -> Option<StaticGlo
         "Map" => "Map",
         "Math" => "Math",
         "Object" => "Object",
+        "Promise" => "Promise",
         "Set" => "Set",
         "console" => "console",
         "undefined" => "undefined",
@@ -2997,6 +3022,7 @@ pub fn qualified_global_symbol_contract(
         "Object.prototype.hasOwnProperty.call" => {
             ("Object.prototype.hasOwnProperty.call", "Object")
         }
+        "Promise.resolve" => ("Promise.resolve", "Promise"),
         _ => return None,
     };
     Some(QualifiedGlobalSymbolContract {

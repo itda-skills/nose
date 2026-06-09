@@ -56,8 +56,12 @@ callback effects; admitted HOF identity alone is not enough.
 
 Promise `.then` now carries an async-continuation demand/effect profile in its
 contract row. That does not open exact beta-reduction by itself. The value-graph
-rule still requires explicit Promise-like receiver proof, so arbitrary
-selector-only `.then(...)` calls remain closed.
+rule requires an admitted Promise-like receiver plus a recoverable supported
+settled value. Today that means JS-like `Promise.resolve(value)` with
+unshadowed `Promise.resolve` proof and a non-thenable-safe value, or a chain of
+admitted `.then(lambda)` calls over that supported boundary. Arbitrary
+selector-only `.then(...)`, custom thenables, shadowed Promise roots, unsafe
+`Promise.resolve(obj)` arguments, and missing receiver proof remain closed.
 
 Source protocol boundaries have internal profiles for future contracts:
 
@@ -82,8 +86,10 @@ pull-lazy and the callback is not demanded until observation. Admitted library
 HOFs currently stay closed for this exact timing path until their contract row
 proves eager callback demand.
 
-The Promise `.then` value-graph rule consumes the async-continuation contract and
-then remains fail-closed until receiver proof is available.
+The Promise `.then` value-graph rule consumes the async-continuation contract,
+PromiseLike receiver proof, and supported settled-value proof. It keeps the
+result behind a Promise boundary, so a Promise continuation does not converge
+with synchronous code that computes the same payload.
 
 ## Exact-channel policy
 
@@ -104,8 +110,7 @@ do not prove demand behavior by themselves.
 The substrate is intentionally broader than today's exact consumers. Remaining
 work includes:
 
-- Promise-like receiver proof and async/await convergence contracts (tracked by
-  issue #154);
+- broader thenable assimilation and async/await convergence contracts;
 - pack-facing schema names for demand/effect rows (coordinated with issue #151);
 - conformance fixtures that let pack authors prove demand/effect behavior
   without giving packs exact-clone authority (issue #157);

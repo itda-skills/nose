@@ -600,6 +600,34 @@ pub fn library_promise_then_contract(
     })
 }
 
+pub fn library_promise_resolve_contract(
+    lang: Lang,
+    receiver: &str,
+    method: &str,
+    arg_count: usize,
+) -> Option<LibraryPromiseFactoryContract> {
+    if !js_like_lang(lang) || receiver != "Promise" || method != "resolve" || arg_count != 1 {
+        return None;
+    }
+    let result = PromiseFactoryContract {
+        receiver: "Promise",
+        method: "resolve",
+        qualified_path: "Promise.resolve",
+        kind: PromiseFactoryKind::Resolve,
+        result_domain: DomainEvidence::PromiseLike,
+    };
+    Some(LibraryPromiseFactoryContract {
+        id: LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve),
+        callee: LibraryApiCalleeContract::StaticGlobalMethod {
+            receiver: result.receiver,
+            method: result.method,
+            qualified_path: result.qualified_path,
+            requires_unshadowed_receiver: true,
+        },
+        result,
+    })
+}
+
 pub fn library_iterator_identity_adapter_contract(
     lang: Lang,
     method: &str,
@@ -684,6 +712,7 @@ pub fn library_receiver_method_api_contract(
             id: contract.id,
             callee: contract.callee,
             rule: "library_api_map_get",
+            result_domain: None,
         })
         .or_else(|| {
             library_map_key_view_contract(lang, method, arg_count).map(|contract| {
@@ -691,6 +720,7 @@ pub fn library_receiver_method_api_contract(
                     id: contract.id,
                     callee: contract.callee,
                     rule: "library_api_map_key_view",
+                    result_domain: None,
                 }
             })
         })
@@ -700,6 +730,7 @@ pub fn library_receiver_method_api_contract(
                     id: contract.id,
                     callee: contract.callee,
                     rule: "library_api_iterator_identity_adapter",
+                    result_domain: None,
                 }
             })
         })
@@ -709,6 +740,7 @@ pub fn library_receiver_method_api_contract(
                     id: contract.id,
                     callee: contract.callee,
                     rule: "library_api_scalar_integer_method",
+                    result_domain: None,
                 }
             })
         })
@@ -718,6 +750,17 @@ pub fn library_receiver_method_api_contract(
                     id: contract.id,
                     callee: contract.callee,
                     rule: "library_api_rust_option_and_then",
+                    result_domain: None,
+                }
+            })
+        })
+        .or_else(|| {
+            library_promise_then_contract(lang, method, arg_count).map(|contract| {
+                LibraryReceiverMethodApiContract {
+                    id: contract.id,
+                    callee: contract.callee,
+                    rule: "library_api_promise_then",
+                    result_domain: Some(DomainEvidence::PromiseLike),
                 }
             })
         })
@@ -727,6 +770,7 @@ pub fn library_receiver_method_api_contract(
                     id: contract.id,
                     callee: contract.callee,
                     rule: "library_api_method_call",
+                    result_domain: None,
                 }
             })
         })

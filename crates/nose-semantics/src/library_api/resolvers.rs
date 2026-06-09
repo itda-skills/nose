@@ -389,6 +389,16 @@ receiver_method_contract_resolver!(
     library_promise_then_contract
 );
 
+pub fn admitted_promise_resolve_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> Option<AdmittedLibraryApiCall<LibraryPromiseFactoryContract>> {
+    admitted_named_receiver_method_call(il, interner, call, |receiver_name, method, arg_count| {
+        library_promise_resolve_contract(il.meta.lang, receiver_name, method, arg_count)
+    })
+}
+
 receiver_method_contract_resolver!(
     admitted_iterator_identity_adapter_at_call,
     LibraryIteratorIdentityAdapterContract,
@@ -719,6 +729,16 @@ impl LibraryApiContractParts for LibraryImportedNamespaceFunctionContract {
 }
 
 impl LibraryApiContractParts for LibraryPromiseThenContract {
+    fn contract_id(self) -> LibraryApiContractId {
+        self.id
+    }
+
+    fn callee_contract(self) -> LibraryApiCalleeContract {
+        self.callee
+    }
+}
+
+impl LibraryApiContractParts for LibraryPromiseFactoryContract {
     fn contract_id(self) -> LibraryApiContractId {
         self.id
     }
