@@ -12,10 +12,13 @@ Schema artifacts:
 - [semantic-pack-v0 schema](schemas/semantic-pack-v0.schema.json)
 - [language-pack example](examples/semantic-packs/v0/language-pack.json)
 - [library-pack example](examples/semantic-packs/v0/library-pack.json)
+- [semantic-pack-loading](semantic-pack-loading.md)
 
-Status: design v0. nose does not load external packs yet. This page defines the
-extension surface that first-party compiled packs and future external packs must
-use.
+Status: design v0 plus local metadata loading. nose can load local manifests for
+explicit opt-in provenance reporting, but external packs are still
+`metadata-only`: they do not emit evidence or open exact contracts. This page
+defines the extension surface that first-party compiled packs and future
+external packs must use.
 
 ## Context
 
@@ -29,7 +32,8 @@ The current implementation already has the internal pieces that this API narrows
 into a public boundary: `EvidenceRecord` facts in `nose-il`, contract rows and
 admission helpers in `nose-semantics`, and evidence-only consumers in normalize,
 detect, value-graph, fragment, and oracle paths. v0 is intentionally a schema and
-contract vocabulary, not a loader.
+contract vocabulary. The current loader validates local manifest shape and
+reports provenance; it does not execute external producers.
 
 ## Goal
 
@@ -47,8 +51,8 @@ contract vocabulary, not a loader.
 
 ## Non-goals
 
-- Do not implement filesystem, network, or registry pack loading in this issue.
-- Do not add a user configuration path for enabling packs.
+- Do not implement network or registry pack loading.
+- Do not let local pack loading make external producers executable yet.
 - Do not expand language or library coverage.
 - Do not let packs mint fingerprints, rewrite value graphs directly, approve
   exact clone pairs, or bypass the law registry.
@@ -67,9 +71,10 @@ Every manifest must declare:
 - stable ids for packs, evidence producers, contracts, laws, fixtures, and
   dependencies.
 
-v0 is allowed to evolve only by adding optional fields or new enum values that
-old consumers can ignore. Removing fields, changing the meaning of an existing
-field, or changing exact-channel admission rules requires a new API version.
+v0 is a strict manifest contract: the published schema rejects unknown fields,
+and the local loader rejects unknown fields and enum values. Adding fields,
+adding enum values, removing fields, changing the meaning of an existing field,
+or changing exact-channel admission rules requires a new API version.
 
 ## Manifest Shape
 
@@ -91,9 +96,11 @@ A v0 manifest has these top-level sections:
 | `conformance` | positive fixtures, hard negatives, commands, proof links, and unsupported edges |
 
 The manifest is declarative. It is not a hook API. A data-only external pack can
-declare rows that a future loader can validate and feed into kernel helpers.
-First-party compiled packs can generate the same manifest metadata for reports
-and conformance gates while still emitting facts from Rust.
+declare rows that the local metadata loader validates and reports. A later
+producer runtime may feed compatible rows into kernel helpers only after the same
+fail-closed evidence obligations are satisfied. First-party compiled packs can
+generate the same manifest metadata for reports and conformance gates while
+still emitting facts from Rust.
 
 ## Pack Kinds
 
@@ -120,10 +127,12 @@ Trust policy is separate from channel eligibility.
 | `first-party-optional` | maintained and tested by nose, but not enabled by default |
 | `external-opt-in` | provider/user responsibility; must be enabled explicitly by the user |
 
-External packs must set `enabled_by_default: false`. A manifest may declare that
-a contract is intended for `exact-empirical` or `exact-proven`, but nose does not
-certify that claim for external packs. A user may still opt into such a pack, and
-nose should surface provenance so the user can see which external pack affected a
+Local external manifests must set `trust: "external-opt-in"` and
+`enabled_by_default: false`. The loader rejects local manifests that claim
+first-party trust or default enablement. A manifest may declare that a contract
+is intended for `exact-empirical` or `exact-proven`, but nose does not certify
+that claim for external packs. A user may still opt into such a pack, and nose
+should surface provenance so the user can see which external pack affected a
 match.
 
 ## Channel Eligibility
@@ -402,8 +411,8 @@ nose should validate:
   proof status, positive fixtures, and hard negatives;
 - external packs are opt-in and not enabled by default;
 - declared compatibility ranges are syntactically valid enough to compare;
-- examples and fixtures are present at declared paths when a loader or harness
-  supports them.
+- examples and fixtures are present at declared paths when a producer runtime or
+  conformance harness supports them.
 
 nose does not validate or certify for external packs:
 
