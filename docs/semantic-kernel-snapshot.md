@@ -9,7 +9,9 @@ post-PR #147 raw/local pocket audit is recorded in
 v0 provider-facing extension API is defined in
 [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md), and the
 local provider/user conformance workflow is in
-[semantic-pack-conformance](semantic-pack-conformance.md).
+[semantic-pack-conformance](semantic-pack-conformance.md). The closeout for the
+first #109 foundation tranche is in
+[semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).
 
 Snapshot date: 2026-06-09. The current implementation has an internal
 semantic-kernel facade, evidence-gated field state, sequence-surface contracts,
@@ -799,6 +801,8 @@ These reduce recall in affected cases, but they are the correct precision trade
 until packs can emit the missing facts.
 
 Remaining migration targets are tracked in
-[semantic-kernel-roadmap](semantic-kernel-roadmap.md), with the post-PR #147
-classification snapshot in
-[semantic-kernel-audit-2026-06-09](semantic-kernel-audit-2026-06-09.md).
+[semantic-kernel-roadmap](semantic-kernel-roadmap.md). The post-PR #147
+classification snapshot is in
+[semantic-kernel-audit-2026-06-09](semantic-kernel-audit-2026-06-09.md), and
+the completed #150-#157 foundation tranche plus next issue map are in
+[semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).

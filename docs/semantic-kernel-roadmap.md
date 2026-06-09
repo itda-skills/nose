@@ -5,7 +5,9 @@ Back to [semantic-kernel](semantic-kernel.md). Current code shape is recorded in
 of remaining raw/local semantic pockets is in
 [semantic-kernel-audit-2026-06-09](semantic-kernel-audit-2026-06-09.md). The
 provider-facing v0 extension API is in
-[semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md).
+[semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md). The
+closeout for the first #109 foundation tranche is in
+[semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).
 
 This page tracks decisions, history, and remaining work for the semantic kernel
 and pack ecosystem.
@@ -660,6 +662,11 @@ and pack ecosystem.
   dependencies, channel eligibility, trust/default status, provider/user
   responsibility boundaries, examples, local metadata loading, and local
   conformance checks for manifests plus declared fixture assets.
+- The first #109 foundation tranche closed issues #150-#157. The closeout
+  records the landed API/loading/conformance/demand/effect/Promise/call-target/
+  domain foundation and opens the next tranche around first-party pack pilots,
+  broader producer coverage, richer demand/effect contracts, and pack-facing
+  value-law provenance.
 
 ## Phase 0: documentation and vocabulary (landed)
 
@@ -674,7 +681,7 @@ and pack ecosystem.
   roadmap so current implementation status, history, and extension design do not
   blur together.
 
-## Phase 1: kernel facade and fail-closed migration (first slice landed)
+## Phase 1: kernel facade and fail-closed migration (foundation tranche landed)
 
 Landed in PR #100 and PR #101:
 
@@ -691,20 +698,22 @@ Landed in PR #100 and PR #101:
   obligations for the migrated facade paths.
 - Parser and lowering dispatch remain unchanged.
 
-Remaining in this phase:
+Remaining after the foundation tranche:
 
-- Continue replacing proof-sensitive `Lang`/selector checks that are still local
-  to normalize, detect, and import proof.
-- Move the next raw fallback cluster behind pack-shaped contracts/evidence:
-  JS/TS guard recognizer dependencies, parsed/versioned type-surface manifests
-  for external type-domain producers, broader C type-system evidence beyond
-  current byte-pack aliases and scalar/pointer guards, remaining lowered
-  sequence/tag surfaces, and exact-fragment predicate code that is now
-  differential/debug support rather than production authority.
+- Ship a narrow first-party pack pilot (#166) so the v0 API, metadata loading,
+  conformance workflow, provenance, and evidence vocabulary are exercised by an
+  actual default pack-shaped implementation.
+- Broaden evidence producer coverage (#169) for call targets, richer domains,
+  guards, aggregates, and module/export dependencies without reopening raw
+  selector/name/type/tag fallbacks.
+- Expand demand/effect contracts (#168) for lazy, iterator, generator, async,
+  channel, repeated, and call-by-need semantics before ecosystem APIs can enter
+  exact matching.
+- Move internal value laws toward pack-facing law ids, conformance status, and
+  per-finding provenance (#167).
 - Keep behavior-changing recall reductions documented when missing evidence
-  blocks exact convergence.
-- Preserve the current precision gates while moving more first-party surfaces
-  behind shared contracts.
+  blocks exact convergence, and preserve the current precision gates while more
+  first-party surfaces move behind shared contracts.
 
 ## Phase 2: shared contracts for duplicated gates
 
