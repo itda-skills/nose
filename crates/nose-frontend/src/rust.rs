@@ -496,7 +496,9 @@ fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         "block" => lower_block(lo, node),
         "binary_expression" => lower_binary(lo, node),
         "unary_expression" => lower_unary(lo, node),
-        "assignment_expression" => crate::lower::assignment(lo, node, lower_expr),
+        "assignment_expression" => {
+            crate::lower::assignment(lo, node, lower_store_target, lower_expr)
+        }
         "compound_assignment_expr" => lower_compound_assign(lo, node),
         "try_expression" => {
             let value = node
@@ -659,8 +661,22 @@ fn lower_unary(lo: &mut Lowering, node: TsNode) -> NodeId {
     lo.add(NodeKind::UnOp, Payload::Op(op), span, &[operand])
 }
 
+/// See [`crate::lower::deref_store_target`]: `*x = v` must keep the store place.
+fn lower_store_target(lo: &mut Lowering, node: TsNode) -> NodeId {
+    crate::lower::deref_store_target(
+        lo,
+        node,
+        |lo, n| {
+            (n.kind() == "unary_expression" && lo.text(n).starts_with('*'))
+                .then(|| n.named_child(n.named_child_count().saturating_sub(1)))
+                .flatten()
+        },
+        lower_expr,
+    )
+}
+
 fn lower_compound_assign(lo: &mut Lowering, node: TsNode) -> NodeId {
-    crate::lower::compound_assignment(lo, node, rust_bin_op, lower_expr)
+    crate::lower::compound_assignment(lo, node, rust_bin_op, lower_store_target, lower_expr)
 }
 
 fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {

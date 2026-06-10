@@ -65,6 +65,32 @@ fn vhash(v: &Value) -> u64 {
     hashed(v)
 }
 
+/// Replace a battery value that violates the parameter's DECLARED type domain
+/// with a deterministic conforming one. Only domains the interpreter can host
+/// concretely are coerced; everything else binds unchanged.
+fn coerce_to_declared_domain(v: Value, d: nose_il::DomainEvidence) -> Value {
+    use nose_il::DomainEvidence as D;
+    let conforms = match d {
+        D::Integer | D::Number => matches!(v, Value::Int(_)),
+        D::Boolean => matches!(v, Value::Bool(_)),
+        D::Array | D::Collection | D::Iterable => matches!(v, Value::List(_)),
+        _ => true,
+    };
+    if conforms {
+        return v;
+    }
+    let h = vhash(&v);
+    match d {
+        D::Integer | D::Number => Value::Int((h % 23) as i64 - 11),
+        D::Boolean => Value::Bool(h & 1 == 1),
+        D::Array | D::Collection | D::Iterable => Value::List(vec![
+            Value::Int((h % 7) as i64),
+            Value::Int((h % 5) as i64 - 2),
+        ]),
+        _ => v,
+    }
+}
+
 /// Stable structural signature of an IL subtree: pre-order over (kind, payload,
 /// child count), with `Name` symbols resolved through the interner so the signature
 /// does not depend on interner-local symbol ids. Used as the identity of an opaque
@@ -229,7 +255,19 @@ pub fn run_unit(il: &Il, interner: &Interner, root: NodeId, args: &[Value]) -> O
     for &k in &kids {
         if il.kind(k) == NodeKind::Param {
             if let Payload::Cid(c) = il.node(k).payload {
-                env.insert(c, args.get(pi).cloned().unwrap_or(Value::Null));
+                // Bind under the param's DECLARED domain (the §BE convention:
+                // interpret under the same contracts the value graph used to
+                // merge). A typed `int` parameter never receives a List at
+                // runtime; feeding one explores a type-state the language rules
+                // out and flags order-insensitive typed field writes as false
+                // merges (#210). Coercion is deterministic in the input value,
+                // so equally-declared twins see identical effective rows.
+                let raw = args.get(pi).cloned().unwrap_or(Value::Null);
+                let v = match nose_semantics::domain_evidence_for_param(il, k) {
+                    Some(d) => coerce_to_declared_domain(raw, d),
+                    None => raw,
+                };
+                env.insert(c, v);
                 it.params.insert(c);
                 pi += 1;
             }
@@ -1347,7 +1385,13 @@ fn fold_ints(v: Option<&Value>, init: i64, f: impl Fn(i64, i64) -> i64) -> Value
 fn min_max_value(args: &[Value], f: impl Fn(i64, i64) -> i64) -> Value {
     match args {
         [Value::Int(a), Value::Int(b)] => Value::Int(f(*a, *b)),
-        _ => fold_opt(args.first(), f),
+        // The 2-arg form is the SCALAR selection; on non-Int operands it is a
+        // type error. Falling through to the collection fold here ignored the
+        // second argument (`max([1,2,3,4], 7)` returned 4), which made the
+        // builtin chain disagree with the if-chain it soundly merges with (#210).
+        [_, _] => Value::Err,
+        [coll] => fold_opt(Some(coll), f),
+        _ => Value::Err,
     }
 }
 

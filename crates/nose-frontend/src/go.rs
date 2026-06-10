@@ -304,7 +304,7 @@ fn lower_assign_like(lo: &mut Lowering, node: TsNode) -> NodeId {
     let mut assigns = Vec::new();
     for (i, l) in lefts.iter().enumerate() {
         let lspan = lo.span(*l);
-        let lhs = lower_expr(lo, *l);
+        let lhs = lower_store_target(lo, *l);
         let rhs = if compound {
             let lhs2 = lower_expr(lo, *l);
             let r = rights
@@ -474,6 +474,22 @@ fn expr_list_items(node: TsNode) -> Vec<TsNode> {
     }
 }
 
+/// See [`crate::lower::deref_store_target`]: `*ls = …` must keep the store place.
+fn lower_store_target(lo: &mut Lowering, node: TsNode) -> NodeId {
+    crate::lower::deref_store_target(
+        lo,
+        node,
+        |lo, n| {
+            (n.kind() == "unary_expression"
+                && n.child_by_field_name("operator")
+                    .is_some_and(|o| lo.text(o) == "*"))
+            .then(|| n.child_by_field_name("operand"))
+            .flatten()
+        },
+        lower_expr,
+    )
+}
+
 fn lower_inc_dec(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let op = if node.kind() == "dec_statement" {
@@ -483,7 +499,7 @@ fn lower_inc_dec(lo: &mut Lowering, node: TsNode) -> NodeId {
     };
     let target = node.named_child(0);
     let t1 = target
-        .map(|t| lower_expr(lo, t))
+        .map(|t| lower_store_target(lo, t))
         .unwrap_or_else(|| lo.empty_block(span));
     let t2 = target
         .map(|t| lower_expr(lo, t))
@@ -673,6 +689,27 @@ fn lower_switch(lo: &mut Lowering, node: TsNode) -> NodeId {
             "default_case" => {
                 let blk = lower_case_body(lo, c);
                 cases.push((None, blk));
+            }
+            // A type-switch case: the runtime type test is unmodeled semantics, but
+            // the ARM BODIES are real code — keep the test as a raw shape keyed by
+            // the case's type spelling so the bodies survive in the fingerprint.
+            // (They used to fall through this match, lowering the whole type-switch
+            // to an empty block — a recursive type-switch traversal fingerprinted
+            // identically to a constant stub, #210.)
+            "type_case" => {
+                let cspan = lo.span(c);
+                let spelling = c
+                    .child_by_field_name("type")
+                    .map(|t| lo.text(t).to_string())
+                    .unwrap_or_else(|| {
+                        Lowering::named_children(c)
+                            .first()
+                            .map(|t| lo.text(*t).to_string())
+                            .unwrap_or_default()
+                    });
+                let test = lo.raw(&format!("type_case {spelling}"), cspan, &[]);
+                let blk = lower_case_body(lo, c);
+                cases.push((Some(test), blk));
             }
             _ => {}
         }

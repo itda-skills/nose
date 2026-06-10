@@ -733,11 +733,28 @@ fn lower_unary(lo: &mut Lowering, node: TsNode) -> NodeId {
     lo.add(NodeKind::UnOp, Payload::Op(op), span, &[operand])
 }
 
+/// See [`crate::lower::deref_store_target`]: `(*nr)++` must keep the store place.
+fn lower_store_target(lo: &mut Lowering, node: TsNode) -> NodeId {
+    crate::lower::deref_store_target(
+        lo,
+        node,
+        |_, n| {
+            (n.kind() == "pointer_expression" && crate::lower::has_direct_token(n, "*"))
+                .then(|| {
+                    n.child_by_field_name("argument")
+                        .or_else(|| n.named_child(n.named_child_count().saturating_sub(1)))
+                })
+                .flatten()
+        },
+        lower_expr,
+    )
+}
+
 fn lower_assignment(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let l = node
         .child_by_field_name("left")
-        .map(|x| lower_expr(lo, x))
+        .map(|x| lower_store_target(lo, x))
         .unwrap_or_else(|| lo.empty_block(span));
     let opt = node
         .child_by_field_name("operator")
@@ -767,7 +784,7 @@ fn lower_update(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let arg = node.child_by_field_name("argument");
     let operand = arg
-        .map(|o| lower_expr(lo, o))
+        .map(|o| lower_store_target(lo, o))
         .unwrap_or_else(|| lo.empty_block(span));
     let operand2 = arg
         .map(|o| lower_expr(lo, o))
