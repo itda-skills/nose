@@ -2986,3 +2986,70 @@ cost was a synthetic-test artifact and the sound fix shipped clean. Residual (st
 pure recall enhancement): a map-value non-null proof would re-converge the coalesce forms with the
 absence family where it is provably sound (literal non-null maps), and null/undefined de-conflation
 would re-home `=== undefined` with the absence class — neither is a soundness obligation.
+
+## CU. async↔sync twins — the dual-view await (the #1 Type-4 gap, §K)
+
+§K named **async ↔ sync twins** "the real Type-4 gap in production code": an `async def f` and
+its sync twin (identical body modulo `await`) are duplicated logic a maintainer would want
+surfaced, but nose detected **0 families** for them (`async_sync_twin: none` in
+`coverage_matrix.v1.json`). The convergence was deliberately gated: `await` lowers to a
+`Raw("await")` protocol boundary the value graph turns into a **childless** `Opaque(subtree_hash)`
+(eval.rs), so twins share no value-DAG structure. Erasing `await` was the *old* unsound path (it
+removed the IL `Raw` → the unit became `exact_safe` → an exact false merge of a Future with its
+resolved value).
+
+**The channel was wrong.** async↔sync twins are NOT behaviorally equal (a coroutine ≠ a value), so
+they belong in the **near/graded** channel (refactoring candidates — no equivalence claim), never
+the exact channel. Two empirical findings shaped the mechanism: (1) a wrapper that keeps the await
+visible **poisons downstream value identity** — `v = await f(x)` makes `v` the wrapper, so every
+later `v+1` diverges from the sync twin's, and family formation is pure `vj`/`sj` scoring (the
+witness only *labels*); so a wrapper alone never converges twins. (2) Full transparency (eval
+`await e → e`) DOES converge them and stays exact-safe (the IL `Raw` keeps the unit non-`exact_safe`
+— `strict_exact` returns false on `Raw` — so async units are excluded from exact families
+regardless of the fingerprint). "Soundness costs recall" was again a hypothesis to measure: it
+didn't, the exact channel is provably inert.
+
+**The fix is a DUAL VIEW** of the value graph, keyed by `Builder.await_transparent`:
+- **Fingerprint build** (default `true`): `await e` ≡ `e`'s value → an async fn's fingerprint
+  matches its sync twin → they converge on `vj` in candidate mode.
+- **ValueDag/witness build** (`false`, set in `value_dag()`): keeps an `Opaque(VG_PROTOCOL_AWAIT,[e])`
+  wrapper so the graded witness *sees* the await. `Au::unify` aligns the wrapper against the bare
+  operand on the sync side (recursing through it so the alignment propagates downstream), records a
+  one-sided **`async-mirror`** hole, and forces `equal_modulo_holes = false` — a transformation
+  twin is never an equivalence claim.
+
+So scoring sees *through* await (twins converge) while the witness *sees* await (honest
+`async-mirror` label + the precision gate). First increment: **Python + JS/TS** (both lower `await`
+through `await_boundary`); Rust `.await` and the other protocol boundaries (`yield`/`try`-`?`/
+channels — non-pass-through semantics) deferred.
+
+**Gates.** Full suite **1056 pass**; the dual-view broke no existing await test. **Exact-channel
+provably inert:** `verify --max-violations 0` clean (axios/rxjs/trpc/flask/guava), and the
+`exact-value-graph` families are **byte-identical** before/after on zod/prettier/flask/guava/gorm —
+the change only ADDs near families. Deterministic. Tests: witness `async-mirror`/`both-sides-await`
+units + an end-to-end detection test (twin converges, different-logic decoy excluded).
+
+**Recall (eval substrate).** A first `production_async_sync` gold set — 6 Python+JS/TS twin pairs
+(`bench/type4/fixtures/async_sync/`, gold `bench/labels/async_sync_twins.v1.json`) + 3
+async-vs-different-logic hard-negatives — measured with `nose eval`: the `near_exact_or_structural`
+twin recall goes **0/6 → 6/6** (baseline binary vs this change), **HN-FP 0/3**. (A 4th would-be
+negative — two async fns differing only `+`/`-` — was dropped: candidate mode surfaces
+same-shape-different-operator BY DESIGN, on the baseline too, so it is not an async-twin miss.)
+
+**Real-corpus lift — measured, and modest.** Mining = run nose (with this feature) on
+async/sync-mirror-rich repos and keep the families whose members span an `async def` and a plain
+`def`. httpx (`Client`/`AsyncClient`) surfaces **8** such twin families, including the production
+`Response.read` / `aread` (`_models.py:468`/`482`). But the **differential** (FIX vs the baseline
+binary) is small: httpx **+1** new twin (`test_*_auth_reads_response_body`), scrapy re-grouped,
+sqlalchemy +0 — because most real twins ALREADY converge via the sub-DAG/anchor path (their shared
+non-await body is a big enough common anchor; `read`/`aread` itself converges on the baseline too).
+So the synthetic 0→6/6 proves the *mechanism*; the marginal real-corpus recall is **+1-ish**, and
+the durable wins are the explicit candidate-mode convergence + the honest `async-mirror` witness
+label (which the anchor path does not give). The `coverage_matrix` `async_sync_twin` **python** cell
+is flipped none→covered (evidence: the hand-verified httpx `read`/`aread`, `real_frontier.v1.json`).
+Lesson, the twin of §CU's first: a new recall feature's *real-corpus lift* is also a hypothesis to
+measure, not assume — here it is small.
+
+**Follow-up (not soundness):** real-corpus evidence for the js/ts/rust cells (js/ts libraries keep
+parallel sync/async versions far less often than Python ones, so no clean mined twin yet), and
+extending the mechanism to Rust `.await` and the other protocol boundaries.
