@@ -483,6 +483,38 @@ toward dynamic-language repos. Type-domain-aware input feeding remains the floor
 follow-up (§3); the rest of `verify_battery` stays hand-curated **on purpose** (the guard
 comment there points here).
 
+### 7.4 Nullish-coalesce map default ≡ absence default — FIXED (coevo series 10, #410)
+
+A LATENT, oracle-blind false merge found by adversarial co-evolution series 10 (experiments
+§CT). `m.get(k) ?? d` — replace the value with `d` when it is absent **or** present-null — got
+the **same fingerprint** as the absence-only defaults `m.has(k) ? m.get(k) : d`,
+`m.get(k) === undefined ? d : g`, and Python `d.get(k, d)`. They diverge on a present key whose
+stored value is null: for `Map<string, number|null>` with `m["x"]=null`, `?? ` yields `0` while
+the presence forms yield `null`. Reproducer `bench/coevo/false_merges/map_nullish_default.ts`.
+
+Root cause: `mk_value_or_map_default` (`value_graph/collections.rs`) upgraded a **null-equality
+guarded** default (`?? `, `== null`) to the absence-only `GetOrDefault`, while the **membership**
+guards (`has`/`in`, typed `getOrDefault`/comma-ok/`.get(k,d)`) reach `GetOrDefault` through a
+separate, non-conflated `map_presence_condition` path. The null-equality guard cannot be proven
+to be the absence check — the model **conflates `null`/`undefined`** (eval.rs §7), so the
+true-absence `=== undefined` is indistinguishable from the coalesce `== null`.
+
+**Fix (two splits, can only remove merges → no new proof obligation):** (1) the null-guarded map
+default folds to the faithful `ValueOrDefault` (`mk_nullish_map_default`), not `GetOrDefault`;
+(2) the eval.rs `=== undefined`-over-map-get exception is dropped, so the strict guard stays a
+distinct opaque rather than the conflated null `Eq`. Now `{?? , == null}` = coalesce,
+`{has, in, getOrDefault, .get(k,d), comma-ok, unwrap_or}` = absence, `=== undefined` = its own
+opaque; the false merge is gone and each class still converges internally. **Corpus byte-identical**
+(`query top=0 --format json`, 15 JS/TS repos / 5825 families + the Python/Java/Go/Rust repos) — the
+lost cross-idiom merges fire only in synthetic tests. The false merge is eliminated by splitting,
+so `verify` has nothing to witness (the oracle blindness is moot once the pair is no longer merged).
+Regression `equivalence.rs::nullish_coalesce_map_default_is_distinct_from_absence_default`.
+
+**Residual (pure recall enhancement, still #410, not a soundness obligation):** a *map-value
+non-null proof* would re-converge the coalesce forms with the absence family where provably sound
+(literal non-null maps); *null/undefined de-conflation* would re-home `=== undefined` with the
+absence class. Both are corpus-inert today, so deferred without urgency.
+
 ---
 
 *See also: [design & direction](design.md) · [formal soundness](formal-soundness.md) ·
