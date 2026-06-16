@@ -50,6 +50,11 @@ source ──tree-sitter──▶ raw IL ──normalize──▶ canonical IL �
    algebraic and operator canonicalization, and a hash-consed **value graph** (GVN) that
    captures *what the code computes*, invariant to temporaries, statement order, and common
    subexpressions. See [normalization](normalization.md) for the exact pass order.
+   **Declarative languages** ([CSS and HTML markup](languages.md)) branch off after
+   desugar and skip the imperative phase entirely: their exact fingerprint is a
+   domain-specific *computed-style* / *rendered-DOM* canonicalization, dispatched by the
+   unit-root kind rather than the GVN — see
+   [normalization › declarative (CSS/HTML)](normalization.md).
 3. **Extract units & features**: frontend units are augmented with bounded
    sub-function units: control-flow blocks (`loop` / statement `if` / `try`) and
    exact-safe statement fragments whose whole value subtree stays inside the reported
@@ -86,7 +91,7 @@ A Cargo workspace; data flows left-to-right through them.
 |---|---|
 | `nose-il` | arena IL model (`Vec<Node>`, `NodeId(u32)`, out-of-line edges), provenance spans, semantic evidence records, interner, serialization, IR verifier |
 | `nose-semantics` | first-party semantic facade: language profiles, evidence/source-fact helpers, type-domain contracts, effect/operator/module/stdlib predicates, API contracts, and exact-channel proof obligations |
-| `nose-frontend` | tree-sitter parse + per-language CST→IL lowering and first-party evidence emission (one module per language; embedded `<script>` extraction) |
+| `nose-frontend` | tree-sitter parse + per-language CST→IL lowering and first-party evidence emission (one module per language, incl. declarative CSS/HTML; `<script>`/`<style>`/markup region extraction for Vue/Svelte/HTML) |
 | `nose-normalize` | the normalization passes, inferred immutable binding-domain evidence, and the value graph (GVN) |
 | `nose-detect` | unit/feature extraction, MinHash/LSH, scoring, clustering, refactor ranking |
 | `nose-eval` | benchmark scoring (precision/recall, pooled, stratified) — see [benchmark](benchmark.md) |

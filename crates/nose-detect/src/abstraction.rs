@@ -315,6 +315,12 @@ fn token_label(token: &WitnessToken) -> &'static str {
             NodeKind::KwArg => "KwArg",
             NodeKind::Splat => "Splat",
             NodeKind::Raw => "Raw",
+            NodeKind::CssRule => "CssRule",
+            NodeKind::CssSelector => "CssSelector",
+            NodeKind::CssDecl => "CssDecl",
+            NodeKind::HtmlElement => "HtmlElement",
+            NodeKind::HtmlAttr => "HtmlAttr",
+            NodeKind::HtmlText => "HtmlText",
         },
     }
 }

@@ -429,3 +429,59 @@ Naive PDG-style slicing was below the noise floor in an earlier token-based
 prototype. nose runs these analyses on a genuinely parsed, type-erased,
 alpha-renamed IL, so dataflow and value identities are recoverable. Same idea,
 different substrate.
+
+---
+
+## Declarative languages (CSS/HTML): the computed-style / rendered-DOM fingerprint
+
+The pipeline above is for **imperative** code, where the fingerprint is the
+behavioral value graph (GVN). [CSS and HTML markup are declarative](languages.md): a
+rule's meaning is its *computed style*, an element's its *rendered DOM*, so they do not
+ride any of the tracks above. In [`normalize`](architecture.md) a declarative file
+branches off right after `desugar` — the whole imperative semantic phase
+(recursion→iteration, dataflow, DCE, CFG/algebra) is skipped — and the exact `semantic`
+fingerprint of each `CssRule` / `HtmlElement` unit is computed by `nose-normalize::css` /
+`nose-normalize::html` (dispatched in `value_graph::api` by the unit-root kind, not the
+file language, so one mixed file can hold CSS, JS, and markup units side by side).
+
+The CSS fingerprint is the **canonical computed/declared style** of the rule's
+declaration block, as a sorted, domain-namespaced hash multiset:
+
+- each declaration binds its **property** to its **ordered, canonicalized value
+  tokens** (`nose-normalize::css_value`: color → canonical hex, number/length →
+  canonical spelling, box shorthands collapsed) — so `#fff` ≡ `#ffffff` ≡ `white` and
+  `margin: 0 0 0 0` ≡ `margin: 0`, while value-token order within a declaration stays
+  significant (`margin: 1px 2px` ≢ `2px 1px`);
+- the multiset is order-INdependent **across** declarations and excludes the selector,
+  so a duplicated declaration block under different selectors is one exact family;
+- **cascade soundness:** a repeated property keeps the last, and when a shorthand and
+  one of its longhands co-occur (`margin` + `margin-top`) the rule is detected as
+  cascade-ambiguous (purely structurally — one property is a `prefix-` of another) and
+  an order-sensitive sequence hash is added, so a reorder that changes the computed
+  style cannot merge;
+- **at-rule context** (`@media (...)`) is folded in, so a conditional rule never merges
+  with an unconditional one;
+- every hash is mixed with a CSS domain tag, so a CSS fingerprint can never equal an
+  imperative one (the cross-domain false-merge guard for the language-blind exact
+  channel).
+
+Soundness here is **by construction** — the fingerprint *is* the canonical computed
+style, so *equal fingerprint ⟺ equal computed style* holds definitionally — backed by
+adversarial per-rule batteries (`css_value` unit tests plus convergence/hard-negative
+tests; the project's primary trust mechanism, see [design](design.md)). A separate
+interpreter oracle, as run for imperative code, is redundant for a declarative domain
+where the fingerprint is the denotation.
+
+**HTML markup** (`nose-normalize::html`) works the same way, with *rendered DOM* in place
+of *computed style*: each `HtmlElement`'s fingerprint is a collision-resistant recursive
+DOM hash combining the lowercased tag, the attribute SET (order-independent — DOM
+attribute order is insignificant; a boolean attribute ≡ its empty-valued form, `class` is
+a token set), and the ORDERED child sequence (child order IS significant). Tag/structure,
+child order, text, and attribute values stay distinct, so a content difference never
+merges; the multiset carries every descendant subtree hash so the structural `near`
+channel can score partial markup similarity. Markup LEAF VALUES (an `HtmlText` run, a
+CSS value token) abstract to a generic class in the *shape* tag (`node_tag`) so the near
+channel scores by structure — "the same component shell with different content" — while
+the exact value lives only in the declarative fingerprint. HTML and CSS hashes carry
+distinct domain tags, so the language-blind exact channel can never merge HTML with CSS or
+with imperative code.

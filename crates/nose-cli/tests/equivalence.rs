@@ -8481,3 +8481,301 @@ fn literal_const_kind_is_separate_from_value_coevo_s8() {
         "numeric `+` still commutes",
     );
 }
+
+// ----- CSS (declarative) exact-channel semantics -----
+//
+// CSS units are NOT lowered through the imperative value graph; their exact fingerprint
+// is the canonical multiset of their declarations (see `nose-normalize::css`). These
+// lock in the soundness-relevant behavior: a duplicated declaration block is a clone
+// regardless of selector or declaration order, but a cascade-affecting or value
+// difference must NOT merge.
+
+/// The declarative value fingerprint of the first `CssRule` unit in `src`.
+fn css_fp(interner: &Interner, src: &str) -> Vec<u64> {
+    let il = nose_frontend::lower_source(FileId(0), "t.css", src.as_bytes(), Lang::Css, interner)
+        .unwrap();
+    let n = normalize(&il, interner, &NormalizeOptions::default());
+    let root = n
+        .units
+        .iter()
+        .find(|u| n.node(u.root).kind == nose_il::NodeKind::CssRule)
+        .map(|u| u.root)
+        .expect("expected a CssRule unit");
+    nose_normalize::value_fingerprint(&n, root, interner)
+}
+
+#[test]
+fn css_declaration_order_independent_and_selector_independent() {
+    // A duplicated declaration block is the canonical CSS clone — same declarations,
+    // different selector AND different source order, must converge.
+    let i = Interner::new();
+    let a = ".btn { display: flex; align-items: center; gap: 8px; padding: 12px; }";
+    let b = ".cta { padding: 12px; gap: 8px; align-items: center; display: flex; }";
+    assert_eq!(
+        css_fp(&i, a),
+        css_fp(&i, b),
+        "same declarations across selectors/orders must converge",
+    );
+}
+
+#[test]
+fn css_differing_value_does_not_converge() {
+    // One value differs (12px vs 16px) → different computed style → must NOT merge.
+    let i = Interner::new();
+    let a = ".btn { display: flex; align-items: center; gap: 8px; padding: 12px; }";
+    let c = ".btn { display: flex; align-items: center; gap: 8px; padding: 16px; }";
+    assert_ne!(
+        css_fp(&i, a),
+        css_fp(&i, c),
+        "a differing value must not merge"
+    );
+}
+
+#[test]
+fn css_cascade_last_wins_is_order_sensitive_for_repeated_properties() {
+    // Declaration order is irrelevant EXCEPT for a repeated property, where the cascade
+    // keeps the last — so these two compute different colors and must NOT merge.
+    let i = Interner::new();
+    let red_then_blue = ".x { color: red; color: blue; }";
+    let blue_then_red = ".x { color: blue; color: red; }";
+    assert_ne!(
+        css_fp(&i, red_then_blue),
+        css_fp(&i, blue_then_red),
+        "repeated-property cascade (last-wins) must stay order-sensitive",
+    );
+}
+
+#[test]
+fn css_value_order_within_a_declaration_is_significant() {
+    // Across declarations order is free, but WITHIN a declaration token order matters:
+    // `margin: 1px 2px` (top/bottom 1px, left/right 2px) ≠ `margin: 2px 1px`.
+    let i = Interner::new();
+    let a = ".a { margin: 1px 2px; color: red; display: flex; gap: 4px; }";
+    let b = ".b { margin: 2px 1px; color: red; display: flex; gap: 4px; }";
+    assert_ne!(
+        css_fp(&i, a),
+        css_fp(&i, b),
+        "value-token order within a declaration must be significant",
+    );
+}
+
+#[test]
+fn css_at_rule_context_blocks_merge_with_unconditional_rule() {
+    // A `@media`-scoped rule and an identical unconditional rule compute different
+    // styles (one is conditional) — the at-rule context must keep them apart.
+    let i = Interner::new();
+    let scoped =
+        "@media (max-width: 600px) { .btn { display: flex; align-items: center; gap: 8px; padding: 12px; } }";
+    let plain = ".btn { display: flex; align-items: center; gap: 8px; padding: 12px; }";
+    assert_ne!(
+        css_fp(&i, scoped),
+        css_fp(&i, plain),
+        "@media-scoped rule must not merge with an unconditional one",
+    );
+}
+
+#[test]
+fn css_computed_equivalence_converges_color_shorthand_unit() {
+    // The deep CSS equivalence: textually different but computed-identical rules merge.
+    // #ffffff≡white, margin:0 0 0 0≡margin:0, #ff0000≡red, padding 4-val≡2-val collapse.
+    let i = Interner::new();
+    let a = ".btn { color: #ffffff; margin: 0 0 0 0; background: #ff0000; padding: 10px 20px 10px 20px; }";
+    let b = ".cta { color: white; margin: 0; background: red; padding: 10px 20px; }";
+    assert_eq!(
+        css_fp(&i, a),
+        css_fp(&i, b),
+        "computed-equivalent rules (color/shorthand/unit) must converge",
+    );
+}
+
+#[test]
+fn css_distinct_colors_do_not_converge() {
+    // Soundness hard negative: different colors must never merge, however close.
+    let i = Interner::new();
+    let red = ".a { color: #ff0000; display: block; padding: 1px; }";
+    let blue = ".b { color: #0000ff; display: block; padding: 1px; }";
+    assert_ne!(
+        css_fp(&i, red),
+        css_fp(&i, blue),
+        "#f00 vs #00f must stay distinct"
+    );
+}
+
+#[test]
+fn css_shorthand_longhand_cascade_is_order_sensitive() {
+    // Soundness: a shorthand and one of its longhands in the same rule cascade by
+    // ORDER — `margin: 0; margin-top: 5px` (top=5px) ≠ `margin-top: 5px; margin: 0`
+    // (top=0). The order-independent multiset would false-merge these; the
+    // cascade-ambiguity guard must keep them apart.
+    let i = Interner::new();
+    let a = ".a { margin: 0; margin-top: 5px; display: block; color: red; }";
+    let b = ".b { margin-top: 5px; margin: 0; display: block; color: red; }";
+    assert_ne!(
+        css_fp(&i, a),
+        css_fp(&i, b),
+        "shorthand/longhand cascade must stay order-sensitive",
+    );
+}
+
+#[test]
+fn css_at_rule_full_condition_distinguishes_blocks() {
+    // Soundness (regression: a bulma `@container` false merge). The WHOLE at-rule head
+    // is the context — two blocks differing only in their condition (and selectors,
+    // which the fingerprint excludes) compute different styles and must NOT merge.
+    let i = Interner::new();
+    let a = "@container foo (max-width: 768px) { .a > .grid { --c: 1; } .a2 > .grid { --c: 2; } }";
+    let b = "@container foo (min-width: 769px) { .b > .grid { --c: 1; } .b2 > .grid { --c: 2; } }";
+    assert_ne!(
+        css_fp(&i, a),
+        css_fp(&i, b),
+        "at-rule blocks with different conditions must not merge",
+    );
+}
+
+#[test]
+fn css_independent_non_overlapping_properties_stay_order_free() {
+    // The guard must NOT over-fire: non-overlapping properties (no shorthand/longhand
+    // relation) remain order-independent.
+    let i = Interner::new();
+    let a = ".a { color: red; display: block; padding: 4px; gap: 2px; }";
+    let b = ".b { gap: 2px; padding: 4px; display: block; color: red; }";
+    assert_eq!(
+        css_fp(&i, a),
+        css_fp(&i, b),
+        "independent properties must remain order-free",
+    );
+}
+
+// ----- HTML (declarative markup) exact-channel semantics -----
+//
+// Markup units are fingerprinted by their canonical rendered DOM (see
+// `nose-normalize::html`): attribute order/boolean-form/whitespace/class-set are
+// normalized, but tag/structure/text/value differences are kept distinct.
+
+/// The declarative DOM fingerprint of the first top-level `HtmlElement` in `src`.
+fn html_fp(interner: &Interner, src: &str) -> Vec<u64> {
+    let ils = nose_frontend::lower_source_regions(
+        FileId(0),
+        "t.html",
+        src.as_bytes(),
+        Lang::Html,
+        interner,
+    );
+    let markup = ils
+        .iter()
+        .find(|il| il.meta.lang == Lang::Html)
+        .expect("a markup (html) region");
+    let n = normalize(markup, interner, &NormalizeOptions::default());
+    let root = n
+        .children(n.root)
+        .iter()
+        .copied()
+        .find(|&c| n.node(c).kind == nose_il::NodeKind::HtmlElement)
+        .expect("a top-level HtmlElement unit");
+    nose_normalize::value_fingerprint(&n, root, interner)
+}
+
+#[test]
+fn html_same_dom_converges_under_attr_order_boolean_whitespace_class_set() {
+    let i = Interner::new();
+    let a = r#"<div class="card x"><img src="a.png" alt="p"><button type="button" disabled>Go</button></div>"#;
+    // attrs reordered, boolean form `disabled=""`, class tokens reordered, extra whitespace
+    let b = "<div class=\"x card\">\n  <img alt=\"p\"   src=\"a.png\">\n  <button disabled=\"\" type=\"button\">Go</button>\n</div>";
+    assert_eq!(
+        html_fp(&i, a),
+        html_fp(&i, b),
+        "same rendered DOM must converge"
+    );
+}
+
+#[test]
+fn html_text_and_value_differences_do_not_converge() {
+    let i = Interner::new();
+    let a = r#"<div class="card"><h3>Title</h3><a href="/a">Link</a></div>"#;
+    let b = r#"<div class="card"><h3>Other</h3><a href="/a">Link</a></div>"#; // different text
+    let c = r#"<div class="card"><h3>Title</h3><a href="/b">Link</a></div>"#; // different href
+    assert_ne!(
+        html_fp(&i, a),
+        html_fp(&i, b),
+        "different text must not merge"
+    );
+    assert_ne!(
+        html_fp(&i, a),
+        html_fp(&i, c),
+        "different attr value must not merge"
+    );
+}
+
+#[test]
+fn html_child_order_is_significant() {
+    let i = Interner::new();
+    let a = r#"<ul class="m"><li>one</li><li>two</li></ul>"#;
+    let b = r#"<ul class="m"><li>two</li><li>one</li></ul>"#;
+    assert_ne!(
+        html_fp(&i, a),
+        html_fp(&i, b),
+        "DOM child order must be significant"
+    );
+}
+
+#[test]
+fn html_inline_style_is_computed_canonicalized() {
+    // Inline `style="…"` reuses the CSS computed-style canon: order-independent,
+    // color/shorthand/unit normalized.
+    let i = Interner::new();
+    let a = r#"<div style="margin: 0 0 0 0; color: #ffffff; padding: 4px"><span>x</span></div>"#;
+    let b = r#"<div style="color: white; padding: 4px; margin: 0"><span>x</span></div>"#;
+    let c = r#"<div style="color: black; padding: 4px; margin: 0"><span>x</span></div>"#;
+    assert_eq!(
+        html_fp(&i, a),
+        html_fp(&i, b),
+        "computed-equal inline styles converge"
+    );
+    assert_ne!(
+        html_fp(&i, a),
+        html_fp(&i, c),
+        "different inline style must not merge"
+    );
+}
+
+#[test]
+fn html_vue_directive_shorthand_canonicalizes() {
+    // `:x` ≡ `v-bind:x` and `@x` ≡ `v-on:x` — same binding, different spelling.
+    let i = Interner::new();
+    let short = r#"<button :class="c" @click="f"><i class="ico"></i>Go</button>"#;
+    let long = r#"<button v-bind:class="c" v-on:click="f"><i class="ico"></i>Go</button>"#;
+    assert_eq!(
+        html_fp(&i, short),
+        html_fp(&i, long),
+        "directive shorthand must canonicalize"
+    );
+}
+
+#[test]
+fn html_fingerprint_is_domain_disjoint_from_css_and_imperative() {
+    let i = Interner::new();
+    let html = html_fp(
+        &i,
+        r#"<div class="card"><h3>Title</h3><p>body text</p></div>"#,
+    );
+    let css = css_fp(&i, ".card { display: flex; gap: 8px; padding: 12px; }");
+    let py = value_fp(&i, "def f(x):\n    return x + 5\n", Lang::Python);
+    assert_ne!(html, css, "HTML and CSS fingerprints must be disjoint");
+    assert_ne!(
+        html, py,
+        "HTML and imperative fingerprints must be disjoint"
+    );
+}
+
+#[test]
+fn css_fingerprint_is_domain_disjoint_from_imperative() {
+    // Cross-domain false-merge guard: a CSS fingerprint must never equal an imperative
+    // one, so the (language-blind) exact channel can never merge CSS with code.
+    let i = Interner::new();
+    let css = css_fp(
+        &i,
+        ".a { display: flex; align-items: center; gap: 8px; padding: 12px; }",
+    );
+    let py = value_fp(&i, "def f(x):\n    return x + 5\n", Lang::Python);
+    assert_ne!(css, py, "CSS and imperative fingerprints must be disjoint");
+}

@@ -20,10 +20,13 @@ mod call_args;
 mod call_target_evidence;
 mod cfg_norm;
 mod commutative;
+mod css;
+mod css_value;
 mod dataflow;
 mod dce;
 mod desugar;
 mod effect_evidence;
+mod html;
 mod idioms;
 mod interp;
 mod library_api_evidence;
@@ -242,10 +245,35 @@ impl<'a> NormalizeTimer<'a> {
 
 /// Normalize one lowered file, returning a fresh canonical [`Il`] (the input is
 /// left untouched). Unit roots are remapped onto the new arena.
+/// Declarative fingerprint dispatch by unit-root kind: a CSS rule or an HTML element
+/// bypasses the imperative value graph and is fingerprinted by its canonical
+/// computed-style / rendered-DOM. `None` for imperative units (caller uses the GVN).
+pub(crate) fn declarative_fingerprint(
+    il: &Il,
+    root: NodeId,
+    interner: &Interner,
+) -> Option<(Vec<u64>, Vec<u64>, Vec<u64>)> {
+    css::declarative_fingerprint(il, root, interner)
+        .or_else(|| html::declarative_fingerprint(il, root, interner))
+}
+
 pub fn normalize(il: &Il, interner: &Interner, opts: &NormalizeOptions) -> Il {
     let mut timer = NormalizeTimer::new(&il.meta.path);
     let mut out = desugar::run(il, interner, opts);
     timer.lap("desugar");
+    // Declarative languages (CSS; HTML markup later) have no imperative behavior —
+    // their meaning is computed style / rendered DOM. The whole imperative semantic
+    // phase below (recursion→iteration, dataflow, DCE, CFG/algebra canon) is a no-op
+    // or actively wrong for them, so skip it. The exact fingerprint of a declarative
+    // unit is produced by its domain canonicalizer and dispatched in
+    // `value_graph::api` by the unit-root kind (see `css`). The structural core
+    // emitted by `desugar` is what the (future) computed-style oracle reads, so this
+    // returns the same pre-canonicalization tree under both `opts.oracle` settings
+    // until a behavior-changing declarative canon exists to gate.
+    if matches!(il.meta.lang, nose_il::Lang::Css | nose_il::Lang::Html) {
+        debug_assert!(out.validate().is_ok());
+        return out;
+    }
     effect_evidence::run(&mut out, interner);
     timer.lap("effect-evidence");
     binding_evidence::run(&mut out, interner);

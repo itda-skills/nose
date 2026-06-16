@@ -1,7 +1,9 @@
 # nose documentation
 
 **nose** finds syntax, semantic, and near-duplicate code clones across
-eight languages — plus the `<script>` logic inside Vue, Svelte, and HTML — by
+eight imperative languages — plus declarative **CSS** (computed-style equivalence)
+and **HTML markup** (rendered-DOM equivalence), and the `<script>`/`<style>` regions
+inside Vue, Svelte, and HTML — by
 lowering every language into one normalized intermediate language (IL) and
 ranking duplicated code by how much it's worth refactoring. The repository
 [README](../README.md) is the one-screen overview; this wiki is the full guide.
@@ -40,7 +42,7 @@ You want to *run* nose on a codebase and act on what it finds.
 - [structured-ignores](structured-ignores.md) — suppress reviewed findings with reason, owner, expiry, and machine-readable ignored-family output.
 - [reinvented-helpers](reinvented-helpers.md) — the containment channel: code that reimplements an existing pure helper inline instead of calling it.
 - [clone-types](clone-types.md) — what nose covers across the standard Type-1/2/3/4 taxonomy, with its honest limits.
-- [languages](languages.md) — the supported languages and the embedded `<script>` extraction for Vue/Svelte/HTML.
+- [languages](languages.md) — the supported languages, declarative CSS and HTML markup, and the `<script>`/`<style>`/markup region extraction for Vue/Svelte/HTML.
 
 ## Integrating nose
 
