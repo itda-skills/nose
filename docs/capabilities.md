@@ -160,6 +160,12 @@ release so it can't drift.
 | `il.cfg_norm_toggle` | boolean | Whether `nose il --no-cfg-norm` is supported. |
 | `stats.output_formats` | array | Supported stats output formats. |
 
+The `scan.*` keys describe the shared detection, ranking, and config surface, not just the
+deprecated `nose scan` command: `nose query` uses the same `--mode` values, the same default
+modes, the same `--format` and `sort` keys, and the same `[scan]` config block. The `scan.`
+prefix is retained for back-compatibility; treat these as the capabilities of the everyday
+[`nose query`](usage.md#nose-query) surface.
+
 Known unsupported capabilities or query interfaces should be represented as
 `false` when nose has a stable key for them. Unknown keys should be ignored by
 consumers. New fields may be added to existing objects without changing
@@ -176,9 +182,9 @@ Version 1 defines these `scan.capabilities` keys:
 | `baseline_changed_detection` | Baseline comparisons can classify changed and resolved families. |
 | `cache` | `--cache-dir` file analysis caching is supported. |
 | `ci_fail_gate` | `--fail-on any|new` gate behavior is supported. |
-| `diff` | the `--show diff` review view is supported. |
-| `hotspots` | the `--show hotspots` directory duplicated-line summary is supported. |
+| `diff` | the per-family unified-diff view is supported (query: open a family with `id=<fam>`; deprecated `nose scan --show diff`). |
+| `hotspots` | the directory duplicated-line summary is supported (query: `group=dir`; deprecated `nose scan --show hotspots`). |
 | `inline_suppression` | Source-level `nose-ignore` markers are supported. |
-| `proposal` | the `--show proposal` extraction-skeleton view is supported. |
+| `proposal` | the all-copies extraction-skeleton view is supported (query: `full`; deprecated `nose scan --show proposal`). |
 | `semantic_pack_loading` | local semantic-pack v0 manifest files/directories can be loaded for provenance reporting. |
 | `structured_ignores` | `nose.ignore.json` / `--ignore-file` audited suppressions are supported. |

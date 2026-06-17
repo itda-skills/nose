@@ -6,6 +6,10 @@ read the report. For settings you'd commit to a repo see
 [configuration](configuration.md); for CI use see
 [continuous integration](continuous-integration.md).
 
+Throughout, **IL** is nose's *intermediate language*: every source language is lowered into
+one normalized representation, so clones match within and across languages, and unit sizes are
+measured in IL tokens (its node count). See [architecture](architecture.md) for the pipeline.
+
 ## Install
 
 The quickest install (Homebrew or the install script) is in
@@ -42,12 +46,12 @@ document the shared ranking keys and detection channels both surfaces use.
 
 ## `nose query`
 
-`nose query <path> [terms…]` is the **exploration surface** (#359): a stateless,
+`nose query <path> [terms…]` is the **exploration surface**: a stateless,
 self-describing query over the family dataset nose builds, designed for both a human and an
 LLM agent loop. With no terms it prints a **landing dashboard** — what nose is, the family
-count by confidence, the cleanest production candidates (each with its own runnable drill
-link), the highest-confidence families, the most-duplicated directories, and a one-line
-omission footer. Add terms to slice, facet, or open one family; every result ends in
+count by confidence, the cleanest candidates to extract (each with its own runnable drill
+link, ranked purely by extractability — test and production alike), the proven families, the
+most-duplicated directories, and a one-line omission footer. Add terms to slice, facet, or open one family; every result ends in
 runnable `nose query …` next-commands, so you navigate by following links rather than
 re-reading a schema or hand-writing `jq`.
 
@@ -63,19 +67,20 @@ nose query <path> [FILTER … | group=FIELD | id=FAM | at=FILE:LINE | reinvented
 
 | part | meaning |
 |---|---|
-| `field=value` | keep families where the field equals the value (terms AND-ed); `field>N`/`field<N` for numbers; `path~substr` for a path substring; **set OR** with a comma — `witness=exact,subdag` matches either; **negate** with `field!=value` / `path!~substr` (e.g. `path!~frontend` drops a directory; `witness!=exact,subdag` drops both) |
+| `field=value` | keep families where the field equals the value (terms AND-ed); `field>N`/`field<N` for numbers; `path~substr` for a path substring; **set OR** with a comma — `witness=exact,shared-core` matches either; **negate** with `field!=value` / `path!~substr` (e.g. `path!~frontend` drops a directory; `witness!=exact,shared-core` drops both) |
 | `group=FIELD` | facet the selection by a discrete field (`dir`, `file`, `scope`, `witness`, `lang`, `shape`, `same_symbol`, `spotclass`, `status`); each bucket carries its family count **and summed removable lines**, ranked by removable — so `group=dir`/`group=file` is the duplication **hotspot** map |
 | `id=FAM` | open one family (any unambiguous id prefix): its copies, the all-copies extraction skeleton, fold-graph links (`subsumes`/`subsumed_by`), and navigation |
 | `at=FILE:LINE` | open the family whose copy covers that source location — a stable handle across edits (the span-derived `id=` shifts when code moves) |
 | `reinvented` | the **reinvented-helper** view: code that reimplements an existing helper inline (the action is "call it"). Complements `shape=call-existing-helper` (those are the cases the family clusterer caught; these are the ones it did not) |
-| `base=REF` | the **divergent-edit** view (the [`nose review`](review.md) pipeline, surfaced in query): detect families at the git ref, flag the ones a diff changed in one copy but not its siblings — a likely un-propagated fix. Each item carries `fire_eligible` (the §BV proven-shared-logic verdict); `base=REF --fail-on any` is the CI gate (fires only on the proven case) |
+| `base=REF` | the **divergent-edit** view (the [`nose review`](review.md) pipeline, surfaced in query): detect families at the git ref, flag the ones a diff changed in one copy but not its siblings — a likely un-propagated fix. Each item carries `fire_eligible` (the conservative proven-shared-logic verdict); `base=REF --fail-on any` is the CI gate (fires only on the proven case) |
 | `since=FILE` | compare to a saved snapshot (written with `--baseline FILE --write-baseline`) and expose each family's **`status`** (`new`/`changed`/`unchanged`) as a queryable field — the temporal lens. Hides nothing (unlike `--baseline`); `since=B status=new --fail-on any` is the composable gate |
 | `sort=KEY` | `extractability` (default), `value`, or `members` |
 | `top=N` | show the first N rows (default 30); `top=0` shows **all** (like the deprecated `scan --top 0`) |
 | `full` | on `id=` or a list, render the all-copies extraction skeletons inline (batched); each varying spot is `⟨param N: class⟩` — a coarse value-class hint (`literal`/`name`/`call`/`expr`/`block`) for the helper signature |
 | `all` | widen past the curated default surface to the full raw universe (demoted families labeled) |
 
-Fields: `scope` (prod\|test\|mixed), `witness` (exact\|subdag\|copy-paste\|similar),
+Fields: `scope` (prod\|test\|mixed), `witness` (exact\|shared-core\|copy-paste\|similar —
+`shared-core` is spelled `subdag` in `--format json`; both are accepted as filter values),
 `same_symbol` (true\|false — every copy is the same named symbol, the parallel-variant
 signature), `spotclass` (leaf-only\|structural — for near families, whether the varying spots
 are clean value-leaves to parameterize or genuine logic divergence), `status`
@@ -127,7 +132,7 @@ invariant lines (a language idiom, or two unrelated type literals with the same 
 have nothing to extract and sink to the bottom, even at `sim 1.00`. Extractability also
 demotes families whose copies **vary widely in length**: 25 same-shaped-but-different
 `Serializer` methods are not one helper waiting to happen, however many copies there
-are — a measured proxy for signature heterogeneity (experiments §CM).
+are — a measured proxy for signature heterogeneity (see [experiments](experiments.md)).
 
 `--sort hazard` is an **experimental** severity-style ranking calibrated on mined
 divergent-edit history. It predicts *which clones get edited inconsistently* (divergence
@@ -326,4 +331,3 @@ integration surface; do not build automation around it without checking the curr
 Hidden `detect`, `verify`, `features`, `eval`, and `ceiling` commands exist for
 strict/research workflows. They are hidden from `--help` because `query` is the command for
 everyday use; the [benchmark](benchmark.md) page documents them.
-</content>
