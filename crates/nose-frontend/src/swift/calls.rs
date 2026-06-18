@@ -1,0 +1,124 @@
+use super::*;
+
+pub(super) fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let callee = lower_callee(lo, node).unwrap_or_else(|| lo.empty_block(span));
+    let mut kids = vec![callee];
+    for suffix in Lowering::named_children(node)
+        .into_iter()
+        .filter(|child| matches!(child.kind(), "call_suffix" | "constructor_suffix"))
+    {
+        for child in Lowering::named_children(suffix) {
+            match child.kind() {
+                "value_arguments" => {
+                    let mut args = Vec::new();
+                    for arg in Lowering::named_children(child) {
+                        if arg.kind() == "value_argument" {
+                            args.push(lower_value_argument(lo, arg));
+                        }
+                    }
+                    if lo.text(child).trim_start().starts_with('[') {
+                        let index = match args.as_slice() {
+                            [] => lo.empty_block(lo.span(child)),
+                            [only] => *only,
+                            [key, default] if kwarg_name(lo, *default) == Some("default") => {
+                                let default_value =
+                                    lo.b.children(*default).first().copied().unwrap_or(*default);
+                                lo.add(
+                                    NodeKind::Seq,
+                                    Payload::Name(lo.sym("swift_subscript_default")),
+                                    lo.span(child),
+                                    &[*key, default_value],
+                                )
+                            }
+                            _ => lo.add(
+                                NodeKind::Seq,
+                                Payload::Name(lo.sym("tuple")),
+                                lo.span(child),
+                                &args,
+                            ),
+                        };
+                        return lo.add(NodeKind::Index, Payload::None, span, &[kids[0], index]);
+                    }
+                    kids.extend(args);
+                }
+                "lambda_literal" => kids.push(lower_lambda(lo, child)),
+                _ => {}
+            }
+        }
+    }
+    lo.add(NodeKind::Call, Payload::None, span, &kids)
+}
+pub(super) fn kwarg_name<'a>(lo: &'a Lowering, node: NodeId) -> Option<&'a str> {
+    if lo.b.kind(node) != NodeKind::KwArg {
+        return None;
+    }
+    let Payload::Name(name) = lo.b.payload(node) else {
+        return None;
+    };
+    Some(lo.interner.resolve(name))
+}
+pub(super) fn lower_callee(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
+    if node.kind() == "constructor_expression" {
+        let ty = node.child_by_field_name("constructed_type")?;
+        let name = type_surface_name(lo, ty).unwrap_or_else(|| lo.text(ty).to_string());
+        return Some(lo.var(&name, lo.span(ty)));
+    }
+    Lowering::named_children(node)
+        .into_iter()
+        .find(|child| child.kind() != "call_suffix")
+        .map(|child| lower_expr(lo, child))
+}
+pub(super) fn lower_value_argument(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let value = node
+        .child_by_field_name("value")
+        .or_else(|| first_expr_child(node))
+        .map(|value| lower_expr(lo, value))
+        .unwrap_or_else(|| lo.empty_block(span));
+    if let Some(name) = node.child_by_field_name("name") {
+        lo.add(
+            NodeKind::KwArg,
+            Payload::Name(lo.sym(lo.text(name).trim_end_matches(':'))),
+            span,
+            &[value],
+        )
+    } else {
+        value
+    }
+}
+pub(super) fn lower_navigation(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let Some(target) = node.child_by_field_name("target") else {
+        return lo.raw(node.kind(), span, &[]);
+    };
+    let mut base = lower_expr(lo, target);
+    let Some(suffix) = node.child_by_field_name("suffix") else {
+        return base;
+    };
+    let suffix_value = suffix
+        .child_by_field_name("suffix")
+        .or_else(|| Lowering::named_children(suffix).into_iter().next());
+    if let Some(value) = suffix_value {
+        match value.kind() {
+            "simple_identifier" | "identifier" => {
+                return lo.add(
+                    NodeKind::Field,
+                    Payload::Name(lo.sym(lo.text(value))),
+                    span,
+                    &[base],
+                );
+            }
+            "integer_literal" => {
+                let index = lower_expr(lo, value);
+                base = lo.add(NodeKind::Index, Payload::None, span, &[base, index]);
+            }
+            _ if is_expr_kind(value.kind()) => {
+                let index = lower_expr(lo, value);
+                base = lo.add(NodeKind::Index, Payload::None, span, &[base, index]);
+            }
+            _ => {}
+        }
+    }
+    base
+}

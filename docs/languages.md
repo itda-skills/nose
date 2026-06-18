@@ -15,8 +15,8 @@ semantic matching fail-closed unless the required facts and contracts are presen
 
 ## Supported languages
 
-Nine **imperative** base languages, each with its own CST→IL lowering (JavaScript and
-TypeScript share one path):
+Nine **imperative** base languages, each with its own CST→IL lowering module tree
+(JavaScript and TypeScript share one path):
 
 | language | extensions |
 |---|---|

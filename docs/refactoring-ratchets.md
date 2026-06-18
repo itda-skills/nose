@@ -104,6 +104,11 @@ and behavior easier to reason about:
   function targets, scope/binding collection, imported call-target materialization,
   and tests now live in focused `nose-normalize/src/call_target_evidence/*`
   modules;
+- keep imperative frontend language lowerers split by lowering concern; C, Go,
+  Java, Python, Ruby, Rust, and Swift roots are thin entry points, while items,
+  statements/control, expressions/calls, imports/factories, language-specific
+  helpers, and tests live under focused `nose-frontend/src/<language>/*`
+  modules;
 - keep normalize idiom canonicalization split by proof responsibility; call
   dispatch, receiver proof, argument construction, receiver-domain evidence
   checks, map/lambda surface recognition, and tests now live in focused

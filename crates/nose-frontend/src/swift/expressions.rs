@@ -1,0 +1,321 @@
+use super::*;
+
+pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    match node.kind() {
+        "identifier" | "simple_identifier" | "type_identifier" => match lo.text(node) {
+            "true" => lo.add(NodeKind::Lit, Payload::LitBool(true), span, &[]),
+            "false" => lo.add(NodeKind::Lit, Payload::LitBool(false), span, &[]),
+            other => lo.var(other, span),
+        },
+        "self_expression" => lo.var("self", span),
+        "super_expression" => lo.var("super", span),
+        "integer_literal" | "hex_literal" | "oct_literal" | "bin_literal" => {
+            lo.int_lit(lo.text(node), span)
+        }
+        "real_literal" => lo.float_lit(lo.text(node), span),
+        "line_string_literal"
+        | "multi_line_string_literal"
+        | "raw_string_literal"
+        | "regex_literal" => lower_string(lo, node),
+        "boolean_literal" => {
+            let text = lo.text(node);
+            lo.add(NodeKind::Lit, Payload::LitBool(text == "true"), span, &[])
+        }
+        "nil" => lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[]),
+        "array_literal" => lower_seq(lo, node, "array"),
+        "dictionary_literal" => lower_dictionary(lo, node),
+        "tuple_expression" => lower_tuple(lo, node),
+        "assignment" => lower_assignment(lo, node),
+        "directly_assignable_expression" => peel_value_child(lo, node),
+        "additive_expression"
+        | "multiplicative_expression"
+        | "comparison_expression"
+        | "equality_expression"
+        | "conjunction_expression"
+        | "disjunction_expression"
+        | "nil_coalescing_expression"
+        | "infix_expression"
+        | "range_expression"
+        | "open_start_range_expression"
+        | "open_end_range_expression"
+        | "fully_open_range"
+        | "bitwise_operation" => lower_binary_like(lo, node),
+        "prefix_expression" => lower_prefix(lo, node),
+        "postfix_expression" => lower_postfix(lo, node),
+        "ternary_expression" => lower_ternary(lo, node),
+        "if_statement" | "guard_statement" => lower_if(lo, node),
+        "switch_statement" => lower_switch(lo, node),
+        "call_expression" | "constructor_expression" => lower_call(lo, node),
+        "navigation_expression" | "selector_expression" => lower_navigation(lo, node),
+        "lambda_literal" => lower_lambda(lo, node),
+        "as_expression" | "check_expression" | "consume_expression" | "value_pack_expansion" => {
+            peel_value_child(lo, node)
+        }
+        "try_expression" => {
+            let value = first_expr_child(node)
+                .map(|child| lower_expr(lo, child))
+                .unwrap_or_else(|| lo.empty_block(span));
+            lo.protocol_boundary(span, SourceProtocolKind::TryPropagation, "try", &[value])
+        }
+        "await_expression" => {
+            let value = first_expr_child(node)
+                .map(|child| lower_expr(lo, child))
+                .unwrap_or_else(|| lo.empty_block(span));
+            lo.await_boundary(span, value)
+        }
+        "control_transfer_statement" => lower_control_transfer(lo, node)
+            .unwrap_or_else(|| lo.raw("control_transfer_statement", span, &[])),
+        k if is_type_level(k) => lo.empty_block(span),
+        _ => {
+            let kids: Vec<NodeId> = Lowering::named_children(node)
+                .into_iter()
+                .map(|child| lower_expr(lo, child))
+                .collect();
+            lo.raw(node.kind(), span, &kids)
+        }
+    }
+}
+pub(super) fn lower_string(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let interpolations: Vec<NodeId> = field_children(node, "interpolation")
+        .into_iter()
+        .map(|interp| {
+            let kids: Vec<NodeId> = Lowering::named_children(interp)
+                .into_iter()
+                .filter(|child| is_expr_kind(child.kind()))
+                .map(|child| lower_expr(lo, child))
+                .collect();
+            if kids.len() == 1 {
+                kids[0]
+            } else {
+                lo.raw("string_interpolation", lo.span(interp), &kids)
+            }
+        })
+        .collect();
+    if interpolations.is_empty() {
+        lo.str_lit(lo.text(node), span)
+    } else {
+        let mut kids = Vec::with_capacity(interpolations.len() + 1);
+        kids.push(lo.str_lit(lo.text(node), span));
+        kids.extend(interpolations);
+        lo.add(
+            NodeKind::Seq,
+            Payload::Name(lo.sym("interpolated_string")),
+            span,
+            &kids,
+        )
+    }
+}
+pub(super) fn lower_seq(lo: &mut Lowering, node: TsNode, tag: &str) -> NodeId {
+    let span = lo.span(node);
+    let kids: Vec<NodeId> = field_children(node, "element")
+        .into_iter()
+        .flat_map(|child| expr_list_children(child).into_iter())
+        .map(|child| lower_expr(lo, child))
+        .collect();
+    lo.add(NodeKind::Seq, Payload::Name(lo.sym(tag)), span, &kids)
+}
+pub(super) fn lower_dictionary(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let keys = field_children(node, "key");
+    let values = field_children(node, "value");
+    let mut entries = Vec::new();
+    for (key, value) in keys.iter().zip(values.iter()) {
+        let k = lower_expr(lo, *key);
+        let v = lower_expr(lo, *value);
+        entries.push(lo.add(NodeKind::Seq, Payload::Name(lo.sym("pair")), span, &[k, v]));
+    }
+    lo.add(NodeKind::Seq, Payload::Name(lo.sym("map")), span, &entries)
+}
+pub(super) fn lower_tuple(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .filter(|child| is_expr_kind(child.kind()) || child.kind() == "value_argument")
+        .map(|child| {
+            if child.kind() == "value_argument" {
+                lower_value_argument(lo, child)
+            } else {
+                lower_expr(lo, child)
+            }
+        })
+        .collect();
+    if kids.len() == 1 {
+        return kids[0];
+    }
+    lo.add(NodeKind::Seq, Payload::Name(lo.sym("tuple")), span, &kids)
+}
+pub(super) fn lower_binary_like(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let lhs = node
+        .child_by_field_name("lhs")
+        .or_else(|| node.child_by_field_name("left"))
+        .or_else(|| node.child_by_field_name("value"));
+    let rhs = node
+        .child_by_field_name("rhs")
+        .or_else(|| node.child_by_field_name("right"))
+        .or_else(|| node.child_by_field_name("if_nil"));
+    let op_text = node
+        .child_by_field_name("op")
+        .or_else(|| node.child_by_field_name("operator"))
+        .map(|op| lo.text(op));
+    if node.kind() == "nil_coalescing_expression" {
+        let left = lhs
+            .map(|lhs| lower_expr(lo, lhs))
+            .unwrap_or_else(|| lo.empty_block(span));
+        let right = rhs
+            .map(|rhs| lower_expr(lo, rhs))
+            .unwrap_or_else(|| lo.empty_block(span));
+        return lo.add(
+            NodeKind::Call,
+            Payload::Builtin(Builtin::ValueOrDefault),
+            span,
+            &[left, right],
+        );
+    }
+    if let (Some(lhs), Some(rhs), Some(op_text)) = (lhs, rhs, op_text) {
+        let left = lower_expr(lo, lhs);
+        let right = lower_expr(lo, rhs);
+        if op_text == "??" {
+            return lo.add(
+                NodeKind::Call,
+                Payload::Builtin(Builtin::ValueOrDefault),
+                span,
+                &[left, right],
+            );
+        }
+        if let Some(rewritten) = lower_misnested_swift_boolean_rhs(lo, span, op_text, left, right) {
+            return rewritten;
+        }
+        if let Some(op) = swift_bin_op(op_text) {
+            return lo.add(NodeKind::BinOp, Payload::Op(op), span, &[left, right]);
+        }
+        return lo.raw(&format!("{} {op_text}", node.kind()), span, &[left, right]);
+    }
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .filter(|child| is_expr_kind(child.kind()))
+        .map(|child| lower_expr(lo, child))
+        .collect();
+    if kids.len() == 1 {
+        kids[0]
+    } else if let Some(op_text) = op_text {
+        lo.raw(&format!("{} {op_text}", node.kind()), span, &kids)
+    } else {
+        lo.raw(node.kind(), span, &kids)
+    }
+}
+pub(super) fn lower_misnested_swift_boolean_rhs(
+    lo: &mut Lowering,
+    span: Span,
+    op_text: &str,
+    left: NodeId,
+    right: NodeId,
+) -> Option<NodeId> {
+    let cmp_op = swift_bin_op(op_text)?;
+    if !matches!(cmp_op, Op::Lt | Op::Le | Op::Gt | Op::Ge | Op::Eq | Op::Ne) {
+        return None;
+    }
+    if lo.b.kind(right) != NodeKind::BinOp {
+        return None;
+    }
+    let Payload::Op(bool_op @ (Op::And | Op::Or)) = lo.b.payload(right) else {
+        return None;
+    };
+    let rhs_children = lo.b.children(right).to_vec();
+    let [rhs_left, rhs_right] = rhs_children.as_slice() else {
+        return None;
+    };
+    let fixed_left = lo.add(
+        NodeKind::BinOp,
+        Payload::Op(cmp_op),
+        span,
+        &[left, *rhs_left],
+    );
+    Some(lo.add(
+        NodeKind::BinOp,
+        Payload::Op(bool_op),
+        span,
+        &[fixed_left, *rhs_right],
+    ))
+}
+pub(super) fn swift_bin_op(text: &str) -> Option<Op> {
+    match text {
+        "&&" => Some(Op::And),
+        "||" => Some(Op::Or),
+        "..<" | "..." => None,
+        other => common_bin_op(other),
+    }
+}
+pub(super) fn lower_prefix(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let op_text = node
+        .child_by_field_name("operation")
+        .map(|op| lo.text(op))
+        .unwrap_or_else(|| lo.text(node).trim_start());
+    let operand = node
+        .child_by_field_name("target")
+        .or_else(|| first_expr_child(node))
+        .map(|child| lower_expr(lo, child))
+        .unwrap_or_else(|| lo.empty_block(span));
+    if op_text.starts_with('!') {
+        lo.add(NodeKind::UnOp, Payload::Op(Op::Not), span, &[operand])
+    } else if op_text.starts_with('-') {
+        lo.add(NodeKind::UnOp, Payload::Op(Op::Neg), span, &[operand])
+    } else if op_text.starts_with('+') || op_text == "&" {
+        operand
+    } else if op_text.starts_with('.') {
+        lower_implicit_member(lo, span, operand)
+    } else {
+        lo.raw("prefix_expression", span, &[operand])
+    }
+}
+pub(super) fn lower_implicit_member(lo: &mut Lowering, span: Span, member: NodeId) -> NodeId {
+    if lo.b.kind(member) == NodeKind::Var {
+        if let Payload::Name(field) = lo.b.payload(member) {
+            let base = lo.var("swift_implicit_member", span);
+            return lo.add(NodeKind::Field, Payload::Name(field), span, &[base]);
+        }
+    }
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("swift_implicit_member")),
+        span,
+        &[member],
+    )
+}
+pub(super) fn lower_postfix(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let op_text = node
+        .child_by_field_name("operation")
+        .map(|op| lo.text(op))
+        .unwrap_or_else(|| lo.text(node).trim_end());
+    let operand_node = node
+        .child_by_field_name("target")
+        .or_else(|| first_expr_child(node));
+    let operand = operand_node
+        .map(|child| lower_expr(lo, child))
+        .unwrap_or_else(|| lo.empty_block(span));
+    if op_text.ends_with('?') || op_text.ends_with('!') {
+        operand
+    } else {
+        lo.raw("postfix_expression", span, &[operand])
+    }
+}
+pub(super) fn lower_ternary(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .filter(|child| is_expr_kind(child.kind()))
+        .map(|child| lower_expr(lo, child))
+        .collect();
+    match kids.as_slice() {
+        [cond, yes, no] => {
+            let then = lo.add(NodeKind::Block, Payload::None, span, &[*yes]);
+            let els = lo.add(NodeKind::Block, Payload::None, span, &[*no]);
+            lo.add(NodeKind::If, Payload::None, span, &[*cond, then, els])
+        }
+        _ => lo.raw("ternary_expression", span, &kids),
+    }
+}

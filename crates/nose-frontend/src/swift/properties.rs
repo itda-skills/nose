@@ -1,0 +1,113 @@
+use super::*;
+
+pub(super) fn lower_property(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let mut assigns = Vec::new();
+    let mut cursor = node.walk();
+    let names: Vec<TsNode> = node.children_by_field_name("name", &mut cursor).collect();
+    let values = field_children(node, "value");
+    let types = field_children(node, "type");
+    for (idx, name_node) in names.iter().enumerate() {
+        if let Some(ty) = types.get(idx).or_else(|| types.first()) {
+            record_property_binding_domain(lo, *name_node, *ty);
+        } else {
+            record_property_binding_domain_from_decl_text(lo, *name_node, node);
+        }
+        let lhs = binding_var(lo, *name_node, span);
+        let rhs = values
+            .get(idx)
+            .or_else(|| values.first())
+            .map(|value| lower_expr(lo, *value))
+            .or_else(|| lower_computed_property(lo, node))
+            .unwrap_or_else(|| lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[]));
+        assigns.push(lo.add(NodeKind::Assign, Payload::None, span, &[lhs, rhs]));
+    }
+    if assigns.is_empty() {
+        lower_computed_property(lo, node).unwrap_or_else(|| lo.empty_block(span))
+    } else if assigns.len() == 1 {
+        assigns[0]
+    } else {
+        lo.add(NodeKind::Block, Payload::None, span, &assigns)
+    }
+}
+pub(super) fn record_property_binding_domain(
+    lo: &mut Lowering,
+    name_node: TsNode,
+    type_node: TsNode,
+) {
+    let Some(name) = binding_name(lo, name_node) else {
+        return;
+    };
+    if name == "_" {
+        return;
+    }
+    let Some(domain) = lo.type_domain_from_text_with_dependencies(lo.text(type_node)) else {
+        return;
+    };
+    lo.record_evidence_with_pack_dependencies(
+        EvidenceAnchor::binding(lo.span(name_node), stable_symbol_hash(&name)),
+        EvidenceKind::Domain(domain.domain),
+        domain.provenance.pack_id,
+        domain.provenance.rule,
+        domain.dependencies,
+    );
+}
+pub(super) fn record_property_binding_domain_from_decl_text(
+    lo: &mut Lowering,
+    name_node: TsNode,
+    property_node: TsNode,
+) {
+    let Some(name) = binding_name(lo, name_node) else {
+        return;
+    };
+    if name == "_" {
+        return;
+    }
+    let decl = lo.text(property_node);
+    let Some(name_start) = decl.find(&name) else {
+        return;
+    };
+    let after_name = &decl[name_start + name.len()..];
+    let Some((_, after_colon)) = after_name.split_once(':') else {
+        return;
+    };
+    let ty = after_colon
+        .split(['=', ','])
+        .next()
+        .unwrap_or(after_colon)
+        .trim();
+    if ty.is_empty() {
+        return;
+    }
+    let annotated = format!("{name}: {ty}");
+    let Some(domain) = lo.type_domain_from_text_with_dependencies(&annotated) else {
+        return;
+    };
+    lo.record_evidence_with_pack_dependencies(
+        EvidenceAnchor::binding(lo.span(name_node), stable_symbol_hash(&name)),
+        EvidenceKind::Domain(domain.domain),
+        domain.provenance.pack_id,
+        domain.provenance.rule,
+        domain.dependencies,
+    );
+}
+pub(super) fn lower_computed_property(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
+    node.child_by_field_name("computed_value")
+        .or_else(|| {
+            Lowering::named_children(node)
+                .into_iter()
+                .find(|child| child.kind() == "computed_property")
+        })
+        .map(|computed| lower_block(lo, computed))
+}
+pub(super) fn type_surface_name(lo: &Lowering, node: TsNode) -> Option<String> {
+    match node.kind() {
+        "user_type" | "optional_type" | "array_type" | "dictionary_type" => {
+            Lowering::named_children(node)
+                .into_iter()
+                .find_map(|child| type_surface_name(lo, child))
+        }
+        "type_identifier" | "simple_identifier" | "identifier" => Some(lo.text(node).to_string()),
+        _ => None,
+    }
+}

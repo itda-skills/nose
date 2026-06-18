@@ -3,13 +3,6 @@
   "files": {
     "crates/nose-cli/src/main.rs": 1618,
     "crates/nose-cli/src/review.rs": 946,
-    "crates/nose-frontend/src/c.rs": 1241,
-    "crates/nose-frontend/src/go.rs": 1262,
-    "crates/nose-frontend/src/java.rs": 1293,
-    "crates/nose-frontend/src/python.rs": 1797,
-    "crates/nose-frontend/src/ruby.rs": 883,
-    "crates/nose-frontend/src/rust.rs": 1835,
-    "crates/nose-frontend/src/swift.rs": 1805,
     "crates/nose-il/src/lib.rs": 1466,
     "crates/nose-il/src/node.rs": 914
   }

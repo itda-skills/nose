@@ -1,0 +1,141 @@
+use super::*;
+
+pub(super) fn lower_empty_java_collection_constructor(
+    lo: &mut Lowering,
+    node: TsNode,
+    args: &[NodeId],
+    span: Span,
+) -> Option<NodeId> {
+    let ty = node.child_by_field_name("type")?;
+    let type_span = lo.span(ty);
+    let type_name = java_constructor_type_name(lo.text(ty));
+    let contract = library_java_collection_constructor_contract(lo.lang, &type_name, args.len())?;
+    let LibraryApiCalleeContract::JavaUtilConstructor {
+        simple_type,
+        module,
+        requires_import_for_simple_type,
+        requires_no_local_type_shadow,
+        ..
+    } = contract.callee
+    else {
+        return None;
+    };
+    let uses_simple_type = type_name == simple_type;
+    if uses_simple_type {
+        let root = java_root(node);
+        if requires_import_for_simple_type
+            && !java_tree_resolves_simple_type(lo, root, module, simple_type)
+        {
+            return None;
+        }
+        if requires_no_local_type_shadow && java_tree_declares_type(lo, root, simple_type) {
+            return None;
+        }
+    }
+    match contract.result {
+        LibraryCollectionFactoryResult::EmptySequence => {
+            let callee = lo.add(
+                NodeKind::Var,
+                Payload::Name(lo.sym(&type_name)),
+                type_span,
+                &[],
+            );
+            let mut kids = Vec::with_capacity(args.len() + 1);
+            kids.push(callee);
+            kids.extend_from_slice(args);
+            lo.record_source_fact(span, SourceFactKind::Call(SourceCallKind::Construct));
+            Some(lo.add(NodeKind::Call, Payload::None, span, &kids))
+        }
+        _ => None,
+    }
+}
+pub(super) fn java_constructor_type_name(text: &str) -> String {
+    text.split('<')
+        .next()
+        .unwrap_or(text)
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect()
+}
+pub(super) fn java_root(mut node: TsNode) -> TsNode {
+    while let Some(parent) = node.parent() {
+        node = parent;
+    }
+    node
+}
+pub(super) fn java_tree_resolves_simple_type(
+    lo: &Lowering,
+    node: TsNode,
+    module: &str,
+    simple_type: &str,
+) -> bool {
+    let mut saw_wildcard = false;
+    let mut saw_exact = false;
+    let mut saw_conflict = false;
+    java_tree_import_resolution(
+        lo,
+        node,
+        module,
+        simple_type,
+        &mut saw_wildcard,
+        &mut saw_exact,
+        &mut saw_conflict,
+    );
+    (saw_exact || saw_wildcard) && !saw_conflict
+}
+pub(super) fn java_tree_import_resolution(
+    lo: &Lowering,
+    node: TsNode,
+    module: &str,
+    simple_type: &str,
+    saw_wildcard: &mut bool,
+    saw_exact: &mut bool,
+    saw_conflict: &mut bool,
+) {
+    if node.kind() == "import_declaration" {
+        let compact: String = lo
+            .text(node)
+            .chars()
+            .filter(|c| !c.is_whitespace())
+            .collect();
+        let exact = format!("import{module}.{simple_type};");
+        let wildcard = format!("import{module}.*;");
+        if compact == exact {
+            *saw_exact = true;
+        } else if compact == wildcard {
+            *saw_wildcard = true;
+        } else if compact.starts_with("import") && compact.ends_with(&format!(".{simple_type};")) {
+            *saw_conflict = true;
+        }
+        return;
+    }
+    for child in Lowering::named_children(node) {
+        java_tree_import_resolution(
+            lo,
+            child,
+            module,
+            simple_type,
+            saw_wildcard,
+            saw_exact,
+            saw_conflict,
+        );
+    }
+}
+pub(super) fn java_tree_declares_type(lo: &Lowering, node: TsNode, simple_type: &str) -> bool {
+    if matches!(
+        node.kind(),
+        "class_declaration"
+            | "interface_declaration"
+            | "enum_declaration"
+            | "record_declaration"
+            | "annotation_type_declaration"
+    ) && node
+        .child_by_field_name("name")
+        .is_some_and(|name| lo.text(name) == simple_type)
+    {
+        return true;
+    }
+    Lowering::named_children(node)
+        .into_iter()
+        .any(|child| java_tree_declares_type(lo, child, simple_type))
+}
