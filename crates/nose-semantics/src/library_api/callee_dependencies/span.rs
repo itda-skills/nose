@@ -1,0 +1,345 @@
+use super::java::*;
+use super::*;
+
+pub(in crate::library_api) fn library_api_dependencies_match_callee_at_span(
+    il: &Il,
+    interner: &Interner,
+    call_span: Span,
+    callee_span: Option<Span>,
+    receiver_span: Option<Span>,
+    callee: LibraryApiCalleeContract,
+    record: &EvidenceRecord,
+) -> bool {
+    match callee {
+        LibraryApiCalleeContract::FreeName { .. }
+        | LibraryApiCalleeContract::RustMacro { .. }
+        | LibraryApiCalleeContract::JsGlobalConstructor { .. }
+        | LibraryApiCalleeContract::ImportedBinding { .. } => {
+            library_api_dependencies_match_named_callee_at_span(
+                il,
+                interner,
+                call_span,
+                callee_span,
+                receiver_span,
+                callee,
+                record,
+            )
+        }
+        LibraryApiCalleeContract::JavaUtilStaticMember { .. }
+        | LibraryApiCalleeContract::JavaUtilConstructor { .. }
+        | LibraryApiCalleeContract::RubyRequireStaticMember { .. } => {
+            library_api_dependencies_match_static_import_callee_at_span(
+                il,
+                interner,
+                call_span,
+                callee_span,
+                receiver_span,
+                callee,
+                record,
+            )
+        }
+        LibraryApiCalleeContract::RegexLiteralMethod { .. }
+        | LibraryApiCalleeContract::Property { .. }
+        | LibraryApiCalleeContract::StaticIndexMembershipMethod { .. }
+        | LibraryApiCalleeContract::ImportedNamespaceFunction { .. }
+        | LibraryApiCalleeContract::StaticGlobalMethod { .. }
+        | LibraryApiCalleeContract::StaticGlobalFunction { .. } => {
+            library_api_dependencies_match_static_member_callee_at_span(
+                il,
+                interner,
+                callee_span,
+                receiver_span,
+                callee,
+                record,
+            )
+        }
+        LibraryApiCalleeContract::Method { .. }
+        | LibraryApiCalleeContract::IteratorAdapterMethod { .. }
+        | LibraryApiCalleeContract::AsyncMethod { .. } => {
+            library_api_dependencies_match_method_callee_at_span(
+                il,
+                interner,
+                callee_span,
+                receiver_span,
+                callee,
+                record,
+            )
+        }
+    }
+}
+
+pub(in crate::library_api) fn library_api_dependencies_match_named_callee_at_span(
+    il: &Il,
+    interner: &Interner,
+    call_span: Span,
+    callee_span: Option<Span>,
+    receiver_span: Option<Span>,
+    callee: LibraryApiCalleeContract,
+    record: &EvidenceRecord,
+) -> bool {
+    match callee {
+        LibraryApiCalleeContract::FreeName { name, shadow } => {
+            callee_span.is_some_and(|span| {
+                dependency_has_unshadowed_global_anchor(il, record, span, NodeKind::Var, name)
+            }) && library_api_free_name_shadow_safe(il.meta.lang, name, shadow, |candidate| {
+                callee_span
+                    .is_some_and(|span| file_defines_name_visible_at(il, interner, candidate, span))
+            })
+        }
+        LibraryApiCalleeContract::RustMacro { name, shadow } => {
+            dependency_has_source_call(il, record, call_span, SourceCallKind::MacroInvocation)
+                && callee_span.is_some_and(|span| {
+                    dependency_has_unshadowed_global_anchor(il, record, span, NodeKind::Var, name)
+                })
+                && library_api_free_name_shadow_safe(il.meta.lang, name, shadow, |candidate| {
+                    callee_span.is_some_and(|span| {
+                        file_defines_name_visible_at(il, interner, candidate, span)
+                    })
+                })
+        }
+        LibraryApiCalleeContract::JsGlobalConstructor {
+            receiver,
+            requires_unshadowed_global,
+        } => {
+            dependency_has_source_call(il, record, call_span, SourceCallKind::Construct)
+                && (!requires_unshadowed_global
+                    || callee_span.is_some_and(|span| {
+                        dependency_has_unshadowed_global_anchor(
+                            il,
+                            record,
+                            span,
+                            NodeKind::Var,
+                            receiver,
+                        )
+                    }))
+        }
+        LibraryApiCalleeContract::ImportedBinding { module, exported } => {
+            if let Some(span) = receiver_span {
+                dependency_has_imported_namespace_anchor(
+                    il,
+                    interner,
+                    record,
+                    span,
+                    NodeKind::Var,
+                    module,
+                )
+            } else if let Some(span) = callee_span {
+                dependency_has_imported_binding_anchor(
+                    il,
+                    interner,
+                    record,
+                    span,
+                    NodeKind::Var,
+                    module,
+                    exported,
+                ) || dependency_has_imported_namespace_dependency(il, interner, record, module)
+            } else {
+                dependency_has_imported_binding_dependency(il, interner, record, module, exported)
+                    || dependency_has_imported_namespace_dependency(il, interner, record, module)
+            }
+        }
+        _ => false,
+    }
+}
+
+pub(in crate::library_api) fn library_api_dependencies_match_static_import_callee_at_span(
+    il: &Il,
+    interner: &Interner,
+    call_span: Span,
+    callee_span: Option<Span>,
+    receiver_span: Option<Span>,
+    callee: LibraryApiCalleeContract,
+    record: &EvidenceRecord,
+) -> bool {
+    match callee {
+        LibraryApiCalleeContract::JavaUtilStaticMember { receiver, .. } => {
+            let receiver_proven = if let Some(span) = receiver_span {
+                dependency_has_imported_binding_anchor(
+                    il,
+                    interner,
+                    record,
+                    span,
+                    NodeKind::Var,
+                    "java.util",
+                    receiver,
+                )
+            } else {
+                dependency_has_imported_binding_dependency(
+                    il,
+                    interner,
+                    record,
+                    "java.util",
+                    receiver,
+                )
+            };
+            receiver_proven
+                && if let Some(span) = receiver_span {
+                    !unit_defines_hash_visible_at(il, interner, stable_symbol_hash(receiver), span)
+                } else {
+                    !unit_defines_hash(il, interner, stable_symbol_hash(receiver))
+                }
+        }
+        LibraryApiCalleeContract::JavaUtilConstructor {
+            simple_type,
+            qualified_type,
+            module,
+            requires_import_for_simple_type,
+            requires_no_local_type_shadow,
+        } => {
+            dependency_has_source_call(il, record, call_span, SourceCallKind::Construct)
+                && callee_span.is_some_and(|span| {
+                    java_constructor_dependencies_match_at_span(
+                        il,
+                        interner,
+                        record,
+                        span,
+                        call_span,
+                        simple_type,
+                        qualified_type,
+                        module,
+                        requires_import_for_simple_type,
+                        requires_no_local_type_shadow,
+                    )
+                })
+        }
+        LibraryApiCalleeContract::RubyRequireStaticMember {
+            receiver,
+            required_module,
+            shadow_root,
+            ..
+        } => {
+            receiver_span.is_some_and(|span| {
+                dependency_has_unshadowed_global_anchor(il, record, span, NodeKind::Var, receiver)
+            }) && dependency_has_required_module_before(
+                record,
+                il,
+                interner,
+                required_module,
+                call_span,
+            ) && receiver_span
+                .is_some_and(|span| !file_defines_name_visible_at(il, interner, shadow_root, span))
+        }
+        _ => false,
+    }
+}
+
+pub(in crate::library_api) fn library_api_dependencies_match_static_member_callee_at_span(
+    il: &Il,
+    interner: &Interner,
+    callee_span: Option<Span>,
+    receiver_span: Option<Span>,
+    callee: LibraryApiCalleeContract,
+    record: &EvidenceRecord,
+) -> bool {
+    match callee {
+        LibraryApiCalleeContract::RegexLiteralMethod {
+            required_receiver_fact,
+            ..
+        } => receiver_span.is_some_and(|span| {
+            dependency_has_source_fact_anchor(il, record, span, required_receiver_fact)
+        }),
+        LibraryApiCalleeContract::Property { .. } => false,
+        LibraryApiCalleeContract::StaticIndexMembershipMethod { method, receiver } => {
+            callee_span.is_some_and(|span| field_method_at_span(il, interner, span, method))
+                && receiver_span.is_some_and(|span| {
+                    static_index_membership_receiver_dependency_id_at_span(
+                        il, interner, span, receiver,
+                    )
+                    .is_some_and(|dependency| dependency_ids_are_present(record, &[dependency]))
+                })
+        }
+        LibraryApiCalleeContract::ImportedNamespaceFunction { module, .. } => {
+            if let Some(span) = receiver_span {
+                dependency_has_imported_namespace_anchor(
+                    il,
+                    interner,
+                    record,
+                    span,
+                    NodeKind::Var,
+                    module,
+                )
+            } else {
+                dependency_has_imported_namespace_dependency(il, interner, record, module)
+            }
+        }
+        LibraryApiCalleeContract::StaticGlobalMethod {
+            receiver,
+            qualified_path,
+            requires_unshadowed_receiver,
+            ..
+        } => {
+            callee_span.is_some_and(|span| {
+                dependency_has_qualified_global_anchor(
+                    il,
+                    record,
+                    span,
+                    NodeKind::Field,
+                    qualified_path,
+                )
+            }) && (!requires_unshadowed_receiver
+                || receiver_span.is_some_and(|span| {
+                    dependency_has_unshadowed_global_anchor(
+                        il,
+                        record,
+                        span,
+                        NodeKind::Var,
+                        receiver,
+                    )
+                }))
+        }
+        LibraryApiCalleeContract::StaticGlobalFunction {
+            function,
+            requires_unshadowed_function,
+        } => {
+            !requires_unshadowed_function
+                || callee_span.is_some_and(|span| {
+                    dependency_has_unshadowed_global_anchor(
+                        il,
+                        record,
+                        span,
+                        NodeKind::Var,
+                        function,
+                    )
+                })
+        }
+        _ => false,
+    }
+}
+
+pub(in crate::library_api) fn library_api_dependencies_match_method_callee_at_span(
+    il: &Il,
+    interner: &Interner,
+    callee_span: Option<Span>,
+    receiver_span: Option<Span>,
+    callee: LibraryApiCalleeContract,
+    record: &EvidenceRecord,
+) -> bool {
+    match callee {
+        LibraryApiCalleeContract::Method { method, receiver } => {
+            callee_span.is_some_and(|span| field_method_at_span(il, interner, span, method))
+                && receiver_span.is_some_and(|span| {
+                    method_receiver_dependencies_at_span(il, interner, span, receiver).is_some_and(
+                        |dependencies| dependency_ids_are_present(record, &dependencies),
+                    )
+                })
+        }
+        LibraryApiCalleeContract::IteratorAdapterMethod { method, receiver } => {
+            callee_span.is_some_and(|span| field_method_at_span(il, interner, span, method))
+                && receiver_span.is_some_and(|span| {
+                    iterator_adapter_receiver_dependencies_at_span(il, interner, span, receiver)
+                        .is_some_and(|dependencies| {
+                            dependency_ids_are_present(record, &dependencies)
+                        })
+                })
+        }
+        LibraryApiCalleeContract::AsyncMethod { method, receiver } => {
+            callee_span.is_some_and(|span| field_method_at_span(il, interner, span, method))
+                && receiver_span.is_some_and(|span| {
+                    async_receiver_dependencies_at_span(il, interner, span, receiver).is_some_and(
+                        |dependencies| dependency_ids_are_present(record, &dependencies),
+                    )
+                })
+        }
+        _ => false,
+    }
+}

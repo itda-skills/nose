@@ -73,11 +73,11 @@ semantic meaning.
 
 ### Accepted first-party producers and helpers
 
-- `crates/nose-semantics/src/library_api.rs` and
-  `crates/nose-semantics/src/library_api/*`
-  own first-party contract rows, evidence dependency validation, hash-to-row
-  registry helpers, and admitted occurrence resolvers. Raw selector parsing here
-  is the current compiled first-party kernel facade, not a consumer bypass.
+- `crates/nose-semantics/src/library_api.rs` and the focused
+  `crates/nose-semantics/src/library_api/` modules own first-party contract
+  rows, evidence dependency validation, hash-to-row registry helpers, and
+  admitted occurrence resolvers. Raw selector parsing here is the current
+  compiled first-party kernel facade, not a consumer bypass.
 - `crates/nose-normalize/src/library_api_evidence.rs::run` and its
   `record_*_library_api` helpers emit first-party `LibraryApi` and dependent
   `Domain` evidence after normalization. These helpers still inspect

@@ -657,13 +657,17 @@ and pack ecosystem.
   `library_api/contract_keys.rs`, first-party library API row constructors live in
   `library_api/rows.rs` with method/static/adapter rows in
   `library_api/rows/methods.rs`, evidence-hash-to-row registry helpers live in
-  `library_api/registry.rs`, library API occurrence evidence/admission and
-  dependency validation logic live in `library_api.rs`, admitted resolver shared
-  admission mechanics live in `library_api/resolvers/admission.rs`, Python
-  stdlib type-domain alias rows live in `type_domain/python_stdlib.rs`, semantic
-  pack compiled summaries, loading/conformance, and validation live under
-  `packs/`, and `lib.rs` preserves the existing flat public facade while
-  shedding the mixed 9k-line implementation body.
+  `library_api/registry.rs`, library API occurrence admission lives in
+  `library_api/admission.rs`, callee shape and dependency validation live in
+  `library_api/callee_shape.rs`, `library_api/callee_dependencies/`, and
+  `library_api/dependency_facts.rs`, receiver dependency proof lives in
+  `library_api/receiver_dependencies/`, imported occurrence validation lives in
+  `library_api/imported_occurrences.rs`, admitted resolver shared admission
+  mechanics live in `library_api/resolvers/admission.rs`, Python stdlib
+  type-domain alias rows live in `type_domain/python_stdlib.rs`, semantic pack
+  compiled summaries, loading/conformance, and validation live under `packs/`,
+  and `lib.rs` preserves the existing flat public facade while shedding the
+  mixed 9k-line implementation body.
 - The same code-quality pass split the CLI end-to-end test target into a small
   `tests/cli.rs` harness plus topic modules, and moved the Type-4 generator's
   axis metadata/model/aggregate helpers under `bench/type4/type4gen/` while
