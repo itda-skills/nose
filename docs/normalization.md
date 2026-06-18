@@ -235,9 +235,12 @@ downstream value-graph.
   model and builder state live in `value_graph/model.rs`, evidence/state
   helpers live in `value_graph/state.rs`, builder initialization lives in
   `value_graph/init.rs`, sink/path emission lives in
-  `value_graph/sinks.rs`, value interning and canonicalization live in
-  `value_graph/canonicalize.rs`, and expression dispatch lives in
-  `value_graph/eval.rs`. Control construction is split below
+  `value_graph/sinks.rs`, expression dispatch lives in
+  `value_graph/eval.rs`, and value interning/canonicalization is split below
+  `value_graph/canonicalize/`: core `mk` interning, operand ordering,
+  unary/binary algebraic rewrites, Phi selection idioms, comparison lattice
+  laws, byte-pack recognition, constants/literal-membership handling, and
+  value-DAG reference checks each have a focused module. Control construction is split below
   `value_graph/control/`: unit entry, guarded-return rewrites, guard/block facts,
   static runtime-error recognition, container walking, statement dispatch, loop
   state, loop idioms, local reductions, and block-return evaluation each have a

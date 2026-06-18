@@ -118,6 +118,11 @@ and behavior easier to reason about:
   map/default recognition, collection library-call adapters, HOF/lambda
   evaluation, and Rust option helpers now live in focused
   `nose-normalize/src/value_graph/collections/*` modules;
+- keep value-graph canonicalization split by rewrite family; core `mk`
+  interning, operand ordering, unary/binary algebraic rewrites, Phi selection
+  idioms, comparison lattice laws, byte-pack recognition, constants/literal
+  membership, and value-DAG reference checks now live in focused
+  `nose-normalize/src/value_graph/canonicalize/*` modules;
 - keep value-graph tests as a thin suite root plus domain modules; builder,
   factory, guard, library API, membership, promise, sequence-surface, source
   evidence, and shared fixture helpers now live under
