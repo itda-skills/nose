@@ -6,7 +6,7 @@
 
 use super::*;
 use crate::evidence::span_contains;
-
+mod contract_keys;
 mod contracts;
 mod registry;
 mod resolvers;
