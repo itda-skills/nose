@@ -603,9 +603,11 @@ and pack ecosystem.
   slice also split source-fact and value-graph proof/admission tests into
   focused adjacent modules so raw-shape regression cases are easier to audit.
   The LibraryApi resolver slice then split the remaining large
-  `nose-semantics` test root into domain/symbol evidence, LibraryApi evidence,
+  `nose-semantics` test root into semantic evidence, LibraryApi evidence,
   LibraryApi contract, and effect/place test modules before adding more
-  occurrence-admission coverage. The LibraryApi evidence tests are now further
+  occurrence-admission coverage. Semantic evidence tests are grouped by domain
+  core, type-domain rows, receiver-domain proof, sequence surfaces, and
+  import/symbol evidence. The LibraryApi evidence tests are now further
   grouped by canonical builtin admission, evidence resolution, callee-source
   proof, and admitted resolver behavior; LibraryApi contract tests are grouped
   by predicates, factory rows, method/static rows, demand/effect, operator
