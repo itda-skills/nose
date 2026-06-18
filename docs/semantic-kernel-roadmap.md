@@ -649,7 +649,8 @@ and pack ecosystem.
   `api_guards.rs`, library API contract identities and result wrappers live in
   `library_api/contracts.rs`, stable contract hash key encoders live in
   `library_api/contract_keys.rs`, first-party library API row constructors live in
-  `library_api/rows.rs`, evidence-hash-to-row registry helpers live in
+  `library_api/rows.rs` with method/static/adapter rows in
+  `library_api/rows/methods.rs`, evidence-hash-to-row registry helpers live in
   `library_api/registry.rs`, library API occurrence evidence/admission and
   dependency validation logic live in `library_api.rs`, admitted resolver shared
   admission mechanics live in `library_api/resolvers/admission.rs`, Python
