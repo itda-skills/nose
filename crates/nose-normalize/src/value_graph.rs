@@ -34,6 +34,7 @@ mod control;
 mod eval;
 mod field_state;
 mod index_state;
+mod init;
 mod inline;
 mod model;
 mod ops;

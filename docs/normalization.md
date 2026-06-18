@@ -228,7 +228,8 @@ downstream value-graph.
   The implementation keeps `value_graph.rs` as a module/documentation hub:
   public API entry points live in `value_graph/api.rs`, private value-graph
   model and builder state live in `value_graph/model.rs`, evidence/state
-  helpers live in `value_graph/state.rs`, sink/path emission lives in
+  helpers live in `value_graph/state.rs`, builder initialization lives in
+  `value_graph/init.rs`, sink/path emission lives in
   `value_graph/sinks.rs`, value interning and canonicalization live in
   `value_graph/canonicalize.rs`, and expression dispatch lives in
   `value_graph/eval.rs`. Other focused modules own active builders,
