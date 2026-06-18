@@ -61,6 +61,8 @@ and behavior easier to reason about:
 - keep shared scan dataset construction and deprecated `nose scan` command
   orchestration outside the dispatcher; they now live in
   `nose-cli/src/scan_commands.rs`;
+- keep post-lower Library API recognition out of the shared lowering context;
+  the first pass lives in `nose-frontend/src/lower/library_api_post_lower.rs`;
 - move reusable semantic or detection rules toward the owning library crate
   instead of keeping them in `nose-cli`;
 - split wide language and IL dispatch only around real concepts, such as
