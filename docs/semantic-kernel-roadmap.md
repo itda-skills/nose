@@ -647,9 +647,11 @@ and pack ecosystem.
   fragment classification, and feature orchestration while keeping proof-policy
   tests next to the strict exact module.
 - The `nose-semantics` production facade is now physically split as well:
-  evidence/source/domain proof helpers live in `evidence.rs`, effect/place proof
-  helpers live in `effects.rs`, first-party effect row tables live in
-  `effects/contract_rows.rs`, negative API guard policy lives in
+  source and call-target proof helpers live in `evidence.rs`, domain proof
+  helpers live in `evidence/domain.rs`, value-law registry rows live in
+  `evidence/value_laws.rs`, effect/place proof helpers live in `effects.rs`,
+  first-party effect row tables live in `effects/contract_rows.rs`, negative
+  API guard policy lives in
   `api_guards.rs`, library API contract identities and result wrappers live in
   `library_api/contracts.rs`, stable contract hash key encoders live in
   `library_api/contract_keys.rs`, first-party library API row constructors live in
