@@ -58,6 +58,9 @@ and behavior easier to reason about:
 - keep the `nose query` surface outside the dispatcher: query model/JSON helpers,
   renderers, dashboard, family drilldown, and command orchestration now live in
   `nose-cli/src/query_*.rs`;
+- keep shared scan dataset construction and deprecated `nose scan` command
+  orchestration outside the dispatcher; they now live in
+  `nose-cli/src/scan_commands.rs`;
 - move reusable semantic or detection rules toward the owning library crate
   instead of keeping them in `nose-cli`;
 - split wide language and IL dispatch only around real concepts, such as
