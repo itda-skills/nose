@@ -498,13 +498,14 @@ Root cause: `mk_value_or_map_default` (`value_graph/collections.rs`) upgraded a 
 guarded** default (`?? `, `== null`) to the absence-only `GetOrDefault`, while the **membership**
 guards (`has`/`in`, typed `getOrDefault`/comma-ok/`.get(k,d)`) reach `GetOrDefault` through a
 separate, non-conflated `map_presence_condition` path. The null-equality guard cannot be proven
-to be the absence check — the model **conflates `null`/`undefined`** (eval.rs §7), so the
-true-absence `=== undefined` is indistinguishable from the coalesce `== null`.
+to be the absence check — the model **conflates `null`/`undefined`** (see
+`value_graph/eval/binary.rs`), so the true-absence `=== undefined` is indistinguishable from the
+coalesce `== null`.
 
 **Fix (two splits, can only remove merges → no new proof obligation):** (1) the null-guarded map
 default folds to the faithful `ValueOrDefault` (`mk_nullish_map_default`), not `GetOrDefault`;
-(2) the eval.rs `=== undefined`-over-map-get exception is dropped, so the strict guard stays a
-distinct opaque rather than the conflated null `Eq`. Now `{?? , == null}` = coalesce,
+(2) the `value_graph/eval/binary.rs` `=== undefined`-over-map-get exception is dropped, so the
+strict guard stays a distinct opaque rather than the conflated null `Eq`. Now `{?? , == null}` = coalesce,
 `{has, in, getOrDefault, .get(k,d), comma-ok, unwrap_or}` = absence, `=== undefined` = its own
 opaque; the false merge is gone and each class still converges internally. **Corpus byte-identical**
 (`query top=0 --format json`, 15 JS/TS repos / 5825 families + the Python/Java/Go/Rust repos) — the

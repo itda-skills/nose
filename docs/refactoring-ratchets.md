@@ -123,6 +123,14 @@ and behavior easier to reason about:
   idioms, comparison lattice laws, byte-pack recognition, constants/literal
   membership, and value-DAG reference checks now live in focused
   `nose-normalize/src/value_graph/canonicalize/*` modules;
+- keep value-graph expression evaluation split by expression family; core
+  dispatch, literals/free variables, binary operators, field/index access,
+  calls, and structured expressions now live in focused
+  `nose-normalize/src/value_graph/eval/*` modules;
+- keep standard-library value recognizers split by proof surface; collection
+  factories, import facts, local binding evidence, library API spans, map
+  factories/access/membership, and integer min/max/clamp calls now live in
+  focused `nose-normalize/src/value_graph/stdlib/*` modules;
 - keep value-graph tests as a thin suite root plus domain modules; builder,
   factory, guard, library API, membership, promise, sequence-surface, source
   evidence, and shared fixture helpers now live under

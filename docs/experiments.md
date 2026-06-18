@@ -2929,7 +2929,8 @@ again: only a crafted attack finds it.
 
 Root cause has two coupled layers. `mk_value_or_map_default`
 (`value_graph/collections.rs`) **upgrades** a null-guarded coalesce to the absence-only
-`GetOrDefault`; and the value model **conflates `null` with `undefined`** (`eval.rs` §7
+`GetOrDefault`; and the value model **conflates `null` with `undefined`**
+(`value_graph/eval/binary.rs`
 comment), collapsing the true-absence `=== undefined` into the same `Eq(MapGet, null)` guard
 as `?? `/`== null`. The membership guards (`has`/`in`) fold to `GetOrDefault` through a
 separate, non-conflated path — they are the only forms the model can *prove* are absence.
@@ -2972,8 +2973,9 @@ a path the null/undefined conflation never touches; only the **null-equality** g
 (`?? `, `== null`) reached `GetOrDefault` via `mk_value_or_map_default`. The fix is two splits
 that can only *remove* merges (never create one, so no new proof obligation): (1) route the
 null-guarded map default to the faithful `ValueOrDefault` (`mk_nullish_map_default`) instead of
-`GetOrDefault`; (2) drop the eval.rs `=== undefined`-over-map-get exception so the strict guard
-stays a distinct opaque rather than the conflated null `Eq`. Result: `{?? , == null}` = coalesce,
+`GetOrDefault`; (2) drop the `value_graph/eval/binary.rs` `=== undefined`-over-map-get exception
+so the strict guard stays a distinct opaque rather than the conflated null `Eq`. Result:
+`{?? , == null}` = coalesce,
 `{has, in, getOrDefault, .get(k,d), comma-ok, unwrap_or}` = absence, `=== undefined` = its own
 opaque — all false merges gone, the coalesce and absence classes each still converge internally.
 **Corpus impact: byte-identical** `query top=0 --format json` across 15 JS/TS repos (5825 families)
@@ -2996,7 +2998,8 @@ its sync twin (identical body modulo `await`) are duplicated logic a maintainer 
 surfaced, but nose detected **0 families** for them (`async_sync_twin: none` in
 `coverage_matrix.v1.json`). The convergence was deliberately gated: `await` lowers to a
 `Raw("await")` protocol boundary the value graph turns into a **childless** `Opaque(subtree_hash)`
-(eval.rs), so twins share no value-DAG structure. Erasing `await` was the *old* unsound path (it
+(`value_graph/eval/core.rs`), so twins share no value-DAG structure. Erasing `await` was the
+*old* unsound path (it
 removed the IL `Raw` → the unit became `exact_safe` → an exact false merge of a Future with its
 resolved value).
 

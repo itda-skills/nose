@@ -235,8 +235,10 @@ downstream value-graph.
   model and builder state live in `value_graph/model.rs`, evidence/state
   helpers live in `value_graph/state.rs`, builder initialization lives in
   `value_graph/init.rs`, sink/path emission lives in
-  `value_graph/sinks.rs`, expression dispatch lives in
-  `value_graph/eval.rs`, and value interning/canonicalization is split below
+  `value_graph/sinks.rs`, expression dispatch is split below
+  `value_graph/eval/`: core dispatch, literals/free variables, binary operators,
+  field/index access, calls, and structured expressions each have a focused
+  module. Value interning/canonicalization is split below
   `value_graph/canonicalize/`: core `mk` interning, operand ordering,
   unary/binary algebraic rewrites, Phi selection idioms, comparison lattice
   laws, byte-pack recognition, constants/literal-membership handling, and
@@ -249,10 +251,13 @@ downstream value-graph.
   cardinality comparisons, map/default and membership recognition, count/product
   calls and related library-call adapters, HOF/lambda evaluation, and Rust option
   helpers each have a focused module.
-  Other focused modules own active builders, output extraction, stdlib recognizers,
-  pure inlining, low-level ops, and proof-sensitive rule modules. New value-graph
-  behavior should land in the narrowest matching module instead of growing the hub
-  file.
+  Standard-library and library-API recognizers are split below
+  `value_graph/stdlib/`: collection factories, import facts, local binding
+  evidence, library API span queries, map factories/access/membership, and
+  integer min/max/clamp calls each have a focused module. Other focused modules
+  own active builders, output extraction, pure inlining, low-level ops, and
+  proof-sensitive rule modules. New value-graph behavior should land in the
+  narrowest matching module instead of growing the hub file.
 
   A narrow Java-only selection idiom lives here: `x % 2 == 0 ? x + 1 : x - 1`
   and the equivalent `x % 2 != 0 ? x - 1 : x + 1` canonicalize to `x ^ 1`.

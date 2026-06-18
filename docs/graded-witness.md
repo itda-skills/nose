@@ -54,7 +54,8 @@ Some divergences are better described than itemized as holes:
   operand against the bare sync value) and records the await as a one-sided hole. Always sets
   `equal_modulo_holes = false` — a coroutine is not its resolved value, so this is a refactoring
   lead, never a behavioral-equivalence claim. (The fingerprint build, by contrast, makes `await e`
-  transparent so the twin's `vj` converges — see the dual view in `value_graph/eval.rs`.)
+  transparent so the twin's `vj` converges — see the dual view in
+  `value_graph/eval/core.rs`.)
 
 ## Soundness — the referent check
 
