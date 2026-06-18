@@ -160,10 +160,12 @@ when changed-line context makes a small exact region useful as an un-propagated-
 
 ## Migrated kinds
 
-The predicate path in `units.rs` is still the **production authority**: it decides which
-fragments are accepted. The contract path is an independent shadow recognizer, kept in lockstep
-by the differential gate above. Migrating a kind means re-expressing it on the contract path
-and adding it to that gate — it does **not** change production output.
+The contract path in `fragment::recognize::recognize_contract` is now the
+**production authority**: it decides which fragments are accepted. The legacy
+predicate path under `nose-detect/src/units/fragments.rs` remains only as a
+debug/differential guard while the old acceptance matrix is still in-tree.
+Migrating a kind means re-expressing it on the contract path and keeping the
+differential gate in lockstep until the legacy predicate can be deleted.
 
 | `FragmentKind` | contract-migrated? |
 |---|---|

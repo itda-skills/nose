@@ -6,7 +6,6 @@
     "crates/nose-detect/src/lib.rs": 1610,
     "crates/nose-detect/src/report.rs": 1868,
     "crates/nose-detect/src/strict_exact.rs": 2457,
-    "crates/nose-detect/src/units.rs": 3458,
     "crates/nose-detect/src/witness.rs": 900,
     "crates/nose-frontend/src/c.rs": 1241,
     "crates/nose-frontend/src/go.rs": 1262,

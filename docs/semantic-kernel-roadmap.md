@@ -643,9 +643,12 @@ and pack ecosystem.
   `Promise.resolve(obj)` assimilation, and missing or ambiguous proof remain
   exact-closed.
 - The detect strict exact safety gate was split from unit extraction into
-  `crates/nose-detect/src/strict_exact.rs`, reducing `units.rs` to extraction,
-  fragment classification, and feature orchestration while keeping proof-policy
-  tests next to the strict exact module.
+  `crates/nose-detect/src/strict_exact.rs`, and unit extraction was then split
+  into focused `crates/nose-detect/src/units/*` modules. The root now
+  orchestrates extraction, while unit model data, feature computation, timing,
+  IL tree helpers, exact-fragment dispatch, fragment context safety, ordered
+  effect sequences, Java self-field fragments, loop-effect fragments, and unit
+  tests live under the units submodules.
 - The `nose-semantics` production facade is now physically split as well:
   source and call-target proof helpers live in `evidence.rs`, sequence-surface
   proof lives in `sequence_surface.rs`, guard/import/symbol proof lives in

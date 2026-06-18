@@ -92,6 +92,11 @@ and behavior easier to reason about:
   field-state proof, statement execution, expression evaluation, call/builtin
   handling, higher-order evaluation, and oracle tests now live in focused
   `nose-normalize/src/interp/*` modules;
+- keep detect unit extraction focused on root orchestration; the public unit
+  model, shape/minhash feature extraction, unit timing, IL tree helpers,
+  exact-fragment root dispatch, ordered effect sequences, Java self-field
+  fragments, loop-effect fragments, fragment context-safety, and unit tests now
+  live in focused `nose-detect/src/units/*` modules;
 - move reusable semantic or detection rules toward the owning library crate
   instead of keeping them in `nose-cli`;
 - split wide language and IL dispatch only around real concepts, such as
