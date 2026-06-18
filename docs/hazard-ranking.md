@@ -190,7 +190,7 @@ later converged was probably unintended), and let users dismiss false positives 
    — **not** `mean_sem` (the data showed semantic size is anti-predictive; this also
    softly demotes the tiny dense functions the `min-size` gate cannot, see
    [normalization](normalization.md)).
-2. ✅ `SortKey::Hazard` in `crates/nose-cli/src/main.rs`, wired into `score()`,
+2. ✅ `SortKey::Hazard` in `crates/nose-cli/src/scan_options.rs`, wired into `score()`,
    `sort_name()`, the `--sort` value list, and `capabilities`. It remains opt-in via
    `--sort hazard`; `extractability` is the default.
 3. ✅ Tier-0 contract unit tests in `report.rs` (divergent > tight under hazard and the

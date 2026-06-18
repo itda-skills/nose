@@ -95,7 +95,7 @@ Compare `tune.py` output against the previous `nose_ver` recorded in
 
 | Thing | Location |
 |---|---|
-| The score (`hazard()`, `SortKey::Hazard`) | `crates/nose-detect/src/report.rs`, `crates/nose-cli/src/main.rs` |
+| The score (`hazard()`, `SortKey::Hazard`) | `crates/nose-detect/src/report.rs`, `crates/nose-cli/src/scan_options.rs` |
 | The formula + evidence | [hazard-ranking › Score design](hazard-ranking.md#score-design) |
 | Evaluation criteria, dataset, versioning model | [hazard-benchmark](hazard-benchmark.md) |
 | Mining + tuning tooling | [eval/hazard/](../eval/hazard/) (`mine.py`, `run_corpus.sh`, `analyze.py`, `tune.py`) |

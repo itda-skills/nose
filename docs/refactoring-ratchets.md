@@ -61,6 +61,9 @@ and behavior easier to reason about:
 - keep shared scan dataset construction and deprecated `nose scan` command
   orchestration outside the dispatcher; they now live in
   `nose-cli/src/scan_commands.rs`;
+- keep shared scan option parsing and report model types outside the dispatcher;
+  mode parsing, scan-channel resolution, report formats, ranking keys, gate
+  selectors, and scan scope summaries now live in `nose-cli/src/scan_options.rs`;
 - keep deprecated `nose scan` report rendering and gate output outside the
   dispatcher; the JSON/markdown/human/SARIF format switch, hotspots, and
   reinvented-helper report section now live in `nose-cli/src/scan_report.rs`;
