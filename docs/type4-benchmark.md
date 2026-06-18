@@ -88,6 +88,14 @@ unsafe boundaries), and the shared strict engine consumes them.
 `capabilities.v1.json` records which surfaces emit which facts, so unsupported cells stay
 visible.
 
+Swift participates as a first-party surface in the capability matrix and generator. Its
+evidence-backed Type-4 matrix coverage is 12/24 applicable cells: collection emptiness,
+string affix, membership, option presence, for-in/indexed reduction, immutable binding,
+proven callee identity, extract-method inline, tail numeric recursion, scalar min/max,
+filter fusion, and map fusion. Swift flat-map/filter-map, map-default, clamp, import
+identity, and scalar abs sign-ternary surfaces remain visible as unsupported or partial
+until their receiver, demand, or proof boundaries are modeled.
+
 ### Breadth-first difficulty levels
 
 Generation advances by level; a higher level is admitted only when lower-level coverage for

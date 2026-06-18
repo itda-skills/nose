@@ -1970,6 +1970,7 @@ const ONE_OR_TWO_ARGS: &[usize] = &[1, 2];
 const ONE_TO_THREE_ARGS: &[usize] = &[1, 2, 3];
 const PY: Lang = Lang::Python;
 const GO: Lang = Lang::Go;
+const SW: Lang = Lang::Swift;
 const FIRST_ARG: BuiltinArgContract = BuiltinArgContract::First;
 const ALL_ARGS: BuiltinArgContract = BuiltinArgContract::All;
 const ARITY_ANY: FreeFunctionBuiltinArity = FreeFunctionBuiltinArity::AtLeast(0);
@@ -2007,6 +2008,9 @@ const FREE_FUNCTION_BUILTINS: &[FreeFunctionBuiltinRow] = &[
     free_function_builtin_row(PY, "min", Builtin::Min, ALL_ARGS, ARITY_ONE_OR_TWO),
     free_function_builtin_row(PY, "max", Builtin::Max, ALL_ARGS, ARITY_ONE_OR_TWO),
     free_function_builtin_row(PY, "abs", Builtin::Abs, FIRST_ARG, ARITY_ONE),
+    free_function_builtin_row(SW, "min", Builtin::Min, ALL_ARGS, ARITY_AT_LEAST_TWO),
+    free_function_builtin_row(SW, "max", Builtin::Max, ALL_ARGS, ARITY_AT_LEAST_TWO),
+    free_function_builtin_row(SW, "abs", Builtin::Abs, FIRST_ARG, ARITY_ONE),
     free_function_builtin_row(PY, "zip", Builtin::Zip, ALL_ARGS, ARITY_TWO),
     free_function_builtin_row(PY, "enumerate", Builtin::Enumerate, FIRST_ARG, ARITY_ONE),
     free_function_builtin_row(PY, "any", Builtin::Any, FIRST_ARG, ARITY_ONE),
@@ -2260,6 +2264,11 @@ fn method_append_contract_shape(
             Receiver::ExactCollection,
             Args::ReceiverThenAll,
         ),
+        (Lang::Swift, "append", 1) => (
+            Builtin::Append,
+            Receiver::ExactCollection,
+            Args::ReceiverThenAll,
+        ),
         _ => return None,
     };
     Some(contract)
@@ -2319,10 +2328,13 @@ fn method_cardinality_contract_shape(
     use MethodReceiverContract as Receiver;
 
     let contract = match (lang, name, arg_count) {
-        (Lang::Rust, "len", 0) | (Lang::Java, "size", 0) => {
+        (Lang::Rust, "len", 0) | (Lang::Java, "size", 0) | (Lang::Swift, "count", 0) => {
             (Builtin::Len, Receiver::ExactCollection, Args::ReceiverOnly)
         }
-        (Lang::Rust, "is_empty", 0) | (Lang::Java, "isEmpty", 0) | (Lang::Ruby, "empty?", 0) => (
+        (Lang::Rust, "is_empty", 0)
+        | (Lang::Java, "isEmpty", 0)
+        | (Lang::Ruby, "empty?", 0)
+        | (Lang::Swift, "isEmpty", 0) => (
             Builtin::IsEmpty,
             Receiver::ExactCollection,
             Args::ReceiverOnly,
@@ -2361,7 +2373,8 @@ fn method_string_affix_contract_shape(
         )
         | (Lang::Python, "startswith", 1)
         | (Lang::Rust, "starts_with", 1)
-        | (Lang::Ruby, "start_with?", 1) => (
+        | (Lang::Ruby, "start_with?", 1)
+        | (Lang::Swift, "hasPrefix", 1) => (
             Builtin::StartsWith,
             Receiver::ExactString,
             Args::ReceiverAndFirst,
@@ -2378,7 +2391,8 @@ fn method_string_affix_contract_shape(
         )
         | (Lang::Python, "endswith", 1)
         | (Lang::Rust, "ends_with", 1)
-        | (Lang::Ruby, "end_with?", 1) => (
+        | (Lang::Ruby, "end_with?", 1)
+        | (Lang::Swift, "hasSuffix", 1) => (
             Builtin::EndsWith,
             Receiver::ExactString,
             Args::ReceiverAndFirst,
@@ -2415,7 +2429,7 @@ fn method_membership_contract_shape(
             1,
         )
         | (Lang::Ruby, "include?" | "member?", 1)
-        | (Lang::Java | Lang::Rust, "contains", 1) => (
+        | (Lang::Java | Lang::Rust | Lang::Swift, "contains", 1) => (
             Builtin::Contains,
             Receiver::ExactCollectionOrJavaKeySet,
             Args::FirstThenReceiver,
@@ -3303,17 +3317,20 @@ pub fn method_hof_contract(lang: Lang, name: &str) -> Option<HoFKind> {
         (Lang::JavaScript | Lang::TypeScript | Lang::Vue | Lang::Svelte | Lang::Html, "map")
         | (Lang::Rust, "map")
         | (Lang::Java, "map")
+        | (Lang::Swift, "map")
         | (Lang::Ruby, "map" | "collect") => HoFKind::Map,
         (
             Lang::JavaScript | Lang::TypeScript | Lang::Vue | Lang::Svelte | Lang::Html,
             "flatMap",
         )
         | (Lang::Rust, "flat_map")
-        | (Lang::Java, "flatMap") => HoFKind::FlatMap,
+        | (Lang::Java, "flatMap")
+        | (Lang::Swift, "flatMap") => HoFKind::FlatMap,
         (Lang::Rust, "filter_map") => HoFKind::FilterMap,
         (Lang::JavaScript | Lang::TypeScript | Lang::Vue | Lang::Svelte | Lang::Html, "filter")
         | (Lang::Rust, "filter")
         | (Lang::Java, "filter")
+        | (Lang::Swift, "filter")
         | (Lang::Ruby, "filter" | "select") => HoFKind::Filter,
         _ => return None,
     })
@@ -3343,6 +3360,8 @@ fn property_builtin_contract_shape(
             (Builtin::Len, MethodReceiverContract::ExactCollection)
         }
         (Lang::Java, "length") => (Builtin::Len, MethodReceiverContract::ExactCollection),
+        (Lang::Swift, "count") => (Builtin::Len, MethodReceiverContract::ExactCollection),
+        (Lang::Swift, "isEmpty") => (Builtin::IsEmpty, MethodReceiverContract::ExactCollection),
         _ => return None,
     })
 }
@@ -3363,6 +3382,8 @@ pub fn library_property_builtin_contract(
 fn library_property_selector_name(name: &str) -> Option<&'static str> {
     Some(match name {
         "length" => "length",
+        "count" => "count",
+        "isEmpty" => "isEmpty",
         _ => return None,
     })
 }

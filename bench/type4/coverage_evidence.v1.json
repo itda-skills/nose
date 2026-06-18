@@ -112,6 +112,28 @@
       "source": "sweep"
     },
     {
+      "axis": "collection_empty_check",
+      "gen_axis": "probe:collection_empty_check",
+      "language": "swift",
+      "status": "covered",
+      "pos_hit": 1,
+      "pos": 1,
+      "false_merges": 0,
+      "neg": 1,
+      "source": "probe"
+    },
+    {
+      "axis": "extract_method_inline",
+      "gen_axis": "probe:extract_method_inline",
+      "language": "swift",
+      "status": "covered",
+      "pos_hit": 1,
+      "pos": 1,
+      "false_merges": 0,
+      "neg": 1,
+      "source": "probe"
+    },
+    {
       "axis": "filter_fusion",
       "gen_axis": "probe:filter_fusion",
       "language": "javascript",
@@ -148,6 +170,17 @@
       "axis": "filter_fusion",
       "gen_axis": "probe:filter_fusion",
       "language": "rust",
+      "status": "covered",
+      "pos_hit": 1,
+      "pos": 1,
+      "false_merges": 0,
+      "neg": 1,
+      "source": "probe"
+    },
+    {
+      "axis": "filter_fusion",
+      "gen_axis": "probe:filter_fusion",
+      "language": "swift",
       "status": "covered",
       "pos_hit": 1,
       "pos": 1,
@@ -396,6 +429,17 @@
       "false_merges": 0,
       "neg": 1,
       "source": "sweep"
+    },
+    {
+      "axis": "immutable_binding",
+      "gen_axis": "probe:immutable_binding",
+      "language": "swift",
+      "status": "covered",
+      "pos_hit": 1,
+      "pos": 1,
+      "false_merges": 0,
+      "neg": 1,
+      "source": "probe"
     },
     {
       "axis": "import_identity",
@@ -653,6 +697,17 @@
     {
       "axis": "map_fusion",
       "gen_axis": "probe:map_fusion",
+      "language": "swift",
+      "status": "covered",
+      "pos_hit": 1,
+      "pos": 1,
+      "false_merges": 0,
+      "neg": 1,
+      "source": "probe"
+    },
+    {
+      "axis": "map_fusion",
+      "gen_axis": "probe:map_fusion",
       "language": "typescript",
       "status": "covered",
       "pos_hit": 1,
@@ -805,6 +860,17 @@
       "source": "sweep"
     },
     {
+      "axis": "membership_contains",
+      "gen_axis": "probe:membership_contains",
+      "language": "swift",
+      "status": "covered",
+      "pos_hit": 1,
+      "pos": 1,
+      "false_merges": 0,
+      "neg": 1,
+      "source": "probe"
+    },
+    {
       "axis": "null_option_presence",
       "gen_axis": "null_presence_predicate",
       "language": "c",
@@ -926,6 +992,17 @@
       "source": "sweep"
     },
     {
+      "axis": "null_option_presence",
+      "gen_axis": "probe:null_option_presence",
+      "language": "swift",
+      "status": "covered",
+      "pos_hit": 1,
+      "pos": 1,
+      "false_merges": 0,
+      "neg": 1,
+      "source": "probe"
+    },
+    {
       "axis": "numeric_clamp",
       "gen_axis": "numeric_clamp",
       "language": "python",
@@ -1012,6 +1089,17 @@
       "false_merges": 0,
       "neg": 10,
       "source": "sweep"
+    },
+    {
+      "axis": "numeric_minmax_abs",
+      "gen_axis": "probe:numeric_minmax_abs",
+      "language": "swift",
+      "status": "covered",
+      "pos_hit": 1,
+      "pos": 1,
+      "false_merges": 0,
+      "neg": 1,
+      "source": "probe"
     },
     {
       "axis": "own_property_guard",
@@ -1144,6 +1232,17 @@
       "false_merges": 0,
       "neg": 4,
       "source": "sweep"
+    },
+    {
+      "axis": "proven_callee_identity",
+      "gen_axis": "probe:proven_callee_identity",
+      "language": "swift",
+      "status": "covered",
+      "pos_hit": 1,
+      "pos": 1,
+      "false_merges": 0,
+      "neg": 1,
+      "source": "probe"
     },
     {
       "axis": "proven_callee_identity",
@@ -1313,6 +1412,17 @@
     {
       "axis": "recursion_tail_numeric",
       "gen_axis": "probe:recursion_tail_numeric",
+      "language": "swift",
+      "status": "covered",
+      "pos_hit": 1,
+      "pos": 1,
+      "false_merges": 0,
+      "neg": 1,
+      "source": "probe"
+    },
+    {
+      "axis": "recursion_tail_numeric",
+      "gen_axis": "probe:recursion_tail_numeric",
       "language": "typescript",
       "status": "covered",
       "pos_hit": 1,
@@ -1379,7 +1489,29 @@
     {
       "axis": "reduce_minmax_anyall",
       "gen_axis": "probe:reduce_minmax_anyall",
+      "language": "swift",
+      "status": "covered",
+      "pos_hit": 1,
+      "pos": 1,
+      "false_merges": 0,
+      "neg": 1,
+      "source": "probe"
+    },
+    {
+      "axis": "reduce_minmax_anyall",
+      "gen_axis": "probe:reduce_minmax_anyall",
       "language": "typescript",
+      "status": "covered",
+      "pos_hit": 1,
+      "pos": 1,
+      "false_merges": 0,
+      "neg": 1,
+      "source": "probe"
+    },
+    {
+      "axis": "string_prefix_suffix",
+      "gen_axis": "probe:string_prefix_suffix",
+      "language": "swift",
       "status": "covered",
       "pos_hit": 1,
       "pos": 1,

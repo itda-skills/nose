@@ -75,6 +75,7 @@ fn library_api_contract_ids() -> Vec<LibraryApiContractId> {
 fn core_library_api_contract_ids() -> Vec<LibraryApiContractId> {
     vec![
         LibraryApiContractId::PropertyBuiltin(Builtin::Len),
+        LibraryApiContractId::PropertyBuiltin(Builtin::IsEmpty),
         LibraryApiContractId::PythonBuiltinCollectionFactory,
         LibraryApiContractId::PythonImportedCollectionFactory,
         LibraryApiContractId::FreeFunctionBuiltin(Builtin::Len),
@@ -231,7 +232,7 @@ fn library_api_callee_contracts_for_id(
     id: LibraryApiContractId,
 ) -> Vec<LibraryApiCalleeContract> {
     match id {
-        LibraryApiContractId::PropertyBuiltin(builtin) => ["length"]
+        LibraryApiContractId::PropertyBuiltin(builtin) => ["length", "count", "isEmpty"]
             .into_iter()
             .filter_map(|property| library_property_builtin_contract(lang, property))
             .filter(|contract| contract.id == LibraryApiContractId::PropertyBuiltin(builtin))
@@ -455,6 +456,9 @@ fn library_free_function_builtin_callee_contracts_for_id(
         (Lang::Python, Builtin::Min) => Some(("min", 1)),
         (Lang::Python, Builtin::Max) => Some(("max", 1)),
         (Lang::Python, Builtin::Abs) => Some(("abs", 1)),
+        (Lang::Swift, Builtin::Min) => Some(("min", 2)),
+        (Lang::Swift, Builtin::Max) => Some(("max", 2)),
+        (Lang::Swift, Builtin::Abs) => Some(("abs", 1)),
         (Lang::Python, Builtin::Zip) => Some(("zip", 2)),
         (Lang::Python, Builtin::Enumerate) => Some(("enumerate", 1)),
         (Lang::Python, Builtin::Any) => Some(("any", 1)),
@@ -483,6 +487,8 @@ fn method_call_contract_callees_for_semantic(
         "Abs",
         "HasPrefix",
         "HasSuffix",
+        "hasPrefix",
+        "hasSuffix",
         "Contains",
         "len",
         "size",
