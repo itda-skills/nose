@@ -241,10 +241,15 @@ downstream value-graph.
   `value_graph/control/`: unit entry, guarded-return rewrites, guard/block facts,
   static runtime-error recognition, container walking, statement dispatch, loop
   state, loop idioms, local reductions, and block-return evaluation each have a
-  focused module. Other focused modules own active builders, collection/HOF/library
-  value recognition, output extraction, stdlib recognizers, pure inlining,
-  low-level ops, and proof-sensitive rule modules. New value-graph behavior should
-  land in the narrowest matching module instead of growing the hub file.
+  focused module. Collection and HOF recognition is split below
+  `value_graph/collections/`: element/range values, reduction builtins,
+  cardinality comparisons, map/default and membership recognition, count/product
+  calls and related library-call adapters, HOF/lambda evaluation, and Rust option
+  helpers each have a focused module.
+  Other focused modules own active builders, output extraction, stdlib recognizers,
+  pure inlining, low-level ops, and proof-sensitive rule modules. New value-graph
+  behavior should land in the narrowest matching module instead of growing the hub
+  file.
 
   A narrow Java-only selection idiom lives here: `x % 2 == 0 ? x + 1 : x - 1`
   and the equivalent `x % 2 != 0 ? x - 1 : x + 1` canonicalize to `x ^ 1`.

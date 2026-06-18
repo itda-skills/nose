@@ -364,6 +364,11 @@ impl<'a> Builder<'a> {
         combine(h, span.end_line as u64)
     }
 
+    pub(super) fn source_salted_opaque(&mut self, expr: NodeId, tag: u64) -> ValueId {
+        let salt = self.source_salted_hash(expr, tag);
+        self.mk(ValOp::Opaque(salt), vec![])
+    }
+
     pub(super) fn is_unproven_membership_like_call(&self, expr: NodeId, kids: &[NodeId]) -> bool {
         if matches!(self.il.node(expr).payload, Payload::Builtin(_)) {
             return false;

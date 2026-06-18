@@ -1,0 +1,71 @@
+use super::super::*;
+
+impl<'a> Builder<'a> {
+    pub(in crate::value_graph) fn rust_some_call_arg(&self, node: NodeId) -> Option<NodeId> {
+        let kids = self.il.children(node);
+        admitted_rust_option_some_constructor_at_call(self.il, self.interner, node)?;
+        kids.get(1).copied()
+    }
+
+    pub(in crate::value_graph) fn rust_option_and_then_call_parts(
+        &self,
+        node: NodeId,
+    ) -> Option<(NodeId, NodeId)> {
+        let occurrence = admitted_rust_option_and_then_at_call(self.il, self.interner, node)?;
+        let callback = *self.il.children(node).get(1)?;
+        Some((occurrence.receiver?, callback))
+    }
+
+    pub(in crate::value_graph) fn is_rust_vec_new_call(&self, call: NodeId) -> bool {
+        admitted_rust_vec_new_factory_at_call(self.il, self.interner, call).is_some()
+    }
+
+    pub(in crate::value_graph) fn is_rust_option_none_node(&self, node: NodeId) -> bool {
+        admitted_rust_option_none_sentinel_at_node(self.il, self.interner, node).is_some()
+    }
+
+    fn rust_option_some_wildcard_pattern(&self, node: NodeId) -> Option<NodeId> {
+        if source_pattern_at_node(self.il, node)
+            != Some(SourcePatternKind::RustTupleStructSingleWildcardPattern)
+        {
+            return None;
+        }
+        let (NodeKind::Raw, Payload::Name(tag)) = (self.il.kind(node), self.il.node(node).payload)
+        else {
+            return None;
+        };
+        if self.interner.resolve(tag) != "tuple_struct_pattern" {
+            return None;
+        }
+        let kids = self.il.children(node);
+        let [callee] = kids else {
+            return None;
+        };
+        if !self.is_rust_option_some_node(*callee) {
+            return None;
+        }
+        Some(*callee)
+    }
+
+    fn is_rust_option_some_node(&self, node: NodeId) -> bool {
+        admitted_rust_option_some_constructor_at_node(self.il, self.interner, node).is_some()
+    }
+
+    pub(in crate::value_graph) fn eval_rust_option_some_pattern_comparison(
+        &mut self,
+        op: u32,
+        kids: &[NodeId],
+        env: &FxHashMap<u32, ValueId>,
+    ) -> Option<ValueId> {
+        if op != Op::Eq as u32 || kids.len() != 2 {
+            return None;
+        }
+        self.rust_option_some_wildcard_pattern(kids[1])?;
+        if self.domain_evidence_of_expr(kids[0]) != Some(DomainEvidence::Option) {
+            return None;
+        }
+        let value = self.eval(kids[0], env);
+        let nil = self.null_const();
+        Some(self.mk(ValOp::Bin(Op::Ne as u32), vec![value, nil]))
+    }
+}

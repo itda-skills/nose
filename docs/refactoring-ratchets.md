@@ -113,6 +113,11 @@ and behavior easier to reason about:
   container walking, statement dispatch, loop state, loop idioms, local reductions,
   and block-return evaluation now live in focused
   `nose-normalize/src/value_graph/control/*` modules;
+- keep value-graph collection recognition split by semantic surface; element/range
+  values, reduction builtins, cardinality and static membership comparisons,
+  map/default recognition, collection library-call adapters, HOF/lambda
+  evaluation, and Rust option helpers now live in focused
+  `nose-normalize/src/value_graph/collections/*` modules;
 - keep value-graph tests as a thin suite root plus domain modules; builder,
   factory, guard, library API, membership, promise, sequence-surface, source
   evidence, and shared fixture helpers now live under
