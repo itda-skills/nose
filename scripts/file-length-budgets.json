@@ -39,7 +39,6 @@
     "crates/nose-semantics/src/library_api/rows.rs": 870,
     "crates/nose-semantics/src/packs.rs": 1924,
     "crates/nose-semantics/src/tests/library_api_contracts.rs": 1962,
-    "crates/nose-semantics/src/tests/library_api_evidence.rs": 1137,
     "crates/nose-semantics/src/tests/semantic_evidence.rs": 1522
   }
 }

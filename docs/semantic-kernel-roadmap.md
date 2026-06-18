@@ -605,7 +605,9 @@ and pack ecosystem.
   The LibraryApi resolver slice then split the remaining large
   `nose-semantics` test root into domain/symbol evidence, LibraryApi evidence,
   LibraryApi contract, and effect/place test modules before adding more
-  occurrence-admission coverage.
+  occurrence-admission coverage. The LibraryApi evidence tests are now further
+  grouped by canonical builtin admission, evidence resolution, callee-source
+  proof, and admitted resolver behavior.
 - The idiom/value-graph resolver cleanup moved supported normalize idiom
   canonicalization and direct value-graph API consumers behind shared
   `nose-semantics` admitted occurrence resolvers. This covers free-function
