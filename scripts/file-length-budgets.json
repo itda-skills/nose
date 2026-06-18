@@ -4,7 +4,7 @@
     "crates/nose-cli/src/main.rs": 4024,
     "crates/nose-cli/src/review.rs": 946,
     "crates/nose-cli/tests/cli/commands.rs": 2796,
-    "crates/nose-cli/tests/cli/exact_fragments.rs": 3140,
+    "crates/nose-cli/tests/cli/exact_fragments.rs": 2240,
     "crates/nose-cli/tests/cli/semantic_idioms.rs": 3832,
     "crates/nose-detect/src/lib.rs": 1610,
     "crates/nose-detect/src/report.rs": 1868,

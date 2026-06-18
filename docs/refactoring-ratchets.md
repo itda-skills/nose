@@ -93,6 +93,11 @@ and behavior easier to reason about:
 - keep ordered branch exact-fragment matrices grouped by effect shape; ordered
   foreach-effect and mixed-effect branch fixtures now live in
   `nose-cli/tests/cli/exact_fragments/ordered_effect_branches.rs`;
+- keep ordered conditional branch exact-fragment matrices grouped by control
+  shape; conditional-only fixtures now live in
+  `nose-cli/tests/cli/exact_fragments/ordered_conditional_branches.rs`, and
+  loop-plus-conditional fixtures live in
+  `nose-cli/tests/cli/exact_fragments/ordered_loop_conditional_branches.rs`;
 - turn oversized integration-test files into small suite roots plus domain-named
   modules, keeping each new module under the 600-line target;
 - lower a file budget only in the same change that makes the corresponding
