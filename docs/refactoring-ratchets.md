@@ -114,6 +114,9 @@ and behavior easier to reason about:
   `nose-cli/tests/cli/exact_fragments/ordered_loop_conditional_branches.rs`;
 - turn oversized integration-test files into small suite roots plus domain-named
   modules, keeping each new module under the 600-line target;
+- keep CLI integration suites as thin roots that declare domain modules;
+  command-surface, exact-fragment, and semantic-idiom scenarios now live under
+  `nose-cli/tests/cli/{commands,exact_fragments,semantic_idioms}/`;
 - lower a file budget only in the same change that makes the corresponding
   design boundary clearer.
 
