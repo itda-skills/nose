@@ -41,7 +41,6 @@
     "crates/nose-semantics/src/tests/js_symbol_guards.rs": 788,
     "crates/nose-semantics/src/tests/library_api_contracts.rs": 1962,
     "crates/nose-semantics/src/tests/library_api_evidence.rs": 1137,
-    "crates/nose-semantics/src/tests/library_api_evidence/admission_resolvers.rs": 756,
     "crates/nose-semantics/src/tests/semantic_evidence.rs": 1522,
     "crates/nose-semantics/src/type_domain.rs": 798
   }
