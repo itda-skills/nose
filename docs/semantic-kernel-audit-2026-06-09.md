@@ -115,7 +115,7 @@ semantic meaning.
   `crates/nose-normalize/src/idioms.rs`, `crates/nose-normalize/src/interp.rs`,
   `crates/nose-normalize/src/effect_evidence.rs`,
   `crates/nose-normalize/src/value_graph/tests*.rs`,
-  `crates/nose-detect/src/strict_exact.rs`, and
+  `crates/nose-detect/src/strict_exact/*`, and
   `crates/nose-detect/src/units.rs` are under test modules or local test helpers.
   They build asserted evidence fixtures and hard negatives; they are not
   production admission paths.
@@ -140,7 +140,7 @@ semantic meaning.
   the value tag is emitted only when the corresponding guard evidence helper
   admits the node. Other `Seq` surfaces go through `seq_surface_contract_for_node`
   and otherwise become untagged.
-- `crates/nose-detect/src/strict_exact.rs` consumes admitted resolvers for
+- `crates/nose-detect/src/strict_exact/` consumes admitted resolvers for
   builtin payloads, HOFs, collection/map factories, Java constructors, static
   JS-like helpers, map get/key views, regex `.test`, iterator adapters, Rust
   `Vec`/`Option`, and static index membership. `Seq` admission uses
@@ -149,7 +149,7 @@ semantic meaning.
 
 ### Intentionally separate opaque identity policy
 
-- `crates/nose-detect/src/strict_exact.rs::strict_exact_callee_identity` keeps
+- `crates/nose-detect/src/strict_exact/identity.rs::strict_exact_callee_identity` keeps
   exact same-callee calls eligible when the callee itself is exact-safe or when a
   concrete `CallTarget` fact proves a direct local, imported function, or
   imported member target. This is deliberately not library/API semantics: the

@@ -97,6 +97,11 @@ and behavior easier to reason about:
   exact-fragment root dispatch, ordered effect sequences, Java self-field
   fragments, loop-effect fragments, fragment context-safety, and unit tests now
   live in focused `nose-detect/src/units/*` modules;
+- keep strict exact-safety policy fail-closed but locally owned; fact collection,
+  tree entry points, HoF/comprehension safety, primitive literal/sequence gates,
+  static index membership, call dispatch, collection/map receivers, factory/map
+  constructors, callee identity, and policy tests now live in focused
+  `nose-detect/src/strict_exact/*` modules;
 - move reusable semantic or detection rules toward the owning library crate
   instead of keeping them in `nose-cli`;
 - split wide language and IL dispatch only around real concepts, such as

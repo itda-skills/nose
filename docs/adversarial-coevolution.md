@@ -72,10 +72,10 @@ Rotate campaigns across these; each entry names what to read and what claim to a
    Attack: equivalences no rule chain reaches (note: packets showing *compositional*
    equivalences the fixed rule order cannot reach are the measured trigger for the
    [e-graph revisit conditions, design §4](design.md) — tag them `compositional`).
-2. **Exact-channel gates** — `strict_exact.rs`, exact-channel eligibility in
-   [semantic-kernel](semantic-kernel.md). Claim: fail-closed gates only exclude, never
-   wrongly admit. Attack both directions: admissible-but-excluded (recall) and the gate's
-   fail-open edges (soundness).
+2. **Exact-channel gates** — `crates/nose-detect/src/strict_exact/`,
+   exact-channel eligibility in [semantic-kernel](semantic-kernel.md). Claim:
+   fail-closed gates only exclude, never wrongly admit. Attack both directions:
+   admissible-but-excluded (recall) and the gate's fail-open edges (soundness).
 3. **Fragment contracts** — [fragment-contracts](fragment-contracts.md) and the explicit
    "stays closed" lists there and in [usage](usage.md). Attack: (a) verify closed things
    are closed, (b) find *unlisted* closed things — the unknown unknowns.

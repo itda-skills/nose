@@ -1,0 +1,258 @@
+use super::super::*;
+use super::support::*;
+
+#[test]
+fn strict_exact_len_rejects_pull_lazy_library_hof_arg() {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let item = b.add(NodeKind::Lit, Payload::LitInt(1), sp(1), &[]);
+    let coll = b.add(NodeKind::Seq, Payload::None, sp(1), &[item]);
+    let param = b.add(NodeKind::Param, Payload::Cid(0), sp(2), &[]);
+    let body_value = b.add(NodeKind::Var, Payload::Cid(0), sp(2), &[]);
+    let ret = b.add(NodeKind::Return, Payload::None, sp(2), &[body_value]);
+    let body = b.add(NodeKind::Block, Payload::None, sp(2), &[ret]);
+    let lambda = b.add(NodeKind::Lambda, Payload::None, sp(2), &[param, body]);
+    let hof = b.add(
+        NodeKind::HoF,
+        Payload::HoF(HoFKind::Map),
+        sp(3),
+        &[coll, lambda],
+    );
+    let len = b.add(
+        NodeKind::Call,
+        Payload::Builtin(Builtin::Len),
+        sp(4),
+        &[hof],
+    );
+    let mut il = b.finish(
+        len,
+        FileMeta {
+            path: "t.rs".into(),
+            lang: Lang::Rust,
+        },
+        Vec::new(),
+        Vec::new(),
+    );
+    il.evidence.push(method_call_library_api_evidence(
+        0,
+        Lang::Rust,
+        "map",
+        il.node(hof).span,
+        1,
+        Vec::new(),
+    ));
+    il.evidence.push(method_call_library_api_evidence(
+        1,
+        Lang::Rust,
+        "len",
+        il.node(len).span,
+        0,
+        Vec::new(),
+    ));
+
+    let facts = StrictFacts::collect(&il, &interner);
+    assert!(
+        !strict_exact_safe_tree(&il, &interner, &facts, len),
+        "len must not treat an admitted pull-lazy iterator HOF as an exact materialized collection"
+    );
+}
+
+#[test]
+fn binding_domain_does_not_make_opaque_binding_exact_value() {
+    let interner = Interner::new();
+    let xs = interner.intern("xs");
+    let mut b = IlBuilder::new(FileId(0));
+    let lhs = b.add(NodeKind::Var, Payload::Cid(0), sp(10), &[]);
+    let opaque = b.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern("opaque")),
+        sp(11),
+        &[],
+    );
+    let rhs = b.add(NodeKind::Call, Payload::None, sp(12), &[opaque]);
+    let assign = b.add(NodeKind::Assign, Payload::None, sp(10), &[lhs, rhs]);
+    let use_name = b.add(NodeKind::Var, Payload::Name(xs), sp(13), &[]);
+    let root = b.add(NodeKind::Block, Payload::None, sp(9), &[assign, use_name]);
+    let mut il = b.finish(
+        root,
+        FileMeta {
+            path: "t.ts".into(),
+            lang: Lang::TypeScript,
+        },
+        Vec::new(),
+        vec![xs],
+    );
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::binding(sp(10), stable_symbol_hash("xs")),
+        EvidenceKind::Domain(nose_il::DomainEvidence::Collection),
+        Vec::new(),
+    ));
+
+    let facts = StrictFacts::collect(&il, &interner);
+    assert!(
+        !strict_exact_safe_tree(&il, &interner, &facts, use_name),
+        "binding-domain evidence proves receiver capability, not exact value safety"
+    );
+}
+
+#[test]
+fn binding_domain_after_receiver_use_does_not_prove_receiver() {
+    let interner = Interner::new();
+    let xs = interner.intern("xs");
+    let mut b = IlBuilder::new(FileId(0));
+    let receiver = b.add(NodeKind::Var, Payload::Cid(0), sp(20), &[]);
+    let callee = b.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("includes")),
+        sp(21),
+        &[receiver],
+    );
+    let item = b.add(NodeKind::Lit, Payload::LitInt(7), sp(22), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(23), &[callee, item]);
+    let lhs = b.add(NodeKind::Var, Payload::Cid(0), sp(30), &[]);
+    let seq = b.add(NodeKind::Seq, Payload::None, sp(31), &[]);
+    let assign = b.add(NodeKind::Assign, Payload::None, sp(30), &[lhs, seq]);
+    let root = b.add(NodeKind::Block, Payload::None, sp(19), &[call, assign]);
+    let mut il = b.finish(
+        root,
+        FileMeta {
+            path: "t.ts".into(),
+            lang: Lang::TypeScript,
+        },
+        Vec::new(),
+        vec![xs],
+    );
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::binding(sp(30), stable_symbol_hash("xs")),
+        EvidenceKind::Domain(nose_il::DomainEvidence::Collection),
+        Vec::new(),
+    ));
+    il.evidence.push(method_call_library_api_evidence(
+        1,
+        Lang::TypeScript,
+        "includes",
+        sp(23),
+        1,
+        vec![EvidenceId(0)],
+    ));
+
+    let facts = StrictFacts::collect(&il, &interner);
+    assert!(
+        !strict_exact_collection_contains_call_safe(
+            &il, &interner, &facts, call, callee, "includes"
+        ),
+        "binding-domain evidence must be visible at the receiver use site"
+    );
+}
+
+#[test]
+fn map_get_method_requires_library_api_occurrence_evidence() {
+    let interner = Interner::new();
+    let map = interner.intern("m");
+    let mut b = IlBuilder::new(FileId(0));
+    let receiver = b.add(NodeKind::Var, Payload::Cid(0), sp(40), &[]);
+    let callee = b.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("get")),
+        sp(41),
+        &[receiver],
+    );
+    let key = b.add(
+        NodeKind::Lit,
+        Payload::LitStr(stable_symbol_hash("ready")),
+        sp(42),
+        &[],
+    );
+    let call = b.add(NodeKind::Call, Payload::None, sp(43), &[callee, key]);
+    let root = b.add(NodeKind::Block, Payload::None, sp(39), &[call]);
+    let mut il = b.finish(
+        root,
+        FileMeta {
+            path: "t.ts".into(),
+            lang: Lang::TypeScript,
+        },
+        Vec::new(),
+        vec![map],
+    );
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(sp(40), NodeKind::Var),
+        EvidenceKind::Domain(nose_il::DomainEvidence::Map),
+        Vec::new(),
+    ));
+
+    let facts = StrictFacts::collect(&il, &interner);
+    assert!(
+        !strict_exact_map_get_call_safe(&il, &interner, &facts, call, callee, "get"),
+        "receiver domain plus method spelling must not admit map-get semantics"
+    );
+
+    il.evidence.push(map_get_library_api_evidence(
+        1,
+        Lang::TypeScript,
+        "get",
+        sp(43),
+        vec![EvidenceId(0)],
+    ));
+    let facts = StrictFacts::collect(&il, &interner);
+    assert!(
+        strict_exact_map_get_call_safe(&il, &interner, &facts, call, callee, "get"),
+        "admitted map-get occurrence evidence should open the exact-safe API path"
+    );
+}
+
+#[test]
+fn swift_default_subscript_requires_map_receiver_domain() {
+    let interner = Interner::new();
+    let dict = interner.intern("dict");
+    let marker = interner.intern("swift_subscript_default");
+    let mut b = IlBuilder::new(FileId(0));
+    let param = b.add(NodeKind::Param, Payload::Cid(0), sp(50), &[]);
+    let receiver = b.add(NodeKind::Var, Payload::Cid(0), sp(51), &[]);
+    let key = b.add(
+        NodeKind::Lit,
+        Payload::LitStr(stable_symbol_hash("ready")),
+        sp(52),
+        &[],
+    );
+    let default = b.add(NodeKind::Lit, Payload::LitInt(0), sp(53), &[]);
+    let index_marker = b.add(
+        NodeKind::Seq,
+        Payload::Name(marker),
+        sp(54),
+        &[key, default],
+    );
+    let index = b.add(
+        NodeKind::Index,
+        Payload::None,
+        sp(55),
+        &[receiver, index_marker],
+    );
+    let root = b.add(NodeKind::Func, Payload::None, sp(49), &[param, index]);
+    let mut il = b.finish(
+        root,
+        FileMeta {
+            path: "t.swift".into(),
+            lang: Lang::Swift,
+        },
+        Vec::new(),
+        vec![dict],
+    );
+
+    let facts = StrictFacts::collect(&il, &interner);
+    assert!(
+        !strict_exact_safe_tree(&il, &interner, &facts, index),
+        "marker spelling alone must not prove Swift Dictionary default-subscript semantics"
+    );
+
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::param(sp(50)),
+        EvidenceKind::Domain(nose_il::DomainEvidence::Map),
+        Vec::new(),
+    ));
+    let facts = StrictFacts::collect(&il, &interner);
+    assert!(strict_exact_safe_tree(&il, &interner, &facts, index));
+}
