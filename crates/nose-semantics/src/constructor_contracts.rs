@@ -1,0 +1,231 @@
+//! Collection constructor and factory contracts.
+
+use super::*;
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum JavaCollectionFactoryKind {
+    ListOf,
+    SetOf,
+    ArraysAsList,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct JavaCollectionFactoryContract {
+    pub receiver: &'static str,
+    pub method: &'static str,
+    pub kind: JavaCollectionFactoryKind,
+    pub single_arg_spreads_array: bool,
+}
+
+pub fn java_collection_factory_contract(
+    lang: Lang,
+    receiver: &str,
+    method: &str,
+) -> Option<JavaCollectionFactoryContract> {
+    if lang != Lang::Java {
+        return None;
+    }
+    Some(match (receiver, method) {
+        ("List", "of") => JavaCollectionFactoryContract {
+            receiver: "List",
+            method: "of",
+            kind: JavaCollectionFactoryKind::ListOf,
+            single_arg_spreads_array: false,
+        },
+        ("Set", "of") => JavaCollectionFactoryContract {
+            receiver: "Set",
+            method: "of",
+            kind: JavaCollectionFactoryKind::SetOf,
+            single_arg_spreads_array: false,
+        },
+        ("Arrays", "asList") => JavaCollectionFactoryContract {
+            receiver: "Arrays",
+            method: "asList",
+            kind: JavaCollectionFactoryKind::ArraysAsList,
+            single_arg_spreads_array: true,
+        },
+        _ => return None,
+    })
+}
+
+pub fn java_collection_factory_contract_by_hash(
+    lang: Lang,
+    receiver: &str,
+    method_hash: u64,
+) -> Option<JavaCollectionFactoryContract> {
+    ["of", "asList"].into_iter().find_map(|method| {
+        (stable_symbol_hash(method) == method_hash)
+            .then(|| java_collection_factory_contract(lang, receiver, method))
+            .flatten()
+    })
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum JavaCollectionConstructorKind {
+    EmptyList,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct JavaCollectionConstructorContract {
+    pub simple_type: &'static str,
+    pub qualified_type: &'static str,
+    pub module: &'static str,
+    pub kind: JavaCollectionConstructorKind,
+    pub requires_import_for_simple_type: bool,
+    pub requires_no_local_type_shadow: bool,
+}
+
+pub fn java_collection_constructor_contract(
+    lang: Lang,
+    type_name: &str,
+    arg_count: usize,
+) -> Option<JavaCollectionConstructorContract> {
+    if lang != Lang::Java || arg_count != 0 {
+        return None;
+    }
+    let simple_type = match type_name {
+        "ArrayList" | "java.util.ArrayList" => "ArrayList",
+        "LinkedList" | "java.util.LinkedList" => "LinkedList",
+        _ => return None,
+    };
+    Some(JavaCollectionConstructorContract {
+        simple_type,
+        qualified_type: match simple_type {
+            "ArrayList" => "java.util.ArrayList",
+            "LinkedList" => "java.util.LinkedList",
+            _ => return None,
+        },
+        module: "java.util",
+        kind: JavaCollectionConstructorKind::EmptyList,
+        requires_import_for_simple_type: true,
+        requires_no_local_type_shadow: true,
+    })
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum JavaMapFactoryKind {
+    Of,
+    OfEntries,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct JavaMapFactoryContract {
+    pub receiver: &'static str,
+    pub method: &'static str,
+    pub kind: JavaMapFactoryKind,
+}
+
+pub fn java_map_factory_contract(
+    lang: Lang,
+    receiver: &str,
+    method: &str,
+) -> Option<JavaMapFactoryContract> {
+    if lang != Lang::Java || receiver != "Map" {
+        return None;
+    }
+    Some(match method {
+        "of" => JavaMapFactoryContract {
+            receiver: "Map",
+            method: "of",
+            kind: JavaMapFactoryKind::Of,
+        },
+        "ofEntries" => JavaMapFactoryContract {
+            receiver: "Map",
+            method: "ofEntries",
+            kind: JavaMapFactoryKind::OfEntries,
+        },
+        _ => return None,
+    })
+}
+
+pub fn java_map_factory_contract_by_hash(
+    lang: Lang,
+    receiver: &str,
+    method_hash: u64,
+) -> Option<JavaMapFactoryContract> {
+    ["of", "ofEntries"].into_iter().find_map(|method| {
+        (stable_symbol_hash(method) == method_hash)
+            .then(|| java_map_factory_contract(lang, receiver, method))
+            .flatten()
+    })
+}
+
+pub fn java_map_entry_contract(lang: Lang, receiver: &str, method: &str) -> bool {
+    lang == Lang::Java && receiver == "Map" && method == "entry"
+}
+
+pub fn java_map_entry_contract_by_hash(lang: Lang, receiver: &str, method_hash: u64) -> bool {
+    java_map_entry_contract(lang, receiver, "entry") && method_hash == stable_symbol_hash("entry")
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct RubySetFactoryContract {
+    pub receiver: &'static str,
+    pub method: &'static str,
+    pub required_module: &'static str,
+    pub shadow_root: &'static str,
+}
+
+pub fn ruby_set_factory_contract(
+    lang: Lang,
+    receiver: &str,
+    method: &str,
+    arg_count: usize,
+) -> Option<RubySetFactoryContract> {
+    (lang == Lang::Ruby && receiver == "Set" && method == "new" && arg_count == 1).then_some(
+        RubySetFactoryContract {
+            receiver: "Set",
+            method: "new",
+            required_module: "set",
+            shadow_root: "Set",
+        },
+    )
+}
+
+pub fn ruby_set_factory_contract_by_hash(
+    lang: Lang,
+    receiver: &str,
+    method_hash: u64,
+    arg_count: usize,
+) -> Option<RubySetFactoryContract> {
+    (method_hash == stable_symbol_hash("new"))
+        .then(|| ruby_set_factory_contract(lang, receiver, "new", arg_count))
+        .flatten()
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ConstructorProofRequirement {
+    ConstructSyntax,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct ClosedConstructorContract {
+    pub receiver: &'static str,
+    pub required_proof: ConstructorProofRequirement,
+    pub requires_unshadowed_global: bool,
+    pub entry_seq_tag: Option<u64>,
+}
+
+pub fn js_like_set_constructor_contract(
+    lang: Lang,
+    receiver: &str,
+) -> Option<ClosedConstructorContract> {
+    (js_like_lang(lang) && receiver == "Set").then_some(ClosedConstructorContract {
+        receiver: "Set",
+        required_proof: ConstructorProofRequirement::ConstructSyntax,
+        requires_unshadowed_global: true,
+        entry_seq_tag: None,
+    })
+}
+
+pub fn js_like_map_constructor_contract(
+    lang: Lang,
+    receiver: &str,
+) -> Option<ClosedConstructorContract> {
+    (js_like_lang(lang) && receiver == "Map").then_some(ClosedConstructorContract {
+        receiver: "Map",
+        required_proof: ConstructorProofRequirement::ConstructSyntax,
+        requires_unshadowed_global: true,
+        entry_seq_tag: Some(SEQ_VALUE_COLLECTION),
+    })
+}

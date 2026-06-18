@@ -647,27 +647,24 @@ and pack ecosystem.
   fragment classification, and feature orchestration while keeping proof-policy
   tests next to the strict exact module.
 - The `nose-semantics` production facade is now physically split as well:
-  source and call-target proof helpers live in `evidence.rs`, domain proof
-  helpers live in `evidence/domain.rs`, value-law registry rows live in
-  `evidence/value_laws.rs`, effect/place proof helpers live in `effects.rs`,
-  first-party effect row tables live in `effects/contract_rows.rs`, negative
-  API guard policy lives in
-  `api_guards.rs`, library API contract identities and result wrappers live in
-  `library_api/contracts.rs`, stable contract hash key encoders live in
-  `library_api/contract_keys.rs`, first-party library API row constructors live in
-  `library_api/rows.rs` with method/static/adapter rows in
-  `library_api/rows/methods.rs`, evidence-hash-to-row registry helpers live in
-  `library_api/registry.rs`, library API occurrence admission lives in
-  `library_api/admission.rs`, callee shape and dependency validation live in
-  `library_api/callee_shape.rs`, `library_api/callee_dependencies/`, and
-  `library_api/dependency_facts.rs`, receiver dependency proof lives in
-  `library_api/receiver_dependencies/`, imported occurrence validation lives in
-  `library_api/imported_occurrences.rs`, admitted resolver shared admission
-  mechanics live in `library_api/resolvers/admission.rs`, Python stdlib
-  type-domain alias rows live in `type_domain/python_stdlib.rs`, semantic pack
-  compiled summaries, loading/conformance, and validation live under `packs/`,
-  and `lib.rs` preserves the existing flat public facade while shedding the
-  mixed 9k-line implementation body.
+  source and call-target proof helpers live in `evidence.rs`, sequence-surface
+  proof lives in `sequence_surface.rs`, guard/import/symbol proof lives in
+  `guard_evidence.rs`, `import_facts.rs`, and `symbol_identity.rs`,
+  language/operator/module/stdlib profile contracts live in
+  `language_profile.rs`, `operators.rs`, `operator_thresholds.rs`,
+  `module_semantics.rs`, and `stdlib_semantics.rs`, free-function and
+  receiver-method rows live in `free_builtins.rs`, `method_contracts.rs`,
+  `method_families.rs`, `async_adapters.rs`, `constructor_contracts.rs`,
+  `map_statics.rs`, and `collection_semantics.rs`, domain proof helpers live in
+  `evidence/domain.rs`, value-law registry rows live in `evidence/value_laws.rs`,
+  effect/place proof helpers live in `effects.rs`, first-party effect row
+  tables live in `effects/contract_rows.rs`, negative API guard policy lives in
+  `api_guards.rs`, library API contract identities and occurrence admission live
+  under `library_api/`, Python stdlib type-domain alias rows live in
+  `type_domain/python_stdlib.rs`, semantic pack compiled summaries,
+  loading/conformance, and validation live under `packs/`, and `lib.rs`
+  preserves the existing flat public facade while staying below the file-length
+  gate.
 - The same code-quality pass split the CLI end-to-end test target into a small
   `tests/cli.rs` harness plus topic modules, and moved the Type-4 generator's
   axis metadata/model/aggregate helpers under `bench/type4/type4gen/` while

@@ -62,13 +62,11 @@ still being migrated toward it.
 - `nose-il` defines a compact shared IL, `Lang`, `Builtin`, `HoFKind`, operators,
   literals, source spans, units, and pack-facing internal `EvidenceRecord` facts.
 - `nose-semantics` defines the first-party semantic profile facade: language,
-  source-fact, operator, demand/effect, fragment, module, stdlib, builtin,
-  method-call, property, async, iterator-adapter, builder-append, and factory
-  contracts. The public crate surface remains a flat facade, while internal
-  evidence/source/domain proof helpers, demand/effect profiles, effect/place helpers,
-  library API contract identities, library API row constructors, library API
-  evidence-hash registry helpers, negative API guard rows, and library API
-  occurrence/admission logic are split into focused modules.
+  source-fact, sequence-surface, guard/import/symbol, operator, demand/effect,
+  fragment, module, stdlib, builtin, method-call, property, async,
+  iterator-adapter, builder-append, and factory contracts. The public crate
+  surface remains a flat facade, while those proof helpers and contract rows are
+  split into focused modules under `src/` and `src/library_api/`.
 - The external pack API is documented as a v0 manifest/schema with examples.
   `nose-semantics` can load local manifest files/directories for metadata and
   provenance reporting, `nose scan --format json` reports active packs, and

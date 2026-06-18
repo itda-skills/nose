@@ -1,0 +1,77 @@
+//! First-party language profile facade.
+
+use super::*;
+
+/// A first-party language profile. Keep this cheap and copyable; callers use it as a
+/// named semantic boundary around currently-supported language behavior.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct LanguageProfile {
+    lang: Lang,
+}
+
+pub fn semantics(lang: Lang) -> LanguageProfile {
+    LanguageProfile { lang }
+}
+
+impl LanguageProfile {
+    pub fn lang(self) -> Lang {
+        self.lang
+    }
+
+    /// Whether the language is dynamically typed — a bare parameter carries no static type, so
+    /// it could be a float at runtime (#342). Used to decide that an untyped `+`/`*` chain is
+    /// POSSIBLY float and must not be reassociated (float `+`/`*` is non-associative). The
+    /// statically-typed languages (Rust/Go/C/Java) instead carry per-param domain evidence, so
+    /// their float-ness is decided by the proven domain, not by this.
+    pub fn is_dynamically_typed(self) -> bool {
+        matches!(
+            self.lang,
+            Lang::Python
+                | Lang::Ruby
+                | Lang::JavaScript
+                | Lang::TypeScript
+                | Lang::Vue
+                | Lang::Svelte
+                | Lang::Html
+        )
+    }
+
+    pub fn pack_id(self) -> &'static str {
+        FIRST_PARTY_PACK_ID
+    }
+
+    pub fn trust(self) -> PackTrust {
+        PackTrust::DefaultFirstParty
+    }
+
+    pub fn operators(self) -> OperatorSemantics {
+        OperatorSemantics { lang: self.lang }
+    }
+
+    pub fn effects(self) -> EffectSemantics {
+        EffectSemantics { lang: self.lang }
+    }
+
+    pub fn modules(self) -> ModuleSemantics {
+        ModuleSemantics { lang: self.lang }
+    }
+
+    pub fn stdlib(self) -> StdlibSemantics {
+        StdlibSemantics { lang: self.lang }
+    }
+
+    pub fn collections(self) -> CollectionSemantics {
+        CollectionSemantics { lang: self.lang }
+    }
+
+    pub fn exact_fragments(self) -> FragmentSemantics {
+        FragmentSemantics { lang: self.lang }
+    }
+}
+
+pub(crate) fn js_like_lang(lang: Lang) -> bool {
+    matches!(
+        lang,
+        Lang::JavaScript | Lang::TypeScript | Lang::Vue | Lang::Svelte | Lang::Html
+    )
+}
