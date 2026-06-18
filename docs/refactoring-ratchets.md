@@ -46,6 +46,9 @@ and behavior easier to reason about:
 - keep shared verify-oracle support outside the command dispatcher; the oracle
   battery, behavior hashing, and behavioral-gate tally now live in
   `nose-cli/src/oracle_gate.rs`;
+- keep `nose verify` collection separate from presentation; JSON, exclusion,
+  soundness, completeness, calibration, and falsification output now live in
+  `nose-cli/src/verify_report.rs`;
 - move reusable semantic or detection rules toward the owning library crate
   instead of keeping them in `nose-cli`;
 - split wide language and IL dispatch only around real concepts, such as

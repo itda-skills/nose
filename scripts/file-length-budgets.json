@@ -1,7 +1,7 @@
 {
   "default_max_lines": 600,
   "files": {
-    "crates/nose-cli/src/main.rs": 7542,
+    "crates/nose-cli/src/main.rs": 7119,
     "crates/nose-cli/src/review.rs": 946,
     "crates/nose-cli/tests/cli/commands.rs": 2796,
     "crates/nose-cli/tests/cli/exact_fragments.rs": 4036,
