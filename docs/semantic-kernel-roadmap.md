@@ -607,7 +607,9 @@ and pack ecosystem.
   LibraryApi contract, and effect/place test modules before adding more
   occurrence-admission coverage. The LibraryApi evidence tests are now further
   grouped by canonical builtin admission, evidence resolution, callee-source
-  proof, and admitted resolver behavior.
+  proof, and admitted resolver behavior; LibraryApi contract tests are grouped
+  by predicates, factory rows, method/static rows, demand/effect, operator
+  contracts, and guard/effect rows.
 - The idiom/value-graph resolver cleanup moved supported normalize idiom
   canonicalization and direct value-graph API consumers behind shared
   `nose-semantics` admitted occurrence resolvers. This covers free-function
