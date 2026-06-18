@@ -6,6 +6,8 @@
 //! matrix on the contract path without calling the predicate acceptance helpers in
 //! `units.rs`.
 
+mod ordered;
+
 use super::contract::{Effect, EffectSite, FragmentContract};
 use super::oracle::free_input_cids;
 use super::{Exit, FragmentKind};
@@ -79,31 +81,31 @@ fn branch_block(il: &Il, interner: &Interner, node: NodeId) -> Option<Summary> {
     if kids.is_empty() {
         return Some(Summary::default());
     }
-    if let Some(effects) = ordered_append_effect_sequence(il, interner, node) {
+    if let Some(effects) = ordered::append_effect_sequence(il, interner, node) {
         return Some(Summary::exact(effects));
     }
-    if let Some(effects) = ordered_index_assignment_effect_sequence(il, node) {
+    if let Some(effects) = ordered::index_assignment_effect_sequence(il, node) {
         return Some(Summary::exact(effects));
     }
-    if let Some(effects) = ordered_self_field_assignment_sequence(il, interner, node) {
+    if let Some(effects) = ordered::self_field_assignment_sequence(il, interner, node) {
         return Some(Summary::exact(effects));
     }
-    if let Some(effects) = ordered_loop_effect_sequence(il, interner, node) {
+    if let Some(effects) = ordered::loop_effect_sequence(il, interner, node) {
         return Some(Summary::exact(effects));
     }
-    if let Some(effects) = ordered_mixed_effect_sequence(il, interner, node) {
+    if let Some(effects) = ordered::mixed_effect_sequence(il, interner, node) {
         return Some(Summary::exact(effects));
     }
-    if let Some(effects) = ordered_conditional_effect_sequence(il, interner, node) {
+    if let Some(effects) = ordered::conditional_effect_sequence(il, interner, node) {
         return Some(Summary::exact(effects));
     }
-    if let Some(effects) = ordered_conditional_mixed_effect_sequence(il, interner, node) {
+    if let Some(effects) = ordered::conditional_mixed_effect_sequence(il, interner, node) {
         return Some(Summary::exact(effects));
     }
-    if let Some(effects) = ordered_loop_conditional_effect_sequence(il, interner, node) {
+    if let Some(effects) = ordered::loop_conditional_effect_sequence(il, interner, node) {
         return Some(Summary::exact(effects));
     }
-    if let Some(effects) = ordered_loop_conditional_mixed_effect_sequence(il, interner, node) {
+    if let Some(effects) = ordered::loop_conditional_mixed_effect_sequence(il, interner, node) {
         return Some(Summary::exact(effects));
     }
     if kids.len() == 3 {
@@ -142,254 +144,6 @@ fn single_branch_statement(il: &Il, interner: &Interner, node: NodeId) -> Option
         NodeKind::Loop => loop_effect_sites(il, interner, node).map(Summary::exact),
         _ => None,
     }
-}
-
-// ---- ordered branch bodies --------------------------------------------------------------
-
-fn ordered_loop_effect_sequence(
-    il: &Il,
-    interner: &Interner,
-    node: NodeId,
-) -> Option<Vec<EffectSite>> {
-    let kids = block_children_exact_len(il, node, 2)?;
-    let mut effects = Vec::new();
-    for &kid in kids {
-        effects.extend(loop_effect_sites(il, interner, kid)?);
-    }
-    Some(effects)
-}
-
-fn ordered_mixed_effect_sequence(
-    il: &Il,
-    interner: &Interner,
-    node: NodeId,
-) -> Option<Vec<EffectSite>> {
-    let kids = block_children_exact_len(il, node, 2)?;
-    if !exactly_one_kid(il, kids, |k| k == NodeKind::Loop) {
-        return None;
-    }
-    if !exactly_one_kid(il, kids, |k| {
-        matches!(k, NodeKind::ExprStmt | NodeKind::Assign)
-    }) {
-        return None;
-    }
-    let mut effects = Vec::new();
-    for &kid in kids {
-        match il.kind(kid) {
-            NodeKind::Loop => effects.extend(loop_effect_sites(il, interner, kid)?),
-            NodeKind::ExprStmt | NodeKind::Assign => {
-                effects.push(direct_effect_site(il, interner, kid)?)
-            }
-            _ => return None,
-        }
-    }
-    Some(effects)
-}
-
-fn ordered_conditional_effect_sequence(
-    il: &Il,
-    interner: &Interner,
-    node: NodeId,
-) -> Option<Vec<EffectSite>> {
-    let kids = block_children_exact_len(il, node, 2)?;
-    if !kids.iter().all(|&kid| il.kind(kid) == NodeKind::If) {
-        return None;
-    }
-    let mut effects = Vec::new();
-    for &kid in kids {
-        effects.extend(conditional_direct_effect_sites(il, interner, kid)?);
-    }
-    Some(effects)
-}
-
-fn ordered_conditional_mixed_effect_sequence(
-    il: &Il,
-    interner: &Interner,
-    node: NodeId,
-) -> Option<Vec<EffectSite>> {
-    let kids = block_children_exact_len(il, node, 2)?;
-    if !exactly_one_kid(il, kids, |k| k == NodeKind::If) {
-        return None;
-    }
-    if !exactly_one_kid(il, kids, |k| {
-        matches!(k, NodeKind::ExprStmt | NodeKind::Assign)
-    }) {
-        return None;
-    }
-    let mut effects = Vec::new();
-    for &kid in kids {
-        match il.kind(kid) {
-            NodeKind::If => effects.extend(conditional_direct_effect_sites(il, interner, kid)?),
-            NodeKind::ExprStmt | NodeKind::Assign => {
-                effects.push(direct_effect_site(il, interner, kid)?)
-            }
-            _ => return None,
-        }
-    }
-    Some(effects)
-}
-
-fn ordered_loop_conditional_effect_sequence(
-    il: &Il,
-    interner: &Interner,
-    node: NodeId,
-) -> Option<Vec<EffectSite>> {
-    let kids = block_children_exact_len(il, node, 2)?;
-    if !exactly_one_kid(il, kids, |k| k == NodeKind::Loop) {
-        return None;
-    }
-    if !exactly_one_kid(il, kids, |k| k == NodeKind::If) {
-        return None;
-    }
-    let mut effects = Vec::new();
-    for &kid in kids {
-        match il.kind(kid) {
-            NodeKind::Loop => effects.extend(loop_effect_sites(il, interner, kid)?),
-            NodeKind::If => effects.extend(conditional_direct_effect_sites(il, interner, kid)?),
-            _ => return None,
-        }
-    }
-    Some(effects)
-}
-
-fn ordered_loop_conditional_mixed_effect_sequence(
-    il: &Il,
-    interner: &Interner,
-    node: NodeId,
-) -> Option<Vec<EffectSite>> {
-    let kids = block_children_exact_len(il, node, 3)?;
-    if !exactly_one_kid(il, kids, |k| k == NodeKind::Loop) {
-        return None;
-    }
-    if !exactly_one_kid(il, kids, |k| k == NodeKind::If) {
-        return None;
-    }
-    if !exactly_one_kid(il, kids, |k| {
-        matches!(k, NodeKind::ExprStmt | NodeKind::Assign)
-    }) {
-        return None;
-    }
-    let mut effects = Vec::new();
-    for &kid in kids {
-        match il.kind(kid) {
-            NodeKind::Loop => effects.extend(loop_effect_sites(il, interner, kid)?),
-            NodeKind::If => effects.extend(conditional_direct_effect_sites(il, interner, kid)?),
-            NodeKind::ExprStmt | NodeKind::Assign => {
-                effects.push(direct_effect_site(il, interner, kid)?)
-            }
-            _ => return None,
-        }
-    }
-    Some(effects)
-}
-
-fn ordered_append_effect_sequence(
-    il: &Il,
-    interner: &Interner,
-    node: NodeId,
-) -> Option<Vec<EffectSite>> {
-    let kids = il.children(node);
-    if il.kind(node) != NodeKind::Block || !(2..=5).contains(&kids.len()) {
-        return None;
-    }
-    if !kids
-        .iter()
-        .all(|&kid| matches!(il.kind(kid), NodeKind::Assign | NodeKind::ExprStmt))
-    {
-        return None;
-    }
-    let expected_effects = match kids
-        .iter()
-        .filter(|&&kid| append_statement(il, interner, kid))
-        .count()
-    {
-        2 if kids.len() <= 4 => 2,
-        3 => 3,
-        _ => return None,
-    };
-    let mut effects = Vec::new();
-    let mut idx = 0;
-    while idx < kids.len() {
-        if idx + 2 < kids.len()
-            && temp_chain_consumed_by_append(il, interner, kids[idx], kids[idx + 1], kids[idx + 2])
-        {
-            effects.push(EffectSite::observable(Effect::Append));
-            idx += 3;
-            continue;
-        }
-        if idx + 1 < kids.len()
-            && temp_assignment_consumed_by_append(il, interner, kids[idx], kids[idx + 1])
-        {
-            effects.push(EffectSite::observable(Effect::Append));
-            idx += 2;
-            continue;
-        }
-        if append_statement(il, interner, kids[idx]) {
-            effects.push(EffectSite::observable(Effect::Append));
-            idx += 1;
-            continue;
-        }
-        return None;
-    }
-    (effects.len() == expected_effects).then_some(effects)
-}
-
-fn ordered_index_assignment_effect_sequence(il: &Il, node: NodeId) -> Option<Vec<EffectSite>> {
-    let kids = il.children(node);
-    if il.kind(node) != NodeKind::Block || !(2..=5).contains(&kids.len()) {
-        return None;
-    }
-    if !kids.iter().all(|&kid| il.kind(kid) == NodeKind::Assign) {
-        return None;
-    }
-    let expected_effects = match kids
-        .iter()
-        .filter(|&&kid| index_assignment(il, kid))
-        .count()
-    {
-        2 if kids.len() <= 4 => 2,
-        3 => 3,
-        _ => return None,
-    };
-    let mut effects = Vec::new();
-    let mut idx = 0;
-    while idx < kids.len() {
-        if idx + 2 < kids.len()
-            && temp_chain_consumed_by_index_assignment(il, kids[idx], kids[idx + 1], kids[idx + 2])
-        {
-            effects.push(EffectSite::observable(Effect::IndexWrite));
-            idx += 3;
-            continue;
-        }
-        if idx + 1 < kids.len()
-            && temp_assignment_consumed_by_index_assignment(il, kids[idx], kids[idx + 1])
-        {
-            effects.push(EffectSite::observable(Effect::IndexWrite));
-            idx += 2;
-            continue;
-        }
-        if index_assignment(il, kids[idx]) {
-            effects.push(EffectSite::observable(Effect::IndexWrite));
-            idx += 1;
-            continue;
-        }
-        return None;
-    }
-    (effects.len() == expected_effects).then_some(effects)
-}
-
-fn ordered_self_field_assignment_sequence(
-    il: &Il,
-    interner: &Interner,
-    node: NodeId,
-) -> Option<Vec<EffectSite>> {
-    let kids = il.children(node);
-    if il.kind(node) != NodeKind::Block || !(2..=3).contains(&kids.len()) {
-        return None;
-    }
-    kids.iter()
-        .map(|&kid| self_field_assignment_site(il, interner, kid))
-        .collect()
 }
 
 // ---- conditional/direct effect branches -------------------------------------------------
