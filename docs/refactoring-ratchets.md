@@ -49,6 +49,9 @@ and behavior easier to reason about:
 - keep `nose verify` collection separate from presentation; JSON, exclusion,
   soundness, completeness, calibration, and falsification output now live in
   `nose-cli/src/verify_report.rs`;
+- keep the verify oracle's per-file collection path separate from command
+  parsing; interpreted records, exclusion accounting, and canon-preservation
+  collection now live in `nose-cli/src/verify_collect.rs`;
 - move reusable semantic or detection rules toward the owning library crate
   instead of keeping them in `nose-cli`;
 - split wide language and IL dispatch only around real concepts, such as
