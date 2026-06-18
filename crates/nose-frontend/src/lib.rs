@@ -244,6 +244,20 @@ mod tests {
     };
     use std::fs;
 
+    fn unit_named<'a>(
+        il: &'a Il,
+        interner: &Interner,
+        kind: UnitKind,
+        name: &str,
+    ) -> &'a nose_il::Unit {
+        il.units
+            .iter()
+            .find(|unit| {
+                unit.kind == kind && unit.name.is_some_and(|sym| interner.resolve(sym) == name)
+            })
+            .unwrap_or_else(|| panic!("expected {kind:?} unit named {name}"))
+    }
+
     fn temp_dir(tag: &str) -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!("nose_frontend_{tag}_{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
@@ -282,7 +296,7 @@ mod tests {
         let il = lower_source(
             FileId(0),
             "P.swift",
-            b"protocol P {\n  func run()\n}\n",
+            b"protocol P {\n  var name: String { get }\n  func run()\n}\n",
             Lang::Swift,
             &interner,
         )
@@ -296,6 +310,31 @@ mod tests {
         assert_eq!(unit.origin.subkind, UnitSubkind::InterfaceTraitProtocol);
         assert_eq!(unit.origin.body_kind, UnitBodyKind::DeclarationOnly);
         assert!(unit.origin.has_evidence(UnitEvidenceFlag::TypeOnly));
+    }
+
+    #[test]
+    fn swift_class_origin_ignores_nested_type_bodies() {
+        let interner = Interner::new();
+        let il = lower_source(
+            FileId(0),
+            "Outer.swift",
+            b"class Outer {\n  class Helper {\n    func run() { print(1) }\n  }\n}\n",
+            Lang::Swift,
+            &interner,
+        )
+        .expect("lower swift class");
+        let unit = il
+            .units
+            .iter()
+            .find(|unit| {
+                unit.kind == UnitKind::Class
+                    && unit.origin.subkind == UnitSubkind::Class
+                    && unit.origin.body_kind == UnitBodyKind::DeclarationOnly
+            })
+            .expect("outer class unit should stay declaration-only");
+        assert_eq!(unit.origin.body_kind, UnitBodyKind::DeclarationOnly);
+        assert!(unit.origin.has_evidence(UnitEvidenceFlag::DeclarationOnly));
+        assert!(!unit.origin.has_evidence(UnitEvidenceFlag::HasReusableBody));
     }
 
     #[test]
@@ -320,6 +359,25 @@ mod tests {
         assert!(unit.origin.has_domain(UnitDomain::TypeContract));
         assert!(unit.origin.has_domain(UnitDomain::Data));
         assert!(!unit.origin.has_domain(UnitDomain::ImplementationType));
+    }
+
+    #[test]
+    fn java_interface_origin_ignores_nested_type_bodies() {
+        let interner = Interner::new();
+        let il = lower_source(
+            FileId(0),
+            "Api.java",
+            b"interface Api {\n  class Helper { void run() {} }\n}\n",
+            Lang::Java,
+            &interner,
+        )
+        .expect("lower java interface");
+        let unit = unit_named(&il, &interner, UnitKind::Class, "Api");
+        assert_eq!(unit.origin.body_kind, UnitBodyKind::DeclarationOnly);
+        assert!(unit.origin.has_evidence(UnitEvidenceFlag::DeclarationOnly));
+        assert!(!unit
+            .origin
+            .has_evidence(UnitEvidenceFlag::InterfaceDefaultMethod));
     }
 
     #[test]
@@ -349,19 +407,53 @@ mod tests {
         let il = lower_source(
             FileId(0),
             "C.swift",
-            b"class C {\n  func run() { print(1) }\n}\n",
+            b"class C {\n  var name: String { get { \"x\" } }\n}\nclass D {\n  func run() { print(1) }\n}\n",
             Lang::Swift,
             &interner,
         )
         .expect("lower swift class");
-        let unit = il
+        let computed_property_class = il
             .units
             .iter()
-            .find(|unit| unit.kind == UnitKind::Class)
-            .expect("class unit");
-        assert!(unit.origin.has_domain(UnitDomain::ImplementationType));
-        assert_eq!(unit.origin.subkind, UnitSubkind::Class);
-        assert!(unit.origin.has_evidence(UnitEvidenceFlag::HasReusableBody));
+            .find(|unit| {
+                unit.kind == UnitKind::Class
+                    && unit.name == Some(interner.intern("C"))
+                    && unit.origin.subkind == UnitSubkind::Class
+            })
+            .expect("computed-property class unit");
+        assert!(computed_property_class
+            .origin
+            .has_domain(UnitDomain::ImplementationType));
+        assert_eq!(computed_property_class.origin.subkind, UnitSubkind::Class);
+        assert!(computed_property_class
+            .origin
+            .has_evidence(UnitEvidenceFlag::HasReusableBody));
+
+        let method_class = unit_named(&il, &interner, UnitKind::Class, "D");
+        assert!(method_class
+            .origin
+            .has_domain(UnitDomain::ImplementationType));
+        assert_eq!(method_class.origin.subkind, UnitSubkind::Class);
+        assert!(method_class
+            .origin
+            .has_evidence(UnitEvidenceFlag::HasReusableBody));
+    }
+
+    #[test]
+    fn rust_trait_origin_ignores_nested_item_bodies() {
+        let interner = Interner::new();
+        let il = lower_source(
+            FileId(0),
+            "lib.rs",
+            b"trait Api {\n    type Item;\n    mod helper { fn run() {} }\n}\n",
+            Lang::Rust,
+            &interner,
+        )
+        .expect("lower rust trait");
+        let unit = unit_named(&il, &interner, UnitKind::Class, "Api");
+        assert_eq!(unit.origin.body_kind, UnitBodyKind::DeclarationOnly);
+        assert!(unit.origin.has_evidence(UnitEvidenceFlag::DeclarationOnly));
+        assert!(!unit.origin.has_evidence(UnitEvidenceFlag::HasDefaultBody));
     }
 
     #[test]
@@ -385,6 +477,82 @@ mod tests {
         assert!(unit
             .origin
             .has_evidence(UnitEvidenceFlag::ComputedStyleEquivalent));
+    }
+
+    #[test]
+    fn jsx_markup_origin_flags_follow_actual_tag_and_attributes() {
+        let interner = Interner::new();
+        let il = lower_source(
+            FileId(0),
+            "View.tsx",
+            b"export const View = (props) => <section><div className=\"plain\" /><Card title={name} /><Panel {...props} /></section>;\n",
+            Lang::TypeScript,
+            &interner,
+        )
+        .expect("lower tsx");
+        let div = unit_named(&il, &interner, UnitKind::Block, "div");
+        assert_eq!(div.origin.subkind, UnitSubkind::HtmlElement);
+        assert!(div.origin.has_evidence(UnitEvidenceFlag::StaticAttrsOnly));
+        assert!(!div.origin.has_evidence(UnitEvidenceFlag::ComponentTag));
+        assert!(!div.origin.has_evidence(UnitEvidenceFlag::BoundAttributes));
+
+        let card = unit_named(&il, &interner, UnitKind::Block, "card");
+        assert_eq!(card.origin.subkind, UnitSubkind::HtmlElement);
+        assert!(card.origin.has_evidence(UnitEvidenceFlag::ComponentTag));
+        assert!(card.origin.has_evidence(UnitEvidenceFlag::BoundAttributes));
+        assert!(!card.origin.has_evidence(UnitEvidenceFlag::StaticAttrsOnly));
+
+        let panel = unit_named(&il, &interner, UnitKind::Block, "panel");
+        assert_eq!(panel.origin.subkind, UnitSubkind::HtmlElement);
+        assert!(panel.origin.has_evidence(UnitEvidenceFlag::ComponentTag));
+        assert!(panel.origin.has_evidence(UnitEvidenceFlag::BoundAttributes));
+        assert!(!panel.origin.has_evidence(UnitEvidenceFlag::StaticAttrsOnly));
+    }
+
+    #[test]
+    fn jsx_fragment_origin_is_not_an_html_element() {
+        let interner = Interner::new();
+        let il = lower_source(
+            FileId(0),
+            "View.tsx",
+            b"export const View = () => <><span>Hi</span></>;\n",
+            Lang::TypeScript,
+            &interner,
+        )
+        .expect("lower tsx");
+        let fragment = unit_named(&il, &interner, UnitKind::Block, "");
+        assert_eq!(fragment.origin.subkind, UnitSubkind::MarkupFragment);
+        assert!(!fragment.origin.has_evidence(UnitEvidenceFlag::ComponentTag));
+        assert!(!fragment
+            .origin
+            .has_evidence(UnitEvidenceFlag::BoundAttributes));
+    }
+
+    #[test]
+    fn html_markup_origin_flags_follow_actual_attributes() {
+        let interner = Interner::new();
+        let regions = lower_source_regions(
+            FileId(0),
+            "page.html",
+            b"<main><div class=\"plain\"></div><button :class=\"active\"></button></main>\n",
+            Lang::Html,
+            &interner,
+        );
+        let il = regions
+            .iter()
+            .find(|il| il.meta.lang == Lang::Html)
+            .expect("lower html markup region");
+        let div = unit_named(il, &interner, UnitKind::Block, "div");
+        assert!(div.origin.has_evidence(UnitEvidenceFlag::StaticAttrsOnly));
+        assert!(!div.origin.has_evidence(UnitEvidenceFlag::BoundAttributes));
+
+        let button = unit_named(il, &interner, UnitKind::Block, "button");
+        assert!(button
+            .origin
+            .has_evidence(UnitEvidenceFlag::BoundAttributes));
+        assert!(!button
+            .origin
+            .has_evidence(UnitEvidenceFlag::StaticAttrsOnly));
     }
 
     #[test]
