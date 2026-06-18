@@ -2938,9 +2938,10 @@ separate, non-conflated path — they are the only forms the model can *prove* a
 kinds; soundness depends on the map's value-type **nullability**, which the IL erases. A blunt
 fix (route the null-guard fold to the faithful `ValueOrDefault`) was built and measured — it
 splits the attacker's parameter-map false merge, but it also **breaks the provably-sound
-literal-map convergence** (`equivalence.rs::literal_map_default_lookup_converges_with_js_map_
-construction_boundaries`: `new Map([["red",1]]).get(k) ?? 0` ≡ the `has` form IS sound, the
-values are non-null literals — already a distinct fingerprint class), and it cannot separate
+literal-map convergence** (`literal_map_default_lookup_converges_with_js_map_construction_boundaries`
+in `crates/nose-cli/tests/equivalence/literal_map_defaults.rs`: `new Map([["red",1]]).get(k) ?? 0`
+≡ the `has` form IS sound, the values are non-null literals — already a distinct fingerprint class),
+and it cannot separate
 `??` from `=== undefined` (both null-guards, conflated). The sound fix needs a *map-value
 non-null proof* plus *null/undefined de-conflation* — value-model-core + interpreter work past
 this campaign's surgical scope. Recorded as `bench/coevo/false_merges/map_nullish_default.ts`,
@@ -2979,8 +2980,9 @@ opaque — all false merges gone, the coalesce and absence classes each still co
 AND the Python/Java/Go/Rust repos — the lost merges (`?? `≡absence, `=== undefined`≡`has`) fire
 only in the synthetic convergence tests, never on real code, so the "provably-sound literal
 merge" the deferral worried about has zero real-world prevalence. Regression:
-`equivalence.rs::nullish_coalesce_map_default_is_distinct_from_absence_default`; the cross-language
-and CLI map-default tests now assert the sound partition (coalesce family distinct from absence).
+`nullish_coalesce_map_default_is_distinct_from_absence_default` in
+`crates/nose-cli/tests/equivalence/map_default_boundaries.rs`; the cross-language and CLI
+map-default tests now assert the sound partition (coalesce family distinct from absence).
 **Lesson:** "soundness costs recall" is a hypothesis to *measure*, not assume — here the recall
 cost was a synthetic-test artifact and the sound fix shipped clean. Residual (still #410, now a
 pure recall enhancement): a map-value non-null proof would re-converge the coalesce forms with the

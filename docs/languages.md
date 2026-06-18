@@ -165,7 +165,7 @@ normalizes its idioms into the shared IL:
 Soundness is preserved end-to-end: a cross-dialect match lands on the exact channel only
 when the rendered DOM is genuinely identical (e.g. a static nav link), otherwise on the
 structural `near` channel — never a false claim of behavioral equality. See the adversarial
-battery in `crates/nose-cli/tests/equivalence.rs` (`markup_*`).
+battery in `crates/nose-cli/tests/equivalence/markup_surfaces.rs`.
 
 Out of scope (see [clone-types](clone-types.md)): SCSS/Less/Sass and CSS `var()`
 resolution across files. Component composition that differs across dialects (one dialect

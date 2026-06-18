@@ -304,10 +304,10 @@ oracle-caught)":
 | in-place element mutation | `array_element_mutation.py` (`swap` vs `clobber`) | detector keeps them **split** AND oracle witnesses — CLOSED (#337, §7.3); guarded by `array_element_swap_does_not_merge_with_clobber` + `index_store_is_observed_by_later_read` |
 
 New permanent regression tests follow the pattern of
-`crates/nose-cli/tests/equivalence.rs`
-(`double_negation_cancels_only_for_proven_numeric` etc.): assert the
-`value_fp` of the divergent forms differs, and that the genuine convergent case
-still merges.
+`crates/nose-cli/tests/equivalence/numeric_law_boundaries.rs`
+(`double_negation_cancels_only_for_proven_numeric` etc.): assert the `value_fp`
+of the divergent forms differs, and that the genuine convergent case still
+merges.
 
 ---
 
@@ -508,7 +508,8 @@ opaque; the false merge is gone and each class still converges internally. **Cor
 (`query top=0 --format json`, 15 JS/TS repos / 5825 families + the Python/Java/Go/Rust repos) — the
 lost cross-idiom merges fire only in synthetic tests. The false merge is eliminated by splitting,
 so `verify` has nothing to witness (the oracle blindness is moot once the pair is no longer merged).
-Regression `equivalence.rs::nullish_coalesce_map_default_is_distinct_from_absence_default`.
+Regression `nullish_coalesce_map_default_is_distinct_from_absence_default` in
+`crates/nose-cli/tests/equivalence/map_default_boundaries.rs`.
 
 **Residual (pure recall enhancement, still #410, not a soundness obligation):** a *map-value
 non-null proof* would re-converge the coalesce forms with the absence family where provably sound
