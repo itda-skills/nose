@@ -1,0 +1,387 @@
+use super::*;
+
+#[test]
+fn import_lowering_emits_symbol_identity_evidence_for_aliases() {
+    let interner = Interner::new();
+    let mut lo = Lowering::new(FileId(0), b"", Lang::Python, &interner);
+
+    import_binding(&mut lo, sp(), "deque", "collections", "deque");
+    import_namespace(&mut lo, sp(), "math", "math");
+
+    assert!(lo.evidence.iter().any(|record| matches!(
+        record.kind,
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
+            module_hash,
+            exported_hash,
+        }) if module_hash == stable_symbol_hash("collections")
+            && exported_hash == stable_symbol_hash("deque")
+    )));
+    assert!(lo.evidence.iter().any(|record| matches!(
+        record.kind,
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace { module_hash })
+            if module_hash == stable_symbol_hash("math")
+    )));
+}
+
+#[test]
+fn core_lowering_emits_import_backed_library_api_occurrences() {
+    let interner = Interner::new();
+    let mut lo = Lowering::new(FileId(0), b"", Lang::Python, &interner);
+    import_binding(&mut lo, sp_at(1), "deque", "collections", "deque");
+    let callee = lo.var("deque", sp_at(2));
+    let seq = lo.add(
+        NodeKind::Seq,
+        Payload::Name(interner.intern("array")),
+        sp_at(3),
+        &[],
+    );
+    lo.add(NodeKind::Call, Payload::None, sp_at(4), &[callee, seq]);
+
+    let contract = nose_semantics::library_imported_collection_factory_contract(
+        Lang::Python,
+        "collections",
+        "deque",
+    )
+    .expect("deque contract");
+    assert_eq!(
+        library_api_evidence_count(
+            &lo,
+            library_api_contract_id_hash(contract.id),
+            library_api_callee_contract_hash(contract.callee),
+        ),
+        1
+    );
+
+    let mut lo = Lowering::new(FileId(0), b"", Lang::Python, &interner);
+    import_binding(&mut lo, sp_at(10), "Values", "collections", "deque");
+    let callee = lo.var("Values", sp_at(11));
+    let seq = lo.add(
+        NodeKind::Seq,
+        Payload::Name(interner.intern("array")),
+        sp_at(12),
+        &[],
+    );
+    lo.add(NodeKind::Call, Payload::None, sp_at(13), &[callee, seq]);
+    assert_eq!(
+        library_api_evidence_count(
+            &lo,
+            library_api_contract_id_hash(contract.id),
+            library_api_callee_contract_hash(contract.callee),
+        ),
+        1
+    );
+
+    let mut lo = Lowering::new(FileId(0), b"", Lang::Python, &interner);
+    import_namespace(&mut lo, sp_at(20), "math", "math");
+    let math = lo.var("math", sp_at(21));
+    let callee = lo.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("prod")),
+        sp_at(22),
+        &[math],
+    );
+    let seq = lo.add(
+        NodeKind::Seq,
+        Payload::Name(interner.intern("array")),
+        sp_at(23),
+        &[],
+    );
+    lo.add(NodeKind::Call, Payload::None, sp_at(24), &[callee, seq]);
+    let contract = library_imported_namespace_function_contract(Lang::Python, "prod", 1)
+        .expect("math.prod contract");
+    assert_eq!(
+        library_api_evidence_count(
+            &lo,
+            library_api_contract_id_hash(contract.id),
+            library_api_callee_contract_hash(contract.callee),
+        ),
+        1
+    );
+}
+
+#[test]
+fn core_lowering_emits_result_domain_evidence_for_library_api_factories() {
+    let interner = Interner::new();
+    assert_python_deque_factory_result_domain(&interner);
+    assert_java_factory_result_domains(&interner);
+    assert_js_constructor_result_domains(&interner);
+}
+
+fn assert_python_deque_factory_result_domain(interner: &Interner) {
+    let mut lo = Lowering::new(FileId(0), b"", Lang::Python, interner);
+    import_binding(&mut lo, sp_at(1), "Values", "collections", "deque");
+    let callee = lo.var("Values", sp_at(2));
+    let seq = array_seq(&mut lo, interner, sp_at(3));
+    lo.add(NodeKind::Call, Payload::None, sp_at(4), &[callee, seq]);
+    let deque = nose_semantics::library_imported_collection_factory_contract(
+        Lang::Python,
+        "collections",
+        "deque",
+    )
+    .expect("deque contract");
+    let deque_api = contract_api_ids(&lo.evidence, deque.id, deque.callee);
+    assert!(
+        result_domain_depends_on_api(
+            &lo.evidence,
+            sp_at(4),
+            DomainEvidence::Collection,
+            &deque_api,
+        ),
+        "collections.deque result domain should depend on the admitted LibraryApi occurrence"
+    );
+}
+
+fn assert_java_factory_result_domains(interner: &Interner) {
+    let mut lo = Lowering::new(FileId(0), b"", Lang::Java, interner);
+    import_binding(&mut lo, sp_at(10), "List", "java.util", "List");
+    import_binding(&mut lo, sp_at(11), "Set", "java.util", "Set");
+    import_binding(&mut lo, sp_at(12), "Map", "java.util", "Map");
+    import_binding(&mut lo, sp_at(13), "Arrays", "java.util", "Arrays");
+    assert_java_of_factory_result_domains(&mut lo, interner);
+    assert_java_arrays_and_map_entry_result_domains(&mut lo, interner);
+}
+
+fn assert_java_of_factory_result_domains(lo: &mut Lowering, interner: &Interner) {
+    let list = lo.var("List", sp_at(20));
+    let list_callee = field_callee(lo, interner, list, "of", sp_at(21));
+    let item = lo.int_lit("1", sp_at(22));
+    lo.add(
+        NodeKind::Call,
+        Payload::None,
+        sp_at(23),
+        &[list_callee, item],
+    );
+    let contract = library_java_collection_factory_contract(Lang::Java, "List", "of").unwrap();
+    let list_api = contract_api_ids(&lo.evidence, contract.id, contract.callee);
+    assert!(result_domain_depends_on_api(
+        &lo.evidence,
+        sp_at(23),
+        DomainEvidence::Collection,
+        &list_api,
+    ));
+
+    let set = lo.var("Set", sp_at(30));
+    let set_callee = field_callee(lo, interner, set, "of", sp_at(31));
+    let item = lo.int_lit("1", sp_at(32));
+    lo.add(
+        NodeKind::Call,
+        Payload::None,
+        sp_at(33),
+        &[set_callee, item],
+    );
+    let contract = library_java_collection_factory_contract(Lang::Java, "Set", "of").unwrap();
+    let set_api = contract_api_ids(&lo.evidence, contract.id, contract.callee);
+    assert!(result_domain_depends_on_api(
+        &lo.evidence,
+        sp_at(33),
+        DomainEvidence::Set,
+        &set_api,
+    ));
+
+    let map = lo.var("Map", sp_at(40));
+    let map_callee = field_callee(lo, interner, map, "of", sp_at(41));
+    let key = lo.str_lit("\"red\"", sp_at(42));
+    let value = lo.int_lit("1", sp_at(43));
+    lo.add(
+        NodeKind::Call,
+        Payload::None,
+        sp_at(44),
+        &[map_callee, key, value],
+    );
+    let contract = library_java_map_factory_contract(Lang::Java, "Map", "of").unwrap();
+    let map_api = contract_api_ids(&lo.evidence, contract.id, contract.callee);
+    assert!(result_domain_depends_on_api(
+        &lo.evidence,
+        sp_at(44),
+        DomainEvidence::Map,
+        &map_api,
+    ));
+}
+
+fn assert_java_arrays_and_map_entry_result_domains(lo: &mut Lowering, interner: &Interner) {
+    let arrays = lo.var("Arrays", sp_at(46));
+    let as_list_callee = field_callee(lo, interner, arrays, "asList", sp_at(47));
+    let maybe_array = lo.var("items", sp_at(48));
+    lo.add(
+        NodeKind::Call,
+        Payload::None,
+        sp_at(49),
+        &[as_list_callee, maybe_array],
+    );
+    assert_eq!(
+        result_domain_any_count_at(&lo.evidence, sp_at(49)),
+        0,
+        "single-argument Arrays.asList must not emit any result-domain evidence"
+    );
+
+    let arrays = lo.var("Arrays", sp_at(55));
+    let as_list_callee = field_callee(lo, interner, arrays, "asList", sp_at(56));
+    let red = lo.str_lit("\"red\"", sp_at(57));
+    let blue = lo.str_lit("\"blue\"", sp_at(58));
+    lo.add(
+        NodeKind::Call,
+        Payload::None,
+        sp_at(59),
+        &[as_list_callee, red, blue],
+    );
+    let as_list_contract =
+        library_java_collection_factory_contract(Lang::Java, "Arrays", "asList").unwrap();
+    let as_list_api = library_api_evidence_ids_at(
+        &lo.evidence,
+        sp_at(59),
+        library_api_contract_id_hash(as_list_contract.id),
+        library_api_callee_contract_hash(as_list_contract.callee),
+        2,
+    );
+    assert!(result_domain_depends_on_api(
+        &lo.evidence,
+        sp_at(59),
+        DomainEvidence::Collection,
+        &as_list_api,
+    ));
+
+    let map = lo.var("Map", sp_at(50));
+    let entry_callee = field_callee(lo, interner, map, "entry", sp_at(51));
+    let key = lo.str_lit("\"red\"", sp_at(52));
+    let value = lo.int_lit("1", sp_at(53));
+    lo.add(
+        NodeKind::Call,
+        Payload::None,
+        sp_at(54),
+        &[entry_callee, key, value],
+    );
+    let entry_contract = library_java_map_entry_contract(Lang::Java, "Map", "entry").unwrap();
+    assert_eq!(
+        contract_api_count(&lo.evidence, entry_contract.id, entry_contract.callee),
+        1
+    );
+    assert_eq!(
+        result_domain_any_count_at(&lo.evidence, sp_at(54)),
+        0,
+        "Map.entry returns an entry value, not any receiver-domain container"
+    );
+
+    let arrays = lo.var("Arrays", sp_at(60));
+    let stream_callee = field_callee(lo, interner, arrays, "stream", sp_at(61));
+    let values = lo.var("values", sp_at(62));
+    lo.add(
+        NodeKind::Call,
+        Payload::None,
+        sp_at(63),
+        &[stream_callee, values],
+    );
+    assert_eq!(
+        result_domain_any_count_at(&lo.evidence, sp_at(63)),
+        0,
+        "Arrays.stream produces a stream/protocol surface, not any receiver-domain container"
+    );
+}
+
+fn assert_js_constructor_result_domains(interner: &Interner) {
+    let mut lo = Lowering::new(FileId(0), b"", Lang::JavaScript, interner);
+    let set = lo.unshadowed_global_var("Set", sp_at(70));
+    let seq = array_seq(&mut lo, interner, sp_at(71));
+    lo.record_source_fact(sp_at(72), SourceFactKind::Call(SourceCallKind::Construct));
+    lo.add(NodeKind::Call, Payload::None, sp_at(72), &[set, seq]);
+    let set_contract =
+        library_js_like_set_constructor_contract(Lang::JavaScript, "Set").expect("Set constructor");
+    let set_api = contract_api_ids(&lo.evidence, set_contract.id, set_contract.callee);
+    assert!(result_domain_depends_on_api(
+        &lo.evidence,
+        sp_at(72),
+        DomainEvidence::Set,
+        &set_api,
+    ));
+
+    let map = lo.unshadowed_global_var("Map", sp_at(80));
+    let seq = array_seq(&mut lo, interner, sp_at(81));
+    lo.record_source_fact(sp_at(82), SourceFactKind::Call(SourceCallKind::Construct));
+    lo.add(NodeKind::Call, Payload::None, sp_at(82), &[map, seq]);
+    let map_contract =
+        library_js_like_map_constructor_contract(Lang::JavaScript, "Map").expect("Map constructor");
+    let map_api = contract_api_ids(&lo.evidence, map_contract.id, map_contract.callee);
+    assert!(result_domain_depends_on_api(
+        &lo.evidence,
+        sp_at(82),
+        DomainEvidence::Map,
+        &map_api,
+    ));
+
+    let array = lo.unshadowed_global_var("Array", sp_at(90));
+    let from_callee = field_callee(&mut lo, interner, array, "from", sp_at(91));
+    lo.record_qualified_global_symbol(sp_at(91), NodeKind::Field, "Array.from");
+    let iterable = lo.var("iterable", sp_at(92));
+    lo.add(
+        NodeKind::Call,
+        Payload::None,
+        sp_at(93),
+        &[from_callee, iterable],
+    );
+    let from_contract =
+        library_map_key_view_wrapper_contract(Lang::JavaScript, "Array", "from", 1).unwrap();
+    let from_api = contract_api_ids(&lo.evidence, from_contract.id, from_contract.callee);
+    assert!(result_domain_depends_on_api(
+        &lo.evidence,
+        sp_at(93),
+        DomainEvidence::Array,
+        &from_api,
+    ));
+
+    let promise = lo.unshadowed_global_var("Promise", sp_at(95));
+    let resolve_callee = field_callee(&mut lo, interner, promise, "resolve", sp_at(96));
+    lo.record_qualified_global_symbol(sp_at(96), NodeKind::Field, "Promise.resolve");
+    let value = lo.int_lit("1", sp_at(97));
+    lo.add(
+        NodeKind::Call,
+        Payload::None,
+        sp_at(98),
+        &[resolve_callee, value],
+    );
+    let resolve_contract =
+        library_promise_resolve_contract(Lang::JavaScript, "Promise", "resolve", 1).unwrap();
+    let resolve_api = contract_api_ids(&lo.evidence, resolve_contract.id, resolve_contract.callee);
+    assert!(result_domain_depends_on_api(
+        &lo.evidence,
+        sp_at(98),
+        DomainEvidence::PromiseLike,
+        &resolve_api,
+    ));
+
+    let boolean = lo.unshadowed_global_var("Boolean", sp_at(100));
+    let value = lo.var("value", sp_at(101));
+    lo.add(NodeKind::Call, Payload::None, sp_at(102), &[boolean, value]);
+    assert_eq!(
+        result_domain_any_count_at(&lo.evidence, sp_at(102)),
+        0,
+        "Boolean(...) has LibraryApi identity but no container result-domain"
+    );
+}
+
+#[test]
+fn python_lowering_emits_library_api_for_aliased_imported_collection_factory() {
+    let interner = Interner::new();
+    let il = crate::lower_source(
+        FileId(0),
+        "alias.py",
+        b"from collections import deque as Values\n\n\
+def f(value, other):\n    return Values([\"red\", \"blue\"]).__contains__(value)\n",
+        Lang::Python,
+        &interner,
+    )
+    .expect("python lowering should succeed");
+    let contract = nose_semantics::library_imported_collection_factory_contract(
+        Lang::Python,
+        "collections",
+        "deque",
+    )
+    .expect("deque contract");
+
+    assert_eq!(
+        library_api_evidence_count_in_records(
+            &il.evidence,
+            library_api_contract_id_hash(contract.id),
+            library_api_callee_contract_hash(contract.callee),
+        ),
+        1
+    );
+}
