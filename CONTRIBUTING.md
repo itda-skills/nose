@@ -14,10 +14,10 @@ Run the fast PR/push preflight locally before opening or updating a PR:
 ./scripts/check-ci-local.sh --fast
 ```
 
-That runs rustfmt, clippy with warnings as errors, the `nose-cli` test suite, and
-the docs wiki lint. It also self-tests the nightly corpus-verify runner without
-checking out the full corpus. It is the gate meant to catch the common CI
-failures quickly.
+That runs rustfmt, the Rust file-length ratchet, clippy with warnings as errors,
+the `nose-cli` test suite, and the docs wiki lint. It also self-tests the nightly
+corpus-verify runner without checking out the full corpus. It is the gate meant
+to catch the common CI failures quickly.
 
 Run everything CI runs, locally, with one command:
 
@@ -31,6 +31,7 @@ full run here is a green CI. The full gates are:
 | gate | command | what it enforces |
 |---|---|---|
 | **format** | `cargo fmt --all --check` | canonical rustfmt formatting |
+| **file length** | `python3 scripts/check-file-lengths.py` | Rust files under `crates/` stay under the 600-line target unless they are existing ratcheted debt |
 | **lints** | `cargo clippy --all-targets --all-features -- -D warnings` | clippy clean; warnings are errors |
 | **docs** | `RUSTDOCFLAGS=-D warnings cargo doc --no-deps --workspace` | no broken/private intra-doc links |
 | **build** | `cargo build --release` | the workspace compiles in release |
@@ -57,6 +58,22 @@ thresholds and the coverage floor start lenient and are **ratchets** — tighten
 them over time (lower the clippy thresholds, raise `--fail-under-lines`) as the
 code is simplified and tests are added; never loosen them to make a red build
 pass.
+
+The file-length gate is a design ratchet, not a formatter preference. New Rust
+files under `crates/` must stay at or below 600 lines. Existing files above that
+target are listed in `scripts/file-length-budgets.json` at their current line
+count; they may not grow, and any refactor that shrinks one must lower its budget
+in the same change. CI compares the budget file with the base ref, so
+`default_max_lines`, existing file budgets, and new over-target budget entries
+cannot be loosened in the same change. Use it to force incremental module extraction
+and clearer ownership, not to split files mechanically.
+
+The local preflight uses `origin/main` as the no-loosening baseline for that
+budget file and fails if the ref is missing; run `git fetch origin main` if the
+gate asks for it.
+
+The broader refactoring policy lives in
+[`docs/refactoring-ratchets.md`](docs/refactoring-ratchets.md).
 
 ### One-time tool install
 

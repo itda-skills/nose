@@ -19,10 +19,11 @@ case "${1:-}" in
         cat <<'EOF'
 usage: ./scripts/check-ci-local.sh [--fast|--full]
 
-  --fast  rustfmt, clippy -D warnings, nose-cli tests, docs wiki lint
+  --fast  rustfmt, file-length ratchet, clippy -D warnings, nose-cli tests,
+          docs wiki lint
   --full  full local mirror of CI: format, clippy, docs, release build/tests,
-          duplication, MSRV, supply-chain, docs wiki, formal obligation lint,
-          and Lean proofs
+          file-length ratchet, duplication, MSRV, supply-chain, docs wiki,
+          formal obligation lint, and Lean proofs
 EOF
         exit 0
         ;;
@@ -61,6 +62,19 @@ run_formal_lean() {
     ./scripts/check-lean-proofs.sh
 }
 
+run_file_length_ratchet() {
+    need_cmd python3
+    python3 scripts/check-file-lengths.py --self-test
+
+    need_cmd git
+    if ! git rev-parse --verify origin/main >/dev/null 2>&1; then
+        echo "missing origin/main; fetch it before running the local file-length ratchet" >&2
+        echo "try: git fetch origin main" >&2
+        exit 127
+    fi
+    python3 scripts/check-file-lengths.py --ratchet-base origin/main
+}
+
 run_msrv_check() {
     need_cmd rustup
     local msrv
@@ -84,6 +98,9 @@ step "corpus verify runner self-test"
 
 step "rustfmt (formatting)"
 cargo fmt --all --check
+
+step "Rust file-length ratchet"
+run_file_length_ratchet
 
 step "clippy (lints, -D warnings)"
 cargo clippy --all-targets --all-features -- -D warnings
