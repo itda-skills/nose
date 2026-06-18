@@ -52,6 +52,9 @@ and behavior easier to reason about:
 - keep the verify oracle's per-file collection path separate from command
   parsing; interpreted records, exclusion accounting, and canon-preservation
   collection now live in `nose-cli/src/verify_collect.rs`;
+- keep hidden diagnostic and benchmark commands outside the dispatcher; `features`,
+  `value-census`, `stats`, `eval`, and `ceiling` now live in
+  `nose-cli/src/diagnostic_commands.rs`;
 - move reusable semantic or detection rules toward the owning library crate
   instead of keeping them in `nose-cli`;
 - split wide language and IL dispatch only around real concepts, such as
