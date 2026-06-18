@@ -13,8 +13,9 @@ Companion to [oracle-value-model §3.3 / §6](oracle-value-model.md) (the cluste
 > pinned corpus** (4309 → 4309), and **0** on type4 + nose. So #342 shipped both halves
 > together (the only gate-safe way — P1 alone exposes the merge as a visible violation
 > without fixing it):
-> - **P1 (oracle):** a real IEEE-754 `Value::Float` in `interp.rs`, plus a `verify_battery`
->   float row (`1e16 ± 1e16`) so the oracle WITNESSES `(a+b)+c ≠ a+(b+c)`.
+> - **P1 (oracle):** a real IEEE-754 `Value::Float` in `interp/value.rs`, primitive
+>   float arithmetic in `interp/ops.rs`, plus a `verify_battery` float row
+>   (`1e16 ± 1e16`) so the oracle WITNESSES `(a+b)+c ≠ a+(b+c)`.
 > - **P2 (scan):** the value graph holds the grouping for a truly-untyped param in a
 >   dynamically-typed language (`possibly_float`), mirrored in the `algebra` pass.
 >
@@ -97,7 +98,8 @@ default in Phase 2.
 
 ### 4.1 Interpreter — a real `Value::Float`
 
-Add `Value::Float(f64)` alongside `Value::Int(i64)` in `interp.rs`:
+Add `Value::Float(f64)` alongside `Value::Int(i64)` in `interp/value.rs`, with
+the primitive arithmetic executed by `interp/ops.rs`:
 
 - **Arithmetic** under IEEE-754: `+`/`-`/`*`/`/` on floats round per double precision;
   `(big + big) + -big ≠ big + (big + -big)` becomes observable, so the oracle can witness
@@ -166,11 +168,12 @@ machinery #339/#340 shipped; the only new input is "untyped leaf in Python/JS/Ru
 **SHIPPED — P1 + P2 together.** P1 alone is NOT gate-safe (it turns the latent merge into a
 *witnessed* violation without fixing the scan), so both halves landed in one change:
 
-- **P1 (oracle):** `Value::Float(F64)` in `interp.rs` with IEEE-754 `bin`/`un` arithmetic
-  (`F64` is a newtype with a behavior-comparison `Eq` that canonicalizes NaN/±0, so `Value`'s
-  derive is preserved). `verify_battery` Part 5 feeds adversarial floats (`1e16 ± 1e16`) so the
-  oracle witnesses non-associativity. Float *literals* stay opaque (`LitFloat` carries only a
-  hash) — only battery-fed params are concrete, which bounds the new interpretable surface.
+- **P1 (oracle):** `Value::Float(F64)` in `interp/value.rs`, with IEEE-754 `bin`/`un`
+  arithmetic in `interp/ops.rs` (`F64` is a newtype with a behavior-comparison `Eq` that
+  canonicalizes NaN/±0, so `Value`'s derive is preserved). `verify_battery` Part 5 feeds
+  adversarial floats (`1e16 ± 1e16`) so the oracle witnesses non-associativity. Float
+  *literals* stay opaque (`LitFloat` carries only a hash) — only battery-fed params are
+  concrete, which bounds the new interpretable surface.
 - **P2 (scan):** `possibly_float` = `proven_float` OR a **truly-untyped** (`None`-domain) param
   in a dynamically-typed language, used by the grouping holds (`eval_assoc_comm_chain`,
   `eval_sub_chain`, `ac_chain_canon`) and mirrored in `algebra`. A grouping-preserving rebuild

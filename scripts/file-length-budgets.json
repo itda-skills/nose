@@ -25,7 +25,7 @@
     "crates/nose-il/src/node.rs": 914,
     "crates/nose-normalize/src/call_target_evidence.rs": 1146,
     "crates/nose-normalize/src/idioms.rs": 1919,
-    "crates/nose-normalize/src/interp.rs": 4248,
+    "crates/nose-normalize/src/interp.rs": 3903,
     "crates/nose-normalize/src/value_graph/canonicalize.rs": 1329,
     "crates/nose-normalize/src/value_graph/collections.rs": 1769,
     "crates/nose-normalize/src/value_graph/control.rs": 2518,

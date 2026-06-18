@@ -36,12 +36,13 @@ finding that opened #283 is [experiments §CE](experiments.md).
 The offline interpreter oracle (`nose verify`, a differential-testing harness —
 **not** a runtime accept gate; see [design §1](design.md)) interprets each unit
 on a battery of inputs and compares observable behavior. Its value type is
-`Value` (`crates/nose-normalize/src/interp.rs`):
+`Value` (`crates/nose-normalize/src/interp/value.rs`), with primitive
+operation semantics in `crates/nose-normalize/src/interp/ops.rs`:
 
 | kind | models | notes |
 |---|---|---|
 | `Int(i64)` | every integer | i64 arithmetic, with JS int32 bitwise execution where typed (#344) |
-| `Float(F64)` | IEEE-754 doubles | full IEEE-754 `Add`/`Sub`/`Mul`/`Div`/`FloorDiv`/`Mod`/`Pow` (#342, see §3.3); float *literals* stay opaque (`LitFloat`) |
+| `Float(F64)` | IEEE-754 doubles | full IEEE-754 `Add`/`Sub`/`Mul`/`Div`/`FloorDiv`/`Mod`/`Pow` in `interp/ops.rs` (#342, see §3.3); float *literals* stay opaque (`LitFloat`) |
 | `Bool(bool)` | booleans | |
 | `Str(Vec<u64>)` | strings as a **free monoid** over appended token hashes | **order-sensitive**: `"x"+"y"` = `[hx,hy]` ≠ `[hy,hx]` = `"y"+"x"`. No char content; length/index stay `Err`. |
 | `List(Vec<Value>)` | sequences | |
@@ -234,8 +235,9 @@ first; promote to the full model only if the priced recall loss justifies it.
   flatten, both of which ARE gateable.
 - **Fully-untyped — CLOSED (#342, the `Value::Float` kind).** The last case, `(a+b)+c` vs
   `a+(b+c)` over params with NO float marker (`float_assoc.py`), is now closed in both halves:
-  the interpreter gained a real IEEE-754 `Value::Float` (`interp.rs`), and a `verify_battery`
-  float row (`1e16 ± 1e16`) feeds untyped params adversarial floats so the oracle WITNESSES the
+  the interpreter gained a real IEEE-754 `Value::Float` (`interp/value.rs`, with arithmetic in
+  `interp/ops.rs`), and a `verify_battery` float row (`1e16 ± 1e16`) feeds untyped params
+  adversarial floats so the oracle WITNESSES the
   non-associativity; the scan holds the grouping (`possibly_float` = a truly-untyped param in a
   dynamically-typed language, mirrored in `algebra`). Crucially the hold is associativity-only —
   COMMUTATIVITY is preserved (`a+b+1 ≡ b+a+1`, same grouping) via a grouping-preserving rebuild
