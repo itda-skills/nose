@@ -43,6 +43,9 @@ and behavior easier to reason about:
 - keep shrinking `nose-cli/src/main.rs` by moving bounded report helpers into
   small sibling modules first; the scan JSON report, baseline comparison view,
   and family-display text now live outside the command dispatcher;
+- keep shared verify-oracle support outside the command dispatcher; the oracle
+  battery, behavior hashing, and behavioral-gate tally now live in
+  `nose-cli/src/oracle_gate.rs`;
 - move reusable semantic or detection rules toward the owning library crate
   instead of keeping them in `nose-cli`;
 - split wide language and IL dispatch only around real concepts, such as

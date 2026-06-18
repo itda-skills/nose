@@ -64,7 +64,7 @@ Two facts matter for everything below:
 
 A bounded differential checker is only as strong as the inputs it feeds. The
 production battery is `verify_battery` / `verify_probes`
-(`crates/nose-cli/src/main.rs`):
+(`crates/nose-cli/src/oracle_gate.rs`):
 
 - **Combinatorial core** — a fixed `pool` of **small integers and integer
   lists** (`3, 0, -1, 7, 2`, `[1,2,3,4]`, `[5,1,4,2,8]`, `[]`), enumerated
