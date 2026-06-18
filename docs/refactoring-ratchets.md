@@ -46,6 +46,8 @@ and behavior easier to reason about:
   expression lowering, declaration facts, effect evidence, or value-graph state;
 - keep table-driven and cross-language tests readable by extracting shared
   fixtures only when the name explains the scenario being tested;
+- turn oversized integration-test files into small suite roots plus domain-named
+  modules, keeping each new module under the 600-line target;
 - lower a file budget only in the same change that makes the corresponding
   design boundary clearer.
 
