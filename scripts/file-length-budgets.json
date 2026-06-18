@@ -34,7 +34,6 @@
     "crates/nose-normalize/src/value_graph/eval.rs": 950,
     "crates/nose-normalize/src/value_graph/stdlib.rs": 1135,
     "crates/nose-normalize/src/value_graph/tests.rs": 2313,
-    "crates/nose-normalize/src/value_graph/tests/source_evidence.rs": 697,
     "crates/nose-semantics/src/effects.rs": 723,
     "crates/nose-semantics/src/evidence.rs": 1248,
     "crates/nose-semantics/src/lib.rs": 3560,
