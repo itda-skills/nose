@@ -3054,10 +3054,10 @@ measure, not assume — here it is small.
 parallel sync/async versions far less often than Python ones, so no clean mined twin yet), and
 extending the mechanism to Rust `.await` and the other protocol boundaries.
 
-## CV. Swift lowering gap tranche from trace dogfood (#452, 2026-06-18)
+## CV. Swift lowering gap tranche from app dogfood (#452, 2026-06-18)
 
-The `../trace` Swift app dogfood run made the Swift Raw tail concrete: baseline
-`nose stats ../trace` showed Swift at **18,083 Raw / 325,423 nodes = 5.557%**, with
+A Swift app dogfood run made the Swift Raw tail concrete: baseline
+`nose stats <swift-app>` showed Swift at **18,083 Raw / 325,423 nodes = 5.557%**, with
 `prefix_expression` alone contributing **8,522** gap nodes. Inspecting the raw IL showed the
 dominant prefix shape was Swift's implicit member shorthand (`.vertical`, `.named(...)`,
 `.top`, etc.), especially in SwiftUI call sites. Treating that as an ordinary bare identifier
@@ -3069,7 +3069,7 @@ the same lowering gap.
 sentinel receiver shape (`swift_implicit_member.member`), so it is not equal to a bare variable
 and does not claim a concrete enum type. Protocol function/property requirements also lower as
 signature/declaration structure instead of raw protocol declaration nodes, which directly
-addresses the protocol-heavy duplication seen in `../trace`.
+addresses the protocol-heavy duplication seen in the app.
 
 **Measured result.** Re-running the same dogfood command with the patched binary:
 
@@ -3083,7 +3083,7 @@ The total Swift Raw count drops **18,083 → 7,056** and `prefix_expression` /
 `key_path_expression` (213), and `ternary_expression` (127). `await` and `try` remain protocol
 boundaries, not lowering misses.
 
-**Query quality check.** `nose query ../trace lang=swift sort=extractability top=5` still leads
+**Query quality check.** `nose query <swift-app> lang=swift sort=extractability top=5` still leads
 with the previously hand-verified refactoring candidates (`sectionTitle`, `CurrentTimeLineView`,
 `EventsView`, the low-shared input/settings UI pattern, and `handleRecurringEventUpdate`), while
 the default Swift family count moves from 415 to 388 because the implicit-member structure changes
@@ -3124,3 +3124,63 @@ templated docs that are genuinely surface-similar but document different things.
 *surfaces* those (relation score + span witness + commonness + the `template` flag) and leaves the
 worth-it call to the maintainer — bending the engine to push that number up would be exactly the
 judgement-deep work nose does not do.
+
+## CX. Markdown query performance on a large wiki (2026-06-18)
+
+A large symlinked Obsidian-style wiki (9,454 Markdown files, 11,389 files total) exposed the first
+real scale cost of the Markdown `nose query` domain. Baseline release run:
+`nose query <wiki-root>/` took **117.26s real / 113.92s user**, with **~1.29GB peak RSS**, and
+reported **284 Markdown near-duplicate families** (35 templated). The code-clone corpus was empty
+(`scanned 0 files`), so the cost was isolated to `nose-markdown`.
+
+**Profiler result.** A 20s macOS `sample` run showed the dominant stack in
+`nose_markdown::verify::CorpusModel::tfidf_cosine`: every candidate pair recomputed both unit
+vector norms by scanning all shingles and doing IDF `HashMap` lookups. The rayon worker threads
+were idle during this phase, so the Markdown verifier was also leaving available CPU parallelism
+unused. A smaller secondary cost was candidate-pair set construction through ordered maps.
+
+**Fix shipped.** `CorpusModel::fit` now precomputes per-unit TF-IDF weights and vector norms once;
+candidate verification uses those cached vectors. Fingerprints are built and candidate pairs are
+verified through rayon while preserving deterministic candidate order. Stage-1 maps use the
+workspace's fast deterministic hash maps/sets, and char-n-gram hashing no longer materializes a
+temporary `String` for every gram.
+
+**Measured result.** Re-running the same release command took **10.12s real / 48.23s user** with
+the output byte-identical to baseline (`cmp` clean): still **284 Markdown families** and the same
+dashboard rows. Follow-up: peak RSS is still about **1.28GB**, so the next performance frontier is
+memory pressure in candidate generation and witness bookkeeping, not relation scoring.
+
+## CY. Corpus query performance pass after the wiki fix (2026-06-18)
+
+After the wiki-scale Markdown fix, a representative pinned-corpus pass covered Python, Go,
+Java, Rust, TypeScript/JavaScript, C, CSS, Svelte, and Markdown-heavy repos:
+`sympy`, `hugo`, `prettier`, `netty`, `guava`, `svelte-core`, `curl`, `tokio`, `raylib`, and
+`bulma`. Every final run was byte-identical to the pre-change report (`cmp` clean).
+
+**Profiler result.** `NOSE_TIME=1` showed code-heavy repos dominated by `normalize+extract`.
+macOS `sample` on `raylib` confirmed that the hot normalization path is value-graph work inside
+large vendored C headers (`miniaudio.h`, `RGFW.h`, etc.), especially parameter-domain seeding and
+value fingerprint construction. That is soundness-sensitive code; no change shipped there.
+
+The actionable repeated cost was the contiguous copy-paste channel on C/CSS-heavy repos. A late
+sample during `raylib` showed time in `nose_detect::contiguous::loc`: for every accepted token run,
+the detector rebuilt full `Loc` objects and cloned path strings before deduplication, while also
+rescanning the token slice for line min/max.
+
+**Fix shipped.** The contiguous detector now keeps internal `(stream, start, end)` span seeds,
+dedups before constructing user-facing `Loc`s, and uses a small per-stream line-range index for
+long token-run span lookup. Candidate selection, clustering, and report ordering are unchanged.
+
+**Measured result.** Representative final release runs:
+
+| repo | baseline real | final real | notable stage change |
+|---|---:|---:|---|
+| `raylib` | 8.17s | 4.80s | contiguous **1011ms → 458ms** |
+| `bulma` | 3.67s | 2.69s | contiguous **1479ms → 912ms** |
+| `sympy` | 8.16s | 4.22s | contiguous **258ms → 130ms**; normalization remains the main cost |
+| `guava` | 4.43s | 3.07s | contiguous **86ms → 39ms** |
+
+The larger wall-time drops also include warm-cache and run-to-run effects, so the durable claim is
+the stage-local contiguous reduction plus byte-identical output. `normalize+extract` remains the
+real frontier for large C/Python/Java repos, but the next change there should be evidence-backed
+deduplication of value-graph work, not local micro-optimization.

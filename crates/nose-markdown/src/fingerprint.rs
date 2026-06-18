@@ -11,7 +11,7 @@
 //! sets, and candidate pairs accumulated into an ordered set.
 
 use crate::unit::Unit;
-use std::collections::{BTreeSet, HashMap};
+use rustc_hash::{FxHashMap, FxHashSet};
 
 pub const NUM_PERM: usize = 128;
 const LSH_ROWS: usize = 4; // bands = NUM_PERM/ROWS = 32; S-curve threshold ~0.42 (recall-favoring)
@@ -27,6 +27,32 @@ pub fn fnv1a(s: &str) -> u64 {
         h = h.wrapping_mul(0x100000001b3);
     }
     h
+}
+
+fn fnv1a_chars(chars: &[char]) -> u64 {
+    let mut h: u64 = 0xcbf29ce484222325;
+    let mut buf = [0u8; 4];
+    for c in chars {
+        for b in c.encode_utf8(&mut buf).as_bytes() {
+            h ^= *b as u64;
+            h = h.wrapping_mul(0x100000001b3);
+        }
+    }
+    h
+}
+
+fn char_ngram_hashes(norm: &str, n: usize) -> Vec<u64> {
+    let chars: Vec<char> = norm.chars().collect();
+    if chars.len() < n {
+        return if chars.is_empty() {
+            Vec::new()
+        } else {
+            vec![fnv1a_chars(&chars)]
+        };
+    }
+    (0..=chars.len() - n)
+        .map(|i| fnv1a_chars(&chars[i..i + n]))
+        .collect()
 }
 
 /// Deterministic LCG (no global RNG state) used to derive MinHash permutation coefficients.
@@ -69,7 +95,7 @@ pub struct Fingerprint {
 
 impl Fingerprint {
     pub fn of(unit: &Unit) -> Fingerprint {
-        let mut shingles: Vec<u64> = unit.shingles().iter().map(|g| fnv1a(g)).collect();
+        let mut shingles: Vec<u64> = char_ngram_hashes(&unit.norm, unit.gram);
         shingles.sort_unstable();
         shingles.dedup();
         let minhash = minhash_sig(&shingles);
@@ -106,22 +132,16 @@ fn minhash_sig(shingles: &[u64]) -> Vec<u64> {
 /// Winnowing (Schleimer/Wilkerson/Aiken): rightmost minimum in each window of `WINNOW_W`
 /// consecutive char-`WINNOW_K`-gram hashes.
 fn winnow(norm: &str) -> Vec<u64> {
-    let chars: Vec<char> = norm.chars().collect();
-    if chars.len() < WINNOW_K {
+    let grams = char_ngram_hashes(norm, WINNOW_K);
+    if grams.is_empty() {
         return Vec::new();
     }
-    let grams: Vec<u64> = (0..=chars.len() - WINNOW_K)
-        .map(|i| {
-            let g: String = chars[i..i + WINNOW_K].iter().collect();
-            fnv1a(&g)
-        })
-        .collect();
-    let mut fps = BTreeSet::new();
+    let mut fps = Vec::new();
     if grams.len() < WINNOW_W {
         if let Some(&m) = grams.iter().min() {
-            fps.insert(m);
+            fps.push(m);
         }
-        return fps.into_iter().collect();
+        return fps;
     }
     let mut last_pos: isize = -1;
     for i in 0..=grams.len() - WINNOW_W {
@@ -130,11 +150,13 @@ fn winnow(norm: &str) -> Vec<u64> {
         // rightmost occurrence of the minimum in this window
         let j = i + window.iter().rposition(|&x| x == m).unwrap();
         if j as isize != last_pos {
-            fps.insert(grams[j]);
+            fps.push(grams[j]);
             last_pos = j as isize;
         }
     }
-    fps.into_iter().collect()
+    fps.sort_unstable();
+    fps.dedup();
+    fps
 }
 
 /// Jaccard of two sorted, de-duplicated u64 sets.
@@ -193,11 +215,11 @@ pub fn minhash_est(a: &[u64], b: &[u64]) -> f64 {
 /// Generate candidate pairs sub-quadratically: union of MinHash-LSH buckets (resemblance) and
 /// the winnowing inverted index (shared-span / small-in-large). Returns ordered unique pairs.
 pub fn candidate_pairs(fps: &[Fingerprint]) -> Vec<(usize, usize)> {
-    let mut pairs: BTreeSet<(usize, usize)> = BTreeSet::new();
+    let mut pairs: FxHashSet<(usize, usize)> = FxHashSet::default();
     let bands = NUM_PERM / LSH_ROWS;
 
     // MinHash-LSH: bucket by (band index, hash of the band's rows).
-    let mut buckets: HashMap<(usize, u64), Vec<usize>> = HashMap::new();
+    let mut buckets: FxHashMap<(usize, u64), Vec<usize>> = FxHashMap::default();
     for (idx, fp) in fps.iter().enumerate() {
         if fp.shingles.is_empty() {
             continue;
@@ -221,7 +243,7 @@ pub fn candidate_pairs(fps: &[Fingerprint]) -> Vec<(usize, usize)> {
     // the corpus — these are ubiquitous boilerplate grams that otherwise flood candidates with
     // near-zero-similarity pairs (the survey's boilerplate failure mode).
     let stop_df = (fps.len() / 25).max(8);
-    let mut winv: HashMap<u64, Vec<usize>> = HashMap::new();
+    let mut winv: FxHashMap<u64, Vec<usize>> = FxHashMap::default();
     for (idx, fp) in fps.iter().enumerate() {
         for &w in &fp.winnow {
             winv.entry(w).or_default().push(idx);
@@ -231,7 +253,7 @@ pub fn candidate_pairs(fps: &[Fingerprint]) -> Vec<(usize, usize)> {
     // 5-gram is weak evidence and floods candidates with near-zero-similarity pairs; a real
     // partial/contained overlap shares many fingerprints.
     const WINNOW_MIN_SHARED: u32 = 3;
-    let mut shared: HashMap<(usize, usize), u32> = HashMap::new();
+    let mut shared: FxHashMap<(usize, usize), u32> = FxHashMap::default();
     for members in winv.values() {
         if members.len() < 2 || members.len() > stop_df {
             continue;
@@ -248,7 +270,9 @@ pub fn candidate_pairs(fps: &[Fingerprint]) -> Vec<(usize, usize)> {
         }
     }
 
-    pairs.into_iter().collect()
+    let mut pairs: Vec<_> = pairs.into_iter().collect();
+    pairs.sort_unstable();
+    pairs
 }
 
 fn order(a: usize, b: usize) -> (usize, usize) {
@@ -314,5 +338,14 @@ mod tests {
         let b = fp("deterministic fingerprints must be byte identical across runs always");
         assert_eq!(a.minhash, b.minhash);
         assert_eq!(a.winnow, b.winnow);
+    }
+
+    #[test]
+    fn hashed_ngrams_match_string_ngrams() {
+        let u = split_units("t.md", "# Title\n\nhéllo wiki world")[0].clone();
+        let mut expected: Vec<u64> = u.shingles().iter().map(|g| fnv1a(g)).collect();
+        expected.sort_unstable();
+        expected.dedup();
+        assert_eq!(Fingerprint::of(&u).shingles, expected);
     }
 }

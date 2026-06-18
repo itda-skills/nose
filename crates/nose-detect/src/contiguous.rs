@@ -136,18 +136,112 @@ fn extend(sa: &Stream, a: usize, sb: &Stream, b: usize) -> usize {
     len
 }
 
-fn loc(s: &Stream, lo: usize, hi: usize) -> Loc {
-    let start = s.start[lo..hi].iter().copied().min().unwrap_or(0);
-    let end = s.end[lo..hi].iter().copied().max().unwrap_or(0);
-    Loc::new(LocInit {
-        file: s.path.clone(),
-        source_span: LineSpan::new(start, end),
-        lang: s.lang.name().to_string(),
-        kind: UnitKind::Block,
-        name: None,
-        sem: hi - lo,
-        span_tokens: hi - lo,
+const LINE_RANGE_BLOCK: usize = 64;
+
+struct LineRangeIndex {
+    start_min: Vec<u32>,
+    end_max: Vec<u32>,
+}
+
+impl LineRangeIndex {
+    fn new(s: &Stream) -> Self {
+        let start_min = s
+            .start
+            .chunks(LINE_RANGE_BLOCK)
+            .map(|chunk| chunk.iter().copied().min().unwrap_or(0))
+            .collect();
+        let end_max = s
+            .end
+            .chunks(LINE_RANGE_BLOCK)
+            .map(|chunk| chunk.iter().copied().max().unwrap_or(0))
+            .collect();
+        LineRangeIndex { start_min, end_max }
+    }
+
+    fn line_span(&self, s: &Stream, lo: usize, hi: usize) -> (u32, u32) {
+        if lo >= hi {
+            return (0, 0);
+        }
+        let mut min_start = u32::MAX;
+        let mut max_end = 0u32;
+        let mut i = lo;
+        while i < hi && i % LINE_RANGE_BLOCK != 0 {
+            min_start = min_start.min(s.start[i]);
+            max_end = max_end.max(s.end[i]);
+            i += 1;
+        }
+        while i + LINE_RANGE_BLOCK <= hi {
+            let block = i / LINE_RANGE_BLOCK;
+            min_start = min_start.min(self.start_min[block]);
+            max_end = max_end.max(self.end_max[block]);
+            i += LINE_RANGE_BLOCK;
+        }
+        while i < hi {
+            min_start = min_start.min(s.start[i]);
+            max_end = max_end.max(s.end[i]);
+            i += 1;
+        }
+        if min_start == u32::MAX {
+            (0, 0)
+        } else {
+            (min_start, max_end)
+        }
+    }
+}
+
+#[derive(Clone)]
+struct LocSeed {
+    stream: usize,
+    start_line: u32,
+    end_line: u32,
+    sem: usize,
+}
+
+impl LocSeed {
+    fn to_loc(&self, streams: &[Stream]) -> Loc {
+        let s = &streams[self.stream];
+        Loc::new(LocInit {
+            file: s.path.clone(),
+            source_span: LineSpan::new(self.start_line, self.end_line),
+            lang: s.lang.name().to_string(),
+            kind: UnitKind::Block,
+            name: None,
+            sem: self.sem,
+            span_tokens: self.sem,
+        })
+    }
+}
+
+fn intern_loc(
+    locs: &mut Vec<LocSeed>,
+    loc_id: &mut FxHashMap<(usize, u32, u32), usize>,
+    l: LocSeed,
+) -> usize {
+    let key = (l.stream, l.start_line, l.end_line);
+    *loc_id.entry(key).or_insert_with(|| {
+        locs.push(l);
+        locs.len() - 1
     })
+}
+
+fn loc_seed(
+    stream: usize,
+    range: &LineRangeIndex,
+    streams: &[Stream],
+    lo: usize,
+    hi: usize,
+) -> LocSeed {
+    let (start_line, end_line) = range.line_span(&streams[stream], lo, hi);
+    LocSeed {
+        stream,
+        start_line,
+        end_line,
+        sem: hi - lo,
+    }
+}
+
+fn line_count(l: &LocSeed) -> u32 {
+    l.end_line.saturating_sub(l.start_line) + 1
 }
 
 /// Find maximal duplicated runs across all streams and cluster them into groups.
@@ -167,19 +261,13 @@ pub(crate) fn detect(streams: &[Stream], min_tokens: usize, min_lines: u32) -> V
     // collision in one language from masking a real same-language match in another.
     let mut seen: FxHashMap<(u64, nose_il::Lang), (usize, usize)> = FxHashMap::default();
     let grams: Vec<Vec<u64>> = streams.iter().map(|s| kgrams(&s.tags, k)).collect();
+    let ranges: Vec<LineRangeIndex> = streams.iter().map(LineRangeIndex::new).collect();
 
     // Emitted clone instances and the pairs linking them (for union-find clustering).
-    let mut locs: Vec<Loc> = Vec::new();
+    let mut locs: Vec<LocSeed> = Vec::new();
     let mut pairs: Vec<(usize, usize)> = Vec::new();
     // Dedup identical (file,start,end) instances to one node id.
-    let mut loc_id: FxHashMap<(String, u32, u32), usize> = FxHashMap::default();
-    let mut intern_loc = |locs: &mut Vec<Loc>, l: Loc| -> usize {
-        let key = (l.file.clone(), l.start_line, l.end_line);
-        *loc_id.entry(key).or_insert_with(|| {
-            locs.push(l);
-            locs.len() - 1
-        })
-    };
+    let mut loc_id: FxHashMap<(usize, u32, u32), usize> = FxHashMap::default();
 
     for (si, g) in grams.iter().enumerate() {
         let lang = streams[si].lang;
@@ -192,24 +280,27 @@ pub(crate) fn detect(streams: &[Stream], min_tokens: usize, min_lines: u32) -> V
                 let self_overlap = sj == si && i.abs_diff(j) < k;
                 if !self_overlap {
                     let len = extend(&streams[sj], j, &streams[si], i);
-                    let la = loc(&streams[sj], j, j + len);
-                    let lb = loc(&streams[si], i, i + len);
-                    let lines = lb.end_line.saturating_sub(lb.start_line) + 1;
-                    // Require the run to contain at least one operation — a flat
-                    // name/field/literal list (prop list, destructure, import/enum list)
-                    // is not extractable logic, however literally it repeats.
-                    let has_op = streams[si].op[i..(i + len).min(streams[si].op.len())]
-                        .iter()
-                        .any(|&o| o);
-                    if has_op && len >= mint && lines >= minl {
-                        let a = intern_loc(&mut locs, la);
-                        let b = intern_loc(&mut locs, lb);
-                        if a != b {
-                            pairs.push((a, b));
+                    if len >= mint {
+                        // Require the run to contain at least one operation — a flat
+                        // name/field/literal list (prop list, destructure, import/enum list)
+                        // is not extractable logic, however literally it repeats.
+                        let has_op = streams[si].op[i..(i + len).min(streams[si].op.len())]
+                            .iter()
+                            .any(|&o| o);
+                        if has_op {
+                            let lb = loc_seed(si, &ranges[si], streams, i, i + len);
+                            if line_count(&lb) >= minl {
+                                let la = loc_seed(sj, &ranges[sj], streams, j, j + len);
+                                let a = intern_loc(&mut locs, &mut loc_id, la);
+                                let b = intern_loc(&mut locs, &mut loc_id, lb);
+                                if a != b {
+                                    pairs.push((a, b));
+                                }
+                                // Skip past the matched run in this stream.
+                                i += len.max(1);
+                                continue;
+                            }
                         }
-                        // Skip past the matched run in this stream.
-                        i += len.max(1);
-                        continue;
                     }
                 }
             } else {
@@ -233,7 +324,7 @@ pub(crate) fn detect(streams: &[Stream], min_tokens: usize, min_lines: u32) -> V
         // exact-token-run clones, so report them at sim 1.0.
         groups.push(crate::Group {
             score: 1.0,
-            members: members.iter().map(|&m| locs[m].clone()).collect(),
+            members: members.iter().map(|&m| locs[m].to_loc(streams)).collect(),
             semantic_laws: Vec::new(),
             abstraction_witness: None,
             witness: Some(crate::EquivalenceWitness {
@@ -291,6 +382,21 @@ mod tests {
         let mut b = vec![9, 8, 7];
         b.extend(&shared);
         assert!(detect(&[mk("a.py", a), mk("b.py", b)], 10, 3).is_empty());
+    }
+
+    #[test]
+    fn line_range_index_matches_slice_scan() {
+        let mut s = mk("a.py", (0..160).collect());
+        for i in 0..s.tags.len() {
+            s.start[i] = (200 - i as u32).max(1);
+            s.end[i] = i as u32 + 10;
+        }
+        let index = LineRangeIndex::new(&s);
+        for (lo, hi) in [(0, 1), (3, 9), (7, 99), (64, 130), (0, 160)] {
+            let expected_start = s.start[lo..hi].iter().copied().min().unwrap();
+            let expected_end = s.end[lo..hi].iter().copied().max().unwrap();
+            assert_eq!(index.line_span(&s, lo, hi), (expected_start, expected_end));
+        }
     }
 
     /// A run with no operation tokens (a flat name/field/literal list — a prop list, a

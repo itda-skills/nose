@@ -12,6 +12,7 @@
 use crate::fingerprint::{self, Fingerprint};
 use crate::unit::{self, Unit};
 use crate::verify::CorpusModel;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -93,13 +94,13 @@ fn build(
             }
         }
     }
-    let fps: Vec<Fingerprint> = units.iter().map(Fingerprint::of).collect();
+    let fps: Vec<Fingerprint> = units.par_iter().map(Fingerprint::of).collect();
     let model = CorpusModel::fit(&fps);
     (units, fps, model)
 }
 
 fn rel_score(model: &CorpusModel, fps: &[Fingerprint], i: usize, j: usize) -> (f64, f64, f64) {
-    let cos = model.tfidf_cosine(&fps[i], &fps[j]);
+    let cos = model.tfidf_cosine_at(fps, i, j);
     let cont = fingerprint::containment(&fps[i].shingles, &fps[j].shingles);
     let common = model.commonness(&fps[i], &fps[j]);
     let rel = if cont >= 0.8 && cont > cos { cont } else { cos };
@@ -109,9 +110,10 @@ fn rel_score(model: &CorpusModel, fps: &[Fingerprint], i: usize, j: usize) -> (f
 /// Score every candidate pair (no threshold) for the given corpus.
 pub fn score_pairs(docs: &[(String, String)], min_words: usize) -> Vec<ScoredPair> {
     let (units, fps, model) = build(docs, min_words);
-    fingerprint::candidate_pairs(&fps)
-        .into_iter()
-        .map(|(i, j)| {
+    let cands = fingerprint::candidate_pairs(&fps);
+    cands
+        .par_iter()
+        .map(|&(i, j)| {
             let (score, containment, commonness) = rel_score(&model, &fps, i, j);
             ScoredPair {
                 a: Ref::of(&units[i]),
@@ -127,9 +129,10 @@ pub fn score_pairs(docs: &[(String, String)], min_words: usize) -> Vec<ScoredPai
 /// Like `score_pairs` but carries the raw unit text — for building the golden labeling set.
 pub fn dump_pairs(docs: &[(String, String)], min_words: usize) -> Vec<DumpPair> {
     let (units, fps, model) = build(docs, min_words);
-    fingerprint::candidate_pairs(&fps)
-        .into_iter()
-        .map(|(i, j)| {
+    let cands = fingerprint::candidate_pairs(&fps);
+    cands
+        .par_iter()
+        .map(|&(i, j)| {
             let (score, containment, commonness) = rel_score(&model, &fps, i, j);
             DumpPair {
                 scored: ScoredPair {

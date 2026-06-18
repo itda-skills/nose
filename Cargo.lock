@@ -535,7 +535,9 @@ dependencies = [
 name = "nose-markdown"
 version = "0.13.0"
 dependencies = [
+ "rayon",
  "regex",
+ "rustc-hash",
  "serde",
  "serde_json",
 ]

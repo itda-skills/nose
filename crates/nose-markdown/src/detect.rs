@@ -9,6 +9,7 @@ use crate::fingerprint::{self, Fingerprint};
 use crate::unit::{self, Unit, UnitKind};
 use crate::verify::CorpusModel;
 use crate::witness::{self, Span};
+use rayon::prelude::*;
 
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct Member {
@@ -124,7 +125,7 @@ pub(crate) fn accept_pair(
     j: usize,
     opts: &Options,
 ) -> Option<f64> {
-    let cos = model.tfidf_cosine(&fps[i], &fps[j]);
+    let cos = model.tfidf_cosine_at(fps, i, j);
     let cont = fingerprint::containment(&fps[i].shingles, &fps[j].shingles);
     // TF-IDF is the primary relation score; containment rescues small-in-large.
     let rel = if cont >= 0.8 && cont > cos { cont } else { cos };
@@ -163,17 +164,18 @@ pub fn detect(docs: &[(String, String)], opts: &Options) -> Vec<Family> {
         return Vec::new();
     }
 
-    let fps: Vec<Fingerprint> = units.iter().map(Fingerprint::of).collect();
+    let fps: Vec<Fingerprint> = units.par_iter().map(Fingerprint::of).collect();
     let model = CorpusModel::fit(&fps);
 
     // Stage 1 → Stage 2: score every candidate pair, accept above threshold.
     let cands = fingerprint::candidate_pairs(&fps);
-    let mut accepted: Vec<(usize, usize, f64)> = Vec::new();
-    for (i, j) in cands {
-        if let Some(rel) = accept_pair(&units, &fps, &model, i, j, opts) {
-            accepted.push((i, j, rel));
-        }
-    }
+    let accepted: Vec<(usize, usize, f64)> = cands
+        .par_iter()
+        .map(|&(i, j)| accept_pair(&units, &fps, &model, i, j, opts).map(|rel| (i, j, rel)))
+        .collect::<Vec<_>>()
+        .into_iter()
+        .flatten()
+        .collect();
     if accepted.is_empty() {
         return Vec::new();
     }

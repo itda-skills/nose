@@ -8,6 +8,7 @@
 //! or "worth removing". Dev golden-build/eval tooling lives in `nose-markdown`'s `mddup` example.
 
 use nose_markdown::{detect, Family, Options};
+use rayon::prelude::*;
 use std::path::{Path, PathBuf};
 
 /// Vendor/build directories never worth scanning for prose duplication — excluded even without a
@@ -74,7 +75,7 @@ fn discover(root: &Path, excludes: &[String]) -> Vec<PathBuf> {
 pub(crate) fn detect_under(root: &Path, excludes: &[String]) -> Vec<Family> {
     let files = discover(root, excludes);
     let docs: Vec<(String, String)> = files
-        .iter()
+        .par_iter()
         .filter_map(|p| {
             std::fs::read(p).ok().map(|b| {
                 (
