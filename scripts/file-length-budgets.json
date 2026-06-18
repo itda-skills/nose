@@ -6,7 +6,7 @@
     "crates/nose-cli/tests/cli/commands.rs": 2796,
     "crates/nose-cli/tests/cli/exact_fragments.rs": 4036,
     "crates/nose-cli/tests/cli/semantic_idioms.rs": 3832,
-    "crates/nose-cli/tests/equivalence.rs": 3826,
+    "crates/nose-cli/tests/equivalence.rs": 3394,
     "crates/nose-detect/src/fragment/conditional_guard.rs": 722,
     "crates/nose-detect/src/fragment/recognize.rs": 708,
     "crates/nose-detect/src/lib.rs": 1610,
