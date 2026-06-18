@@ -658,9 +658,10 @@ and pack ecosystem.
   `library_api/registry.rs`, library API occurrence evidence/admission and
   dependency validation logic live in `library_api.rs`, admitted resolver shared
   admission mechanics live in `library_api/resolvers/admission.rs`, Python
-  stdlib type-domain alias rows live in `type_domain/python_stdlib.rs`, and
-  `lib.rs` preserves the existing flat public facade while shedding the mixed
-  9k-line implementation body.
+  stdlib type-domain alias rows live in `type_domain/python_stdlib.rs`, semantic
+  pack compiled summaries, loading/conformance, and validation live under
+  `packs/`, and `lib.rs` preserves the existing flat public facade while
+  shedding the mixed 9k-line implementation body.
 - The same code-quality pass split the CLI end-to-end test target into a small
   `tests/cli.rs` harness plus topic modules, and moved the Type-4 generator's
   axis metadata/model/aggregate helpers under `bench/type4/type4gen/` while

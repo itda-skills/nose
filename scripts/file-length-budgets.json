@@ -34,7 +34,6 @@
     "crates/nose-normalize/src/value_graph/tests.rs": 2313,
     "crates/nose-semantics/src/evidence.rs": 1248,
     "crates/nose-semantics/src/lib.rs": 3560,
-    "crates/nose-semantics/src/library_api.rs": 2911,
-    "crates/nose-semantics/src/packs.rs": 1924
+    "crates/nose-semantics/src/library_api.rs": 2911
   }
 }
