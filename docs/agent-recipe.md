@@ -54,12 +54,14 @@ Read the fields in this order — each step either decides or narrows:
    non-default `surface` value *is* the demotion reason — a decidable classification, not a
    worthiness verdict: `shallow` (the extracted helper would be mostly parameters), `declaration`
    (only import/include/use/re-export spans), `generated` (every location in generated-header
-   source), and `review`/`hidden` (review-hazard or proof-only diagnostics, too small to extract).
+   source or CSS source-plus-compiled/minified build pipeline), and `review`/`hidden`
+   (review-hazard or proof-only diagnostics, too small to extract).
    A default-surface family carries `surface == "default"`.
-2. **Generated/vendored.** The `generated` surface already flags families whose every location
-   sits in generated-header source; also drop families whose paths are vendored (`vendor/`,
-   `.min.`, `*.pb.go`, lockfiles). A *partly* generated family keeps a ranked surface — it is a
-   real leak, so keep it.
+2. **Generated/vendored.** The `generated` surface already flags generated-header families and CSS
+   source-plus-compiled/minified build pipelines; also drop families whose paths are vendored
+   (`vendor/`, `.min.`, `*.pb.go`, lockfiles). A *partly* generated family keeps a ranked surface
+   unless it is a CSS build pipeline — hand-written logic leaking into ordinary generated output is
+   a real finding, so keep it.
 3. **Why did it merge — `witness`.**
    - `exact`: a behavioral proof (identical value graphs, literal values included; `value_nodes`
      is *how much* was proven). Treat the members as computing the same thing; the only

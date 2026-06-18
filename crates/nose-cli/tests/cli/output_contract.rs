@@ -325,6 +325,125 @@ fn scan_surfaces_generated_families_off_default_and_flags_partial_ones() {
     );
 }
 
+/// CSS source plus its compiled/minified outputs is one generated build pipeline,
+/// even though one member is hand-written source. It stays visible in full JSON
+/// for diagnostics, but off the default human/CI surface.
+#[test]
+fn scan_surfaces_css_build_pipeline_as_generated() {
+    let dir = make_css_pipeline_project("surface");
+    let out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--min-lines",
+        "1",
+        "--min-size",
+        "1",
+        "--format",
+        "json",
+        "--top",
+        "0",
+    ]);
+    let json = scan_json(&out);
+    let fams = scan_families(&json);
+    assert_eq!(fams.len(), 1, "CSS pipeline remains in full JSON: {out}");
+    assert_eq!(
+        fams[0]["recommended_surface"], "generated",
+        "CSS build pipeline leaves the default surface: {out}"
+    );
+    assert_eq!(
+        fams[0]["actionability_reason"], "generated-source",
+        "CSS pipeline carries the generated-source reason: {out}"
+    );
+    assert_eq!(
+        json["ranking"]["surface_counts"]["generated"].as_u64(),
+        Some(1),
+        "surface_counts uses the same generated classification: {out}"
+    );
+
+    let human = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--min-lines",
+        "1",
+        "--min-size",
+        "1",
+    ]);
+    assert!(
+        human.contains("no clone families found"),
+        "CSS pipeline should not be a default human finding: {human}"
+    );
+    assert!(
+        human.contains("omitted 1 family from default output (1 generated-code)"),
+        "human omission footer uses the generated classification: {human}"
+    );
+    assert_css_pipeline_ignored_json(&dir, fams[0]["family_id"].as_str().unwrap());
+}
+
+fn make_css_pipeline_project(tag: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("nose_csspipe_{tag}_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    let source = ".card {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  color: #123456;\n}\n";
+    fs::write(dir.join("source.css"), source).unwrap();
+    fs::write(
+        dir.join("bundle.css"),
+        format!("/*! App v1.2.3 */\n{source}"),
+    )
+    .unwrap();
+    fs::write(
+        dir.join("bundle.min.css"),
+        ".card{display:flex;align-items:center;justify-content:center;color:#123456}\n",
+    )
+    .unwrap();
+    dir
+}
+
+fn assert_css_pipeline_ignored_json(dir: &Path, family_id: &str) {
+    let ignore_file = dir.join("nose.ignore.json");
+    fs::write(
+        &ignore_file,
+        format!(
+            "{{\"ignores\":[{{\"family_id\":\"{family_id}\",\"reason\":\"generated-code\"}}]}}\n"
+        ),
+    )
+    .unwrap();
+    let ignored_out = run(&[
+        "scan",
+        dir.to_str().unwrap(),
+        "--min-lines",
+        "1",
+        "--min-size",
+        "1",
+        "--format",
+        "json",
+        "--top",
+        "0",
+        "--ignore-file",
+        ignore_file.to_str().unwrap(),
+    ]);
+    let ignored_json = scan_json(&ignored_out);
+    assert!(scan_families(&ignored_json).is_empty());
+    let ignored = &ignored_json["ignored_families"][0];
+    assert_eq!(
+        ignored["recommended_surface"], "generated",
+        "ignored families use the same effective surface policy: {ignored_out}"
+    );
+    assert_eq!(
+        ignored["actionability_reason"], "generated-source",
+        "ignored generated families retain the actionability reason: {ignored_out}"
+    );
+    let ignored_generated_locations = ignored["locations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|loc| loc["looks_generated"].as_bool().unwrap_or(false))
+        .count();
+    assert_eq!(
+        ignored_generated_locations, 2,
+        "ignored family locations keep generated flags: {ignored_out}"
+    );
+}
+
 /// #225: plain Block locations carry their enclosing function/method, so an
 /// agent can NAME the region a block family lives in without opening files.
 #[test]

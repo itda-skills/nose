@@ -83,6 +83,11 @@ deprecated `nose review --format json`.
 | `locations[]` | every copy: `{file, start, end, name, lang}`; when the frontend knows source-origin facts the location also carries `origin` (domains/body/region facets such as `type-contract`, `style`, `markup`, `declaration-only`, or `vue-sfc`); the `existing_helper` member also carries `role: "existing-helper"`; a sub-dag clone's member carries `shared_subdag: [start, end]` — where the proven shared computation lives at that site |
 | `skeleton` | (only with `full`) the all-copies extraction-skeleton lines, each varying spot a `⟨param N: class⟩` placeholder (`class` = `literal`/`name`/`call`/`expr`/`block` — a coarse value-class hint for the helper signature) |
 
+`surface` uses the same curation policy as scan JSON. `generated` includes families wholly
+in generated/distributed output and CSS source-plus-compiled/minified build pipelines; a
+default family may still contain a generated-looking location when the hand-written copies
+remain actionable. See [scan-json](scan-json.md#surface-curation-and-ranking).
+
 Evidence, never a verdict: there is no `worth_it`/`confidence` field — the worthy-vs-parallel
 judgment is the caller's ([design §2](design.md)). See the [agent-recipe](agent-recipe.md) for
 the loop, and [usage › nose query](usage.md#nose-query) for the grammar.

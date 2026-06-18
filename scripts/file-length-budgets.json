@@ -1,7 +1,7 @@
 {
   "default_max_lines": 600,
   "files": {
-    "crates/nose-cli/src/main.rs": 9091,
+    "crates/nose-cli/src/main.rs": 8655,
     "crates/nose-cli/src/review.rs": 946,
     "crates/nose-cli/tests/cli/commands.rs": 2796,
     "crates/nose-cli/tests/cli/exact_fragments.rs": 4036,
@@ -9,7 +9,7 @@
     "crates/nose-cli/tests/equivalence.rs": 9322,
     "crates/nose-detect/src/fragment/conditional_guard.rs": 722,
     "crates/nose-detect/src/fragment/recognize.rs": 708,
-    "crates/nose-detect/src/lib.rs": 1611,
+    "crates/nose-detect/src/lib.rs": 1610,
     "crates/nose-detect/src/report.rs": 1868,
     "crates/nose-detect/src/strict_exact.rs": 2457,
     "crates/nose-detect/src/units.rs": 3458,
