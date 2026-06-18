@@ -16,7 +16,7 @@ sort        = "extractability"
 min-value   = 200
 min-members = 3
 min-size    = 30
-top         = 50            # bounds `nose scan` only; `nose query` uses the `top=` term
+top         = 50
 ignore-file = "nose.ignore.json"
 semantic-packs = ["semantic-packs/python-math-prod.json"]
 ```
@@ -34,9 +34,8 @@ CI failure mode.
 
 All keys are optional; an absent key means "no opinion — use the CLI value or
 the built-in default". Keys are kebab-case and live under the `[scan]` table.
-`nose query` reads the same `[scan]` config keys as `nose scan`, with one exception:
-`top` has no effect under `nose query` (its row limit is the `top=` query term, default
-30); it only bounds the deprecated `nose scan`'s report.
+`nose query` reads the same `[scan]` config keys as `nose scan`, with one exception for
+`top` (see the table below).
 
 The **CLI override** column gives the per-run flag (or, where they differ, the `nose query`
 term — `nose query` spells `sort`/`top` as the DSL terms `sort=`/`top=`, not `--sort`/`--top`).
@@ -50,7 +49,7 @@ term — `nose query` spells `sort`/`top` as the DSL terms `sort=`/`top=`, not `
 | `min-members` | int | `2` | `--min-members` |
 | `min-size` | int (IL tokens) | `24` | `--min-size` |
 | `min-lines` | int (advanced) | `5` | `--min-lines` |
-| `top` | int | `30` | `top=` (query term); `--top` (deprecated scan). **Config key bounds `scan` only** — `nose query`'s limit is the `top=` term |
+| `top` | int | `30` | `top=` (query term); `--top` (deprecated scan). **Config key bounds `scan` only** — `nose query`'s row limit is the `top=` term (default 30) |
 | `ignore-file` | string path | auto-read `nose.ignore.json` when present | `--ignore-file` |
 | `semantic-packs` | list of file or directory paths | `[]` | `--semantic-pack` |
 
@@ -71,16 +70,16 @@ The `near` channel's acceptance threshold rides on the `mode` value itself —
 There is no separate threshold setting, so it can never be mis-applied to the exact
 `syntax`/`semantic` channels.
 
+```sh
+nose query src --mode syntax,semantic,near:0.70
+```
+
 The hidden experimental `abstraction[:T]` mode is also accepted in `mode`, but it is
 not a stable project-policy surface and is intentionally absent from
 [capabilities](capabilities.md)' stable mode list. Prefer it for local research or
 tooling experiments, not CI gates. If `near:T` and `abstraction:T` appear together,
 they must name the same threshold because both modes share one fuzzy acceptance
 cutoff.
-
-```sh
-nose query src --mode syntax,semantic,near:0.70
-```
 
 Config file paths are resolved from the config file's directory, so committed
 project paths do not depend on where `nose` was invoked. This applies to
@@ -119,8 +118,7 @@ ignore-file = "nose.ignore.json"
 When unset, nose automatically reads `nose.ignore.json` in the current working
 directory if it exists. Pass `--ignore-file <file>` to override the config for one
 run. Ignored families are hidden from the active report and from `--fail-on any` /
-`--fail-on new`; the ignore file keeps the reason, owner, note, and expiry for each
-suppression as the audit record.
+`--fail-on new`.
 
 The file format, selector semantics, and expiry behavior are documented in
 [structured-ignores](structured-ignores.md).
@@ -133,7 +131,6 @@ comment syntax all work). nose drops that unit from detection, so that site cann
 family. Use this for a duplicate you've consciously decided to live with, rather than
 excluding the whole file.
 
-For a finding that should stay visible to audit tooling, prefer a structured
-ignore entry. For accepting *all* of today's existing duplication at once — so
-only *new* duplication is reported — use a baseline instead; see
-[continuous-integration](continuous-integration.md).
+For when to reach for this inline marker vs a structured ignore entry vs a
+baseline, see [Which suppression to use](structured-ignores.md#which-suppression-to-use).
+Baselines are set up in [continuous-integration](continuous-integration.md).

@@ -5,37 +5,19 @@ context. Use them when a finding is intentional, generated, framework-imposed, o
 owned by a team that is not ready to refactor it yet. For command basics see
 [usage](usage.md); for CI gates see [continuous-integration](continuous-integration.md).
 
-## Inline marker vs structured file — which to use
-
-nose has two ways to say "this clone is fine"; they serve different needs, so pick by
-*who* the suppression is for:
-
-| | inline `// nose-ignore` | structured `nose.ignore.json` |
-|---|---|---|
-| Lives | next to the code, travels with it | one file in the scan working directory |
-| Carries | nothing — just "skip this site" | reason, owner, expiry, note |
-| Audit | invisible in reports | the file records reason/owner/expiry for each suppression |
-| Best for | a quick, local, self-evident exception | team-level, reviewable, expiring debt |
-
-Rule of thumb: reach for the **inline marker** when the reason is obvious to anyone
-reading the line; reach for the **structured file** when the suppression is a decision
-someone else should be able to find, question, and revisit later. When in doubt — or for
-anything going through CI — prefer the structured file, because it stays auditable.
-
 ## Quick start
 
-Run nose and copy a family's full ID from the JSON report — the `id` field. (The human and
-markdown rows show only a short `id=` drill prefix, which works with `nose query … id=` but is
-*not* a valid `family_id` selector; an ignore entry needs the full 16-hex-digit ID.)
+Run nose and copy a family's full `id` field from the JSON report. Do not paste the short
+`id=` prefix shown in the human drill links — that is a drill handle, not a valid `family_id`.
+See [Family IDs](#family-ids).
 
 ```sh
-nose query src --format json all
+nose query src --format json all top=0
 ```
 
 (`nose scan src --format json --top 0` is the deprecated equivalent.)
 
-Create `nose.ignore.json` in the directory where you invoke nose, or pass an explicit
-path with `--ignore-file`:
+Create `nose.ignore.json` in the directory where you invoke nose:
 
 ```json
 {
@@ -117,15 +99,16 @@ nose versions whose IDs omitted span and fragment metadata. Use `paths` and
 `languages` selectors when the review decision should survive routine movement
 inside a file.
 
-`nose query`'s human rows carry a short family handle in each drill link
-(`id=` accepts any unambiguous prefix):
+`nose query`'s human rows carry only a short family handle in each drill link. That prefix
+works with `nose query … id=` (which accepts any unambiguous prefix) but is *not* a valid
+`family_id` selector for an ignore entry:
 
 ```text
 src/loaders/users.py:1  load_users  3 copies · 12/14 shared, 1p · ~24 removable · copy-paste   nose query src id=479389f590
 ```
 
-The full ID to copy into an ignore entry's `family_id` is the `id` field in `--format json`
-(every family object carries it):
+The full ID to copy into an ignore entry's `family_id` is the 16-hex-digit `id` field in
+`--format json` (every family object carries it):
 
 ```json
 { "id": "479389f590c1234a", "...": "..." }
@@ -144,6 +127,14 @@ passed. nose prints a warning on stderr and does not apply the entry (the deprec
 carries no `ignore` object).
 
 ## Which suppression to use
+
+nose has three ways to suppress a finding; pick by *who* the suppression is for and
+whether the decision needs to stay reviewable. Reach for the inline `// nose-ignore`
+marker when the reason is self-evident to anyone reading the line; reach for the
+structured file when the suppression is a decision someone else should be able to find,
+question, and revisit; use a baseline to accept an existing codebase in bulk. When in
+doubt — or for anything going through CI — prefer the structured file, because it stays
+auditable.
 
 | mechanism | use when | tradeoff |
 |---|---|---|

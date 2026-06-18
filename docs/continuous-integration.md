@@ -6,8 +6,8 @@ and runs fast on every push.
 
 The gate command is now [`nose query`](usage.md#nose-query): it carries the same
 `--fail-on`/`--baseline`/`--ignore-file`/`--cache-dir` workflow flags and the same
-`--format sarif` output as the old `nose scan`. `nose scan` takes the same flags and
-still works, but it is **deprecated (0.10.0)** in favour of `nose query`; the examples
+`--format sarif` output as the old `nose scan`. `nose scan` still works, but it is
+**deprecated (0.10.0)** in favour of `nose query`; the examples
 below use the `query` spelling throughout.
 
 ## The `--fail-on any` gate
@@ -77,8 +77,9 @@ non-zero for new or changed clone families. Plain `--fail-on any` still means "f
 anything is reported on the default surface after the active filters."
 
 Commit `.nose-baseline.json`. Families are keyed by their sorted reported member
-locations: displayed path, language, span, unit kind, symbol name, and fragment
-metadata. **The key is deliberately span- and path-sensitive**, which has three
+locations — the same key structured ignores use (see [structured-ignores ›
+Family IDs](structured-ignores.md#family-ids)). **The key is deliberately span-
+and path-sensitive**, which has three
 honest consequences (measured in [experiments §CB](experiments.md)): editing lines
 *above* an accepted clone re-keys it (it resurfaces as `new`/`changed`); renaming
 its file re-keys it; and the key embeds the detecting channel's unit shape, so a
@@ -116,13 +117,10 @@ nose query src --ignore-file nose.ignore.json --fail-on any
 ```
 
 Ignored families are removed from the active report, so they do not fail `--fail-on any`
-or `--fail-on new`. The ignore file keeps each suppression's reason, note, owner, expiry, and
-selectors as the audit record. (The deprecated `nose scan --format json` also echoes the
-suppressed families back under an `ignored_families` array.)
+or `--fail-on new`.
 
 Malformed ignore files fail the run. Expired entries are reported as warnings on stderr
-and are not applied (the deprecated `nose scan --format json` also lists them under
-`ignore.expired`). That makes stale waivers visible instead of silently hiding
+and are not applied. That makes stale waivers visible instead of silently hiding
 duplication. See [structured-ignores](structured-ignores.md) for the file format and
 selector semantics.
 
