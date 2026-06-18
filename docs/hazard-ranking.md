@@ -119,7 +119,7 @@ LLM-judge audit found it only ~11% precise — so the validation rests on the cl
 label, not G2.)
 
 **Phase 1 — static hazard, from fields nose already computes** — `hazard()` beside
-`extractability()` in `crates/nose-detect/src/report.rs`, plus opt-in
+`extractability()` in `crates/nose-detect/src/report/model.rs`, plus opt-in
 `SortKey::Hazard`. No new detection logic. Measured formula (leave-one-repo-out AUC:
 G1 0.644 vs 0.609 for the size-led design it replaces, 0.611 value-baseline, ~0.49 random):
 
@@ -183,7 +183,7 @@ later converged was probably unintended), and let users dismiss false positives 
 
 **Phase 1 — static hazard score. ✅ Done (implemented as opt-in).**
 
-1. ✅ `hazard()` on `RefactorFamily` in `crates/nose-detect/src/report.rs`,
+1. ✅ `hazard()` on `RefactorFamily` in `crates/nose-detect/src/report/model.rs`,
    implementing the calibrated formula above. Reuses `spread()`; `invisibility`
    (`0.3 + 0.7·(1 − tightness)`, `tightness = shared_weight / mean_lines`) and
    `scope_weight` (prod 1.0 / mixed 0.5 / test 0.25) inline. Magnitude is `mean_lines`
@@ -193,8 +193,9 @@ later converged was probably unintended), and let users dismiss false positives 
 2. ✅ `SortKey::Hazard` in `crates/nose-cli/src/scan_options.rs`, wired into `score()`,
    `sort_name()`, the `--sort` value list, and `capabilities`. It remains opt-in via
    `--sort hazard`; `extractability` is the default.
-3. ✅ Tier-0 contract unit tests in `report.rs` (divergent > tight under hazard and the
-   reverse under extractability; cross-language ranks high; test scope demoted).
+3. ✅ Tier-0 contract unit tests in `crates/nose-detect/src/report/tests/hazard.rs`
+   (divergent > tight under hazard and the reverse under extractability; cross-language
+   ranks high; test scope demoted).
 4. ✅ Docs: [usage](usage.md#ranking) ranking table, scan-json, capabilities, README.
 
 No change to detection, normalization, or the value graph.
@@ -217,7 +218,7 @@ arbiter:** it scores *opinion*, not *outcome*, and will agree with our own score
 circularly if it reasons the same way.
 
 **Tier 0 — sanity (unit + synthetic), in CI.** Pin the defining contract as
-`report.rs` unit tests: for two same-size families, a semantically-identical-but-
+`report/tests/hazard.rs` unit tests: for two same-size families, a semantically-identical-but-
 syntactically-divergent one (low tightness) ranks **above** a tight near-identical
 one under `hazard()`, and **below** it under `extractability()`; a cross-language
 family ranks high; a test-scope family is demoted. Extend the

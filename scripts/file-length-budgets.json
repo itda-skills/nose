@@ -3,9 +3,6 @@
   "files": {
     "crates/nose-cli/src/main.rs": 1618,
     "crates/nose-cli/src/review.rs": 946,
-    "crates/nose-detect/src/lib.rs": 1610,
-    "crates/nose-detect/src/report.rs": 1868,
-    "crates/nose-detect/src/witness.rs": 900,
     "crates/nose-frontend/src/c.rs": 1241,
     "crates/nose-frontend/src/go.rs": 1262,
     "crates/nose-frontend/src/java.rs": 1293,

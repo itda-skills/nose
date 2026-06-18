@@ -7,6 +7,7 @@ summary = "String/list builder semantics are ordered free-monoid concatenation, 
 files = [
   "crates/nose-normalize/src/value_graph/state.rs",
   "crates/nose-normalize/src/interp.rs",
+  "crates/nose-normalize/src/interp/ops.rs",
 ]
 symbols = ["add_values_not_concat", "join_strings"]
 

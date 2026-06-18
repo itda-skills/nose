@@ -24,7 +24,7 @@ behaviorally-different fragments sharing a fingerprint) is a **bug**, not an acc
 approximation. This is enforced by, in layers:
 
 - the **exact `semantic` channel**: acceptance is total value-graph multiset equality
-  (`crates/nose-detect/src/lib.rs` — `a.value == b.value`, length-gated), over a hash-consed
+  (`crates/nose-detect/src/detectors.rs` — `a.value == b.value`, length-gated), over a hash-consed
   value graph that canonicalizes behaviorally-equivalent code to identical structure;
 - a **static** safety gate (`strict_exact_safe_tree`,
   `crates/nose-detect/src/strict_exact/`) on the accept path — no interpreter

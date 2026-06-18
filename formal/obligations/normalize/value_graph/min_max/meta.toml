@@ -10,6 +10,7 @@ files = [
   "crates/nose-normalize/src/value_graph/stdlib.rs",
   "crates/nose-normalize/src/idioms.rs",
   "crates/nose-semantics/src/lib.rs",
+  "crates/nose-semantics/src/method_contracts.rs",
 ]
 symbols = [
   "minmax_pattern",

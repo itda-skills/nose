@@ -43,7 +43,7 @@ A 206-family stratified sample of the two default surfaces (94 `copy-paste-run`,
 mixed), labeled by five parallel judge agents that **read the actual source** of each
 family. The rubric encodes nose's standing principle that *test duplication is a real smell
 — `scope` is a context tag, never a worthiness penalty*
-([report.rs](../crates/nose-detect/src/report.rs), [field-evaluation](field-evaluation.md)):
+([report/model.rs](../crates/nose-detect/src/report/model.rs), [field-evaluation](field-evaluation.md)):
 
 - **KEEP** (belongs on the default head): a cleanly extractable shared helper; a duplicated
   production block; **test code that reimplements production logic**; a fixture that is one

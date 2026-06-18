@@ -33,7 +33,7 @@ const SELF_REFERENT: u64 = 0x5e1f_5e1f_5e1f_5e1f;
 /// a Future with its resolved value (async units are non-`exact_safe` regardless, the
 /// load-bearing guard). The `args.len() == 1` shape is the witness's safety gate against
 /// the (2⁻⁶⁴) chance a real `Raw`'s `subtree_hash` equals this key — a colliding `Raw` is
-/// childless. See `crates/nose-detect/src/witness.rs` (the `async-mirror` pattern).
+/// childless. See `crates/nose-detect/src/witness/anti_unify.rs` (the `async-mirror` pattern).
 pub const VG_PROTOCOL_AWAIT: u64 = 0xA5A5_0A17_C0DE_0001;
 
 /// The operator family of a [`VgNode`]. Mirrors the private `ValOp`; the paired `key`
@@ -532,7 +532,7 @@ pub fn value_dag(
     };
     // The witness build keeps the `await` wrapper visible (vs the fingerprint build's transparency)
     // so the graded anti-unification can align an async fn with its sync twin and label it
-    // `async-mirror` — see `crates/nose-detect/src/witness.rs`.
+    // `async-mirror` — see `crates/nose-detect/src/witness/anti_unify.rs`.
     b.await_transparent = false;
     b.build_unit_with_context(root, context);
     let nodes = b

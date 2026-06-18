@@ -4,7 +4,13 @@ kind = "soundness"
 summary = "The graded witness's `equal_modulo_holes` grade asserts the two copies' value graphs are equal modulo the reported holes. Its STRUCTURAL core — anti-unification soundness — is machine-checked: both inputs match their least general generalization (it is a real generalization; holes are the only freedom), and a hole-free anti-unification means the terms are equal (the k=0 case). Like `factor_distribute`'s Num gate, one precondition stays empirical and is NOT part of the proof: that names both copies consume resolve to the same referent (`compare_referents`), plus the decorator/sink checks — these fail the family closed when violated and are defended by the witness soundness battery, not by Lean."
 
 [rust]
-files = ["crates/nose-detect/src/witness.rs"]
+files = [
+  "crates/nose-detect/src/witness.rs",
+  "crates/nose-detect/src/witness/analysis.rs",
+  "crates/nose-detect/src/witness/anti_unify.rs",
+  "crates/nose-detect/src/witness/dag.rs",
+  "crates/nose-detect/src/witness/model.rs",
+]
 symbols = ["graded_witness", "equal_modulo_holes", "compare_referents"]
 
 [lean]

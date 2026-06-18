@@ -102,6 +102,12 @@ and behavior easier to reason about:
   static index membership, call dispatch, collection/map receivers, factory/map
   constructors, callee identity, and policy tests now live in focused
   `nose-detect/src/strict_exact/*` modules;
+- keep the detect crate root and report/witness surfaces as thin APIs; detect options,
+  scorer policy, public report/location models, reinvented-helper containment,
+  orchestration, candidate/group construction, report ranking/path policy, report test
+  suites, and graded-witness anti-unification now live in focused
+  `nose-detect/src/{options,detectors,model,locations,reinvented,orchestration,candidates,report/*,witness/*}.rs`
+  modules;
 - move reusable semantic or detection rules toward the owning library crate
   instead of keeping them in `nose-cli`;
 - split wide language and IL dispatch only around real concepts, such as

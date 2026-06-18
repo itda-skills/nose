@@ -77,7 +77,7 @@ Compare `tune.py` output against the previous `nose_ver` recorded in
   [RESULTS.md](../eval/hazard/RESULTS.md).
 - **Weights drift** (a sign flips, or a different candidate formula now wins) → **re-calibrate**:
   1. Pick the new best candidate formula (or add one) in `tune.py`.
-  2. Update the formula constants in `crates/nose-detect/src/report.rs` (`hazard()`).
+  2. Update the formula constants in `crates/nose-detect/src/report/model.rs` (`hazard()`).
   3. Update [hazard-ranking › Score design](hazard-ranking.md#score-design),
      [RESULTS.md](../eval/hazard/RESULTS.md), and add an [experiments](experiments.md)
      entry (next `§` letter).
@@ -86,7 +86,7 @@ Compare `tune.py` output against the previous `nose_ver` recorded in
 
 - [ ] If detection changed: dataset regenerated, every event carries the new `nose_ver`.
 - [ ] `tune.py` run; weights compared to the previous version; formula updated iff drifted.
-- [ ] `report.rs` `hazard()` matches the formula in [Score design](hazard-ranking.md#score-design).
+- [ ] `report/model.rs` `hazard()` matches the formula in [Score design](hazard-ranking.md#score-design).
 - [ ] [RESULTS.md](../eval/hazard/RESULTS.md) reflects the current `nose_ver` and numbers.
 - [ ] An [experiments](experiments.md) entry exists if the formula changed.
 - [ ] Tier-0 contract unit tests pass (see [evaluation tiers](hazard-ranking.md#evaluating-ranking-quality)).
@@ -95,7 +95,7 @@ Compare `tune.py` output against the previous `nose_ver` recorded in
 
 | Thing | Location |
 |---|---|
-| The score (`hazard()`, `SortKey::Hazard`) | `crates/nose-detect/src/report.rs`, `crates/nose-cli/src/scan_options.rs` |
+| The score (`hazard()`, `SortKey::Hazard`) | `crates/nose-detect/src/report/model.rs`, `crates/nose-cli/src/scan_options.rs` |
 | The formula + evidence | [hazard-ranking › Score design](hazard-ranking.md#score-design) |
 | Evaluation criteria, dataset, versioning model | [hazard-benchmark](hazard-benchmark.md) |
 | Mining + tuning tooling | [eval/hazard/](../eval/hazard/) (`mine.py`, `run_corpus.sh`, `analyze.py`, `tune.py`) |
