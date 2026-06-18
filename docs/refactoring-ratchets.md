@@ -55,6 +55,9 @@ and behavior easier to reason about:
 - keep hidden diagnostic and benchmark commands outside the dispatcher; `features`,
   `value-census`, `stats`, `eval`, and `ceiling` now live in
   `nose-cli/src/diagnostic_commands.rs`;
+- keep the `nose query` surface outside the dispatcher: query model/JSON helpers,
+  renderers, dashboard, family drilldown, and command orchestration now live in
+  `nose-cli/src/query_*.rs`;
 - move reusable semantic or detection rules toward the owning library crate
   instead of keeping them in `nose-cli`;
 - split wide language and IL dispatch only around real concepts, such as
