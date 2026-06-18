@@ -40,6 +40,12 @@ and behavior easier to reason about:
 
 - separate CLI orchestration from query planning, rendering, config parsing, and
   file/process effects;
+- keep the CLI binary root focused on process setup and subcommand dispatch;
+  argument models, legacy detect/IL adapters, scan baseline handling, graded
+  witness enrichment, opportunity grouping, source-line diff/proposal logic,
+  human/markdown/SARIF scan rendering, and CLI-side timing helpers now live in
+  dedicated `nose-cli/src/{cli_args,detect_command,il_command,scan_*,timing}.rs`
+  modules;
 - keep shrinking `nose-cli/src/main.rs` by moving bounded report helpers into
   small sibling modules first; the scan JSON report, baseline comparison view,
   and family-display text now live outside the command dispatcher;
