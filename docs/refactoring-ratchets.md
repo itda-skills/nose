@@ -66,6 +66,9 @@ and behavior easier to reason about:
   reinvented-helper report section now live in `nose-cli/src/scan_report.rs`;
 - keep post-lower Library API recognition out of the shared lowering context;
   the first pass lives in `nose-frontend/src/lower/library_api_post_lower.rs`;
+- keep the verify oracle's value model separate from tree-walking evaluation;
+  `Value`, `Behavior`, symbolic containment, and declared-domain coercion now
+  live in `nose-normalize/src/interp/value.rs`;
 - move reusable semantic or detection rules toward the owning library crate
   instead of keeping them in `nose-cli`;
 - split wide language and IL dispatch only around real concepts, such as
