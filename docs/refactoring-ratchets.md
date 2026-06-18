@@ -40,6 +40,9 @@ and behavior easier to reason about:
 
 - separate CLI orchestration from query planning, rendering, config parsing, and
   file/process effects;
+- keep shrinking `nose-cli/src/main.rs` by moving bounded report helpers into
+  small sibling modules first; the scan JSON report, baseline comparison view,
+  and family-display text now live outside the command dispatcher;
 - move reusable semantic or detection rules toward the owning library crate
   instead of keeping them in `nose-cli`;
 - split wide language and IL dispatch only around real concepts, such as
