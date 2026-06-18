@@ -87,6 +87,9 @@ and behavior easier to reason about:
 - keep exact-fragment CLI fixture scanning and family-selection helpers outside
   the oversized test body; shared exact-fragment test support now lives in
   `nose-cli/tests/cli/exact_fragments/support.rs`;
+- keep Java `this` field exact-fragment scenarios together in their own CLI
+  test module; assignment, guarded branch, body, and fluent `return this`
+  fixtures now live in `nose-cli/tests/cli/exact_fragments/java_this_field.rs`;
 - turn oversized integration-test files into small suite roots plus domain-named
   modules, keeping each new module under the 600-line target;
 - lower a file budget only in the same change that makes the corresponding
