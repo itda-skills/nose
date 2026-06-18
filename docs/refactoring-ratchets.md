@@ -82,6 +82,14 @@ and behavior easier to reason about:
   IL builders, semantic-evidence recording, import facts, parse/file setup,
   post-lower evidence helpers, expression helpers, and lowering tests now live
   in focused `nose-frontend/src/lower/*` modules;
+- keep wide frontend language roots as dispatch surfaces instead of mixed
+  parser-policy files; JS/TS import parsing, type declarations, declarations,
+  control-flow rewrites, expression lowering, global-symbol proof, record-shape
+  guards, JSX lowering, operators, syntax helpers, and tests now live in
+  focused `nose-frontend/src/js_ts/*` modules;
+- keep corpus-level import replacement split by concern; export discovery,
+  binding-use safety, module-path hashing, snapshot/evidence copying, and tests
+  now live in focused `nose-frontend/src/module_imports/*` modules;
 - keep the verify oracle's value model separate from tree-walking evaluation;
   `Value`, `Behavior`, symbolic containment, and declared-domain coercion now
   live in `nose-normalize/src/interp/value.rs`;
