@@ -15,7 +15,7 @@
     "crates/nose-frontend/src/go.rs": 1262,
     "crates/nose-frontend/src/java.rs": 1293,
     "crates/nose-frontend/src/js_ts.rs": 2801,
-    "crates/nose-frontend/src/lower.rs": 4258,
+    "crates/nose-frontend/src/lower.rs": 4012,
     "crates/nose-frontend/src/module_imports.rs": 1662,
     "crates/nose-frontend/src/python.rs": 1797,
     "crates/nose-frontend/src/ruby.rs": 883,

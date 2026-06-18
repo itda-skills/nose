@@ -69,6 +69,9 @@ and behavior easier to reason about:
   reinvented-helper report section now live in `nose-cli/src/scan_report.rs`;
 - keep post-lower Library API recognition out of the shared lowering context;
   the first pass lives in `nose-frontend/src/lower/library_api_post_lower.rs`;
+- keep shared frontend control-flow lowering out of the shared lowering context;
+  `switch`, `if`, `while`, block-wrapping, and C-style `for` helpers now live in
+  `nose-frontend/src/lower/control_flow.rs`;
 - keep the verify oracle's value model separate from tree-walking evaluation;
   `Value`, `Behavior`, symbolic containment, and declared-domain coercion now
   live in `nose-normalize/src/interp/value.rs`;
