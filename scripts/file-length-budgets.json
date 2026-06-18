@@ -25,7 +25,6 @@
     "crates/nose-frontend/src/swift.rs": 1805,
     "crates/nose-il/src/lib.rs": 1466,
     "crates/nose-il/src/node.rs": 914,
-    "crates/nose-normalize/src/binding_evidence.rs": 648,
     "crates/nose-normalize/src/call_target_evidence.rs": 1146,
     "crates/nose-normalize/src/idioms.rs": 1919,
     "crates/nose-normalize/src/interp.rs": 4416,
