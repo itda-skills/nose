@@ -1,4 +1,4 @@
-use super::*;
+use super::super::support::*;
 
 #[test]
 fn raw_hof_value_graph_requires_source_or_api_admission() {

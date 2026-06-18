@@ -1,0 +1,100 @@
+use super::support::*;
+
+pub(super) fn rust_hash_map_from_call(
+    entry_surface: &str,
+    shadow_std: bool,
+    with_entries_surface: bool,
+) -> (Il, Interner, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let entry_span = sp_at(10, 20, 1);
+    let entries_span = sp_at(30, 40, 1);
+    let key = b.add(NodeKind::Lit, Payload::LitStr(1), sp(), &[]);
+    let value = b.add(NodeKind::Lit, Payload::LitInt(1), sp(), &[]);
+    let entry = b.add(
+        NodeKind::Seq,
+        Payload::Name(interner.intern(entry_surface)),
+        entry_span,
+        &[key, value],
+    );
+    let entries = b.add(
+        NodeKind::Seq,
+        Payload::Name(interner.intern("array")),
+        entries_span,
+        &[entry],
+    );
+    let callee = b.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern("std::collections::HashMap::from")),
+        sp(),
+        &[],
+    );
+    let call = b.add(NodeKind::Call, Payload::None, sp(), &[callee, entries]);
+    let root = b.add(NodeKind::Module, Payload::None, sp(), &[call]);
+    let units = if shadow_std {
+        vec![Unit {
+            root,
+            kind: UnitKind::Class,
+            name: Some(interner.intern("std")),
+            origin: Default::default(),
+        }]
+    } else {
+        Vec::new()
+    };
+    let mut il = b.finish(
+        root,
+        FileMeta {
+            path: "t".to_string(),
+            lang: Lang::Rust,
+        },
+        units,
+        Vec::new(),
+    );
+    let entry_kind = match entry_surface {
+        "tuple" => SequenceSurfaceKind::Tuple,
+        "array" => SequenceSurfaceKind::Collection,
+        other => panic!("unexpected test entry surface: {other}"),
+    };
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::sequence(entry_span),
+        EvidenceKind::SequenceSurface(entry_kind),
+        EvidenceStatus::Asserted,
+    ));
+    if with_entries_surface {
+        il.evidence.push(evidence(
+            1,
+            EvidenceAnchor::sequence(entries_span),
+            EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
+            EvidenceStatus::Asserted,
+        ));
+    }
+    (il, interner, call)
+}
+
+pub(super) fn push_rust_hash_map_library_api_evidence(il: &mut Il) {
+    let contract =
+        library_free_name_map_factory_contract(Lang::Rust, "std::collections::HashMap::from")
+            .expect("Rust HashMap::from contract");
+    let symbol_id = next_evidence_id(il);
+    il.evidence.push(evidence(
+        symbol_id,
+        EvidenceAnchor::node(sp(), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("std::collections::HashMap::from"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    let api_id = next_evidence_id(il);
+    il.evidence.push(evidence_with_dependencies(
+        api_id,
+        EvidenceAnchor::node(sp(), NodeKind::Call),
+        EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
+            contract_hash: nose_semantics::library_api_contract_id_hash(contract.id),
+            callee_hash: nose_semantics::library_api_callee_contract_hash(contract.callee),
+            arity: 1,
+        }),
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(symbol_id)],
+    ));
+}

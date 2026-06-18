@@ -1,4 +1,4 @@
-use super::*;
+use super::support::*;
 
 #[derive(Clone, Copy)]
 enum ClampShape {

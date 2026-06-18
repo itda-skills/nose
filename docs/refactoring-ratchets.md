@@ -100,6 +100,23 @@ and behavior easier to reason about:
   field-state proof, statement execution, expression evaluation, call/builtin
   handling, higher-order evaluation, and oracle tests now live in focused
   `nose-normalize/src/interp/*` modules;
+- keep first-party call-target evidence as a small pass root; direct in-file
+  function targets, scope/binding collection, imported call-target materialization,
+  and tests now live in focused `nose-normalize/src/call_target_evidence/*`
+  modules;
+- keep normalize idiom canonicalization split by proof responsibility; call
+  dispatch, receiver proof, argument construction, receiver-domain evidence
+  checks, map/lambda surface recognition, and tests now live in focused
+  `nose-normalize/src/idioms/*` modules;
+- keep value-graph control construction split by control concern; unit entry,
+  guarded-return rewrites, guard/block facts, static runtime-error recognition,
+  container walking, statement dispatch, loop state, loop idioms, local reductions,
+  and block-return evaluation now live in focused
+  `nose-normalize/src/value_graph/control/*` modules;
+- keep value-graph tests as a thin suite root plus domain modules; builder,
+  factory, guard, library API, membership, promise, sequence-surface, source
+  evidence, and shared fixture helpers now live under
+  `nose-normalize/src/value_graph/tests/`;
 - keep detect unit extraction focused on root orchestration; the public unit
   model, shape/minhash feature extraction, unit timing, IL tree helpers,
   exact-fragment root dispatch, ordered effect sequences, Java self-field

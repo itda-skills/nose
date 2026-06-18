@@ -199,6 +199,11 @@ Guiding constraints for every pass:
   block above; CFG normalization straddles algebra — `structure()` runs before it,
   `run()` after; the evidence re-run re-anchors effect and library-API facts on
   the canonicalized shapes). Each documented below.
+  The proof-sensitive producers and idiom recognizers stay split by responsibility:
+  `call_target_evidence.rs` is the pass root, with direct-function, scope/binding,
+  imported-target, and test modules below `call_target_evidence/`; `idioms.rs` is
+  the call-canonicalization root, with receiver proof, argument construction,
+  receiver-domain evidence, map/lambda surface, and test modules below `idioms/`.
 
 ---
 
@@ -232,11 +237,14 @@ downstream value-graph.
   `value_graph/init.rs`, sink/path emission lives in
   `value_graph/sinks.rs`, value interning and canonicalization live in
   `value_graph/canonicalize.rs`, and expression dispatch lives in
-  `value_graph/eval.rs`. Other focused modules own active builders,
-  control/loop processing, collection/HOF/library value recognition, output
-  extraction, stdlib recognizers, pure inlining, low-level ops, and
-  proof-sensitive rule modules. New value-graph behavior should land in the
-  narrowest matching module instead of growing the hub file.
+  `value_graph/eval.rs`. Control construction is split below
+  `value_graph/control/`: unit entry, guarded-return rewrites, guard/block facts,
+  static runtime-error recognition, container walking, statement dispatch, loop
+  state, loop idioms, local reductions, and block-return evaluation each have a
+  focused module. Other focused modules own active builders, collection/HOF/library
+  value recognition, output extraction, stdlib recognizers, pure inlining,
+  low-level ops, and proof-sensitive rule modules. New value-graph behavior should
+  land in the narrowest matching module instead of growing the hub file.
 
   A narrow Java-only selection idiom lives here: `x % 2 == 0 ? x + 1 : x - 1`
   and the equivalent `x % 2 != 0 ? x - 1 : x + 1` canonicalize to `x ^ 1`.
