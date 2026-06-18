@@ -88,6 +88,10 @@ and behavior easier to reason about:
 - keep the verify oracle's primitive operation semantics separate from tree-walking
   evaluation; truthiness, builtin folds, ranges, int32 coercion, and unary/binary
   operator execution now live in `nose-normalize/src/interp/ops.rs`;
+- keep the verify oracle root focused on entry points and execution state;
+  field-state proof, statement execution, expression evaluation, call/builtin
+  handling, higher-order evaluation, and oracle tests now live in focused
+  `nose-normalize/src/interp/*` modules;
 - move reusable semantic or detection rules toward the owning library crate
   instead of keeping them in `nose-cli`;
 - split wide language and IL dispatch only around real concepts, such as
