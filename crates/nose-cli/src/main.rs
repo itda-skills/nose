@@ -2,12 +2,14 @@
 
 mod baseline;
 mod cache;
+mod capabilities;
 mod config;
 mod falsify;
 mod fnv;
 mod ignores;
 mod markdown;
 mod review;
+mod schema_versions;
 mod semantic_pack;
 mod verify_census;
 
@@ -956,188 +958,6 @@ impl ScanScope {
     }
 }
 
-const SCAN_JSON_SCHEMA_VERSION: u32 = 1;
-const QUERY_JSON_SCHEMA_VERSION: u32 = 3;
-const CAPABILITIES_SCHEMA_VERSION: u32 = 1;
-
-#[derive(serde::Serialize)]
-struct CapabilitiesReport {
-    schema_version: u32,
-    tool: CapabilitiesTool,
-    platform: CapabilitiesPlatform,
-    interfaces: CapabilitiesInterfaces,
-    commands: CapabilitiesCommands,
-    schemas: CapabilitiesSchemas,
-    scan: CapabilitiesScan,
-    semantic_packs: CapabilitiesSemanticPacks,
-    il: CapabilitiesIl,
-    stats: CapabilitiesStats,
-}
-
-#[derive(serde::Serialize)]
-struct CapabilitiesTool {
-    name: &'static str,
-    version: &'static str,
-}
-
-#[derive(serde::Serialize)]
-struct CapabilitiesPlatform {
-    os: &'static str,
-    arch: &'static str,
-    family: &'static str,
-}
-
-#[derive(serde::Serialize)]
-struct CapabilitiesInterfaces {
-    capabilities_json: bool,
-    version_json: bool,
-    doctor_json: bool,
-}
-
-#[derive(serde::Serialize)]
-struct CapabilitiesCommands {
-    stable: Vec<&'static str>,
-    /// Commands that still work but are on their way out — integrations should migrate.
-    /// `scan` → `nose query` (same dataset, gate, and a structured `--format json` contract).
-    deprecated: Vec<&'static str>,
-}
-
-#[derive(serde::Serialize)]
-struct CapabilitiesSchemas {
-    capabilities: Vec<u32>,
-    scan_json: Vec<u32>,
-    query_json: Vec<u32>,
-    semantic_packs: Vec<&'static str>,
-    semantic_pack_conformance: Vec<u32>,
-}
-
-#[derive(serde::Serialize)]
-struct CapabilitiesScan {
-    modes: Vec<&'static str>,
-    default_modes: Vec<&'static str>,
-    output_formats: Vec<&'static str>,
-    sort_keys: Vec<&'static str>,
-    config_keys: Vec<&'static str>,
-    capabilities: std::collections::BTreeMap<&'static str, bool>,
-}
-
-#[derive(serde::Serialize)]
-struct CapabilitiesSemanticPacks {
-    api_versions: Vec<&'static str>,
-    loading: Vec<&'static str>,
-    conformance: Vec<&'static str>,
-    conformance_output_formats: Vec<&'static str>,
-    trust: Vec<&'static str>,
-    external_packs_enabled_by_default: bool,
-    external_pack_influence: &'static str,
-}
-
-#[derive(serde::Serialize)]
-struct CapabilitiesIl {
-    output_formats: Vec<&'static str>,
-    normalized: bool,
-    cfg_norm_toggle: bool,
-}
-
-#[derive(serde::Serialize)]
-struct CapabilitiesStats {
-    output_formats: Vec<&'static str>,
-}
-
-impl CapabilitiesReport {
-    fn current() -> Self {
-        CapabilitiesReport {
-            schema_version: CAPABILITIES_SCHEMA_VERSION,
-            tool: CapabilitiesTool {
-                name: "nose",
-                version: env!("CARGO_PKG_VERSION"),
-            },
-            platform: CapabilitiesPlatform {
-                os: std::env::consts::OS,
-                arch: std::env::consts::ARCH,
-                family: std::env::consts::FAMILY,
-            },
-            interfaces: CapabilitiesInterfaces {
-                capabilities_json: true,
-                version_json: false,
-                doctor_json: false,
-            },
-            commands: CapabilitiesCommands {
-                stable: vec!["capabilities", "il", "query", "semantic-pack", "stats"],
-                deprecated: vec!["review", "scan"],
-            },
-            schemas: CapabilitiesSchemas {
-                capabilities: vec![CAPABILITIES_SCHEMA_VERSION],
-                scan_json: vec![SCAN_JSON_SCHEMA_VERSION],
-                query_json: vec![QUERY_JSON_SCHEMA_VERSION],
-                semantic_packs: vec![nose_semantics::SEMANTIC_PACK_API_VERSION],
-                semantic_pack_conformance: vec![semantic_pack::CONFORMANCE_SCHEMA_VERSION],
-            },
-            scan: CapabilitiesScan {
-                modes: vec!["syntax", "semantic", "near"],
-                default_modes: vec!["syntax", "semantic", "near"],
-                output_formats: vec!["human", "json", "markdown", "sarif"],
-                sort_keys: vec!["extractability", "value", "sites", "hazard"],
-                config_keys: vec![
-                    "exclude",
-                    "ignore-file",
-                    "min-lines",
-                    "min-members",
-                    "min-size",
-                    "min-value",
-                    "mode",
-                    "semantic-packs",
-                    "sort",
-                    "top",
-                ],
-                capabilities: scan_capability_flags(),
-            },
-            semantic_packs: CapabilitiesSemanticPacks {
-                api_versions: vec![nose_semantics::SEMANTIC_PACK_API_VERSION],
-                loading: vec![
-                    "compiled-first-party",
-                    "local-manifest-file",
-                    "local-manifest-directory",
-                ],
-                conformance: vec!["local-manifest-file", "local-manifest-directory"],
-                conformance_output_formats: vec!["human", "json"],
-                trust: vec![
-                    "default-first-party",
-                    "first-party-optional",
-                    "external-opt-in",
-                ],
-                external_packs_enabled_by_default: false,
-                external_pack_influence: "metadata-only",
-            },
-            il: CapabilitiesIl {
-                output_formats: vec!["sexpr", "json"],
-                normalized: true,
-                cfg_norm_toggle: true,
-            },
-            stats: CapabilitiesStats {
-                output_formats: vec!["human", "json"],
-            },
-        }
-    }
-}
-
-fn scan_capability_flags() -> std::collections::BTreeMap<&'static str, bool> {
-    [
-        ("baseline", true),
-        ("baseline_changed_detection", true),
-        ("cache", true),
-        ("ci_fail_gate", true),
-        ("diff", true),
-        ("hotspots", true),
-        ("inline_suppression", true),
-        ("proposal", true),
-        ("semantic_pack_loading", true),
-        ("structured_ignores", true),
-    ]
-    .into_iter()
-    .collect()
-}
-
 #[derive(serde::Serialize)]
 struct ScanJsonReport<'a> {
     schema_version: u32,
@@ -1338,7 +1158,7 @@ impl<'a> ScanJsonReport<'a> {
     fn new(input: ScanJsonInput<'a>) -> Self {
         let statuses = input.baseline.map(|b| &b.statuses);
         ScanJsonReport {
-            schema_version: SCAN_JSON_SCHEMA_VERSION,
+            schema_version: schema_versions::SCAN_JSON_SCHEMA_VERSION,
             tool_version: env!("CARGO_PKG_VERSION"),
             scope: ScanJsonScope {
                 files: input.scope.files,
@@ -1729,7 +1549,7 @@ fn run() -> Result<()> {
             normalized,
             no_cfg_norm,
         } => cmd_il(path, format, normalized, no_cfg_norm),
-        Cmd::Capabilities => cmd_capabilities(),
+        Cmd::Capabilities => capabilities::print(),
         Cmd::SemanticPack { cmd } => match cmd {
             SemanticPackCmd::Check { paths, format } => semantic_pack::cmd_check(paths, format),
         },
@@ -3672,12 +3492,6 @@ fn cmd_stats(paths: Vec<PathBuf>, top: usize, json: bool) -> Result<()> {
     Ok(())
 }
 
-fn cmd_capabilities() -> Result<()> {
-    let report = CapabilitiesReport::current();
-    println!("{}", serde_json::to_string_pretty(&report)?);
-    Ok(())
-}
-
 struct ScanArgs {
     paths: Vec<PathBuf>,
     top: Option<usize>,
@@ -4717,7 +4531,7 @@ fn render_query_base(
         println!(
             "{}",
             serde_json::json!({
-                "schema_version": QUERY_JSON_SCHEMA_VERSION,
+                "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
                 "tool": "nose",
                 "view": "base",
                 "path": path,
@@ -5064,7 +4878,7 @@ fn render_query_dashboard(
         println!(
             "{}",
             serde_json::json!({
-                "schema_version": QUERY_JSON_SCHEMA_VERSION,
+                "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
                 "tool": "nose",
                 "view": "dashboard",
                 "path": path,
@@ -5295,7 +5109,7 @@ fn render_query_reinvented(
         println!(
             "{}",
             serde_json::json!({
-                "schema_version": QUERY_JSON_SCHEMA_VERSION,
+                "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
                 "tool": "nose",
                 "view": "reinvented",
                 "path": path,
@@ -5367,7 +5181,7 @@ fn render_query_list(
         println!(
             "{}",
             serde_json::json!({
-                "schema_version": QUERY_JSON_SCHEMA_VERSION,
+                "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
                 "tool": "nose",
                 "view": "list",
                 "path": path,
@@ -5534,7 +5348,7 @@ fn render_query_group(
         println!(
             "{}",
             serde_json::json!({
-                "schema_version": QUERY_JSON_SCHEMA_VERSION, "tool": "nose", "view": "group", "path": path,
+                "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION, "tool": "nose", "view": "group", "path": path,
                 "field": field, "groups": groups,
             })
         );
@@ -5633,7 +5447,7 @@ fn render_query_family(
         println!(
             "{}",
             serde_json::json!({
-                "schema_version": QUERY_JSON_SCHEMA_VERSION,
+                "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
                 "tool": "nose",
                 "view": "family",
                 "path": path,
