@@ -1,4 +1,4 @@
-# nose query JSON (schema v3)
+# nose query JSON (schema v4)
 
 `nose query <path> [terms…] --format json` emits a structured, versioned contract over the
 duplicated-code family dataset — the **machine** form of the
@@ -8,7 +8,7 @@ For multi-root analysis, use repeated roots:
 `nose query --root <path> --root <path> [terms…] --format json`.
 
 Discover support with [`nose capabilities`](capabilities.md): `schemas.query_json` lists the
-versions the installed binary emits (currently `[3]`).
+versions the installed binary emits (currently `[4]`).
 
 ## Envelope
 
@@ -16,7 +16,7 @@ Every response is an object with:
 
 | field | meaning |
 |---|---|
-| `schema_version` | `3` |
+| `schema_version` | `4` |
 | `tool` | `"nose"` |
 | `view` | which surface produced it: `dashboard` \| `list` \| `group` \| `family` \| `reinvented` \| `base` |
 | `path` | the analyzed path expression, as given; multi-root commands render the repeated `--root`/`-r` flags |
@@ -82,10 +82,14 @@ proven-shared-logic verdict the gate fires on.
 | `spotclass` | (only on enriched near families) `leaf-only` (varying spots are clean value-leaves) \| `structural` (a shape/arity/referent divergence — genuine logic difference). Omitted unless the query filters/groups by `spotclass` (the graded-witness enrichment runs on demand) |
 | `value_nodes` | (exact families) the size of the shared value multiset proven identical — *how much* is proven, not just that it is |
 | `status` | (only with `since=`) `new` \| `changed` \| `unchanged` against the snapshot — the temporal lens |
+| `baseline_status` | (only with `--baseline`, and only for reported families) `new` \| `changed`; accepted unchanged families are hidden by `--baseline` |
+| `baseline_match` | (only with `baseline_status`) `none` \| `partial-members` \| `member-locations`, explaining whether the current family matched accepted members by digest or only by exact member location |
+| `matched_baseline_ids` | (only with `baseline_status`) baseline family ids that contributed accepted members or matching member locations |
+| `accepted_member_count` / `new_member_count` | (only with `baseline_status`) how many current members were already accepted by source digest vs newly unaccepted |
 | `folds` | count of overlapping slice families folded under this one |
 | `subsumes` | (present when this family has folded slices, in any view) the `id=` handles of the slice families this one subsumes — open any to inspect |
 | `subsumed_by` | (present when this family is a slice, in any view) the `id=` handle of the fuller overlapping family this one is a slice of |
-| `locations[]` | every copy: `{file, start, end, name, lang}`; when the frontend knows source-origin facts the location also carries `origin` (domains/body/region facets such as `type-contract`, `style`, `markup`, `declaration-only`, or `vue-sfc`); the `existing_helper` member also carries `role: "existing-helper"`; a sub-dag clone's member carries `shared_subdag: [start, end]` — where the proven shared computation lives at that site |
+| `locations[]` | every copy: `{id, file, start, end, name, lang}` where `id` is the member id used by baseline diagnostics; when the frontend knows source-origin facts the location also carries `origin` (domains/body/region facets such as `type-contract`, `style`, `markup`, `declaration-only`, or `vue-sfc`); the `existing_helper` member also carries `role: "existing-helper"`; a sub-dag clone's member carries `shared_subdag: [start, end]` — where the proven shared computation lives at that site |
 | `skeleton` | (only with `full`) the all-copies extraction-skeleton lines, each varying spot a `⟨param N: class⟩` placeholder (`class` = `literal`/`name`/`call`/`expr`/`block` — a coarse value-class hint for the helper signature) |
 
 `surface` uses the default-surface curation policy. `generated` includes families wholly

@@ -1,16 +1,22 @@
 //! Baseline support for incremental adoption: record the duplication a codebase
-//! already has, so later runs (and the `--fail-on` gate) flag only *new* families.
+//! already accepts, so later runs (and the `--fail-on` gate) flag only new or
+//! changed families.
 //!
 //! A family's identity is the sorted set of its reported locations. Fragment families
 //! can repeat in the same file and enclosing symbol, so the key includes the displayed
 //! path, language, source span, syntactic kind, symbol name, and fragment proof metadata.
-//! Baseline files also keep those member identities for changed-family matching; older
-//! member-only baselines are still accepted as coarse `(file, name)` overlap hints.
+//! Baseline files also keep each accepted member's source digest, so already-accepted
+//! members stay accepted after a family reshapes, while edited source is reported again.
 
 use anyhow::{Context, Result};
 use nose_detect::{Loc, RefactorFamily};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
+
+pub(crate) const BASELINE_SCHEMA_VERSION: u32 = 2;
+const BASELINE_KIND: &str = "accepted-duplication";
+const TOOL: &str = "nose";
+const DIGEST_PREFIX: &str = "fnv1a64";
 
 /// Stable cross-run identity of a family.
 pub(crate) fn family_key(f: &RefactorFamily) -> u64 {
@@ -73,24 +79,12 @@ impl MemberKey {
         mix_opt_str(mix, self.fragment_kind.as_deref());
         mix_opt_str(mix, self.reason_code.as_deref());
     }
+}
 
-    fn has_location_identity(&self) -> bool {
-        self.lang.is_some()
-            && self.start_line.is_some()
-            && self.end_line.is_some()
-            && self.kind.is_some()
-            && self.is_fragment.is_some()
-    }
-
-    fn overlaps(&self, other: &Self) -> bool {
-        if self.file != other.file || self.name != other.name {
-            return false;
-        }
-        if self.has_location_identity() && other.has_location_identity() {
-            return self == other;
-        }
-        true
-    }
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub(crate) struct AcceptedMember {
+    pub key: MemberKey,
+    pub source_digest: String,
 }
 
 fn mix_opt_str(mix: &mut impl FnMut(&[u8]), value: Option<&str>) {
@@ -145,37 +139,100 @@ fn member_key_from_location(loc: &Loc) -> MemberKey {
     }
 }
 
+pub(crate) fn member_id(loc: &Loc) -> String {
+    format_key(member_key_hash(&member_key_from_location(loc)))
+}
+
+fn member_key_hash(member: &MemberKey) -> u64 {
+    let mut h = crate::fnv::OFFSET_BASIS;
+    let mut mix = |bytes: &[u8]| {
+        for &b in bytes {
+            h = crate::fnv::mix(h, b as u64);
+        }
+        h = crate::fnv::mix(h, 0xff);
+    };
+    member.mix_into(&mut mix);
+    h
+}
+
 pub(crate) fn member_keys(f: &RefactorFamily) -> Vec<MemberKey> {
     f.locations.iter().map(member_key_from_location).collect()
 }
 
-pub(crate) fn member_sets_overlap(left: &[MemberKey], right: &[MemberKey]) -> bool {
-    left.iter()
-        .any(|left| right.iter().any(|right| left.overlaps(right)))
+pub(crate) fn accepted_members(f: &RefactorFamily) -> Result<Vec<AcceptedMember>> {
+    f.locations
+        .iter()
+        .map(|loc| {
+            Ok(AcceptedMember {
+                key: member_key_from_location(loc),
+                source_digest: source_digest(loc)?,
+            })
+        })
+        .collect()
+}
+
+fn source_digest(loc: &Loc) -> Result<String> {
+    let lines = crate::source_lines::read_lines(&loc.file, loc.start_line, loc.end_line)
+        .with_context(|| {
+            format!(
+                "reading source for baseline member {}:{}-{}",
+                loc.file, loc.start_line, loc.end_line
+            )
+        })?;
+    Ok(format!(
+        "{DIGEST_PREFIX}:{:016x}",
+        source_digest_hash(&lines)
+    ))
+}
+
+fn source_digest_hash(lines: &[String]) -> u64 {
+    let mut h = crate::fnv::OFFSET_BASIS;
+    for &b in b"nose-baseline-member-source-v1" {
+        h = crate::fnv::mix(h, b as u64);
+    }
+    h = crate::fnv::mix(h, 0xff);
+    for line in lines {
+        for &b in line.as_bytes() {
+            h = crate::fnv::mix(h, b as u64);
+        }
+        h = crate::fnv::mix(h, b'\n' as u64);
+    }
+    h
 }
 
 pub(crate) struct Baseline {
     pub keys: HashSet<u64>,
     pub entries: Vec<BaselineEntry>,
+    pub entries_by_key: HashMap<u64, Vec<usize>>,
 }
 
 pub(crate) struct BaselineEntry {
     pub key: u64,
-    pub members: Vec<MemberKey>,
+    pub members: Vec<AcceptedMember>,
 }
 
-/// One recorded family: the matching `key` plus a human note (so the baseline file
-/// is auditable in a diff). Only `key` is used for matching.
+/// The baseline file is an auditable envelope around accepted duplicated members.
+#[derive(serde::Serialize, serde::Deserialize)]
+struct BaselineFile {
+    schema_version: u32,
+    tool: String,
+    baseline_kind: String,
+    families: Vec<Entry>,
+}
+
+/// One recorded family: the current family id plus a human note. Matching uses the
+/// member identities and source digests, not just the family id.
 #[derive(serde::Serialize, serde::Deserialize)]
 struct Entry {
-    key: String,
+    id: String,
     note: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     members: Vec<MemberEntry>,
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct MemberEntry {
+    id: String,
+    source_digest: String,
     file: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     lang: Option<String>,
@@ -196,49 +253,86 @@ struct MemberEntry {
 }
 
 impl MemberEntry {
-    fn into_member_key(self) -> MemberKey {
-        MemberKey {
-            file: self.file,
-            lang: self.lang,
-            start_line: self.start_line,
-            end_line: self.end_line,
-            kind: self.kind,
-            name: self.name.unwrap_or_default(),
-            is_fragment: self.is_fragment,
-            fragment_kind: self.fragment_kind,
-            reason_code: self.reason_code,
+    fn into_accepted_member(self) -> AcceptedMember {
+        AcceptedMember {
+            key: MemberKey {
+                file: self.file,
+                lang: self.lang,
+                start_line: self.start_line,
+                end_line: self.end_line,
+                kind: self.kind,
+                name: self.name.unwrap_or_default(),
+                is_fragment: self.is_fragment,
+                fragment_kind: self.fragment_kind,
+                reason_code: self.reason_code,
+            },
+            source_digest: self.source_digest,
         }
     }
 
-    fn from_member_key(member: MemberKey) -> Self {
+    fn from_accepted_member(member: AcceptedMember) -> Self {
+        let id = format_key(member_key_hash(&member.key));
         Self {
-            file: member.file,
-            lang: member.lang,
-            start_line: member.start_line,
-            end_line: member.end_line,
-            kind: member.kind,
-            name: (!member.name.is_empty()).then_some(member.name),
-            is_fragment: member.is_fragment,
-            fragment_kind: member.fragment_kind,
-            reason_code: member.reason_code,
+            id,
+            source_digest: member.source_digest,
+            file: member.key.file,
+            lang: member.key.lang,
+            start_line: member.key.start_line,
+            end_line: member.key.end_line,
+            kind: member.key.kind,
+            name: (!member.key.name.is_empty()).then_some(member.key.name),
+            is_fragment: member.key.is_fragment,
+            fragment_kind: member.key.fragment_kind,
+            reason_code: member.key.reason_code,
         }
     }
 }
 
-/// Load the set of accepted family keys. A missing or malformed baseline is a hard
+/// Load accepted duplicated members. A missing or malformed baseline is a hard
 /// error because `--baseline` is a CI ratchet artifact, not an optional hint.
 pub(crate) fn load(path: &Path) -> Result<Baseline> {
     let bytes =
         std::fs::read(path).with_context(|| format!("reading baseline {}", path.display()))?;
-    let entries: Vec<Entry> = serde_json::from_slice(&bytes)
+    let raw: serde_json::Value = serde_json::from_slice(&bytes)
         .with_context(|| format!("parsing baseline {}", path.display()))?;
-    let entries: Vec<BaselineEntry> = entries
+    if raw.is_array() {
+        anyhow::bail!(
+            "baseline {} uses the pre-v2 array format, which is no longer supported; regenerate it with `nose query <path> --baseline {} --write-baseline`",
+            path.display(),
+            path.display()
+        );
+    }
+    let file: BaselineFile = serde_json::from_value(raw)
+        .with_context(|| format!("parsing baseline {}", path.display()))?;
+    if file.schema_version != BASELINE_SCHEMA_VERSION {
+        anyhow::bail!(
+            "baseline {} schema_version must be {BASELINE_SCHEMA_VERSION}, got {}",
+            path.display(),
+            file.schema_version
+        );
+    }
+    if file.tool != TOOL {
+        anyhow::bail!(
+            "baseline {} tool must be `{TOOL}`, got `{}`",
+            path.display(),
+            file.tool
+        );
+    }
+    if file.baseline_kind != BASELINE_KIND {
+        anyhow::bail!(
+            "baseline {} baseline_kind must be `{BASELINE_KIND}`, got `{}`",
+            path.display(),
+            file.baseline_kind
+        );
+    }
+    let entries: Vec<BaselineEntry> = file
+        .families
         .iter()
         .enumerate()
         .map(|(index, e)| {
-            let key = parse_key(&e.key).ok_or_else(|| {
+            let key = parse_key(&e.id).ok_or_else(|| {
                 anyhow::anyhow!(
-                    "baseline {} entry[{index}].key must be 16 hex digits, optionally prefixed with 0x",
+                    "baseline {} families[{index}].id must be 16 hex digits, optionally prefixed with 0x",
                     path.display()
                 )
             })?;
@@ -246,36 +340,52 @@ pub(crate) fn load(path: &Path) -> Result<Baseline> {
                 .members
                 .iter()
                 .cloned()
-                .map(MemberEntry::into_member_key)
+                .map(MemberEntry::into_accepted_member)
                 .collect();
             Ok(BaselineEntry { key, members })
         })
         .collect::<Result<Vec<_>>>()?;
     let keys = entries.iter().map(|e| e.key).collect();
-    Ok(Baseline { keys, entries })
+    let mut entries_by_key: HashMap<u64, Vec<usize>> = HashMap::new();
+    for (index, entry) in entries.iter().enumerate() {
+        entries_by_key.entry(entry.key).or_default().push(index);
+    }
+    Ok(Baseline {
+        keys,
+        entries,
+        entries_by_key,
+    })
 }
 
-/// Write `families` as the accepted baseline, sorted by key for stable git diffs.
+/// Write `families` as the accepted baseline, sorted by id for stable git diffs.
 pub(crate) fn write(
     path: &Path,
     families: &[RefactorFamily],
     note_of: impl Fn(&RefactorFamily) -> String,
-) -> std::io::Result<()> {
+) -> Result<()> {
     let mut entries: Vec<Entry> = families
         .iter()
-        .map(|f| Entry {
-            key: family_id(f),
-            note: note_of(f),
-            members: member_keys(f)
-                .into_iter()
-                .map(MemberEntry::from_member_key)
-                .collect(),
+        .map(|f| {
+            Ok(Entry {
+                id: family_id(f),
+                note: note_of(f),
+                members: accepted_members(f)?
+                    .into_iter()
+                    .map(MemberEntry::from_accepted_member)
+                    .collect(),
+            })
         })
-        .collect();
-    entries.sort_by(|a, b| a.key.cmp(&b.key));
-    let mut json = serde_json::to_string_pretty(&entries).unwrap_or_default();
+        .collect::<Result<Vec<_>>>()?;
+    entries.sort_by(|a, b| a.id.cmp(&b.id));
+    let file = BaselineFile {
+        schema_version: BASELINE_SCHEMA_VERSION,
+        tool: TOOL.to_owned(),
+        baseline_kind: BASELINE_KIND.to_owned(),
+        families: entries,
+    };
+    let mut json = serde_json::to_string_pretty(&file)?;
     json.push('\n');
-    std::fs::write(path, json)
+    std::fs::write(path, json).with_context(|| format!("writing baseline {}", path.display()))
 }
 
 #[cfg(test)]
@@ -339,27 +449,6 @@ mod tests {
             family_id(&first),
             family_id(&second),
             "families with the same file/name members but different reported spans need unique ids"
-        );
-    }
-
-    #[test]
-    fn legacy_member_keys_overlap_location_identities_by_file_and_name() {
-        let current = member_keys(&fragment_family(&[866, 902, 937]));
-        let legacy = vec![MemberKey {
-            file: "src/main/java/example/DateUtils.java".to_owned(),
-            lang: None,
-            start_line: None,
-            end_line: None,
-            kind: None,
-            name: String::new(),
-            is_fragment: None,
-            fragment_kind: None,
-            reason_code: None,
-        }];
-
-        assert!(
-            member_sets_overlap(&legacy, &current),
-            "member-only baselines should still classify re-keyed families as changed"
         );
     }
 }

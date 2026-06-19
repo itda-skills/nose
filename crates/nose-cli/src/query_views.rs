@@ -263,6 +263,48 @@ pub(super) fn render_query_reinvented(
 
 /// A ranked list of the current selection: each row carries its own `id=` drill link,
 /// plus a reasoned `next:`.
+#[allow(clippy::too_many_arguments)]
+fn query_list_json(
+    sel: &[&nose_detect::RefactorFamily],
+    ov: &SurfaceOverrides,
+    opp: &OpportunityGroups,
+    q: &Query,
+    path: &str,
+    widen: bool,
+    baseline_cmp: Option<&BaselineComparison>,
+    since: Option<&BaselineComparison>,
+) -> serde_json::Value {
+    let top = query_row_limit(q.top);
+    let shown = sel.len().min(top);
+    let mut lines = FileLineCache::default();
+    let fams: Vec<_> = sel
+        .iter()
+        .take(top)
+        .map(|f| {
+            let (shared, params) = all_copies_shared_cached(f, &mut lines);
+            query_family_json_with_counts(
+                f,
+                ov,
+                opp,
+                q.id_full,
+                baseline_cmp,
+                since,
+                shared,
+                params,
+            )
+        })
+        .collect();
+    serde_json::json!({
+        "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
+        "tool": "nose",
+        "view": "list",
+        "path": path,
+        "summary": { "families": sel.len(), "shown": shown, "widened": widen },
+        "families": fams,
+        "next": [format!("nose query {path} group=dir"), format!("nose query {path} group=witness")],
+    })
+}
+
 #[allow(clippy::too_many_arguments)] // dataset + view + selection state for one list render
 pub(super) fn render_query_list(
     sel: &[&nose_detect::RefactorFamily],
@@ -273,31 +315,15 @@ pub(super) fn render_query_list(
     path: &str,
     widen: bool,
     json: bool,
+    baseline_cmp: Option<&BaselineComparison>,
     since: Option<&BaselineComparison>,
 ) {
     let top = query_row_limit(q.top);
     let shown = sel.len().min(top);
     if json {
-        let mut lines = FileLineCache::default();
-        let fams: Vec<_> = sel
-            .iter()
-            .take(top)
-            .map(|f| {
-                let (shared, params) = all_copies_shared_cached(f, &mut lines);
-                query_family_json_with_counts(f, ov, opp, q.id_full, since, shared, params)
-            })
-            .collect();
         println!(
             "{}",
-            serde_json::json!({
-                "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
-                "tool": "nose",
-                "view": "list",
-                "path": path,
-                "summary": { "families": sel.len(), "shown": shown, "widened": widen },
-                "families": fams,
-                "next": [format!("nose query {path} group=dir"), format!("nose query {path} group=witness")],
-            })
+            query_list_json(sel, ov, opp, q, path, widen, baseline_cmp, since)
         );
         return;
     }
@@ -342,7 +368,8 @@ pub(super) fn render_query_list(
         };
         // With `since=`, tag the actionable changes (new/changed) so the diff against the
         // snapshot is visible inline; unchanged families stay untagged (the common case).
-        let status = match since.map(|c| family_status(f, c)) {
+        let status_cmp = since.or(baseline_cmp);
+        let status = match status_cmp.map(|c| family_status(f, c)) {
             Some(s @ ("new" | "changed")) => format!(" [{s}]"),
             _ => String::new(),
         };
@@ -398,6 +425,7 @@ pub(super) fn render_query_group(
     terms: &[String],
     path: &str,
     json: bool,
+    baseline_cmp: Option<&BaselineComparison>,
     since: Option<&BaselineComparison>,
 ) {
     use std::collections::HashMap;
@@ -419,7 +447,9 @@ pub(super) fn render_query_group(
             "shape" | "extraction_shape" => f.extraction_shape().to_string(),
             "same_symbol" => family_same_symbol(f).to_string(),
             "spotclass" => family_spotclass(f).unwrap_or("unwitnessed").to_string(),
-            "status" => since.map_or_else(|| "?".to_string(), |c| family_status(f, c).to_string()),
+            "status" => since
+                .or(baseline_cmp)
+                .map_or_else(|| "?".to_string(), |c| family_status(f, c).to_string()),
             _ => "?".to_string(),
         }
     };

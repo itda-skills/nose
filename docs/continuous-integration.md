@@ -1,7 +1,7 @@
 # Continuous integration
 
 nose is built to run in CI as a duplication gate. The pieces below turn the
-report from [usage](usage.md) into a pass/fail check that flags only *new* duplication
+report from [usage](usage.md) into a pass/fail check that flags new or changed duplication
 and runs fast on every push.
 
 The gate command is [`nose query`](usage.md#nose-query): it carries
@@ -74,22 +74,22 @@ accepted by the baseline (the default whenever `--baseline` is present). Use
 non-zero for new or changed clone families. Plain `--fail-on any` still means "fail if
 anything is reported on the default surface after the active filters."
 
-Commit `.nose-baseline.json`. Families are keyed by their sorted reported member
-locations — the same key structured ignores use (see [structured-ignores ›
-Family IDs](structured-ignores.md#family-ids)). **The key is deliberately span-
-and path-sensitive**, which has three
-honest consequences (measured in [experiments §CB](experiments.md)): editing lines
-*above* an accepted clone re-keys it (it resurfaces as `new`/`changed`); renaming
-its file re-keys it; and the key embeds the detecting channel's unit shape, so a
-baseline is only valid for the `--mode` it was written under — pin the mode in CI
-and re-baseline after refactors that move accepted clones. Every drift direction
-is loud (the gate fires; nothing is silently hidden). New baselines also record
-those member identities next to the auditable
-note, which lets later runs classify exact matches as `unchanged`, overlapping
-but re-keyed families as `changed`, missing accepted families as `resolved`, and
-unmatched current families as `new`. Regenerate the baseline deliberately (re-run
-`--write-baseline`) when you've paid down duplication and want the lower bar
-locked in — it's a ratchet.
+Commit `.nose-baseline.json`. A baseline is an accepted set of duplicated
+members, not just a list of family ids. Each accepted member records its exact
+member identity and a source digest next to an auditable note. Later runs hide a
+current family only when every current member is already accepted with the same
+digest. That means a family can reshape — for example, a three-copy accepted
+family becomes an accepted two-copy family — without firing the gate, while an
+edited member is reported again as `changed`.
+
+The family id is still the `id=` handle and remains span- and path-sensitive (see
+[structured-ignores › Family IDs](structured-ignores.md#family-ids)), but the
+baseline decision is digest-backed: exact accepted members are `unchanged`,
+accepted-plus-new members are `changed`, missing accepted families are
+`resolved`, and unmatched current families are `new`. Baselines are valid for
+the detection mode they were written under, so pin `--mode` in CI and regenerate
+the baseline deliberately (re-run `--write-baseline`) when you've paid down
+duplication and want the lower bar locked in — it's a ratchet.
 
 When `--baseline` is present, the file must exist and parse as a valid baseline.
 Missing or malformed baselines are hard errors; otherwise a CI ratchet could
@@ -98,8 +98,8 @@ silently compare against an empty accepted state.
 To read this temporal status from JSON under `nose query`, use the `since=<baseline>`
 query term: it leaves every family in place and exposes each one's `status`
 (`new`/`changed`/`unchanged`) as a queryable field — so `nose query src
-since=.nose-baseline.json status=new --format json` is the machine-readable "what's new"
-view. See [query-json](query-json.md).
+since=.nose-baseline.json status!=unchanged --format json` is the machine-readable
+"what changed since the accepted snapshot" view. See [query-json](query-json.md).
 
 ## Structured ignores — audited suppressions
 
@@ -137,7 +137,7 @@ were hidden, adds a `note` notification under `runs[].invocations[]`, so a trunc
 at least detectable; `top=0` avoids the cap entirely.
 
 `--format json` is the general machine-readable form for any other tooling. The forward
-versioned contract is [query-json](query-json.md) (`nose query --format json`, schema v3).
+versioned contract is [query-json](query-json.md) (`nose query --format json`, schema v4).
 It is truncated by the active top limit in the same way.
 
 ## Fast re-runs: `--cache-dir`

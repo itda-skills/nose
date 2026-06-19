@@ -163,6 +163,7 @@ fn query_capability_flags() -> std::collections::BTreeMap<&'static str, bool> {
         ("base_divergence", true),
         ("baseline", true),
         ("baseline_changed_detection", true),
+        ("baseline_member_digest", true),
         ("cache", true),
         ("ci_fail_gate", true),
         ("family_drilldown", true),

@@ -105,7 +105,7 @@ fn query_family_json_carries_fold_navigation() {
         declaration_run_ids: std::collections::HashSet::new(),
     };
     // The primary lists the slice ids it subsumes (navigable id= handles).
-    let ja = query_family_json(&a, &ov, &opp, false, None);
+    let ja = query_family_json(&a, &ov, &opp, false, None, None);
     assert_eq!(
         ja["subsumes"],
         serde_json::json!([short_id(&baseline::family_id(&b))]),
@@ -113,7 +113,7 @@ fn query_family_json_carries_fold_navigation() {
     );
     assert!(ja.get("subsumed_by").is_none(), "a primary is not subsumed");
     // The slice points back at its primary.
-    let jb = query_family_json(&b, &ov, &opp, false, None);
+    let jb = query_family_json(&b, &ov, &opp, false, None, None);
     assert_eq!(
         jb["subsumed_by"],
         serde_json::Value::from(short_id(&baseline::family_id(&a))),
@@ -148,7 +148,7 @@ fn query_family_json_carries_proof_depth() {
         mean_shape_jaccard: None,
         graded: None,
     });
-    let je = query_family_json(&exact, &ov, &empty, false, None);
+    let je = query_family_json(&exact, &ov, &empty, false, None, None);
     assert_eq!(
         je["value_nodes"], 12,
         "exact family carries value_nodes: {je}"
@@ -156,7 +156,7 @@ fn query_family_json_carries_proof_depth() {
     // Sub-dag channel: the proven shared-computation span per location.
     let mut sub = fam(1, 2, &[Some("c"), Some("d")]);
     sub.locations[0].shared_subdag = Some((10, 14));
-    let js = query_family_json(&sub, &ov, &empty, false, None);
+    let js = query_family_json(&sub, &ov, &empty, false, None, None);
     assert_eq!(
         js["locations"][0]["shared_subdag"],
         serde_json::json!([10, 14]),

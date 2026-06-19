@@ -284,6 +284,7 @@ fn render_query_exploration(ctx: &QueryOutput<'_>) -> Result<bool> {
             ctx.path_arg,
             reinvented_prod,
             json,
+            ctx.baseline_comparison,
             ctx.since,
             &md,
         );
@@ -309,6 +310,7 @@ fn render_query_family_view(ctx: &QueryOutput<'_>, idv: &str, json: bool) {
         ctx.q.id_full,
         ctx.path_arg,
         json,
+        ctx.baseline_comparison,
         ctx.since,
     );
 }
@@ -324,7 +326,15 @@ fn render_query_list_or_group(ctx: &QueryOutput<'_>, json: bool) -> Result<()> {
         ctx.since,
     )?;
     match &ctx.q.group {
-        Some(field) => render_query_group(&sel, field, ctx.terms, ctx.path_arg, json, ctx.since),
+        Some(field) => render_query_group(
+            &sel,
+            field,
+            ctx.terms,
+            ctx.path_arg,
+            json,
+            ctx.baseline_comparison,
+            ctx.since,
+        ),
         None => render_query_list(
             &sel,
             ctx.overrides,
@@ -334,6 +344,7 @@ fn render_query_list_or_group(ctx: &QueryOutput<'_>, json: bool) -> Result<()> {
             ctx.path_arg,
             widen,
             json,
+            ctx.baseline_comparison,
             ctx.since,
         ),
     }

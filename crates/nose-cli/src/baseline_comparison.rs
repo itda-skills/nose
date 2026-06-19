@@ -1,4 +1,6 @@
 use crate::legacy_prelude::*;
+use anyhow::Result;
+use std::collections::{HashMap, HashSet};
 
 #[derive(serde::Serialize)]
 pub(super) struct BaselineSummary {
@@ -38,9 +40,64 @@ impl BaselineStatus {
     }
 }
 
+#[derive(Clone, Copy)]
+pub(super) enum BaselineMatch {
+    None,
+    PartialMembers,
+    MemberLocations,
+}
+
+impl BaselineMatch {
+    pub(super) fn as_str(&self) -> &'static str {
+        match self {
+            BaselineMatch::None => "none",
+            BaselineMatch::PartialMembers => "partial-members",
+            BaselineMatch::MemberLocations => "member-locations",
+        }
+    }
+}
+
+#[derive(Clone)]
+pub(super) struct BaselineFamilyStatus {
+    pub(super) status: BaselineStatus,
+    pub(super) baseline_match: BaselineMatch,
+    pub(super) matched_baseline_ids: Vec<u64>,
+    pub(super) accepted_member_count: usize,
+    pub(super) new_member_count: usize,
+}
+
 pub(super) struct BaselineComparison {
     pub(super) summary: BaselineSummary,
-    pub(super) statuses: std::collections::HashMap<u64, BaselineStatus>,
+    pub(super) statuses: HashMap<u64, BaselineFamilyStatus>,
+    pub(super) suppressed_keys: HashSet<u64>,
+}
+
+struct BaselineIndexes {
+    accepted_by_member: HashMap<baseline::AcceptedMember, HashSet<u64>>,
+    accepted_by_location: HashMap<baseline::MemberKey, HashSet<u64>>,
+}
+
+impl BaselineIndexes {
+    fn build(entries: &[baseline::BaselineEntry]) -> Self {
+        let mut accepted_by_member = HashMap::new();
+        let mut accepted_by_location = HashMap::new();
+        for entry in entries {
+            for member in &entry.members {
+                accepted_by_member
+                    .entry(member.clone())
+                    .or_insert_with(HashSet::new)
+                    .insert(entry.key);
+                accepted_by_location
+                    .entry(member.key.clone())
+                    .or_insert_with(HashSet::new)
+                    .insert(entry.key);
+            }
+        }
+        Self {
+            accepted_by_member,
+            accepted_by_location,
+        }
+    }
 }
 
 impl BaselineComparison {
@@ -48,75 +105,143 @@ impl BaselineComparison {
         path: &std::path::Path,
         baseline: &baseline::Baseline,
         families: &[nose_detect::RefactorFamily],
-    ) -> Self {
-        let current_keys: std::collections::HashSet<u64> =
-            families.iter().map(baseline::family_key).collect();
-        let unchanged_families = baseline.keys.intersection(&current_keys).count();
+    ) -> Result<Self> {
+        let indexes = BaselineIndexes::build(&baseline.entries);
+        let mut statuses = HashMap::new();
+        let mut suppressed_keys = HashSet::new();
+        let mut matched_baseline = HashSet::new();
 
-        let mut changed_current = std::collections::HashSet::new();
-        let mut changed_baseline = std::collections::HashSet::new();
         for family in families {
             let key = baseline::family_key(family);
-            if baseline.keys.contains(&key) {
-                continue;
-            }
-            let current_members = baseline::member_keys(family);
+            let members = baseline::accepted_members(family)?;
+            let member_count = members.len();
+
             if baseline
-                .entries
-                .iter()
-                .filter(|entry| !current_keys.contains(&entry.key))
-                .any(|entry| {
-                    !entry.members.is_empty()
-                        && baseline::member_sets_overlap(&entry.members, &current_members)
-                })
+                .entries_by_key
+                .get(&key)
+                .into_iter()
+                .flatten()
+                .any(|entry_index| same_accepted_members(&baseline.entries[*entry_index], &members))
             {
-                changed_current.insert(key);
-                for entry in baseline
-                    .entries
-                    .iter()
-                    .filter(|entry| !current_keys.contains(&entry.key))
-                {
-                    if !entry.members.is_empty()
-                        && baseline::member_sets_overlap(&entry.members, &current_members)
-                    {
-                        changed_baseline.insert(entry.key);
-                    }
-                }
-            }
-        }
-
-        let mut statuses = std::collections::HashMap::new();
-        for family in families {
-            let key = baseline::family_key(family);
-            if baseline.keys.contains(&key) {
+                suppressed_keys.insert(key);
+                matched_baseline.insert(key);
                 continue;
             }
-            let status = if changed_current.contains(&key) {
-                BaselineStatus::Changed
-            } else {
-                BaselineStatus::New
-            };
+
+            let (accepted_member_count, exact_member_matches) =
+                accepted_member_matches(&indexes, &members);
+            if accepted_member_count == member_count && member_count > 0 {
+                suppressed_keys.insert(key);
+                matched_baseline.extend(exact_member_matches);
+                continue;
+            }
+
+            let location_matches = location_matches(&indexes, &members);
+            let status = family_status(
+                accepted_member_count,
+                member_count,
+                &exact_member_matches,
+                &location_matches,
+            );
+            matched_baseline.extend(status.matched_baseline_ids.iter().copied());
             statuses.insert(key, status);
         }
 
         let resolved_families = baseline
             .keys
             .iter()
-            .filter(|key| !current_keys.contains(key) && !changed_baseline.contains(key))
+            .filter(|key| !matched_baseline.contains(key))
             .count();
-        let changed_families = changed_current.len();
+        let changed_families = statuses
+            .values()
+            .filter(|status| matches!(status.status, BaselineStatus::Changed))
+            .count();
         let new_families = statuses.len().saturating_sub(changed_families);
-        BaselineComparison {
+        let unchanged_families = suppressed_keys.len();
+        Ok(BaselineComparison {
             summary: BaselineSummary {
                 path: path.display().to_string(),
                 mode: "new-only",
-                baseline_families: baseline.keys.len(),
+                baseline_families: baseline.entries.len(),
                 new_families,
                 changed_families,
                 unchanged_families,
                 resolved_families,
             },
             statuses,
+            suppressed_keys,
+        })
+    }
+}
+
+fn accepted_member_matches(
+    indexes: &BaselineIndexes,
+    members: &[baseline::AcceptedMember],
+) -> (usize, HashSet<u64>) {
+    let mut matches = HashSet::new();
+    let mut count = 0usize;
+    for member in members {
+        if let Some(ids) = indexes.accepted_by_member.get(member) {
+            count += 1;
+            matches.extend(ids.iter().copied());
         }
     }
+    (count, matches)
+}
+
+fn location_matches(
+    indexes: &BaselineIndexes,
+    members: &[baseline::AcceptedMember],
+) -> HashSet<u64> {
+    let mut matches = HashSet::new();
+    for member in members {
+        if let Some(ids) = indexes.accepted_by_location.get(&member.key) {
+            matches.extend(ids.iter().copied());
+        }
+    }
+    matches
+}
+
+fn family_status(
+    accepted_member_count: usize,
+    member_count: usize,
+    exact_member_matches: &HashSet<u64>,
+    location_matches: &HashSet<u64>,
+) -> BaselineFamilyStatus {
+    if accepted_member_count > 0 || !location_matches.is_empty() {
+        let mut matched_baseline_ids: Vec<u64> = exact_member_matches
+            .union(location_matches)
+            .copied()
+            .collect();
+        matched_baseline_ids.sort_unstable();
+        return BaselineFamilyStatus {
+            status: BaselineStatus::Changed,
+            baseline_match: if accepted_member_count > 0 {
+                BaselineMatch::PartialMembers
+            } else {
+                BaselineMatch::MemberLocations
+            },
+            matched_baseline_ids,
+            accepted_member_count,
+            new_member_count: member_count.saturating_sub(accepted_member_count),
+        };
+    }
+    BaselineFamilyStatus {
+        status: BaselineStatus::New,
+        baseline_match: BaselineMatch::None,
+        matched_baseline_ids: Vec::new(),
+        accepted_member_count: 0,
+        new_member_count: member_count,
+    }
+}
+
+fn same_accepted_members(
+    entry: &baseline::BaselineEntry,
+    members: &[baseline::AcceptedMember],
+) -> bool {
+    if entry.members.len() != members.len() {
+        return false;
+    }
+    let accepted: HashSet<&baseline::AcceptedMember> = entry.members.iter().collect();
+    members.iter().all(|member| accepted.contains(member))
 }

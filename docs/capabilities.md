@@ -47,7 +47,7 @@ nose capabilities
   },
   "schemas": {
     "capabilities": [2],
-    "query_json": [3],
+    "query_json": [4],
     "semantic_packs": ["nose.semantic-pack.v0"],
     "semantic_pack_conformance": [1]
   },
@@ -71,6 +71,7 @@ nose capabilities
       "base_divergence": true,
       "baseline": true,
       "baseline_changed_detection": true,
+      "baseline_member_digest": true,
       "cache": true,
       "ci_fail_gate": true,
       "family_drilldown": true,
@@ -172,6 +173,7 @@ Version 2 defines these `query.capabilities` keys:
 | `base_divergence` | `base=<ref>` divergent-edit analysis is supported. |
 | `baseline` | `--baseline` and `--write-baseline` are supported. |
 | `baseline_changed_detection` | Baseline comparisons can classify changed and resolved families. |
+| `baseline_member_digest` | Baselines use accepted member source digests, so reshaped accepted families stay hidden while edited members report as changed. |
 | `cache` | `--cache-dir` file analysis caching is supported. |
 | `ci_fail_gate` | `--fail-on any|new` gate behavior is supported. |
 | `family_drilldown` | Opening a family with `id=<fam>` / `at=FILE:LINE` is supported. |

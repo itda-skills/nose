@@ -26,13 +26,34 @@ fn baseline_hides_accepted_families() {
         .expect("run");
     assert!(bl.exists(), "baseline file should be written");
     let baseline_text = fs::read_to_string(&bl).expect("read baseline");
+    let baseline_json: serde_json::Value =
+        serde_json::from_str(&baseline_text).expect("baseline should be valid JSON");
+    assert_eq!(baseline_json["schema_version"], 2);
+    assert_eq!(baseline_json["tool"], "nose");
+    assert_eq!(baseline_json["baseline_kind"], "accepted-duplication");
     assert!(
-        baseline_text.contains("\"members\""),
-        "baseline should record member identities for changed/resolved comparison: {baseline_text}"
+        !baseline_text.contains("\"key\""),
+        "baseline v2 should expose ids, not legacy keys: {baseline_text}"
+    );
+    let first_family = &baseline_json["families"][0];
+    assert!(
+        first_family["id"].as_str().is_some_and(|s| s.len() == 16),
+        "baseline families should carry stable ids: {baseline_text}"
+    );
+    let first_member = &first_family["members"][0];
+    assert!(
+        first_member["id"].as_str().is_some_and(|s| s.len() == 16),
+        "baseline members should carry stable ids: {baseline_text}"
     );
     assert!(
-        baseline_text.contains("\"start_line\"") && baseline_text.contains("\"kind\""),
-        "baseline member identities should include location fields for unique family ids: {baseline_text}"
+        first_member["source_digest"]
+            .as_str()
+            .is_some_and(|s| s.starts_with("fnv1a64:")),
+        "baseline members should carry source digests: {baseline_text}"
+    );
+    assert!(
+        first_member["start_line"].is_number() && first_member["kind"].is_string(),
+        "baseline member identities should include location fields: {baseline_text}"
     );
 
     // …then a re-run shows no *new* families.
@@ -41,6 +62,43 @@ fn baseline_hides_accepted_families() {
         !after.contains("sites"),
         "baselined families must be hidden, got: {after}"
     );
+    let _ = fs::remove_file(&bl);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn legacy_array_baseline_fails_with_regeneration_guidance() {
+    let dir = make_project("baseline_legacy");
+    let p = dir.to_str().unwrap();
+    let bl = std::env::temp_dir().join(format!("nose_legacy_baseline_{}.json", std::process::id()));
+    fs::write(
+        &bl,
+        r#"[{"key":"0000000000000000","note":"legacy","members":[]}]"#,
+    )
+    .unwrap();
+
+    let out = Command::new(bin())
+        .args([
+            "query",
+            p,
+            "--min-size",
+            "12",
+            "--baseline",
+            bl.to_str().unwrap(),
+        ])
+        .output()
+        .expect("run query");
+
+    assert!(
+        !out.status.success(),
+        "legacy baseline arrays should be rejected"
+    );
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(
+        stderr.contains("pre-v2 array format") && stderr.contains("--write-baseline"),
+        "stderr should explain how to regenerate the old baseline: {stderr}"
+    );
+
     let _ = fs::remove_file(&bl);
     let _ = fs::remove_dir_all(&dir);
 }
@@ -156,6 +214,116 @@ fn new_only_json_marks_new_families_against_baseline() {
         "new-only JSON should include new sites, not accepted baseline sites: {out}"
     );
     assert_eq!(json["view"], "list");
+
+    let _ = fs::remove_file(&bl);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn baseline_suppresses_accepted_subcluster_after_family_reshapes() {
+    let dir = make_project("baseline_reshaped_subcluster");
+    let p = dir.to_str().unwrap();
+    let bl = std::env::temp_dir().join(format!(
+        "nose_reshaped_subcluster_bl_{}.json",
+        std::process::id()
+    ));
+    let bls = bl.to_str().unwrap();
+
+    let baseline = Command::new(bin())
+        .args([
+            "query",
+            p,
+            "--min-size",
+            "12",
+            "--baseline",
+            bls,
+            "--write-baseline",
+        ])
+        .output()
+        .expect("write baseline");
+    assert!(baseline.status.success());
+
+    fs::write(
+        dir.join("tests/f.py"),
+        "def f(items):\n    s = []\n    for n in items:\n        if n < 0:\n            s.append(n - 1)\n    return s\n",
+    )
+    .unwrap();
+
+    let out = run(&[
+        "query",
+        p,
+        "--min-size",
+        "12",
+        "--baseline",
+        bls,
+        "--format",
+        "json",
+        "top=0",
+    ]);
+    let json = query_json(&out);
+    assert!(
+        query_families(&json).is_empty(),
+        "a reshaped family made only of accepted members should stay hidden: {out}"
+    );
+
+    let _ = fs::remove_file(&bl);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn baseline_reports_same_location_source_changes_as_changed() {
+    let dir = make_project("baseline_digest_changed");
+    let p = dir.to_str().unwrap();
+    let bl = std::env::temp_dir().join(format!(
+        "nose_digest_changed_bl_{}.json",
+        std::process::id()
+    ));
+    let bls = bl.to_str().unwrap();
+
+    let baseline = Command::new(bin())
+        .args([
+            "query",
+            p,
+            "--min-size",
+            "12",
+            "--baseline",
+            bls,
+            "--write-baseline",
+        ])
+        .output()
+        .expect("write baseline");
+    assert!(baseline.status.success());
+
+    fs::write(
+        dir.join("a/f.py"),
+        "def f(items):\n    total = 0\n    for x in items:\n        if x > 0:\n            total = total + x * x + 1\n    return total\n",
+    )
+    .unwrap();
+
+    let out = run(&[
+        "query",
+        p,
+        "--min-size",
+        "12",
+        "--baseline",
+        bls,
+        "--format",
+        "json",
+        "top=0",
+    ]);
+    let json = query_json(&out);
+    let families = query_families(&json);
+    assert_eq!(
+        families.len(),
+        1,
+        "changed family should be reported: {out}"
+    );
+    assert_eq!(families[0]["baseline_status"], "changed");
+    assert_eq!(families[0]["baseline_match"], "partial-members");
+    assert!(
+        families[0]["accepted_member_count"].as_u64().unwrap_or(0) >= 1,
+        "changed family should explain accepted-member overlap: {out}"
+    );
 
     let _ = fs::remove_file(&bl);
     let _ = fs::remove_dir_all(&dir);
