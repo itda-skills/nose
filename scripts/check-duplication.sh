@@ -27,9 +27,10 @@ set -euo pipefail
 # on top of this stronger detector.
 # Scope expansion in the quality-gates pass: the gate now scans tests as well as production
 # code. Current binary, current tree: production-only default surface reports 24 substantial
-# families, while the tests-included default surface reports 38. The 14 newly visible
-# test-scope/mixed families are reviewed in docs/dogfooding.md; this is a scope expansion,
-# not a loosening of the old production-only gate.
+# families, while the tests-included default surface reports 39. The newly visible
+# tests/mixed families and post-release refresh deltas are reviewed in docs/dogfooding.md;
+# this is a scope expansion and reviewed baseline refresh, not a loosening of the old
+# production-only gate.
 #
 # 20 → 21: weight-grading the sub-DAG score (a larger shared computation now scores higher, up to
 # 0.90) lifts one PRE-EXISTING partial-clone family in nose's own source past the substantial

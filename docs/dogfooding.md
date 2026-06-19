@@ -23,19 +23,19 @@ baseline/docs update, so an unrelated removal cannot mask a newly introduced dup
 
 Reviewed on 2026-06-19 with the current binary and current tree. The production-only
 default surface reports 24 substantial families; the tests-included default surface
-reports 38. The 14 newly visible default-surface families below are
-accepted as pre-existing debt, not as permission to add more. Update the baseline only
-when the corresponding family delta is reviewed here.
+reports 39. The reviewed default-surface families below are accepted as pre-existing
+debt, not as permission to add more. Update the baseline only when the corresponding
+family delta is reviewed here.
 
-The exact machine baseline is the union of the 24 production-family IDs retained from
-the earlier production-only dogfooding gate and the 14 tests/mixed rows below:
+The exact machine baseline is the union of the retained family IDs below and the
+reviewed scope-expansion or refresh rows that follow:
 
-`1639812e75927a23`, `18b10c46c5eef924`, `1bdaa5320aa60caa`,
-`1dfaba2582163d7c`, `1fc08105c8b5d5c0`, `20607f742b158b0f`,
+`1639812e75927a23`, `18b10c46c5eef924`, `1dfaba2582163d7c`,
+`1fc08105c8b5d5c0`, `20607f742b158b0f`,
 `209fdc39157ececd`, `4ac4a88371e43e72`, `4fcb322e2465279d`,
 `5cef2d2e6eb4d3a9`, `7acab484d0d624b8`, `9bcb27a3b3454c87`,
-`9dfc900a8a39f8c9`, `a3f115a64eee87e5`, `ab38dd94000926e1`,
-`af156a42f4c4c870`, `b0c36983532b2550`, `bf4255f2994b1d65`,
+`9dfc900a8a39f8c9`, `ab38dd94000926e1`, `af156a42f4c4c870`,
+`b0c36983532b2550`, `bf4255f2994b1d65`,
 `c817740ef79d19fb`, `c9fe4dc9d9cd14f5`, `e2af7ec5d30fd509`,
 `e8f33f62a81eaf80`, `f010e9908081b902`, `f5d4dde27f380cfc`.
 
@@ -55,6 +55,13 @@ the earlier production-only dogfooding gate and the 14 tests/mixed rows below:
 | `8f9c8cadbe769f47` | test | HOF demand and strict-exact lazy receiver tests share library-HOF fixture setup. | Accepted cross-boundary test scaffold; extract only if it names the HOF demand scenario. |
 | `f380654d807c1e90` | test | typed/free call IL fixture builders share a construction skeleton. | Candidate for a small fixture builder. |
 | `0a5cdb261739af70` | test | library API admission resolver tests share resolver/evidence setup for node and call paths. | Accepted as paired behavior tests; extract if resolver fixture setup grows again. |
+| `903047aa966ea3da` | production | `cmd_scan` and query fail-on validation now share the same gate-policy shape after scan orchestration gained timing stages; the large scan span makes this look more extractable than it is. | Keep visible; extract only if scan/query gate validation grows into a shared policy object. |
+| `c5f1969d0a866135` | production | `nose-semantics::Evidence` accessor blocks repeat the same small field-return shape across evidence variants. | Accepted data-accessor boilerplate; avoid hiding the enum facets behind a generic accessor table. |
+| `e633f3912604730d` | production | `UnionFind` exists independently in detect clustering and markdown detection. | Real shared utility candidate, but cross-crate extraction is out of scope for the CLI prelude isolation pass; keep visible under the ratchet. |
+
+The 2026-06-19 post-release refresh also removed two stale IDs from the old
+baseline; they are no longer reported by the current release binary on the current
+tree.
 
 ## Verdict by candidate (critically)
 
