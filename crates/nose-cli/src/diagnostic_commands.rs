@@ -1,4 +1,4 @@
-use super::*;
+use crate::legacy_prelude::*;
 
 /// Dump each unit's detection features as JSON `{units: [...]}` — the raw value-graph,
 /// shape, return and literal fingerprints, before candidate generation/thresholding.

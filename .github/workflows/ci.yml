@@ -44,6 +44,10 @@ jobs:
           fi
           python3 scripts/check-file-lengths.py --self-test
           python3 scripts/check-file-lengths.py --ratchet-base "$ratchet_base"
+      - name: legacy-prelude ratchet
+        run: |
+          python3 scripts/check-legacy-prelude.py --self-test
+          python3 scripts/check-legacy-prelude.py
       - name: clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
       - name: doc

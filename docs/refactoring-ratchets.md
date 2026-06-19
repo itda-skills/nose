@@ -34,6 +34,22 @@ Do not use the budget file to bless newly large modules. New modules should stay
 under the 600-line target; if a split still produces a 600-line-or-larger file,
 keep looking for a sharper boundary.
 
+## CLI legacy prelude
+
+Run the temporary prelude gate directly with:
+
+```sh
+python3 scripts/check-legacy-prelude.py
+```
+
+`nose-cli/src/legacy_prelude.rs` exists only to keep older CLI modules compiling
+while they move to explicit owner imports. The gate counts top-level
+`nose-cli/src/*.rs` modules that still import from `crate::legacy_prelude` and
+the number of `pub(crate) use` exports inside the prelude itself. The current
+budget is 17 users and 34 exports; future refactors should lower those budgets
+when they remove users or exports, and new users should import from the owning
+`crate::<module>` instead.
+
 ## Refactoring direction
 
 File length is a symptom, not the objective. Prefer changes that make ownership
@@ -51,6 +67,10 @@ and behavior easier to reason about:
   scan/review detection setup, path diagnostics, terminal styling, runtime
   setup, shared report text, and CLI-root tests now live in
   `nose-cli/src/{command_dispatch,detect_pipeline,path_utils,style,runtime,report_text,main_tests/*}.rs`;
+- keep the `nose-cli` crate root free of ambient helper imports. Remaining
+  compatibility imports are isolated in `nose-cli/src/legacy_prelude.rs`; do not
+  add new module dependencies there when a module can name its actual owner with
+  `crate::<module>::...`, and shrink the prelude as files move to explicit imports;
 - keep divergent-edit review split by adapter boundary; review detection policy,
   git/worktree diff plumbing, output formats, and tests now live under
   `nose-cli/src/review/`;

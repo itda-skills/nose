@@ -1,4 +1,8 @@
-use super::*;
+use anyhow::Result;
+
+use crate::baseline;
+use crate::query_opportunities::family_hint;
+use crate::report_text::plural;
 
 /// Build a SARIF 2.1.0 document — one result per family, every member site a
 /// location so SARIF consumers can annotate each. The first location is primary;

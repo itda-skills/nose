@@ -1,5 +1,5 @@
 #[cfg(test)]
-use super::*;
+use crate::query_opportunities::family_langs;
 
 /// The line count of the family's representative copy — the denominator for "`N of M`
 /// shared". It's the *first* (largest) site's own span, not the family-wide `mean_lines`:

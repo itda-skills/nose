@@ -1,4 +1,4 @@
-use super::*;
+use crate::legacy_prelude::*;
 
 pub(crate) fn enrich_graded_witnesses(
     families: &mut [nose_detect::RefactorFamily],

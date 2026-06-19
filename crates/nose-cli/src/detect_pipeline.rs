@@ -1,4 +1,4 @@
-use super::*;
+use crate::legacy_prelude::*;
 
 struct ChannelDetector {
     name: &'static str,

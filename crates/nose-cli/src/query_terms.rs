@@ -1,5 +1,7 @@
 use anyhow::Result;
 
+use crate::query_options::SortKey;
+
 /// A parsed query: in-memory filters over the family dataset, plus the chosen view.
 #[derive(Default)]
 pub(crate) struct Query {
@@ -14,7 +16,7 @@ pub(crate) struct Query {
     /// declaration/generated families too) — the `all` token. Default queries stay on the
     /// default surface so `query`'s counts and curation match `analysis`'s.
     pub(crate) all: bool,
-    pub(crate) sort: Option<crate::SortKey>,
+    pub(crate) sort: Option<SortKey>,
     pub(crate) top: Option<usize>,
     /// The `reinvented` view — code that reimplements an existing helper (the `reinvented`
     /// channel, surfaced in query), distinct from `shape=call-existing-helper` families.
@@ -99,12 +101,12 @@ fn validate_field(field: &str, op: &QOp) -> Result<()> {
     Ok(())
 }
 
-fn parse_sort_key(v: &str) -> Option<crate::SortKey> {
+fn parse_sort_key(v: &str) -> Option<SortKey> {
     match v {
-        "extractability" | "extract" => Some(crate::SortKey::Extractability),
-        "value" => Some(crate::SortKey::Value),
-        "sites" | "members" | "copies" => Some(crate::SortKey::Sites),
-        "hazard" => Some(crate::SortKey::Hazard),
+        "extractability" | "extract" => Some(SortKey::Extractability),
+        "value" => Some(SortKey::Value),
+        "sites" | "members" | "copies" => Some(SortKey::Sites),
+        "hazard" => Some(SortKey::Hazard),
         _ => None,
     }
 }

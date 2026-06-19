@@ -17,7 +17,7 @@ break.
 
 ### Performance
 - Re-profiled the checked-out `bench/repos` corpus with a release build after the render fix:
-  **150/150 repos succeeded**, **0 repos >= 4s**, **75.858s total**, max **3.732s** (`sympy`).
+  **150/150 repos succeeded**, **0 repos >= 4s**, **62.044s total**, max **2.948s** (`sympy`).
   Representative byte-identical stage checks: `raylib` `query_render` **5284.7ms → 67.3ms**,
   `sympy` **778.7ms → 166.7ms**, and `bulma` **3124.8ms → 87.9ms**.
 

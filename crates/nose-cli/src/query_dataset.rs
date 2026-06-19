@@ -1,4 +1,17 @@
-use super::*;
+use anyhow::Result;
+
+use crate::cli_args::QueryArgs;
+use crate::detect_pipeline::{detection_engine, detection_options, validate_exclude_globs};
+use crate::path_utils::{relativize, relativize_loc};
+use crate::query_options::{
+    validate_min_value, DetectionChannels, QueryScope, SortKey, QUERY_DEFAULT_MODES,
+};
+use crate::source_lines::{
+    corpus_line_idf, family_anchor, is_trivial_line, shared_lines_of, varying_spots_of,
+    FileLineCache,
+};
+use crate::timing::{time_lower, time_stage};
+use crate::{cache, config, ignores};
 
 /// The ranked family dataset behind `nose query`: detect, rank,
 /// filter (min-members / min-value / scope), relativize paths, weight shared lines, and

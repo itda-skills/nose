@@ -1,4 +1,4 @@
-use super::*;
+use crate::legacy_prelude::*;
 
 /// One record per interpretable unit.
 pub(super) struct VerifyRec {

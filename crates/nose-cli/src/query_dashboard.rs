@@ -1,6 +1,6 @@
 use super::query_model::*;
 use super::query_views::{loc_cell, metrics_cell};
-use super::*;
+use crate::legacy_prelude::*;
 
 /// Print a block of candidate rows in aligned columns (location · metrics · drill command),
 /// coloured. Widths are computed from each cell's visible length so the ANSI codes never

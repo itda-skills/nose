@@ -17,15 +17,17 @@
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
+use crate::query_options::{DetectionMode, SortKey};
+
 /// The `[query]` table. Every field is optional — absent means "no opinion,
 /// use the CLI value or the built-in default".
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "kebab-case", default, deny_unknown_fields)]
 pub(crate) struct QueryConfig {
     pub exclude: Vec<String>,
-    pub mode: Vec<crate::DetectionMode>,
+    pub mode: Vec<DetectionMode>,
     pub min_value: Option<f64>,
-    pub sort: Option<crate::SortKey>,
+    pub sort: Option<SortKey>,
     pub min_members: Option<usize>,
     /// Advanced: minimum source-line span (most users only set `min-size`).
     pub min_lines: Option<u32>,

@@ -23,7 +23,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::DetectionMode;
+use crate::query_options::DetectionMode;
 use nose_detect::{EnclosingUnit, FragmentKind, Loc, RefactorFamily};
 
 pub(crate) use detect::{detect_divergences, divergences_fire};

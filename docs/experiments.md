@@ -3193,7 +3193,7 @@ deduplication of value-graph work, not local micro-optimization.
 
 Goal: make `nose query bench/repos/<repo>` finish under **4s for every checked-out corpus repo**
 with a release build, without leaning on local micro-optimizations. The final saved run is
-`target/corpus-query-speed-release-0.13.2/summary.tsv`.
+`target/corpus-query-speed-release-0.13.2-merged/summary.tsv`.
 
 **Baseline symptoms.** The first full pass had three repos over budget: `alamofire` **8.994s**,
 `sympy` **4.673s**, and `raylib` **4.669s**; `curl` was close at **3.793s**. `NOSE_TIME=1`
@@ -3238,23 +3238,23 @@ showed different bottlenecks per repo:
 | repos | 150 |
 | failures | 0 |
 | repos >= 4s | 0 |
-| total wall time | 75.858s |
-| max repo | `sympy` 3.732s |
+| total wall time | 62.044s |
+| max repo | `sympy` 2.948s |
 
 Top final repo times:
 
 | repo | seconds |
 |---|---:|
-| `sympy` | 3.732 |
-| `guava` | 3.082 |
-| `raylib` | 2.856 |
-| `libgdx` | 2.835 |
-| `netty` | 2.408 |
-| `h2database` | 2.304 |
-| `rxjava` | 2.128 |
-| `nushell` | 1.998 |
-| `alamofire` | 1.858 |
-| `sqlalchemy` | 1.842 |
+| `sympy` | 2.948 |
+| `raylib` | 2.463 |
+| `guava` | 2.387 |
+| `libgdx` | 2.282 |
+| `netty` | 1.925 |
+| `h2database` | 1.818 |
+| `alamofire` | 1.810 |
+| `nushell` | 1.746 |
+| `rxjava` | 1.628 |
+| `sqlalchemy` | 1.579 |
 
 Representative stage checks after the changes: `curl` Markdown `md_accept` dropped from about
 **2108ms** to **538ms** in the Markdown pass; bulk JSON `query_render` then dropped from

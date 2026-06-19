@@ -1,4 +1,6 @@
-use super::*;
+use anyhow::Result;
+use nose_il::Corpus;
+use std::path::PathBuf;
 
 /// Borrow a slice of owned `PathBuf`s as `&Path` references — the form the detection entry
 /// points take. Used by every analysis/refactor subcommand that holds its input paths as a

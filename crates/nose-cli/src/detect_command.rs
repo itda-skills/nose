@@ -1,4 +1,8 @@
-use super::*;
+use anyhow::{Context, Result};
+use std::path::PathBuf;
+
+use crate::path_utils::{paths_as_refs, warn_if_empty};
+use crate::timing::time_lower;
 
 pub(crate) struct DetectArgs {
     pub(crate) paths: Vec<PathBuf>,

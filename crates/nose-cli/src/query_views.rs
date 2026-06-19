@@ -1,5 +1,7 @@
 use super::query_model::*;
-use super::*;
+use crate::divergence;
+use crate::legacy_prelude::*;
+use crate::query_family_text::print_member_proposal;
 
 /// The location cell — `file:line  name` — coloured (path dim, symbol bold) with its
 /// *visible* width (sans ANSI) for column alignment.

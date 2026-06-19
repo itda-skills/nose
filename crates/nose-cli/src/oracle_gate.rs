@@ -1,4 +1,4 @@
-use super::*;
+use crate::legacy_prelude::*;
 
 /// Deterministic input battery for an `arity`-parameter function. The parameters range
 /// over a fixed pool of small int-lists and scalars; for small arity the pool is
@@ -223,7 +223,7 @@ fn manifest_key(path: &str) -> String {
     }
 }
 
-pub(super) fn cmd_behavioral_gate(
+pub(crate) fn cmd_behavioral_gate(
     paths: Vec<PathBuf>,
     manifest: PathBuf,
     battery_kind: BatteryKind,

@@ -1,6 +1,6 @@
 # Dogfooding nose on nose — a critical review
 
-Goal: honestly assess whether `nose scan crates` produces *real* design-level
+Goal: honestly assess whether `nose query crates all top=0 --mode near --min-value 40` produces *real* design-level
 refactoring opportunities on its own codebase, act on the genuine ones, and record
 where the tool is weak. The third-party counterpart is [field evaluation](field-evaluation.md);
 the duplication gate that grew out of this lives in [CONTRIBUTING](../CONTRIBUTING.md).
@@ -12,7 +12,7 @@ review pass; re-running on today's larger codebase reports more, since the crate
 since grown.
 
 The current CI gate is [scripts/check-duplication.sh](../scripts/check-duplication.sh):
-it runs `nose scan crates --mode near --min-value 40 --format json --top 0` and
+it runs `nose query crates all top=0 --mode near --min-value 40 --format json` and
 compares the default-surface family IDs with
 [`scripts/duplication-baseline.json`](../scripts/duplication-baseline.json). Tests are
 included in the current ratchet so fixture/scaffolding copy-paste stays visible instead
@@ -23,21 +23,22 @@ baseline/docs update, so an unrelated removal cannot mask a newly introduced dup
 
 Reviewed on 2026-06-19 with the current binary and current tree. The production-only
 default surface reports 24 substantial families; the tests-included default surface
-reports 38. The 14 newly visible default-surface families below are
-accepted as pre-existing debt, not as permission to add more. Update the baseline only
-when the corresponding family delta is reviewed here.
+reports 36. The reviewed default-surface families below are accepted as pre-existing
+debt, not as permission to add more. Update the baseline only when the corresponding
+family delta is reviewed here.
 
-The exact machine baseline is the union of the 24 production-family IDs retained from
-the earlier production-only dogfooding gate and the 14 tests/mixed rows below:
+The exact machine baseline is the union of the retained family IDs below and the
+reviewed scope-expansion or refresh rows that follow:
 
-`1639812e75927a23`, `18b10c46c5eef924`, `1bdaa5320aa60caa`,
-`1dfaba2582163d7c`, `1fc08105c8b5d5c0`, `20607f742b158b0f`,
-`209fdc39157ececd`, `4ac4a88371e43e72`, `4fcb322e2465279d`,
-`5cef2d2e6eb4d3a9`, `7acab484d0d624b8`, `9bcb27a3b3454c87`,
-`9dfc900a8a39f8c9`, `a3f115a64eee87e5`, `ab38dd94000926e1`,
-`af156a42f4c4c870`, `b0c36983532b2550`, `bf4255f2994b1d65`,
-`c817740ef79d19fb`, `c9fe4dc9d9cd14f5`, `e2af7ec5d30fd509`,
-`e8f33f62a81eaf80`, `f010e9908081b902`, `f5d4dde27f380cfc`.
+`0a5cdb261739af70`, `1267c115f7832175`, `1639812e75927a23`, `18b10c46c5eef924`,
+`1dfaba2582163d7c`, `1fc08105c8b5d5c0`, `20607f742b158b0f`, `209fdc39157ececd`,
+`248e283bde49aaf6`, `4890b7227d416249`, `49cf43940d7ba72c`, `4ac4a88371e43e72`,
+`4fcb322e2465279d`, `77d8e8012b2ac08a`, `7acab484d0d624b8`, `7afae0406480a99e`,
+`84df147de864f719`, `8d3e36bdd11cf2c0`, `8f9c8cadbe769f47`, `90809d0e27461ac4`,
+`98f5617cbcf09658`, `9bcb27a3b3454c87`, `9dfc900a8a39f8c9`, `ab38dd94000926e1`,
+`af156a42f4c4c870`, `b527e97155167c1b`, `bf4255f2994b1d65`, `c817740ef79d19fb`,
+`c9fe4dc9d9cd14f5`, `d7dea9009200ed08`, `e2af7ec5d30fd509`, `e633f3912604730d`,
+`e8f33f62a81eaf80`, `f010e9908081b902`, `f380654d807c1e90`, `f5d4dde27f380cfc`.
 
 | family | scope | judgment | action |
 |---|---|---|---|
@@ -46,15 +47,20 @@ the earlier production-only dogfooding gate and the 14 tests/mixed rows below:
 | `1267c115f7832175` | test | method-call IL fixture builders differ by receiver/argument shape but share a large construction skeleton. | Candidate for a fixture builder; keep until it improves readability. |
 | `d7dea9009200ed08` | test | receiver-domain fail-closed tests share setup for three distinct evidence-break cases. | Accepted test scaffold; consolidate only around named receiver-domain scenarios. |
 | `248e283bde49aaf6` | test | strict-exact receiver/binding-domain tests share evidence setup across detect unit surfaces. | Visible cross-test debt; extract if a common strict-exact receiver fixture emerges. |
-| `4e43a909c838f9fc` | test | guard/library-API CLI tests repeat semantic scan scaffolding for static identity/builtin cases. | Keep as named behavior tests unless a local helper clarifies the scenarios. |
-| `973a8ee2eafd71f6` | test | literal-preservation tests for JS/Python/Ruby share object/dict/hash boundary structure. | Candidate for a language-fixture table; avoid hiding per-language expectations. |
-| `67215082c9c77bb1` | test | cross-language literal convergence tests share module/list/map fixture structure. | Accepted until a fixture table makes failures easier, not harder. |
-| `89981251086618d5` | test | ordered exact-fragment branch tests have large repeated fixture blocks. | Real refactor candidate; this pass reduced return-fragment duplication, ordered-branch files remain next debt. |
 | `90809d0e27461ac4` | test | interpreter field-state tests repeat state construction across read/write scenarios. | Candidate for a state-fixture builder when interpreter tests are next reorganized. |
-| `7d8e2e30a1fae955` | test | ordered conditional/effect exact-fragment tests share large branch fixture shape. | Real refactor candidate; keep visible under the ratchet. |
 | `8f9c8cadbe769f47` | test | HOF demand and strict-exact lazy receiver tests share library-HOF fixture setup. | Accepted cross-boundary test scaffold; extract only if it names the HOF demand scenario. |
 | `f380654d807c1e90` | test | typed/free call IL fixture builders share a construction skeleton. | Candidate for a small fixture builder. |
 | `0a5cdb261739af70` | test | library API admission resolver tests share resolver/evidence setup for node and call paths. | Accepted as paired behavior tests; extract if resolver fixture setup grows again. |
+| `e633f3912604730d` | production | `UnionFind` exists independently in detect clustering and markdown detection. | Real shared utility candidate, but cross-crate extraction is out of scope for the CLI prelude isolation pass; keep visible under the ratchet. |
+| `4890b7227d416249` | test | ordered loop-conditional exact-fragment tests share the same branch fixture skeleton with the ordered conditional tests. | Accepted as visible test-fixture debt; extract only if a named ordered-branch fixture reduces the per-case signal. |
+| `77d8e8012b2ac08a` | production | query origin-hint helpers share scoring/reason collection shape inside `query_opportunities`. | Small real local helper candidate; keep visible until that module is next simplified. |
+| `84df147de864f719` | test | guard/static-import/library-API semantic tests share the same query fixture harness. | Accepted named behavior tests; table only if it keeps failure messages specific. |
+| `8d3e36bdd11cf2c0` | test | list/map/module literal convergence tests repeat cross-language fixture structure. | Candidate for a literal-fixture table; keep visible until it improves readability. |
+| `98f5617cbcf09658` | test | JS/Python/Ruby literal-preservation and `typeof` guard tests share the same semantic query scaffold. | Accepted test scaffold across boundary cases. |
+| `b527e97155167c1b` | test | ordered conditional/effect exact-fragment tests still share a large branch fixture shape. | Real refactor candidate; keep visible under the ratchet. |
+
+The 2026-06-19 query-only/prelude refresh removed nine stale IDs from the old
+baseline and added the six reviewed rows above. Net current count: 39 → 36.
 
 ## Verdict by candidate (critically)
 
@@ -159,7 +165,7 @@ lifts one pre-existing partial-clone family past the substantial threshold — b
 
 Those line ranges are now surfaced at the **family** level too: when every member of a clone family
 shares a heavy sub-DAG, each site in the report carries `locations[].shared_subdag = [start, end]`
-— its OWN source range for the shared computation — and `nose scan`'s text output appends
+— its OWN source range for the shared computation — and `nose query`'s text output appends
 `(shared computation: lines X-Y)` to each site. So a partial / sub-DAG clone points at *where* the
 shared logic lives in every copy, not just that one exists.
 

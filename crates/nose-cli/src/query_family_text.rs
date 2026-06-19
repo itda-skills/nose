@@ -1,4 +1,4 @@
-use super::*;
+use crate::source_lines::{anti_unify_all, line_diff, read_lines};
 
 /// Print a unified diff between two family members' source — the few lines that
 /// differ are what a reader needs to judge how cleanly the copies can be merged.

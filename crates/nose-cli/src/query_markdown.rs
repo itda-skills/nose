@@ -1,4 +1,4 @@
-use super::*;
+use crate::legacy_prelude::*;
 
 /// Markdown form of the all-copies extraction skeleton (#360), rendered on an `id=<fam>`
 /// drilldown so `--format markdown` honors the help's "every copy + extraction skeleton"
