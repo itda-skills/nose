@@ -6,7 +6,7 @@ TypeScript, Go, Rust, Java, C, Ruby, Swift, plus declarative **CSS** (computed-s
 equivalence) and **HTML markup** (rendered-DOM equivalence), including the
 `<script>`/`<style>`/markup regions inside Vue, Svelte, and HTML. It **proves** its
 semantic matches are real — equal fingerprint ⟹ equal behavior, never a false
-equivalence — and ranks candidates by refactoring value for review or CI. One
+equivalence — and ranks candidates by refactoring value for triage or CI. One
 self-contained Rust binary; no runtime, services, or network.
 
 ## Install
@@ -59,11 +59,6 @@ nose query docs                              # also reports same-language near-d
 By default it runs all three channels — `syntax` (copy-paste runs), `semantic` (exact
 same-logic Type-4 clones), and `near` (fuzzy near-duplicates) — and respects `.gitignore`;
 pass `--mode` to run exactly the channels you list.
-
-> `nose scan` (the one-shot ranked report + scan-JSON v1) and `nose review --base <ref>` (the
-> PR check) still work but are **deprecated** in favour of `nose query` and `nose query
-> base=<ref>`, which read the same dataset and now carry the CI gate and a versioned JSON
-> contract. See [usage](docs/usage.md).
 
 ## Documentation
 

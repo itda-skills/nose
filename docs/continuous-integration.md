@@ -4,11 +4,9 @@ nose is built to run in CI as a duplication gate. The pieces below turn the
 report from [usage](usage.md) into a pass/fail check that flags only *new* duplication
 and runs fast on every push.
 
-The gate command is now [`nose query`](usage.md#nose-query): it carries the same
-`--fail-on`/`--baseline`/`--ignore-file`/`--cache-dir` workflow flags and the same
-`--format sarif` output as the old `nose scan`. `nose scan` still works, but it is
-**deprecated (0.10.0)** in favour of `nose query`; the examples
-below use the `query` spelling throughout.
+The gate command is [`nose query`](usage.md#nose-query): it carries
+`--fail-on`/`--baseline`/`--ignore-file`/`--cache-dir` workflow flags and
+`--format sarif` output.
 
 ## The `--fail-on any` gate
 
@@ -32,7 +30,7 @@ For a broader exact gate, pin both exact channels and keep only substantial find
 nose query src --mode syntax,semantic --min-value 300 --min-members 3 --fail-on any
 ```
 
-To include Type-3 near-duplicates in a review ratchet, add `near` and tune the fuzzy
+To include Type-3 near-duplicates in an audit ratchet, add `near` and tune the fuzzy
 threshold. This is usually better as a report or ratchet with `--min-value` than as a
 bare "any finding fails" gate:
 
@@ -86,8 +84,8 @@ its file re-keys it; and the key embeds the detecting channel's unit shape, so a
 baseline is only valid for the `--mode` it was written under — pin the mode in CI
 and re-baseline after refactors that move accepted clones. Every drift direction
 is loud (the gate fires; nothing is silently hidden). New baselines also record
-those member identities next to the reviewable
-note, which lets later scans classify exact matches as `unchanged`, overlapping
+those member identities next to the auditable
+note, which lets later runs classify exact matches as `unchanged`, overlapping
 but re-keyed families as `changed`, missing accepted families as `resolved`, and
 unmatched current families as `new`. Regenerate the baseline deliberately (re-run
 `--write-baseline`) when you've paid down duplication and want the lower bar
@@ -101,14 +99,12 @@ To read this temporal status from JSON under `nose query`, use the `since=<basel
 query term: it leaves every family in place and exposes each one's `status`
 (`new`/`changed`/`unchanged`) as a queryable field — so `nose query src
 since=.nose-baseline.json status=new --format json` is the machine-readable "what's new"
-view. (The deprecated `nose scan --format json` instead carries a top-level `baseline`
-object with the counts and a per-family `baseline_status`; query-JSON v3 has neither — see
-[query-json](query-json.md).)
+view. See [query-json](query-json.md).
 
 ## Structured ignores — audited suppressions
 
 Baselines accept the current state in bulk. Structured ignores are for individual
-families that were reviewed and intentionally kept. Commit `nose.ignore.json`
+families that were accepted and intentionally kept. Commit `nose.ignore.json`
 next to the code, or point to another file with `--ignore-file` / `ignore-file`
 in [configuration](configuration.md):
 
@@ -134,16 +130,15 @@ nose query src --format sarif top=0 > nose.sarif   # then upload via github/code
 ```
 
 **Pass `top=0` for a complete upload.** Every output format truncates to the row limit —
-`top=N` (default 30); `top=0` means *all* (matching the deprecated `nose scan --top 0`).
+`top=N` (default 30); `top=0` means *all*.
 Without it a repo with more than 30 families uploads only the first 30. The SARIF run records
 the full count in `runs[].properties` (`total_families` / `shown_families`) and, when families
 were hidden, adds a `note` notification under `runs[].invocations[]`, so a truncated upload is
 at least detectable; `top=0` avoids the cap entirely.
 
 `--format json` is the general machine-readable form for any other tooling. The forward
-versioned contract is [query-json](query-json.md) (`nose query --format json`, schema v3);
-the deprecated equivalent is documented in [scan-json](scan-json.md) (schema v1). Both are
-truncated by their respective top limit in the same way.
+versioned contract is [query-json](query-json.md) (`nose query --format json`, schema v3).
+It is truncated by the active top limit in the same way.
 
 ## Fast re-runs: `--cache-dir`
 
@@ -159,5 +154,5 @@ nose query src --cache-dir .nose-cache --fail-on any
 ---
 
 Contributing to nose itself? The repository's own CI — the local preflight, the duplication
-ratchet, the nightly soundness corpus-verify, and review-bot policy — lives in
+ratchet and the nightly soundness corpus-verify policy — lives in
 [CONTRIBUTING](../CONTRIBUTING.md), not here.

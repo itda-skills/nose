@@ -6,16 +6,15 @@ use clap::{Parser, Subcommand};
     name = "nose",
     version,
     about = "Find duplicated code worth refactoring — exact, semantic (Type-4), and near-duplicate clone families",
-    long_about = "nose scans source files, groups duplicated code into clone families,\n\
+    long_about = "nose analyzes source files, groups duplicated code into clone families,\n\
                   and ranks the results by how useful they are to inspect or refactor.\n\
-                  • `nose query <paths>`                  — scan and show a summary with next commands\n\
+                  • `nose query <paths>`                  — analyze and show a summary with next commands\n\
                   • `nose query <paths> id=<fam> full`    — open one family: every copy + its extraction skeleton\n\
                   • `nose query <paths> base=origin/main` — flag a change applied to one clone copy but not its siblings\n\
                   • `nose query <paths> --fail-on any`    — gate CI (exit non-zero on duplication); add `--format json` for the contract\n\
                   • `nose stats <paths>`                  — language coverage and unsupported syntax\n\
                   • `nose il <file>`                      — inspect why two snippets do or do not match\n\
-                  • `nose capabilities`                   — machine-readable integration contract\n\
-                  `nose scan` and `nose review` still work but are deprecated in favour of `nose query`."
+                  • `nose capabilities`                   — machine-readable integration contract"
 )]
 pub(crate) struct Cli {
     #[command(subcommand)]
@@ -25,11 +24,11 @@ pub(crate) struct Cli {
 #[derive(Subcommand)]
 pub(crate) enum Cmd {
     /// Research interface for raw unit clone pairs/groups.
-    /// Hidden: `scan` is the user-facing command; `detect` is the strict/research
+    /// Hidden: `query` is the user-facing command; `detect` is the strict/research
     /// and benchmark interface (`--bench-schema`, `--dump`, …).
     #[command(hide = true)]
     Detect {
-        /// Paths to source files or directories (recursively scanned).
+        /// Paths to source files or directories (recursively analyzed).
         #[arg(required = true)]
         paths: Vec<PathBuf>,
         /// Minimum unit line count.
@@ -44,7 +43,7 @@ pub(crate) enum Cmd {
         threshold: Option<f64>,
         /// Candidate mode: disable the behavioral-precision gates and default the
         /// threshold to 0.70. Surfaces near-duplicate FAMILIES (locale classes,
-        /// comparison operators, sync/async wrappers) for human review. Use the
+        /// comparison operators, sync/async wrappers) for human triage. Use the
         /// default strict path for behavioral-clone research runs.
         #[arg(long)]
         candidates: bool,
@@ -84,114 +83,14 @@ pub(crate) enum Cmd {
         #[arg(long)]
         dump: Option<PathBuf>,
     },
-    /// Rank refactoring candidates as a one-shot report. DEPRECATED — use `nose query`.
-    ///
-    /// Scans files/directories (respecting .gitignore), groups duplicated code into
-    /// clone families, and ranks them by extractability — how cleanly each family
-    /// folds into one shared helper. Default channels: `syntax,semantic,near`
-    /// (copy-paste runs + exact semantic Type-4 + fuzzy near-duplicates). Passing
-    /// --mode replaces that default with exactly the channels listed.
-    /// `nose query` reads the same dataset and carries the gate, baselines, and a
-    /// structured `--format json` contract; `scan` still works but will be removed later.
-    #[command(hide = true)]
-    Scan {
-        /// Paths to source files or directories (recursively scanned).
-        #[arg(required = true)]
-        paths: Vec<PathBuf>,
-        /// How many top families to show (`0` = all). [default: 30]
-        #[arg(long)]
-        top: Option<usize>,
-        /// Only families with at least this many duplicated sites. [default: 2]
-        #[arg(long)]
-        min_members: Option<usize>,
-        /// Hide families whose refactoring value is below this (noise floor on
-        /// large repos). 0 shows every family. [default: 0]
-        #[arg(long, value_parser = parse_min_value)]
-        min_value: Option<f64>,
-        /// Rank families by: `extractability` (how cleanly it folds into one helper —
-        /// the default), `value` (raw duplicated volume), `sites` (most copies), or
-        /// `hazard` (experimental divergent-edit propensity).
-        #[arg(long)]
-        sort: Option<SortKey>,
-        /// Read defaults from this config file (else `nose.toml`/`.nose.toml`).
-        #[arg(long, value_name = "FILE")]
-        config: Option<PathBuf>,
-        /// Detection channels to run. Omit for `syntax,semantic,near`. If present,
-        /// this replaces the default; pass a comma-list or repeat it, e.g.
-        /// `--mode syntax,near` or `--mode syntax --mode semantic`. Fuzzy channels
-        /// take an optional acceptance threshold inline: `--mode near:0.8`.
-        #[arg(
-            long,
-            value_delimiter = ',',
-            num_args = 1,
-            action = clap::ArgAction::Append,
-            value_parser = parse_scan_mode,
-            value_name = "MODE"
-        )]
-        mode: Vec<ScanMode>,
-        /// Extra views (repeatable / comma-list): `diff` (each family as a unified
-        /// diff of its two copies), `proposal` (an extraction skeleton over all copies),
-        /// `hotspots` (directories ranked by duplicated lines), `reinvented` (helpers
-        /// reimplemented inline instead of called). e.g. `--show diff,hotspots`.
-        #[arg(long, value_delimiter = ',', value_name = "VIEW")]
-        show: Vec<ShowView>,
-        /// Cache per-file analysis under this directory. Re-runs reuse the cache for
-        /// unchanged files (keyed by content hash), skipping parse/normalize/extract
-        /// — much faster on repeated invocations (CI, pre-commit, iterating).
-        #[arg(long, value_name = "DIR")]
-        cache_dir: Option<PathBuf>,
-        /// CI gate — exit non-zero when families are reported: `any` (any reported
-        /// family fails) or `new` (only families new/changed vs `--baseline` fail;
-        /// requires `--baseline`). e.g. `nose scan src --mode syntax --fail-on any`.
-        #[arg(long, value_name = "WHAT")]
-        fail_on: Option<FailOn>,
-        /// Baseline file of already-accepted families. Families recorded here are
-        /// hidden from the report and don't trip `--fail-on`, so a run flags only
-        /// *new* duplication — the way to adopt on a codebase that already has clones.
-        #[arg(long, value_name = "FILE")]
-        baseline: Option<PathBuf>,
-        /// Structured ignore file for intentionally suppressed families. Defaults
-        /// to `nose.ignore.json` when that file exists.
-        #[arg(long, value_name = "FILE")]
-        ignore_file: Option<PathBuf>,
-        /// Local semantic-pack v0 manifest file or directory to load. Repeatable;
-        /// each path is an explicit opt-in and currently contributes provenance metadata only.
-        #[arg(long = "semantic-pack", value_name = "FILE_OR_DIR")]
-        semantic_pack: Vec<PathBuf>,
-        /// Write the current families to the `--baseline` file (accept today's state)
-        /// and exit, instead of reporting.
-        #[arg(long, requires = "baseline")]
-        write_baseline: bool,
-        /// Output format.
-        #[arg(long, default_value = "human")]
-        format: ReportFormat,
-        /// Skip files matching a gitignore-style glob (repeatable), e.g.
-        /// `--exclude tests --exclude 'vendor/**' --exclude '**/*.generated.ts'`.
-        /// (.gitignore is already respected automatically.)
-        #[arg(long)]
-        exclude: Vec<String>,
-        /// Ignore units or syntax copy-paste runs smaller than this size, measured in
-        /// IL tokens (the unit's node count). [default: 24]
-        #[arg(long)]
-        min_size: Option<usize>,
-        /// Advanced: also require this many source lines (most users only need
-        /// --min-size). [default: 5]
-        #[arg(long, hide = true)]
-        min_lines: Option<u32>,
-        /// Keep only one side of the test boundary: `prod` (drop all-test
-        /// families; test↔prod leaks stay), `test` (only all-test families),
-        /// or `all` (default). Applies to every output format and `--fail-on`.
-        #[arg(long, value_enum, default_value_t = ScopeFilter::All)]
-        scope: ScopeFilter,
-    },
-    /// Scan a path, list duplicated-code families, and drill into the results.
+    /// Analyze a path, list duplicated-code families, and drill into the results.
     ///
     /// With no terms, `nose query <path>` prints a summary and runnable next commands.
     /// Add terms to filter (`witness=exact`, `path~api`), group (`group=dir`), sort
     /// (`sort=value`), or open one family (`id=<fam> full`). Carries the analysis flags,
     /// the `--fail-on` CI gate, and a versioned `--format json` contract.
     Query {
-        /// Path to a file or directory (recursively scanned).
+        /// Path to a file or directory (recursively analyzed).
         #[arg(required = true)]
         path: PathBuf,
         /// Query terms (none → summary): `field=value` `field>N` `field<N`
@@ -205,7 +104,7 @@ pub(crate) enum Cmd {
         /// Detection channels to run; omit for `syntax,semantic,near`. Pass a comma-list
         /// or repeat the flag; fuzzy channels take an inline threshold (`near:0.8`).
         #[arg(long, value_delimiter = ',')]
-        mode: Vec<ScanMode>,
+        mode: Vec<DetectionMode>,
         /// Ignore units smaller than this size, in IL tokens (the unit's node count). [default: 24]
         #[arg(long)]
         min_size: Option<usize>,
@@ -245,65 +144,6 @@ pub(crate) enum Cmd {
         #[arg(long, requires = "baseline")]
         write_baseline: bool,
     },
-    /// Flag a change applied to one clone copy but not its siblings (PR/CI check).
-    ///
-    /// Compares the working tree to a git ref and reports clone families changed
-    /// inconsistently in that diff: a copy was edited but its sibling clones were
-    /// not — a likely un-propagated change. Needs a git repository. e.g.
-    /// `nose review --base origin/main` in CI, or `nose review` for local changes.
-    #[command(hide = true)]
-    Review {
-        /// Paths to scan (recursively). Defaults to the current directory.
-        paths: Vec<PathBuf>,
-        /// Compare the working tree against this git ref (`origin/main` for a PR branch;
-        /// the default `HEAD` reviews uncommitted local changes).
-        #[arg(long, default_value = "HEAD")]
-        base: String,
-        /// Detection channels, like `scan`: `syntax`, `semantic`, `near[:T]` (comma-list
-        /// or repeatable). Omit for `syntax,semantic` (review keeps the conservative
-        /// mix; `scan`'s default also includes `near`).
-        #[arg(
-            long,
-            value_delimiter = ',',
-            num_args = 1,
-            action = clap::ArgAction::Append,
-            value_parser = parse_scan_mode,
-            value_name = "MODE"
-        )]
-        mode: Vec<ScanMode>,
-        /// Ignore units smaller than this size, in IL tokens. [default: 24]
-        #[arg(long)]
-        min_size: Option<usize>,
-        /// Advanced: also require this many source lines. [default: 5]
-        #[arg(long, hide = true)]
-        min_lines: Option<u32>,
-        /// Skip paths matching a gitignore-style glob (repeatable).
-        #[arg(long)]
-        exclude: Vec<String>,
-        /// Read defaults from this config file (else `nose.toml`/`.nose.toml`).
-        #[arg(long, value_name = "FILE")]
-        config: Option<PathBuf>,
-        /// Structured ignore file for accepted divergences (same format as `scan`).
-        /// Defaults to `nose.ignore.json` when it exists.
-        #[arg(long, value_name = "FILE")]
-        ignore_file: Option<PathBuf>,
-        /// Output format.
-        #[arg(long, default_value = "human")]
-        format: ReportFormat,
-        /// Show at most N findings (0 = all). [default: 30]
-        #[arg(long)]
-        top: Option<usize>,
-        /// Exit non-zero when the gate fires (CI gate). What fires is governed
-        /// by --fail-on (default: only findings whose change provably touches
-        /// lines shared with the un-updated sibling).
-        #[arg(long)]
-        fail: bool,
-        /// Gate tier for --fail: `shared-logic` (default — fire only when the
-        /// diff provably touches lines a changed copy shares with its
-        /// un-updated sibling) or `any` (fire on every flagged finding).
-        #[arg(long, value_enum, default_value_t = review::ReviewFailOn::SharedLogic)]
-        fail_on: review::ReviewFailOn,
-    },
     /// Recall-ceiling diagnostic: split gold recall across unit-extraction /
     /// candidate-generation stages. (Hidden — benchmark/research tooling.)
     #[command(hide = true)]
@@ -334,7 +174,7 @@ pub(crate) enum Cmd {
     },
     /// Report IL lowering coverage (Raw ratio + top unhandled constructs).
     Stats {
-        /// Paths to source files or directories (recursively scanned).
+        /// Paths to source files or directories (recursively analyzed).
         #[arg(required = true)]
         paths: Vec<PathBuf>,
         /// How many top unhandled surface kinds to list.
@@ -373,7 +213,7 @@ pub(crate) enum Cmd {
     /// (Hidden — research.)
     #[command(hide = true)]
     Features {
-        /// Paths to source files or directories (recursively scanned).
+        /// Paths to source files or directories (recursively analyzed).
         #[arg(required = true)]
         paths: Vec<PathBuf>,
         /// Minimum unit line count.
@@ -395,7 +235,7 @@ pub(crate) enum Cmd {
     /// dispatch, …) by unproven mass. JSON only. (Hidden — research.)
     #[command(hide = true)]
     ValueCensus {
-        /// Paths to source files or directories (recursively scanned).
+        /// Paths to source files or directories (recursively analyzed).
         #[arg(required = true)]
         paths: Vec<PathBuf>,
         /// Disable control-flow normalization (ablation).
@@ -408,7 +248,7 @@ pub(crate) enum Cmd {
     /// of a clone detector). Also reports completeness. (Hidden — research.)
     #[command(hide = true)]
     Verify {
-        /// Paths to source files or directories (recursively scanned).
+        /// Paths to source files or directories (recursively analyzed).
         #[arg(required = true)]
         paths: Vec<PathBuf>,
         /// Disable control-flow normalization (ablation).
@@ -502,15 +342,13 @@ pub(crate) enum StatsFormat {
     Json,
 }
 
-pub(crate) struct ScanArgs {
+pub(crate) struct QueryArgs {
     pub(crate) paths: Vec<PathBuf>,
-    pub(crate) top: Option<usize>,
     pub(crate) min_members: Option<usize>,
     pub(crate) min_value: Option<f64>,
     pub(crate) sort: Option<SortKey>,
     pub(crate) config: Option<PathBuf>,
-    pub(crate) mode: Vec<ScanMode>,
-    pub(crate) show: Vec<ShowView>,
+    pub(crate) mode: Vec<DetectionMode>,
     pub(crate) cache_dir: Option<PathBuf>,
     pub(crate) fail_on: Option<FailOn>,
     pub(crate) baseline: Option<PathBuf>,

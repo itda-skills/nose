@@ -261,7 +261,7 @@ impl Il {
     /// The nearest enclosing `Func`/`Lambda` scope of `node` by source span: the
     /// smallest-width scope whose span contains the node's span, ties broken by
     /// the lowest scope id. Computed for the whole arena on first use and cached —
-    /// the per-query linear scan this replaces was O(nodes) *per call*, which went
+    /// the per-query linear pass this replaces was O(nodes) *per call*, which went
     /// quadratic (4-minute single files) on minified-bundle-sized inputs.
     pub fn nearest_scope(&self, node: NodeId) -> Option<NodeId> {
         let index = self.scope_index.get_or_init(|| self.build_scope_index());
@@ -348,7 +348,7 @@ impl Il {
         let pack_hash = stable_symbol_hash(pack_id);
         let rule_hash = stable_symbol_hash(rule);
         // Index-backed dedup: only records anchored at this exact span can match,
-        // so the previous whole-`evidence` scan (quadratic over an emit-heavy
+        // so the previous whole-`evidence` pass (quadratic over an emit-heavy
         // pass) narrows to one bucket.
         if let Some(id) = self.evidence_anchored_at(anchor.span()).find_map(|record| {
             (record.anchor == anchor
@@ -399,7 +399,7 @@ impl Il {
 
     /// Evidence records whose anchor sits exactly at `span` (all anchor kinds
     /// match by exact span equality). Backed by the lazy evidence index, so a
-    /// caller no longer pays a full `evidence` scan per query.
+    /// caller no longer pays a full `evidence` pass per query.
     pub fn evidence_anchored_at(&self, span: Span) -> impl Iterator<Item = &EvidenceRecord> {
         let indices = self.with_evidence_index(|index| {
             index
@@ -415,7 +415,7 @@ impl Il {
 
     /// Node ids whose span covers exactly these bytes (callers still compare
     /// full [`Span`]/kind/payload as needed), in arena order. Replaces
-    /// whole-arena scans for span-keyed lookups — those were quadratic when a
+    /// whole-arena passes for span-keyed lookups — those were quadratic when a
     /// consumer queried per node. Backed by a lazy index under the arena
     /// immutability discipline (see the `span_index` field).
     pub fn nodes_spanning(&self, span: Span) -> impl Iterator<Item = NodeId> + '_ {
@@ -441,7 +441,7 @@ impl Il {
     /// `Assign` node ids whose [`Il::nearest_scope`] is `scope` (`None` =
     /// module level), in arena order. Backed by a lazy index: binding-LHS
     /// resolution filters assignments by scope per *reference*, which was a
-    /// whole-arena scan per query before.
+    /// whole-arena pass per query before.
     pub fn assigns_in_scope(&self, scope: Option<NodeId>) -> &[NodeId] {
         let index = self.assign_scope_index.get_or_init(|| {
             let mut by_scope: std::collections::HashMap<u32, Vec<NodeId>> =

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reconstruct evidence packets for every G2 (gold) event so a judge can audit the label.
 
-For each G2 event we re-scan the `from` snapshot, locate the family by fam_key, find the
+For each G2 event we re-query the `from` snapshot, locate the family by fam_key, find the
 changed member and the bug-fix commit that touched its function, and capture the code of
 a changed member and a lagging (unchanged) sibling plus the commit message. The output
 feeds an LLM-judge precision audit (docs/hazard-benchmark.md, the "human-audited gold
@@ -11,7 +11,7 @@ Usage: audit_sample.py all-events.jsonl out-evidence.jsonl [--limit N]
 """
 import json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from mine import sh, scan, families, span_changed, changed_ranges, BUGFIX  # noqa: E402
+from mine import sh, query_snapshot, families, span_changed, changed_ranges, BUGFIX  # noqa: E402
 
 NOSE = os.environ.get("NOSE", "/Users/ak/prjs/cc/nose/target/release/nose")
 WORK = os.environ.get("WORK", "/tmp/hazard-mine")
@@ -50,13 +50,13 @@ def main():
             repo = e["repo"]
             dir_ = f"{WORK}/{repo}"
             subdir = SUBDIR.get(repo, "")
-            jdoc = scan(dir_, e["from"], NOSE, subdir, "semantic,near", 0.7)
+            jdoc = query_snapshot(dir_, e["from"], NOSE, subdir, "semantic,near", 0.7)
             if not jdoc:
                 continue
             fams = families(jdoc, os.path.abspath(dir_))
             fam = next((f for f in fams if f["key"] == e["fam_key"]), None)
             if fam is None:
-                continue  # family not reproduced at re-scan (rare)
+                continue  # family not reproduced by the replayed query (rare)
             ranges = changed_ranges(dir_, e["from"], e["to"])
             changed, lagging = [], []
             for (f, n, s, en) in fam["members"]:

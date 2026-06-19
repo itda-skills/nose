@@ -45,7 +45,7 @@ NOSE = ROOT / "target" / "release" / "nose"
 
 SUBDAG_FLOORS = (8, 12, 20)  # 20 == nose_normalize::ANCHOR_MIN_WEIGHT
 INLINE_FLOOR = 20  # one-step inline must reach the shipped anchor weight
-SCAN_TIMEOUT = 600
+QUERY_TIMEOUT = 600
 
 
 def rel(p: str) -> str:
@@ -67,19 +67,19 @@ def member_locs(fam):
     ]
 
 
-def scan_families(stdout: str):
+def query_families(stdout: str):
     payload = json.loads(stdout or "[]")
     if isinstance(payload, dict):
         return payload.get("families", [])
     return payload
 
 
-def run_scan(repo_dir: Path, extra):
-    cmd = [str(NOSE), "scan", str(repo_dir), "--format", "json", "--top", "0", *extra]
-    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=SCAN_TIMEOUT)
+def run_query(repo_dir: Path, extra):
+    cmd = [str(NOSE), "query", str(repo_dir), "all", "top=0", "--format", "json", *extra]
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=QUERY_TIMEOUT)
     if r.returncode != 0:
         return None
-    return [member_locs(f) for f in scan_families(r.stdout)]
+    return [member_locs(f) for f in query_families(r.stdout)]
 
 
 def label_hit(label, fam_locs) -> bool:
@@ -114,7 +114,7 @@ def inter_mass(a, b) -> int:
 
 def features_units(files):
     cmd = [str(NOSE), "features", *files, "--min-lines", "1", "--min-tokens", "1"]
-    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=SCAN_TIMEOUT)
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=QUERY_TIMEOUT)
     if r.returncode != 0:
         return None
     return json.loads(r.stdout)["units"]
@@ -206,7 +206,7 @@ def main():
 
     agg = defaultdict(Counter)  # (lang, split) -> counters
     missed_records = []
-    scan_failures = []
+    query_failures = []
 
     for rid in repo_ids:
         repo_dir = repos_root / rid
@@ -215,12 +215,12 @@ def main():
         labs = by_repo[rid]
         split = labs[0]["split"]
         lang = lang_of.get(rid, "?")
-        arm0 = run_scan(repo_dir, [])
-        arm1 = run_scan(
+        arm0 = run_query(repo_dir, [])
+        arm1 = run_query(
             repo_dir, ["--mode", "syntax,semantic,near", "--min-value", "0", "--min-members", "2"]
         )
         if arm0 is None or arm1 is None:
-            scan_failures.append(rid)
+            query_failures.append(rid)
             continue
         key = (lang, split)
         for lab in labs:
@@ -252,7 +252,7 @@ def main():
         "nose_version": nose_ver,
         "subdag_floors": list(SUBDAG_FLOORS),
         "inline_floor": INLINE_FLOOR,
-        "scan_failures": sorted(scan_failures),
+        "query_failures": sorted(query_failures),
         "summary": {
             f"{lang}/{split}": dict(sorted(c.items())) for (lang, split), c in sorted(agg.items())
         },
@@ -286,8 +286,8 @@ def main():
                   f"arm1-missed {missed1} of which sub-DAG-ceiling {tot['subdag-ceiling']}, "
                   f"inline-ceiling {tot['inline-ceiling']}, "
                   f"same-unit-window {tot['same-unit-window']}")
-    if scan_failures:
-        print(f"\nscan failures (excluded): {', '.join(sorted(scan_failures))}")
+    if query_failures:
+        print(f"\nquery failures (excluded): {', '.join(sorted(query_failures))}")
 
     if args.json_out:
         Path(args.json_out).write_text(json.dumps(out, indent=1, sort_keys=True) + "\n")

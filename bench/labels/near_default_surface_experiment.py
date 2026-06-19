@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Price putting the near channel on the default scan surface.
+"""Price putting the near channel on the default query surface.
 
 The experiment compares the current CLI default (`syntax,semantic`) with opt-in
 `near` arms on the frozen v5 refactoring-family labelset. It reports:
@@ -27,7 +27,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 NOSE = ROOT / "target" / "release" / "nose"
-SURFACES = ("default", "review", "hidden", "debug")
+SURFACES = ("default", "divergence", "hidden", "debug")
 SCOPES = ("prod", "test", "mixed", "unknown")
 ARMS = (
     ("default", None),
@@ -49,7 +49,7 @@ def parse_args() -> argparse.Namespace:
         default=ROOT / "bench" / "repos",
         help="checkout root containing one directory per corpus repo",
     )
-    p.add_argument("--cache-dir", type=Path, help="forwarded to nose scan --cache-dir")
+    p.add_argument("--cache-dir", type=Path, help="forwarded to nose query --cache-dir")
     p.add_argument(
         "--output",
         type=Path,
@@ -57,7 +57,7 @@ def parse_args() -> argparse.Namespace:
         help="aggregate JSON result path",
     )
     p.add_argument("--bootstrap", type=int, default=2000, help="bootstrap resamples per CI")
-    p.add_argument("--timeout", type=int, default=300, help="per-repo scan timeout in seconds")
+    p.add_argument("--timeout", type=int, default=300, help="per-repo query timeout in seconds")
     p.add_argument("--limit-repos", type=int, help="smoke-test with the first N labeled repos")
     return p.parse_args()
 
@@ -74,8 +74,8 @@ def load_inputs() -> tuple[list[dict], dict[str, dict], dict[str, list[dict]]]:
     return labels, corpus, by_repo
 
 
-def scan(repo: Path, mode: str | None, cache_dir: Path | None, timeout: int) -> dict:
-    cmd = [str(NOSE), "scan", str(repo), "--format", "json", "--top", "0"]
+def query_repo(repo: Path, mode: str | None, cache_dir: Path | None, timeout: int) -> dict:
+    cmd = [str(NOSE), "query", str(repo), "all", "top=0", "--format", "json"]
     if mode:
         cmd += ["--mode", mode]
     if cache_dir:
@@ -193,7 +193,7 @@ def evaluate(args: argparse.Namespace) -> dict:
         meta = corpus[rid]
         keys = [(meta["primary_language"], meta["split"]), ("OVERALL", meta["split"])]
         for arm, mode in ARMS:
-            payload = scan(repo, mode, args.cache_dir, args.timeout)
+            payload = query_repo(repo, mode, args.cache_dir, args.timeout)
             families = payload.get("families", [])
             for key in keys:
                 acc[arm][key]["p10"].extend(p10_flags(families, labs))
@@ -262,7 +262,7 @@ def fmt_metric(data: dict) -> str:
 
 def markdown(result: dict) -> str:
     lines = []
-    lines.append("## Near default-surface experiment")
+    lines.append("## Near default-query-surface experiment")
     lines.append("")
     lines.append("P@10 uses nose's native JSON order (`extractability`); worthy-recall is over worthy v5 labels.")
     for split in ("dev", "heldout"):
@@ -279,9 +279,9 @@ def markdown(result: dict) -> str:
                     f"{fmt_metric(data['p_at_10'])} | {fmt_metric(data['worthy_recall'])} |"
                 )
     lines.append("")
-    lines.append("### default-surface family deltas")
+    lines.append("### default-query-surface family deltas")
     lines.append("")
-    lines.append("| arm | default | delta | prod delta | test delta | mixed delta | review delta | hidden delta |")
+    lines.append("| arm | default | delta | prod delta | test delta | mixed delta | divergence delta | hidden delta |")
     lines.append("|---|---:|---:|---:|---:|---:|---:|---:|")
     for arm, data in result["noise"].items():
         lines.append(
@@ -289,7 +289,7 @@ def markdown(result: dict) -> str:
             f"{data['default_surface_delta_by_scope'].get('prod', 0):+d} | "
             f"{data['default_surface_delta_by_scope'].get('test', 0):+d} | "
             f"{data['default_surface_delta_by_scope'].get('mixed', 0):+d} | "
-            f"{data['surface_delta_vs_default']['review']:+d} | "
+            f"{data['surface_delta_vs_default']['divergence']:+d} | "
             f"{data['surface_delta_vs_default']['hidden']:+d} |"
         )
     return "\n".join(lines)

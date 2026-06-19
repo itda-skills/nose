@@ -57,7 +57,7 @@ pub(crate) fn candidates<'a>(
     // 2. Sort so equal-hash entries are contiguous — these runs are the buckets.
     entries.par_sort_unstable();
 
-    // 3. Find bucket boundaries (cheap O(n) scan over contiguous memory)…
+    // 3. Find bucket boundaries (cheap O(n) pass over contiguous memory)…
     let mut bounds = Vec::new();
     let mut start = 0;
     while start < entries.len() {

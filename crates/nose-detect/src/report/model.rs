@@ -280,7 +280,7 @@ impl RefactorFamily {
         }
     }
 
-    /// Product placement for the default scan/review/debug surfaces. This is a
+    /// Product placement for the default/divergence/debug surfaces. This is a
     /// presentation/ranking decision, not detector semantics: exact fragments remain
     /// present in `--top 0` JSON even when their default ranking is dampened.
     ///
@@ -355,20 +355,20 @@ impl RefactorFamily {
 
         if tiny_test_scaffold {
             // The fragment-quality audit found these are usually correct but too often
-            // test arrange/assert or fixture-constructor substrate to be review items.
+            // test arrange/assert or fixture-constructor substrate to be divergence items.
             "hidden"
         } else if high_fanout && self.mean_lines <= 3 {
             "hidden"
         } else if has_effect_or_body {
             // Receiver/effect-bearing fragments are usually synchronization hazards first.
             // Promote only substantial, cross-file production fragments to default; keep
-            // test/generated-looking and tiny forms in review/hidden.
+            // test/generated-looking and tiny forms in divergence/hidden.
             if !all_test && self.mean_lines >= 12 && self.files >= 2 && self.modules >= 2 {
                 "default"
             } else if self.mean_lines <= 3 && all_have_enclosing {
                 "hidden"
             } else {
-                "review"
+                "divergence"
             }
         } else if has_guard_or_exit {
             if self.mean_lines >= 12 && self.files >= 2 && !all_test {
@@ -376,10 +376,10 @@ impl RefactorFamily {
             } else if self.mean_lines <= 3 {
                 "hidden"
             } else {
-                "review"
+                "divergence"
             }
         } else if self.mean_lines <= 8 {
-            "review"
+            "divergence"
         } else {
             "default"
         }
@@ -388,7 +388,7 @@ impl RefactorFamily {
     fn default_surface_weight(&self) -> f64 {
         match self.recommended_surface() {
             "default" => 1.0,
-            "review" => 0.35,
+            "divergence" => 0.35,
             "shallow" => 0.05,
             "hidden" => 0.05,
             "debug" => 0.02,

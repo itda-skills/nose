@@ -34,9 +34,9 @@ The pages are grouped by what you're here to do.
 
 You want to *run* nose on a codebase and act on what it finds.
 
-- [usage](usage.md) — the complete command and flag reference: `query`, `stats`, `il`, `capabilities`, `semantic-pack` — plus the deprecated `scan`/`review` — the ranking keys, and the detection modes.
-- [usage › nose query](usage.md#nose-query) — `nose query`: scan a path, inspect the best duplicated-code families, filter/group/sort the list, open one family, run the `--fail-on` CI gate, or emit the versioned JSON contract.
-- [review](review.md) — the **divergent-edit** check: flag clones changed inconsistently in a diff (a copy fixed, its siblings missed). Now reached as `nose query <paths> base=<ref>`; `nose review` is the deprecated alias.
+- [usage](usage.md) — the complete command and flag reference: `query`, `stats`, `il`, `capabilities`, `semantic-pack`, the ranking keys, and the detection modes.
+- [usage › nose query](usage.md#nose-query) — `nose query`: analyze a path, inspect the best duplicated-code families, filter/group/sort the list, open one family, run the `--fail-on` CI gate, or emit the versioned JSON contract.
+- [divergent edits](divergent-edits.md) — the `base=<ref>` check: flag clones changed inconsistently in a diff (a copy fixed, its siblings missed).
 - [configuration](configuration.md) — the `nose.toml` file: excludes, modes, ranking, thresholds, and structured-ignore defaults.
 - [continuous-integration](continuous-integration.md) — the `--fail-on any` gate, baseline-driven incremental adoption, SARIF, and fast re-runs.
 - [structured-ignores](structured-ignores.md) — suppress reviewed findings with reason, owner, expiry, and machine-readable ignored-family output.
@@ -52,8 +52,7 @@ of nose's machine-readable output.
 
 - [capabilities](capabilities.md) — the `nose capabilities` JSON contract: what an installed binary supports, so a wrapper never has to scrape `--help`.
 - [agent-recipe](agent-recipe.md) — the validated protocol for an LLM agent: use `nose query` for exploration, then read the `nose query --format json` contract for batch and gate workflows.
-- [query-json](query-json.md) — the versioned `nose query --format json` contract (schema v3): the structured, view-shaped machine form of the exploration surface. **The forward machine contract.**
-- [scan-json](scan-json.md) — the versioned `nose scan --format json` v1 contract — **deprecated** in favour of query-JSON v3, documented for back-compat.
+- [query-json](query-json.md) — the versioned `nose query --format json` contract (schema v3): the structured, view-shaped machine form of the exploration surface.
 
 ## Contributing
 
@@ -73,7 +72,7 @@ fundamentals; the rest is grouped by area.
 - [fragment-contracts](fragment-contracts.md) — how exact sub-function fragments are modeled: classification, contract, the wrapper-synthesis behavior oracle, the effect algebra, and fail-closed receiver identity.
 - [reinvented-helpers](reinvented-helpers.md) — the containment channel: code that reimplements an existing pure helper inline, and the surface policy promoting non-test findings to the default report.
 - [oracle-value-model](oracle-value-model.md) — the verify oracle's value model (Int/Bool/Str-monoid/List/Float/Sym), what it witnesses, and the outcomes that closed the #283 false-merge cluster (C string/`+`-non-assoc, D-int32 width, D-div float) plus the `--falsify` search.
-- [value-float-kind-design](value-float-kind-design.md) — the IEEE-754 `Value::Float` kind (#342, SHIPPED): how fully-untyped float associativity was closed in both the oracle and the scan, with the full-corpus recall measurement (delta 0).
+- [value-float-kind-design](value-float-kind-design.md) — the IEEE-754 `Value::Float` kind (#342, SHIPPED): how fully-untyped float associativity was closed in both the oracle and the analyzer, with the full-corpus recall measurement (delta 0).
 - [formal-soundness](formal-soundness.md) — Lean 4 proof-obligation registry for proof-sensitive IL, normalization, fragment, and oracle contracts.
 
 ### Semantic kernel & packs
@@ -85,7 +84,7 @@ fundamentals; the rest is grouped by area.
 - [semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md) — closeout for the #109 semantic-kernel foundation and follow-up tranche.
 - [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md) — versioned v0 schema and provider-facing extension API for language/library semantic packs.
 - [semantic-pack-conformance](semantic-pack-conformance.md) — provider/user workflow for checking local pack manifests and declared fixture assets without implying nose approval.
-- [semantic-pack-loading](semantic-pack-loading.md) — local pack manifest loading, explicit opt-in trust policy, and scan JSON provenance reporting.
+- [semantic-pack-loading](semantic-pack-loading.md) — local pack manifest loading, explicit opt-in trust policy, and query JSON provenance reporting.
 - [evidence-records](evidence-records.md) — the internal pack-facing evidence substrate for source, domain, import, symbol, type, guard, place/effect, library API, and sequence-surface facts.
 - [demand-effect-semantics](demand-effect-semantics.md) — the internal demand/effect contract model for eager, lazy, short-circuit, async, generator, and channel boundaries.
 - [source-facts](source-facts.md) — source-origin evidence for semantic contracts: construct syntax, async/generator/error boundaries, literal/operator provenance, pack boundaries, and fail-closed exact admission.
@@ -107,9 +106,9 @@ fundamentals; the rest is grouped by area.
 - [field-evaluation](field-evaluation.md) — qualitative results from running nose on real third-party projects.
 - [dogfooding](dogfooding.md) — nose run on its own source, and what its findings taught us.
 - [reinvented-helper-audit-2026-06-13](reinvented-helper-audit-2026-06-13.md) — the hand-labeled field audit that promoted the reinvented-helper channel to the default surface.
-- [scanjson-agent-audit-2026-06-10](scanjson-agent-audit-2026-06-10.md) — can an LLM agent decide and act from scan JSON alone? The measured gap list for consumer 1's evidence surface.
-- [scanjson-agent-audit-2026-06-13](scanjson-agent-audit-2026-06-13.md) — the re-validation after the gap fixes (incl. the graded witness): all five gaps closed, 8/8 decidable from JSON alone.
-- [fragment-quality-audit-2026-06-10](fragment-quality-audit-2026-06-10.md) — labeled Java/Python hidden/review exact-fragment sample and the resulting surface policy.
+- [scanjson-agent-audit-2026-06-10](scanjson-agent-audit-2026-06-10.md) — historical machine-contract audit for consumer 1's evidence surface.
+- [scanjson-agent-audit-2026-06-13](scanjson-agent-audit-2026-06-13.md) — historical re-validation after the gap fixes (incl. the graded witness): all five gaps closed, 8/8 decidable from JSON alone.
+- [fragment-quality-audit-2026-06-10](fragment-quality-audit-2026-06-10.md) — labeled Java/Python exact-fragment sample and the resulting surface policy.
 - [lawpack-provenance-audit-2026-06-10](lawpack-provenance-audit-2026-06-10.md) — full-corpus and targeted real-repo audit of `nose.value_graph.laws` provenance.
 - [default-surface-noise-audit-2026-06-14](default-surface-noise-audit-2026-06-14.md) — re-judging the #263/#264/#11/#353 triage-noise feedback on fresh repos: the default-surface noise is two populations (decidable-shape vs judgment-deep AAA scaffolding), and the principle-respecting lever.
 

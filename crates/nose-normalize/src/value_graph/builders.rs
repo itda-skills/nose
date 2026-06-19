@@ -195,7 +195,7 @@ impl<'a> Builder<'a> {
         while let Some(n) = stack.pop() {
             // Go functional append `r = append(r, item)`: count it as r's single build append
             // and a single build mention (mirroring the effect form's one receiver mention),
-            // then scan ONLY `item` — the two r occurrences (assign target + append receiver)
+            // then visit ONLY `item` — the two r occurrences (assign target + append receiver)
             // are the build, not other uses that would disqualify r.
             if self.il.kind(n) == NodeKind::Assign {
                 if let [tgt, rhs] = self.il.children(n) {
@@ -222,7 +222,7 @@ impl<'a> Builder<'a> {
             }
             // An effect-form append — `r.append/push(item)` (canonical) or Java `r.add(item)` —
             // counts as r's build append (the receiver mention is counted by the generic Var
-            // scan above / below as the node's children are walked).
+            // generic Var visit above / below as the node's children are walked).
             if let Some((c, items)) = self.list_append_parts(n) {
                 if items.len() == 1 {
                     *appends.entry((c, BuilderKind::List)).or_insert(0) += 1;

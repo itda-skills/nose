@@ -52,7 +52,6 @@ Two exclusions keep the surface honest:
 
 - **`nose query <path> reinvented`** (primary): the forward exploration view — the action
   is "call it". It lists every finding, test-container ones included.
-  `nose scan --show reinvented` is the deprecated equivalent.
 - **Human report**: the default report LISTS the non-test findings (top by weight) —
   promoted from a one-line count after the [2026-06-13 field audit](reinvented-helper-audit-2026-06-13.md)
   ([design §2c](design.md)); the audit's precision figures are in the Measured section below.
@@ -62,8 +61,7 @@ Two exclusions keep the surface honest:
   view.
 - **Machine JSON**: query-JSON's `reinvented` view (`items[]`, each
   `{helper, site, value, approximate}`) is the forward contract —
-  see [query-json](query-json.md#views); the deprecated equivalent is scan-JSON's additive
-  `reinvented_helpers` array (omitted when empty) — see [scan-json](scan-json.md#reinvented-helpers).
+  see [query-json](query-json.md#views).
 - A **vendored** (non-test) container is, like a test container, a consumer judgment
   call — but unlike `container_in_test` it is *not* auto-excluded from the default: nose
   lists it and carries the locations, so the consumer filters by path.
@@ -76,7 +74,7 @@ boundaries the consumer must check:
 
 - **Approximate site.** When the matched computation is a synthesized loop fold (a
   `Reduce` with no precise source span), the site falls back to the WHOLE container range
-  and `approximate` is `true` in the JSON (`site_approximate` in the deprecated scan-JSON).
+  and `approximate` is `true` in the JSON.
   The helper's computation is then a
   *sub-part* of those lines (the container does more — e.g. `total * extra + 9` around
   the fold), so the fix is "call the helper for the matched part", not "delete these
@@ -102,4 +100,4 @@ copy-pasted from the time variant and still calls `getCollectionTime()`, which i
 `NOSE_REINVENTED_MIN_WEIGHT` (research surface) adjusts the anchor collection floor.
 
 *See also: [normalization](normalization.md) · [clone-types](clone-types.md) ·
-[query-json](query-json.md) · [scan-json](scan-json.md) · [design](design.md) · [experiments](experiments.md).*
+[query-json](query-json.md) · [design](design.md) · [experiments](experiments.md).*

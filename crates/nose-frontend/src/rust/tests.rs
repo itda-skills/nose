@@ -123,7 +123,7 @@ fn panic_macro_lowers_to_throw() {
 }
 
 #[test]
-fn rust_item_shadow_scan_handles_visibility_and_qualifiers() {
+fn rust_item_shadow_lookup_handles_visibility_and_qualifiers() {
     assert!(rust_item_declares_name(
         "pub(crate) struct Some<T>(T);",
         "Some"

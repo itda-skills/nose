@@ -40,7 +40,7 @@
     "f5d4dde27f380cfc"
   ],
   "budget": 38,
-  "generated_by": "target/release/nose scan crates --mode near --min-value 40 --format json --top 0",
+  "generated_by": "target/release/nose query crates all top=0 --mode near --min-value 40 --format json",
   "min_value": 40,
   "mode": "near",
   "recommended_surface": "default",

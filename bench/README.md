@@ -45,7 +45,7 @@ new Swift frontend, not a replacement for the frozen v5 product metric.
 benchmark factory described in `docs/type4-benchmark.md`. It generates pair-level
 positive and hard-negative cases from semantic spec cards across every supported language
 surface, records the semantic proof capabilities currently available per surface, then
-evaluates `nose scan --mode semantic` against the manifest.
+evaluates `nose query --mode semantic` against the manifest.
 
 ```sh
 python3 bench/type4/generate.py --out-dir /tmp/nose-type4-seed

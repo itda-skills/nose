@@ -5,7 +5,7 @@
 /// Virtual only; pages commit lazily. See `deeply_nested_file_does_not_overflow`.
 pub(crate) const STACK_SIZE: usize = 1024 * 1024 * 1024;
 
-/// When a reader closes the pipe early — `nose scan … | head`, quitting a pager —
+/// When a reader closes the pipe early — `nose query … | head`, quitting a pager —
 /// the next write to stdout fails with `BrokenPipe`, and `println!` turns that into
 /// a panic (the ugly `failed printing to stdout` message). The Unix convention for a
 /// filter is to stop quietly instead. The textbook fix is to reset the `SIGPIPE`

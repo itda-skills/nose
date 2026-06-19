@@ -18,14 +18,14 @@ frontier_platform.py
 
 `bench/type4/adversarial` is no longer the source of truth for next work. The former
 adversarial ledger was retired after each entry had a current gate in tests, `type4-smoke`,
-focused verifier checks, or `scan_regression`.
+focused verifier checks, or `query_regression`.
 
 What remains is intentionally smaller:
 
 | file | role |
 |---|---|
 | `cases/cases.v1.json` | focused positive and hard-negative case handles |
-| `cases/**` | small fixture corpora used by focused `scan` gates, focused verifier checks, or boundary documentation |
+| `cases/**` | small fixture corpora used by focused query gates, focused verifier checks, or boundary documentation |
 | `scripts/type4-check` | validate target packets, real-frontier links, and focused cases |
 | `scripts/type4-next` | print next task cards from `frontier_target_packets.v1.json` |
 | `scripts/type4-report` | summarize target packets and focused case coverage |
@@ -64,7 +64,7 @@ real frontier evidence. Important cases should be promoted into an automatic gat
 - `nose verify --max-violations 0 <focused-corpus>` for named oracle-backed behavior
   checks; not every directory under `cases/**` is intended to pass as a standalone
   zero-violation verifier corpus;
-- `scan_regression compare` for product output/runtime and HoF value-graph budget checks;
+- `query_regression compare` for product output/runtime and HoF value-graph budget checks;
 - formal obligations where a proof precondition is the boundary.
 
 If a focused case is not used by a gate and does not clarify a target packet boundary, it is
@@ -80,7 +80,7 @@ Good hard negatives attack exactly the proof invariant a rule needs:
 - Java stream `flatMap` vs `map` returning streams;
 - FlatMap aggregate seed/predicate changes and nested-list aggregation;
 - effectful callback where a pure HoF rule would be unsound;
-- deep/wide generated HoF chains where representation growth or scan time makes a coverage
+- deep/wide generated HoF chains where representation growth or query time makes a coverage
   win too expensive.
 
 ## Verifier leads
@@ -105,7 +105,7 @@ negatives, and add a focused gate.
   and frontier summaries.
 - `bench/type4/frontier_platform.py` ranks real-corpus axes by breadth and evidence, then
   emits implementation-ready target packets.
-- `bench/type4/scan_regression/` guards product semantic scan output, runtime, fragment
+- `bench/type4/query_regression/` guards product semantic query output, runtime, fragment
   buckets, and HoF value-graph budgets.
 - `bench/type4/adversarial/cases` keeps small focused fixtures only when they support those
   gates or target packets.

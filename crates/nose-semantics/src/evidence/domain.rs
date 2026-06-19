@@ -323,7 +323,7 @@ pub(crate) fn unique_binding_lhs_for_var_reference(
     let mut found = None;
     // Only assignments in the reference's own scope can match — plus, for a
     // free (pre-alpha) name, module-level assignments. The scope-bucketed
-    // index replaces the whole-arena scan this did per reference.
+    // index replaces the whole-arena pass this did per reference.
     let module_level: &[NodeId] = if reference_is_free_name && scope.is_some() {
         il.assigns_in_scope(None)
     } else {

@@ -69,13 +69,13 @@ By default the generator emits:
 Use `--cross all` to generate every cross-surface positive pair and cross-template
 negative sibling.
 
-## Legacy generated-corpus evaluator
+## Generated-corpus evaluator
 
 ```sh
 python3 bench/type4/eval_manifest.py /tmp/nose-type4-seed/manifest.json
 ```
 
-The manifest evaluator still exercises the legacy semantic-scan product path over generated
+The manifest evaluator exercises the semantic-query product path over generated
 sources and reports positive recall plus false merges among every
 `expected_exact_detect=false` item. The summary line keeps the historic "hard-negative
 false merges" label, but the denominator also includes `E0` unproven/unsafe boundary cases
@@ -83,27 +83,27 @@ that exact semantic detection must not merge. Use `--fail-on-false-merge` when t
 a CI gate.
 
 `eval_manifest.py` and `frontier.py` accept both the current versioned
-`nose scan --format json` object and the older raw `families` array when `--scan-json`
-is supplied, so saved scan output can be reused without post-processing.
+`nose query --format json` object and the older raw `families` array when `--query-json`
+is supplied, so saved query output can be reused without post-processing.
 
 Focused coverage probes use the current exact-query path through
 `coverage_probe.py`, which runs `nose query ... witness=exact`.
 
-## Scan regression harness
+## Query regression harness
 
 Where the manifest evaluator asks *"does semantic detection cover the intended classes?"*,
-the scan regression harness asks *"did a detector change move product runtime or output
-volume on real repos?"* It measures only the product scan path
-(`nose scan --mode semantic --format json --top 0`), records full binary identity, takes
-median no-cache runtimes, and canonicalizes the `--top 0` JSON for order-independent
+the query regression harness asks *"did a detector change move product runtime or output
+volume on real repos?"* It measures only the product query path
+(`nose query <repo> all top=0 --mode semantic --format json`), records full binary identity, takes
+median no-cache runtimes, and canonicalizes the `top=0` JSON for order-independent
 output-drift comparison against a recorded baseline. Thresholds are investigation
 triggers, not merge blockers.
 
 ```sh
-python3 bench/type4/scan_regression/scan_regression.py compare --nose ./target/release/nose
+python3 bench/type4/query_regression/query_regression.py compare --nose ./target/release/nose
 ```
 
-See [`scan_regression/README.md`](scan_regression/README.md) for the subset, baseline,
+See [`query_regression/README.md`](query_regression/README.md) for the subset, baseline,
 cache mode, and thresholds.
 
 Before spending implementation time on a new axis, run a focused preflight against the
@@ -221,7 +221,7 @@ Use the prioritizer as a repeated pattern loop, not as a one-off report:
 Use `--cache` for routine reruns. The cache is invalidated when candidate regexes, probe
 regexes, file metadata, `--max-bytes`, or `--sample-limit` change; unchanged corpus reruns
 reuse the previous result. The report also lists top matching repos per candidate, which
-are the default audit sample before doing a wider real-repo scan.
+are the default audit sample before doing wider real-repo queries.
 
 For a new semantic axis, run this loop at least once end to end before adding more
 patterns. Continue for three to five passes while the top candidate still changes or real

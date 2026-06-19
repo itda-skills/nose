@@ -45,7 +45,7 @@ fn compiled_css_pipeline_demotes_source_plus_outputs_but_not_cross_source() {
     assert_eq!(effective_surface(&pipe, &ov), "generated");
     assert!(
         !is_default_report_family(&pipe, &ov),
-        "CSS build-pipeline families stay off scan's default surface"
+        "CSS build-pipeline families stay off query's default surface"
     );
     assert_eq!(
         family_actionability_reason(&pipe, &ov),

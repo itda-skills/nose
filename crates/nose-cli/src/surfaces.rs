@@ -2,7 +2,7 @@ use rayon::prelude::*;
 
 /// Compute the surface overrides for every output format and flag generated
 /// locations. The generated index is one head-read per discovered file (#224
-/// — the #216 audit's re2c case) and the declaration scan is one span-read
+/// — the #216 audit's re2c case) and the declaration analysis is one span-read
 /// per family; both run only when families exist.
 pub(crate) fn classify_surface_overrides(
     families: &mut [nose_detect::RefactorFamily],
@@ -65,6 +65,7 @@ pub(crate) fn is_default_report_family(
 /// CLI-side non-action classes (`generated-source`, `declaration-run`) take precedence —
 /// mirroring [`effective_surface`] — then the detector's pure-shape codes (`trivial`,
 /// `shallow-extraction`). `None` for a clean candidate. A reason, not a verdict.
+#[cfg(test)]
 pub(crate) fn family_actionability_reason(
     family: &nose_detect::RefactorFamily,
     overrides: &SurfaceOverrides,
@@ -329,7 +330,7 @@ pub(crate) fn surface_omission_note(
     let mut generated = 0;
     let mut declaration = 0;
     let mut shallow = 0;
-    let mut review = 0;
+    let mut divergence = 0;
     let mut hidden = 0;
     let mut debug = 0;
     for family in families {
@@ -337,20 +338,20 @@ pub(crate) fn surface_omission_note(
             "generated" => generated += 1,
             "declaration" => declaration += 1,
             "shallow" => shallow += 1,
-            "review" => review += 1,
+            "divergence" => divergence += 1,
             "hidden" => hidden += 1,
             "debug" => debug += 1,
             _ => {}
         }
     }
-    let omitted = generated + declaration + shallow + review + hidden + debug;
+    let omitted = generated + declaration + shallow + divergence + hidden + debug;
     if omitted == 0 {
         return None;
     }
     if generated == 0
         && declaration == 0
         && shallow == 0
-        && review == 0
+        && divergence == 0
         && hidden == 1
         && debug == 0
     {
@@ -366,8 +367,8 @@ pub(crate) fn surface_omission_note(
     if shallow > 0 {
         parts.push(format!("{shallow} shallow-extraction"));
     }
-    if review > 0 {
-        parts.push(format!("{review} review"));
+    if divergence > 0 {
+        parts.push(format!("{divergence} divergence"));
     }
     if hidden > 0 {
         parts.push(format!("{hidden} hidden"));
@@ -418,14 +419,14 @@ fn source_has_generated_header(file: &str) -> bool {
     source_head_has_generated_header(file)
 }
 
-const GENERATED_HEADER_SCAN_BYTES: u64 = 64 * 1024;
+const GENERATED_HEADER_READ_BYTES: u64 = 64 * 1024;
 
 fn source_head_has_generated_header(file: &str) -> bool {
     let Ok(mut f) = std::fs::File::open(file) else {
         return false;
     };
     let mut head = String::new();
-    let mut limited = std::io::Read::take(&mut f, GENERATED_HEADER_SCAN_BYTES);
+    let mut limited = std::io::Read::take(&mut f, GENERATED_HEADER_READ_BYTES);
     if std::io::Read::read_to_string(&mut limited, &mut head).is_err() {
         return false;
     }

@@ -4,7 +4,7 @@ use super::*;
 // intentional until the fixture setup has a clearer table-builder abstraction.
 #[allow(clippy::too_many_lines)]
 #[test]
-fn semantic_scan_reports_exact_safe_foreach_index_assignment_fragments_for_go() {
+fn semantic_query_reports_exact_safe_foreach_index_assignment_fragments_for_go() {
     let dir = std::env::temp_dir().join(format!(
         "nose_exact_foreach_index_assign_fragments_{}",
         std::process::id()
@@ -107,7 +107,7 @@ fn semantic_scan_reports_exact_safe_foreach_index_assignment_fragments_for_go() 
     }
 
     let out = run(&[
-        "scan",
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "semantic",
@@ -117,11 +117,10 @@ fn semantic_scan_reports_exact_safe_foreach_index_assignment_fragments_for_go() 
         "100",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]);
-    let json = scan_json(&out);
-    let families = scan_families(&json);
+    let json = query_json(&out);
+    let families = query_families(&json);
 
     let assert_loop_family =
         |left: &str, right: &str, negative: &str, start_line: u64, end_line: u64| {
@@ -230,7 +229,7 @@ fn semantic_scan_reports_exact_safe_foreach_index_assignment_fragments_for_go() 
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_conditional_foreach_append_effect_fragments_under_opaque_functions(
+fn semantic_query_reports_exact_safe_conditional_foreach_append_effect_fragments_under_opaque_functions(
 ) {
     let fixtures = [
         (
@@ -283,7 +282,7 @@ fn semantic_scan_reports_exact_safe_conditional_foreach_append_effect_fragments_
         ),
     ];
     let (dir, out, families) =
-        scan_fragment_only_fixtures("nose_exact_conditional_loop_effect_fragments", &fixtures);
+        query_fragment_only_fixtures("nose_exact_conditional_loop_effect_fragments", &fixtures);
 
     let assert_conditional_loop_family = |left: &str,
                                           right: &str,

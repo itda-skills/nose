@@ -11,7 +11,7 @@ use nose_markdown::{detect, Family, Options};
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
 
-/// Vendor/build directories never worth scanning for prose duplication — excluded even without a
+/// Vendor/build directories never worth checking for prose duplication — excluded even without a
 /// `.gitignore` (a non-git project's `node_modules` otherwise floods the report).
 const DEFAULT_EXCLUDE_DIRS: &[&str] = &[
     "node_modules",

@@ -130,7 +130,7 @@ pub(crate) fn cmd_detect(args: DetectArgs) -> Result<()> {
     Ok(())
 }
 
-/// Map an absolute/scanned path to `(repo_id, repo_relative_path)` given the root
+/// Map an absolute analyzed path to `(repo_id, repo_relative_path)` given the root
 /// whose immediate children are repo ids.
 pub(crate) fn map_to_repo(root: &std::path::Path, path: &str) -> Option<(String, String)> {
     let rel = std::path::Path::new(path).strip_prefix(root).ok()?;

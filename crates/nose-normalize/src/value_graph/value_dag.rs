@@ -271,10 +271,10 @@ pub struct FileReferents<'a> {
     def_by_span: FxHashMap<(u32, u32), NodeId>,
     def_by_name: FxHashMap<Symbol, Vec<NodeId>>,
     /// Unit name keyed by definition start-byte, for `def_name` — avoids an O(units)
-    /// scan per call-target.
+    /// pass per call-target.
     name_by_start: FxHashMap<u32, Symbol>,
     /// `CallTarget` evidence (anchor span + kind) sorted by anchor start-byte, so the
-    /// per-unit lookup is a range scan, not a full `il.evidence` walk (the latter was
+    /// per-unit lookup is a range walk, not a full `il.evidence` walk (the latter was
     /// O(units × evidence) — the §BQ "index the hot lookups" rule).
     call_evidence: Vec<(Span, CallTargetEvidenceKind)>,
     import_evidence: Vec<(Span, ImportEvidenceKind)>,
@@ -378,7 +378,7 @@ impl<'a> FileReferents<'a> {
     }
 
     /// Referents from `CallTarget` evidence anchored inside the unit. `call_evidence` is
-    /// sorted by anchor start-byte, so we binary-search to the unit's span and scan only
+    /// sorted by anchor start-byte, so we binary-search to the unit's span and walk only
     /// that window instead of walking all of `il.evidence` per unit.
     fn call_target_referents(&self, root: NodeId) -> Vec<VgReferent> {
         let il = self.il;

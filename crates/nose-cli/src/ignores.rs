@@ -1,7 +1,7 @@
-//! Structured suppressions for scan findings.
+//! Structured suppressions for analysis findings.
 //!
 //! Inline `nose-ignore` removes a unit before detection. This module handles the
-//! later, auditable case: a family was found, reviewed, and intentionally hidden
+//! later, auditable case: a family was found, accepted, and intentionally hidden
 //! with a reason, owner, and optional expiry.
 
 use crate::baseline;
@@ -119,7 +119,7 @@ struct RawEntry {
     expires_at: Option<String>,
 }
 
-pub(crate) fn load_for_scan(path: Option<&Path>) -> Result<Option<IgnoreSet>> {
+pub(crate) fn load_for_query(path: Option<&Path>) -> Result<Option<IgnoreSet>> {
     let path = match path {
         Some(path) => Some(path.to_path_buf()),
         None => {

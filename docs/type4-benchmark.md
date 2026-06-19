@@ -208,7 +208,7 @@ exact positive converge; and a regression check proving the nearby hard-negative
 don't merge. The loop:
 
 ```text
-generate a benchmark slice  →  run focused exact query / legacy semantic-scan gates
+generate a benchmark slice  ->  run focused exact query / semantic-query gates
         →  frontier summary: missed positives grouped by computation/surface/representation
         →  pick one narrow under-merge class  →  add a failing convergence test
         →  patch the frontend / idiom lowering / shared value graph
@@ -278,7 +278,7 @@ indexed-loop positives, and all hard-negatives in `heldout`; the evaluator repor
 split-level recall and false merges over every `expected_exact_detect=false` item,
 including `E0` unproven/unsafe boundaries, grouping negatives by `negative_tag`.
 
-Routine work uses three gate tiers so the inner loop doesn't scan the whole corpus every
+Routine work uses three gate tiers so the inner loop doesn't query the whole corpus every
 iteration:
 
 - **`focused`** — generate only the selected axis/proposal prefix (usually `CROSS=none`):
@@ -287,7 +287,7 @@ iteration:
   a compact manifest selected from the full corpus by explicit feature coverage
   (proposal/computation, status, split, representation pair, transform and hard-negative
   tags, language surface, capability state — so proof-fact regressions aren't compacted
-  away). Not random sampling; it copies only the selected sources so scan time actually
+  away). Not random sampling; it copies only the selected sources so query time actually
   drops.
 - **`full`** — the full manifest; dense all-cross and broad real-repo audits are reserved
   for milestone validation, which catch any interaction the selector hid.
@@ -299,7 +299,7 @@ when the focused/compact gates have closed.
 
 | asset | primary question |
 |---|---|
-| v5 refactoring-family labelset | Did the legacy product scan surface useful refactoring candidates first? |
+| v5 refactoring-family labelset | Did the historical product query surface useful refactoring candidates first? |
 | Type-4 synthetic factory | Does exact semantic detection cover the intended equivalence classes without false merges? |
 | future evidence-backed real subset | Do proven Type-4 cases occur and get detected in real repos? |
 
@@ -324,8 +324,8 @@ The stable roles are:
 - focused adversarial cases and verifier-lead draft tooling:
   `adversarial/`, summarized in
   [type4-adversarial-coverage](type4-adversarial-coverage.md);
-- product semantic-scan regression:
-  `scan_regression/`, which guards runtime, output drift, fragment/reason-code/surface
+- product semantic-query regression:
+  `query_regression/`, which guards runtime, output drift, fragment/reason-code/surface
   buckets, enclosing-unit recovery, and HoF value-graph budget behavior.
 
 The long-term direction is an adversarial semantic test factory: the generator creates

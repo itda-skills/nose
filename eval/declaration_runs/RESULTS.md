@@ -25,8 +25,8 @@ number in [experiments §BY](../../docs/experiments.md).
   detector-version span drift but intentionally over-counts: any labeled
   family merely *touching* a declaration span counts as an overlap.
 - The classifier under test is the shipped one (`declaration_run_ids` in
-  `crates/nose-cli/src/main.rs`), exercised through `nose scan --format json
-  --top 0`.
+  `crates/nose-cli/src/main.rs`), exercised through `nose query <repo> all
+  top=0 --format json`.
 
 ## Re-price after the C1/C5 single-statement discipline (coevo series 1)
 

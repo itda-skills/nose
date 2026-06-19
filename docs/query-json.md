@@ -1,9 +1,8 @@
 # nose query JSON (schema v3)
 
 `nose query <path> [terms…] --format json` emits a structured, versioned contract over the
-same family dataset [`scan`](scan-json.md) computes — the **machine** form of the
-[exploration surface](usage.md#nose-query). Unlike scan-JSON v1 (a one-shot `families[]`
-dump), the query contract is *view-shaped*: it mirrors what the human surface shows, so a
+duplicated-code family dataset — the **machine** form of the
+[exploration surface](usage.md#nose-query). The query contract is *view-shaped*: it mirrors what the human surface shows, so a
 caller drives the same dashboard → slice → open-family loop programmatically.
 
 Discover support with [`nose capabilities`](capabilities.md): `schemas.query_json` lists the
@@ -18,7 +17,7 @@ Every response is an object with:
 | `schema_version` | `3` |
 | `tool` | `"nose"` |
 | `view` | which surface produced it: `dashboard` \| `list` \| `group` \| `family` \| `reinvented` \| `base` |
-| `path` | the scanned path, as given |
+| `path` | the analyzed path, as given |
 
 plus the view-specific body below. Like the human surface, a result is a pure function of
 (repo state, command); an unknown field or enum value is a hard error.
@@ -48,15 +47,13 @@ available), and a single `family` object; with `full`, that object carries `skel
 `{helper {name,file,start,end}, site {file,container,container_start,container_end,start,end},
 value, approximate}` — code that reimplements an existing helper; the action is "call it".
 
-**`base`** (`base=<git-ref>`) — the divergent-edit view (the [`nose review`](review.md)
-pipeline). `base` (the ref), `summary` (`changed_files`, `divergences`,
+**`base`** (`base=<git-ref>`) — the divergent-edit view. `base` (the ref), `summary` (`changed_files`, `divergences`,
 `shown_divergences`, `limit`, `fire_eligible`), and `items[]` of `{family_id, similarity,
 complexity, scope, witness_kind, fire_eligible, graded, changed[], not_updated[]}` — each
 `changed`/`not_updated` site carries `{file, name, start_line, end_line, …, touches_shared}`.
 `divergences` is the total before `top=N` truncation; `shown_divergences` is `items.length`;
 `limit` is the numeric row limit or `null` for `top=0`. `fire_eligible` is the conservative
-proven-shared-logic verdict the gate fires on. This is the same per-finding shape as the
-deprecated `nose review --format json`.
+proven-shared-logic verdict the gate fires on.
 
 ## The family object
 
@@ -65,7 +62,7 @@ deprecated `nose review --format json`.
 | `id` | family id (the `id=` handle; any unique prefix opens it) |
 | `scope` | `prod` \| `test` \| `mixed` (context, never a worthiness penalty) |
 | `witness` | why the copies merged: `exact` \| `subdag` (behavior-proven) \| `copy-paste` \| `similar` |
-| `surface` | `default` \| `review` \| `hidden` \| `shallow` \| `generated` \| `declaration` \| `debug` (curation tier; `debug` is a reserved diagnostic tier normal runs don't emit) |
+| `surface` | `default` \| `divergence` \| `hidden` \| `shallow` \| `generated` \| `declaration` \| `debug` (curation tier; `debug` is a reserved diagnostic tier normal runs don't emit) |
 | `members` | number of copies |
 | `files` / `dirs` | distinct files / directories the copies span |
 | `shared` | lines invariant across **all** copies (the all-copies anti-unification count) |
@@ -85,10 +82,10 @@ deprecated `nose review --format json`.
 | `locations[]` | every copy: `{file, start, end, name, lang}`; when the frontend knows source-origin facts the location also carries `origin` (domains/body/region facets such as `type-contract`, `style`, `markup`, `declaration-only`, or `vue-sfc`); the `existing_helper` member also carries `role: "existing-helper"`; a sub-dag clone's member carries `shared_subdag: [start, end]` — where the proven shared computation lives at that site |
 | `skeleton` | (only with `full`) the all-copies extraction-skeleton lines, each varying spot a `⟨param N: class⟩` placeholder (`class` = `literal`/`name`/`call`/`expr`/`block` — a coarse value-class hint for the helper signature) |
 
-`surface` uses the same curation policy as scan JSON. `generated` includes families wholly
+`surface` uses the default-surface curation policy. `generated` includes families wholly
 in generated/distributed output and CSS source-plus-compiled/minified build pipelines; a
 default family may still contain a generated-looking location when the hand-written copies
-remain actionable. See [scan-json](scan-json.md#surface-curation-and-ranking).
+remain actionable.
 
 Evidence, never a verdict: there is no `worth_it`/`confidence` field — the worthy-vs-parallel
 judgment is the caller's ([design §2](design.md)). See the [agent-recipe](agent-recipe.md) for

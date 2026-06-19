@@ -1457,22 +1457,22 @@ lesson matches §T: hot-path evidence/node lookups must be index-backed by
 default — a raw `il.evidence`/`il.nodes` iteration in a per-node helper is a
 red flag in review.
 
-## BR. Review fire-precision benchmark — consumer 2 gets its first measurement
+## BR. Divergent-edit fire-precision benchmark — consumer 2 gets its first measurement
 
-[design](design.md) §3 raised "review-as-gate: harden it past v1 and define a
+[design](design.md) §3 raised "divergent-edit gate: harden it past v1 and define a
 conservative fire policy" — but nothing measured the gate product itself: the v5
-labelset owns the scan surface, and §BG measured hazard *ranking*, not whether
-`nose review` fires correctly on a real change stream. #243 built that measurement
-(`eval/review_fire/replay.py`): replay `nose review --base <parent>` at 25 sampled
+labelset owns the historical product-query surface, and §BG measured hazard *ranking*, not whether
+`nose query . base=<parent>` fires correctly on a real change stream. #243 built that measurement
+(`eval/divergence_fire/replay.py`): replay query base at 25 sampled
 first-parent commits in each of 14 corpus repos (7 languages × dev/heldout) — the
 working tree holds the merged change, exactly the PR-gate situation — in two arms
-(review's default `syntax,semantic`, and `+near`). Labeling unit: a fired change's
+(default `syntax,semantic`, and `+near`). Labeling unit: a fired change's
 **top-ranked finding** (`--fail` is a per-change decision); 120 findings, §BG-gold
 method — judge labels, then two adversarial refuters on every positive, a positive
 survives only if both sustain.
 
-**Result** (artifacts `eval/review_fire/{replay_summary,verdicts}_2026_06_11.*`,
-narrative [eval/review_fire/RESULTS.md](../eval/review_fire/RESULTS.md)): the default
+**Result** (artifacts `eval/divergence_fire/{replay_summary,verdicts}_2026_06_11.*`,
+narrative [eval/divergence_fire/RESULTS.md](../eval/divergence_fire/RESULTS.md)): the default
 arm fires on **33.1%** of replayed merged changes (near arm 41.2%) at **4.2%** strict
 top-1 precision (default 3.1%, near 5.5%). The five confirmed positives are three
 unique, externally-validated misses — rubocop's `DataInheritance#correct_parent`
@@ -1481,13 +1481,13 @@ autocorrect bug (still latent upstream), rxjs's missing `AnimationFrameAction` g
 cause**), and tokio #7675 fixing five identical socket `Debug` impls but missing
 `UdpSocket`. The false-fire taxonomy is the #245 gap list: **51%
 `no_propagation_needed`** — the diff overlaps the member's *span* but not the
-*shared logic* (review's overlap test is span-level; requiring overlap with the
+*shared logic* (the old overlap test is span-level; requiring overlap with the
 family's shared/invariant lines targets exactly this bucket), 32% intentional
 divergence (variant pairs — an ignore/ergonomics problem, not a threshold), 12%
 not-a-clone (grouping artifacts).
 
 Two reads. The gate problem is **dilution, not absence**: real un-propagated changes
-exist in the wild at a useful rate (3 in 350 merged changes) and review's ordering
+exist in the wild at a useful rate (3 in 350 merged changes) and query-base ordering
 put them at top-1 — but a 33–41% fire rate at ~4% precision means `--fail` must stay
 an explicitly-opted, policy-tuned gate ("a gate that cries wolf gets disabled" is now
 a measured fact). And half the noise is one mechanical bucket, so the first #245
@@ -1622,11 +1622,11 @@ not another control-flow mechanism — and given §BS measured the frontier this
 instrument feeds at one worthy pair per 105 repos, further oracle-completeness
 investment should wait for a consumer that needs it.
 
-## BV. The conservative review fire policy — measured, shipped as the `--fail` default
+## BV. The conservative divergent-edit fire policy — measured, shipped as the `--fail` default
 
 §BR gave the gate its labelset (120 refuter-confirmed top-1 findings; 5 genuine
 should-propagate) and its gap list (51% of false fires = span overlap without
-shared-logic contact). #245 turns that into the `--fail` policy. Review now
+shared-logic contact). #245 turns that into the `--fail` policy. Query base now
 computes, per changed member, whether the diff PROVABLY touches lines the member
 shares with an un-updated sibling — two proof shapes keyed on the family's
 equivalence witness: an `exact-value-graph` family's whole span is shared by the
@@ -1636,12 +1636,12 @@ would under-fire exactly on the strongest families), while fuzzy and token
 families subtract the member's varying spots (the token channel abstracts
 identifiers/literals, so a `copy-paste-run` member may legitimately vary in
 exactly those spots). Unknown (unreadable source, capped spot list) is
-not-eligible: the gate fires on proof, never on absence of one. Scan JSON gains
+not-eligible: the gate fires on proof, never on absence of one. Query JSON gains
 `fire_eligible` / `witness_kind` / `scope` per finding and `touches_shared` per
 changed site.
 
 **Measured on the §BR labels** (re-replay with policy fields, joined 120/120 by
-changed-site span; `eval/review_fire/policy_eval_2026_06_11.json`):
+changed-site span; `eval/divergence_fire/policy_eval_2026_06_11.json`):
 
 | policy | fires (n=120) | true positives kept | precision |
 |---|---:|---:|---:|
@@ -3193,7 +3193,7 @@ deduplication of value-graph work, not local micro-optimization.
 
 Goal: make `nose query bench/repos/<repo>` finish under **4s for every checked-out corpus repo**
 with a release build, without leaning on local micro-optimizations. The final saved run is
-`target/corpus-query-speed-final8/summary.tsv`.
+`target/corpus-query-speed-release-0.13.2/summary.tsv`.
 
 **Baseline symptoms.** The first full pass had three repos over budget: `alamofire` **8.994s**,
 `sympy` **4.673s**, and `raylib` **4.669s**; `curl` was close at **3.793s**. `NOSE_TIME=1`
@@ -3222,11 +3222,14 @@ showed different bottlenecks per repo:
   participate in semantic matching, preserving the normal test-code signal and existing CLI
   semantics.
 - Shared-line IDF now reads/splits files in parallel while preserving deterministic aggregation.
-- Query/scan skip raw accepted-pair materialization and sorting; hidden `nose detect` and library
+- Query reports skip raw accepted-pair materialization and sorting; hidden `nose detect` and library
   callers keep the pair list for research and compatibility.
 - Markdown verification computes TF-IDF cosine, containment, and shared-gram substance in one
   sorted-set pass per candidate. It also keeps stop-bucket guards for ubiquitous LSH/winnow grams,
   reducing the `curl` dashboard without suppressing true duplicate families.
+- Bulk query JSON rendering now reuses a single source-line cache for all-copies `params` /
+  shared-line evidence, preserving byte-identical JSON while avoiding a full file reread and
+  anti-unification setup per reported family.
 
 **Measured result.** Final release-build corpus pass, sequential per repo:
 
@@ -3235,25 +3238,26 @@ showed different bottlenecks per repo:
 | repos | 150 |
 | failures | 0 |
 | repos >= 4s | 0 |
-| total wall time | 77.06s |
-| max repo | `sympy` 3.485s |
+| total wall time | 75.858s |
+| max repo | `sympy` 3.732s |
 
 Top final repo times:
 
 | repo | seconds |
 |---|---:|
-| `sympy` | 3.485 |
-| `raylib` | 3.292 |
-| `esbuild` | 2.568 |
-| `netty` | 2.538 |
-| `guava` | 2.515 |
-| `libgdx` | 2.280 |
-| `drizzle-orm` | 2.183 |
-| `curl` | 2.117 |
-| `nushell` | 1.941 |
-| `rxjava` | 1.776 |
+| `sympy` | 3.732 |
+| `guava` | 3.082 |
+| `raylib` | 2.856 |
+| `libgdx` | 2.835 |
+| `netty` | 2.408 |
+| `h2database` | 2.304 |
+| `rxjava` | 2.128 |
+| `nushell` | 1.998 |
+| `alamofire` | 1.858 |
+| `sqlalchemy` | 1.842 |
 
 Representative stage checks after the changes: `curl` Markdown `md_accept` dropped from about
-**2108ms** to **538ms**, with `query_render` about **2990ms** to **1400ms**; `sympy` stayed under
-budget after narrowing the test-fixture skip to large test files only. Relevant tests:
-`cargo test -p nose-markdown`, `cargo test -p nose-detect`, and `cargo test -p nose-cli`.
+**2108ms** to **538ms** in the Markdown pass; bulk JSON `query_render` then dropped from
+**5284.7ms** to **67.3ms** on `raylib`, **778.7ms** to **166.7ms** on `sympy`, and
+**3124.8ms** to **87.9ms** on `bulma`, with byte-identical JSON for those three checks. Relevant
+tests: `cargo test -p nose-markdown`, `cargo test -p nose-detect`, and `cargo test -p nose-cli`.

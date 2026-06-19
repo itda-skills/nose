@@ -8,8 +8,8 @@ fingerprints, or approve clone pairs.
 
 ## Local entry points
 
-Use `--semantic-pack <file-or-dir>` on `nose query` (the primary surface) or the
-deprecated `nose scan` to opt into local pack metadata for one run:
+Use `--semantic-pack <file-or-dir>` on `nose query` to opt into local pack metadata
+for one run:
 
 ```sh
 nose query src --format json --semantic-pack semantic-packs/python-math-prod.json
@@ -18,11 +18,11 @@ nose query src --format json --semantic-pack semantic-packs/python-math-prod.jso
 Commit stable project opt-ins in `nose.toml`:
 
 ```toml
-[scan]
+[query]
 semantic-packs = ["semantic-packs/python-math-prod.json"]
 ```
 
-Each path may be a manifest file or a directory. Paths from `[scan].semantic-packs`
+Each path may be a manifest file or a directory. Paths from `[query].semantic-packs`
 are resolved relative to the config file that declared them; paths from
 `--semantic-pack` are resolved by the shell/current working directory like other
 CLI paths. Directory loading reads direct `*.json` children in sorted order; it
@@ -31,7 +31,7 @@ does not recurse and it does not contact a registry or network service.
 ## Conformance entry point
 
 Pack authors and users can check the same local manifest paths without loading
-them into a scan:
+them into an analysis run:
 
 ```sh
 nose semantic-pack check semantic-packs/python-math-prod.json
@@ -58,10 +58,10 @@ Trust is separate from channel eligibility.
 - Local manifests must declare `trust = "external-opt-in"` and
   `enabled_by_default = false`; manifests that claim first-party trust or default
   enablement are rejected.
-- Duplicate pack ids fail the scan instead of letting provenance become
+- Duplicate pack ids fail the run instead of letting provenance become
   ambiguous.
 
-`scan --format json` reports every active pack under `semantic_packs`, including
+`query --format json` reports every active pack under `semantic_packs`, including
 its stable hash, trust, source, influence, provider, repository, supported
 languages, and declaration counts. Human and Markdown reports print a short
 semantic-pack line when local opt-in packs are loaded.

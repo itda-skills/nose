@@ -248,7 +248,7 @@ pub fn detect_from_units(
 
     let enclosing = enclosing_units(&units);
 
-    // Build pair output only for raw-detection surfaces. `scan`/`query` use the grouped
+    // Build pair output only for raw-detection surfaces. Query uses the grouped
     // refactoring families, so they skip this accepted-pair materialization and sort.
     let duplicates: Vec<DupPair> = if opts.emit_pairs {
         let mut duplicates: Vec<DupPair> = accepted

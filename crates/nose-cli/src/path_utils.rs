@@ -1,7 +1,7 @@
 use super::*;
 
 /// Borrow a slice of owned `PathBuf`s as `&Path` references — the form the detection entry
-/// points take. Used by every scan/refactor subcommand that holds its input paths as a
+/// points take. Used by every analysis/refactor subcommand that holds its input paths as a
 /// `Vec<PathBuf>`.
 pub(crate) fn paths_as_refs(paths: &[PathBuf]) -> Vec<&std::path::Path> {
     paths.iter().map(|p| p.as_path()).collect()
@@ -39,7 +39,7 @@ pub(crate) fn relativize_loc(loc: &mut nose_detect::Loc, cwd: &std::path::Path) 
 
 /// Stderr notice that discovery found nothing — so a mistyped path or unsupported
 /// tree doesn't masquerade as "no duplication found".
-/// A named path that doesn't exist is a usage error, not an empty scan: a typo'd
+/// A named path that doesn't exist is a usage error, not an empty analysis: a typo'd
 /// path in a CI gate must fail loudly instead of passing on a 0-file report.
 /// "Exists but contains no supported files" stays a warning (`warn_no_files`).
 pub(crate) fn require_paths_exist(paths: &[PathBuf]) -> Result<()> {

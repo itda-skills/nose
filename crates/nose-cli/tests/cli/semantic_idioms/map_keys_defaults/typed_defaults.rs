@@ -4,7 +4,7 @@ use super::*;
 // intentional until the fixture setup has a clearer table-builder abstraction.
 #[allow(clippy::too_many_lines)]
 #[test]
-fn scan_mode_semantic_proves_typed_typescript_map_default_lookup() {
+fn query_mode_semantic_proves_typed_typescript_map_default_lookup() {
     let dir =
         std::env::temp_dir().join(format!("nose_typed_ts_map_default_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
@@ -155,9 +155,9 @@ fn scan_mode_semantic_proves_typed_typescript_map_default_lookup() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     let expected = [
         "map_default.go",
         "ts_has_get.ts",

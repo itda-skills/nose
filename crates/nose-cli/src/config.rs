@@ -3,7 +3,7 @@
 //! the config supplies defaults; anything unset falls back to the built-in default.
 //!
 //! ```toml
-//! [scan]
+//! [query]
 //! exclude = ["tests/**", "**/*.generated.ts", "vendor/**"]
 //! mode = ["syntax", "semantic", "near:0.8"] # fuzzy thresholds ride on the mode
 //! min-value = 200
@@ -17,13 +17,13 @@
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
-/// The `[scan]` table. Every field is optional — absent means "no opinion,
+/// The `[query]` table. Every field is optional — absent means "no opinion,
 /// use the CLI value or the built-in default".
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "kebab-case", default, deny_unknown_fields)]
-pub(crate) struct ScanConfig {
+pub(crate) struct QueryConfig {
     pub exclude: Vec<String>,
-    pub mode: Vec<crate::ScanMode>,
+    pub mode: Vec<crate::DetectionMode>,
     pub min_value: Option<f64>,
     pub sort: Option<crate::SortKey>,
     pub min_members: Option<usize>,
@@ -31,7 +31,6 @@ pub(crate) struct ScanConfig {
     pub min_lines: Option<u32>,
     /// Minimum unit size in IL tokens.
     pub min_size: Option<usize>,
-    pub top: Option<usize>,
     pub ignore_file: Option<PathBuf>,
     /// Local semantic-pack v0 manifest files or directories. These are explicit opt-ins.
     pub semantic_packs: Vec<PathBuf>,
@@ -40,26 +39,26 @@ pub(crate) struct ScanConfig {
 #[derive(Deserialize, Default)]
 #[serde(default, deny_unknown_fields)]
 struct File {
-    scan: ScanConfig,
+    query: QueryConfig,
 }
 
-/// Load the `[scan]` config: from `explicit` if given, else the first of
+/// Load the `[query]` config: from `explicit` if given, else the first of
 /// `nose.toml` / `.nose.toml` found in the current directory. Returns the default
 /// (all-unset) config when there is no file. A malformed file is a hard error —
 /// silently ignoring it would hide a typo'd setting.
-pub(crate) fn load_scan(explicit: Option<&Path>) -> anyhow::Result<ScanConfig> {
+pub(crate) fn load_query(explicit: Option<&Path>) -> anyhow::Result<QueryConfig> {
     let path = match explicit {
         Some(p) => Some(p.to_path_buf()),
         None => discover(),
     };
     let Some(path) = path else {
-        return Ok(ScanConfig::default());
+        return Ok(QueryConfig::default());
     };
     let text = std::fs::read_to_string(&path)
         .map_err(|e| anyhow::anyhow!("reading config {}: {e}", path.display()))?;
     let file: File =
         toml::from_str(&text).map_err(|e| anyhow::anyhow!("parsing {}: {e}", path.display()))?;
-    Ok(resolve_config_relative_paths(file.scan, &path))
+    Ok(resolve_config_relative_paths(file.query, &path))
 }
 
 fn discover() -> Option<PathBuf> {
@@ -69,7 +68,7 @@ fn discover() -> Option<PathBuf> {
         .find(|p| p.is_file())
 }
 
-fn resolve_config_relative_paths(mut cfg: ScanConfig, path: &Path) -> ScanConfig {
+fn resolve_config_relative_paths(mut cfg: QueryConfig, path: &Path) -> QueryConfig {
     let base = path.parent().unwrap_or_else(|| Path::new(""));
     if let Some(ignore_file) = &mut cfg.ignore_file {
         if ignore_file.is_relative() {
@@ -97,11 +96,11 @@ mod tests {
     }
 
     #[test]
-    fn unknown_scan_key_is_a_hard_error() {
+    fn unknown_query_key_is_a_hard_error() {
         // `min-valeu` is a typo for `min-value`; silently dropping it would hide the setting.
-        let p = write_cfg("badkey", "[scan]\nmin-valeu = 200\n");
+        let p = write_cfg("badkey", "[query]\nmin-valeu = 200\n");
         assert!(
-            load_scan(Some(&p)).is_err(),
+            load_query(Some(&p)).is_err(),
             "a typo'd key must be a hard error, not silently dropped"
         );
     }
@@ -110,7 +109,7 @@ mod tests {
     fn unknown_table_is_a_hard_error() {
         let p = write_cfg("badtable", "[scna]\nmin-value = 200\n");
         assert!(
-            load_scan(Some(&p)).is_err(),
+            load_query(Some(&p)).is_err(),
             "a typo'd table must be a hard error"
         );
     }
@@ -119,9 +118,9 @@ mod tests {
     fn valid_config_still_loads() {
         let p = write_cfg(
             "ok",
-            "[scan]\nmin-value = 200\nmin-size = 30\nignore-file = \"nose.ignore.json\"\nsemantic-packs = [\"packs\"]\n",
+            "[query]\nmin-value = 200\nmin-size = 30\nignore-file = \"nose.ignore.json\"\nsemantic-packs = [\"packs\"]\n",
         );
-        let cfg = load_scan(Some(&p)).expect("valid config must load");
+        let cfg = load_query(Some(&p)).expect("valid config must load");
         assert_eq!(cfg.min_value, Some(200.0));
         assert_eq!(cfg.min_size, Some(30));
         assert_eq!(

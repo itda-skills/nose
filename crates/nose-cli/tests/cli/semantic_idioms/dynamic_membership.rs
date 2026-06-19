@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn scan_mode_semantic_keeps_unproven_contains_calls_distinct() {
+fn query_mode_semantic_keeps_unproven_contains_calls_distinct() {
     let dir = std::env::temp_dir().join(format!("nose_unproven_contains_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -21,9 +21,9 @@ fn scan_mode_semantic_keeps_unproven_contains_calls_distinct() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
+    let semantic = query_min_json(&dir, "semantic");
     let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
+        serde_json::from_str(&semantic).expect("semantic query should emit JSON");
     let semantic_text = semantic_json.to_string();
     assert!(
         !semantic_text.contains("java_string_negative.java"),
@@ -37,7 +37,7 @@ fn scan_mode_semantic_keeps_unproven_contains_calls_distinct() {
 // intentional until the fixture setup has a clearer table-builder abstraction.
 #[allow(clippy::too_many_lines)]
 #[test]
-fn scan_mode_semantic_proves_typed_dynamic_collection_membership() {
+fn query_mode_semantic_proves_typed_dynamic_collection_membership() {
     let dir = std::env::temp_dir().join(format!(
         "nose_typed_dynamic_membership_{}",
         std::process::id()
@@ -130,9 +130,9 @@ fn scan_mode_semantic_proves_typed_dynamic_collection_membership() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     let expected = [
         "membership.py",
         "membership.ts",
@@ -185,7 +185,7 @@ fn scan_mode_semantic_proves_typed_dynamic_collection_membership() {
 // intentional until the fixture setup has a clearer table-builder abstraction.
 #[allow(clippy::too_many_lines)]
 #[test]
-fn scan_mode_semantic_proves_set_membership_when_receiver_is_proven() {
+fn query_mode_semantic_proves_set_membership_when_receiver_is_proven() {
     let dir = std::env::temp_dir().join(format!("nose_set_membership_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -275,9 +275,9 @@ fn scan_mode_semantic_proves_set_membership_when_receiver_is_proven() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     let expected_positive = [
         "literal.py",
         "set_inline.js",
@@ -333,7 +333,7 @@ fn scan_mode_semantic_proves_set_membership_when_receiver_is_proven() {
 }
 
 #[test]
-fn scan_mode_semantic_keeps_aslist_single_unproven_receiver_distinct() {
+fn query_mode_semantic_keeps_aslist_single_unproven_receiver_distinct() {
     // `Arrays.asList(x).contains(value)` with a single argument is ambiguous: when `x`
     // is an array it is spread into the element list (membership in the elements), but
     // when `x` is a single object it is the sole element (`value.equals(x)`). Without an
@@ -353,9 +353,9 @@ fn scan_mode_semantic_keeps_aslist_single_unproven_receiver_distinct() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     for family in semantic_families {
         let family_text = family.to_string();
         assert!(
@@ -368,7 +368,7 @@ fn scan_mode_semantic_keeps_aslist_single_unproven_receiver_distinct() {
 }
 
 #[test]
-fn scan_mode_semantic_handles_shadowed_callback_collection_name() {
+fn query_mode_semantic_handles_shadowed_callback_collection_name() {
     let dir = std::env::temp_dir().join(format!(
         "nose_shadowed_callback_collection_{}",
         std::process::id()
@@ -395,17 +395,16 @@ fn scan_mode_semantic_handles_shadowed_callback_collection_name() {
     .unwrap();
 
     let semantic = run(&[
-        "scan",
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "semantic",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]);
     let _: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
+        serde_json::from_str(&semantic).expect("semantic query should emit JSON");
 
     let _ = fs::remove_dir_all(&dir);
 }

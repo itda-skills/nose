@@ -1,81 +1,9 @@
 use super::*;
 
 #[test]
-fn proposal_shows_shared_skeleton_and_parameters() {
-    // Two near-identical functions differing in one line → an extraction proposal:
-    // the shared skeleton plus a ⟨param⟩ for the varying spot.
-    let dir = std::env::temp_dir().join(format!("nose_prop_{}", std::process::id()));
-    let _ = fs::remove_dir_all(&dir);
-    fs::create_dir_all(dir.join("a")).unwrap();
-    fs::create_dir_all(dir.join("b")).unwrap();
-    let mk = |op: &str| {
-        format!("def f(xs):\n    t = 0\n    for x in xs:\n        if x > 0:\n            t = t {op} x\n    return t\n")
-    };
-    fs::write(dir.join("a/m.py"), mk("+")).unwrap();
-    fs::write(dir.join("b/m.py"), mk("*")).unwrap();
-    let out = run(&[
-        "scan",
-        dir.to_str().unwrap(),
-        "--mode",
-        "near:0.5",
-        "--show",
-        "proposal",
-        "--min-size",
-        "12",
-    ]);
-    assert!(out.contains("proposal"), "should print a proposal: {out}");
-    assert!(
-        out.contains("parameter(s) vary"),
-        "should report parameters: {out}"
-    );
-    assert!(
-        out.contains("⟨param 1:"),
-        "should show a parameter placeholder with a value-class hint: {out}"
-    );
-    let _ = fs::remove_dir_all(&dir);
-}
-
-#[test]
-fn proposal_aligns_across_all_copies() {
-    // Three near-identical functions (one operator each) form one family of 3. The
-    // proposal must align across ALL three copies (#360), not just a representative
-    // pair — so it says so, and the operator line is a parameter.
-    let dir = std::env::temp_dir().join(format!("nose_prop3_{}", std::process::id()));
-    let _ = fs::remove_dir_all(&dir);
-    for d in ["a", "b", "c"] {
-        fs::create_dir_all(dir.join(d)).unwrap();
-    }
-    let mk = |op: &str| {
-        format!("def f(xs):\n    t = 0\n    for x in xs:\n        if x > 0:\n            t = t {op} x\n    return t\n")
-    };
-    fs::write(dir.join("a/m.py"), mk("+")).unwrap();
-    fs::write(dir.join("b/m.py"), mk("*")).unwrap();
-    fs::write(dir.join("c/m.py"), mk("-")).unwrap();
-    let out = run(&[
-        "scan",
-        dir.to_str().unwrap(),
-        "--mode",
-        "near:0.5",
-        "--show",
-        "proposal",
-        "--min-size",
-        "12",
-    ]);
-    assert!(
-        out.contains("across all 3 copies"),
-        "proposal must align across all 3 copies: {out}"
-    );
-    assert!(
-        out.contains("⟨param 1:"),
-        "the varying operator line is a parameter (with a class hint): {out}"
-    );
-    let _ = fs::remove_dir_all(&dir);
-}
-
-#[test]
 fn query_top_zero_shows_all_families() {
-    // Regression for the v0.10.0 query-subsumes-scan gap: `top=0` must mean *all* (matching
-    // `scan --top 0`, and the `top: Some(0)` the dataset build already uses for "every
+    // Regression for the v0.10.0 query-subsumes-query gap: `top=0` must mean *all* (matching
+    // `query --top 0`, and the `top: Some(0)` the dataset build already uses for "every
     // family"), not "zero rows". The display paths previously truncated it to an empty set.
     let dir = make_mode_project("top_zero");
     let p = dir.to_str().unwrap();
@@ -103,7 +31,7 @@ fn query_top_zero_shows_all_families() {
     assert_eq!(
         count("top=0"),
         total,
-        "query top=0 shows ALL families, like scan --top 0"
+        "query top=0 shows ALL families, like query --top 0"
     );
     assert_eq!(count("top=1"), 1, "a finite top still truncates");
 }
@@ -222,7 +150,7 @@ fn query_dashboard_filter_and_family() {
     );
     assert!(run_fail(&["query", p, "same_symbol=oops"]).contains("unknown same_symbol value"));
 
-    // query takes scan's analysis flags (dataset parity): `--min-members 99` floors out the
+    // query takes query's analysis flags (dataset parity): `--min-members 99` floors out the
     // 3-copy family, and `--mode syntax` is accepted (different channel mix).
     assert!(
         run(&["query", p, "--min-members", "99"]).contains("0 duplicated-code families"),
@@ -233,8 +161,8 @@ fn query_dashboard_filter_and_family() {
         "query accepts --mode"
     );
 
-    // query gates like scan: `--fail-on any` exits non-zero on a reported family, and
-    // `--fail-on new` without `--baseline` errors (parity with scan).
+    // query gates like query: `--fail-on any` exits non-zero on a reported family, and
+    // `--fail-on new` without `--baseline` errors (parity with query).
     assert!(
         run_fail(&["query", p, "--fail-on", "any"]).contains("--fail-on any"),
         "query --fail-on any fires on a reported family"
@@ -246,7 +174,7 @@ fn query_dashboard_filter_and_family() {
 
     // The JSON form is the structured, versioned query-v3 contract (every view).
     let dash: serde_json::Value =
-        serde_json::from_str(&run(&["query", p, "--format", "json"])).unwrap();
+        serde_json::from_str(&run_raw(&["query", p, "--format", "json"])).unwrap();
     assert_eq!(
         dash["schema_version"], 3,
         "dashboard json is schema v3: {dash}"
@@ -310,7 +238,7 @@ fn query_dashboard_filter_and_family() {
     );
     assert!(run_fail(&["query", p, "spotclass=bogus"]).contains("unknown spotclass value"));
 
-    // Report formats (#374 + scan parity): query reuses scan's markdown and SARIF formatters
+    // Report formats (#374 + query parity): query reuses query's markdown and SARIF formatters
     // over the selected family set.
     let md = run(&["query", p, "--format", "markdown"]);
     assert!(

@@ -2,21 +2,20 @@
 
 Real projects shouldn't carry 200-character command lines. Put a `nose.toml`
 (or `.nose.toml`) in the directory where you invoke nose and it is read
-automatically. The config supplies defaults for supported scan settings; most CLI flags
+automatically. The config supplies defaults for supported query settings; most CLI flags
 override those defaults, while `exclude` globs are additive. Anything unset falls back to
 the built-in default.
 
 ## `nose.toml`
 
 ```toml
-[scan]
+[query]
 exclude     = ["tests/**", "**/*.generated.ts", "vendor/**"]
 mode        = ["syntax", "semantic"]
 sort        = "extractability"
 min-value   = 200
 min-members = 3
 min-size    = 30
-top         = 50
 ignore-file = "nose.ignore.json"
 semantic-packs = ["semantic-packs/python-math-prod.json"]
 ```
@@ -25,7 +24,7 @@ Pass an alternate file with `--config <file>`. A malformed config is a **hard
 error** — a silently-ignored typo'd setting would be worse than a crash.
 
 Put stable project policy in `nose.toml`: excludes, detection modes, ranking, size/value
-thresholds, report limits, the structured-ignore file, and explicit local
+thresholds, the structured-ignore file, and explicit local
 semantic-pack opt-ins. Keep one-off workflow choices on the command line or in query terms:
 output format, the drill/view terms (`id=`, `group=`, `full`), baselines, cache location, and
 CI failure mode.
@@ -33,30 +32,27 @@ CI failure mode.
 ### Keys
 
 All keys are optional; an absent key means "no opinion — use the CLI value or
-the built-in default". Keys are kebab-case and live under the `[scan]` table.
-`nose query` reads the same `[scan]` config keys as `nose scan`, with one exception for
-`top` (see the table below).
+the built-in default". Keys are kebab-case and live under the `[query]` table.
 
 The **CLI override** column gives the per-run flag (or, where they differ, the `nose query`
-term — `nose query` spells `sort`/`top` as the DSL terms `sort=`/`top=`, not `--sort`/`--top`).
+term — `nose query` spells `sort` as the DSL term `sort=`, not `--sort`).
 
 | key | type | default | CLI override |
 |---|---|---|---|
 | `exclude` | list of globs | `[]` | `--exclude` |
 | `mode` | list of `syntax`\|`semantic`\|`near[:T]` | `["syntax", "semantic", "near"]` | `--mode` |
-| `sort` | `extractability`\|`value`\|`sites`\|`hazard` | `extractability` | `sort=` (query term); `--sort` (deprecated scan) |
+| `sort` | `extractability`\|`value`\|`sites`\|`hazard` | `extractability` | `sort=` (query term) |
 | `min-value` | finite non-negative float | `0.0` | `--min-value` |
 | `min-members` | int | `2` | `--min-members` |
 | `min-size` | int (IL tokens) | `24` | `--min-size` |
 | `min-lines` | int (advanced) | `5` | `--min-lines` |
-| `top` | int | `30` | `top=` (query term); `--top` (deprecated scan). **Config key bounds `scan` only** — `nose query`'s row limit is the `top=` term (default 30) |
 | `ignore-file` | string path | auto-read `nose.ignore.json` when present | `--ignore-file` |
 | `semantic-packs` | list of file or directory paths | `[]` | `--semantic-pack` |
 
 `mode` is a TOML array, even for one channel:
 
 ```toml
-[scan]
+[query]
 mode = ["syntax"]                          # jscpd-style gate (exact copy-paste only)
 # mode = ["syntax", "semantic"]            # exact channels only, no fuzzy near
 # mode = ["syntax", "semantic", "near"]    # same as omitting mode (the default)
@@ -98,20 +94,20 @@ they do not emit evidence or enable exact contracts yet. See
 command line are combined. Globs use gitignore syntax (`tests/**`,
 `**/*.test.ts`, `vendor/**`) and are applied *during the directory walk*, so an
 excluded directory is pruned, not just filtered out afterward. Invalid exclude
-globs are hard errors; silently scanning a path the user meant to exclude is
+globs are hard errors; silently analyzing a path the user meant to exclude is
 worse than failing early.
 
-`.gitignore` files inside each scanned tree are respected automatically, even when that
+`.gitignore` files inside each analyzed tree are respected automatically, even when that
 tree is not a git checkout, so vendored dependencies, build output, and the like are
-skipped without any configuration. Parent ignore files above the scanned root are not
-applied; pointing nose at an ignored subdirectory intentionally still scans it.
+skipped without any configuration. Parent ignore files above the analyzed root are not
+applied; pointing nose at an ignored subdirectory intentionally still analyzes it.
 
 ## Structured ignores
 
-`ignore-file` points to a structured suppression file for reviewed findings:
+`ignore-file` points to a structured suppression file for accepted findings:
 
 ```toml
-[scan]
+[query]
 ignore-file = "nose.ignore.json"
 ```
 

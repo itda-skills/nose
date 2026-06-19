@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-const CAPABILITIES_SCHEMA_VERSION: u32 = 1;
+const CAPABILITIES_SCHEMA_VERSION: u32 = 2;
 
 #[derive(serde::Serialize)]
 struct Report {
@@ -10,7 +10,7 @@ struct Report {
     interfaces: Interfaces,
     commands: Commands,
     schemas: Schemas,
-    scan: Scan,
+    query: QuerySurface,
     semantic_packs: SemanticPacks,
     il: Il,
     stats: Stats,
@@ -39,22 +39,19 @@ struct Interfaces {
 #[derive(serde::Serialize)]
 struct Commands {
     stable: Vec<&'static str>,
-    /// Commands that still work but are on their way out — integrations should migrate.
-    /// `scan` → `nose query` (same dataset, gate, and a structured `--format json` contract).
     deprecated: Vec<&'static str>,
 }
 
 #[derive(serde::Serialize)]
 struct Schemas {
     capabilities: Vec<u32>,
-    scan_json: Vec<u32>,
     query_json: Vec<u32>,
     semantic_packs: Vec<&'static str>,
     semantic_pack_conformance: Vec<u32>,
 }
 
 #[derive(serde::Serialize)]
-struct Scan {
+struct QuerySurface {
     modes: Vec<&'static str>,
     default_modes: Vec<&'static str>,
     output_formats: Vec<&'static str>,
@@ -106,16 +103,15 @@ impl Report {
             },
             commands: Commands {
                 stable: vec!["capabilities", "il", "query", "semantic-pack", "stats"],
-                deprecated: vec!["review", "scan"],
+                deprecated: Vec::new(),
             },
             schemas: Schemas {
                 capabilities: vec![CAPABILITIES_SCHEMA_VERSION],
-                scan_json: vec![crate::schema_versions::SCAN_JSON_SCHEMA_VERSION],
                 query_json: vec![crate::schema_versions::QUERY_JSON_SCHEMA_VERSION],
                 semantic_packs: vec![nose_semantics::SEMANTIC_PACK_API_VERSION],
                 semantic_pack_conformance: vec![crate::semantic_pack::CONFORMANCE_SCHEMA_VERSION],
             },
-            scan: Scan {
+            query: QuerySurface {
                 modes: vec!["syntax", "semantic", "near"],
                 default_modes: vec!["syntax", "semantic", "near"],
                 output_formats: vec!["human", "json", "markdown", "sarif"],
@@ -130,9 +126,8 @@ impl Report {
                     "mode",
                     "semantic-packs",
                     "sort",
-                    "top",
                 ],
-                capabilities: scan_capability_flags(),
+                capabilities: query_capability_flags(),
             },
             semantic_packs: SemanticPacks {
                 api_versions: vec![nose_semantics::SEMANTIC_PACK_API_VERSION],
@@ -163,16 +158,16 @@ impl Report {
     }
 }
 
-fn scan_capability_flags() -> std::collections::BTreeMap<&'static str, bool> {
+fn query_capability_flags() -> std::collections::BTreeMap<&'static str, bool> {
     [
+        ("base_divergence", true),
         ("baseline", true),
         ("baseline_changed_detection", true),
         ("cache", true),
         ("ci_fail_gate", true),
-        ("diff", true),
-        ("hotspots", true),
+        ("family_drilldown", true),
         ("inline_suppression", true),
-        ("proposal", true),
+        ("reinvented_view", true),
         ("semantic_pack_loading", true),
         ("structured_ignores", true),
     ]

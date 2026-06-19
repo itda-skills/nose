@@ -8,7 +8,7 @@ value DAGs and reports them as **equal except at *k* holes**, each hole carrying
 specific value that differs. It turns a bare `0.86` into a machine-checkable,
 actionable statement — the lever for [consumer 1](design.md) (the calling agent reads
 *what* differs instead of re-deriving it) and a graded surface for the
-[review](review.md) gate.
+[review](divergent-edits.md) gate.
 
 This is the productized outcome of the #315 investigation; the
 [architecture](architecture.md) pipeline (step 5, scoring) emits it, and it surfaces in
@@ -129,4 +129,4 @@ not folded into nose's deterministic order on a neutral signal.
 
 *See also: [design](design.md) · [architecture](architecture.md) ·
 [normalization](normalization.md) · [clone-types](clone-types.md) ·
-[scan JSON](scan-json.md) · [review](review.md).*
+[scan JSON](scan-json.md) · [review](divergent-edits.md).*

@@ -4,7 +4,7 @@ use super::*;
 // intentional until the fixture setup has a clearer table-builder abstraction.
 #[allow(clippy::too_many_lines)]
 #[test]
-fn semantic_scan_reports_exact_safe_branch_temp_consumption_fragments_under_opaque_functions() {
+fn semantic_query_reports_exact_safe_branch_temp_consumption_fragments_under_opaque_functions() {
     let dir = std::env::temp_dir().join(format!(
         "nose_exact_branch_temp_fragments_{}",
         std::process::id()
@@ -155,7 +155,7 @@ fn semantic_scan_reports_exact_safe_branch_temp_consumption_fragments_under_opaq
     }
 
     let out = run(&[
-        "scan",
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "semantic",
@@ -165,11 +165,10 @@ fn semantic_scan_reports_exact_safe_branch_temp_consumption_fragments_under_opaq
         "100",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]);
-    let json = scan_json(&out);
-    let families = scan_families(&json);
+    let json = query_json(&out);
+    let families = query_families(&json);
 
     let assert_temp_family = |left: &str, right: &str, negative: &str| {
         let family = families
@@ -262,7 +261,7 @@ fn semantic_scan_reports_exact_safe_branch_temp_consumption_fragments_under_opaq
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_nested_conditional_effect_fragments_under_opaque_functions() {
+fn semantic_query_reports_exact_safe_nested_conditional_effect_fragments_under_opaque_functions() {
     let fixtures = [
         (
             "nested_push_a.ts",
@@ -302,7 +301,7 @@ fn semantic_scan_reports_exact_safe_nested_conditional_effect_fragments_under_op
         ),
     ];
     let (dir, out, families) =
-        scan_fragment_only_fixtures("nose_exact_nested_fragments", &fixtures);
+        query_fragment_only_fixtures("nose_exact_nested_fragments", &fixtures);
 
     let assert_guard_family = |left: &str, right: &str, negative: &str| {
         let family = find_block_pair_family_at(&families, left, right, negative, 2, 8)

@@ -238,7 +238,7 @@ unsigned int q(const int *a) {
     let fp = value_fp(&i, add_casted, Lang::C);
     assert!(
         fp.len() >= 4,
-        "C u16 byte-pack fingerprint must stay large enough for exact scan buckets: {} atoms",
+        "C u16 byte-pack fingerprint must stay large enough for exact query buckets: {} atoms",
         fp.len()
     );
     assert_eq!(fp, value_fp(&i, add_uncasted, Lang::C));
@@ -304,7 +304,7 @@ u32 q(const int *a) {
     let fp = value_fp(&i, add_casted_alias, Lang::C);
     assert!(
         fp.len() >= 4,
-        "C u32 byte-pack fingerprint must stay large enough for exact scan buckets: {} atoms",
+        "C u32 byte-pack fingerprint must stay large enough for exact query buckets: {} atoms",
         fp.len()
     );
     assert_eq!(fp, value_fp(&i, or_casted_alias, Lang::C));

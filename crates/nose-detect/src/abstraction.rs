@@ -1,4 +1,4 @@
-//! Typed weak-claim witnesses for the experimental `abstraction` scan surface.
+//! Typed weak-claim witnesses for the experimental `abstraction` query surface.
 //!
 //! This module owns the anti-unification policy. Unit extraction only records the
 //! pre-order token stream; deciding whether a token difference is a meaningful

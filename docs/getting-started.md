@@ -20,7 +20,7 @@ curl --proto '=https' --tlsv1.2 -LsSf https://github.com/corca-ai/nose/releases/
 ```
 
 Both put a single self-contained `nose` binary on your `PATH` — no runtime,
-services, or network needed at scan time. Prebuilt binaries for macOS (Apple
+services, or network needed at analysis time. Prebuilt binaries for macOS (Apple
 Silicon + Intel) and Linux (x86_64 + arm64) are attached to every
 [release](https://github.com/corca-ai/nose/releases). To build from source
 instead, see [usage → Install](usage.md#install).
@@ -30,7 +30,7 @@ instead, see [usage → Install](usage.md#install).
 `nose query <path>` is the one command you need. Point it at any file or directory
 and it prints a summary of what it found, plus runnable next commands for filtering,
 grouping, and opening one family. It recurses, respects `.gitignore` files inside the
-scanned tree, and nothing is written to disk.
+analyzed tree, and nothing is written to disk.
 
 ```
 $ nose query examples
@@ -165,12 +165,12 @@ not the others:
 
 ```sh
 nose query .                            # explore the duplication first
-nose query . base=HEAD                  # review uncommitted local changes
-nose query . base=origin/main           # review a PR branch (e.g. in CI)
+nose query . base=HEAD                  # inspect uncommitted local changes
+nose query . base=origin/main           # inspect a PR branch (e.g. in CI)
 nose query . base=origin/main --fail-on any   # the CI gate (fires only on the proven case)
 ```
 
-See [review](review.md) for how these findings are ranked and the gate policy.
+See [divergent edits](divergent-edits.md) for how these findings are ranked and the gate policy.
 
 ## Gate CI
 
@@ -187,18 +187,13 @@ nose query src --baseline .nose-baseline.json --fail-on new      # then fail onl
 The full gate, baselines, SARIF, and fast re-runs are in
 [continuous-integration](continuous-integration.md).
 
-> **`nose scan` and `nose review` are deprecated** in favour of `nose query` and `nose query
-> base=<ref>`, which read the same dataset and add the gate, baselines, and a versioned JSON
-> contract. They still work (an interactive run prints a one-line nudge) but will be removed in
-> a later release — see [usage](usage.md#nose-query) for the migration.
-
 ## Where to go next
 
 - **[usage › nose query](usage.md#nose-query)** — the full query grammar: filters,
   groups, opening one family, and the CI gate.
 - **[usage](usage.md)** — every command and flag, the ranking keys, and the detection
   modes in full.
-- **[review](review.md)** — the divergent-edit check (`nose query base=<ref>`): catch a
+- **[divergent edits](divergent-edits.md)** — the divergent-edit check (`nose query base=<ref>`): catch a
   clone changed in one copy but not its siblings.
 - **[configuration](configuration.md)** — commit a `nose.toml` so CI and teammates
   don't retype long flag lists.

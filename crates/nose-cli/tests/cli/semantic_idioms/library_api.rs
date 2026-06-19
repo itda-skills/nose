@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn scan_mode_semantic_proves_regex_literal_predicate_matches() {
+fn query_mode_semantic_proves_regex_literal_predicate_matches() {
     let dir = std::env::temp_dir().join(format!("nose_regex_semantic_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -31,9 +31,9 @@ fn scan_mode_semantic_proves_regex_literal_predicate_matches() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -49,17 +49,17 @@ fn scan_mode_semantic_proves_regex_literal_predicate_matches() {
         "semantic mode must consume regex literal provenance without merging different patterns: {semantic}"
     );
 
-    let near = scan_min_json(&dir, "near:0.5");
+    let near = query_min_json(&dir, "near:0.5");
     assert!(
         near.contains("dot-only.ts") && near.contains("markdown-link.ts"),
-        "near mode may still surface the review candidate: {near}"
+        "near mode may still surface the divergent-edit candidate: {near}"
     );
 
     let _ = fs::remove_dir_all(&dir);
 }
 
 #[test]
-fn scan_mode_semantic_allows_proved_js_static_builtins() {
+fn query_mode_semantic_allows_proved_js_static_builtins() {
     let dir = std::env::temp_dir().join(format!("nose_static_builtin_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -79,9 +79,9 @@ fn scan_mode_semantic_allows_proved_js_static_builtins() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -99,7 +99,7 @@ fn scan_mode_semantic_allows_proved_js_static_builtins() {
 }
 
 #[test]
-fn scan_mode_semantic_rejects_unproved_typeof_function_name() {
+fn query_mode_semantic_rejects_unproved_typeof_function_name() {
     let dir = std::env::temp_dir().join(format!(
         "nose_unproved_typeof_function_{}",
         std::process::id()
@@ -127,8 +127,8 @@ fn scan_mode_semantic_rejects_unproved_typeof_function_name() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
     assert!(
         !family_contains_all(
             &semantic_json,
@@ -141,7 +141,7 @@ fn scan_mode_semantic_rejects_unproved_typeof_function_name() {
 }
 
 #[test]
-fn scan_mode_semantic_rejects_unproved_array_isarray_name() {
+fn query_mode_semantic_rejects_unproved_array_isarray_name() {
     let dir = std::env::temp_dir().join(format!(
         "nose_unproved_array_isarray_{}",
         std::process::id()
@@ -159,8 +159,8 @@ fn scan_mode_semantic_rejects_unproved_array_isarray_name() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
     assert!(
         !family_contains_all(&semantic_json, &["array_a.py", "array_b.py"]),
         "semantic mode must not treat an arbitrary Array.isArray method as the JS static builtin: {semantic}"
@@ -170,7 +170,7 @@ fn scan_mode_semantic_rejects_unproved_array_isarray_name() {
 }
 
 #[test]
-fn scan_mode_semantic_rejects_unproved_literal_test_method_name() {
+fn query_mode_semantic_rejects_unproved_literal_test_method_name() {
     let dir =
         std::env::temp_dir().join(format!("nose_unproved_literal_test_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
@@ -186,8 +186,8 @@ fn scan_mode_semantic_rejects_unproved_literal_test_method_name() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
     assert!(
         !family_contains_all(
             &semantic_json,
@@ -200,7 +200,7 @@ fn scan_mode_semantic_rejects_unproved_literal_test_method_name() {
 }
 
 #[test]
-fn scan_mode_semantic_proves_extreme_type4_idioms() {
+fn query_mode_semantic_proves_extreme_type4_idioms() {
     let dir = std::env::temp_dir().join(format!("nose_extreme_type4_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -244,9 +244,9 @@ fn scan_mode_semantic_proves_extreme_type4_idioms() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     let family = |positives: &[&str], negatives: &[&str]| {
         semantic_families
             .iter()
@@ -271,7 +271,7 @@ fn scan_mode_semantic_proves_extreme_type4_idioms() {
 }
 
 #[test]
-fn scan_mode_semantic_proves_collection_empty_checks() {
+fn query_mode_semantic_proves_collection_empty_checks() {
     let dir = std::env::temp_dir().join(format!("nose_collection_empty_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -316,9 +316,9 @@ fn scan_mode_semantic_proves_collection_empty_checks() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert!(
         !semantic_families.is_empty(),
         "semantic mode should report collection emptiness families: {semantic}"
@@ -340,7 +340,7 @@ fn scan_mode_semantic_proves_collection_empty_checks() {
 }
 
 #[test]
-fn scan_mode_semantic_proves_string_prefix_checks() {
+fn query_mode_semantic_proves_string_prefix_checks() {
     let dir = std::env::temp_dir().join(format!("nose_string_prefix_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -395,9 +395,9 @@ fn scan_mode_semantic_proves_string_prefix_checks() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert!(
         !semantic_families.is_empty(),
         "semantic mode should report string prefix families: {semantic}"
@@ -432,7 +432,7 @@ fn scan_mode_semantic_proves_string_prefix_checks() {
 }
 
 #[test]
-fn scan_mode_semantic_proves_rust_integer_methods() {
+fn query_mode_semantic_proves_rust_integer_methods() {
     let dir =
         std::env::temp_dir().join(format!("nose_rust_numeric_methods_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
@@ -488,9 +488,9 @@ fn scan_mode_semantic_proves_rust_integer_methods() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     for expected_pair in [
         ["abs_conditional.py", "abs_method.rs"],
         ["min_conditional.py", "min_method.rs"],

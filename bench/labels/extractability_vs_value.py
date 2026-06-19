@@ -19,7 +19,7 @@ for rid, labs in by_repo.items():
     repo = ROOT/"bench"/"repos"/rid
     if not repo.is_dir(): continue
     lang, split = corpus[rid]["primary_language"], corpus[rid]["split"]
-    r = subprocess.run([str(NOSE),"scan",str(repo),"--format","json","--top","1000000"],
+    r = subprocess.run([str(NOSE), "query", str(repo), "all", "top=1000000", "--format", "json"],
                        cwd=ROOT, capture_output=True, text=True, timeout=300)
     fams = json.loads(r.stdout or "[]")           # native order == extractability (default)
     val_order = sorted(fams, key=lambda f: -f["value"])

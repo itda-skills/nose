@@ -3,7 +3,7 @@
 //! A unit is a heading-rooted **section** (a heading plus the block content under it, up to the
 //! next heading of any level), or the whole document when there are no headings. Section
 //! granularity is the survey default; block/sliding-window granularity is a measured follow-up
-//! (#437 unit-granularity experiment). Parsing is a deterministic, dependency-free line scan —
+//! (#437 unit-granularity experiment). Parsing is a deterministic, dependency-free line pass —
 //! no tree-sitter grammar — because the substrate is normalized text, not a fine AST.
 
 use crate::norm;

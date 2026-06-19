@@ -5,7 +5,7 @@ NOSE = './target/release/nose'
 decl = []
 for r in repos:
     try:
-        out = subprocess.run([NOSE,'scan',f'bench/repos/{r}','--top','0','--format','json'],
+        out = subprocess.run([NOSE, "query", f"bench/repos/{r}", "all", "top=0", "--format", "json"],
                              capture_output=True, text=True, timeout=600)
         d = json.loads(out.stdout)
     except Exception as e:

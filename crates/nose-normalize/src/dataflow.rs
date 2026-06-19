@@ -143,7 +143,7 @@ fn find_inlines(
         let stmts = il.children(node).to_vec();
         // Precompute, in one pass over the block, which statement each node belongs
         // to and the cids each statement writes. This turns the per-candidate
-        // "find the use's statement" (was an O(stmts) subtree scan) into an O(1)
+        // "find the use's statement" (was an O(stmts) subtree walk) into an O(1)
         // lookup and the hazard check into cheap set tests — without it a single
         // huge block is O(stmts² · subtree) (e.g. comfy/sd.py: 84ms → ~3ms).
         let mut owner: FxHashMap<u32, usize> = FxHashMap::default();

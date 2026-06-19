@@ -1,48 +1,6 @@
 use super::*;
 
 #[test]
-fn diff_shows_the_differing_line() {
-    // Two near-identical functions differing in one line -> --show diff marks it +/-.
-    let dir = std::env::temp_dir().join(format!("nose_diff_{}", std::process::id()));
-    let _ = fs::remove_dir_all(&dir);
-    fs::create_dir_all(dir.join("a")).unwrap();
-    fs::create_dir_all(dir.join("b")).unwrap();
-    // The two sum-loops differ only in a literal (the per-element weight), so they
-    // are a clear near-duplicate family. (A `+`-loop vs a `*`-loop is deliberately
-    // *not* used here: the value graph now treats those as distinct reductions — see
-    // §AH — so they are no longer a single family.)
-    // Share enough invariant lines that the one differing literal is a clean,
-    // low-parameter extract — otherwise the family is (correctly) a `shallow`
-    // non-action candidate and leaves the default surface this test reads.
-    fs::write(
-        dir.join("a/f.py"),
-        "def f(items):\n    t = 0\n    n = 0\n    s = 0\n    for x in items:\n        t = t + x * 2\n        n = n + 1\n        s = s + x\n    return t\n",
-    )
-    .unwrap();
-    fs::write(
-        dir.join("b/f.py"),
-        "def g(items):\n    t = 0\n    n = 0\n    s = 0\n    for x in items:\n        t = t + x * 3\n        n = n + 1\n        s = s + x\n    return t\n",
-    )
-    .unwrap();
-    let out = run(&[
-        "scan",
-        dir.to_str().unwrap(),
-        "--mode",
-        "near:0.5",
-        "--min-size",
-        "10",
-        "--show",
-        "diff",
-    ]);
-    assert!(out.contains("diff  "), "should print a diff header: {out}");
-    assert!(
-        out.contains("-         t = t + x * 2") && out.contains("+         t = t + x * 3"),
-        "diff should mark the changed line: {out}"
-    );
-    let _ = fs::remove_dir_all(&dir);
-}
-
-#[test]
 fn version_flag_works() {
     let out = run(&["--version"]);
     assert!(out.starts_with("nose "), "version line: {out}");
@@ -54,7 +12,7 @@ fn capabilities_command_emits_machine_readable_contract() {
     let json: serde_json::Value =
         serde_json::from_str(&out).expect("capabilities must emit valid JSON");
 
-    assert_eq!(json["schema_version"], 1);
+    assert_eq!(json["schema_version"], 2);
     assert_eq!(json["tool"]["name"], "nose");
     assert_eq!(json["tool"]["version"], env!("CARGO_PKG_VERSION"));
     assert!(
@@ -84,14 +42,8 @@ fn capabilities_command_lists_stable_commands_and_schemas() {
         json_array_strings(&json["commands"], "stable"),
         vec!["capabilities", "il", "query", "semantic-pack", "stats"]
     );
-    // `scan` and `review` are deprecated in favour of `query` (#375): `query <path>` and
-    // `query <path> base=<ref>` subsume them — moved out of `stable`.
-    assert_eq!(
-        json_array_strings(&json["commands"], "deprecated"),
-        vec!["review", "scan"]
-    );
-    assert_eq!(json["schemas"]["capabilities"][0], 1);
-    assert_eq!(json["schemas"]["scan_json"][0], 1);
+    assert!(json_array_strings(&json["commands"], "deprecated").is_empty());
+    assert_eq!(json["schemas"]["capabilities"][0], 2);
     assert_eq!(json["schemas"]["query_json"][0], 3);
     assert_eq!(
         json["schemas"]["semantic_packs"][0],
@@ -101,30 +53,30 @@ fn capabilities_command_lists_stable_commands_and_schemas() {
 }
 
 #[test]
-fn capabilities_command_reports_scan_surface() {
+fn capabilities_command_reports_query_surface() {
     let out = run(&["capabilities"]);
     let json: serde_json::Value =
         serde_json::from_str(&out).expect("capabilities must emit valid JSON");
 
     assert_eq!(
-        json_array_strings(&json["scan"], "modes"),
+        json_array_strings(&json["query"], "modes"),
         vec!["syntax", "semantic", "near"]
     );
     assert_eq!(
-        json_array_strings(&json["scan"], "default_modes"),
+        json_array_strings(&json["query"], "default_modes"),
         vec!["syntax", "semantic", "near"]
     );
     assert_eq!(
-        json_array_strings(&json["scan"], "output_formats"),
+        json_array_strings(&json["query"], "output_formats"),
         vec!["human", "json", "markdown", "sarif"]
     );
     assert_eq!(
-        json_array_strings(&json["scan"], "sort_keys"),
+        json_array_strings(&json["query"], "sort_keys"),
         vec!["extractability", "value", "sites", "hazard"]
     );
-    assert_eq!(json["scan"]["capabilities"]["baseline"], true);
-    assert_eq!(json["scan"]["capabilities"]["semantic_pack_loading"], true);
-    assert_eq!(json["scan"]["capabilities"]["structured_ignores"], true);
+    assert_eq!(json["query"]["capabilities"]["baseline"], true);
+    assert_eq!(json["query"]["capabilities"]["semantic_pack_loading"], true);
+    assert_eq!(json["query"]["capabilities"]["structured_ignores"], true);
 }
 
 #[test]
@@ -165,7 +117,7 @@ fn capabilities_command_reports_semantic_pack_il_and_stats_surfaces() {
 
 #[test]
 fn broken_pipe_exits_cleanly() {
-    // `nose scan … | head` (or quitting a pager) closes the read end of stdout while
+    // `nose query … | head` (or quitting a pager) closes the read end of stdout while
     // nose is still writing. That write then fails with `BrokenPipe`, which `println!`
     // turns into a panic — the `failed printing to stdout` crash users hit. The Unix
     // convention is to stop quietly; main()'s panic hook must catch this and exit 0.
@@ -173,8 +125,8 @@ fn broken_pipe_exits_cleanly() {
     // now-readerless pipe gets EPIPE.
     let dir = std::env::temp_dir().join(format!("nose_pipe_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
-    // A handful of large, distinct clone families -> plenty of `--show diff` output, so the
-    // child keeps writing past any buffering and reliably hits the dead pipe.
+    // A handful of large, distinct clone families -> plenty of markdown output, so the child
+    // keeps writing past any buffering and reliably hits the dead pipe.
     for i in 0..40 {
         let body = |delta: &str| {
             let mut s = format!("def fam{i}(xs):\n    acc{i} = 0\n");
@@ -193,14 +145,14 @@ fn broken_pipe_exits_cleanly() {
 
     let mut child = Command::new(bin())
         .args([
-            "scan",
+            "query",
             dir.to_str().unwrap(),
+            "all",
+            "top=40",
             "--mode",
             "near:0.5",
-            "--show",
-            "diff",
-            "--top",
-            "40",
+            "--format",
+            "markdown",
         ])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -235,13 +187,13 @@ fn deeply_nested_file_does_not_overflow() {
     let depth = 40_000;
     let body = format!("const x = {}1{};\n", "[".repeat(depth), "]".repeat(depth));
     fs::write(dir.join("deep.js"), body).unwrap();
-    let _ = run(&["scan", dir.to_str().unwrap()]);
+    let _ = run(&["query", dir.to_str().unwrap()]);
     let _ = fs::remove_dir_all(&dir);
 }
 
 #[test]
 fn recursive_hof_callback_fragment_does_not_overflow() {
-    // Regression for the rxjs scanner abort: when extracting sub-function units inside a
+    // Regression for the rxjs parser abort: when extracting sub-function units inside a
     // recursive helper, the value graph must not register the enclosing function as a pure inline
     // target and inline the helper through its own reduce callback forever.
     let dir = std::env::temp_dir().join(format!("nose_recursive_hof_{}", std::process::id()));
@@ -253,16 +205,15 @@ fn recursive_hof_callback_fragment_does_not_overflow() {
     )
     .unwrap();
     let out = run(&[
-        "scan",
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "semantic",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]);
-    let json = scan_json(&out);
-    assert_eq!(json["scope"]["files"], 1);
+    let json = query_json(&out);
+    assert_eq!(json["schema_version"], 3);
     let _ = fs::remove_dir_all(&dir);
 }

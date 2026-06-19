@@ -43,7 +43,7 @@ pub(super) fn metrics_cell(f: &nose_detect::RefactorFamily) -> (String, usize) {
     (colored, plain.chars().count())
 }
 
-/// One concise list/preview row: where the largest copy is, what it is, and the **payoff
+/// One concise list row: where the largest copy is, what it is, and the **payoff
 /// economics** an agent needs to triage without opening the family — how much is shared,
 /// how many spots vary, how many lines an extraction removes (counts, not a verdict).
 fn query_row(f: &nose_detect::RefactorFamily) -> String {
@@ -52,11 +52,11 @@ fn query_row(f: &nose_detect::RefactorFamily) -> String {
     format!("{loc}  {metrics}")
 }
 
-/// Render the `base=` divergence view: query's schema envelope around review's shared finding
+/// Render the `base=` divergence view: query's schema envelope around divergence's shared finding
 /// JSON, or a concise human report keyed on which copy changed and whether the edit touched
 /// shared logic (the propagation hazard).
 pub(super) fn render_query_base(
-    flagged: &[review::Divergence],
+    flagged: &[divergence::Divergence],
     changed_files: usize,
     base_ref: &str,
     path: &str,
@@ -66,7 +66,7 @@ pub(super) fn render_query_base(
     let limit = query_row_limit(top);
     let fire_eligible = flagged.iter().filter(|d| d.fire_eligible).count();
     if json {
-        let items: Vec<_> = review::divergence_items_json(flagged)
+        let items: Vec<_> = divergence::divergence_items_json(flagged)
             .into_iter()
             .take(limit)
             .collect();
@@ -109,7 +109,7 @@ pub(super) fn render_query_base(
         plural(flagged.len(), "family", "families"),
         plural(changed_files, "file", "files"),
     );
-    let site = |s: &review::Site| {
+    let site = |s: &divergence::Site| {
         let name = s
             .name
             .as_deref()
@@ -239,10 +239,14 @@ pub(super) fn render_query_list(
     let top = query_row_limit(q.top);
     let shown = sel.len().min(top);
     if json {
+        let mut lines = FileLineCache::default();
         let fams: Vec<_> = sel
             .iter()
             .take(top)
-            .map(|f| query_family_json(f, ov, opp, q.id_full, since))
+            .map(|f| {
+                let (shared, params) = all_copies_shared_cached(f, &mut lines);
+                query_family_json_with_counts(f, ov, opp, q.id_full, since, shared, params)
+            })
             .collect();
         println!(
             "{}",

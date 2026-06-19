@@ -2,7 +2,7 @@
 """Mine divergent-edit (G1) and control (G0) clone-family events from a repo's history.
 
 Tier-1 ground-truth pipeline from docs/hazard-benchmark.md, using nose as the
-Type-4-aware clone *identifier*. At each monthly snapshot T we ask nose which sites
+Type-4-aware clone *identifier*. At each monthly snapshot T we query which sites
 form a clone family; git tells us which of those members changed by T+1. The label is
 Kim's Inconsistent-Change predicate, computed channel-agnostically from git:
 
@@ -42,7 +42,7 @@ def monthly_commits(repo, branch, max_months):
     return list(reversed(picked[:max_months]))  # oldest -> newest
 
 
-def scan(repo, sha, nose, subdir, mode, threshold):
+def query_snapshot(repo, sha, nose, subdir, mode, threshold):
     if sh(["git", "-C", repo, "checkout", "-q", "--detach", sha]).returncode != 0:
         return None
     target = repo if not subdir else f"{repo}/{subdir}"
@@ -51,7 +51,7 @@ def scan(repo, sha, nose, subdir, mode, threshold):
     mode_eff = ",".join(
         f"near:{threshold}" if ch == "near" else ch for ch in mode.split(",")
     )
-    cmd = [nose, "scan", target, "--mode", mode_eff, "--format", "json", "--top", "0"]
+    cmd = [nose, "query", target, "all", "top=0", "--mode", mode_eff, "--format", "json"]
     r = sh(cmd)
     try:
         return json.loads(r.stdout)
@@ -204,7 +204,7 @@ def main():
     with open(a.out, "w") as fout:
         prev = None
         for sha, iso in commits:
-            jdoc = scan(a.repo, sha, a.nose, a.subdir, a.mode, a.threshold)
+            jdoc = query_snapshot(a.repo, sha, a.nose, a.subdir, a.mode, a.threshold)
             fams = families(jdoc, os.path.abspath(a.repo)) if jdoc else []
             print(f"[mine] {iso[:10]} {sha[:10]}: {len(fams)} named families", file=sys.stderr)
             if prev is not None:

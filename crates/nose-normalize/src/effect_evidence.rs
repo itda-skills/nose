@@ -194,7 +194,7 @@ fn upsert(
     let rule_hash = stable_symbol_hash(rule);
     let mut found = None;
     // Index-backed: only records anchored at this node's span can match, so the
-    // per-upsert whole-`evidence` scan (quadratic — this pass upserts for most
+    // per-upsert whole-`evidence` pass (quadratic — this pass upserts for most
     // assignments and calls) narrows to one bucket. `rule_hash`/`dependencies`
     // are read live by the index, so in-place updates need no invalidation.
     for idx in il.evidence_indices_anchored_at(anchor.span()) {

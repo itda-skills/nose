@@ -103,7 +103,7 @@ fn tiny_mixed_fragment_family_is_hidden() {
 
 #[test]
 fn fragment_surface_uses_kind_scope_and_spread() {
-    let review_effect = fam(
+    let divergence_effect = fam(
         10.0,
         6,
         6,
@@ -114,8 +114,8 @@ fn fragment_surface_uses_kind_scope_and_spread() {
         ],
     );
     assert_eq!(
-        review_effect.recommended_surface(),
-        "review",
+        divergence_effect.recommended_surface(),
+        "divergence",
         "medium effect fragments are synchronization hazards before default refactors"
     );
 
@@ -148,7 +148,7 @@ fn fragment_surface_uses_kind_scope_and_spread() {
     assert_eq!(
         tiny_test_self_field.recommended_surface(),
         "hidden",
-        "small test fixture constructor bodies stay out of review output"
+        "small test fixture constructor bodies stay out of divergence output"
     );
 
     let medium_test_expr = fam(
@@ -163,8 +163,8 @@ fn fragment_surface_uses_kind_scope_and_spread() {
     );
     assert_eq!(
         medium_test_expr.recommended_surface(),
-        "review",
-        "larger test setup fragments can still be useful review context"
+        "divergence",
+        "larger test setup fragments can still be useful divergence context"
     );
 
     let default_guard = fam(

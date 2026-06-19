@@ -170,7 +170,7 @@ pub fn rank_families(report: &Report) -> Vec<RefactorFamily> {
     // kept location intervals by file and test only families whose interval actually
     // covers that first site, instead of every family that merely touches the same file.
     // Same result: every possible subsumer is still in the candidate set, but generated
-    // docs with thousands of overlapping HTML slices no longer scan the whole file bucket.
+    // docs with thousands of overlapping HTML slices no longer walk the whole file bucket.
     let mut kept: Vec<RefactorFamily> = Vec::with_capacity(fams.len());
     let mut by_file: rustc_hash::FxHashMap<String, Vec<(u32, u32, usize)>> =
         rustc_hash::FxHashMap::default();

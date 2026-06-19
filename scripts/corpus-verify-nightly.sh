@@ -124,7 +124,7 @@ CANON PRESERVATION - normalization preserves behavior:
 SOUNDNESS - fingerprint-equal => behavior-equal (exact claim surface):
   fingerprint groups (>=2): 1
   SOUND: no false merges
-  advisory (symbolic-trace disagreements - review, not gated): 2
+  advisory (symbolic-trace disagreements - inspect, not gated): 2
 
 GATE: 0 <= 0 false merges - OK
 LOG

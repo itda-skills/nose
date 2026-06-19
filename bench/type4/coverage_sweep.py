@@ -26,7 +26,7 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 
-from eval_manifest import build_family_index, item_detected, run_scan
+from eval_manifest import build_family_index, item_detected, run_query
 
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parents[1]
@@ -111,7 +111,7 @@ def sweep_axis(gen_axis: str, nose: Path) -> tuple[dict, dict]:
         out = Path(td)
         manifest_path = gen_manifest(gen_axis, out)
         manifest = json.loads(manifest_path.read_text())
-        families = run_scan(nose, out / "sources")
+        families = run_query(nose, out / "sources")
         oracle = run_oracle(nose, out / "sources")
         index = build_family_index(families)
         cells: dict[str, dict[str, int]] = defaultdict(
@@ -165,7 +165,7 @@ def main() -> int:
         try:
             cells, oracle = sweep_axis(gen_axis, nose)
         except subprocess.CalledProcessError as exc:
-            print(f"  ! {gen_axis}: generate/scan failed: {exc.stderr[:120] if exc.stderr else exc}",
+            print(f"  ! {gen_axis}: generate/query failed: {exc.stderr[:120] if exc.stderr else exc}",
                   file=sys.stderr)
             continue
         # Soundness arm: did the generator's hard negatives stay un-merged, and what did the

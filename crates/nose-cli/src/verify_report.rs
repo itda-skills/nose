@@ -131,7 +131,7 @@ pub(super) fn report_verify_soundness(recs: &[VerifyRec]) -> usize {
     if !advisory.is_empty() {
         advisory.sort();
         println!(
-            "  advisory (symbolic-trace disagreements — review, not gated): {}",
+            "  advisory (symbolic-trace disagreements — divergence, not gated): {}",
             advisory.len()
         );
         for (a, b, d) in advisory.iter().take(10) {
@@ -312,7 +312,7 @@ pub(super) fn report_verify_completeness(
 /// runs/thread counts, which would otherwise pick a different max-vj pair on ties
 /// and break byte-identical output. The pair comes back in canonical orientation
 /// (smaller location first) so it reads identically regardless of which rep the
-/// scan happened to encounter first.
+/// analysis happened to encounter first.
 fn best_split_pair(mut reps: Vec<&VerifyRec>) -> (String, String, f64) {
     reps.sort_by(|a, b| a.loc.cmp(&b.loc));
     let mut best = (0.0f64, reps[0], reps[0]);

@@ -165,7 +165,7 @@ pub(crate) struct BaselineEntry {
 }
 
 /// One recorded family: the matching `key` plus a human note (so the baseline file
-/// is reviewable in a diff). Only `key` is used for matching.
+/// is auditable in a diff). Only `key` is used for matching.
 #[derive(serde::Serialize, serde::Deserialize)]
 struct Entry {
     key: String,

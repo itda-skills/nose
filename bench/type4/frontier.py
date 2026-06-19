@@ -8,7 +8,7 @@ from collections import Counter, defaultdict
 import json
 from pathlib import Path
 
-from eval_manifest import build_family_index, item_detected, run_scan, scan_families
+from eval_manifest import build_family_index, item_detected, run_query, query_families
 
 
 def surface_key(item: dict) -> str:
@@ -184,7 +184,7 @@ def print_comparison(comparison: dict, limit: int) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("manifest", type=Path)
-    parser.add_argument("--scan-json", type=Path)
+    parser.add_argument("--query-json", type=Path)
     parser.add_argument("--nose", default=Path("target/release/nose"), type=Path)
     parser.add_argument("--limit", default=20, type=int)
     parser.add_argument("--json-out", type=Path, help="write the frontier summary as JSON")
@@ -206,10 +206,10 @@ def main() -> int:
     manifest_path = args.manifest.resolve()
     manifest_dir = manifest_path.parent
     manifest = json.loads(manifest_path.read_text())
-    if args.scan_json:
-        families = scan_families(json.loads(args.scan_json.read_text()))
+    if args.query_json:
+        families = query_families(json.loads(args.query_json.read_text()))
     else:
-        families = run_scan(args.nose, manifest_dir / "sources")
+        families = run_query(args.nose, manifest_dir / "sources")
 
     summary = build_summary(manifest, families, manifest_dir)
     print_summary(summary, args.limit)

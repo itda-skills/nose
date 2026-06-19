@@ -59,7 +59,7 @@ def refactorability(f):
     return r
 
 
-def scan_families(stdout):
+def query_families(stdout):
     payload = json.loads(stdout or "[]")
     if isinstance(payload, dict):
         return payload.get("families", [])
@@ -73,8 +73,8 @@ def split_modes(raw_modes):
     return modes
 
 
-def scan_repo(repo, *, mode=None, cache_dir=None, top=1000000, timeout=300):
-    cmd = [str(NOSE), "scan", str(repo), "--format", "json", "--top", str(top)]
+def query_repo(repo, *, mode=None, cache_dir=None, top=1000000, timeout=300):
+    cmd = [str(NOSE), "query", str(repo), "all", f"top={top}", "--format", "json"]
     modes = split_modes([mode] if mode else [])
     if modes:
         cmd += ["--mode", ",".join(modes)]
@@ -82,7 +82,7 @@ def scan_repo(repo, *, mode=None, cache_dir=None, top=1000000, timeout=300):
         cmd += ["--cache-dir", str(cache_dir)]
     r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout)
     r.check_returncode()
-    return scan_families(r.stdout)
+    return query_families(r.stdout)
 
 
 def ci(flags, b=2000):
@@ -104,7 +104,7 @@ def parse_args(argv=None):
         "--mode",
         action="append",
         help=(
-            "nose scan channel list. Omit for the CLI default; repeat or pass a "
+            "nose query mode list. Omit for the CLI default; repeat or pass a "
             "comma-list, e.g. --mode syntax,semantic,near"
         ),
     )
@@ -114,9 +114,9 @@ def parse_args(argv=None):
         default=ROOT / "bench" / "repos",
         help="checkout root containing one directory per corpus repo",
     )
-    p.add_argument("--cache-dir", type=Path, help="forwarded to nose scan --cache-dir")
-    p.add_argument("--top", type=int, default=1000000, help="forwarded to nose scan --top")
-    p.add_argument("--timeout", type=int, default=300, help="per-repo scan timeout in seconds")
+    p.add_argument("--cache-dir", type=Path, help="forwarded to nose query --cache-dir")
+    p.add_argument("--top", type=int, default=1000000, help="forwarded to query top=N")
+    p.add_argument("--timeout", type=int, default=300, help="per-repo query timeout in seconds")
     p.add_argument("--bootstrap", type=int, default=2000, help="bootstrap resamples per CI")
     p.add_argument(
         "--rank",
@@ -150,7 +150,7 @@ def main(argv=None):
         a = acc[(lang, split)]
         a["n"] += len(labs)
         a["worthy"] += sum(x["worthy"] for x in labs)
-        native = scan_repo(
+        native = query_repo(
             repo,
             mode=mode or None,
             cache_dir=args.cache_dir,

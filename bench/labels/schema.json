@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "nose scaning-family labels",
+  "title": "nose query-family labels",
   "description": "Ground truth for the refactoring-candidate product metric. See RUBRIC.md.",
   "type": "object",
   "required": ["schema_version", "families"],

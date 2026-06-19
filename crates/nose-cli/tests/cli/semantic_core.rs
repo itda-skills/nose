@@ -1,11 +1,11 @@
 use super::*;
 
 #[test]
-fn scan_mode_syntax_reports_copy_paste_only() {
+fn query_mode_syntax_reports_copy_paste_only() {
     let dir = make_mode_project("syntax");
     let p = dir.to_str().unwrap();
     let out = run(&[
-        "scan",
+        "query",
         p,
         "--mode",
         "syntax",
@@ -30,11 +30,11 @@ fn scan_mode_syntax_reports_copy_paste_only() {
 }
 
 #[test]
-fn scan_mode_syntax_min_tokens_controls_copy_paste_floor() {
+fn query_mode_syntax_min_tokens_controls_copy_paste_floor() {
     let dir = make_mode_project("syntax_floor");
     let p = dir.to_str().unwrap();
     let out = run(&[
-        "scan",
+        "query",
         p,
         "--mode",
         "syntax",
@@ -43,20 +43,20 @@ fn scan_mode_syntax_min_tokens_controls_copy_paste_floor() {
         "--format",
         "json",
     ]);
-    let json = scan_json(&out);
+    let json = query_json(&out);
     assert!(
-        scan_families(&json).is_empty(),
+        query_families(&json).is_empty(),
         "a high syntax token floor suppresses the short copy-paste run: {out}"
     );
     let _ = fs::remove_dir_all(&dir);
 }
 
 #[test]
-fn scan_mode_semantic_keeps_renamed_exact_clone_candidates() {
+fn query_mode_semantic_keeps_renamed_exact_clone_candidates() {
     let dir = make_mode_project("semantic_mode");
     let p = dir.to_str().unwrap();
     let out = run(&[
-        "scan",
+        "query",
         p,
         "--mode",
         "semantic",
@@ -73,7 +73,7 @@ fn scan_mode_semantic_keeps_renamed_exact_clone_candidates() {
 }
 
 #[test]
-fn scan_mode_semantic_reports_c_u16_byte_pack_only_when_byte_buffer_proven() {
+fn query_mode_semantic_reports_c_u16_byte_pack_only_when_byte_buffer_proven() {
     let dir = std::env::temp_dir().join(format!("nose_c_u16_pack_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -115,9 +115,9 @@ fn scan_mode_semantic_reports_c_u16_byte_pack_only_when_byte_buffer_proven() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     let family_files = |family: &serde_json::Value| -> Vec<String> {
         family["locations"]
             .as_array()
@@ -150,7 +150,7 @@ fn scan_mode_semantic_reports_c_u16_byte_pack_only_when_byte_buffer_proven() {
 }
 
 #[test]
-fn scan_mode_semantic_reports_c_u32_byte_pack_only_when_unsigned_cast_proven() {
+fn query_mode_semantic_reports_c_u32_byte_pack_only_when_unsigned_cast_proven() {
     let dir = std::env::temp_dir().join(format!("nose_c_u32_pack_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -195,9 +195,9 @@ fn scan_mode_semantic_reports_c_u32_byte_pack_only_when_unsigned_cast_proven() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     let family_files = |family: &serde_json::Value| -> Vec<String> {
         family["locations"]
             .as_array()

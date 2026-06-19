@@ -1,6 +1,6 @@
 # Confirmed false-merge reproducers (coevo series 5)
 
-Each `.py`/`.js`/… file holds two functions that `nose scan --mode semantic`
+Each `.py`/`.js`/… file holds two functions that `nose query --mode semantic`
 reports as one `exact-value-graph` family but that compute different things.
 `nose verify <file> --max-violations 0` exits non-zero on the verify-confirmed
 ones — the offline soundness oracle catches them; they are LATENT (the pinned

@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn scan_mode_semantic_converges_cross_language_list_literals() {
+fn query_mode_semantic_converges_cross_language_list_literals() {
     let dir = std::env::temp_dir().join(format!("nose_list_cross_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -26,9 +26,9 @@ fn scan_mode_semantic_converges_cross_language_list_literals() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -47,7 +47,7 @@ fn scan_mode_semantic_converges_cross_language_list_literals() {
 }
 
 #[test]
-fn scan_mode_semantic_preserves_js_object_keys() {
+fn query_mode_semantic_preserves_js_object_keys() {
     let dir = std::env::temp_dir().join(format!("nose_object_semantic_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -77,9 +77,9 @@ fn scan_mode_semantic_preserves_js_object_keys() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -99,7 +99,7 @@ fn scan_mode_semantic_preserves_js_object_keys() {
 }
 
 #[test]
-fn scan_mode_semantic_converges_cross_language_map_literals() {
+fn query_mode_semantic_converges_cross_language_map_literals() {
     let dir = std::env::temp_dir().join(format!("nose_map_cross_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -124,9 +124,9 @@ fn scan_mode_semantic_converges_cross_language_map_literals() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -145,7 +145,7 @@ fn scan_mode_semantic_converges_cross_language_map_literals() {
 }
 
 #[test]
-fn scan_mode_semantic_captures_module_literal_bindings() {
+fn query_mode_semantic_captures_module_literal_bindings() {
     let dir = std::env::temp_dir().join(format!("nose_module_const_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -170,9 +170,9 @@ fn scan_mode_semantic_captures_module_literal_bindings() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -191,7 +191,7 @@ fn scan_mode_semantic_captures_module_literal_bindings() {
 }
 
 #[test]
-fn scan_mode_semantic_preserves_python_dict_keys() {
+fn query_mode_semantic_preserves_python_dict_keys() {
     let dir = std::env::temp_dir().join(format!("nose_dict_semantic_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -221,9 +221,9 @@ fn scan_mode_semantic_preserves_python_dict_keys() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -243,7 +243,7 @@ fn scan_mode_semantic_preserves_python_dict_keys() {
 }
 
 #[test]
-fn scan_mode_semantic_preserves_ruby_hash_keys() {
+fn query_mode_semantic_preserves_ruby_hash_keys() {
     let dir = std::env::temp_dir().join(format!("nose_hash_semantic_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -273,9 +273,9 @@ fn scan_mode_semantic_preserves_ruby_hash_keys() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,

@@ -12,7 +12,3 @@ mod ignores_sarif;
 mod proposal_query;
 #[path = "commands/query_reinvented.rs"]
 mod query_reinvented;
-#[path = "commands/scan_core.rs"]
-mod scan_core;
-#[path = "commands/scan_options.rs"]
-mod scan_options;

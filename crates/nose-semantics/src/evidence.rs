@@ -32,7 +32,7 @@ pub(crate) enum EvidenceResolution<T> {
 
 /// Resolve the unique evidence value projected by `project` among the records
 /// anchored exactly at `span` (anchors only ever match by exact span equality,
-/// so the span-bucketed index replaces a full `evidence` scan per query).
+/// so the span-bucketed index replaces a full `evidence` pass per query).
 pub(crate) fn unique_evidence_at<T: Copy + Eq>(
     il: &Il,
     span: Span,

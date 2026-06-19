@@ -57,7 +57,7 @@ impl DeclarationFacts {
 }
 
 /// Compute declaration facts for one file, selected by extension (the same
-/// vocabulary `nose scan` discovers by). Returns `None` for extensions without
+/// vocabulary `nose query` discovers by). Returns `None` for extensions without
 /// a standalone grammar here — notably the embedded-script containers
 /// (`vue`/`svelte`/`html`), which fail open in the classifier (zero corpus
 /// presence on the declaration surface, measured §BY).

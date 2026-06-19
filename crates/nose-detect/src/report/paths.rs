@@ -92,7 +92,7 @@ pub(super) fn is_generated_loc(l: &Loc) -> bool {
 }
 
 /// Below this mean value-graph size, an all-`Class` family is a field-only type
-/// definition (a record/enum/DTO), not shared behavior — see the dogfood review.
+/// definition (a record/enum/DTO), not shared behavior — see the dogfood audit.
 const TYPEDEF_SEM: f64 = 12.0;
 
 /// Refactor-worthiness discount in `(0, 1]`, applied after `refactor_value`.

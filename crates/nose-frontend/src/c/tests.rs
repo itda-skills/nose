@@ -173,7 +173,7 @@ fn direct_quote_include_aliases_emit_import_type_and_dependent_facts() {
 }
 
 #[test]
-fn direct_quote_include_alias_scan_is_not_hardcoded_to_u8_u32_names() {
+fn direct_quote_include_alias_lookup_is_not_hardcoded_to_u8_u32_names() {
     let interner = Interner::new();
     let dir = std::env::temp_dir().join(format!(
         "nose_c_include_generic_alias_evidence_{}",

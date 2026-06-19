@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn semantic_scan_reports_exact_safe_ordered_index_assignment_branch_fragments_for_go() {
+fn semantic_query_reports_exact_safe_ordered_index_assignment_branch_fragments_for_go() {
     let fixtures = [
         (
             "index_pair_a.go",
@@ -57,7 +57,7 @@ fn semantic_scan_reports_exact_safe_ordered_index_assignment_branch_fragments_fo
         ),
     ];
     let (dir, out, families) =
-        scan_fragment_only_fixtures("nose_index_effect_order_boundary", &fixtures);
+        query_fragment_only_fixtures("nose_index_effect_order_boundary", &fixtures);
 
     for (left, right, negative) in [
         (
@@ -103,7 +103,7 @@ fn semantic_scan_reports_exact_safe_ordered_index_assignment_branch_fragments_fo
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_three_index_assignment_branch_fragments_for_go() {
+fn semantic_query_reports_exact_safe_three_index_assignment_branch_fragments_for_go() {
     let fixtures = [
         (
             "index_three_a.go",
@@ -163,7 +163,7 @@ fn semantic_scan_reports_exact_safe_three_index_assignment_branch_fragments_for_
         ),
     ];
     let (dir, out, families) =
-        scan_fragment_only_fixtures("nose_three_index_effect_boundary", &fixtures);
+        query_fragment_only_fixtures("nose_three_index_effect_boundary", &fixtures);
 
     for (left, right, negative) in [
         (
@@ -210,7 +210,7 @@ fn semantic_scan_reports_exact_safe_three_index_assignment_branch_fragments_for_
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_index_assignment_fragments_for_non_overloaded_languages() {
+fn semantic_query_reports_exact_safe_index_assignment_fragments_for_non_overloaded_languages() {
     let fixtures = [
         (
             "index_square_a.c",
@@ -266,7 +266,7 @@ fn semantic_scan_reports_exact_safe_index_assignment_fragments_for_non_overloade
         ),
     ];
     let (dir, out, families) =
-        scan_fragment_only_fixtures("nose_exact_index_assign_fragments", &fixtures);
+        query_fragment_only_fixtures("nose_exact_index_assign_fragments", &fixtures);
 
     let assert_assignment_family = |left: &str, right: &str, negative: &str| {
         let family =
@@ -303,7 +303,7 @@ fn semantic_scan_reports_exact_safe_index_assignment_fragments_for_non_overloade
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_throw_fragments_under_opaque_functions() {
+fn semantic_query_reports_exact_safe_throw_fragments_under_opaque_functions() {
     let dir =
         std::env::temp_dir().join(format!("nose_exact_throw_fragments_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
@@ -352,17 +352,16 @@ fn semantic_scan_reports_exact_safe_throw_fragments_under_opaque_functions() {
     }
 
     let out = run(&[
-        "scan",
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "semantic",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]);
-    let json = scan_json(&out);
-    let families = scan_families(&json);
+    let json = query_json(&out);
+    let families = query_families(&json);
 
     let assert_throw_family = |left: &str, right: &str, negative: &str| {
         let family = families

@@ -205,7 +205,7 @@ pub struct Group {
 }
 
 /// The evidence behind a group: which kind of convergence merged its members,
-/// derived from the same predicates the channels gate on. An agent reading scan
+/// derived from the same predicates the channels gate on. An agent reading
 /// JSON could not previously tell an exact value-graph proof from shape likeness
 /// (`shared_lines: 0` with `mean_score: 1.0` was uninterpretable — the #216
 /// audit's top gap); this names it without re-plumbing the scorer.

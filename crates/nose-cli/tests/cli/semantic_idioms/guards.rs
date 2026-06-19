@@ -4,7 +4,7 @@ use super::*;
 mod nullish_and_object;
 
 #[test]
-fn scan_mode_semantic_proves_null_presence_predicates() {
+fn query_mode_semantic_proves_null_presence_predicates() {
     let dir = std::env::temp_dir().join(format!("nose_null_presence_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -44,9 +44,9 @@ fn scan_mode_semantic_proves_null_presence_predicates() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -75,7 +75,7 @@ fn scan_mode_semantic_proves_null_presence_predicates() {
 }
 
 #[test]
-fn scan_mode_semantic_reports_flattened_guard_span_only() {
+fn query_mode_semantic_reports_flattened_guard_span_only() {
     let dir = std::env::temp_dir().join(format!("nose_guard_span_semantic_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -91,9 +91,9 @@ fn scan_mode_semantic_reports_flattened_guard_span_only() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let families = query_families(&semantic_json);
     let text = semantic_json.to_string();
     assert!(
         text.contains("large_branch.ts") && text.contains("small_guard.ts"),
@@ -119,7 +119,7 @@ fn scan_mode_semantic_reports_flattened_guard_span_only() {
 }
 
 #[test]
-fn scan_mode_semantic_preserves_js_typeof_operator() {
+fn query_mode_semantic_preserves_js_typeof_operator() {
     let dir = std::env::temp_dir().join(format!("nose_typeof_semantic_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -149,9 +149,9 @@ fn scan_mode_semantic_preserves_js_typeof_operator() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -171,7 +171,7 @@ fn scan_mode_semantic_preserves_js_typeof_operator() {
 }
 
 #[test]
-fn scan_mode_semantic_allows_safe_uninterpreted_calls() {
+fn query_mode_semantic_allows_safe_uninterpreted_calls() {
     let dir = std::env::temp_dir().join(format!("nose_uninterpreted_call_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -192,7 +192,7 @@ fn scan_mode_semantic_allows_safe_uninterpreted_calls() {
     .unwrap();
 
     let semantic = run(&[
-        "scan",
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "semantic",
@@ -202,11 +202,10 @@ fn scan_mode_semantic_allows_safe_uninterpreted_calls() {
         "1",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]);
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -224,7 +223,7 @@ fn scan_mode_semantic_allows_safe_uninterpreted_calls() {
 }
 
 #[test]
-fn scan_mode_semantic_allows_safe_uninterpreted_method_calls() {
+fn query_mode_semantic_allows_safe_uninterpreted_method_calls() {
     let dir =
         std::env::temp_dir().join(format!("nose_uninterpreted_method_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
@@ -246,7 +245,7 @@ fn scan_mode_semantic_allows_safe_uninterpreted_method_calls() {
     .unwrap();
 
     let semantic = run(&[
-        "scan",
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "semantic",
@@ -256,11 +255,10 @@ fn scan_mode_semantic_allows_safe_uninterpreted_method_calls() {
         "1",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]);
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -278,7 +276,7 @@ fn scan_mode_semantic_allows_safe_uninterpreted_method_calls() {
 }
 
 #[test]
-fn scan_mode_semantic_distinguishes_sequence_kinds() {
+fn query_mode_semantic_distinguishes_sequence_kinds() {
     let dir = std::env::temp_dir().join(format!("nose_seq_semantic_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -298,9 +296,9 @@ fn scan_mode_semantic_distinguishes_sequence_kinds() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -318,7 +316,7 @@ fn scan_mode_semantic_distinguishes_sequence_kinds() {
 }
 
 #[test]
-fn scan_mode_semantic_allows_static_import_identity() {
+fn query_mode_semantic_allows_static_import_identity() {
     let dir = std::env::temp_dir().join(format!("nose_import_identity_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -338,9 +336,9 @@ fn scan_mode_semantic_allows_static_import_identity() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -358,7 +356,7 @@ fn scan_mode_semantic_allows_static_import_identity() {
 }
 
 #[test]
-fn scan_mode_semantic_allows_named_namespace_import_identity() {
+fn query_mode_semantic_allows_named_namespace_import_identity() {
     let dir = std::env::temp_dir().join(format!(
         "nose_import_namespace_member_{}",
         std::process::id()
@@ -391,9 +389,9 @@ fn scan_mode_semantic_allows_named_namespace_import_identity() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
+    let semantic = query_min_json(&dir, "semantic");
     let semantic_json: serde_json::Value =
-        serde_json::from_str(&semantic).expect("semantic scan should emit JSON");
+        serde_json::from_str(&semantic).expect("semantic query should emit JSON");
     let semantic_text = semantic_json.to_string();
     assert!(
         family_contains_all(&semantic_json, &["named.js", "namespace.js"]),
@@ -412,7 +410,7 @@ fn scan_mode_semantic_allows_named_namespace_import_identity() {
 }
 
 #[test]
-fn scan_mode_semantic_allows_static_projection_identity() {
+fn query_mode_semantic_allows_static_projection_identity() {
     let dir = std::env::temp_dir().join(format!("nose_projection_identity_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -447,9 +445,9 @@ fn scan_mode_semantic_allows_static_projection_identity() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert!(
         !semantic_families.is_empty(),
         "semantic mode should report static projection identities: {semantic}"

@@ -90,7 +90,7 @@ impl CorpusModel {
     }
 
     /// IDF-weighted cosine for fingerprints from this model's input slice. The per-unit vector
-    /// norms and weights are cached during `fit`, avoiding a full shingle scan for every
+    /// norms and weights are cached during `fit`, avoiding a full shingle pass for every
     /// candidate pair.
     pub fn tfidf_cosine_at(&self, fps: &[Fingerprint], i: usize, j: usize) -> f64 {
         self.pair_stats_at(fps, i, j).cosine

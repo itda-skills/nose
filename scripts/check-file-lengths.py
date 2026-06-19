@@ -60,12 +60,12 @@ def load_budget(path: Path) -> tuple[int, dict[str, int]]:
     return parse_budget_json(text, str(path))
 
 
-def rust_files(root: Path, scan_roots: list[str]) -> list[Path]:
+def rust_files(root: Path, include_roots: list[str]) -> list[Path]:
     files: list[Path] = []
-    for scan_root in scan_roots:
-        base = root / scan_root
+    for include_root in include_roots:
+        base = root / include_root
         if not base.exists():
-            raise SystemExit(f"scan root does not exist: {scan_root}")
+            raise SystemExit(f"include root does not exist: {include_root}")
         files.extend(path for path in base.rglob("*.rs") if path.is_file())
     return sorted(files)
 
@@ -135,13 +135,13 @@ def no_loosening_failures(
 def check(
     root: Path,
     config: Path,
-    scan_roots: list[str],
+    include_roots: list[str],
     *,
     quiet: bool = False,
     ratchet_base: str | None = None,
 ) -> int:
     default_max, budgets = load_budget(config)
-    files = rust_files(root, scan_roots)
+    files = rust_files(root, include_roots)
     actual = {relpath(path, root): count_lines(path) for path in files}
 
     failures: list[str] = []
@@ -248,7 +248,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--root", type=Path, default=Path("."))
-    parser.add_argument("--scan-root", action="append", dest="scan_roots")
+    parser.add_argument("--include-root", action="append", dest="include_roots")
     parser.add_argument(
         "--ratchet-base",
         help="git ref whose budget config is the no-loosening baseline",
@@ -263,8 +263,8 @@ def main() -> int:
     config = args.config
     if not config.is_absolute():
         config = root / config
-    scan_roots = args.scan_roots or list(DEFAULT_ROOTS)
-    return check(root, config, scan_roots, ratchet_base=args.ratchet_base)
+    include_roots = args.include_roots or list(DEFAULT_ROOTS)
+    return check(root, config, include_roots, ratchet_base=args.ratchet_base)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn semantic_scan_reports_exact_safe_return_fragments_under_opaque_functions() {
+fn semantic_query_reports_exact_safe_return_fragments_under_opaque_functions() {
     let fixtures = [
         (
             "arith_a.py",
@@ -40,7 +40,7 @@ fn semantic_scan_reports_exact_safe_return_fragments_under_opaque_functions() {
             "def product_wrong(zs):\n    return (zs[0] + zs[1]) * (zs[2] + 5)\n    audit(zs)\n",
         ),
     ];
-    let (dir, out, families) = scan_fragment_fixtures("nose_exact_return_fragments", &fixtures);
+    let (dir, out, families) = query_fragment_fixtures("nose_exact_return_fragments", &fixtures);
 
     assert_block_pair_family(
         &families,
@@ -70,7 +70,7 @@ fn semantic_scan_reports_exact_safe_return_fragments_under_opaque_functions() {
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_conditional_return_fragments_under_opaque_functions() {
+fn semantic_query_reports_exact_safe_conditional_return_fragments_under_opaque_functions() {
     let fixtures = [
         (
             "square_guard_a.py",
@@ -109,7 +109,7 @@ fn semantic_scan_reports_exact_safe_conditional_return_fragments_under_opaque_fu
             "def both_guard_mutated(zs):\n    zs.append(1)\n    if zs[0] > 0 and zs[1] > 0:\n        return zs[0] + zs[1]\n    audit(zs)\n",
         ),
     ];
-    let (dir, out, families) = scan_fragment_fixtures("nose_exact_guard_fragments", &fixtures);
+    let (dir, out, families) = query_fragment_fixtures("nose_exact_guard_fragments", &fixtures);
 
     assert_block_pair_family(
         &families,
@@ -139,7 +139,7 @@ fn semantic_scan_reports_exact_safe_conditional_return_fragments_under_opaque_fu
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_conditional_throw_fragments_under_opaque_functions() {
+fn semantic_query_reports_exact_safe_conditional_throw_fragments_under_opaque_functions() {
     let fixtures = [
         (
             "square_throw_guard_a.ts",
@@ -179,7 +179,7 @@ fn semantic_scan_reports_exact_safe_conditional_throw_fragments_under_opaque_fun
         ),
     ];
     let (dir, out, families) =
-        scan_fragment_fixtures("nose_exact_throw_guard_fragments", &fixtures);
+        query_fragment_fixtures("nose_exact_throw_guard_fragments", &fixtures);
 
     assert_block_pair_family(
         &families,
@@ -209,8 +209,8 @@ fn semantic_scan_reports_exact_safe_conditional_throw_fragments_under_opaque_fun
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_empty_branch_conditional_exit_fragments_under_opaque_functions()
-{
+fn semantic_query_reports_exact_safe_empty_branch_conditional_exit_fragments_under_opaque_functions(
+) {
     let fixtures = [
         (
             "empty_else_return_a.ts",
@@ -250,7 +250,7 @@ fn semantic_scan_reports_exact_safe_empty_branch_conditional_exit_fragments_unde
         ),
     ];
     let (dir, out, families) =
-        scan_fragment_fixtures("nose_exact_empty_branch_fragments", &fixtures);
+        query_fragment_fixtures("nose_exact_empty_branch_fragments", &fixtures);
 
     assert_block_pair_family(
         &families,
@@ -280,7 +280,7 @@ fn semantic_scan_reports_exact_safe_empty_branch_conditional_exit_fragments_unde
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_conditional_bare_return_fragments_under_opaque_functions() {
+fn semantic_query_reports_exact_safe_conditional_bare_return_fragments_under_opaque_functions() {
     let fixtures = [
         (
             "bare_square_a.ts",
@@ -320,7 +320,7 @@ fn semantic_scan_reports_exact_safe_conditional_bare_return_fragments_under_opaq
         ),
     ];
     let (dir, out, families) =
-        scan_fragment_fixtures("nose_exact_bare_return_fragments", &fixtures);
+        query_fragment_fixtures("nose_exact_bare_return_fragments", &fixtures);
 
     assert_block_pair_family(
         &families,
@@ -350,7 +350,7 @@ fn semantic_scan_reports_exact_safe_conditional_bare_return_fragments_under_opaq
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_conditional_expr_effect_fragments_under_opaque_functions() {
+fn semantic_query_reports_exact_safe_conditional_expr_effect_fragments_under_opaque_functions() {
     let fixtures = [
         (
             "push_square_a.ts",
@@ -390,7 +390,7 @@ fn semantic_scan_reports_exact_safe_conditional_expr_effect_fragments_under_opaq
         ),
     ];
     let (dir, out, families) =
-        scan_fragment_fixtures("nose_exact_expr_effect_fragments", &fixtures);
+        query_fragment_fixtures("nose_exact_expr_effect_fragments", &fixtures);
 
     assert_block_pair_family(
         &families,

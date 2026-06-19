@@ -289,7 +289,7 @@ fn find_script_open(src: &[u8], mut pos: usize) -> Option<usize> {
 }
 
 /// The index of the `>` that closes the opening tag at `open`, skipping any `>`
-/// inside a quoted attribute value. Scans from `open + 1` (just past `<`) so it works
+/// inside a quoted attribute value. Starts from `open + 1` (just past `<`) so it works
 /// for both `<script` and the one-shorter `<style` (a hardcoded `"<script".len()`
 /// offset overran the `>` of a bare `<style>`).
 fn tag_end(src: &[u8], open: usize) -> Option<usize> {

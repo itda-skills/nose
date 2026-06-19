@@ -3,7 +3,7 @@
 Status: nose provides a local semantic-pack v0 conformance harness for manifest
 structure and declared fixture assets. The harness is a provider/user workflow,
 not nose approval of third-party semantic correctness. External packs remain
-`metadata-only` when loaded by `nose query` (or the deprecated `nose scan`).
+`metadata-only` when loaded by `nose query`.
 
 ## Goal
 
@@ -116,7 +116,7 @@ every user's risk model.
 
 ## User Responsibilities
 
-Users who opt into external packs own the enablement decision. They should review:
+Users who opt into external packs own the enablement decision. They should inspect:
 
 - provider identity and repository history;
 - package/version ranges and unsupported boundaries;
@@ -124,8 +124,7 @@ Users who opt into external packs own the enablement decision. They should revie
 - whether exact-capable contracts are appropriate for their codebase;
 - the pack's own test or proof evidence outside nose.
 
-`nose query --semantic-pack` (or the deprecated `nose scan --semantic-pack`) and
-`[scan].semantic-packs` report loaded external packs under `semantic_packs` with
+`nose query --semantic-pack` and `[query].semantic-packs` report loaded external packs under `semantic_packs` with
 `metadata-only` influence today. Future producer
 execution must keep the same provenance and fail-closed behavior before external
 packs can affect `near` or exact results.

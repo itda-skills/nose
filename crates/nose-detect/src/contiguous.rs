@@ -249,7 +249,7 @@ fn line_count(l: &LocSeed) -> u32 {
 /// A single forward pass keyed by k-gram hash: the first time a k-gram is seen it is
 /// recorded; a later identical k-gram seeds a match against that first occurrence,
 /// which is extended to its maximal length and (if large enough) emitted. After a
-/// match the scan skips past it, so each duplicated region is reported once and the
+/// match the pass skips past it, so each duplicated region is reported once and the
 /// pass stays linear even on highly repetitive code.
 pub(crate) fn detect(streams: &[Stream], min_tokens: usize, min_lines: u32) -> Vec<crate::Group> {
     let (k, mint, minl) = (k(), min_tokens, min_lines);

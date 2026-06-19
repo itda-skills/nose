@@ -39,8 +39,7 @@ nose query <path> --format json                    # the ranked triage surface (
 nose query <path> base=origin/main --format json   # PR-time divergence (the base view)
 ```
 
-The deprecated equivalents are `nose scan <path> --format json` and `nose review --base
-origin/main --format json`. Parse the family objects — `top_candidates[]` in the dashboard
+Parse the family objects — `top_candidates[]` in the dashboard
 view, `families[]` in a list view (a filter/`sort=`/`top=` term), `items[]` in the `base` view
 ([query JSON](query-json.md)). Do not scrape human output. The per-family decision procedure
 below applies to both a `nose query` row and a JSON family — they carry the same evidence fields.
@@ -50,12 +49,12 @@ below applies to both a `nose query` row and a JSON family — they carry the sa
 Read the fields in this order — each step either decides or narrows:
 
 1. **Surface filter.** Act on `surface == "default"` only;
-   `review`/`hidden`/`shallow`/`generated`/`declaration`/`debug` are diagnostic surfaces. The
+   `divergence`/`hidden`/`shallow`/`generated`/`declaration`/`debug` are diagnostic surfaces. The
    non-default `surface` value *is* the demotion reason — a decidable classification, not a
    worthiness verdict: `shallow` (the extracted helper would be mostly parameters), `declaration`
    (only import/include/use/re-export spans), `generated` (every location in generated-header
-   source or CSS source-plus-compiled/minified build pipeline), and `review`/`hidden`
-   (review-hazard or proof-only diagnostics, too small to extract).
+   source or CSS source-plus-compiled/minified build pipeline), and `divergence`/`hidden`
+   (divergence-hazard or proof-only diagnostics, too small to extract).
    A default-surface family carries `surface == "default"`.
 2. **Generated/vendored.** The `generated` surface already flags generated-header families and CSS
    source-plus-compiled/minified build pipelines; also drop families whose paths are vendored
@@ -121,8 +120,8 @@ Read the fields in this order — each step either decides or narrows:
 
 ## PR-time: divergent-edit findings
 
-`nose query <path> base=<ref> --format json` (the `base` view — `nose review --format json` is
-the deprecated alias) emits one `items[]` finding per divergence, each carrying the gate
+`nose query <path> base=<ref> --format json` (the `base` view) emits one `items[]`
+finding per divergence, each carrying the gate
 fields: `fire_eligible` (the conservative shared-logic policy verdict the gate fires on),
 `witness_kind`, `scope`, and per-changed-site `touches_shared`. For a harm pass over the top
 findings, judge each as
@@ -139,5 +138,5 @@ reproduced the human-audited worthy/not-worthy verdicts — see
 [experiments §BX](experiments.md) for the run and its agreement numbers.
 
 *See also: [usage › nose query](usage.md#nose-query) · [query JSON](query-json.md) ·
-[scan JSON](scan-json.md) · [review](review.md) · [structured-ignores](structured-ignores.md) ·
+[query JSON](query-json.md) · [divergent edits](divergent-edits.md) · [structured-ignores](structured-ignores.md) ·
 [design](design.md).*

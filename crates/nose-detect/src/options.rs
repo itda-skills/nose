@@ -18,16 +18,16 @@ pub struct DetectOptions {
     /// Disable with `--no-blocks`.
     pub block_units: bool,
     /// Minimum duplicated run size for the contiguous copy-paste channel, in IL
-    /// tokens. This is separate from structural unit size internally, but the CLI's
-    /// `scan --min-size` intentionally drives both so syntax gates have one size knob.
+    /// tokens. This is separate from structural unit size internally, but the query
+    /// `--min-size` intentionally drives both so syntax gates have one size knob.
     pub contiguous_min_tokens: usize,
     /// Minimum duplicated run size for the contiguous copy-paste channel, in source
-    /// lines. The CLI's `scan --min-lines` drives both unit extraction and this floor.
+    /// lines. Query's advanced `--min-lines` drives both unit extraction and this floor.
     pub contiguous_min_lines: u32,
-    /// Run the syntax copy-paste channel: a Rabin-Karp scan over each file's IL token
+    /// Run the syntax copy-paste channel: a Rabin-Karp pass over each file's IL token
     /// stream that finds
     /// maximal duplicated runs *regardless of unit boundaries* (the Type-1/2 floor
-    /// a token-based detector like jscpd catches). Enabled by `scan --mode syntax`,
+    /// a token-based detector like jscpd catches). Enabled by `query --mode syntax`,
     /// and off for the strict/gold `detect` path so Type-4 benchmark numbers are stable.
     pub contiguous: bool,
     /// Run the unit detector used by the semantic and near channels. Turning this off
@@ -42,7 +42,7 @@ pub struct DetectOptions {
     /// operators differ and therefore the value fingerprint no longer matches.
     pub shape_candidates: bool,
     /// Build syntactic unit features (`shapes`, `shape_minhash`, `linear`) for fuzzy
-    /// structural scoring. Exact semantic scans do not need them: candidate generation
+    /// structural scoring. Exact semantic runs do not need them: candidate generation
     /// and scoring both use the value graph only.
     pub shape_features: bool,
     /// Attach experimental abstraction witnesses to near-derived families whose normalized
@@ -50,7 +50,7 @@ pub struct DetectOptions {
     /// claim and never participates in exact semantic acceptance.
     pub abstraction_witnesses: bool,
     /// Materialize and sort raw accepted pair output. Hidden `nose detect` and library callers
-    /// keep this on; `scan`/`query` rank grouped families and do not need the pair list.
+    /// keep this on; query ranks grouped families and does not need the pair list.
     pub emit_pairs: bool,
 }
 

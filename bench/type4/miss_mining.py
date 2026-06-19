@@ -44,7 +44,7 @@ NOSE = ROOT / "target" / "release" / "nose"
 
 BANDS, ROWS = 32, 4  # over the 128-slot detection minhash
 MIN_LINES, MIN_TOKENS = 5, 40  # meaningful-size floor for mined units
-SCAN_TIMEOUT = 900
+QUERY_TIMEOUT = 900
 
 
 def rel(p: str) -> str:
@@ -54,7 +54,7 @@ def rel(p: str) -> str:
 
 
 def run_json(cmd):
-    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=SCAN_TIMEOUT)
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=QUERY_TIMEOUT)
     if r.returncode != 0:
         return None
     return json.loads(r.stdout)
@@ -63,7 +63,7 @@ def run_json(cmd):
 def reported_groups(repo_dir):
     """Family id per (file,line) span on the maximal current surface."""
     payload = run_json([
-        str(NOSE), "scan", str(repo_dir), "--format", "json", "--top", "0",
+        str(NOSE), "query", str(repo_dir), "all", "top=0", "--format", "json",
         "--mode", "syntax,semantic,near", "--min-value", "0", "--min-members", "2",
     ])
     if payload is None:
@@ -112,7 +112,7 @@ def overlapping(ua, ub) -> bool:
 def mine_repo(repo_dir, vj_floor, per_repo):
     spans = reported_groups(repo_dir)
     if spans is None:
-        return None, "scan-failed"
+        return None, "query-failed"
     feats = run_json([
         str(NOSE), "features", str(repo_dir),
         "--min-lines", str(MIN_LINES), "--min-tokens", str(MIN_TOKENS),
@@ -220,7 +220,7 @@ def main():
             "nose_version": nose_ver,
             "vj_floor": args.vj,
             "min_unit": {"lines": MIN_LINES, "tokens": MIN_TOKENS, "value_nodes": 8},
-            "scan_failures": sorted(f["repo"] for f in failures),
+            "query_failures": sorted(f["repo"] for f in failures),
             "repos": dict(sorted(out_repos.items())),
         }, indent=1, sort_keys=True) + "\n")
         print(f"wrote {args.json_out}")

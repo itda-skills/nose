@@ -40,7 +40,7 @@ def evaluate(manifest_path: Path, nose: Path) -> dict[str, int]:
     manifest_path = manifest_path.resolve()
     manifest_dir = manifest_path.parent
     manifest = json.loads(manifest_path.read_text())
-    families = eval_manifest.run_scan(nose, manifest_dir / "sources")
+    families = eval_manifest.run_query(nose, manifest_dir / "sources")
     family_index = eval_manifest.build_family_index(families)
     positives = [item for item in manifest["items"] if item["expected_exact_detect"]]
     negatives = [item for item in manifest["items"] if not item["expected_exact_detect"]]

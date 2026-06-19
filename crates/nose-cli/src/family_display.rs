@@ -1,3 +1,4 @@
+#[cfg(test)]
 use super::*;
 
 /// The line count of the family's representative copy — the denominator for "`N of M`
@@ -16,6 +17,7 @@ pub(super) fn representative_lines(f: &nose_detect::RefactorFamily) -> u32 {
 /// One plain-language line describing a family: how many copies, how much is actually
 /// shared vs varies, how many lines you'd remove, and where the duplication lives. No
 /// internal ranking numbers — those only order the list, they're not for the reader.
+#[cfg(test)]
 pub(super) fn family_summary(f: &nose_detect::RefactorFamily) -> String {
     let detail = if f.languages > 1 {
         format!(

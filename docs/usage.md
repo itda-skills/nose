@@ -40,23 +40,21 @@ from-source `./target/release/nose`.
 | Inspect lowering coverage for a language | `nose stats <paths...>` |
 | Find near-duplicate Markdown **prose** | `nose query <path>` — see [markdown-duplication](markdown-duplication.md) |
 | Debug why two snippets do or do not converge | `nose il <file> --normalized` |
-| One-shot ranked report (**deprecated**) | `nose scan <paths...>` — prefer `nose query --format markdown` |
 
 `nose query` is the main command; the **Ranking** and **Detection modes** sections below
-document the shared ranking keys and detection channels both surfaces use.
+document the ranking keys and detection channels it uses.
 
 ## `nose query`
 
-`nose query <path> [terms…]` scans a file or directory and prints the duplicated-code
-families nose found. With no terms it shows a summary: scan scope, family counts by
+`nose query <path> [terms…]` analyzes a file or directory and prints the duplicated-code
+families nose found. With no terms it shows a summary: analysis scope, family counts by
 evidence, the best candidates to inspect first, proven-behavior families, duplicated
 directory hotspots, and next commands. Add terms to filter, group, sort, or open one
 family; every result includes a runnable `nose query …` command.
 
 `nose query` carries the analysis flags, the `--fail-on` CI gate, and a structured contract: with
 `--format json` every view emits the versioned [query-JSON v3 contract](query-json.md), and
-`--format markdown`/`sarif` produce a ranked report. The deprecated `nose scan`/`nose review`
-read the same dataset.
+`--format markdown`/`sarif` produce a ranked report.
 
 ```text
 nose query <path> [FILTER … | group=FIELD | id=FAM | at=FILE:LINE | reinvented | base=REF] [since=FILE] [sort=KEY] [top=N] [full] [all]
@@ -69,10 +67,10 @@ nose query <path> [FILTER … | group=FIELD | id=FAM | at=FILE:LINE | reinvented
 | `id=FAM` | open one family (any unambiguous id prefix): its copies, the all-copies extraction skeleton, overlapping-family links (`subsumes`/`subsumed_by`), and navigation |
 | `at=FILE:LINE` | open the family whose copy covers that source location — a stable handle across edits (the span-derived `id=` shifts when code moves) |
 | `reinvented` | the **reinvented-helper** view: code that reimplements an existing helper inline (the action is "call it"). Complements `shape=call-existing-helper` (those are the cases the family clusterer caught; these are the ones it did not) |
-| `base=REF` | the **divergent-edit** view (the [`nose review`](review.md) pipeline, surfaced in query): detect families at the git ref, flag the ones a diff changed in one copy but not its siblings — a likely un-propagated fix. It is its own view, so combine it only with `top=N`, detection flags, `--format`, or `--fail-on any`; ordinary family filters are for the non-`base=` query views. Each item carries `fire_eligible` (the conservative proven-shared-logic verdict); `base=REF --fail-on any` is the CI gate (fires only on the proven case) |
+| `base=REF` | the **divergent-edit** view: detect families at the git ref, flag the ones a diff changed in one copy but not its siblings — a likely un-propagated fix. It is its own view, so combine it only with `top=N`, detection flags, `--format`, or `--fail-on any`; ordinary family filters are for the non-`base=` query views. Each item carries `fire_eligible` (the conservative proven-shared-logic verdict); `base=REF --fail-on any` is the CI gate (fires only on the proven case) |
 | `since=FILE` | compare to a saved snapshot (written with `--baseline FILE --write-baseline`) and expose each family's **`status`** (`new`/`changed`/`unchanged`) as a queryable field — the temporal lens. Hides nothing (unlike `--baseline`); `since=B status=new --fail-on any` is the composable gate |
 | `sort=KEY` | `extractability` (default), `value`, `members` (also `sites` and the experimental `hazard` — see [Ranking](#ranking)) |
-| `top=N` | show the first N rows (default 30); `top=0` shows **all** (like the deprecated `scan --top 0`) |
+| `top=N` | show the first N rows (default 30); `top=0` shows **all** |
 | `full` | on `id=` or a list, render the all-copies extraction skeletons inline (batched); each varying spot is `⟨param N: class⟩` — a coarse value-class hint (`literal`/`name`/`call`/`expr`/`block`) for the helper signature |
 | `all` | widen past the curated default surface to the full raw universe (demoted families labeled) |
 
@@ -89,7 +87,7 @@ result is a pure function of (repo state, command); an unknown field or enum val
 error (so a typo can't read as "no duplication").
 
 `spotclass` reads the [graded witness](graded-witness.md), which is presentation-layer
-enrichment (the dominant scan cost), so `query` computes it **on demand** — only when a term
+enrichment (the dominant extra analysis cost), so `query` computes it **on demand** — only when a term
 filters or groups by `spotclass`. The common query path pays nothing; a `spotclass=` /
 `group=spotclass` query re-derives the witness for the near families first.
 
@@ -109,10 +107,10 @@ advanced `--min-lines`, `--exclude`, `--config`), `--ignore-file`, `--format`, `
 
 A named path that doesn't exist is an error (exit non-zero) — a typo'd path in a
 CI gate must fail loudly. A path that exists but contains no supported source
-files warns on stderr and reports an empty scan. This holds for `nose query`,
-`nose stats`, and the deprecated `nose scan` alike.
+files warns on stderr and reports an empty result. This holds for `nose query` and
+`nose stats`.
 
-How to read the resulting dashboard — the `scanned …` scope line, the confidence breakdown,
+How to read the resulting dashboard — the scope line, the confidence breakdown,
 the per-family economics, scope tags, and the `→` hint — is covered in
 [getting-started → How to read the report](getting-started.md#how-to-read-the-report).
 
@@ -120,7 +118,7 @@ the per-family economics, scope tags, and the `→` hint — is covered in
 
 The dashboard, the other formats, and the `--fail-on` gate show a curated **default
 surface** of action-oriented families, and hold the rest back behind a one-line omission
-footer (`omitted N families …`). Held back are tiny proof-only fragments, review-only
+footer (`omitted N families …`). Held back are tiny proof-only fragments,
 fragments, generated/distributed-output families (including generated-code headers and CSS
 source-plus-compiled/minified build pipelines), **declaration runs**
 (spans that are only import/include/use/re-export lines — duplication the language mandates
@@ -131,10 +129,10 @@ surface is what `--fail-on` gates on — a family in the `all` view alone never 
 
 ## Ranking
 
-`--sort` (scan) and `sort=` (query) choose what "most worth your attention first" means.
-`--min-value` is a noise floor on raw value and applies under every sort. Both surfaces
-accept the same keys — `extractability`, `value`, `sites`, and the experimental `hazard`;
-`nose query` additionally accepts `members` as an alias for `sites`. (The query dashboard's
+`sort=` chooses what "most worth your attention first" means.
+`--min-value` is a noise floor on raw value and applies under every sort. `nose query`
+accepts `extractability`, `value`, `sites`, the alias `members`, and the experimental `hazard`.
+(The query dashboard's
 `sort` cheatsheet advertises only the common three — `extractability`, `value`, `members`.)
 
 | key | ranks by | use when |
@@ -163,7 +161,7 @@ chance** — see [hazard-ranking](hazard-ranking.md) for the full, honest evalua
 ## Detection modes
 
 nose's detection has three stable orthogonal channels, selected with `--mode` on
-`nose query` (or the deprecated `nose scan`). Omitting `--mode` runs all three:
+`nose query`. Omitting `--mode` runs all three:
 `syntax,semantic,near`. When `--mode` is present, nose runs exactly the channels you list;
 it does not add them to the default. See [clone-types](clone-types.md) for what each finds
 against the standard Type-1–4 taxonomy.
@@ -172,7 +170,7 @@ against the standard Type-1–4 taxonomy.
 |---|---|---|---|
 | `syntax` | Type-1 / exact token-run floor | same-language jscpd-style contiguous copy-paste runs | replacing jscpd / blocking copy-paste clones in CI |
 | `semantic` | Type-4 | exact value-fingerprint matches | high-confidence semantic clones with no fuzzy threshold |
-| `near` | Type-3 | shape candidates + fuzzy structural/value scoring | finding near-duplicates for review |
+| `near` | Type-3 | shape candidates + fuzzy structural/value scoring | finding near-duplicates for triage |
 
 Examples:
 
@@ -193,14 +191,13 @@ candidate stream, defaults to threshold `0.50`, and then keeps only same-languag
 families whose normalized IL differs by exactly one supported literal leaf. Its
 claim is weaker than `semantic`: it reports a refactoring-template witness with a
 typed hole and caveats such as `numeric-domain-sensitive`; it does not say the two
-copies are behavior-equivalent. Emit all families as JSON (`nose query … top=0 --format json`,
-or the deprecated `nose scan … --top 0 --format json`) to consume the
-`abstraction_witness` field documented in [scan-json](scan-json.md#abstraction-witnesses).
+copies are behavior-equivalent. Emit all families as JSON (`nose query … top=0 --format json`)
+to consume the `abstraction_witness` field.
 The witness is built from normalized IL, not line-level `--show proposal` text; its
 template is machine-oriented today and carries typed hole metadata for tooling. A
 reported abstraction family must share one literal-leaf hole position across all
 members; mixed families with different changed positions are left unwitnessed.
-When `near:T` and `abstraction:T` are combined in one scan, they share one fuzzy
+When `near:T` and `abstraction:T` are combined in one run, they share one fuzzy
 acceptance threshold; giving different inline values is rejected instead of silently
 choosing the last one.
 
@@ -214,51 +211,8 @@ Besides whole functions/classes/blocks, it admits only exact-safe sub-function f
 whose inputs, exits, and ordered effects are self-contained: direct return/throw values,
 bounded conditional guards, selected for-each append/index effects, and fixed-`this` Java
 field writes. General statement windows, dynamic receiver writes, mixed unproven effects,
-and arbitrary field/property mutation stay closed. The exact fragment contract and JSON
-metadata are documented in [fragment-contracts](fragment-contracts.md) and
-[scan-json](scan-json.md#fragment-metadata).
-
-## `nose scan`
-
-> **Deprecated** (since 0.10.0) in favour of [`nose query`](#nose-query), which reads the
-> same dataset and now carries the analysis flags, the `--fail-on`/`--baseline` gate, and a
-> structured versioned [`--format json`](query-json.md) contract. `scan` still works (an
-> interactive run prints a one-line nudge); it will be removed in a later release. The
-> [Ranking](#ranking) keys and [Detection modes](#detection-modes) above apply to both surfaces.
-
-`nose scan <paths…>` scans one or more files/directories (recursively, respecting
-`.gitignore` files inside each scanned tree) and groups duplicated code into **families**.
-Ranking (default `extractability`) and detection channels (default `syntax,semantic,near`)
-follow the shared [Ranking](#ranking) and [Detection modes](#detection-modes) sections above.
-
-```sh
-nose scan path/to/project
-```
-
-How to read the resulting report is covered in
-[getting-started → How to read the report](getting-started.md#how-to-read-the-report).
-Like `nose query`, `scan` shows only the curated [default surface](#the-default-surface)
-of action-oriented findings and omits the held-back categories with a short count line;
-`--format json --top 0` keeps the post-ranking diagnostic families that survive rank-time
-pruning.
-
-Within the human report, **production findings lead and test-scope duplication is
-ranked beneath**, behind a `── N test-scope families …` separator (or a `+N more`
-footer when `--top` cuts them). Test duplication is still a real smell — nothing is
-dropped: the families stay ranked, in `--format json`, and one `--scope test` away.
-`--scope prod` hides them entirely; `--scope test` focuses on them. (This prod-first
-ordering is specific to the deprecated `scan` view; `nose query` is **scope-blind** —
-it ranks test and production purely by extractability and slices with `scope=`.)
-
-Families whose members are overlapping slices of the same source regions are
-one refactoring *opportunity*: the best-ranked family keeps its numbered entry
-and the others fold into a `↳ N overlapping slice families…` note under it
-(`--format json` keeps every family, with `overlap_primary_id` marking the
-slices). Each entry also names its equivalence evidence — `exact behavior
-match` (value-graph proof), `shared core computation`, `copy-paste`, or
-`near-duplicate` — so a *shared decision* reads differently from a *shared
-shape*. These are the deprecated `scan` view's spellings of the same evidence
-classes `nose query` tags `exact` / `shared-core` / `copy-paste` / `similar`.
+and arbitrary field/property mutation stay closed. The exact fragment contract is
+documented in [fragment-contracts](fragment-contracts.md).
 
 ### Flags
 
@@ -270,31 +224,23 @@ mode flags are documented under [Ranking](#ranking) and [Detection modes](#detec
 
 | flag | effect |
 |---|---|
-| `--sort KEY` | ranking: `extractability` (default), `value`, `sites`, or `hazard` (experimental; see [Ranking](#ranking)) |
-| `--top N` | show only the top N families (default 30; `--top 0` = all) |
 | `--min-members N` | only families with at least N duplicated sites (default 2) |
 | `--min-value V` | hide families below this finite non-negative refactoring value (noise floor on large repos) |
 | `--min-size N` | ignore units or syntax copy-paste runs smaller than this size, in IL tokens (default 24) |
-| `--scope prod\|test\|all` | keep one side of the test boundary: `prod` drops all-test families (test↔prod leaks stay), `test` keeps only them (default `all`). Applies to every output format and `--fail-on` |
 | `--mode MODE` | one or more of `syntax`, `semantic`, `near[:T]`; comma-list or repeatable; when present, replaces the default. Experimental `abstraction[:T]` is accepted but not a stable capabilities mode. |
 | `--exclude <glob>` | skip paths matching a gitignore-syntax glob (repeatable) |
-| `--ignore-file <file>` | suppress reviewed families using a structured ignore file with reason/owner/expiry metadata |
+| `--ignore-file <file>` | suppress accepted families using a structured ignore file with reason/owner/expiry metadata |
 | `--semantic-pack <file-or-dir>` | explicitly load local semantic-pack v0 manifest metadata for provenance reporting; external packs are metadata-only today |
 
-**Review what was found**
+**Output**
 
 | flag | effect |
 |---|---|
-| `--show diff` | show each family inline as a unified diff between its two representative copies — both versions and exactly what differs |
-| `--show proposal` | show an extraction skeleton per family — the structure shared across **all** the family's copies, with the differing parts marked as parameters (so the helper is safe to apply to every copy, not just a representative pair) |
-| `--show hotspots` | after the report, rank directories by total duplicated lines (architecture view) |
-| `--show reinvented` | list **every** [reinvented-helper](reinvented-helpers.md) containment finding (code that reimplements an existing pure helper inline), including the test-container ones the default report excludes — the bare default already lists the non-test findings |
 | `--format human\|json\|markdown\|sarif` | output format (default `human`) |
 
-`--format json` emits a versioned object with `schema_version`, `tool_version`,
-scan scope, ranking metadata, and a `families` array. The stable contract and
-compatibility rule are documented in [scan-json](scan-json.md) (v1, deprecated; the
-forward contract is [query-json](query-json.md) v3).
+Use terms for report shaping: `sort=KEY`, `top=N`, `scope=prod|test|mixed`, `group=dir`,
+`id=<fam> full`, and `reinvented`. `--format json` emits the stable
+[query-json](query-json.md) contract.
 
 **Workflow** (`--baseline`, `--write-baseline`, `--fail-on any|new`, `--ignore-file`, `--cache-dir`, `--config`, `--semantic-pack`) is covered in
 [continuous-integration](continuous-integration.md), [configuration](configuration.md), and
@@ -311,8 +257,8 @@ nose capabilities
 ```
 
 The command emits JSON only. It reports the tool version, platform, stable
-commands, supported scan modes and output formats such as SARIF, JSON schema
-versions, config keys, and scan capability flags such as baselines, caching,
+commands, supported detection modes and output formats such as SARIF, JSON schema
+versions, config keys, and query capability flags such as baselines, caching,
 and structured ignores. Do not scrape `nose --help`; help text is for humans
 and may change to improve readability. The stable contract is documented in
 [capabilities](capabilities.md); the structured result JSON is in
@@ -320,14 +266,13 @@ and may change to improve readability. The stable contract is documented in
 
 ## Other commands
 
-- `nose review [paths…] [--base <ref>]` — **deprecated** in favour of
-  [`nose query <paths> base=<ref>`](#nose-query) (same detection + gate). Flags clones changed
-  inconsistently in a diff (a copy edited, its siblings missed); defaults to `HEAD`, use
-  `base=origin/main` for a PR branch. Full guide in [review](review.md).
+- `nose query <paths> base=<ref>` — flags clones changed inconsistently in a diff
+  (a copy edited, its siblings missed); use `base=HEAD` for uncommitted changes and
+  `base=origin/main` for a PR branch. Full guide in [divergent edits](divergent-edits.md).
 - `nose stats <paths…> [--top N] [--format human|json]` — per-language IL lowering coverage (the
   Raw-node ratio, split into by-design protocol boundaries vs genuine lowering gaps), with
   the top unhandled surface kinds (`--top`, default 30; `--format json` for machine output —
-  the same `--format` contract as `query`/`scan`/`il`).
+  the same `--format` contract as `query`/`il`).
   Use it to spot a language/construct that isn't lowering well; see [languages](languages.md).
 - `nose semantic-pack check <file-or-dir> [--format human|json]` — validate local
   semantic-pack v0 manifest structure and declared fixture assets. It is a

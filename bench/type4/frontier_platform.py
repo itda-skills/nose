@@ -26,7 +26,7 @@ Design choices that follow the #44 final decision:
   weaker evidence; an axis that also spreads to held-out is preferred.
 * **Curated, not estimated.** ``implementation_cost`` / ``soundness_risk`` /
   ``substrate_required`` are a controlled vocabulary curated per axis (seeded from
-  ``prioritize_frontier``'s reviewed constants) — never auto-estimated into fake numbers.
+  ``prioritize_frontier``'s curated constants) — never auto-estimated into fake numbers.
 * **Stable existing artifacts.** ``prioritize_frontier.py`` and ``FRONTIER_PRIORITIES.md``
   are untouched; this tool emits its own ``frontier_platform.v1.json`` + markdown.
 
@@ -48,7 +48,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 
-import prioritize_frontier as pf  # noqa: E402  (reuse candidate/probe defs + scan helpers)
+import prioritize_frontier as pf  # noqa: E402  (reuse candidate/probe defs + corpus helpers)
 import frontier_axes as fa  # noqa: E402  (Team B extra axes, kept out of the frozen prioritizer)
 
 TOOL_VERSION = "frontier-platform/1"
@@ -93,8 +93,8 @@ RECOMMENDATION_CATEGORY = {
     "product-noise-ranking-only",
 }
 
-# Curated per-axis metadata. These are NOT auto-estimated: they are reviewed judgments,
-# seeded from prioritize_frontier's reviewed `implementation_cost`/`soundness_risk`
+# Curated per-axis metadata. These are NOT auto-estimated: they are audited judgments,
+# seeded from prioritize_frontier's curated `implementation_cost`/`soundness_risk`
 # integers and re-expressed in the decision's controlled vocabulary, plus the
 # `substrate_required` routing for #43 and a short rationale. Any axis absent here falls
 # back to `unknown` (fail-loud, never fabricated).
@@ -252,14 +252,14 @@ def curated_for(candidate_id: str) -> dict:
             "implementation_cost": "unknown",
             "soundness_risk": "unknown",
             "substrate_required": "unknown",
-            "rationale": "No curated review recorded for this axis.",
+            "rationale": "No curated audit recorded for this axis.",
         }
     return meta
 
 
 def validate_vocab() -> None:
     """Fail loud if any curated value escapes the controlled vocabulary, or if any axis in
-    the union has no curated review (a silent `unknown` fallback would violate the
+    the union has no curated audit (a silent `unknown` fallback would violate the
     'curated, not estimated' principle — issue #44 decision 5 / #50 decision 1)."""
     for cid, meta in CURATED_ALL.items():
         assert meta["implementation_cost"] in IMPLEMENTATION_COST, cid
@@ -311,9 +311,9 @@ def union_signature() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Presence-based corpus scan (queue signal layer).
+# Presence-based corpus query (queue signal layer).
 # ---------------------------------------------------------------------------
-def presence_scan(repos: list[dict], max_bytes: int, sample_limit: int) -> dict:
+def presence_query(repos: list[dict], max_bytes: int, sample_limit: int) -> dict:
     """Accumulate per-axis REPO PRESENCE (binary per repo) plus uncovered-probe gaps.
 
     Unlike ``prioritize_frontier.analyze`` (which sums occurrences), this records the SET
@@ -508,7 +508,7 @@ def load_frontier_evidence(path: Path) -> dict[str, list[dict]]:
 def detector_suggest(
     nose_binary: Path, repos_root: Path, samples: list[dict], limit: int
 ) -> dict:
-    """Run `nose scan --mode semantic` on the files of up to `limit` gap samples and
+    """Run `nose query --mode semantic` on the files of up to `limit` gap samples and
     SUGGEST whether each axis location is already covered by a reported semantic family.
 
     This is a *suggestion* tier only (evidence_tier=detector-suggested). It never sets a
@@ -530,14 +530,14 @@ def detector_suggest(
             continue
         cmd = [
             str(nose_binary),
-            "scan",
+            "query",
             str(target),
+            "all",
+            "top=0",
             "--mode",
             "semantic",
             "--format",
             "json",
-            "--top",
-            "0",
             "--min-size",
             "1",
             "--min-lines",
@@ -578,7 +578,7 @@ def _sample_ref(sample: dict) -> dict:
 def classify_probe(
     returncode: int, stdout: str, stderr: str, rel: str, line: int | None
 ) -> dict:
-    """Classify one scan result as a detector suggestion. A non-zero exit is a detector/CLI
+    """Classify one query result as a detector suggestion. A non-zero exit is a detector/CLI
     failure, NOT a miss — recording it as `likely-miss` would pollute the triage queue with
     crashes — so it maps to `error`. Otherwise a reported family overlapping the probe line
     suggests the product output already surfaces it (`likely-covered`); absence is a
@@ -692,7 +692,7 @@ def build(
     corpus_primary_languages = sorted(
         {r["primary_language"] for r in repos if r.get("primary_language")}
     )
-    buckets, corpus_source_languages = presence_scan(repos, max_bytes, sample_limit)
+    buckets, corpus_source_languages = presence_query(repos, max_bytes, sample_limit)
     evidence = load_frontier_evidence(real_frontier)
 
     candidates_out = []
@@ -1220,7 +1220,7 @@ def main() -> int:
     ap.add_argument(
         "--with-detector-probe",
         action="store_true",
-        help="run `nose scan` on gap samples to SUGGEST covered/miss (needs --nose-binary)",
+        help="run `nose query` on gap samples to SUGGEST covered/miss (needs --nose-binary)",
     )
     ap.add_argument("--detector-probe-limit", type=int, default=6)
     ap.add_argument("--build-ref", default=None)

@@ -199,7 +199,7 @@ already captured (`cogcomplexity.py`, `harm_model.py`), no re-mining:
 | signal (#23) | harm-AUC | availability |
 |---|---|---|
 | `diff_per_cog` — small change in a *complex* function (Krinke "critical change") | **0.650** | post-divergence (needs the diff) |
-| `cog` — member cognitive complexity (branches × nesting) | 0.61 | **pre-divergence** (scan time) |
+| `cog` — member cognitive complexity (branches × nesting) | 0.61 | **pre-divergence** (query time) |
 | `maxnest` | 0.59 | pre-divergence |
 | (prior best: git-history −skew 0.60, mean_sem 0.57, hazard 0.53) | | |
 

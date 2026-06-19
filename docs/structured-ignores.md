@@ -1,6 +1,6 @@
 # Structured ignores
 
-Structured ignores suppress reviewed clone families without losing the decision
+Structured ignores suppress accepted clone families without losing the decision
 context. Use them when a finding is intentional, generated, framework-imposed, or
 owned by a team that is not ready to refactor it yet. For command basics see
 [usage](usage.md); for CI gates see [continuous-integration](continuous-integration.md).
@@ -14,8 +14,6 @@ See [Family IDs](#family-ids).
 ```sh
 nose query src --format json all top=0
 ```
-
-(`nose scan src --format json --top 0` is the deprecated equivalent.)
 
 Create `nose.ignore.json` in the directory where you invoke nose:
 
@@ -34,14 +32,13 @@ Create `nose.ignore.json` in the directory where you invoke nose:
 ```
 
 Then run `nose query` from that directory. nose automatically reads
-`nose.ignore.json` when it exists (`nose scan`, the deprecated equivalent, reads it the same
-way). Use `--ignore-file <file>` or `ignore-file = "path/to/file.json"` in
+`nose.ignore.json` when it exists. Use `--ignore-file <file>` or
+`ignore-file = "path/to/file.json"` in
 [configuration](configuration.md) when the file lives elsewhere.
 
 Ignored families are removed from the active report and do not trip `--fail-on any` or
 `--fail-on new`. The ignore file itself is the durable audit record — every suppression keeps
-its reason, owner, and expiry there. (The deprecated `nose scan --format json` additionally
-echoes suppressed families back under an `ignored_families` array.)
+its reason, owner, and expiry there.
 
 ## File shape
 
@@ -63,7 +60,7 @@ The preferred file shape is an object with an `ignores` array:
 ```
 
 A top-level array of entries is also accepted for small files, but the object
-shape is easier to extend in review.
+shape is easier to extend over time.
 
 Each entry must have:
 
@@ -73,7 +70,7 @@ Each entry must have:
 | `family_id` | one selector required | Stable family ID printed by nose. Best for one exact finding. |
 | `paths` | one selector required | Gitignore-style path globs (positive patterns only; a leading `!` negation is rejected as an error). **Every member of the family must match** — an entry covering only one copy must not hide the others from the report or the `--fail-on` gate (a `vendor/**` entry cannot silently excuse the first-party copy of a vendor clone). Best for generated directories or templates. |
 | `languages` | one selector required | Language names such as `python`, `typescript`, or `rust`. Best as a broad guard combined with another selector. |
-| `note` | no | Human review context. Explain where the real refactoring point is. |
+| `note` | no | Human audit context. Explain where the real refactoring point is. |
 | `owner` | no | Team or person responsible for revisiting the decision. |
 | `expires_at` | no | `YYYY-MM-DD`. The entry applies through that date; after it, nose reports it as expired and does not apply it. The date is evaluated against the current **UTC** day (deterministic across machines), so near a boundary an entry may expire up to one local day earlier or later than local midnight. |
 
@@ -87,7 +84,7 @@ family, the first active entry supplies the metadata.
 `family_id` is the same key used by baselines. It is derived from the sorted
 reported location identities: displayed file path, language, start/end line span,
 unit kind, symbol name, and fragment proof metadata. That makes IDs unique for
-distinct reported families in one scan, including hidden exact fragments that
+distinct reported families in one run, including hidden exact fragments that
 share the same file and enclosing symbol but live on nearby lines. It also means
 IDs intentionally change when a copy is added, removed, renamed, moved, or when
 the reported span changes.
@@ -96,7 +93,7 @@ Baseline comparison records member identities and can classify overlapping
 re-keyed families as `changed`. Structured ignores that select by `family_id` are
 more exact: refresh them after large code motion or after upgrading from older
 nose versions whose IDs omitted span and fragment metadata. Use `paths` and
-`languages` selectors when the review decision should survive routine movement
+`languages` selectors when the acceptance decision should survive routine movement
 inside a file.
 
 `nose query`'s human rows carry only a short family handle in each drill link. That prefix
@@ -122,14 +119,12 @@ dates, or entries with no selector. Silent ignore mistakes would make the report
 untrustworthy.
 
 Expired entries are different: they are valid historical decisions whose date has
-passed. nose prints a warning on stderr and does not apply the entry (the deprecated
-`nose scan --format json` additionally lists it under `ignore.expired`; query-JSON v3
-carries no `ignore` object).
+passed. nose prints a warning on stderr and does not apply the entry.
 
 ## Which suppression to use
 
 nose has three ways to suppress a finding; pick by *who* the suppression is for and
-whether the decision needs to stay reviewable. Reach for the inline `// nose-ignore`
+whether the decision needs to stay auditable. Reach for the inline `// nose-ignore`
 marker when the reason is self-evident to anyone reading the line; reach for the
 structured file when the suppression is a decision someone else should be able to find,
 question, and revisit; use a baseline to accept an existing codebase in bulk. When in
@@ -139,5 +134,5 @@ auditable.
 | mechanism | use when | tradeoff |
 |---|---|---|
 | Inline `// nose-ignore` | One source unit should never participate in detection. | Removes the unit before families are formed; no family metadata exists later. |
-| Structured ignore file | A reported family was reviewed and intentionally kept. | Keeps rationale, owner, expiry, and machine-readable ignored-family output. |
+| Structured ignore file | A reported family was accepted and intentionally kept. | Keeps rationale, owner, expiry, and machine-readable ignored-family output. |
 | Baseline | You are adopting nose on an existing codebase and want CI to flag only new or changed duplication. | Accepts the current state in bulk; use structured ignores for individual decisions that need explanation. |

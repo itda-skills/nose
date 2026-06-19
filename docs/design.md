@@ -93,7 +93,7 @@ A gate that cries wolf gets disabled. So the requirement is inverted from a sear
   therefore *harmful* here.
 
 This requirement **is the sound core.** The CI-gate product and the moat are the same thing.
-The [review](review.md) signal — a clone copy fixed while its siblings were missed in a
+The [review](divergent-edits.md) signal — a clone copy fixed while its siblings were missed in a
 diff — is a natural high-precision, actionable gate trigger.
 
 ### One core, two operating points
@@ -306,4 +306,4 @@ Cheap experiments that turn direction into data:
 
 *See also: [architecture](architecture.md) · [normalization](normalization.md) ·
 [formal soundness](formal-soundness.md) · [clone types](clone-types.md) ·
-[scan JSON](scan-json.md) · [review](review.md).*
+[scan JSON](scan-json.md) · [review](divergent-edits.md).*

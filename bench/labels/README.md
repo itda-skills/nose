@@ -1,6 +1,6 @@
 # Refactoring-family labelset
 
-Ground-truth evaluation data for nose's **product** metric: does `nose scan`
+Ground-truth evaluation data for nose's **product** metric: does `nose query`
 surface *genuine refactoring candidates*? Each label is on a clone **family** (the
 unit nose reports), judged worthy / not-worthy per [`RUBRIC.md`](RUBRIC.md).
 
@@ -117,7 +117,7 @@ expanded 120-repo corpus, and a refreshed committed manifest should travel with 
 product-labelset refresh.
 
 `fragment_quality_audit_2026_06_10.json` is not part of the v5 product metric. It is a
-small, three-reviewer audit of Java/Python hidden/review exact-fragment families used to
+small, three-person audit of Java/Python hidden/divergence exact-fragment families used to
 validate surface policy after the semantic corpus pass. See
 [`docs/fragment-quality-audit-2026-06-10.md`](../../docs/fragment-quality-audit-2026-06-10.md).
 
@@ -127,19 +127,19 @@ first-party `nose.value_graph.laws` LawPack pilot. See
 [`docs/lawpack-provenance-audit-2026-06-10.md`](../../docs/lawpack-provenance-audit-2026-06-10.md).
 
 `recall_ceiling_probe.py` + `recall_ceiling_probe_2026_06_10.json` are the design §5
-recall-ceiling probe: for every worthy label the maximal current scan surface misses, an
+recall-ceiling probe: for every worthy label the maximal current query surface misses, an
 over-approximated classification of whether generalized sub-DAG matching or one-step
 pure inlining could recover it. The measured verdict and method are recorded in
 [`docs/experiments.md`](../../docs/experiments.md) §BJ.
 
 `scanjson_agent_audit_2026_06_10.json` records the #216 agent-usability audit of the
-scan-JSON contract: 18 sampled families, JSON-only decisions graded against source,
+query-JSON contract: 18 sampled families, JSON-only decisions graded against source,
 and the ranked evidence-gap list. See
 [`docs/scanjson-agent-audit-2026-06-10.md`](../../docs/scanjson-agent-audit-2026-06-10.md).
 
 `near_default_surface_experiment.py` +
 `near_default_surface_2026_06_10.json` price the product decision of adding the
-`near` channel to the default scan surface. The script compares default,
+`near` channel to the default query surface. The script compares default,
 `syntax,semantic,near`, and two thresholded `near` arms on v5 P@10, worthy-recall,
 and default-surface family-count deltas. The decision record is in
 [`docs/experiments.md`](../../docs/experiments.md) §BM.

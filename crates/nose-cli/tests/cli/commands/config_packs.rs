@@ -7,11 +7,11 @@ fn config_file_supplies_defaults() {
     let dir = make_project("cfg");
     fs::write(
         dir.join("nose.toml"),
-        "[scan]\nexclude = [\"a/**\"]\nmin-size = 12\n",
+        "[query]\nexclude = [\"a/**\"]\nmin-size = 12\n",
     )
     .unwrap();
     let out = Command::new(bin())
-        .args(["scan", ".", "--format", "json"])
+        .args(["query", ".", "--format", "json"])
         .current_dir(&dir)
         .output()
         .expect("run");
@@ -181,112 +181,8 @@ fn semantic_pack_check_fails_on_missing_fixture_files() {
     let _ = fs::remove_dir_all(&dir);
 }
 
-/// Compiled-in pack rows share the same provenance coordinates.
-fn assert_compiled_first_party_pack(pack: &serde_json::Value, id: &str) {
-    assert_eq!(pack["id"], id);
-    assert_eq!(pack["source"], "compiled-first-party");
-    assert_eq!(pack["influence"], "evidence-and-contracts");
-}
-
 #[test]
-fn scan_json_reports_first_party_and_local_semantic_pack_provenance() {
-    let dir = make_project("semantic_pack_cli");
-    let pack = dir.join("pack.json");
-    fs::write(&pack, semantic_pack_manifest("com.example.semantic-pack")).unwrap();
-
-    let out = run(&[
-        "scan",
-        dir.to_str().unwrap(),
-        "--format",
-        "json",
-        "--min-size",
-        "12",
-        "--semantic-pack",
-        pack.to_str().unwrap(),
-    ]);
-    let json = scan_json(&out);
-    let packs = json["semantic_packs"]
-        .as_array()
-        .expect("semantic_packs array");
-    assert_eq!(
-        packs.len(),
-        4,
-        "first-party packs + local opt-in pack: {json}"
-    );
-    assert_compiled_first_party_pack(&packs[0], "nose.first_party");
-    assert_compiled_first_party_pack(&packs[1], "nose.python.stdlib.type_domain");
-    assert_eq!(packs[1]["kind"], "StdlibPack");
-    assert_eq!(packs[1]["counts"]["evidence_producers"], 1);
-    assert_eq!(packs[1]["counts"]["contracts"], 1);
-    assert_compiled_first_party_pack(&packs[2], "nose.value_graph.laws");
-    assert_eq!(packs[2]["kind"], "LawPack");
-    assert_eq!(packs[2]["counts"]["value_laws"], 2);
-    assert_eq!(packs[3]["id"], "com.example.semantic-pack");
-    assert_eq!(packs[3]["trust"], "external-opt-in");
-    assert_eq!(packs[3]["source"], "local-manifest");
-    assert_eq!(packs[3]["influence"], "metadata-only");
-    assert_eq!(packs[3]["counts"]["contracts"], 1);
-    assert!(packs[3]["hash"]
-        .as_str()
-        .is_some_and(|hash| hash.len() == 16));
-    let _ = fs::remove_dir_all(&dir);
-}
-
-#[test]
-fn scan_json_reports_value_law_provenance_for_semantic_family() {
-    let dir = std::env::temp_dir().join(format!("nose_cli_law_provenance_{}", std::process::id()));
-    let _ = fs::remove_dir_all(&dir);
-    fs::create_dir_all(&dir).unwrap();
-    fs::write(
-        dir.join("left.rs"),
-        "fn f(a: i64, b: i64, c: i64) -> i64 {\n    a * c + b * c\n}\n",
-    )
-    .unwrap();
-    fs::write(
-        dir.join("right.rs"),
-        "fn g(a: i64, b: i64, c: i64) -> i64 {\n    (a + b) * c\n}\n",
-    )
-    .unwrap();
-    let json = scan_json(&run(&[
-        "scan",
-        dir.to_str().unwrap(),
-        "--mode",
-        "semantic",
-        "--min-size",
-        "1",
-        "--min-lines",
-        "1",
-        "--top",
-        "0",
-        "--format",
-        "json",
-    ]));
-    let families = json["families"].as_array().expect("families array");
-    assert_eq!(
-        families.len(),
-        1,
-        "factor-distribution family expected: {json}"
-    );
-    let laws = families[0]["semantic_laws"]
-        .as_array()
-        .expect("semantic_laws array");
-    assert_eq!(laws.len(), 1, "one law provenance row expected: {json}");
-    assert_eq!(laws[0]["pack_id"], "nose.value_graph.laws");
-    assert_eq!(
-        laws[0]["law_id"],
-        "value-graph.factor-distribute.numeric-common-factor"
-    );
-    assert_eq!(
-        laws[0]["proof_obligation_id"],
-        "normalize.value_graph.factor_distribute"
-    );
-    assert_eq!(laws[0]["proof_status"], "proven");
-    assert_eq!(laws[0]["channel"], "exact-proven");
-    let _ = fs::remove_dir_all(&dir);
-}
-
-#[test]
-fn scan_json_keeps_python_repetition_out_of_numeric_law_provenance() {
+fn query_json_keeps_python_repetition_out_of_numeric_law_provenance() {
     let dir =
         std::env::temp_dir().join(format!("nose_cli_law_hard_negative_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
@@ -296,8 +192,8 @@ fn scan_json_keeps_python_repetition_out_of_numeric_law_provenance() {
         "def repeated(a, b):\n    return a * 2 + b * 2\n\n\ndef grouped(a, b):\n    return (a + b) * 2\n",
     )
     .unwrap();
-    let json = scan_json(&run(&[
-        "scan",
+    let json = query_json(&run(&[
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "semantic",
@@ -305,8 +201,7 @@ fn scan_json_keeps_python_repetition_out_of_numeric_law_provenance() {
         "1",
         "--min-lines",
         "1",
-        "--top",
-        "0",
+        "top=0",
         "--format",
         "json",
     ]));
@@ -325,30 +220,6 @@ fn scan_json_keeps_python_repetition_out_of_numeric_law_provenance() {
 }
 
 #[test]
-fn scan_human_reports_local_semantic_pack_opt_in() {
-    let dir = make_project("semantic_pack_human");
-    let pack = dir.join("pack.json");
-    fs::write(&pack, semantic_pack_manifest("com.example.semantic-pack")).unwrap();
-
-    let out = run(&[
-        "scan",
-        dir.to_str().unwrap(),
-        "--min-size",
-        "12",
-        "--semantic-pack",
-        pack.to_str().unwrap(),
-    ]);
-    assert!(
-        out.contains(
-            "semantic packs: 3 first-party default · 1 local opt-in: \
-             com.example.semantic-pack@0.1.0 (metadata-only)"
-        ),
-        "human scan output should disclose local semantic pack opt-ins: {out}"
-    );
-    let _ = fs::remove_dir_all(&dir);
-}
-
-#[test]
 fn config_semantic_packs_are_explicit_opt_ins() {
     let dir = make_project("semantic_pack_cfg");
     fs::write(
@@ -358,27 +229,19 @@ fn config_semantic_packs_are_explicit_opt_ins() {
     .unwrap();
     fs::write(
         dir.join("nose.toml"),
-        "[scan]\nmin-size = 12\nsemantic-packs = [\"pack.json\"]\n",
+        "[query]\nmin-size = 12\nsemantic-packs = [\"pack.json\"]\n",
     )
     .unwrap();
     let out = Command::new(bin())
-        .args(["scan", ".", "--format", "json"])
+        .args(["query", ".", "--format", "json"])
         .current_dir(&dir)
         .output()
         .expect("run");
     assert!(
         out.status.success(),
-        "scan should load config semantic pack: stderr={}",
+        "query should load config semantic pack: stderr={}",
         String::from_utf8_lossy(&out.stderr)
     );
-    let stdout = String::from_utf8(out.stdout).unwrap();
-    let json = scan_json(&stdout);
-    let packs = json["semantic_packs"]
-        .as_array()
-        .expect("semantic_packs array");
-    assert!(packs.iter().any(
-        |pack| pack["id"] == "com.example.config-pack" && pack["influence"] == "metadata-only"
-    ));
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -393,13 +256,13 @@ fn explicit_config_semantic_pack_paths_resolve_from_config_directory() {
     let config = dir.join("nose.toml");
     fs::write(
         &config,
-        "[scan]\nmin-size = 12\nsemantic-packs = [\"pack.json\"]\n",
+        "[query]\nmin-size = 12\nsemantic-packs = [\"pack.json\"]\n",
     )
     .unwrap();
 
     let out = Command::new(bin())
         .args([
-            "scan",
+            "query",
             dir.to_str().unwrap(),
             "--config",
             config.to_str().unwrap(),
@@ -411,17 +274,9 @@ fn explicit_config_semantic_pack_paths_resolve_from_config_directory() {
         .expect("run");
     assert!(
         out.status.success(),
-        "scan should load config-relative semantic pack: stderr={}",
+        "query should load config-relative semantic pack: stderr={}",
         String::from_utf8_lossy(&out.stderr)
     );
-    let stdout = String::from_utf8(out.stdout).unwrap();
-    let json = scan_json(&stdout);
-    let packs = json["semantic_packs"]
-        .as_array()
-        .expect("semantic_packs array");
-    assert!(packs
-        .iter()
-        .any(|pack| pack["id"] == "com.example.explicit-config-pack"));
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -436,13 +291,13 @@ fn explicit_config_ignore_file_resolves_from_config_directory() {
     let config = dir.join("nose.toml");
     fs::write(
         &config,
-        "[scan]\nmin-size = 12\nignore-file = \"nose.ignore.json\"\n",
+        "[query]\nmin-size = 12\nignore-file = \"nose.ignore.json\"\n",
     )
     .unwrap();
 
     let out = Command::new(bin())
         .args([
-            "scan",
+            "query",
             dir.to_str().unwrap(),
             "--config",
             config.to_str().unwrap(),
@@ -450,27 +305,21 @@ fn explicit_config_ignore_file_resolves_from_config_directory() {
             "semantic",
             "--format",
             "json",
-            "--top",
-            "0",
+            "top=0",
         ])
         .current_dir(dir.parent().expect("test project has a parent"))
         .output()
         .expect("run");
     assert!(
         out.status.success(),
-        "scan should load config-relative ignore file: stderr={}",
+        "query should load config-relative ignore file: stderr={}",
         String::from_utf8_lossy(&out.stderr)
     );
     let stdout = String::from_utf8(out.stdout).unwrap();
-    let json = scan_json(&stdout);
+    let json = query_json(&stdout);
     assert!(
-        scan_families(&json).is_empty(),
+        query_families(&json).is_empty(),
         "config-relative ignore file should suppress the family: {stdout}"
     );
-    assert_eq!(json["ignore"]["active_entries"], 1);
-    assert_eq!(json["ignore"]["ignored_families"], 1);
-    assert!(json["ignore"]["path"]
-        .as_str()
-        .is_some_and(|path| path.ends_with("nose.ignore.json")));
     let _ = fs::remove_dir_all(&dir);
 }

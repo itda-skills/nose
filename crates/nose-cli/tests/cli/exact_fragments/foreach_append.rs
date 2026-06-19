@@ -4,7 +4,7 @@ use super::*;
 // intentional until the fixture setup has a clearer table-builder abstraction.
 #[allow(clippy::too_many_lines)]
 #[test]
-fn semantic_scan_reports_exact_safe_foreach_append_effect_fragments_under_opaque_functions() {
+fn semantic_query_reports_exact_safe_foreach_append_effect_fragments_under_opaque_functions() {
     let dir = std::env::temp_dir().join(format!(
         "nose_exact_loop_effect_fragments_{}",
         std::process::id()
@@ -135,7 +135,7 @@ fn semantic_scan_reports_exact_safe_foreach_append_effect_fragments_under_opaque
     }
 
     let out = run(&[
-        "scan",
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "semantic",
@@ -145,11 +145,10 @@ fn semantic_scan_reports_exact_safe_foreach_append_effect_fragments_under_opaque
         "100",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]);
-    let json = scan_json(&out);
-    let families = scan_families(&json);
+    let json = query_json(&out);
+    let families = query_families(&json);
 
     let assert_loop_family = |left: &str,
                               right: &str,

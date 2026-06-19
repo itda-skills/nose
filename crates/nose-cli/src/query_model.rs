@@ -64,7 +64,7 @@ pub(super) fn family_dir(f: &nose_detect::RefactorFamily) -> String {
 /// Whether every copy is the **same named symbol** in a different place — the decidable
 /// signature of a parallel-variant family (e.g. one `lower_for`/`stmt_as_block` per language
 /// frontend). Evidence, not a verdict: combine with negation (`same_symbol!=true`) to drop the
-/// parallel-by-design class, or `same_symbol=true` to review it.
+/// parallel-by-design class, or `same_symbol=true` to divergence it.
 pub(super) fn family_same_symbol(f: &nose_detect::RefactorFamily) -> bool {
     let mut names = f.locations.iter().map(|l| l.name.as_deref());
     match names.next().flatten() {
@@ -218,6 +218,18 @@ pub(super) fn query_family_json(
     since: Option<&BaselineComparison>,
 ) -> serde_json::Value {
     let (shared, params) = all_copies_shared(f);
+    query_family_json_with_counts(f, ov, opp, full, since, shared, params)
+}
+
+pub(super) fn query_family_json_with_counts(
+    f: &nose_detect::RefactorFamily,
+    ov: &SurfaceOverrides,
+    opp: &OpportunityGroups,
+    full: bool,
+    since: Option<&BaselineComparison>,
+    shared: u32,
+    params: u32,
+) -> serde_json::Value {
     let removable = u32::try_from(f.members.saturating_sub(1)).unwrap_or(0) * shared;
     let helper = family_existing_helper(f);
     let locations: Vec<_> = f
@@ -325,16 +337,24 @@ fn family_skeleton(f: &nose_detect::RefactorFamily) -> Option<Vec<String>> {
 /// all-copies-shared`, which is never more than is truly shared and `0` when nothing is.
 /// Cross-language or unreadable families fall back to the detector's structural estimate.
 pub(super) fn all_copies_shared(f: &nose_detect::RefactorFamily) -> (u32, u32) {
+    let mut cache = FileLineCache::default();
+    all_copies_shared_cached(f, &mut cache)
+}
+
+pub(super) fn all_copies_shared_cached(
+    f: &nose_detect::RefactorFamily,
+    cache: &mut FileLineCache,
+) -> (u32, u32) {
     if f.languages != 1 {
         return (f.shared_lines, f.params);
     }
-    // Same MEMBER_CAP (8) as scan's shared_lines_of, so the two surfaces compute the
+    // Same MEMBER_CAP (8) as `shared_lines_of`, so the two surfaces compute the
     // all-copies count over the same member set and report identical numbers.
     let members: Vec<Vec<String>> = f
         .locations
         .iter()
         .take(8)
-        .filter_map(|l| read_lines(&l.file, l.start_line, l.end_line))
+        .filter_map(|l| cache.slice(&l.file, l.start_line, l.end_line))
         .collect();
     if members.len() < 2 {
         return (f.shared_lines, f.params);
@@ -348,7 +368,7 @@ pub(super) fn is_default_surface(f: &nose_detect::RefactorFamily, ov: &SurfaceOv
 }
 
 /// Resolve how many rows a query view shows. `top=N` shows N; `top=0` means *all*
-/// (matching `scan --top 0`, and the `top: Some(0)` the dataset build already uses for
+/// (matching `analysis --top 0`, and the `top: Some(0)` the dataset build already uses for
 /// "every family"); an absent `top=` defaults to 30.
 pub(super) fn query_row_limit(top: Option<usize>) -> usize {
     match top {

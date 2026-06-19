@@ -21,9 +21,7 @@ pub(crate) fn run() -> Result<()> {
             hard_negatives,
             corpus,
         } => cmd_eval(gold, predictions, hard_negatives, corpus),
-        cmd @ Cmd::Scan { .. } => run_scan_cmd(cmd),
         cmd @ Cmd::Query { .. } => run_query_cmd(cmd),
-        cmd @ Cmd::Review { .. } => run_review_cmd(cmd),
         Cmd::Ceiling {
             gold,
             units,
@@ -100,109 +98,6 @@ fn run_detect_cmd(cmd: Cmd) -> Result<()> {
         bench_schema,
         repos_root,
         dump,
-    })
-}
-
-fn run_scan_cmd(cmd: Cmd) -> Result<()> {
-    let Cmd::Scan {
-        paths,
-        top,
-        min_members,
-        min_value,
-        sort,
-        config,
-        mode,
-        show,
-        cache_dir,
-        fail_on,
-        baseline,
-        ignore_file,
-        semantic_pack,
-        write_baseline,
-        format,
-        exclude,
-        min_size,
-        min_lines,
-        scope,
-    } = cmd
-    else {
-        unreachable!("run_scan_cmd requires Cmd::Scan")
-    };
-    require_paths_exist(&paths)?;
-    cmd_scan(ScanArgs {
-        paths,
-        top,
-        min_members,
-        min_value,
-        sort,
-        config,
-        mode,
-        show,
-        cache_dir,
-        fail_on,
-        baseline,
-        ignore_file,
-        semantic_pack,
-        write_baseline,
-        format,
-        exclude,
-        min_size,
-        min_lines,
-        scope,
-    })
-}
-
-fn run_review_cmd(cmd: Cmd) -> Result<()> {
-    let Cmd::Review {
-        paths,
-        base,
-        mode,
-        min_size,
-        min_lines,
-        exclude,
-        config,
-        ignore_file,
-        format,
-        top,
-        fail,
-        fail_on,
-    } = cmd
-    else {
-        unreachable!("run_review_cmd requires Cmd::Review")
-    };
-    let paths = if paths.is_empty() {
-        vec![PathBuf::from(".")]
-    } else {
-        paths
-    };
-    require_paths_exist(&paths)?;
-    // `nose review` is deprecated in favour of `nose query <paths> base=<ref>` (#375), which
-    // runs this exact detection under the unified query surface (same findings, same gate).
-    // The nudge is interactive-only — gated on a TTY stderr — so machine/CI/test runs (piped
-    // stderr) are never spammed; `capabilities.commands.deprecated` is the machine signal.
-    if std::io::IsTerminal::is_terminal(&std::io::stderr()) {
-        eprintln!(
-            "note: `nose review` is deprecated — use `nose query {} base={}` (same divergent-edit \
-             detection; add --fail-on any for the gate). See `nose query --help`.",
-            paths
-                .first()
-                .map_or(".".into(), |p| p.display().to_string()),
-            base,
-        );
-    }
-    review::cmd_review(review::ReviewArgs {
-        paths,
-        base,
-        mode,
-        min_size,
-        min_lines,
-        exclude,
-        config,
-        ignore_file,
-        format,
-        top,
-        fail,
-        fail_on,
     })
 }
 

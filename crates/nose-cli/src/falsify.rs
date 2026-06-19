@@ -7,7 +7,7 @@
 //! value-kind-rich input domain (mixed-radix, seeded/deterministic, budget-bounded) for a row
 //! on which they behave differently. A hit is a false merge the fixed battery missed.
 //!
-//! Scope: this runs only under `nose verify --falsify` (offline, opt-in) — the scan path and
+//! Scope: this runs only under `nose verify --falsify` (offline, opt-in) — the query path and
 //! the default gate are untouched. Determinism comes from the fixed pool + fixed enumeration
 //! order (no RNG), so a nightly run is reproducible.
 

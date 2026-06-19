@@ -7,15 +7,15 @@ mod fixture;
 // intentional until the fixture setup has a clearer table-builder abstraction.
 #[allow(clippy::too_many_lines)]
 #[test]
-fn scan_mode_semantic_proves_literal_collection_membership() {
+fn query_mode_semantic_proves_literal_collection_membership() {
     let dir = std::env::temp_dir().join(format!("nose_literal_membership_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     fixture::write_literal_membership_fixtures(&dir);
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert!(
         !semantic_families.is_empty(),
         "semantic mode should report literal membership families: {semantic}"

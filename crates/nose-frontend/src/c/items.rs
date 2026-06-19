@@ -8,7 +8,7 @@ pub(super) fn lower_items(lo: &mut Lowering, node: TsNode) -> NodeId {
 }
 /// Collect top-level items, descending through preprocessor conditionals. A function
 /// guarded by `#if PLATFORM … #endif` (ubiquitous in C: nginx/curl per-OS code) lives
-/// *inside* a `preproc_if`/`preproc_ifdef` node, so a flat scan of the translation
+/// *inside* a `preproc_if`/`preproc_ifdef` node, so a flat item walk of the translation
 /// unit would discard it entirely — the file would lower to an empty module and its
 /// functions become invisible to detection. Recurse into the conditional's body
 /// (skipping the condition/macro-name field, which is not an item).

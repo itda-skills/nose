@@ -18,37 +18,37 @@ impl nose_detect::Detector for ChannelDetector {
     }
 }
 
-/// Lower + detect + rank clone families for review's base tree. This keeps
-/// review's conservative default channel policy (`syntax,semantic`) explicit;
-/// scan/query use their own dataset construction and default to `syntax,semantic,near`.
-pub(crate) fn detect_review_families(
+/// Lower + detect + rank clone families for divergence's base tree. This keeps
+/// divergence's conservative default channel policy (`syntax,semantic`) explicit;
+/// query use their own dataset construction and default to `syntax,semantic,near`.
+pub(crate) fn detect_divergence_base_families(
     paths: &[PathBuf],
     exclude: &[String],
-    mode: Vec<ScanMode>,
-    cfg_mode: Vec<ScanMode>,
+    mode: Vec<DetectionMode>,
+    cfg_mode: Vec<DetectionMode>,
     min_tokens: usize,
     min_lines: u32,
 ) -> Result<Vec<nose_detect::RefactorFamily>> {
     validate_exclude_globs(exclude)?;
     let refs = paths_as_refs(paths);
-    let channels = ScanChannels::resolve(mode, cfg_mode, REVIEW_DEFAULT_MODES)?;
-    let opts = scan_detect_options(channels, min_tokens, min_lines);
-    let detector = scan_detector(channels, &opts);
+    let channels = DetectionChannels::resolve(mode, cfg_mode, DIVERGENCE_DEFAULT_MODES)?;
+    let opts = detection_options(channels, min_tokens, min_lines);
+    let detector = detection_engine(channels, &opts);
     let corpus = nose_frontend::lower_corpus_filtered(&refs, exclude);
     let report = nose_detect::detect(&corpus, &opts, detector.as_ref());
     let mut families = nose_detect::rank_families(&report);
     if channels.abstraction_only() {
         families.retain(|f| f.abstraction_witness.is_some());
     }
-    // The graded witness is NOT attached here: `review` enriches only the *flagged*
+    // The graded witness is NOT attached here: `divergence` enriches only the *flagged*
     // families (a small subset of a diff) in `flag_divergences`, not every near family
     // in the repo — enriching all of them on every gate run would be wasted work.
     Ok(families)
 }
 
-/// Detection options for the resolved scan channels — shared by `scan` and `review`.
-pub(crate) fn scan_detect_options(
-    channels: ScanChannels,
+/// Detection options for the resolved query channels — shared by `analysis` and `divergence`.
+pub(crate) fn detection_options(
+    channels: DetectionChannels,
     min_tokens: usize,
     min_lines: u32,
 ) -> nose_detect::DetectOptions {
@@ -86,8 +86,8 @@ pub(crate) fn validate_exclude_globs(exclude: &[String]) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn scan_detector(
-    channels: ScanChannels,
+pub(crate) fn detection_engine(
+    channels: DetectionChannels,
     opts: &nose_detect::DetectOptions,
 ) -> Box<dyn nose_detect::Detector> {
     let mut detectors: Vec<Box<dyn nose_detect::Detector>> = Vec::new();

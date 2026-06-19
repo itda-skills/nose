@@ -3,7 +3,7 @@ use super::*;
 /// Does `node` have a *direct* child token of the given `kind`? Used to read an
 /// operator token (`--`, `++`) off the node it belongs to without being fooled by a
 /// nested occurrence in the operand (e.g. the inner `i--` of `a[i--]++`), which a
-/// substring scan over the node's whole text would wrongly match.
+/// substring search over the node's whole text would wrongly match.
 pub(crate) fn has_direct_token(node: TsNode, kind: &str) -> bool {
     let mut cur = node.walk();
     let found = node.children(&mut cur).any(|c| c.kind() == kind);

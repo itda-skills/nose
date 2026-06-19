@@ -43,10 +43,9 @@ fn query_selection<'a>(
 }
 
 /// The `base=<git-ref>` view: divergent edits (a clone changed in one copy but not its
-/// siblings) detected at the ref by the `nose review` pipeline, surfaced under query. Reuses
-/// review's detection verbatim — so the §BV fire precision is preserved by construction — and
-/// gates with the same conservative shared-logic policy.
-fn run_query_base(args: &ScanArgs, base_ref: &str, q: &Query, path_arg: &str) -> Result<()> {
+/// siblings) detected at the ref and surfaced under query. Reuses the same conservative
+/// shared-logic policy measured in §BV.
+fn run_query_base(args: &QueryArgs, base_ref: &str, q: &Query, path_arg: &str) -> Result<()> {
     validate_base_query(q, args)?;
     // `base=` gates on a diff against a ref, not a saved baseline — `--fail-on new` (which
     // needs `--baseline`) is meaningless here.
@@ -55,7 +54,7 @@ fn run_query_base(args: &ScanArgs, base_ref: &str, q: &Query, path_arg: &str) ->
             "`base=` gates on a diff, not a baseline — use `--fail-on any` (fires on a proven divergence)"
         );
     }
-    let review_args = review::ReviewArgs {
+    let divergence_args = divergence::DivergenceArgs {
         paths: args.paths.clone(),
         base: base_ref.to_string(),
         mode: args.mode.clone(),
@@ -64,30 +63,27 @@ fn run_query_base(args: &ScanArgs, base_ref: &str, q: &Query, path_arg: &str) ->
         exclude: args.exclude.clone(),
         config: args.config.clone(),
         ignore_file: args.ignore_file.clone(),
-        format: args.format,
-        top: q.top,
-        fail: false,
-        fail_on: review::ReviewFailOn::default(),
     };
-    let (flagged, changed_files) = review::detect_divergences(&review_args)?.unwrap_or_default();
+    let (flagged, changed_files) =
+        divergence::detect_divergences(&divergence_args)?.unwrap_or_default();
     match args.format {
         ReportFormat::Json => {
             render_query_base(&flagged, changed_files, base_ref, path_arg, q.top, true)
         }
-        ReportFormat::Sarif => println!("{}", review::review_sarif(&flagged, q.top, "top=0")?),
+        ReportFormat::Sarif => println!(
+            "{}",
+            divergence::divergence_sarif(&flagged, q.top, "top=0")?
+        ),
         _ => render_query_base(&flagged, changed_files, base_ref, path_arg, q.top, false),
     }
-    // The gate fires on the §BV conservative policy (a proven shared-logic divergence) — the
-    // only sane CI default — reused verbatim from review so the fire decision is identical.
-    if matches!(args.fail_on, Some(FailOn::Any))
-        && review::divergences_fire(&flagged, review::ReviewFailOn::SharedLogic)
-    {
+    // The gate fires on the §BV conservative policy: a proven shared-logic divergence.
+    if matches!(args.fail_on, Some(FailOn::Any)) && divergence::divergences_fire(&flagged) {
         std::process::exit(1);
     }
     Ok(())
 }
 
-fn validate_base_query(q: &Query, args: &ScanArgs) -> Result<()> {
+fn validate_base_query(q: &Query, args: &QueryArgs) -> Result<()> {
     let unsupported_terms = q.reinvented
         || q.all
         || q.id_full
@@ -131,21 +127,21 @@ fn validate_base_query(q: &Query, args: &ScanArgs) -> Result<()> {
 }
 
 struct QueryOutput<'a> {
-    args: &'a ScanArgs,
+    args: &'a QueryArgs,
     terms: &'a [String],
     q: &'a Query,
     path_arg: &'a str,
     families: &'a [nose_detect::RefactorFamily],
     reinvented: &'a [nose_detect::ReinventedHelper],
-    scope: &'a ScanScope,
-    settings: &'a ScanSettings,
+    scope: &'a QueryScope,
+    settings: &'a QuerySettings,
     overrides: &'a SurfaceOverrides,
     opp: &'a OpportunityGroups,
     baseline_comparison: Option<&'a BaselineComparison>,
     since: Option<&'a BaselineComparison>,
 }
 
-fn ensure_query_fail_on_is_valid(args: &ScanArgs) -> Result<()> {
+fn ensure_query_fail_on_is_valid(args: &QueryArgs) -> Result<()> {
     if matches!(args.fail_on, Some(FailOn::New)) && args.baseline.is_none() {
         anyhow::bail!(
             "--fail-on new requires --baseline (it gates on families new vs the baseline)"
@@ -155,14 +151,13 @@ fn ensure_query_fail_on_is_valid(args: &ScanArgs) -> Result<()> {
 }
 
 fn activate_query_families(
-    args: &ScanArgs,
-    dataset: &mut ScanDataset,
+    args: &QueryArgs,
+    dataset: &mut QueryDataset,
 ) -> Result<Option<BaselineComparison>> {
-    let baseline_comparison = apply_scan_baseline(args, &mut dataset.families)?;
+    let baseline_comparison = apply_query_baseline(args, &mut dataset.families)?;
     let ignore_set = dataset.settings.ignore_set.take();
-    let (active, _ignored) =
+    dataset.families =
         partition_ignored(std::mem::take(&mut dataset.families), ignore_set.as_ref());
-    dataset.families = active;
     Ok(baseline_comparison)
 }
 
@@ -356,7 +351,7 @@ fn enforce_query_fail_on(ctx: &QueryOutput<'_>) -> Result<()> {
         .filter(|f| is_default_report_family(f, ctx.overrides))
         .collect()
     };
-    enforce_scan_fail_on(
+    enforce_query_fail_on_selection(
         ctx.args,
         ctx.settings.channels,
         &reportable,
@@ -392,15 +387,13 @@ pub(super) fn run_query_cmd(cmd: Cmd) -> Result<()> {
     // The path as the user typed it — every suggested next-command echoes it so the links
     // are runnable verbatim (the surface takes the path positionally).
     let path_arg = path.to_string_lossy().into_owned();
-    let args = ScanArgs {
+    let args = QueryArgs {
         paths: vec![path],
-        top: Some(0),
         min_members,
         min_value,
         sort: None,
         config,
         mode,
-        show: vec![],
         cache_dir,
         fail_on,
         baseline,
@@ -419,9 +412,9 @@ pub(super) fn run_query_cmd(cmd: Cmd) -> Result<()> {
     }
 
     let refs = paths_as_refs(&args.paths);
-    let mut dataset = build_scan_dataset(&args, &refs)?;
+    let mut dataset = build_query_dataset(&args, &refs)?;
     if args.write_baseline {
-        return write_scan_baseline(&args, &dataset.families);
+        return write_query_baseline(&args, &dataset.families);
     }
     let baseline_comparison = time_stage("query_activate", || {
         activate_query_families(&args, &mut dataset)

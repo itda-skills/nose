@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn scan_mode_semantic_rejects_cross_receiver_field_state() {
+fn query_mode_semantic_rejects_cross_receiver_field_state() {
     let project = TempProject::new("field_place");
     project.write(
         "read_other.py",
@@ -12,9 +12,9 @@ fn scan_mode_semantic_rejects_cross_receiver_field_state() {
         "def f(a, b):\n    a.x = 7\n    return a.x\n",
     );
 
-    let json = project.scan_json("semantic", &["--min-size", "1", "--min-lines", "1"]);
+    let json = project.query_json("semantic", &["--min-size", "1", "--min-lines", "1"]);
     assert!(
-        scan_families(&json).is_empty(),
+        query_families(&json).is_empty(),
         "same-named fields on different receivers must not report as exact semantic clones: {json}"
     );
 }
@@ -28,7 +28,7 @@ fn scan_mode_semantic_rejects_cross_receiver_field_state() {
 /// when its callee name happened to be a proven top-level binding — which an explicit
 /// import incidentally provides but a wildcard import does not.
 #[test]
-fn scan_mode_semantic_matches_wildcard_imported_java_empty_collection_constructors() {
+fn query_mode_semantic_matches_wildcard_imported_java_empty_collection_constructors() {
     let project = TempProject::new("java_wildcard_ctor");
     project.write(
         "A.java",
@@ -39,7 +39,7 @@ fn scan_mode_semantic_matches_wildcard_imported_java_empty_collection_constructo
         "import java.util.*;\nclass B {\n  List<Object> build(Object a, Object b) {\n    List<Object> r = new LinkedList<>();\n    r.add(a);\n    r.add(b);\n    return r;\n  }\n}\n",
     );
 
-    let json = project.scan_semantic_json();
+    let json = project.query_semantic_json();
     assert!(
         family_contains_all(&json, &["A.java", "B.java"]),
         "wildcard-imported empty java.util collection constructors with identical appends must form one semantic family: {json}"
@@ -51,7 +51,7 @@ fn scan_mode_semantic_matches_wildcard_imported_java_empty_collection_constructo
 /// elements in a DIFFERENT order are not behaviorally equivalent and must not form a
 /// semantic family.
 #[test]
-fn scan_mode_semantic_rejects_wildcard_java_collections_with_divergent_append_order() {
+fn query_mode_semantic_rejects_wildcard_java_collections_with_divergent_append_order() {
     let project = TempProject::new("java_wildcard_neg");
     project.write(
         "A.java",
@@ -62,7 +62,7 @@ fn scan_mode_semantic_rejects_wildcard_java_collections_with_divergent_append_or
         "import java.util.*;\nclass B {\n  List<Object> build(Object a, Object b) {\n    List<Object> r = new LinkedList<>();\n    r.add(b);\n    r.add(a);\n    return r;\n  }\n}\n",
     );
 
-    let json = project.scan_semantic_json();
+    let json = project.query_semantic_json();
     assert!(
         !family_contains_all(&json, &["A.java", "B.java"]),
         "builders appending the same elements in different order must not be exact semantic clones: {json}"
@@ -78,7 +78,7 @@ fn scan_mode_semantic_rejects_wildcard_java_collections_with_divergent_append_or
 /// IL) previously returned the stale parameter domain, while the Name form already guards
 /// reassignment — an asymmetric fail-open that admitted the unsound merge.
 #[test]
-fn scan_mode_semantic_rejects_reassigned_param_with_stale_collection_domain() {
+fn query_mode_semantic_rejects_reassigned_param_with_stale_collection_domain() {
     let project = TempProject::new("stale_domain");
     // `y` reassigned to a list: `e in y` is list element membership.
     project.write(
@@ -91,7 +91,7 @@ fn scan_mode_semantic_rejects_reassigned_param_with_stale_collection_domain() {
         "def memb(e, y: list[int], z: str):\n    y = z\n    return e in y\n",
     );
 
-    let json = project.scan_semantic_json();
+    let json = project.query_semantic_json();
     assert!(
         !family_contains_all(&json, &["list_membership.py", "substring_membership.py"]),
         "a reassigned parameter's declared domain is not proof of the current receiver's domain: list membership and substring membership must not merge: {json}"
@@ -104,7 +104,7 @@ fn scan_mode_semantic_rejects_reassigned_param_with_stale_collection_domain() {
 /// function form an exact semantic family even though Promise/thenable
 /// scheduling and error propagation have different observable semantics.
 #[test]
-fn scan_mode_semantic_rejects_unproven_js_await_sync_convergence() {
+fn query_mode_semantic_rejects_unproven_js_await_sync_convergence() {
     let project = TempProject::new("js_await_boundary");
     project.write("sync.js", "function id(x) {\n  return x + 1;\n}\n");
     project.write(
@@ -112,7 +112,7 @@ fn scan_mode_semantic_rejects_unproven_js_await_sync_convergence() {
         "async function idAsync(x) {\n  return await x + 1;\n}\n",
     );
 
-    let json = project.scan_semantic_min_json();
+    let json = project.query_semantic_min_json();
     assert!(
         !family_contains_all(&json, &["sync.js", "async.js"]),
         "await must not be erased into a sync exact semantic family without protocol evidence: {json}"
@@ -122,7 +122,7 @@ fn scan_mode_semantic_rejects_unproven_js_await_sync_convergence() {
 /// Same async protocol boundary for Python: `await x` is a coroutine protocol
 /// operation, not a plain value read unless a future contract proves it.
 #[test]
-fn scan_mode_semantic_rejects_unproven_python_await_sync_convergence() {
+fn query_mode_semantic_rejects_unproven_python_await_sync_convergence() {
     let project = TempProject::new("py_await_boundary");
     project.write("sync.py", "def id(x):\n    return x + 1\n");
     project.write(
@@ -130,7 +130,7 @@ fn scan_mode_semantic_rejects_unproven_python_await_sync_convergence() {
         "async def id_async(x):\n    return await x + 1\n",
     );
 
-    let json = project.scan_semantic_min_json();
+    let json = project.query_semantic_min_json();
     assert!(
         !family_contains_all(&json, &["sync.py", "async.py"]),
         "await must not be erased into a sync exact semantic family without protocol evidence: {json}"
@@ -141,7 +141,7 @@ fn scan_mode_semantic_rejects_unproven_python_await_sync_convergence() {
 /// wrappers around the body. Exact sync/async convergence requires future
 /// protocol proof that is not modeled yet.
 #[test]
-fn scan_mode_semantic_rejects_unproven_rust_await_sync_convergence() {
+fn query_mode_semantic_rejects_unproven_rust_await_sync_convergence() {
     let project = TempProject::new("rs_await_boundary");
     project.write("sync.rs", "fn id(x: i32) -> i32 { x + 1 }\n");
     project.write(
@@ -149,7 +149,7 @@ fn scan_mode_semantic_rejects_unproven_rust_await_sync_convergence() {
         "async fn id_async(x: i32) -> i32 { async move { x + 1 }.await }\n",
     );
 
-    let json = project.scan_semantic_min_json();
+    let json = project.query_semantic_min_json();
     assert!(
         !family_contains_all(&json, &["sync.rs", "async.rs"]),
         "Rust async/await must not be erased into a sync exact semantic family without future protocol evidence: {json}"
@@ -160,7 +160,7 @@ fn scan_mode_semantic_rejects_unproven_rust_await_sync_convergence() {
 /// semantics. They must not be erased into ordinary calls or value reads until
 /// a language protocol contract proves the required demand/effect obligations.
 #[test]
-fn scan_mode_semantic_rejects_unproven_go_concurrency_protocol_convergence() {
+fn query_mode_semantic_rejects_unproven_go_concurrency_protocol_convergence() {
     let project = TempProject::new("go_protocol_boundary");
     project.write(
         "direct_call.go",
@@ -207,7 +207,7 @@ fn scan_mode_semantic_rejects_unproven_go_concurrency_protocol_convergence() {
         "package p\nfunc ifReceive(ch chan int) int { v := <-ch; if v != 0 { return v }; return 0 }\n",
     );
 
-    let json = project.scan_semantic_min_json();
+    let json = project.query_semantic_min_json();
     for pair in [
         ["direct_call.go", "goroutine.go"],
         ["direct_call.go", "deferred.go"],
@@ -227,7 +227,7 @@ fn scan_mode_semantic_rejects_unproven_go_concurrency_protocol_convergence() {
 /// comprehension is eager and materialized, a generator expression is lazy and
 /// one-shot, and a set comprehension deduplicates and is unordered.
 #[test]
-fn scan_mode_semantic_rejects_unproven_python_comprehension_surface_convergence() {
+fn query_mode_semantic_rejects_unproven_python_comprehension_surface_convergence() {
     let project = TempProject::new("py_comprehension_boundary");
     project.write(
         "list_value.py",
@@ -242,7 +242,7 @@ fn scan_mode_semantic_rejects_unproven_python_comprehension_surface_convergence(
         "def f(xs):\n    return {x * x for x in xs}\n",
     );
 
-    let json = project.scan_semantic_min_json();
+    let json = project.query_semantic_min_json();
     for pair in [
         ["list_value.py", "generator_value.py"],
         ["list_value.py", "set_value.py"],
@@ -259,7 +259,7 @@ fn scan_mode_semantic_rejects_unproven_python_comprehension_surface_convergence(
 /// `len(generator)` is a TypeError and `len(set_comprehension)` observes
 /// deduplication rather than iteration count.
 #[test]
-fn scan_mode_semantic_respects_python_comprehension_cardinality_boundaries() {
+fn query_mode_semantic_respects_python_comprehension_cardinality_boundaries() {
     let project = TempProject::new("py_comprehension_cardinality");
     project.write(
         "list_len.py",
@@ -282,7 +282,7 @@ fn scan_mode_semantic_respects_python_comprehension_cardinality_boundaries() {
         "def f(xs):\n    return len([x % 2 for x in xs])\n",
     );
 
-    let json = project.scan_semantic_min_json();
+    let json = project.query_semantic_min_json();
     assert!(
         family_contains_all(&json, &["list_len.py", "sum_count.py"]),
         "proof-backed list comprehension cardinality should still converge with a count reduction: {json}"
@@ -302,7 +302,7 @@ fn scan_mode_semantic_respects_python_comprehension_cardinality_boundaries() {
 /// Generator expression construction is lazy. Its body must not be treated like
 /// an eager list comprehension body for exception timing.
 #[test]
-fn scan_mode_semantic_respects_python_generator_lazy_exception_timing() {
+fn query_mode_semantic_respects_python_generator_lazy_exception_timing() {
     let project = TempProject::new("py_generator_lazy_exception");
     project.write(
         "eager_list.py",
@@ -313,7 +313,7 @@ fn scan_mode_semantic_respects_python_generator_lazy_exception_timing() {
         "def f():\n    try:\n        return (1 / 0 for x in [1])\n    except ZeroDivisionError:\n        return 7\n",
     );
 
-    let json = project.scan_semantic_min_json();
+    let json = project.query_semantic_min_json();
     assert!(
         !family_contains_all(&json, &["eager_list.py", "lazy_generator.py"]),
         "generator construction must not inherit eager list-comprehension exception timing: {json}"
@@ -321,11 +321,11 @@ fn scan_mode_semantic_respects_python_generator_lazy_exception_timing() {
 }
 
 #[test]
-fn scan_human_hides_generated_header_families() {
+fn query_human_hides_generated_header_families() {
     let dir = make_generated_header_project("human");
 
     let out = run(&[
-        "scan",
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "semantic",
@@ -333,7 +333,7 @@ fn scan_human_hides_generated_header_families() {
         "12",
     ]);
     assert!(
-        out.contains("no semantic clone families found"),
+        out.contains("0 duplicated-code families"),
         "generated-header families should not be top-level human findings: {out}"
     );
     assert!(
@@ -346,24 +346,23 @@ fn scan_human_hides_generated_header_families() {
     );
 
     let json = run(&[
-        "scan",
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "semantic",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
         "--min-size",
         "12",
     ]);
     assert!(
-        !scan_families(&scan_json(&json)).is_empty(),
+        !query_families(&query_json(&json)).is_empty(),
         "full JSON should retain generated-header families for diagnostics: {json}"
     );
     let fail = Command::new(bin())
         .args([
-            "scan",
+            "query",
             dir.to_str().unwrap(),
             "--mode",
             "semantic",

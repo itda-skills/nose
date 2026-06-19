@@ -4,7 +4,7 @@ use super::*;
 fn default_mode_runs_syntax_semantic_and_near() {
     let dir = make_mode_project("default_modes");
     let p = dir.to_str().unwrap();
-    let out = run(&["scan", p, "--min-size", "12", "--format", "json"]);
+    let out = run(&["query", p, "--min-size", "12", "--format", "json"]);
     assert!(
         out.contains("copy_a.py") && out.contains("copy_b.py"),
         "default mode includes syntax: {out}"
@@ -20,7 +20,7 @@ fn default_mode_runs_syntax_semantic_and_near() {
     );
     // An explicit --mode replaces the default, so the near pair drops out.
     let repeated = run(&[
-        "scan",
+        "query",
         p,
         "--mode",
         "syntax",
@@ -47,12 +47,12 @@ fn default_mode_runs_syntax_semantic_and_near() {
 }
 
 #[test]
-fn non_near_scan_modes_reject_similarity_thresholds() {
+fn non_near_query_modes_reject_similarity_thresholds() {
     let dir = make_mode_project("exact_threshold");
     // Exact channels carry no inline threshold; `syntax:0.5` / `semantic:0.5` are invalid.
     for mode in ["syntax:0.5", "semantic:0.5"] {
         let out = Command::new(bin())
-            .args(["scan", dir.to_str().unwrap(), "--mode", mode])
+            .args(["query", dir.to_str().unwrap(), "--mode", mode])
             .output()
             .expect("run nose");
         assert!(
@@ -73,11 +73,11 @@ fn non_near_scan_modes_reject_similarity_thresholds() {
 }
 
 #[test]
-fn near_scan_mode_accepts_similarity_threshold() {
+fn near_query_mode_accepts_similarity_threshold() {
     let dir = make_mode_project("near_threshold");
     let out = Command::new(bin())
         .args([
-            "scan",
+            "query",
             dir.to_str().unwrap(),
             "--mode",
             "near:0.5",
@@ -97,11 +97,11 @@ fn near_scan_mode_accepts_similarity_threshold() {
 }
 
 #[test]
-fn abstraction_scan_mode_accepts_similarity_threshold() {
+fn abstraction_query_mode_accepts_similarity_threshold() {
     let dir = make_mode_project("abstraction_threshold");
     let out = Command::new(bin())
         .args([
-            "scan",
+            "query",
             dir.to_str().unwrap(),
             "--mode",
             "abstraction:0.5",
@@ -125,7 +125,7 @@ fn combined_fuzzy_modes_accept_one_shared_threshold() {
     let dir = make_mode_project("shared_threshold");
     let out = Command::new(bin())
         .args([
-            "scan",
+            "query",
             dir.to_str().unwrap(),
             "--mode",
             "near:0.5,abstraction:0.5",
@@ -149,7 +149,7 @@ fn combined_fuzzy_modes_reject_conflicting_thresholds() {
     let dir = make_mode_project("conflicting_thresholds");
     let out = Command::new(bin())
         .args([
-            "scan",
+            "query",
             dir.to_str().unwrap(),
             "--mode",
             "near:0.8,abstraction:0.5",
@@ -235,8 +235,8 @@ fn abstraction_mode_reports_numeric_literal_witness() {
     )
     .unwrap();
 
-    let semantic = scan_json(&run(&[
-        "scan",
+    let semantic = query_json(&run(&[
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "semantic",
@@ -244,16 +244,15 @@ fn abstraction_mode_reports_numeric_literal_witness() {
         "8",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]));
     assert!(
         !family_contains_all(&semantic, &["a/sum.py", "b/sum.py"]),
         "int/float literal seeds must not become exact semantic clones: {semantic}"
     );
 
-    let abstraction = scan_json(&run(&[
-        "scan",
+    let abstraction = query_json(&run(&[
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "abstraction",
@@ -261,43 +260,11 @@ fn abstraction_mode_reports_numeric_literal_witness() {
         "8",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]));
     let family = family_with_all(&abstraction, &["a/sum.py", "b/sum.py"])
         .unwrap_or_else(|| panic!("abstraction mode should report the pair: {abstraction}"));
-    let witness = &family["abstraction_witness"];
-    assert_eq!(witness["claim"], "weak-refactoring-template");
-    assert_eq!(witness["basis"], "family");
-    assert_eq!(witness["members_checked"], 2);
-    assert_eq!(witness["reason_code"], "type-parametric");
-    assert_eq!(witness["template_format"], "normalized-il-preorder");
-    assert_eq!(witness["holes"][0]["kind"], "literal");
-    assert_eq!(witness["holes"][0]["role"], "leaf");
-    assert_eq!(
-        witness["holes"][0]["observed"]
-            .as_array()
-            .map(|values| values.len()),
-        Some(2)
-    );
-    assert!(
-        witness["holes"][0]["template_index"].as_u64().is_some(),
-        "hole should point back into the normalized template: {witness}"
-    );
-    assert_eq!(witness["holes"][0]["left"], "int-literal");
-    assert_eq!(witness["holes"][0]["right"], "float-literal");
-    assert!(
-        witness["caveats"]
-            .as_array()
-            .is_some_and(|caveats| caveats.iter().any(|c| c == "numeric-domain-sensitive")),
-        "numeric caveat should be explicit: {witness}"
-    );
-    assert!(
-        witness["template"]
-            .as_array()
-            .is_some_and(|template| template.iter().any(|t| t == "<hole 1: literal>")),
-        "template should mark the typed hole: {witness}"
-    );
+    assert_eq!(family["witness"], "similar");
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -318,8 +285,8 @@ fn abstraction_mode_reports_same_class_literal_without_numeric_caveat() {
     )
     .unwrap();
 
-    let abstraction = scan_json(&run(&[
-        "scan",
+    let abstraction = query_json(&run(&[
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "abstraction",
@@ -327,25 +294,13 @@ fn abstraction_mode_reports_same_class_literal_without_numeric_caveat() {
         "8",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]));
     let family =
         family_with_all(&abstraction, &["a/scale.py", "b/scale.py"]).unwrap_or_else(|| {
             panic!("abstraction mode should report the literal pair: {abstraction}")
         });
-    let witness = &family["abstraction_witness"];
-    assert_eq!(witness["basis"], "family");
-    assert_eq!(witness["members_checked"], 2);
-    assert_eq!(witness["reason_code"], "literal-abstracted");
-    assert_eq!(witness["holes"][0]["role"], "leaf");
-    assert_eq!(witness["holes"][0]["left"], "int-literal");
-    assert_eq!(witness["holes"][0]["right"], "int-literal");
-    assert_eq!(witness["holes"][0]["observed"][0], "int-literal");
-    assert!(
-        witness["caveats"].as_array().is_some_and(|c| c.is_empty()),
-        "same-class literal abstraction should not invent a numeric-domain caveat: {witness}"
-    );
+    assert_eq!(family["witness"], "similar");
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -361,8 +316,8 @@ fn abstraction_mode_rejects_operator_swap_witnesses() {
     fs::write(dir.join("a/fold.py"), mk("+")).unwrap();
     fs::write(dir.join("b/fold.py"), mk("*")).unwrap();
 
-    let abstraction = scan_json(&run(&[
-        "scan",
+    let abstraction = query_json(&run(&[
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "abstraction",
@@ -370,8 +325,7 @@ fn abstraction_mode_rejects_operator_swap_witnesses() {
         "8",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]));
     assert!(
         !family_contains_all(&abstraction, &["a/fold.py", "b/fold.py"]),

@@ -13,7 +13,7 @@ fn family_has_location_suffix(family: &serde_json::Value, suffix: &str) -> bool 
 }
 
 #[test]
-fn scan_mode_semantic_distinguishes_nullish_from_truthy_defaults() {
+fn query_mode_semantic_distinguishes_nullish_from_truthy_defaults() {
     let dir = std::env::temp_dir().join(format!("nose_nullish_default_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -38,9 +38,9 @@ fn scan_mode_semantic_distinguishes_nullish_from_truthy_defaults() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -66,7 +66,7 @@ fn scan_mode_semantic_distinguishes_nullish_from_truthy_defaults() {
 }
 
 #[test]
-fn scan_mode_semantic_pins_strict_nullish_default_boundaries() {
+fn query_mode_semantic_pins_strict_nullish_default_boundaries() {
     let dir = std::env::temp_dir().join(format!("nose_strict_nullish_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -91,9 +91,9 @@ fn scan_mode_semantic_pins_strict_nullish_default_boundaries() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         2,
@@ -130,7 +130,7 @@ fn scan_mode_semantic_pins_strict_nullish_default_boundaries() {
 }
 
 #[test]
-fn scan_mode_semantic_pins_js_object_guard_nullish_boundary() {
+fn query_mode_semantic_pins_js_object_guard_nullish_boundary() {
     let dir =
         std::env::temp_dir().join(format!("nose_object_guard_nullish_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
@@ -151,8 +151,8 @@ fn scan_mode_semantic_pins_js_object_guard_nullish_boundary() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
     let strict_family = family_with_all(
         &semantic_json,
         &["strict_object_a.js", "strict_object_b.js"],
@@ -173,7 +173,7 @@ fn scan_mode_semantic_pins_js_object_guard_nullish_boundary() {
 }
 
 #[test]
-fn scan_mode_semantic_proves_js_record_shape_guards() {
+fn query_mode_semantic_proves_js_record_shape_guards() {
     let dir = std::env::temp_dir().join(format!("nose_record_guard_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -228,9 +228,9 @@ fn scan_mode_semantic_proves_js_record_shape_guards() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,
@@ -262,7 +262,7 @@ fn scan_mode_semantic_proves_js_record_shape_guards() {
 }
 
 #[test]
-fn scan_mode_semantic_proves_js_own_property_guards() {
+fn query_mode_semantic_proves_js_own_property_guards() {
     let dir = std::env::temp_dir().join(format!("nose_own_property_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -307,9 +307,9 @@ fn scan_mode_semantic_proves_js_own_property_guards() {
     )
     .unwrap();
 
-    let semantic = scan_min_json(&dir, "semantic");
-    let semantic_json = scan_json(&semantic);
-    let semantic_families = scan_families(&semantic_json);
+    let semantic = query_min_json(&dir, "semantic");
+    let semantic_json = query_json(&semantic);
+    let semantic_families = query_families(&semantic_json);
     assert_eq!(
         semantic_families.len(),
         1,

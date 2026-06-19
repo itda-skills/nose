@@ -36,7 +36,7 @@ fn print_candidates(rows: &[&nose_detect::RefactorFamily], path: &str, opp: &Opp
     }
 }
 
-/// The query summary: scan scope, candidate counts, a few high-value rows with `id=`
+/// The query summary: analysis scope, candidate counts, a few high-value rows with `id=`
 /// links, and the next commands a reader is likely to need.
 #[allow(clippy::too_many_lines)]
 #[allow(clippy::too_many_arguments)] // a self-describing landing view over several dataset facets
@@ -44,14 +44,14 @@ pub(super) fn render_query_dashboard(
     families: &[nose_detect::RefactorFamily],
     ov: &SurfaceOverrides,
     opp: &OpportunityGroups,
-    scope: &ScanScope,
+    scope: &QueryScope,
     path: &str,
     reinvented_prod: usize,
     json: bool,
     since: Option<&BaselineComparison>,
     markdown: &[nose_markdown::Family],
 ) {
-    // Default surface, slice-folds removed (shown under their primary) — matches scan.
+    // Default surface, slice-folds removed (shown under their primary) — matches analysis.
     let def: Vec<&nose_detect::RefactorFamily> = families
         .iter()
         .filter(|f| is_default_surface(f, ov) && !opp.is_slice(f))
@@ -185,7 +185,7 @@ pub(super) fn render_query_dashboard(
     let mut dirs: Vec<_> = by_dir.into_iter().collect();
     dirs.sort_by(|a, b| b.1 .0.cmp(&a.1 .0).then(a.0.cmp(&b.0)));
     // Only worth surfacing when the duplication actually spans directories — with a single
-    // directory both the `path~` slice and the `group=dir` facet just re-run the same scan.
+    // directory both the `path~` slice and the `group=dir` facet just re-run the same analysis.
     if dirs.len() > 1 {
         println!("\n{}", style::bold("most-duplicated directories:"));
         for (d, (_dup, n)) in dirs.iter().take(3) {
@@ -212,7 +212,7 @@ pub(super) fn render_query_dashboard(
             style::dim("# the call-the-helper findings")
         );
     }
-    // Repo-level magnitude + what the default surface omitted (scan's honesty footer).
+    // Repo-level magnitude + what the default surface omitted.
     let omitted = surface_omission_note(families, ov);
     println!(
         "\n~{} duplicated lines on the default surface.{}",

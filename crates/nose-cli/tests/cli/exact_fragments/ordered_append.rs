@@ -4,7 +4,7 @@ use super::*;
 // intentional until the fixture setup has a clearer table-builder abstraction.
 #[allow(clippy::too_many_lines)]
 #[test]
-fn semantic_scan_reports_exact_safe_ordered_append_effect_branch_fragments() {
+fn semantic_query_reports_exact_safe_ordered_append_effect_branch_fragments() {
     let dir = std::env::temp_dir().join(format!(
         "nose_append_effect_order_boundary_{}",
         std::process::id()
@@ -79,7 +79,7 @@ fn semantic_scan_reports_exact_safe_ordered_append_effect_branch_fragments() {
     }
 
     let out = run(&[
-        "scan",
+        "query",
         dir.to_str().unwrap(),
         "--mode",
         "semantic",
@@ -89,11 +89,10 @@ fn semantic_scan_reports_exact_safe_ordered_append_effect_branch_fragments() {
         "100",
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]);
-    let json = scan_json(&out);
-    let families = scan_families(&json);
+    let json = query_json(&out);
+    let families = query_families(&json);
 
     let assert_block_pair = |left: &str, right: &str, negative: &str| {
         let family = families
@@ -178,7 +177,7 @@ fn semantic_scan_reports_exact_safe_ordered_append_effect_branch_fragments() {
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_three_append_effect_branch_fragments() {
+fn semantic_query_reports_exact_safe_three_append_effect_branch_fragments() {
     let fixtures = [
         (
             "append_three_a.ts",
@@ -234,7 +233,7 @@ fn semantic_scan_reports_exact_safe_three_append_effect_branch_fragments() {
         ),
     ];
     let (dir, out, families) =
-        scan_fragment_only_fixtures("nose_three_append_effect_boundary", &fixtures);
+        query_fragment_only_fixtures("nose_three_append_effect_boundary", &fixtures);
 
     for (left, right, negative) in [
         (

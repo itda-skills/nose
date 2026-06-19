@@ -31,7 +31,7 @@ fn unit_value_fingerprints(dir: &Path) -> std::collections::HashMap<String, Stri
 /// the value fingerprint and collapsing the wrapper onto its `except: return x`
 /// arm (black's `wrap_stream_for_windows` ≡ `optimize(self): return self`).
 #[test]
-fn scan_mode_semantic_keeps_python_try_else_wrapper_apart_from_identity() {
+fn query_mode_semantic_keeps_python_try_else_wrapper_apart_from_identity() {
     let dir = std::env::temp_dir().join(format!("nose_try_else_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
@@ -61,7 +61,7 @@ fn scan_mode_semantic_keeps_python_try_else_wrapper_apart_from_identity() {
 /// the success path, not a handler; in handler position the no-throw fingerprint
 /// convention erased it entirely.
 #[test]
-fn scan_mode_semantic_keeps_ruby_begin_else_wrapper_apart_from_identity() {
+fn query_mode_semantic_keeps_ruby_begin_else_wrapper_apart_from_identity() {
     let dir = std::env::temp_dir().join(format!("nose_ruby_else_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();

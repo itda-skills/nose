@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify nose's self-duplication families against the reviewed baseline."""
+"""Verify nose's self-duplication families against the accepted baseline."""
 
 from __future__ import annotations
 
@@ -46,16 +46,16 @@ def load_baseline(path: Path) -> dict[str, Any]:
 def current_family_ids(nose_bin: Path, baseline: dict[str, Any]) -> list[str]:
     command = [
         str(nose_bin),
-        "scan",
+        "query",
         "crates",
+        "all",
+        "top=0",
         "--mode",
         baseline["mode"],
         "--min-value",
         str(baseline["min_value"]),
         "--format",
         "json",
-        "--top",
-        "0",
     ]
     result = subprocess.run(
         command,
@@ -74,9 +74,10 @@ def current_family_ids(nose_bin: Path, baseline: dict[str, Any]) -> list[str]:
 
     surface = baseline["recommended_surface"]
     return sorted(
-        family["family_id"]
+        family_id
         for family in payload.get("families", [])
-        if family.get("recommended_surface") == surface
+        if (family_id := family.get("id") or family.get("family_id"))
+        and (family.get("surface") or family.get("recommended_surface")) == surface
     )
 
 
@@ -115,7 +116,7 @@ def check(nose_bin: Path, baseline_path: Path) -> int:
             print(f"  - {failure}", file=sys.stderr)
         print("", file=sys.stderr)
         print(
-            "Review the family delta, update docs/dogfooding.md, then update "
+            "Evaluate the family delta, update docs/dogfooding.md, then update "
             f"{baseline_path} in the same change.",
             file=sys.stderr,
         )

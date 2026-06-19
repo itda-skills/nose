@@ -4966,7 +4966,7 @@ def axis_data_shape(axis: str) -> str:
         "string_prefix_suffix": "string",
         "table_access": "map<string,int>",
         "total_order_compare": "ordered-scalar-pair",
-        "java_statically_false_loop": "java-array-scan",
+        "java_statically_false_loop": "java-array-iteration",
         "java_integer_low_bit_toggle": "java-int-edge-key",
         "c_u16_be_byte_pack": "c-byte-buffer",
         "c_u32_be_byte_pack": "c-byte-buffer",

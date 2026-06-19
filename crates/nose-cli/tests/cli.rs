@@ -12,10 +12,8 @@ mod commands;
 mod exact_fragments;
 #[path = "cli/modes.rs"]
 mod modes;
-#[path = "cli/output_contract.rs"]
-mod output_contract;
-#[path = "cli/review.rs"]
-mod review;
+#[path = "cli/query_base.rs"]
+mod query_base;
 #[path = "cli/semantic_boundaries.rs"]
 mod semantic_boundaries;
 #[path = "cli/semantic_core.rs"]

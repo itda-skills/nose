@@ -1,35 +1,35 @@
 use crate::*;
 
-pub(super) type FragmentScan = (PathBuf, String, Vec<serde_json::Value>);
+pub(super) type FragmentQuery = (PathBuf, String, Vec<serde_json::Value>);
 
-/// Write `fixtures` into a unique temp dir and run a semantic JSON scan,
-/// returning the project dir, the raw scan output, and the parsed families.
-pub(super) fn scan_fragment_fixtures(tag: &str, fixtures: &[(&str, &str)]) -> FragmentScan {
-    scan_fragment_fixtures_with(tag, fixtures, &[])
+/// Write `fixtures` into a unique temp dir and run a semantic JSON query,
+/// returning the project dir, the raw query output, and the parsed families.
+pub(super) fn query_fragment_fixtures(tag: &str, fixtures: &[(&str, &str)]) -> FragmentQuery {
+    query_fragment_fixtures_with(tag, fixtures, &[])
 }
 
-/// Like [`scan_fragment_fixtures`], but raises the size gates so only exact
+/// Like [`query_fragment_fixtures`], but raises the size gates so only exact
 /// fragments can report.
-pub(super) fn scan_fragment_only_fixtures(tag: &str, fixtures: &[(&str, &str)]) -> FragmentScan {
-    scan_fragment_fixtures_with(tag, fixtures, &["--min-lines", "100", "--min-size", "100"])
+pub(super) fn query_fragment_only_fixtures(tag: &str, fixtures: &[(&str, &str)]) -> FragmentQuery {
+    query_fragment_fixtures_with(tag, fixtures, &["--min-lines", "100", "--min-size", "100"])
 }
 
-fn scan_fragment_fixtures_with(
+fn query_fragment_fixtures_with(
     tag: &str,
     fixtures: &[(&str, &str)],
     size_args: &[&str],
-) -> FragmentScan {
+) -> FragmentQuery {
     let dir = std::env::temp_dir().join(format!("{tag}_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     for (name, src) in fixtures {
         fs::write(dir.join(name), src).unwrap();
     }
-    let mut args = vec!["scan", dir.to_str().unwrap(), "--mode", "semantic"];
+    let mut args = vec!["query", dir.to_str().unwrap(), "--mode", "semantic"];
     args.extend_from_slice(size_args);
-    args.extend_from_slice(&["--format", "json", "--top", "0"]);
+    args.extend_from_slice(&["--format", "json", "top=0"]);
     let out = run(&args);
-    let families = scan_families(&scan_json(&out)).to_vec();
+    let families = query_families(&query_json(&out)).to_vec();
     (dir, out, families)
 }
 

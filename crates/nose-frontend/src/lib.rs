@@ -131,7 +131,7 @@ pub fn discover_paths(root: &Path, exclude: &[String]) -> Vec<(String, Lang)> {
 
     // Honor .gitignore *within* the target tree (skips node_modules, build dirs)
     // but not gitignores in parent directories outside it — pointing the tool at
-    // a path that happens to sit under an ignored dir should still scan it.
+    // a path that happens to sit under an ignored dir should still analyze it.
     // `require_git(false)` so a tree's .gitignore is respected even when it isn't a
     // git checkout (extracted tarball, sub-tree, vendored copy) — otherwise `ignore`
     // only activates gitignore rules under an actual `.git`, and generated/vendored

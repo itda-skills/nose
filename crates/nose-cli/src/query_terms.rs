@@ -12,7 +12,7 @@ pub(crate) struct Query {
     pub(crate) id_full: bool,
     /// Widen from the curated default surface to the full raw universe (shallow/hidden/
     /// declaration/generated families too) — the `all` token. Default queries stay on the
-    /// default surface so `query`'s counts and curation match `scan`'s.
+    /// default surface so `query`'s counts and curation match `analysis`'s.
     pub(crate) all: bool,
     pub(crate) sort: Option<crate::SortKey>,
     pub(crate) top: Option<usize>,
@@ -23,7 +23,7 @@ pub(crate) struct Query {
     /// `status` (new/changed/unchanged) as a queryable field (temporal lens, not a gate).
     pub(crate) since: Option<String>,
     /// `base=<git-ref>` — the divergent-edit view: detect families at that ref and flag the
-    /// ones a diff changed in one copy but not its siblings (the `nose review` pipeline,
+    /// ones a diff changed in one copy but not its siblings (the `nose divergence` pipeline,
     /// surfaced in query). A distinct entity (a divergence), so it's its own view.
     pub(crate) base: Option<String>,
 }

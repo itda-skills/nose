@@ -6,6 +6,21 @@ break.
 
 ## [Unreleased]
 
+## [0.13.2] - 2026-06-19
+
+### Changed
+- Removed the old `scan` and `review` CLI surfaces. Use `nose query <path> ...` for clone-family
+  exploration and `nose query <path> base=<ref>` for divergent-edit gates.
+- Bulk `nose query ... all top=0 --format json` rendering now reuses one source-line cache while
+  preserving byte-identical JSON. This keeps the existing all-copies `params` contract but avoids
+  re-reading and anti-unifying every family independently during JSON output.
+
+### Performance
+- Re-profiled the checked-out `bench/repos` corpus with a release build after the render fix:
+  **150/150 repos succeeded**, **0 repos >= 4s**, **75.858s total**, max **3.732s** (`sympy`).
+  Representative byte-identical stage checks: `raylib` `query_render` **5284.7ms → 67.3ms**,
+  `sympy` **778.7ms → 166.7ms**, and `bulma` **3124.8ms → 87.9ms**.
+
 ## [0.13.1] - 2026-06-19
 
 ### Changed

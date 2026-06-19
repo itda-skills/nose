@@ -9,7 +9,7 @@
 //! normalize+extract step is cached. The key is a content hash of each file's
 //! *post-resolve* IL, so a file whose imported-immutable-literal context changed
 //! (its provider edited) gets a different key and recomputes — fixing #275, where
-//! the old source-content key skipped resolution entirely and the cached scan
+//! the old source-content key skipped resolution entirely and the cached analysis
 //! under-merged cross-file imported-literal convergence. A [`UnitFeat`]'s features
 //! are interner-independent content hashes, so a hit needs no interner; the key
 //! folds in a schema version and an options signature so a format/option change

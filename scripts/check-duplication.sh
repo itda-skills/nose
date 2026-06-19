@@ -2,14 +2,14 @@
 # Duplication gate — nose dogfooding itself.
 #
 # Fails when the set of *substantial* duplicate families on nose's own source differs
-# from the reviewed baseline. The mode, minimum refactoring value, output surface, and
-# accepted family IDs live in scripts/duplication-baseline.json; the review trail lives
+# from the accepted baseline. The mode, minimum refactoring value, output surface, and
+# accepted family IDs live in scripts/duplication-baseline.json; the decision trail lives
 # in docs/dogfooding.md. To accept a genuinely new one, either dedupe it or update both
 # files with a one-line justification in the PR.
 #
 # Runs only the `near` channel: this gate is about *design-level* Type-3 duplication
 # (families worth extracting), not the syntax copy-paste floor — which always surfaces
-# the reviewed-and-accepted per-grammar frontend parallelism (see docs/dogfooding.md).
+# the accepted per-grammar frontend parallelism (see docs/dogfooding.md).
 #
 # DETERMINISM: the count is reproducible run-to-run AND across platforms — nose hashes with
 # FxHash (no random seed) and ranks with IEEE correctly-rounded ops only (+ - * / sqrt), and the
@@ -28,7 +28,7 @@ set -euo pipefail
 # Scope expansion in the quality-gates pass: the gate now scans tests as well as production
 # code. Current binary, current tree: production-only default surface reports 24 substantial
 # families, while the tests-included default surface reports 38. The 14 newly visible
-# test-scope/mixed families are reviewed in docs/dogfooding.md; this is a scope expansion,
+# test-scope/mixed families are tracked in docs/dogfooding.md; this is a scope expansion,
 # not a loosening of the old production-only gate.
 #
 # 20 → 21: weight-grading the sub-DAG score (a larger shared computation now scores higher, up to
@@ -44,7 +44,7 @@ set -euo pipefail
 # Re-baselined 23 -> 24 in the #210 campaign: stronger fingerprint fidelity (deref
 # stores, loop-effect keying) made one PRE-EXISTING cross-crate near-family visible —
 # the assignment-name counting loops in value_graph/context.rs::seed_module_value_bindings
-# and module_imports.rs::collect_statement_exports (small, cross-crate; reviewed, kept).
+# and module_imports.rs::collect_statement_exports (small, cross-crate; accepted, kept).
 # Re-baselined 24 -> 25 in the #283-A fix: the effect-free-reorder guard shifts a few
 # self-source value-graph fingerprints, nudging one PRE-EXISTING large-span dispatch
 # near-family (interp.rs / value_graph/eval.rs / control.rs, sharing ~12 of ~1082 lines)
@@ -65,7 +65,7 @@ set -euo pipefail
 #
 # +1 (semantic false-merge boundaries): the value-graph order-orientation soundness fix shifts
 # canonicalized value fingerprints enough for this branch's binary to report the same 28-family
-# count even when scanning an unmodified origin/main tree. The extra counted family is the
+# count even when querying an unmodified origin/main tree. The extra counted family is the
 # pre-existing high-parameter overlap slice
 # `body_depends_on_iter` / `foreach_effect_body_depends_on_iter` / `single_branch_statement`,
 # folded under the loop-effect family in human output. It is tracked design debt, not code

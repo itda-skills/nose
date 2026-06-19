@@ -7,7 +7,7 @@ There are two distinct questions, measured separately:
 
 | question | how | data |
 |---|---|---|
-| **Product quality** — does the review-oriented scan surface rank *genuine* refactoring candidates first? | precision@10 + worthy-recall, per language, dev/held-out, bootstrap 95% CIs | the v5 refactoring-family labelset |
+| **Product quality** — does the query surface rank *genuine* refactoring candidates first? | precision@10 + worthy-recall, per language, dev/held-out, bootstrap 95% CIs | the v5 refactoring-family labelset |
 | **Soundness** — does an equal fingerprint really mean equal behavior? | an interpreter oracle on a battery of inputs (`nose verify`) + Lean proofs | the pinned corpus |
 
 A third asset is the [Type-4 benchmark factory](type4-benchmark.md): an evidence-carrying
@@ -117,22 +117,21 @@ The detector is parallel at every stage and designed for deterministic output; t
 repeat runs and thread-count variation on the local platform. The archived §T run measured
 about **19,500 files/sec** warm on its pinned corpus/hardware, with frontend parse+lower
 dominating and scaling about 11.6x on 18 cores. `NOSE_TIME=1 nose query <path>`
-prints the per-stage breakdown for your machine (the timing covers the whole scan
+prints the per-stage breakdown for your machine (the timing covers the whole analysis run
 regardless of how many families are displayed). The default mode already runs
 the full `syntax,semantic,near` surface. See
 experiments §T for the throughput work.
 
 Current corpus speed budget: a 2026-06-19 release-build pass over the checked-out
 `bench/repos` corpus (`target/release/nose query bench/repos/<repo>`, one repo at a time)
-completed **150/150 repos successfully**, **0 repos at or above 4s**, **77.06s total**, max
-**3.485s** (`sympy`). The saved run is `target/corpus-query-speed-final8/summary.tsv`; see
+completed **150/150 repos successfully**, **0 repos at or above 4s**, **75.858s total**, max
+**3.732s** (`sympy`). The saved run is `target/corpus-query-speed-release-0.13.2/summary.tsv`; see
 [experiments §CZ](experiments.md#cz-corpus-query-speed-budget-pass-2026-06-19).
 
 ## The research commands
 
 The everyday surface is `nose query` (interactive exploration, carrying the
-`--fail-on`/`--baseline` CI gate); `nose scan` is the deprecated one-shot alias over the
-same dataset ([usage](usage.md)). The default mix is
+`--fail-on`/`--baseline` CI gate). The default mix is
 `syntax,semantic,near` (experiments §BM priced the flip); benchmark runs that need the
 pre-flip exact-only surface pin `--mode syntax,semantic` explicitly. The benchmark also
 uses a hidden research surface:

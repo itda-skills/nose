@@ -34,8 +34,8 @@ pub(in crate::library_api) fn domain_dependency_id_for_receiver_requirement(
     // A record can match the receiver only when anchored at one of three spans
     // (the receiver node itself, its unique binding LHS, or its declaring
     // param — see `domain_dependency_anchor_matches_receiver`), so query those
-    // index buckets instead of scanning the whole evidence table. Candidates
-    // are visited in evidence order, exactly like the scan they replace.
+    // index buckets instead of walking the whole evidence table. Candidates
+    // are visited in evidence order, exactly like the pass they replace.
     let mut indices = il.evidence_indices_anchored_at(il.node(receiver).span);
     if let EvidenceResolution::Found(lhs) =
         unique_binding_lhs_for_var_reference_cached(il, receiver, cache)

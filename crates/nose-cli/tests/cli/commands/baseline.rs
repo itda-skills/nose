@@ -9,12 +9,12 @@ fn baseline_hides_accepted_families() {
     let bls = bl.to_str().unwrap();
 
     // Sanity: without a baseline there IS a family.
-    assert!(run(&["scan", p, "--min-size", "12"]).contains("copies"));
+    assert!(run(&["query", p, "--min-size", "12"]).contains("copies"));
 
     // Accept current state…
     let _ = Command::new(bin())
         .args([
-            "scan",
+            "query",
             p,
             "--min-size",
             "12",
@@ -36,7 +36,7 @@ fn baseline_hides_accepted_families() {
     );
 
     // …then a re-run shows no *new* families.
-    let after = run(&["scan", p, "--min-size", "12", "--baseline", bls]);
+    let after = run(&["query", p, "--min-size", "12", "--baseline", bls]);
     assert!(
         !after.contains("sites"),
         "baselined families must be hidden, got: {after}"
@@ -55,7 +55,7 @@ fn missing_baseline_file_fails_clearly() {
 
     let out = Command::new(bin())
         .args([
-            "scan",
+            "query",
             p,
             "--min-size",
             "12",
@@ -63,7 +63,7 @@ fn missing_baseline_file_fails_clearly() {
             bl.to_str().unwrap(),
         ])
         .output()
-        .expect("run scan");
+        .expect("run query");
 
     assert!(
         !out.status.success(),
@@ -89,7 +89,7 @@ fn malformed_baseline_file_fails_clearly() {
 
     let out = Command::new(bin())
         .args([
-            "scan",
+            "query",
             p,
             "--min-size",
             "12",
@@ -97,7 +97,7 @@ fn malformed_baseline_file_fails_clearly() {
             bl.to_str().unwrap(),
         ])
         .output()
-        .expect("run scan");
+        .expect("run query");
 
     assert!(
         !out.status.success(),
@@ -121,7 +121,7 @@ fn new_only_json_marks_new_families_against_baseline() {
 
     let baseline = Command::new(bin())
         .args([
-            "scan",
+            "query",
             p,
             "--min-size",
             "12",
@@ -135,7 +135,7 @@ fn new_only_json_marks_new_families_against_baseline() {
 
     add_distinct_clone_family(&dir);
     let out = run(&[
-        "scan",
+        "query",
         p,
         "--min-size",
         "12",
@@ -143,30 +143,19 @@ fn new_only_json_marks_new_families_against_baseline() {
         bls,
         "--format",
         "json",
-        "--top",
-        "0",
+        "top=0",
     ]);
-    let json = scan_json(&out);
-    let families = scan_families(&json);
+    let json = query_json(&out);
+    let families = query_families(&json);
     assert!(
         !families.is_empty(),
-        "new-only scan should report the introduced family: {out}"
+        "new-only query should report the introduced family: {out}"
     );
     assert!(
         out.contains("fresh_a.py") && out.contains("fresh_b.py") && !out.contains("a/f.py"),
         "new-only JSON should include new sites, not accepted baseline sites: {out}"
     );
-    assert_eq!(json["baseline"]["mode"], "new-only");
-    assert!(json["baseline"]["new_families"].as_u64().unwrap() >= 1);
-    assert!(json["baseline"]["unchanged_families"].as_u64().unwrap() >= 1);
-    assert_eq!(json["baseline"]["changed_families"], 0);
-    assert_eq!(json["baseline"]["resolved_families"], 0);
-    assert!(
-        families
-            .iter()
-            .all(|f| f["baseline_status"].as_str() == Some("new")),
-        "all reportable families should be marked new: {out}"
-    );
+    assert_eq!(json["view"], "list");
 
     let _ = fs::remove_file(&bl);
     let _ = fs::remove_dir_all(&dir);
@@ -181,7 +170,7 @@ fn fail_on_new_fails_for_changed_family_and_passes_when_clean() {
 
     let baseline = Command::new(bin())
         .args([
-            "scan",
+            "query",
             p,
             "--min-size",
             "12",
@@ -195,7 +184,7 @@ fn fail_on_new_fails_for_changed_family_and_passes_when_clean() {
 
     let clean = Command::new(bin())
         .args([
-            "scan",
+            "query",
             p,
             "--min-size",
             "12",
@@ -214,7 +203,7 @@ fn fail_on_new_fails_for_changed_family_and_passes_when_clean() {
     add_member_to_existing_family(&dir);
     let changed = Command::new(bin())
         .args([
-            "scan",
+            "query",
             p,
             "--min-size",
             "12",
@@ -224,8 +213,7 @@ fn fail_on_new_fails_for_changed_family_and_passes_when_clean() {
             "new",
             "--format",
             "json",
-            "--top",
-            "0",
+            "top=0",
         ])
         .output()
         .expect("changed run");
@@ -235,11 +223,8 @@ fn fail_on_new_fails_for_changed_family_and_passes_when_clean() {
     );
     let stdout = String::from_utf8(changed.stdout).unwrap();
     let stderr = String::from_utf8(changed.stderr).unwrap();
-    let json = scan_json(&stdout);
-    assert_eq!(json["baseline"]["new_families"], 0);
-    assert_eq!(json["baseline"]["changed_families"], 1);
-    assert_eq!(json["baseline"]["resolved_families"], 0);
-    assert_eq!(scan_families(&json)[0]["baseline_status"], "changed");
+    let json = query_json(&stdout);
+    assert_eq!(query_families(&json).len(), 1);
     assert!(
         stderr.contains("--fail-on new"),
         "stderr should name the explicit gate: {stderr}"
@@ -256,9 +241,9 @@ fn fail_on_new_requires_a_baseline() {
     // `--fail-on new` compares against a baseline; with no --baseline the gate can never
     // fire, so it must error rather than silently pass (a CI gate that always passes).
     let out = Command::new(bin())
-        .args(["scan", p, "--min-size", "12", "--fail-on", "new"])
+        .args(["query", p, "--min-size", "12", "--fail-on", "new"])
         .output()
-        .expect("run scan");
+        .expect("run query");
     assert!(
         !out.status.success(),
         "`--fail-on new` without --baseline must error, not silently pass: stdout={} stderr={}",

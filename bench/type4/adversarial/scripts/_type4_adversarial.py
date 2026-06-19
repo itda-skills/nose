@@ -206,7 +206,7 @@ def packet_card(packet: dict[str, Any]) -> str:
     result = packet.get("current_detector_result", {})
     if result:
         lines.extend(["", "Current detector result:"])
-        for field in ("baseline_result", "semantic_scan_result", "default_scan_result"):
+        for field in ("baseline_result", "semantic_query_result", "default_query_result"):
             if result.get(field):
                 lines.append(f"  - {field}: {result[field]}")
     return "\n".join(lines)

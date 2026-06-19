@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn semantic_scan_reports_exact_safe_java_this_field_assignment_fragments() {
+fn semantic_query_reports_exact_safe_java_this_field_assignment_fragments() {
     let fixtures = [
         (
             "FieldSelfSquareA.java",
@@ -57,7 +57,7 @@ fn semantic_scan_reports_exact_safe_java_this_field_assignment_fragments() {
         ),
     ];
     let (dir, out, families) =
-        scan_fragment_only_fixtures("nose_exact_this_field_assign_fragments", &fixtures);
+        query_fragment_only_fixtures("nose_exact_this_field_assign_fragments", &fixtures);
 
     let assert_fragment_family = |left: &str, right: &str, negative: &str| {
         let family =
@@ -102,7 +102,7 @@ fn semantic_scan_reports_exact_safe_java_this_field_assignment_fragments() {
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_ordered_java_this_field_branch_fragments() {
+fn semantic_query_reports_exact_safe_ordered_java_this_field_branch_fragments() {
     let fixtures = [
         (
             "FieldBranchOrderedA.java",
@@ -130,7 +130,7 @@ fn semantic_scan_reports_exact_safe_ordered_java_this_field_branch_fragments() {
         ),
     ];
     let (dir, out, families) =
-        scan_fragment_only_fixtures("nose_ordered_this_field_branch_fragments", &fixtures);
+        query_fragment_only_fixtures("nose_ordered_this_field_branch_fragments", &fixtures);
 
     let assert_branch_family = |left: &str, right: &str, negative: &str| {
         let family = families
@@ -187,7 +187,7 @@ fn semantic_scan_reports_exact_safe_ordered_java_this_field_branch_fragments() {
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_java_this_field_assignment_body_fragments() {
+fn semantic_query_reports_exact_safe_java_this_field_assignment_body_fragments() {
     let fixtures = [
         (
             "FieldBodyDirectA.java",
@@ -227,7 +227,7 @@ fn semantic_scan_reports_exact_safe_java_this_field_assignment_body_fragments() 
         ),
     ];
     let (dir, out, families) =
-        scan_fragment_only_fixtures("nose_exact_this_field_body_fragments", &fixtures);
+        query_fragment_only_fixtures("nose_exact_this_field_body_fragments", &fixtures);
 
     let assert_body_family = |left: &str, right: &str, negative: &str| {
         let family = find_multiline_block_pair_family(&families, left, right, negative)
@@ -270,7 +270,7 @@ fn semantic_scan_reports_exact_safe_java_this_field_assignment_body_fragments() 
 }
 
 #[test]
-fn semantic_scan_reports_exact_safe_java_this_field_return_this_body_fragments() {
+fn semantic_query_reports_exact_safe_java_this_field_return_this_body_fragments() {
     let fixtures = [
         (
             "FluentBodyDirectA.java",
@@ -309,7 +309,7 @@ fn semantic_scan_reports_exact_safe_java_this_field_return_this_body_fragments()
             "class FluentBodyNestedWrongValue {\n  int base;\n  int score;\n  FluentBodyNestedWrongValue f(boolean ready, int c, int d) {\n    this.base = d + c;\n    if (ready) {\n      if (0 < c) {\n        this.score = (d + c) + (d + c);\n      }\n    }\n    return this;\n  }\n}\n",
         ),
     ];
-    let (dir, out, families) = scan_fragment_only_fixtures(
+    let (dir, out, families) = query_fragment_only_fixtures(
         "nose_exact_this_field_return_this_body_fragments",
         &fixtures,
     );

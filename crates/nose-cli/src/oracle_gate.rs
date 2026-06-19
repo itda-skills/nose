@@ -215,7 +215,7 @@ fn wide_battery(probes: &[nose_normalize::Value]) -> Vec<Vec<nose_normalize::Val
 
 /// Trailing `sources/<id>/<file>` key shared by the corpus path and the manifest path,
 /// so an interpreted unit can be matched to its manifest entry regardless of the prefix
-/// the corpus was scanned under.
+/// the corpus was analyzed under.
 fn manifest_key(path: &str) -> String {
     match path.rfind("sources/") {
         Some(i) => path[i..].to_string(),

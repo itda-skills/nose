@@ -2,7 +2,7 @@ use super::*;
 
 thread_local! {
     /// Per-thread, per-grammar parser cache. `tree_sitter::Parser::new` allocates
-    /// the parser's internal scan stack and lexer caches; recreating one for every
+    /// the parser's internal stack and lexer caches; recreating one for every
     /// file (corpora run thousands) is pure overhead. Rayon hands each worker its
     /// own thread, so a thread-local pool needs no locking and a grammar's parser
     /// is built at most once per worker.

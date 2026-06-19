@@ -8,7 +8,7 @@ pub trait Detector: Sync {
     fn score(&self, a: &UnitFeat, b: &UnitFeat) -> f64;
 }
 
-/// A no-op scorer used when a scan mode intentionally runs only the contiguous
+/// A no-op scorer used when a mode intentionally runs only the contiguous
 /// copy-paste channel.
 pub struct CopyPasteDetector;
 
@@ -23,7 +23,7 @@ impl Detector for CopyPasteDetector {
 }
 
 /// Exact behavioral scorer: accept only the oracle-backed value-graph fast path.
-/// This gives the `semantic` scan channel a high-confidence Type-4 surface without fuzzy
+/// This gives the `semantic` channel a high-confidence Type-4 surface without fuzzy
 /// structural similarity.
 pub struct ExactBehaviorDetector;
 
@@ -87,7 +87,7 @@ impl Detector for ExactBehaviorDetector {
 /// (more expensive) LCS for obviously-dissimilar pairs.
 pub struct StructuralDetector {
     pub jaccard_weight: f64,
-    /// Accept exact value-fingerprint matches before fuzzy structural scoring. Scan's
+    /// Accept exact value-fingerprint matches before fuzzy structural scoring. The
     /// `near` channel disables this so Type-3 near-duplicates stay separate from the
     /// exact semantic Type-4 channel.
     pub exact_behavior: bool,
@@ -95,9 +95,9 @@ pub struct StructuralDetector {
     /// (data-table, return-signature). Those gates demote "same shape, different
     /// data/operator" pairs — correct for behavioral-clone detection, but those
     /// pairs (locale-class families, comparison-operator families, sync/async
-    /// wrappers) are exactly the refactoring candidates a human wants to review.
+    /// wrappers) are exactly the refactoring candidates a human wants to inspect.
     /// Measured: under a refactoring-worthiness rubric, candidate mode (gates off,
-    /// thr 0.70) surfaces ~4.5k pairs at ~99% review-worthy.
+    /// thr 0.70) surfaces ~4.5k pairs at ~99% triage-worthy.
     pub candidate_mode: bool,
     /// Acceptance threshold, used only for a score-preserving early-exit (RANSAC and
     /// the gates can only lower the score below `wv·vj + ws·sj + wr`, so a pair whose
@@ -116,7 +116,7 @@ impl StructuralDetector {
             accept_threshold: 0.0,
         }
     }
-    /// Near-candidate detector: gates off (recall-oriented, ~99% review-worthy).
+    /// Near-candidate detector: gates off (recall-oriented, ~99% triage-worthy).
     pub fn candidates(jaccard_weight: f64) -> Self {
         Self {
             jaccard_weight,
@@ -171,7 +171,7 @@ impl Detector for StructuralDetector {
         // candidate (refactoring) mode is structure-dominant, so two units with the
         // same skeleton but a different operator (a sum-loop vs a product-loop) — now
         // behaviorally distinct in the value graph (`Reduce(Add)` vs `Reduce(Mul)`) —
-        // still group as a refactoring family worth a human's review.
+        // still group as a refactoring family worth a human's attention.
         let (wv, ws, wr) = score_weights(self.candidate_mode);
         let vj = align::multiset_jaccard(&a.value, &b.value);
         // Candidate mode trusts the value graph: a near-identical value fingerprint — produced
@@ -193,7 +193,7 @@ impl Detector for StructuralDetector {
         // time without changing any accepted score.
         let sj = align::multiset_jaccard(&a.shapes, &b.shapes);
         // Partial / sub-DAG clone: the units share a rare heavy anchor (an extractable common
-        // sub-computation) even though the whole-unit blend is low. Surface it for review at a
+        // sub-computation) even though the whole-unit blend is low. Surface it for inspection at a
         // score above the near floor but below a full clone — it's a real refactor lead (pull
         // the shared computation into a helper), just a partial one. Keep the higher of the two.
         if self.candidate_mode {
