@@ -4,6 +4,9 @@
 pub(crate) use std::fs;
 pub(crate) use std::path::{Path, PathBuf};
 pub(crate) use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static TEMP_PROJECT_SEQ: AtomicU64 = AtomicU64::new(0);
 
 pub(crate) fn bin() -> &'static str {
     env!("CARGO_BIN_EXE_nose")
@@ -109,6 +112,50 @@ def {name}(items):\n    {acc} = 0\n    for {it} in items:\n        if {it} > 0:\
         fs::write(d.join("f.py"), src).unwrap();
     }
     dir
+}
+
+pub(crate) struct TempProject {
+    dir: PathBuf,
+}
+
+impl TempProject {
+    pub(crate) fn new(tag: &str) -> Self {
+        let unique = TEMP_PROJECT_SEQ.fetch_add(1, Ordering::Relaxed);
+        let dir =
+            std::env::temp_dir().join(format!("nose_{tag}_{}_{}", std::process::id(), unique));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        Self { dir }
+    }
+
+    pub(crate) fn write(&self, name: &str, src: &str) {
+        let path = self.dir.join(name);
+        fs::write(&path, src).unwrap_or_else(|err| panic!("write {}: {err}", path.display()));
+    }
+
+    pub(crate) fn scan_json(&self, mode: &str, extra_args: &[&str]) -> serde_json::Value {
+        let mut args = vec!["scan", self.dir.to_str().unwrap(), "--mode", mode];
+        args.extend_from_slice(extra_args);
+        args.extend_from_slice(&["--format", "json"]);
+        scan_json(&run(&args))
+    }
+
+    pub(crate) fn scan_semantic_json(&self) -> serde_json::Value {
+        self.scan_json("semantic", &[])
+    }
+
+    pub(crate) fn scan_semantic_min_json(&self) -> serde_json::Value {
+        self.scan_json(
+            "semantic",
+            &["--top", "0", "--min-size", "1", "--min-lines", "1"],
+        )
+    }
+}
+
+impl Drop for TempProject {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.dir);
+    }
 }
 
 pub(crate) fn run(args: &[&str]) -> String {

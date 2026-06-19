@@ -37,7 +37,7 @@ full run here is a green CI. The full gates are:
 | **build** | `cargo build --release` | the workspace compiles in release |
 | **tests** | `cargo test --release` | the full suite, incl. cross-language convergence |
 | **coverage** | `cargo llvm-cov --workspace --summary-only --fail-under-lines 86` | line coverage stays above the ratchet floor (currently ~86%); runs before PR merge and release publishing |
-| **copy-paste** | `./scripts/check-duplication.sh` | nose run on its own source, including tests — substantial duplicate families stay within budget |
+| **copy-paste** | `./scripts/check-duplication.sh` | nose run on its own source, including tests — substantial duplicate family IDs match the reviewed baseline |
 | **MSRV** | `cargo +$MSRV check --workspace --all-targets` | the crates still build on the declared minimum Rust (`rust-version` in `Cargo.toml`) |
 | **unused deps** | `cargo machete` | no dependency declared but unused (à la *knip*) |
 | **supply chain** | `cargo deny check` | no advisories/yanked crates, only allowed licenses, no dup/wildcard deps, crates.io-only |
@@ -60,13 +60,13 @@ code is simplified and tests are added; never loosen them to make a red build
 pass.
 
 The file-length gate is a design ratchet, not a formatter preference. New Rust
-files under `crates/` must stay at or below 600 lines. Existing files above that
-target are listed in `scripts/file-length-budgets.json` at their current line
-count; they may not grow, and any refactor that shrinks one must lower its budget
-in the same change. CI compares the budget file with the base ref, so
-`default_max_lines`, existing file budgets, and new over-target budget entries
-cannot be loosened in the same change. Use it to force incremental module extraction
-and clearer ownership, not to split files mechanically.
+files under `crates/` must stay below 600 lines (the enforced default max is 599).
+Existing files above that target are listed in `scripts/file-length-budgets.json`
+at their current line count; they may not grow, and any refactor that shrinks one
+must lower its budget in the same change. CI compares the budget file with the
+base ref, so `default_max_lines`, existing file budgets, and new over-target
+budget entries cannot be loosened in the same change. Use it to force incremental
+module extraction and clearer ownership, not to split files mechanically.
 
 The local preflight uses `origin/main` as the no-loosening baseline for that
 budget file and fails if the ref is missing; run `git fetch origin main` if the
@@ -109,14 +109,15 @@ NOSE_SKIP_PRE_PUSH=1 git push
 ### The duplication gate (dogfooding)
 
 nose *is* a clone detector, so it polices its own duplication. The gate fails when
-the number of substantial Type-3 near-duplicate families (refactoring value ≥ 40) on
-the crates exceeds the budget committed in `scripts/check-duplication.sh`. The scan
-includes tests as well as production code, so fixture/scaffolding copy-paste is visible
-instead of hidden behind file-length-only pressure. The currently accepted families are
-reviewed and recorded in [`docs/dogfooding.md`](docs/dogfooding.md) (e.g. the
-borrow-checker-blocked `generic` node-copy and reviewed test scaffolding). If your
-change introduces a new substantial family, either factor it out or — with a one-line
-justification in the PR — raise the budget. It is a ratchet, not a fixed wall.
+the substantial Type-3 near-duplicate family IDs (refactoring value ≥ 40, default
+surface) on the crates differ from the reviewed baseline in
+`scripts/duplication-baseline.json`. The scan includes tests as well as production
+code, so fixture/scaffolding copy-paste is visible instead of hidden behind
+file-length-only pressure. The currently accepted families are reviewed and recorded in
+[`docs/dogfooding.md`](docs/dogfooding.md) (e.g. the borrow-checker-blocked `generic`
+node-copy and reviewed test scaffolding). If your change introduces or removes a
+substantial family, either factor it out or update the dogfooding review and baseline
+in the same PR. It is a ratchet, not a fixed wall.
 
 ## Repository CI and automation
 

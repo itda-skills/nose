@@ -17,8 +17,8 @@ Run the gate directly with:
 python3 scripts/check-file-lengths.py
 ```
 
-The target is 600 lines for every Rust file under `crates/`. Files already above
-that line are recorded in
+The target is below 600 lines for every Rust file under `crates/`; the enforced
+default max is 599. Files already above that line are recorded in
 [`scripts/file-length-budgets.json`](../scripts/file-length-budgets.json). A
 budgeted file fails the gate if it grows. It also fails if it shrinks without its
 budget being lowered, so the accepted ceiling moves down whenever a refactor pays
@@ -31,8 +31,8 @@ increase, existing file budgets may not increase, and new over-target budget
 entries are rejected.
 
 Do not use the budget file to bless newly large modules. New modules should stay
-under the 600-line target; if a split still produces a larger file, keep looking
-for a sharper boundary.
+under the 600-line target; if a split still produces a 600-line-or-larger file,
+keep looking for a sharper boundary.
 
 ## Refactoring direction
 

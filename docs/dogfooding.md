@@ -12,28 +12,40 @@ review pass; re-running on today's larger codebase reports more, since the crate
 since grown.
 
 The current CI gate is [scripts/check-duplication.sh](../scripts/check-duplication.sh):
-it runs `nose scan crates --mode near --min-value 40` and compares the substantial
-near-duplicate count with the accepted budget recorded in that script. Tests are included
-in the current ratchet so fixture/scaffolding copy-paste stays visible instead of being
-policed only by the file-length gate.
+it runs `nose scan crates --mode near --min-value 40 --format json --top 0` and
+compares the default-surface family IDs with
+[`scripts/duplication-baseline.json`](../scripts/duplication-baseline.json). Tests are
+included in the current ratchet so fixture/scaffolding copy-paste stays visible instead
+of being policed only by the file-length gate. A family disappearing also requires a
+baseline/docs update, so an unrelated removal cannot mask a newly introduced duplicate.
 
 ## Current tests-included ratchet baseline
 
 Reviewed on 2026-06-19 with the current binary and current tree. The production-only
 default surface reports 24 substantial families; the tests-included default surface
-reports 40. The 16 newly visible default-surface families below are
-accepted as pre-existing debt, not as permission to add more. Raise the budget only when
-a new row is reviewed here.
+reports 38. The 14 newly visible default-surface families below are
+accepted as pre-existing debt, not as permission to add more. Update the baseline only
+when the corresponding family delta is reviewed here.
+
+The exact machine baseline is the union of the 24 production-family IDs retained from
+the earlier production-only dogfooding gate and the 14 tests/mixed rows below:
+
+`1639812e75927a23`, `18b10c46c5eef924`, `1bdaa5320aa60caa`,
+`1dfaba2582163d7c`, `1fc08105c8b5d5c0`, `20607f742b158b0f`,
+`209fdc39157ececd`, `4ac4a88371e43e72`, `4fcb322e2465279d`,
+`5cef2d2e6eb4d3a9`, `7acab484d0d624b8`, `9bcb27a3b3454c87`,
+`9dfc900a8a39f8c9`, `a3f115a64eee87e5`, `ab38dd94000926e1`,
+`af156a42f4c4c870`, `b0c36983532b2550`, `bf4255f2994b1d65`,
+`c817740ef79d19fb`, `c9fe4dc9d9cd14f5`, `e2af7ec5d30fd509`,
+`e8f33f62a81eaf80`, `f010e9908081b902`, `f5d4dde27f380cfc`.
 
 | family | scope | judgment | action |
 |---|---|---|---|
 | `49cf43940d7ba72c` | mixed | `evidence_with_dependencies` / `evidence` test-support builders repeat across semantics, detect, and normalize; real shared fixture shape, but crossing crate support boundaries. | Track as visible fixture debt; extract only with a deliberate shared evidence-fixture boundary. |
 | `7afae0406480a99e` | mixed | `evidence_anchor_span` appears in JS/TS test support and production evidence helpers; tiny same-purpose accessor. | Candidate for a small helper when the evidence APIs are next touched. |
-| `ade356e2e4f9b3ed` | test | async/generator semantic-boundary CLI tests share arrange/scan/assert scaffolding while preserving different protocol boundaries. | Keep scenario names local; consider a boundary-test DSL if more cases land. |
 | `1267c115f7832175` | test | method-call IL fixture builders differ by receiver/argument shape but share a large construction skeleton. | Candidate for a fixture builder; keep until it improves readability. |
 | `d7dea9009200ed08` | test | receiver-domain fail-closed tests share setup for three distinct evidence-break cases. | Accepted test scaffold; consolidate only around named receiver-domain scenarios. |
 | `248e283bde49aaf6` | test | strict-exact receiver/binding-domain tests share evidence setup across detect unit surfaces. | Visible cross-test debt; extract if a common strict-exact receiver fixture emerges. |
-| `19c05e02a2f2636e` | test | Java collection semantic-boundary tests repeat scan fixtures for related hard negatives. | Accepted scenario scaffolding; table-drive only if diagnostics stay clear. |
 | `4e43a909c838f9fc` | test | guard/library-API CLI tests repeat semantic scan scaffolding for static identity/builtin cases. | Keep as named behavior tests unless a local helper clarifies the scenarios. |
 | `973a8ee2eafd71f6` | test | literal-preservation tests for JS/Python/Ruby share object/dict/hash boundary structure. | Candidate for a language-fixture table; avoid hiding per-language expectations. |
 | `67215082c9c77bb1` | test | cross-language literal convergence tests share module/list/map fixture structure. | Accepted until a fixture table makes failures easier, not harder. |

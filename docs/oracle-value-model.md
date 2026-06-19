@@ -280,8 +280,9 @@ For each candidate fix, record **before → after**:
    pathologically (a fix that merges *nothing* trivially has "no false merges");
    the pre-gate guards against measuring a degenerate detector.
 4. **No silent regressions elsewhere.**
-   dup-gate (`scripts/check-duplication.sh`, current budget recorded there) and the byte-identical
-   `cmp` fingerprint-stability gate must stay green; build a `main` worktree
+   dup-gate (`scripts/check-duplication.sh`, with accepted IDs recorded in
+   `scripts/duplication-baseline.json`) and the byte-identical `cmp`
+   fingerprint-stability gate must stay green; build a `main` worktree
    baseline for the family count so the delta is apples-to-apples (see the perf
    tooling notes in the repo memory / [dogfooding](dogfooding.md)).
 

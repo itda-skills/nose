@@ -1,5 +1,25 @@
 use super::*;
 
+fn finish_python(b: IlBuilder, root: NodeId, units: Vec<Unit>) -> Il {
+    b.finish(
+        root,
+        FileMeta {
+            path: "t".into(),
+            lang: Lang::Python,
+        },
+        units,
+        Vec::new(),
+    )
+}
+
+fn run_python_behavior(b: IlBuilder, root: NodeId, args: &[Value]) -> Behavior {
+    run_admitted_unit(finish_python(b, root, Vec::new()), root, args).expect("run_unit")
+}
+
+fn run_python_ret(b: IlBuilder, root: NodeId, args: &[Value]) -> Value {
+    run_python_behavior(b, root, args).ret
+}
+
 fn print_with_error_arg_then_return() -> Value {
     let sp = Span::synthetic(FileId(0));
     let mut b = IlBuilder::new(FileId(0));
@@ -12,16 +32,7 @@ fn print_with_error_arg_then_return() -> Value {
     let ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
     let block = b.add(NodeKind::Block, Payload::None, sp, &[print_stmt, ret]);
     let func = b.add(NodeKind::Func, Payload::None, sp, &[block]);
-    let il = b.finish(
-        func,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::Python,
-        },
-        Vec::new(),
-        Vec::new(),
-    );
-    run_admitted_unit(il, func, &[]).expect("run_unit").ret
+    run_python_ret(b, func, &[])
 }
 
 #[test]
@@ -47,16 +58,7 @@ fn print_with_error_arg_before_effect_arg() -> Behavior {
     let ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
     let block = b.add(NodeKind::Block, Payload::None, sp, &[print_stmt, ret]);
     let func = b.add(NodeKind::Func, Payload::None, sp, &[block]);
-    let il = b.finish(
-        func,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::Python,
-        },
-        Vec::new(),
-        Vec::new(),
-    );
-    run_admitted_unit(il, func, &[]).expect("run_unit")
+    run_python_behavior(b, func, &[])
 }
 
 #[test]
@@ -86,16 +88,7 @@ fn index_assignment_with_error_index_after_rhs_effect() -> Behavior {
     let ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
     let block = b.add(NodeKind::Block, Payload::None, sp, &[assign, ret]);
     let func = b.add(NodeKind::Func, Payload::None, sp, &[param, block]);
-    let il = b.finish(
-        func,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::Python,
-        },
-        Vec::new(),
-        Vec::new(),
-    );
-    run_admitted_unit(il, func, &[Value::List(Vec::new())]).expect("run_unit")
+    run_python_behavior(b, func, &[Value::List(Vec::new())])
 }
 
 #[test]
@@ -119,16 +112,7 @@ fn index_assignment_with_error_base_before_index_effect() -> Behavior {
     let ret = b.add(NodeKind::Return, Payload::None, sp, &[later]);
     let block = b.add(NodeKind::Block, Payload::None, sp, &[assign, ret]);
     let func = b.add(NodeKind::Func, Payload::None, sp, &[block]);
-    let il = b.finish(
-        func,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::Python,
-        },
-        Vec::new(),
-        Vec::new(),
-    );
-    run_admitted_unit(il, func, &[]).expect("run_unit")
+    run_python_behavior(b, func, &[])
 }
 
 #[test]
@@ -173,19 +157,15 @@ fn self_call_with_error_arg_ignored_by_callee() -> Value {
         sp,
         &[done_param, ignored_param, body],
     );
-    let mut il = b.finish(
+    let mut il = finish_python(
+        b,
         func,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::Python,
-        },
         vec![Unit {
             root: func,
             kind: UnitKind::Function,
             name: Some(func_name),
             origin: Default::default(),
         }],
-        Vec::new(),
     );
     il.evidence.push(test_call_target_record(
         2000,
@@ -214,19 +194,15 @@ fn unproven_call_becomes_symbolic_application_keyed_by_callee() {
     let ret = b.add(NodeKind::Return, Payload::None, sp, &[call]);
     let body = b.add(NodeKind::Block, Payload::None, sp, &[ret]);
     let func = b.add(NodeKind::Func, Payload::None, sp, &[body]);
-    let il = b.finish(
+    let il = finish_python(
+        b,
         func,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::Python,
-        },
         vec![Unit {
             root: func,
             kind: UnitKind::Function,
             name: Some(func_name),
             origin: Default::default(),
         }],
-        Vec::new(),
     );
 
     // No call-target evidence: the call is OPAQUE, not a bail — a symbolic
@@ -246,15 +222,7 @@ fn opaque_call_behavior(name: &str, arg: i64, interner: &Interner) -> Behavior {
     let ret = b.add(NodeKind::Return, Payload::None, sp, &[call]);
     let body = b.add(NodeKind::Block, Payload::None, sp, &[ret]);
     let func = b.add(NodeKind::Func, Payload::None, sp, &[body]);
-    let il = b.finish(
-        func,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::Python,
-        },
-        Vec::new(),
-        Vec::new(),
-    );
+    let il = finish_python(b, func, Vec::new());
     run_unit(&il, interner, func, &[]).expect("symbolic run")
 }
 
@@ -294,15 +262,7 @@ fn opaque_call_order_is_observable() {
         let s2 = stmt(second, &mut b);
         let body = b.add(NodeKind::Block, Payload::None, sp, &[s1, s2]);
         let func = b.add(NodeKind::Func, Payload::None, sp, &[body]);
-        let il = b.finish(
-            func,
-            FileMeta {
-                path: "t".into(),
-                lang: Lang::Python,
-            },
-            Vec::new(),
-            Vec::new(),
-        );
+        let il = finish_python(b, func, Vec::new());
         run_unit(&il, &interner, func, &[]).expect("symbolic run")
     };
     assert_eq!(build("f", "g"), build("f", "g"));
@@ -323,15 +283,7 @@ fn branch_on_symbolic_value_bails() {
     let ret = b.add(NodeKind::Return, Payload::None, sp, &[ternary]);
     let body = b.add(NodeKind::Block, Payload::None, sp, &[ret]);
     let func = b.add(NodeKind::Func, Payload::None, sp, &[body]);
-    let il = b.finish(
-        func,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::Python,
-        },
-        Vec::new(),
-        Vec::new(),
-    );
+    let il = finish_python(b, func, Vec::new());
     assert!(run_unit(&il, &interner, func, &[]).is_none());
 }
 
@@ -411,12 +363,9 @@ fn cross_function_call_result() -> Value {
     let f_ret = b.add(NodeKind::Return, Payload::None, sp(14), &[f_add]);
     let f_body = b.add(NodeKind::Block, Payload::None, sp(15), &[f_ret]);
     let f_func = b.add(NodeKind::Func, Payload::None, sp(16), &[f_param, f_body]);
-    let mut il = b.finish(
+    let mut il = finish_python(
+        b,
         f_func,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::Python,
-        },
         vec![
             Unit {
                 root: g_func,
@@ -431,7 +380,6 @@ fn cross_function_call_result() -> Value {
                 origin: Default::default(),
             },
         ],
-        Vec::new(),
     );
     il.evidence.push(test_call_target_record(
         2001,
@@ -469,16 +417,7 @@ fn run_any_all_with_error_predicate(all: bool) -> Value {
     );
     let ret = b.add(NodeKind::Return, Payload::None, sp, &[call]);
     let func = b.add(NodeKind::Func, Payload::None, sp, &[ret]);
-    let il = b.finish(
-        func,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::Python,
-        },
-        Vec::new(),
-        Vec::new(),
-    );
-    run_admitted_unit(il, func, &[]).expect("run_unit").ret
+    run_python_ret(b, func, &[])
 }
 
 #[test]
@@ -513,16 +452,7 @@ fn reduce_with_error_init_ignored_by_lambda() -> Value {
     );
     let ret = b.add(NodeKind::Return, Payload::None, sp, &[reduce]);
     let func = b.add(NodeKind::Func, Payload::None, sp, &[ret]);
-    let il = b.finish(
-        func,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::Python,
-        },
-        Vec::new(),
-        Vec::new(),
-    );
-    run_admitted_unit(il, func, &[]).expect("run_unit").ret
+    run_python_ret(b, func, &[])
 }
 
 #[test]
@@ -539,16 +469,7 @@ fn run_pow(base: i64, exp: i64) -> Value {
     let pow = b.add(NodeKind::BinOp, Payload::Op(Op::Pow), sp, &[x, y]);
     let ret = b.add(NodeKind::Return, Payload::None, sp, &[pow]);
     let func = b.add(NodeKind::Func, Payload::None, sp, &[ret]);
-    let il = b.finish(
-        func,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::Python,
-        },
-        Vec::new(),
-        Vec::new(),
-    );
-    run_admitted_unit(il, func, &[]).expect("run_unit").ret
+    run_python_ret(b, func, &[])
 }
 
 #[test]
@@ -578,16 +499,7 @@ fn run_neg(v: i64) -> Value {
     let neg = b.add(NodeKind::UnOp, Payload::Op(Op::Neg), sp, &[x]);
     let ret = b.add(NodeKind::Return, Payload::None, sp, &[neg]);
     let func = b.add(NodeKind::Func, Payload::None, sp, &[ret]);
-    let il = b.finish(
-        func,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::Python,
-        },
-        Vec::new(),
-        Vec::new(),
-    );
-    run_admitted_unit(il, func, &[]).expect("run_unit").ret
+    run_python_ret(b, func, &[])
 }
 
 #[test]

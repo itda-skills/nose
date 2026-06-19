@@ -1,4 +1,5 @@
 use super::*;
+use clap::Parser;
 
 pub(crate) fn run() -> Result<()> {
     let cli = Cli::parse();
