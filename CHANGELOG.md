@@ -10,6 +10,9 @@ break.
 - Added explicit multi-root query analysis with repeatable `nose query --root/-r <path>`, while
   keeping the single positional-root form compatible. `nose capabilities` now advertises
   `query.capabilities.multi_root`.
+- Added a hidden `nose gap-impact` research diagnostic that ranks remaining lowering gaps by
+  affected files, detection units, unit node/line mass, repositories, and parser-error status
+  instead of by Raw count alone.
 
 ### Changed
 - Tightened the `nose query` surface around evidence and counts: verified evidence labels now
@@ -33,6 +36,10 @@ break.
   Swift-specific operator/literal/range surfaces no longer cascade into Raw wrappers. Full
   `bench/repos` lowering-gap Raw now reports **82,886** gaps (0.180% of IL nodes), down from
   **134,722** after the prior tranche.
+- Closed the highest-impact non-parser gap found by `nose gap-impact`: nested Rust constructor
+  patterns such as `(Kind::Selection, Some(provider))` now lower to exact-closed Rust pattern
+  nodes instead of `Raw("tuple_struct_pattern")`. Full `bench/repos` lowering-gap Raw drops again
+  to **77,207** gaps, and Rust's gap count drops from **10,236** to **4,557**.
 - Made checked-out benchmark corpus setup reproducible after pruning: pinned repos are reset
   before pruning, `.DS_Store` is excluded from prune/digest accounting, and the prune manifest was
   refreshed for the fresh-corpus result. Manual corpus-verify runs also have a longer timeout and

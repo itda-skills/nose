@@ -108,8 +108,9 @@ pub(super) fn lower_match_pattern_condition(
         return lower_range_pattern_condition(lo, scrutinee, pattern, span);
     }
     // `Some(_)`-style single-wildcard patterns are a recognized *presence* test: the source
-    // fact lets a downstream idiom converge `if let Some(_)` with `.is_some()`. Keep their
-    // existing lowering untouched so that convergence holds.
+    // fact lets a downstream idiom converge `if let Some(_)` with `.is_some()`. Keep the
+    // pattern node itself in the comparison so the source fact remains anchored to the evaluated
+    // selector node.
     let presence_wildcard = rust_tuple_struct_wildcard_pattern(lo, pattern);
     if presence_wildcard {
         lo.record_source_fact(
@@ -124,9 +125,9 @@ pub(super) fn lower_match_pattern_condition(
     // opaque `Raw` node (the dominant Rust pattern coverage loss, #390 §CP) and (b) keys the
     // test on the binding name's subtree hash, splitting two copies that differ only in
     // `Some(x)` vs `Some(y)`. Lowering the path makes the variant test binding-name-invariant.
-    let pat = if !presence_wildcard
-        && matches!(pattern.kind(), "tuple_struct_pattern" | "struct_pattern")
-    {
+    let pat = if presence_wildcard {
+        lower_expr(lo, pattern)
+    } else if matches!(pattern.kind(), "tuple_struct_pattern" | "struct_pattern") {
         let target = constructor_path_node(pattern).unwrap_or(pattern);
         lower_expr(lo, target)
     } else {

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use crate::cli_args::{Cli, Cmd, SemanticPackCmd, StatsFormat};
 use crate::detect_command::{cmd_detect, DetectArgs};
 use crate::diagnostic_commands::{
-    cmd_ceiling, cmd_eval, cmd_features, cmd_stats, cmd_value_census,
+    cmd_ceiling, cmd_eval, cmd_features, cmd_gap_impact, cmd_stats, cmd_value_census,
 };
 use crate::il_command::cmd_il;
 use crate::oracle_gate::{cmd_behavioral_gate, verify_battery, verify_probes};
@@ -45,6 +45,9 @@ pub(crate) fn run() -> Result<()> {
             candidates,
         } => cmd_ceiling(gold, units, candidates),
         Cmd::Stats { paths, top, format } => cmd_stats(paths, top, format == StatsFormat::Json),
+        Cmd::GapImpact { paths, top, format } => {
+            cmd_gap_impact(paths, top, format == StatsFormat::Json)
+        }
         Cmd::Features {
             paths,
             min_lines,

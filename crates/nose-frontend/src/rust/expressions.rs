@@ -83,6 +83,14 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         // `(a, b)` and `[a, b]` shapes converge across binding/value position.
         "tuple_pattern" => lower_seq_tagged(lo, node, "tuple_expression"),
         "slice_pattern" => lower_seq_tagged(lo, node, "array_expression"),
+        "tuple_struct_pattern"
+        | "struct_pattern"
+        | "field_pattern"
+        | "remaining_field_pattern"
+        | "captured_pattern"
+        | "or_pattern"
+        | "wildcard_pattern"
+        | "shorthand_field_identifier_pattern" => lower_pattern_surface(lo, node),
         "array_expression" | "tuple_expression" => lower_seq_tagged(lo, node, node.kind()),
         "struct_expression" => lower_struct_expr(lo, node),
         "async_block" => {
@@ -159,6 +167,43 @@ pub(super) fn lower_seq_tagged(lo: &mut Lowering, node: TsNode, tag_str: &str) -
         .collect();
     let tag = lo.sym(tag_str);
     lo.add(NodeKind::Seq, Payload::Name(tag), span, &kids)
+}
+pub(super) fn lower_pattern_surface(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let constructor_path = matches!(node.kind(), "tuple_struct_pattern" | "struct_pattern")
+        .then(|| constructor_path_node(node))
+        .flatten();
+    let constructor_id = constructor_path.map(|path| path.id());
+    let mut kids = Vec::new();
+    if let Some(path) = constructor_path {
+        kids.push(lower_expr(lo, path));
+    }
+    kids.extend(
+        Lowering::named_children(node)
+            .into_iter()
+            .filter(|child| Some(child.id()) != constructor_id)
+            .filter(|child| !is_type_level(child.kind()))
+            .map(|child| lower_expr(lo, child)),
+    );
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym(rust_pattern_tag(node.kind()))),
+        span,
+        &kids,
+    )
+}
+pub(super) fn rust_pattern_tag(kind: &str) -> &'static str {
+    match kind {
+        "tuple_struct_pattern" => "rust_tuple_struct_pattern",
+        "struct_pattern" => "rust_struct_pattern",
+        "field_pattern" => "rust_field_pattern",
+        "remaining_field_pattern" => "rust_remaining_field_pattern",
+        "captured_pattern" => "rust_captured_pattern",
+        "or_pattern" => "rust_or_pattern",
+        "wildcard_pattern" => "rust_wildcard_pattern",
+        "shorthand_field_identifier_pattern" => "rust_shorthand_field_identifier_pattern",
+        _ => "rust_pattern",
+    }
 }
 pub(super) fn lower_binary(lo: &mut Lowering, node: TsNode) -> NodeId {
     crate::lower::binary(lo, node, rust_bin_op, lower_expr)

@@ -252,3 +252,269 @@ pub(super) fn cmd_stats(paths: Vec<PathBuf>, top: usize, json: bool) -> Result<(
     }
     Ok(())
 }
+
+#[derive(serde::Serialize)]
+struct GapImpactReport {
+    files: usize,
+    total_nodes: usize,
+    raw_nodes: usize,
+    lowering_gap_raw: usize,
+    protocol_boundary_raw: usize,
+    rows: Vec<GapImpactRow>,
+}
+
+#[derive(serde::Serialize)]
+struct GapImpactRow {
+    lang: String,
+    surface_kind: String,
+    raw_count: usize,
+    files: usize,
+    units: usize,
+    unit_nodes: u64,
+    unit_lines: u64,
+    repos: usize,
+    actionability_score: f64,
+    kind: String,
+    top_repos: Vec<RepoCount>,
+    samples: Vec<String>,
+}
+
+#[derive(serde::Serialize)]
+struct RepoCount {
+    repo: String,
+    count: usize,
+}
+
+#[derive(Default)]
+struct GapImpactAcc {
+    raw_count: usize,
+    files: std::collections::BTreeSet<String>,
+    units: std::collections::BTreeSet<(String, u32)>,
+    unit_nodes: u64,
+    unit_lines: u64,
+    repos: std::collections::BTreeSet<String>,
+    repo_counts: std::collections::BTreeMap<String, usize>,
+    samples: std::collections::BTreeSet<String>,
+}
+
+pub(super) fn cmd_gap_impact(paths: Vec<PathBuf>, top: usize, json: bool) -> Result<()> {
+    use nose_il::{NodeId, NodeKind, Payload, Span};
+    use std::collections::{BTreeMap, HashMap};
+
+    require_paths_exist(&paths)?;
+    let refs = paths_as_refs(&paths);
+    let corpus = nose_frontend::lower_corpus_many(&refs);
+    warn_if_empty(&corpus, &paths);
+
+    let coverage = nose_frontend::coverage(&corpus, usize::MAX);
+    let mut rows: BTreeMap<(String, String), GapImpactAcc> = BTreeMap::new();
+
+    for il in &corpus.files {
+        let lang = il.meta.lang.name().to_string();
+        let path = il.meta.path.clone();
+        let repo = repo_name(&path);
+        let unit_spans: Vec<(NodeId, Span)> = il
+            .units
+            .iter()
+            .map(|unit| (unit.root, il.node(unit.root).span))
+            .collect();
+        let mut unit_size_cache: HashMap<u32, (usize, u32)> = HashMap::new();
+
+        for node in &il.nodes {
+            if node.kind != NodeKind::Raw {
+                continue;
+            }
+            let surface = match node.payload {
+                Payload::Name(sym) => corpus.interner.resolve(sym).to_string(),
+                _ => "<unknown>".to_string(),
+            };
+            if nose_frontend::is_protocol_boundary_tag(&surface) {
+                continue;
+            }
+
+            let key = (lang.clone(), surface);
+            let acc = rows.entry(key).or_default();
+            acc.raw_count += 1;
+            acc.files.insert(path.clone());
+            acc.repos.insert(repo.clone());
+            *acc.repo_counts.entry(repo.clone()).or_default() += 1;
+            if acc.samples.len() < 16 {
+                acc.samples.insert(format!(
+                    "{}:{}-{}",
+                    path, node.span.start_line, node.span.end_line
+                ));
+            }
+
+            if let Some(unit) = nearest_unit(node.span, &unit_spans) {
+                let unit_key = (path.clone(), unit.0);
+                if acc.units.insert(unit_key) {
+                    let (nodes, lines) = *unit_size_cache.entry(unit.0).or_insert_with(|| {
+                        (
+                            subtree_node_count(il, unit),
+                            il.node(unit).span.line_count(),
+                        )
+                    });
+                    acc.unit_nodes += nodes as u64;
+                    acc.unit_lines += lines as u64;
+                }
+            }
+        }
+    }
+
+    let mut rows: Vec<GapImpactRow> = rows
+        .into_iter()
+        .map(|((lang, surface_kind), acc)| {
+            let files = acc.files.len();
+            let units = acc.units.len();
+            let repos = acc.repos.len();
+            let score = actionability_score(files, units, acc.unit_lines, acc.raw_count);
+            let mut top_repos: Vec<RepoCount> = acc
+                .repo_counts
+                .into_iter()
+                .map(|(repo, count)| RepoCount { repo, count })
+                .collect();
+            top_repos.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.repo.cmp(&b.repo)));
+            top_repos.truncate(5);
+            let kind = if surface_kind == "ERROR" {
+                "parser-error"
+            } else {
+                "lowering-gap"
+            };
+            GapImpactRow {
+                lang,
+                surface_kind,
+                raw_count: acc.raw_count,
+                files,
+                units,
+                unit_nodes: acc.unit_nodes,
+                unit_lines: acc.unit_lines,
+                repos,
+                actionability_score: score,
+                kind: kind.to_string(),
+                top_repos,
+                samples: acc.samples.into_iter().take(5).collect(),
+            }
+        })
+        .collect();
+    rows.sort_by(|a, b| {
+        b.actionability_score
+            .total_cmp(&a.actionability_score)
+            .then_with(|| b.raw_count.cmp(&a.raw_count))
+            .then_with(|| a.lang.cmp(&b.lang))
+            .then_with(|| a.surface_kind.cmp(&b.surface_kind))
+    });
+    rows.truncate(top);
+
+    let report = GapImpactReport {
+        files: coverage.files,
+        total_nodes: coverage.total_nodes,
+        raw_nodes: coverage.raw_nodes,
+        lowering_gap_raw: coverage.raw_nodes.saturating_sub(coverage.boundary_raw),
+        protocol_boundary_raw: coverage.boundary_raw,
+        rows,
+    };
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&report)?);
+        return Ok(());
+    }
+
+    println!(
+        "files: {}   IL nodes: {}   Raw nodes: {}   = {} lowering-gap + {} protocol-boundary",
+        report.files,
+        report.total_nodes,
+        report.raw_nodes,
+        report.lowering_gap_raw,
+        report.protocol_boundary_raw,
+    );
+    println!("\ntop lowering-gap impact candidates:");
+    println!(
+        "  {:<10} {:<30} {:>8} {:>7} {:>7} {:>11} {:>10} {:>9} {:<13}  top_repos",
+        "lang",
+        "surface_kind",
+        "raw",
+        "files",
+        "units",
+        "unit_nodes",
+        "unit_lines",
+        "score",
+        "kind"
+    );
+    for row in &report.rows {
+        let repos = row
+            .top_repos
+            .iter()
+            .map(|repo| format!("{}:{}", repo.repo, repo.count))
+            .collect::<Vec<_>>()
+            .join(",");
+        println!(
+            "  {:<10} {:<30} {:>8} {:>7} {:>7} {:>11} {:>10} {:>9.1} {:<13}  {}",
+            row.lang,
+            row.surface_kind,
+            row.raw_count,
+            row.files,
+            row.units,
+            row.unit_nodes,
+            row.unit_lines,
+            row.actionability_score,
+            row.kind,
+            repos
+        );
+    }
+    Ok(())
+}
+
+fn nearest_unit(
+    raw_span: nose_il::Span,
+    units: &[(nose_il::NodeId, nose_il::Span)],
+) -> Option<nose_il::NodeId> {
+    units
+        .iter()
+        .filter(|(_, span)| span_contains(*span, raw_span))
+        .min_by_key(|(root, span)| (span.end_byte.saturating_sub(span.start_byte), root.0))
+        .map(|(root, _)| *root)
+}
+
+fn span_contains(outer: nose_il::Span, inner: nose_il::Span) -> bool {
+    outer.file == inner.file
+        && outer.start_byte <= inner.start_byte
+        && outer.end_byte >= inner.end_byte
+}
+
+fn subtree_node_count(il: &nose_il::Il, root: nose_il::NodeId) -> usize {
+    let mut count = 0usize;
+    let mut stack = vec![root];
+    while let Some(node) = stack.pop() {
+        count += 1;
+        stack.extend_from_slice(il.children(node));
+    }
+    count
+}
+
+fn actionability_score(files: usize, units: usize, unit_lines: u64, raw_count: usize) -> f64 {
+    let breadth = (files as f64).ln_1p();
+    let unit_signal = units as f64;
+    let line_signal = (unit_lines as f64 + 1.0).ln();
+    let raw_signal = (raw_count as f64 + 1.0).ln();
+    ((unit_signal * breadth) + line_signal + raw_signal) * 10.0
+}
+
+fn repo_name(path: &str) -> String {
+    let marker = "bench/repos/";
+    if let Some(rest) = path
+        .strip_prefix(marker)
+        .or_else(|| path.find(marker).map(|idx| &path[idx + marker.len()..]))
+    {
+        return rest
+            .split('/')
+            .next()
+            .filter(|name| !name.is_empty())
+            .unwrap_or("<unknown>")
+            .to_string();
+    }
+    std::path::Path::new(path)
+        .components()
+        .next()
+        .map(|component| component.as_os_str().to_string_lossy().to_string())
+        .unwrap_or_else(|| "<unknown>".to_string())
+}

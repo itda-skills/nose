@@ -179,6 +179,20 @@ pub(crate) enum Cmd {
         #[arg(long, value_enum, default_value_t = StatsFormat::Human)]
         format: StatsFormat,
     },
+    /// Rank remaining lowering gaps by affected files/units, not just Raw count.
+    /// (Hidden — research.)
+    #[command(hide = true)]
+    GapImpact {
+        /// Paths to source files or directories (recursively analyzed).
+        #[arg(required = true)]
+        paths: Vec<PathBuf>,
+        /// How many surface rows to list.
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        /// Output format (`human` or `json`).
+        #[arg(long, value_enum, default_value_t = StatsFormat::Human)]
+        format: StatsFormat,
+    },
     /// Dump the IL for a source file — debug why two snippets do or don't converge.
     Il {
         /// Path to a source file.

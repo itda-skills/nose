@@ -86,6 +86,12 @@ pub fn lower_source(
     }
 }
 
+/// Whether a Raw surface tag is an intentional protocol/effect boundary rather than a
+/// fixable lowering gap. Exposed for CLI diagnostics that rank gap work.
+pub fn is_protocol_boundary_tag(tag: &str) -> bool {
+    lower::is_protocol_boundary_tag(tag)
+}
+
 /// Lower every analyzable region of a file into separate [`Il`]s. For most languages
 /// this is one `Il` (delegating to [`lower_source`]); for `<script>`/`<style>`-bearing
 /// containers (Vue/Svelte/HTML) it is one per embedded region (JS/TS for `<script>`, CSS

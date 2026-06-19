@@ -3390,3 +3390,66 @@ cargo test -q -p nose-cli --test equivalence
 cargo test -q -p nose-cli --test css_html_quality
 awiki lint --root docs
 ```
+
+## DC. Gap-impact ranking and Rust nested constructor patterns (2026-06-20)
+
+After §DB, raw counts alone were no longer a good worklist: parser `ERROR` and protocol boundaries
+were large, while smaller surfaces could still affect many clone units. A hidden research command,
+`nose gap-impact`, now ranks non-boundary Raw surfaces by affected files, affected detection units,
+unit node/line mass, repository breadth, and parser-error status. The score is not a product
+contract; it is a triage heuristic for choosing the next lowering experiment from the checked-out
+corpus.
+
+**Baseline impact ranking.** Running `cargo run -q -p nose-cli -- gap-impact bench/repos --top 80`
+on the §DB state produced this top list after excluding parser `ERROR` as an implementation target:
+
+| rank | surface | raw | files | units | unit lines | score |
+|---:|---|---:|---:|---:|---:|---:|
+| 1 | Rust `tuple_struct_pattern` | 3,448 | 670 | 1,184 | 66,220 | 77,256.3 |
+| 2 | Rust `macro_rule_body` | 858 | 200 | 858 | 9,765 | 45,661.8 |
+| 3 | Ruby `binary` | 765 | 319 | 513 | 14,878 | 29,754.0 |
+| 4 | Swift `case` | 660 | 199 | 490 | 14,703 | 26,122.7 |
+
+The Rust `tuple_struct_pattern` lead was not just frequent; it was broad. It affected 670 files and
+1,184 units, mostly in `nushell`, `meilisearch`, `regex`, `tokio`, and `clap`. A sample from
+`alacritty` showed the missed path clearly: top-level `Some(x)` patterns were already handled, but
+nested constructor patterns inside tuple patterns, such as `(ClipboardType::Selection,
+Some(provider))`, fell through to `Raw("tuple_struct_pattern")`.
+
+**Fix shipped.** Rust pattern lowering now routes nested constructor, struct, field, wildcard,
+captured, and or-pattern surfaces through exact-closed Rust pattern `Seq` tags when they appear in
+expression-position pattern trees. This preserves Rust-specific pattern structure without pretending
+that destructuring patterns are ordinary runtime values.
+
+**Measured result.** Re-running full coverage after the fix:
+
+```text
+files: 67407   IL nodes: 46051702   Raw nodes: 193349 (0.420%)
+= 77207 lowering-gap + 116142 protocol-boundary
+```
+
+Compared with the §DB baseline, total Raw drops **199,028 -> 193,349** and lowering-gap Raw drops
+**82,886 -> 77,207** (-5,679). Rust's language gap drops **10,236 -> 4,557** (-5,679). The
+post-fix `gap-impact` top non-parser candidate is now Rust `macro_rule_body` (858 Raw, 200 files,
+858 units); `tuple_struct_pattern` is no longer in the top list.
+
+**Regression coverage.** A focused Rust fixture covers the real missed shape:
+
+```rust
+match (kind, selection) {
+    (Kind::Selection, Some(provider)) => provider,
+    _ => 0,
+}
+```
+
+The guardrails run for this pass were:
+
+```text
+cargo test -q -p nose-frontend rust::tests -- --nocapture
+cargo run -q -p nose-cli -- stats bench/repos --top 100
+cargo run -q -p nose-cli -- gap-impact bench/repos --top 20
+cargo test -q -p nose-frontend
+cargo test -q -p nose-cli --test equivalence
+cargo test -q -p nose-cli --test css_html_quality
+awiki lint --root docs
+```

@@ -37,6 +37,17 @@ fn raw_names(il: &Il, interner: &Interner) -> Vec<String> {
         .collect()
 }
 
+fn seq_names(il: &Il, interner: &Interner) -> Vec<String> {
+    il.nodes
+        .iter()
+        .filter(|node| node.kind == NodeKind::Seq)
+        .filter_map(|node| match node.payload {
+            Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
 fn unit_names(src: &str) -> Vec<(UnitKind, String)> {
     let (interner, il) = lower_rust(src);
     il.units
@@ -278,6 +289,32 @@ fn match_tuple_pattern_lowers_without_raw() {
     assert!(
         !raw.iter().any(|name| name == "tuple_pattern"),
         "tuple match pattern should lower without Raw tuple_pattern: {raw:?}"
+    );
+}
+
+#[test]
+fn nested_constructor_patterns_lower_without_raw() {
+    let src = r#"
+enum Kind { Selection, Primary }
+
+fn f(kind: Kind, selection: Option<i32>) -> i32 {
+    match (kind, selection) {
+        (Kind::Selection, Some(provider)) => provider,
+        _ => 0,
+    }
+}
+"#;
+    let (interner, il) = lower_rust(src);
+
+    let raw = raw_names(&il, &interner);
+    assert!(
+        !raw.iter().any(|name| name == "tuple_struct_pattern"),
+        "nested constructor patterns should lower exactly, not as Raw: {raw:?}"
+    );
+    let seq = seq_names(&il, &interner);
+    assert!(
+        seq.iter().any(|name| name == "rust_tuple_struct_pattern"),
+        "nested constructor pattern should preserve its Rust-specific shape: {seq:?}"
     );
 }
 
