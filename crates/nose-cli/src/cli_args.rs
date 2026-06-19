@@ -82,15 +82,17 @@ pub(crate) enum Cmd {
     /// nose finds duplication in code and docs.
     ///
     /// nose finds; you judge. Filter, group, sort, or open families to explore.
+    #[command(
+        override_usage = "nose query <path> [terms...] [OPTIONS]\n       nose query --root <path> --root <path> [terms...] [OPTIONS]"
+    )]
     Query {
-        /// Path to a file or directory (recursively analyzed).
-        #[arg(required = true)]
-        path: PathBuf,
-        /// Query terms (none → summary): `field=value` `field>N` `field<N`
-        /// `path~substr` filter (AND-ed; negate with `field!=value` / `path!~substr`);
-        /// `group=FIELD` facet; `id=FAM` or `at=FILE:LINE` open one family (add `full` to
-        /// align all copies); `sort=KEY`; `top=N`.
-        terms: Vec<String>,
+        /// Additional root path to analyze; repeat for multi-root queries.
+        #[arg(short = 'r', long = "root", value_name = "PATH")]
+        roots: Vec<PathBuf>,
+        /// Legacy form: first bare argument is the root path and the rest are query
+        /// terms. With --root/-r, every bare argument is a query term.
+        #[arg(value_name = "PATH_OR_TERM")]
+        positionals: Vec<String>,
         /// Output format (`human`, `json`, `markdown`, or `sarif`).
         #[arg(long, default_value = "human")]
         format: ReportFormat,

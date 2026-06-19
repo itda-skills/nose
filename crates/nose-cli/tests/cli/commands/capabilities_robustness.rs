@@ -75,6 +75,7 @@ fn capabilities_command_reports_query_surface() {
         vec!["extractability", "value", "sites", "hazard"]
     );
     assert_eq!(json["query"]["capabilities"]["baseline"], true);
+    assert_eq!(json["query"]["capabilities"]["multi_root"], true);
     assert_eq!(json["query"]["capabilities"]["semantic_pack_loading"], true);
     assert_eq!(json["query"]["capabilities"]["structured_ignores"], true);
 }

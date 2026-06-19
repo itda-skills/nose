@@ -75,6 +75,7 @@ nose capabilities
       "ci_fail_gate": true,
       "family_drilldown": true,
       "inline_suppression": true,
+      "multi_root": true,
       "reinvented_view": true,
       "semantic_pack_loading": true,
       "structured_ignores": true
@@ -175,6 +176,7 @@ Version 2 defines these `query.capabilities` keys:
 | `ci_fail_gate` | `--fail-on any|new` gate behavior is supported. |
 | `family_drilldown` | Opening a family with `id=<fam>` / `at=FILE:LINE` is supported. |
 | `inline_suppression` | Source-level `nose-ignore` markers are supported. |
+| `multi_root` | `nose query --root <path>` / `-r <path>` repeatable root analysis is supported. |
 | `reinvented_view` | The `reinvented` query view is supported. |
 | `semantic_pack_loading` | local semantic-pack v0 manifest files/directories can be loaded for provenance reporting. |
 | `structured_ignores` | `nose.ignore.json` / `--ignore-file` audited suppressions are supported. |

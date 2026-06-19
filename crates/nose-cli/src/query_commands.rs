@@ -365,10 +365,68 @@ fn enforce_query_fail_on(ctx: &QueryOutput<'_>) -> Result<()> {
     Ok(())
 }
 
+fn split_query_roots_and_terms(
+    roots: Vec<PathBuf>,
+    positionals: Vec<String>,
+) -> Result<(Vec<PathBuf>, Vec<String>, String, bool)> {
+    if roots.is_empty() {
+        let Some((path, terms)) = positionals.split_first() else {
+            anyhow::bail!(
+                "`nose query` needs a root path — use `nose query <path>` or `nose query --root <path>`"
+            );
+        };
+        return Ok((
+            vec![PathBuf::from(path)],
+            terms.to_vec(),
+            path.to_string(),
+            false,
+        ));
+    }
+    let path_arg = roots
+        .iter()
+        .map(|root| format!("-r {}", root.display()))
+        .collect::<Vec<_>>()
+        .join(" ");
+    Ok((roots, positionals, path_arg, true))
+}
+
+fn parse_query_with_path_hint(
+    terms: &[String],
+    roots: &[PathBuf],
+    path_arg: &str,
+    roots_are_explicit: bool,
+) -> Result<Query> {
+    match parse_query(terms) {
+        Ok(q) => Ok(q),
+        Err(err) => {
+            if let Some(term) = terms
+                .iter()
+                .find(|term| std::path::Path::new(term).exists())
+            {
+                if roots_are_explicit {
+                    anyhow::bail!(
+                        "{err}\n\
+                         `{term}` looks like a path. When using `--root`/`-r`, pass every analyzed path with `--root <path>` or `-r <path>`; bare arguments are query terms."
+                    );
+                }
+                let first = roots
+                    .first()
+                    .map(|path| path.display().to_string())
+                    .unwrap_or_else(|| path_arg.to_string());
+                anyhow::bail!(
+                    "{err}\n\
+                     `{term}` looks like another path. `nose query` accepts one positional root; pass multiple roots explicitly, for example `nose query -r {first} -r {term}`."
+                );
+            }
+            Err(err)
+        }
+    }
+}
+
 pub(super) fn run_query_cmd(cmd: Cmd) -> Result<()> {
     let Cmd::Query {
-        path,
-        terms,
+        roots,
+        positionals,
         format,
         mode,
         min_size,
@@ -387,13 +445,14 @@ pub(super) fn run_query_cmd(cmd: Cmd) -> Result<()> {
     else {
         unreachable!("run_query_cmd requires Cmd::Query")
     };
-    require_paths_exist(std::slice::from_ref(&path))?;
-    let q = parse_query(&terms)?;
+    let (paths, terms, path_arg, roots_are_explicit) =
+        split_query_roots_and_terms(roots, positionals)?;
+    require_paths_exist(&paths)?;
+    let q = parse_query_with_path_hint(&terms, &paths, &path_arg, roots_are_explicit)?;
     // The path as the user typed it — every suggested next-command echoes it so the links
-    // are runnable verbatim (the surface takes the path positionally).
-    let path_arg = path.to_string_lossy().into_owned();
+    // are runnable verbatim. Multi-root commands echo the explicit root flags.
     let args = QueryArgs {
-        paths: vec![path],
+        paths,
         min_members,
         min_value,
         sort: None,
