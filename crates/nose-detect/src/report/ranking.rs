@@ -1,5 +1,6 @@
 use crate::{Group, Loc, Report};
 use nose_semantics::value_law_provenance;
+use rayon::prelude::*;
 
 use super::{
     model::RefactorFamily,
@@ -8,6 +9,19 @@ use super::{
     },
     score::refactor_value,
 };
+
+fn time_rank_stage<T>(stage: &str, f: impl FnOnce() -> T) -> T {
+    if std::env::var_os("NOSE_TIME").is_none() {
+        return f();
+    }
+    let t0 = std::time::Instant::now();
+    let out = f();
+    eprintln!(
+        "  [time] rank_{stage:<7} {:>7.1}ms",
+        t0.elapsed().as_secs_f64() * 1e3
+    );
+    out
+}
 
 /// The distinct keys of `locs` under `key`, sorted. Collect-then-`sort_unstable`+`dedup` is
 /// the family-stat idiom for counting distinct files / modules / languages.
@@ -32,12 +46,16 @@ pub(super) fn family_of(group: &Group) -> RefactorFamily {
             .then_with(|| a.start_line.cmp(&b.start_line))
     });
     let mut kept: Vec<Loc> = Vec::with_capacity(locs.len());
+    let mut kept_by_file: rustc_hash::FxHashMap<String, Vec<usize>> =
+        rustc_hash::FxHashMap::default();
     for l in locs {
-        let subsumed = kept
-            .iter()
-            .any(|k| k.file == l.file && overlap_frac(k, &l) >= 0.5);
+        let subsumed = kept_by_file
+            .get(l.file.as_str())
+            .is_some_and(|idxs| idxs.iter().any(|&i| overlap_frac(&kept[i], &l) >= 0.5));
         if !subsumed {
+            let file = l.file.clone();
             kept.push(l);
+            kept_by_file.entry(file).or_default().push(kept.len() - 1);
         }
     }
     let mut locs = kept;
@@ -111,20 +129,22 @@ pub(super) fn family_of(group: &Group) -> RefactorFamily {
 /// Rank a detection report's groups as refactoring opportunities, highest value
 /// first. Trivial families (a single pair of tiny fragments) sink to the bottom.
 pub fn rank_families(report: &Report) -> Vec<RefactorFamily> {
-    let mut fams: Vec<RefactorFamily> = report
-        .groups
-        .iter()
-        .map(family_of)
-        // Drop families living entirely in generated / vendored / ambient-declaration
-        // files (`vendor/`, `.min.`, `*.d.ts`, `// Generated`-style paths): you don't
-        // refactor code a tool regenerates. A *partly*-generated family is kept — that's
-        // a real leak of hand-written logic into generated output.
-        .filter(|f| !f.locations.iter().all(is_generated_loc))
-        // A raw group can collapse to one reported site when all of its matches are
-        // overlapping windows in the same file. That is not a clone family, and it must
-        // not subsume a real multi-site family before the CLI's min-member gate drops it.
-        .filter(|f| f.members >= 2)
-        .collect();
+    let mut fams: Vec<RefactorFamily> = time_rank_stage("map", || {
+        report
+            .groups
+            .par_iter()
+            .map(family_of)
+            // Drop families living entirely in generated / vendored / ambient-declaration
+            // files (`vendor/`, `.min.`, `*.d.ts`, `// Generated`-style paths): you don't
+            // refactor code a tool regenerates. A *partly*-generated family is kept — that's
+            // a real leak of hand-written logic into generated output.
+            .filter(|f| !f.locations.iter().all(is_generated_loc))
+            // A raw group can collapse to one reported site when all of its matches are
+            // overlapping windows in the same file. That is not a clone family, and it must
+            // not subsume a real multi-site family before the CLI's min-member gate drops it.
+            .filter(|f| f.members >= 2)
+            .collect()
+    });
     // Dedup overlapping families by total span, LARGEST FIRST, so the most complete
     // family of a region is the one kept and the sub-blocks inside it are dropped. (A
     // value/extractability order would keep whichever scored highest — often a sub-block
@@ -137,33 +157,47 @@ pub fn rank_families(report: &Report) -> Vec<RefactorFamily> {
     // deduped in either direction depending on map-iteration order, making the kept set (and so the
     // dup-gate count) sensitive to incidental ordering. (The gate is otherwise fully deterministic:
     // FxHash and IEEE `+−×÷`/`sqrt` are platform-independent, so CI and local agree exactly.)
-    fams.sort_by(|a, b| {
-        total_span(b)
-            .cmp(&total_span(a))
-            .then(b.value.total_cmp(&a.value))
-            .then_with(|| family_min_loc(a).cmp(&family_min_loc(b)))
+    time_rank_stage("sort", || {
+        fams.sort_by(|a, b| {
+            total_span(b)
+                .cmp(&total_span(a))
+                .then(b.value.total_cmp(&a.value))
+                .then_with(|| family_min_loc(a).cmp(&family_min_loc(b)))
+        })
     });
     // Keep a family unless an already-kept (larger) one subsumes it. `subsumes(k, f)`
-    // requires `k` to have a site in the file of *every* `f` site — so any subsumer must
-    // touch `f`'s first file. Index kept families by the files they touch and test only
-    // those candidates, instead of scanning all kept families (the dedup was O(families²)
-    // — ~0.13s on guava's ~6k families). Same result: every possible subsumer is in the
-    // candidate set, and `subsumes` returns false for the rest.
+    // requires `k` to cover *every* `f` site, so it must cover `f`'s first site. Index
+    // kept location intervals by file and test only families whose interval actually
+    // covers that first site, instead of every family that merely touches the same file.
+    // Same result: every possible subsumer is still in the candidate set, but generated
+    // docs with thousands of overlapping HTML slices no longer scan the whole file bucket.
     let mut kept: Vec<RefactorFamily> = Vec::with_capacity(fams.len());
-    let mut by_file: rustc_hash::FxHashMap<String, Vec<usize>> = rustc_hash::FxHashMap::default();
-    for f in fams {
-        let first_file = f.locations.first().map(|l| l.file.as_str()).unwrap_or("");
-        let subsumed = by_file
-            .get(first_file)
-            .is_some_and(|idxs| idxs.iter().any(|&ki| subsumes(&kept[ki], &f)));
-        if !subsumed {
-            let ki = kept.len();
-            for l in &f.locations {
-                by_file.entry(l.file.clone()).or_default().push(ki);
+    let mut by_file: rustc_hash::FxHashMap<String, Vec<(u32, u32, usize)>> =
+        rustc_hash::FxHashMap::default();
+    time_rank_stage("dedup", || {
+        for f in fams {
+            let subsumed = f.locations.first().is_some_and(|first| {
+                by_file.get(first.file.as_str()).is_some_and(|spans| {
+                    let mut seen = rustc_hash::FxHashSet::default();
+                    spans.iter().any(|&(start, end, ki)| {
+                        seen.insert(ki)
+                            && overlap_frac_span(start, end, first) >= SUBSUME_COVER
+                            && subsumes(&kept[ki], &f)
+                    })
+                })
+            });
+            if !subsumed {
+                let ki = kept.len();
+                for l in &f.locations {
+                    by_file
+                        .entry(l.file.clone())
+                        .or_default()
+                        .push((l.start_line, l.end_line, ki));
+                }
+                kept.push(f);
             }
-            kept.push(f);
         }
-    }
+    });
     kept
 }
 
@@ -196,11 +230,21 @@ pub(super) fn subsumes(outer: &RefactorFamily, inner: &RefactorFamily) -> bool {
     // inner families. Coverage alone — every inner site ≥60% inside some same-file outer
     // site — is the criterion. The caller only ever asks whether a larger-span (kept)
     // family subsumes a smaller one, so this can't collapse genuinely distinct code.
-    const COVER: f64 = 0.60;
     inner.locations.iter().all(|i| {
         outer
             .locations
             .iter()
-            .any(|o| o.file == i.file && overlap_frac(o, i) >= COVER)
+            .any(|o| o.file == i.file && overlap_frac(o, i) >= SUBSUME_COVER)
     })
+}
+
+const SUBSUME_COVER: f64 = 0.60;
+
+fn overlap_frac_span(start_line: u32, end_line: u32, inner: &Loc) -> f64 {
+    let start = start_line.max(inner.start_line);
+    let end = end_line.min(inner.end_line);
+    if end < start {
+        return 0.0;
+    }
+    (end - start + 1) as f64 / span_lines(inner).max(1) as f64
 }

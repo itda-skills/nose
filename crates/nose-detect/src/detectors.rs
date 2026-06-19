@@ -174,7 +174,6 @@ impl Detector for StructuralDetector {
         // still group as a refactoring family worth a human's review.
         let (wv, ws, wr) = score_weights(self.candidate_mode);
         let vj = align::multiset_jaccard(&a.value, &b.value);
-        let sj = align::multiset_jaccard(&a.shapes, &b.shapes);
         // Candidate mode trusts the value graph: a near-identical value fingerprint — produced
         // AFTER semantic canonicalization (a `.then`-chain ≡ await code, a loop ≡ a
         // comprehension) — is the strongest refactoring signal there is, even when the
@@ -189,6 +188,10 @@ impl Detector for StructuralDetector {
         {
             return vj;
         }
+        // Shape overlap is only needed after the value-graph fast path above. Corpus profiling
+        // showed many candidate-mode pairs exit there; computing shapes first spent measurable
+        // time without changing any accepted score.
+        let sj = align::multiset_jaccard(&a.shapes, &b.shapes);
         // Partial / sub-DAG clone: the units share a rare heavy anchor (an extractable common
         // sub-computation) even though the whole-unit blend is low. Surface it for review at a
         // score above the near floor but below a full clone — it's a real refactor lead (pull

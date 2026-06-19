@@ -15,6 +15,12 @@ struct WeightedFingerprint {
     norm: f64,
 }
 
+pub(crate) struct PairStats {
+    pub(crate) cosine: f64,
+    pub(crate) containment: f64,
+    pub(crate) shared: usize,
+}
+
 /// Corpus document-frequency model over the char-gram shingle space.
 pub struct CorpusModel {
     n: usize,
@@ -87,15 +93,48 @@ impl CorpusModel {
     /// norms and weights are cached during `fit`, avoiding a full shingle scan for every
     /// candidate pair.
     pub fn tfidf_cosine_at(&self, fps: &[Fingerprint], i: usize, j: usize) -> f64 {
+        self.pair_stats_at(fps, i, j).cosine
+    }
+
+    /// Relation ingredients for two fingerprints from this model's input slice.
+    /// Candidate verification touches many pairs in large documentation repos; computing
+    /// cosine, containment, and shared-gram substance in one sorted-set pass avoids scanning
+    /// the same long shingle vectors three times.
+    pub(crate) fn pair_stats_at(&self, fps: &[Fingerprint], i: usize, j: usize) -> PairStats {
         let (a, b) = (&fps[i], &fps[j]);
         if a.shingles.is_empty() || b.shingles.is_empty() {
-            return 0.0;
+            return PairStats {
+                cosine: 0.0,
+                containment: 0.0,
+                shared: 0,
+            };
         }
         let (wa, wb) = (&self.weighted[i], &self.weighted[j]);
-        if wa.norm == 0.0 || wb.norm == 0.0 {
-            return 0.0;
+        let mut dot = 0.0;
+        let mut shared = 0usize;
+        let (mut ai, mut bi) = (0, 0);
+        while ai < a.shingles.len() && bi < b.shingles.len() {
+            match a.shingles[ai].cmp(&b.shingles[bi]) {
+                std::cmp::Ordering::Less => ai += 1,
+                std::cmp::Ordering::Greater => bi += 1,
+                std::cmp::Ordering::Equal => {
+                    dot += wa.weights[ai] * wb.weights[bi];
+                    shared += 1;
+                    ai += 1;
+                    bi += 1;
+                }
+            }
         }
-        self.dot_weighted(a, b, wa, wb) / (wa.norm * wb.norm)
+        let cosine = if wa.norm == 0.0 || wb.norm == 0.0 {
+            0.0
+        } else {
+            dot / (wa.norm * wb.norm)
+        };
+        PairStats {
+            cosine,
+            containment: shared as f64 / a.shingles.len().min(b.shingles.len()) as f64,
+            shared,
+        }
     }
 
     fn norm(&self, s: &[u64]) -> f64 {
@@ -111,29 +150,6 @@ impl CorpusModel {
                 std::cmp::Ordering::Greater => j += 1,
                 std::cmp::Ordering::Equal => {
                     dot += self.idf(a.shingles[i]).powi(2);
-                    i += 1;
-                    j += 1;
-                }
-            }
-        }
-        dot
-    }
-
-    fn dot_weighted(
-        &self,
-        a: &Fingerprint,
-        b: &Fingerprint,
-        wa: &WeightedFingerprint,
-        wb: &WeightedFingerprint,
-    ) -> f64 {
-        let mut dot = 0.0;
-        let (mut i, mut j) = (0, 0);
-        while i < a.shingles.len() && j < b.shingles.len() {
-            match a.shingles[i].cmp(&b.shingles[j]) {
-                std::cmp::Ordering::Less => i += 1,
-                std::cmp::Ordering::Greater => j += 1,
-                std::cmp::Ordering::Equal => {
-                    dot += wa.weights[i] * wb.weights[j];
                     i += 1;
                     j += 1;
                 }

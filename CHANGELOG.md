@@ -6,6 +6,26 @@ break.
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-06-19
+
+### Changed
+- **Corpus query speed pass.** A release-build pass over the checked-out `bench/repos` corpus now
+  completes **150/150 repos** with **0 repos >= 4s**; the final saved run is
+  `target/corpus-query-speed-final8/summary.tsv` (max `sympy` **3.485s**, total **77.06s**).
+  The speedup comes from stage-level fixes rather than local micro-tuning: file-indexed ranking
+  dedup, family-referenced generated-source classification, bounded non-CSS generated-header reads,
+  dependency/large-file block-unit suppression, dense data-like function gating, large-test-fixture
+  semantic skip with syntax coverage retained, skipped raw-pair materialization for grouped
+  query/scan reports, parallel shared-line IDF, and one-pass Markdown candidate verification.
+
+### Fixed
+- **Markdown dashboard verification cost.** `nose query` now computes Markdown TF-IDF cosine,
+  containment, and shared-gram substance in one pass per candidate pair. On `curl`, the Markdown
+  accept stage dropped from about **2108ms** to **538ms** while preserving the same relation gates.
+- **Release workflow drift.** The cargo-dist release workflow now declares its intentional CI
+  customization with `allow-dirty = ["ci"]`, and the file-length ratchet tolerates force-updated
+  tag events whose previous tag object is no longer fetchable.
+
 ### Added
 - **Faceted unit-origin metadata + origin-aware clone hints (#453).** IL units now carry compact,
   language-neutral `UnitOrigin` facets — domains (non-exclusive), subkind, body-kind,

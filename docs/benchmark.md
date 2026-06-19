@@ -122,6 +122,12 @@ regardless of how many families are displayed). The default mode already runs
 the full `syntax,semantic,near` surface. See
 experiments §T for the throughput work.
 
+Current corpus speed budget: a 2026-06-19 release-build pass over the checked-out
+`bench/repos` corpus (`target/release/nose query bench/repos/<repo>`, one repo at a time)
+completed **150/150 repos successfully**, **0 repos at or above 4s**, **77.06s total**, max
+**3.485s** (`sympy`). The saved run is `target/corpus-query-speed-final8/summary.tsv`; see
+[experiments §CZ](experiments.md#cz-corpus-query-speed-budget-pass-2026-06-19).
+
 ## The research commands
 
 The everyday surface is `nose query` (interactive exploration, carrying the

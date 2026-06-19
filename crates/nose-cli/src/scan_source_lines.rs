@@ -1,3 +1,5 @@
+use rayon::prelude::*;
+
 /// Anti-unify N line-blocks at line granularity. Anchored on the first (largest) copy,
 /// a line *survives* into the shared body only if it is matched in *every* other copy
 /// (each copy votes via a pairwise `line_diff` against the anchor); any maximal run of
@@ -347,20 +349,44 @@ pub(crate) fn corpus_line_idf(
     exclude: &[String],
     cache: &mut FileLineCache,
 ) -> LineIdf {
+    let paths = refs
+        .iter()
+        .flat_map(|root| {
+            nose_frontend::discover_paths(root, exclude)
+                .into_iter()
+                .map(|(path, _lang)| path)
+        })
+        .collect::<Vec<_>>();
+    let loaded = paths
+        .into_par_iter()
+        .map(|path| {
+            let data = std::fs::read_to_string(&path).ok().map(|text| {
+                let lines = text.lines().map(str::to_string).collect::<Vec<_>>();
+                let mut seen = std::collections::HashSet::new();
+                for line in &lines {
+                    let t = line.trim();
+                    if !is_trivial_line(t) {
+                        seen.insert(t.to_string());
+                    }
+                }
+                (lines, seen)
+            });
+            (path, data)
+        })
+        .collect::<Vec<_>>();
     let mut df: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
     let mut n_files = 0u32;
-    for root in refs {
-        for (path, _lang) in nose_frontend::discover_paths(root, exclude) {
-            let Some(all) = cache.whole(&path) else {
-                continue;
-            };
-            n_files += 1;
-            let mut seen = std::collections::HashSet::new();
-            for l in all {
-                let t = l.trim();
-                if !is_trivial_line(t) && seen.insert(t.to_string()) {
-                    *df.entry(t.to_string()).or_insert(0) += 1;
+    for (path, data) in loaded {
+        match data {
+            Some((lines, seen)) => {
+                n_files += 1;
+                for line in seen {
+                    *df.entry(line).or_insert(0) += 1;
                 }
+                cache.0.insert(path, Some(lines));
+            }
+            None => {
+                cache.0.insert(path, None);
             }
         }
     }

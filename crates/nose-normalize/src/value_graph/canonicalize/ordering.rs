@@ -40,9 +40,13 @@ impl<'a> Builder<'a> {
     /// Effect-free ⇒ safe to reorder past a sibling operand. A subtree with a
     /// call/HOF/lambda/opaque node can carry an observable effect whose order the
     /// interpreter tracks, so it is held in place (coevo §CE / §AS).
-    pub(in crate::value_graph) fn reorder_safe(&self, v: ValueId) -> bool {
+    pub(in crate::value_graph) fn reorder_safe(&mut self, v: ValueId) -> bool {
+        if let Some(&safe) = self.reorder_safe_cache.get(&v) {
+            return safe;
+        }
         let mut seen = FxHashSet::default();
         let mut stack = vec![v];
+        let mut safe = true;
         while let Some(n) = stack.pop() {
             if !seen.insert(n) {
                 continue;
@@ -53,11 +57,15 @@ impl<'a> Builder<'a> {
                 | ValOp::Lambda(_)
                 | ValOp::Loop(_)
                 | ValOp::Recurrence(_)
-                | ValOp::Opaque(_) => return false,
+                | ValOp::Opaque(_) => {
+                    safe = false;
+                    break;
+                }
                 _ => {}
             }
             stack.extend(self.nodes[n as usize].args.iter().copied());
         }
-        true
+        self.reorder_safe_cache.insert(v, safe);
+        safe
     }
 }

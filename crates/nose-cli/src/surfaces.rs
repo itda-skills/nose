@@ -6,13 +6,11 @@ use rayon::prelude::*;
 /// per family; both run only when families exist.
 pub(crate) fn classify_surface_overrides(
     families: &mut [nose_detect::RefactorFamily],
-    refs: &[&std::path::Path],
-    exclude: &[String],
 ) -> SurfaceOverrides {
     let generated_sources = if families.is_empty() {
         std::collections::HashSet::new()
     } else {
-        generated_source_index(refs, exclude)
+        generated_source_index(families)
     };
     for f in families.iter_mut() {
         for l in &mut f.locations {
@@ -114,14 +112,13 @@ fn declaration_run_ids(
     let mut candidates: Vec<&nose_detect::RefactorFamily> = Vec::new();
     let mut wanted: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for f in families {
-        if f.locations.is_empty() {
+        if !declaration_run_candidate(f) {
             continue;
         }
         let pass = f.locations.iter().all(|l| {
-            l.end_line.saturating_sub(l.start_line) <= DECLARATION_SPAN_CAP
-                && lines
-                    .whole(&l.file)
-                    .is_some_and(|all| declaration_prescreen(all, l.start_line, l.end_line))
+            lines
+                .whole(&l.file)
+                .is_some_and(|all| declaration_prescreen(all, l.start_line, l.end_line))
         });
         if pass {
             candidates.push(f);
@@ -152,6 +149,24 @@ fn declaration_run_ids(
         })
         .map(|f| crate::baseline::family_id(f))
         .collect()
+}
+
+fn declaration_run_candidate(family: &nose_detect::RefactorFamily) -> bool {
+    !family.locations.is_empty()
+        && family
+            .witness
+            .as_ref()
+            .is_some_and(|w| w.kind == "copy-paste-run")
+        && family.locations.iter().all(|l| {
+            declaration_candidate_lang(&l.lang)
+                && l.kind == nose_il::UnitKind::Block
+                && l.name.is_none()
+                && l.end_line.saturating_sub(l.start_line) <= DECLARATION_SPAN_CAP
+        })
+}
+
+fn declaration_candidate_lang(lang: &str) -> bool {
+    matches!(lang, "javascript" | "typescript")
 }
 
 /// An import run longer than this is implausible; skip the read and fail open.
@@ -368,30 +383,53 @@ pub(crate) fn surface_omission_note(
 }
 
 fn generated_source_index(
-    refs: &[&std::path::Path],
-    exclude: &[String],
+    families: &[nose_detect::RefactorFamily],
 ) -> std::collections::HashSet<String> {
     let cwd = std::env::current_dir().ok();
     let mut generated = std::collections::HashSet::new();
-    for root in refs {
-        for (path, _lang) in nose_frontend::discover_paths(root, exclude) {
-            if !source_has_generated_header(&path) {
-                continue;
-            }
-            generated.insert(path.clone());
-            if let Some(cwd) = &cwd {
-                generated.insert(crate::relativize(&path, cwd));
-            }
+    let files = families
+        .iter()
+        .flat_map(|f| f.locations.iter().map(|l| l.file.as_str()))
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    let generated_files = files
+        .into_par_iter()
+        .filter(|path| source_has_generated_header(path))
+        .collect::<Vec<_>>();
+    for path in generated_files {
+        generated.insert(path.clone());
+        if let Some(cwd) = &cwd {
+            generated.insert(crate::relativize(&path, cwd));
         }
     }
     generated
 }
 
 fn source_has_generated_header(file: &str) -> bool {
-    let Some(text) = std::fs::read_to_string(file).ok() else {
+    if file.ends_with(".css") {
+        let Some(text) = std::fs::read_to_string(file).ok() else {
+            return false;
+        };
+        return text.lines().take(8).any(is_generated_header_line)
+            || looks_compiled_css(file, &text);
+    }
+    source_head_has_generated_header(file)
+}
+
+const GENERATED_HEADER_SCAN_BYTES: u64 = 64 * 1024;
+
+fn source_head_has_generated_header(file: &str) -> bool {
+    let Ok(mut f) = std::fs::File::open(file) else {
         return false;
     };
-    text.lines().take(8).any(is_generated_header_line) || looks_compiled_css(file, &text)
+    let mut head = String::new();
+    let mut limited = std::io::Read::take(&mut f, GENERATED_HEADER_SCAN_BYTES);
+    if std::io::Read::read_to_string(&mut limited, &mut head).is_err() {
+        return false;
+    }
+    head.lines().take(8).any(is_generated_header_line)
 }
 
 fn is_generated_header_line(line: &str) -> bool {

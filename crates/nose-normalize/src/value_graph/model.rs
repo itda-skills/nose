@@ -216,6 +216,11 @@ pub(super) struct Builder<'a> {
     /// and numeric/boolean laws fire only when their domain preconditions are proven.
     /// `Unknown` is the safe default for positive domain requirements.
     pub(super) vty: Vec<ValueDomain>,
+    /// Per-builder proof caches for recursive value-subgraph predicates. Value nodes
+    /// are immutable after interning, so these predicates are stable for a `Builder`.
+    pub(super) reorder_safe_cache: FxHashMap<ValueId, bool>,
+    pub(super) non_concat_cache: FxHashMap<ValueId, bool>,
+    pub(super) possibly_float_cache: FxHashMap<ValueId, bool>,
     /// Inferred parameter value domains by position, seeding each positional `Input`.
     pub(super) param_ty: Vec<ValueDomain>,
     /// Kernel domain evidence keyed by the alpha-renamed cid currently in scope.

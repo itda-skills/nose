@@ -3188,3 +3188,72 @@ The larger wall-time drops also include warm-cache and run-to-run effects, so th
 the stage-local contiguous reduction plus byte-identical output. `normalize+extract` remains the
 real frontier for large C/Python/Java repos, but the next change there should be evidence-backed
 deduplication of value-graph work, not local micro-optimization.
+
+## CZ. Corpus query speed budget pass (2026-06-19)
+
+Goal: make `nose query bench/repos/<repo>` finish under **4s for every checked-out corpus repo**
+with a release build, without leaning on local micro-optimizations. The final saved run is
+`target/corpus-query-speed-final8/summary.tsv`.
+
+**Baseline symptoms.** The first full pass had three repos over budget: `alamofire` **8.994s**,
+`sympy` **4.673s**, and `raylib` **4.669s**; `curl` was close at **3.793s**. `NOSE_TIME=1`
+showed different bottlenecks per repo:
+
+| repo | dominant cost |
+|---|---|
+| `alamofire` | family ranking dedup compared candidates against too many already-kept families |
+| `raylib` | block-unit expansion/value extraction inside huge vendored C headers |
+| `sympy` | normalization/extraction over large data-like formulas and large test fixtures |
+| `curl` | Markdown dashboard candidate verification over 920 Markdown files |
+
+**Fixes shipped.**
+
+- Ranking dedup now indexes kept family spans by file and only calls exact subsumption when the
+  first site can actually overlap. This changes the search shape, not the ranking semantics.
+- Generated-source classification scans only files that occur in reported families, and non-CSS
+  generated-header checks read only the first 64 KiB. CSS still reads the full file because compiled
+  CSS detection needs source-map and minification evidence.
+- Bulk dependency and very large files still keep function/method/class units, but no longer expand
+  every nested block into extra semantic block units; exact copy-paste remains covered by the syntax
+  channel.
+- Dense generated/data-like mega-functions are excluded from semantic value extraction when they are
+  extremely token-dense; exact syntax matches still surface them.
+- Large test fixture files skip semantic value extraction and stay syntax-covered. Small tests still
+  participate in semantic matching, preserving the normal test-code signal and existing CLI
+  semantics.
+- Shared-line IDF now reads/splits files in parallel while preserving deterministic aggregation.
+- Query/scan skip raw accepted-pair materialization and sorting; hidden `nose detect` and library
+  callers keep the pair list for research and compatibility.
+- Markdown verification computes TF-IDF cosine, containment, and shared-gram substance in one
+  sorted-set pass per candidate. It also keeps stop-bucket guards for ubiquitous LSH/winnow grams,
+  reducing the `curl` dashboard without suppressing true duplicate families.
+
+**Measured result.** Final release-build corpus pass, sequential per repo:
+
+| metric | value |
+|---|---:|
+| repos | 150 |
+| failures | 0 |
+| repos >= 4s | 0 |
+| total wall time | 77.06s |
+| max repo | `sympy` 3.485s |
+
+Top final repo times:
+
+| repo | seconds |
+|---|---:|
+| `sympy` | 3.485 |
+| `raylib` | 3.292 |
+| `esbuild` | 2.568 |
+| `netty` | 2.538 |
+| `guava` | 2.515 |
+| `libgdx` | 2.280 |
+| `drizzle-orm` | 2.183 |
+| `curl` | 2.117 |
+| `nushell` | 1.941 |
+| `rxjava` | 1.776 |
+
+Representative stage checks after the changes: `curl` Markdown `md_accept` dropped from about
+**2108ms** to **538ms**, with `query_render` about **2990ms** to **1400ms**; `sympy` stayed under
+budget after narrowing the test-fixture skip to large test files only. Relevant tests:
+`cargo test -p nose-markdown`, `cargo test -p nose-detect`, and `cargo test -p nose-cli`.

@@ -10,6 +10,20 @@ use crate::unit::{self, Unit, UnitKind};
 use crate::verify::CorpusModel;
 use crate::witness::{self, Span};
 use rayon::prelude::*;
+use std::time::Instant;
+
+fn time_stage<T>(label: &str, f: impl FnOnce() -> T) -> T {
+    let on = std::env::var_os("NOSE_TIME").is_some();
+    let start = on.then(Instant::now);
+    let out = f();
+    if let Some(start) = start {
+        eprintln!(
+            "  [time] {label:<12} {:>7.1}ms",
+            start.elapsed().as_secs_f64() * 1e3
+        );
+    }
+    out
+}
 
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct Member {
@@ -125,12 +139,12 @@ pub(crate) fn accept_pair(
     j: usize,
     opts: &Options,
 ) -> Option<f64> {
-    let cos = model.tfidf_cosine_at(fps, i, j);
-    let cont = fingerprint::containment(&fps[i].shingles, &fps[j].shingles);
+    let stats = model.pair_stats_at(fps, i, j);
+    let cos = stats.cosine;
+    let cont = stats.containment;
     // TF-IDF is the primary relation score; containment rescues small-in-large.
     let rel = if cont >= 0.8 && cont > cos { cont } else { cos };
-    let shared = fingerprint::shared_grams(&fps[i].shingles, &fps[j].shingles);
-    if rel < opts.threshold || shared < opts.min_shared_grams {
+    if rel < opts.threshold || stats.shared < opts.min_shared_grams {
         return None;
     }
     // Genuine SMALL-IN-LARGE (a real size disparity) only: a small unit's grams are "contained"
@@ -152,30 +166,37 @@ pub(crate) fn accept_pair(
 /// Run the full pipeline over `(path, source)` documents.
 pub fn detect(docs: &[(String, String)], opts: &Options) -> Vec<Family> {
     // Stage 0: units (filter to prose-bearing units above the trivial floor).
-    let mut units: Vec<Unit> = Vec::new();
-    for (path, src) in docs {
-        for u in unit::split_units(path, src) {
-            if u.prose_words() >= opts.min_words {
-                units.push(u);
+    let units: Vec<Unit> = time_stage("md_units", || {
+        let mut units = Vec::new();
+        for (path, src) in docs {
+            for u in unit::split_units(path, src) {
+                if u.prose_words() >= opts.min_words {
+                    units.push(u);
+                }
             }
         }
-    }
+        units
+    });
     if units.len() < 2 {
         return Vec::new();
     }
 
-    let fps: Vec<Fingerprint> = units.par_iter().map(Fingerprint::of).collect();
-    let model = CorpusModel::fit(&fps);
+    let fps: Vec<Fingerprint> = time_stage("md_fingerprint", || {
+        units.par_iter().map(Fingerprint::of).collect()
+    });
+    let model = time_stage("md_model", || CorpusModel::fit(&fps));
 
     // Stage 1 → Stage 2: score every candidate pair, accept above threshold.
-    let cands = fingerprint::candidate_pairs(&fps);
-    let accepted: Vec<(usize, usize, f64)> = cands
-        .par_iter()
-        .map(|&(i, j)| accept_pair(&units, &fps, &model, i, j, opts).map(|rel| (i, j, rel)))
-        .collect::<Vec<_>>()
-        .into_iter()
-        .flatten()
-        .collect();
+    let cands = time_stage("md_candidates", || fingerprint::candidate_pairs(&fps));
+    let accepted: Vec<(usize, usize, f64)> = time_stage("md_accept", || {
+        cands
+            .par_iter()
+            .map(|&(i, j)| accept_pair(&units, &fps, &model, i, j, opts).map(|rel| (i, j, rel)))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .flatten()
+            .collect()
+    });
     if accepted.is_empty() {
         return Vec::new();
     }

@@ -49,6 +49,9 @@ pub struct DetectOptions {
     /// structure differs by exactly one supported literal leaf. This is a weak refactoring
     /// claim and never participates in exact semantic acceptance.
     pub abstraction_witnesses: bool,
+    /// Materialize and sort raw accepted pair output. Hidden `nose detect` and library callers
+    /// keep this on; `scan`/`query` rank grouped families and do not need the pair list.
+    pub emit_pairs: bool,
 }
 
 impl Default for DetectOptions {
@@ -77,6 +80,7 @@ impl Default for DetectOptions {
             shape_candidates: false,
             shape_features: true,
             abstraction_witnesses: false,
+            emit_pairs: true,
         }
     }
 }

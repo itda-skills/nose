@@ -67,6 +67,7 @@ pub(crate) fn scan_detect_options(
         shape_candidates: channels.near || channels.abstraction,
         shape_features: channels.near || channels.abstraction,
         abstraction_witnesses: channels.abstraction,
+        emit_pairs: false,
         ..Default::default()
     }
 }

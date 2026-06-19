@@ -423,16 +423,27 @@ pub(super) fn run_query_cmd(cmd: Cmd) -> Result<()> {
     if args.write_baseline {
         return write_scan_baseline(&args, &dataset.families);
     }
-    let baseline_comparison = activate_query_families(&args, &mut dataset)?;
-    let overrides =
-        classify_surface_overrides(&mut dataset.families, &refs, &dataset.settings.exclude);
+    let baseline_comparison = time_stage("query_activate", || {
+        activate_query_families(&args, &mut dataset)
+    })?;
+    let overrides = time_stage("query_surface", || {
+        classify_surface_overrides(&mut dataset.families)
+    });
     if query_needs_spotclass(&q) {
-        enrich_graded_witnesses(&mut dataset.families, &dataset.opts);
+        time_stage("query_spot", || {
+            enrich_graded_witnesses(&mut dataset.families, &dataset.opts)
+        });
     }
     let mut since_cmp = None;
-    let since = query_since(&q, &dataset.families, &mut since_cmp)?;
-    sort_query_families(&q, &mut dataset.families);
-    let opp = query_opportunities(&dataset.families, &overrides);
+    let since = time_stage("query_since", || {
+        query_since(&q, &dataset.families, &mut since_cmp)
+    })?;
+    time_stage("query_sort", || {
+        sort_query_families(&q, &mut dataset.families)
+    });
+    let opp = time_stage("query_opp", || {
+        query_opportunities(&dataset.families, &overrides)
+    });
     let output = QueryOutput {
         args: &args,
         terms: &terms,
@@ -447,10 +458,10 @@ pub(super) fn run_query_cmd(cmd: Cmd) -> Result<()> {
         baseline_comparison: baseline_comparison.as_ref(),
         since,
     };
-    let markdown_found = render_query_output(&output)?;
+    let markdown_found = time_stage("query_render", || render_query_output(&output))?;
     if dataset.scope.files == 0 && !markdown_found {
         warn_no_files(&args.paths);
     }
-    enforce_query_fail_on(&output)?;
+    time_stage("query_gate", || enforce_query_fail_on(&output))?;
     Ok(())
 }

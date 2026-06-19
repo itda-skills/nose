@@ -32,7 +32,7 @@ impl<'a> Builder<'a> {
     /// `num + str` errors regardless of order. JS/TS/Java are stricter because their `+`
     /// coerces mixed string/non-string operands instead of erroring, so `x + 4` is ordered
     /// unless every leaf is proven non-concat.
-    pub(super) fn add_values_not_concat(&self, law: ValueLaw, values: &[ValueId]) -> bool {
+    pub(super) fn add_values_not_concat(&mut self, law: ValueLaw, values: &[ValueId]) -> bool {
         self.value_law_satisfied(law, values)
             && if self.plus_has_mixed_string_coercion() {
                 values.iter().all(|&v| self.proven_non_concat(v))
@@ -56,7 +56,7 @@ impl<'a> Builder<'a> {
     /// Whether a `+` chain may be re-associated. In JS/TS/Java, grouping itself is
     /// observable under mixed string coercion (`"a"+2+3` vs `"a"+(2+3)`), so association
     /// needs the same all-leaves non-concat proof as commutation.
-    pub(super) fn add_association_safe(&self, values: &[ValueId]) -> bool {
+    pub(super) fn add_association_safe(&mut self, values: &[ValueId]) -> bool {
         !self.plus_has_mixed_string_coercion()
             || self.add_values_not_concat(ValueLaw::AddAssociativity, values)
     }
@@ -73,7 +73,7 @@ impl<'a> Builder<'a> {
     ///   (series 9). Reordering a numeric `*` is always sound.
     /// - `& | ^` Err on a non-numeric operand in every order, so they always commute.
     pub(super) fn ac_chain_commutes(
-        &self,
+        &mut self,
         op: u32,
         operands: &[ValueId],
         add_law: ValueLaw,
@@ -138,17 +138,16 @@ impl<'a> Builder<'a> {
     /// so the held grouping survives. This is GENUINE proof only; the fully-untyped chain is
     /// handled (possibly-float) by `possibly_float`, and the oracle witnesses it via a float
     /// battery (#342, oracle-value-model §3.3).
-    pub(super) fn proven_float(&self, v: ValueId) -> bool {
-        match self.nodes[v as usize].op {
+    pub(super) fn proven_float(&mut self, v: ValueId) -> bool {
+        let op = self.nodes[v as usize].op.clone();
+        let args = self.nodes[v as usize].args.clone();
+        match op {
             ValOp::Const { kind, .. } => kind == ConstKind::Float,
             ValOp::Input(cid) => self.param_domain.get(&cid).is_some_and(|d| d.is_float()),
             ValOp::Bin(o) => op_from_code(o) == Some(Op::TrueDiv),
             ValOp::Un(o) => {
                 matches!(op_from_code(o), Some(Op::Neg | Op::Pos))
-                    && self.nodes[v as usize]
-                        .args
-                        .first()
-                        .is_some_and(|&a| self.proven_float(a))
+                    && args.first().is_some_and(|&a| self.proven_float(a))
             }
             _ => false,
         }
@@ -160,14 +159,19 @@ impl<'a> Builder<'a> {
     /// / `ac_chain_canon`), never by a value-creating rewrite: holding a chain is split-only, so a
     /// false positive here costs recall, never soundness (corpus family delta measured 0). The
     /// statically-typed languages decide float-ness by proven domain (`proven_float`) instead.
-    pub(super) fn possibly_float(&self, v: ValueId) -> bool {
+    pub(super) fn possibly_float(&mut self, v: ValueId) -> bool {
+        if let Some(&possible) = self.possibly_float_cache.get(&v) {
+            return possible;
+        }
         if self.proven_float(v) {
+            self.possibly_float_cache.insert(v, true);
             return true;
         }
         if !semantics(self.il.meta.lang).is_dynamically_typed() {
+            self.possibly_float_cache.insert(v, false);
             return false;
         }
-        match self.nodes[v as usize].op {
+        let possible = match self.nodes[v as usize].op {
             // A TRULY-UNTYPED param (no domain evidence) could be a float at runtime → hold; the
             // float battery feeds it directly, so the oracle witnesses the non-associativity. Any
             // param WITH a domain (`a: int`, inferred `Number`, `str`, …) is fed a coerced
@@ -176,7 +180,9 @@ impl<'a> Builder<'a> {
             // split int/`number` clones, including across languages) with no soundness gain.
             ValOp::Input(cid) => !self.param_domain.contains_key(&cid),
             _ => false,
-        }
+        };
+        self.possibly_float_cache.insert(v, possible);
+        possible
     }
 
     /// Whether `v` is already an int32-valued node — a JS-family bitwise result (its result
@@ -213,8 +219,13 @@ impl<'a> Builder<'a> {
     /// (`Sub`/`Div`/`Mod`/`Pow`/bitwise/shift/comparison and all unary) ERRORS on a
     /// string/list operand, so its result is never one. Fails closed: an untyped param,
     /// index, field, call, or `Phi` could be a string, so it is NOT proven non-concat.
-    pub(super) fn proven_non_concat(&self, v: ValueId) -> bool {
-        match self.nodes[v as usize].op {
+    pub(super) fn proven_non_concat(&mut self, v: ValueId) -> bool {
+        if let Some(&proven) = self.non_concat_cache.get(&v) {
+            return proven;
+        }
+        let op = self.nodes[v as usize].op.clone();
+        let args = self.nodes[v as usize].args.clone();
+        let proven = match op {
             // Non-string literals (Number / Boolean / Null). A String const is concat.
             ValOp::Const { kind, .. } => !matches!(const_value_domain(kind), ValueDomain::String),
             // Only a GENUINELY non-string-typed param (numeric/boolean evidence) qualifies;
@@ -228,7 +239,6 @@ impl<'a> Builder<'a> {
             // bool/number on a string operand — never a string.
             ValOp::Un(_) => true,
             ValOp::Bin(o) => {
-                let args = &self.nodes[v as usize].args;
                 if let Some(op) = op_from_code(o) {
                     match op {
                         // Concat / repetition: result is a string/list only when an operand
@@ -254,7 +264,9 @@ impl<'a> Builder<'a> {
                 }
             }
             _ => false,
-        }
+        };
+        self.non_concat_cache.insert(v, proven);
+        proven
     }
 
     pub(super) fn record_value_law(&mut self, law: ValueLaw) {

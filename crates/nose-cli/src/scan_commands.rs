@@ -22,12 +22,14 @@ pub(super) fn build_scan_dataset(
     let detector = scan_detector(settings.channels, &opts);
     let (mut report, scope) = scan_report(args, refs, &settings.exclude, &opts, detector.as_ref());
 
-    let mut families = nose_detect::rank_families(&report);
-    if settings.channels.abstraction_only() {
-        families.retain(|f| f.abstraction_witness.is_some());
-    }
-    families.retain(|f| f.members >= settings.min_members && f.value >= settings.min_value);
-    families.retain(|f| args.scope.keeps(f));
+    let mut families = time_stage("rank_families", || nose_detect::rank_families(&report));
+    time_stage("scan_filter", || {
+        if settings.channels.abstraction_only() {
+            families.retain(|f| f.abstraction_witness.is_some());
+        }
+        families.retain(|f| f.members >= settings.min_members && f.value >= settings.min_value);
+        families.retain(|f| args.scope.keeps(f));
+    });
     // Show paths relative to the working directory — absolute paths are unreadable
     // in CI logs and reviews, and relative ones are clickable and portable.
     let mut reinvented = std::mem::take(&mut report.reinvented);
@@ -42,14 +44,18 @@ pub(super) fn build_scan_dataset(
             r.container_file = relativize(&r.container_file, &cwd);
         }
     }
-    weight_shared_lines(&mut families, refs, &settings.exclude);
+    time_stage("shared_lines", || {
+        weight_shared_lines(&mut families, refs, &settings.exclude)
+    });
     let sort = settings.sort;
-    families.sort_by(|a, b| {
-        sort.score(b)
-            .total_cmp(&sort.score(a))
-            // Deterministic tie-breaks: raw value, then first site's location.
-            .then(b.value.total_cmp(&a.value))
-            .then_with(|| family_anchor(a).cmp(&family_anchor(b)))
+    time_stage("scan_sort", || {
+        families.sort_by(|a, b| {
+            sort.score(b)
+                .total_cmp(&sort.score(a))
+                // Deterministic tie-breaks: raw value, then first site's location.
+                .then(b.value.total_cmp(&a.value))
+                .then_with(|| family_anchor(a).cmp(&family_anchor(b)))
+        })
     });
     Ok(ScanDataset {
         families,
@@ -100,7 +106,7 @@ pub(super) fn cmd_scan(args: ScanArgs) -> Result<()> {
         return write_scan_baseline(&args, &families);
     }
     let baseline_comparison = apply_scan_baseline(&args, &mut families)?;
-    let overrides = classify_surface_overrides(&mut families, &refs, &settings.exclude);
+    let overrides = classify_surface_overrides(&mut families);
     let (mut families, mut ignored_families) =
         partition_ignored(families, settings.ignore_set.as_ref());
 

@@ -61,7 +61,7 @@ impl StageTimer {
 /// may pass a throwaway per-file interner — which is exactly what makes caching a
 /// file's units by its source-content hash sound.
 pub fn units_of_file(il: &Il, interner: &Interner, opts: &DetectOptions) -> Vec<UnitFeat> {
-    if raw_il_is_empty_module(il) {
+    if raw_il_is_empty_module(il) || units::large_test_file(il) {
         return Vec::new();
     }
     let norm_opts = NormalizeOptions {
@@ -71,13 +71,14 @@ pub fn units_of_file(il: &Il, interner: &Interner, opts: &DetectOptions) -> Vec<
     };
     let seeds = minhash::seeds(opts.minhash_k);
     let n = nose_normalize::normalize(il, interner, &norm_opts);
+    let block_units = block_units_for_file(&n, opts);
     units::extract(
         &n,
         interner,
         &seeds,
         opts.min_lines,
         opts.min_tokens,
-        opts.block_units,
+        block_units,
         units::ExtractFeatures {
             shape_features: opts.shape_features,
             abstraction_witnesses: opts.abstraction_witnesses,
@@ -108,17 +109,18 @@ pub fn detect_with_dump(
         .par_iter()
         .map(|il| {
             let units = if opts.structural {
-                if raw_il_is_empty_module(il) {
+                if raw_il_is_empty_module(il) || units::large_test_file(il) {
                     Vec::new()
                 } else {
                     let n = nose_normalize::normalize(il, &corpus.interner, &norm_opts);
+                    let block_units = block_units_for_file(&n, opts);
                     units::extract(
                         &n,
                         &corpus.interner,
                         &seeds,
                         opts.min_lines,
                         opts.min_tokens,
-                        opts.block_units,
+                        block_units,
                         units::ExtractFeatures {
                             shape_features: opts.shape_features,
                             abstraction_witnesses: opts.abstraction_witnesses,
@@ -158,6 +160,41 @@ pub fn detect_with_dump(
 
 fn raw_il_is_empty_module(il: &Il) -> bool {
     il.units.is_empty() && il.kind(il.root) == NodeKind::Module && il.children(il.root).is_empty()
+}
+
+/// Keep whole function/method/class units for cross-file matches, but do not expand
+/// every nested `if`/loop into extra block units inside dependency code or very
+/// large files. The syntax channel still covers exact copy-paste spans there.
+const LARGE_FILE_BLOCK_NODE_CUTOFF: usize = 5_000;
+
+fn block_units_for_file(il: &Il, opts: &DetectOptions) -> bool {
+    opts.block_units
+        && !is_bulk_dependency_path(&il.meta.path)
+        && il.nodes.len() <= LARGE_FILE_BLOCK_NODE_CUTOFF
+}
+
+fn is_bulk_dependency_path(path: &str) -> bool {
+    let p = path.to_ascii_lowercase();
+    [
+        "vendor/",
+        "third_party/",
+        "third-party/",
+        "/deps/",
+        "node_modules/",
+        "/dist/",
+        "/build/",
+        "/external/",
+        ".min.",
+        ".pb.",
+        "_pb2",
+        ".g.dart",
+        ".d.ts",
+        "generated/",
+        "/gen/",
+        ".generated.",
+    ]
+    .iter()
+    .any(|m| p.contains(m))
 }
 
 /// Run candidate-generation → scoring → clustering over already-built `units` (the
@@ -211,17 +248,23 @@ pub fn detect_from_units(
 
     let enclosing = enclosing_units(&units);
 
-    // Build pair output (sorted by score desc).
-    let mut duplicates: Vec<DupPair> = accepted
-        .iter()
-        .map(|&(i, j, s)| DupPair {
-            left: loc_of(&units[i], enclosing[i].clone()),
-            right: loc_of(&units[j], enclosing[j].clone()),
-            score: round3(s),
-            cross_language: units[i].lang != units[j].lang,
-        })
-        .collect();
-    duplicates.sort_by(|a, b| b.score.total_cmp(&a.score));
+    // Build pair output only for raw-detection surfaces. `scan`/`query` use the grouped
+    // refactoring families, so they skip this accepted-pair materialization and sort.
+    let duplicates: Vec<DupPair> = if opts.emit_pairs {
+        let mut duplicates: Vec<DupPair> = accepted
+            .iter()
+            .map(|&(i, j, s)| DupPair {
+                left: loc_of(&units[i], enclosing[i].clone()),
+                right: loc_of(&units[j], enclosing[j].clone()),
+                score: round3(s),
+                cross_language: units[i].lang != units[j].lang,
+            })
+            .collect();
+        duplicates.sort_by(|a, b| b.score.total_cmp(&a.score));
+        duplicates
+    } else {
+        Vec::new()
+    };
 
     let groups = build_groups(&units, &accepted, &mut uf, &raw_groups, &enclosing, opts);
     clk.lap("groups");

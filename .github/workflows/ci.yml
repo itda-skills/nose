@@ -38,6 +38,9 @@ jobs:
             if [ -z "$ratchet_base" ] || [[ "$ratchet_base" =~ ^0+$ ]]; then
               ratchet_base="HEAD^"
             fi
+            if ! git rev-parse --verify -q "$ratchet_base^{commit}" >/dev/null; then
+              ratchet_base="HEAD^"
+            fi
           fi
           python3 scripts/check-file-lengths.py --self-test
           python3 scripts/check-file-lengths.py --ratchet-base "$ratchet_base"

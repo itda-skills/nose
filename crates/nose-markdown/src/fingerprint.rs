@@ -218,6 +218,10 @@ pub fn candidate_pairs(fps: &[Fingerprint]) -> Vec<(usize, usize)> {
     let mut pairs: FxHashSet<(usize, usize)> = FxHashSet::default();
     let bands = NUM_PERM / LSH_ROWS;
 
+    // Stop-bucket guard: ubiquitous boilerplate bands/fingerprints otherwise flood
+    // candidate generation with near-zero-similarity pairs on doc-heavy repos.
+    let stop_df = (fps.len() / 25).max(8);
+
     // MinHash-LSH: bucket by (band index, hash of the band's rows).
     let mut buckets: FxHashMap<(usize, u64), Vec<usize>> = FxHashMap::default();
     for (idx, fp) in fps.iter().enumerate() {
@@ -230,11 +234,17 @@ pub fn candidate_pairs(fps: &[Fingerprint]) -> Vec<(usize, usize)> {
                 h ^= fp.minhash[band * LSH_ROWS + r];
                 h = h.wrapping_mul(0x100000001b3);
             }
-            let entry = buckets.entry((band, h)).or_default();
-            for &other in entry.iter() {
-                pairs.insert(order(other, idx));
+            buckets.entry((band, h)).or_default().push(idx);
+        }
+    }
+    for members in buckets.values() {
+        if members.len() < 2 || members.len() > stop_df {
+            continue;
+        }
+        for a in 0..members.len() {
+            for b in a + 1..members.len() {
+                pairs.insert(order(members[a], members[b]));
             }
-            entry.push(idx);
         }
     }
 
@@ -242,7 +252,6 @@ pub fn candidate_pairs(fps: &[Fingerprint]) -> Vec<(usize, usize)> {
     // Stop-shingle guard: drop fingerprints whose document frequency exceeds a small fraction of
     // the corpus — these are ubiquitous boilerplate grams that otherwise flood candidates with
     // near-zero-similarity pairs (the survey's boilerplate failure mode).
-    let stop_df = (fps.len() / 25).max(8);
     let mut winv: FxHashMap<u64, Vec<usize>> = FxHashMap::default();
     for (idx, fp) in fps.iter().enumerate() {
         for &w in &fp.winnow {

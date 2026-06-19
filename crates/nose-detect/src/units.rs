@@ -33,6 +33,14 @@ const MAX_BLOCK_TOKENS: usize = 160;
 /// while very large class bodies are delegated to their method/function units.
 const MAX_CLASS_TOKENS: usize = 8_000;
 const EXACT_VALUE_MIN: usize = 4;
+/// Dense-function admission exists for real compact code (`return sum(...)`), not
+/// generated/data-like mega expressions. Syntax copy-paste still covers exact repeats.
+const DATA_LIKE_FUNCTION_MIN_TOKENS: usize = 2_000;
+const DATA_LIKE_FUNCTION_MIN_TOKENS_PER_LINE: usize = 120;
+/// Huge test fixtures stay covered by the syntax channel for exact copy-paste. Small
+/// tests still participate in semantic matching; very large test files are usually
+/// data/scenario corpora where Type-4 value extraction is less actionable than the cost.
+const LARGE_TEST_FILE_NODE_CUTOFF: usize = 5_000;
 
 fn semantic_container_token_cap(kind: UnitKind) -> Option<usize> {
     match kind {
@@ -72,6 +80,7 @@ struct UnitExtractCtx<'a> {
     parents: Option<&'a [Option<NodeId>]>,
     facts: &'a StrictFacts<'a>,
     value_context: Option<&'a nose_normalize::ValueFingerprintContext>,
+    large_test_file: bool,
 }
 
 /// A unit root that survived the size/semantic gates, with the semantic
@@ -143,6 +152,7 @@ pub(crate) fn extract(
         parents: parents.as_deref(),
         facts: &facts,
         value_context: value_context.as_ref(),
+        large_test_file: large_test_file(il),
     };
     let mut unit_timer = UnitTimer::new();
     let test_module_spans = inline_test_module_spans(il, interner);
@@ -180,6 +190,9 @@ pub fn unit_dags_at(
     opts: &crate::DetectOptions,
     wanted: &[(u32, u32)],
 ) -> Vec<Option<(nose_normalize::ValueDag, bool)>> {
+    if large_test_file(il) {
+        return vec![None; wanted.len()];
+    }
     let norm_opts = nose_normalize::NormalizeOptions {
         cfg_norm: opts.cfg_norm,
         dce: opts.dce,
@@ -287,8 +300,6 @@ fn inline_test_module_spans(il: &Il, interner: &Interner) -> Vec<(u32, u32)> {
     spans
 }
 
-/// Gate one unit root: collect its pre-order, apply the container/size/dense gates
-/// (reporting skips), and compute the strict-exact verdict and value fingerprint.
 fn exact_safe_for_unit(ctx: &UnitExtractCtx<'_>, root: NodeId, exact_fragment: bool) -> bool {
     strict_exact_safe_tree(ctx.il, ctx.interner, ctx.facts, root)
         || (exact_fragment
@@ -301,6 +312,28 @@ fn exact_safe_for_unit(ctx: &UnitExtractCtx<'_>, root: NodeId, exact_fragment: b
                     root,
                 )
             }))
+}
+
+fn skip_before_value_fingerprint(
+    kind: UnitKind,
+    tokens: usize,
+    lines: u32,
+    syntactically_small: bool,
+    declarative: bool,
+    exact_fragment: bool,
+    large_test_file: bool,
+) -> bool {
+    // Cheap structural gates run before strict/value extraction; syntax copy-paste coverage
+    // still handles exact repeats from generated-like mega-functions and huge test fixtures.
+    if semantic_container_token_cap(kind).is_some_and(|cap| tokens > cap) {
+        return true;
+    }
+    if data_like_function_unit(kind, tokens, lines) || test_structural_unit(large_test_file, kind) {
+        return true;
+    }
+    let can_use_dense_gate =
+        declarative || matches!(kind, UnitKind::Function | UnitKind::Method) || exact_fragment;
+    syntactically_small && !can_use_dense_gate
 }
 
 fn gate_unit(
@@ -338,23 +371,21 @@ fn gate_unit(
         });
     };
 
-    // Broad container units are covered by their nested primary units. Apply
-    // this cap before strict/value extraction so discarded containers never pay
-    // the dominant semantic fingerprint cost.
-    if semantic_container_token_cap(kind).is_some_and(|cap| pre.len() > cap) {
-        skip(unit_timer, None, None);
-        return None;
-    }
-
     // A declarative unit (a CSS rule; HTML element later) is a `Block`, but unlike an
     // imperative block its value fingerprint IS its meaning (the canonical declaration
     // set), so — like a dense functional one-liner — it may pass the size gate on the
     // `value.len() >= EXACT_VALUE_MIN` floor below rather than the syntactic floor.
     let declarative = matches!(ctx.il.kind(root), NodeKind::CssRule | NodeKind::HtmlElement);
     let syntactically_small = lines < ctx.min_lines || pre.len() < ctx.min_tokens;
-    let can_use_dense_gate =
-        declarative || matches!(kind, UnitKind::Function | UnitKind::Method) || exact_fragment;
-    if syntactically_small && !can_use_dense_gate {
+    if skip_before_value_fingerprint(
+        kind,
+        pre.len(),
+        lines,
+        syntactically_small,
+        declarative,
+        exact_fragment,
+        ctx.large_test_file,
+    ) {
         skip(unit_timer, None, None);
         return None;
     }
@@ -435,6 +466,45 @@ fn gate_unit(
         safe_ms,
         value_ms,
     })
+}
+
+fn data_like_function_unit(kind: UnitKind, tokens: usize, lines: u32) -> bool {
+    matches!(kind, UnitKind::Function | UnitKind::Method)
+        && tokens > DATA_LIKE_FUNCTION_MIN_TOKENS
+        && tokens / (lines.max(1) as usize) > DATA_LIKE_FUNCTION_MIN_TOKENS_PER_LINE
+}
+
+fn test_structural_unit(large_test_file: bool, kind: UnitKind) -> bool {
+    matches!(
+        kind,
+        UnitKind::Function | UnitKind::Method | UnitKind::Class | UnitKind::Block
+    ) && large_test_file
+}
+
+pub(crate) fn large_test_file(il: &Il) -> bool {
+    is_test_path(&il.meta.path) && il.nodes.len() > LARGE_TEST_FILE_NODE_CUTOFF
+}
+
+fn is_test_path(path: &str) -> bool {
+    let p = path.to_ascii_lowercase();
+    p.contains("/test/")
+        || p.contains("/tests/")
+        || p.contains("/__tests__/")
+        || p.contains("/spec/")
+        || p.starts_with("test/")
+        || p.starts_with("tests/")
+        || p.ends_with("_test.go")
+        || p.ends_with("conftest.py")
+        || ["_test.", ".test.", ".spec.", "_spec."]
+            .iter()
+            .any(|m| p.contains(m))
+        || p.rsplit('/')
+            .next()
+            .unwrap_or(&p)
+            .split('.')
+            .next()
+            .unwrap_or("")
+            .starts_with("test_")
 }
 
 fn extract_unit(
