@@ -1,5 +1,8 @@
 use super::*;
 
+#[path = "review/sarif.rs"]
+mod sarif;
+
 fn git_in(dir: &Path, args: &[&str]) {
     let out = Command::new("git")
         .current_dir(dir)
@@ -83,7 +86,7 @@ fn query_base_flags_divergent_edits_like_review() {
 
     let jout = nose_query_in(&dir, &["base=main", "--min-size", "8", "--format", "json"]);
     let j: serde_json::Value = serde_json::from_slice(&jout.stdout).unwrap();
-    assert_eq!(j["view"], "base", "v2 envelope, base view: {j}");
+    assert_eq!(j["view"], "base", "query schema envelope, base view: {j}");
     assert_eq!(j["base"], "main");
     assert!(
         j["summary"]["divergences"].as_u64().unwrap() >= 1,
@@ -93,6 +96,55 @@ fn query_base_flags_divergent_edits_like_review() {
         j["items"][0]["fire_eligible"].is_boolean(),
         "items carry the §BV fire verdict: {j}"
     );
+
+    let sout = nose_query_in(&dir, &["base=main", "--min-size", "8", "--format", "sarif"]);
+    assert!(
+        sout.status.success(),
+        "base= SARIF should succeed: {}",
+        String::from_utf8_lossy(&sout.stderr)
+    );
+    let sarif: serde_json::Value = serde_json::from_slice(&sout.stdout).expect("query base SARIF");
+    assert!(
+        sarif["runs"][0]["results"]
+            .as_array()
+            .is_some_and(|r| !r.is_empty()),
+        "query base= SARIF reuses review findings: {sarif}"
+    );
+    let unsupported = nose_query_in(&dir, &["base=main", "path~a/f.py", "--min-size", "8"]);
+    let stderr = String::from_utf8_lossy(&unsupported.stderr);
+    assert!(
+        !unsupported.status.success(),
+        "base= should reject ignored query filters"
+    );
+    assert!(
+        stderr.contains("combine it only with `top=N`"),
+        "base= explains its supported term set: {stderr}"
+    );
+    for (args, needle, label) in [
+        (
+            &["base=main", "--min-members", "3"][..],
+            "--min-members",
+            "ignored query flags",
+        ),
+        (
+            &[
+                "base=main",
+                "--baseline",
+                "accepted.json",
+                "--write-baseline",
+            ][..],
+            "--baseline",
+            "baseline writes",
+        ),
+    ] {
+        let out = nose_query_in(&dir, args);
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        assert!(!out.status.success(), "base= should reject {label}");
+        assert!(
+            stderr.contains(needle),
+            "base= names unsupported {label}: {stderr}"
+        );
+    }
 
     // `--fail-on any` over base= fires on the conservative (shared-logic) policy.
     let gated = nose_query_in(&dir, &["base=main", "--min-size", "8", "--fail-on", "any"]);
@@ -152,6 +204,65 @@ fn query_base_matches_review_findings() {
     );
 
     let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn query_base_pathspec_is_relative_to_invocation_dir() {
+    let root = std::env::temp_dir().join(format!("nose_query_base_subdir_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&root);
+    let sub = root.join("sub");
+    let src = sub.join("src");
+    fs::create_dir_all(src.join("a")).unwrap();
+    fs::create_dir_all(src.join("b")).unwrap();
+    let body = "def process(items):\n    total = 0\n    for item in items:\n        total += item * 2\n    return total\n";
+    fs::write(src.join("a/f.py"), body).unwrap();
+    fs::write(src.join("b/f.py"), body).unwrap();
+    init_git_repo(&root);
+
+    fs::write(
+        src.join("a/f.py"),
+        body.replace(
+            "    return total",
+            "    total = total + 1\n    return total",
+        ),
+    )
+    .unwrap();
+
+    let out = Command::new(bin())
+        .current_dir(&sub)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
+        .env_remove("GIT_OBJECT_DIRECTORY")
+        .env_remove("GIT_COMMON_DIR")
+        .args([
+            "query",
+            "src",
+            "base=main",
+            "--min-size",
+            "8",
+            "--format",
+            "json",
+        ])
+        .output()
+        .expect("run nose query from subdir");
+    assert!(
+        out.status.success(),
+        "query base from subdir should succeed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let json: serde_json::Value = serde_json::from_slice(&out.stdout).expect("query base JSON");
+    assert!(
+        json["summary"]["divergences"].as_u64().unwrap_or(0) >= 1,
+        "subdir-relative pathspec should find the divergent clone: {json}"
+    );
+    let rendered = json.to_string();
+    assert!(
+        rendered.contains("sub/src/a/f.py") && rendered.contains("sub/src/b/f.py"),
+        "locations stay repo-relative to the actual scanned subtree: {rendered}"
+    );
+
+    let _ = fs::remove_dir_all(&root);
 }
 
 #[test]
@@ -324,25 +435,6 @@ fn review_respects_structured_ignores() {
         "a fully-suppressed review must not trip --fail"
     );
 
-    let _ = fs::remove_dir_all(&dir);
-}
-
-#[test]
-fn fail_on_new_requires_a_baseline() {
-    let dir = make_project("fail_on_new_nobaseline");
-    let p = dir.to_str().unwrap();
-    // `--fail-on new` compares against a baseline; with no --baseline the gate can never
-    // fire, so it must error rather than silently pass (a CI gate that always passes).
-    let out = Command::new(bin())
-        .args(["scan", p, "--min-size", "12", "--fail-on", "new"])
-        .output()
-        .expect("run scan");
-    assert!(
-        !out.status.success(),
-        "`--fail-on new` without --baseline must error, not silently pass: stdout={} stderr={}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr),
-    );
     let _ = fs::remove_dir_all(&dir);
 }
 

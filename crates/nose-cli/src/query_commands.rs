@@ -47,6 +47,7 @@ fn query_selection<'a>(
 /// review's detection verbatim — so the §BV fire precision is preserved by construction — and
 /// gates with the same conservative shared-logic policy.
 fn run_query_base(args: &ScanArgs, base_ref: &str, q: &Query, path_arg: &str) -> Result<()> {
+    validate_base_query(q, args)?;
     // `base=` gates on a diff against a ref, not a saved baseline — `--fail-on new` (which
     // needs `--baseline`) is meaningless here.
     if matches!(args.fail_on, Some(FailOn::New)) {
@@ -69,14 +70,62 @@ fn run_query_base(args: &ScanArgs, base_ref: &str, q: &Query, path_arg: &str) ->
         fail_on: review::ReviewFailOn::default(),
     };
     let (flagged, changed_files) = review::detect_divergences(&review_args)?.unwrap_or_default();
-    let json = matches!(args.format, ReportFormat::Json);
-    render_query_base(&flagged, changed_files, base_ref, path_arg, q.top, json);
+    match args.format {
+        ReportFormat::Json => {
+            render_query_base(&flagged, changed_files, base_ref, path_arg, q.top, true)
+        }
+        ReportFormat::Sarif => println!("{}", review::review_sarif(&flagged, q.top, "top=0")?),
+        _ => render_query_base(&flagged, changed_files, base_ref, path_arg, q.top, false),
+    }
     // The gate fires on the §BV conservative policy (a proven shared-logic divergence) — the
     // only sane CI default — reused verbatim from review so the fire decision is identical.
     if matches!(args.fail_on, Some(FailOn::Any))
         && review::divergences_fire(&flagged, review::ReviewFailOn::SharedLogic)
     {
         std::process::exit(1);
+    }
+    Ok(())
+}
+
+fn validate_base_query(q: &Query, args: &ScanArgs) -> Result<()> {
+    let unsupported_terms = q.reinvented
+        || q.all
+        || q.id_full
+        || q.group.is_some()
+        || q.id.is_some()
+        || q.at.is_some()
+        || q.since.is_some()
+        || q.sort.is_some()
+        || !q.filters.is_empty();
+    if unsupported_terms {
+        anyhow::bail!(
+            "`base=` is its own divergent-edit view; combine it only with `top=N`, detection flags, `--format`, or `--fail-on any`"
+        );
+    }
+    let mut unsupported_flags = Vec::new();
+    if args.min_members.is_some() {
+        unsupported_flags.push("--min-members");
+    }
+    if args.min_value.is_some() {
+        unsupported_flags.push("--min-value");
+    }
+    if args.cache_dir.is_some() {
+        unsupported_flags.push("--cache-dir");
+    }
+    if !args.semantic_pack.is_empty() {
+        unsupported_flags.push("--semantic-pack");
+    }
+    if args.baseline.is_some() {
+        unsupported_flags.push("--baseline");
+    }
+    if args.write_baseline {
+        unsupported_flags.push("--write-baseline");
+    }
+    if !unsupported_flags.is_empty() {
+        anyhow::bail!(
+            "`base=` does not support {}; combine it only with `top=N`, detection flags, `--format`, or `--fail-on any`",
+            unsupported_flags.join(", ")
+        );
     }
     Ok(())
 }
@@ -314,12 +363,17 @@ pub(super) fn run_query_cmd(cmd: Cmd) -> Result<()> {
     if dataset.scope.files == 0 && !markdown_found {
         warn_no_files(&args.paths);
     }
-    // CI gate (same as scan): a non-empty default-report family set fails `--fail-on`.
-    let reportable: Vec<&nose_detect::RefactorFamily> = dataset
-        .families
-        .iter()
-        .filter(|f| is_default_report_family(f, &overrides))
-        .collect();
+    // CI gate (same as scan), scoped to the same untruncated family selection the query terms
+    // address. `top=N` stays presentation-only; filters/id/at/status narrow the gate. The
+    // `reinvented` view is a separate helper channel, not a RefactorFamily report.
+    let reportable = if q.reinvented {
+        Vec::new()
+    } else {
+        query_selection(&dataset.families, &overrides, &opp, &q, &path_arg, since)?
+            .into_iter()
+            .filter(|f| is_default_report_family(f, &overrides))
+            .collect()
+    };
     enforce_scan_fail_on(
         &args,
         dataset.settings.channels,

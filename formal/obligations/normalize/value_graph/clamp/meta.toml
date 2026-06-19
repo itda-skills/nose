@@ -8,10 +8,12 @@ rule_module = true
 files = [
   "crates/nose-normalize/src/value_graph/rules/clamp.rs",
   "crates/nose-normalize/src/value_graph/canonicalize.rs",
+  "crates/nose-normalize/src/value_graph/canonicalize/selection.rs",
+  "crates/nose-normalize/src/value_graph/control/guards.rs",
   "crates/nose-normalize/src/value_graph/ops.rs",
-  "crates/nose-normalize/src/value_graph/stdlib.rs",
-  "crates/nose-semantics/src/lib.rs",
+  "crates/nose-normalize/src/value_graph/stdlib/integers.rs",
   "crates/nose-semantics/src/method_contracts.rs",
+  "crates/nose-semantics/src/method_families.rs",
 ]
 symbols = [
   "apply",

@@ -49,10 +49,12 @@ available), and a single `family` object; with `full`, that object carries `skel
 value, approximate}` — code that reimplements an existing helper; the action is "call it".
 
 **`base`** (`base=<git-ref>`) — the divergent-edit view (the [`nose review`](review.md)
-pipeline). `base` (the ref), `summary` (`changed_files`, `divergences`, `fire_eligible`), and
-`items[]` of `{family_id, similarity, complexity, scope, witness_kind, fire_eligible, graded,
-changed[], not_updated[]}` — each `changed`/`not_updated` site carries `{file, name,
-start_line, end_line, …, touches_shared}`. `fire_eligible` is the conservative
+pipeline). `base` (the ref), `summary` (`changed_files`, `divergences`,
+`shown_divergences`, `limit`, `fire_eligible`), and `items[]` of `{family_id, similarity,
+complexity, scope, witness_kind, fire_eligible, graded, changed[], not_updated[]}` — each
+`changed`/`not_updated` site carries `{file, name, start_line, end_line, …, touches_shared}`.
+`divergences` is the total before `top=N` truncation; `shown_divergences` is `items.length`;
+`limit` is the numeric row limit or `null` for `top=0`. `fire_eligible` is the conservative
 proven-shared-logic verdict the gate fires on. This is the same per-finding shape as the
 deprecated `nose review --format json`.
 

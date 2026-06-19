@@ -18,9 +18,10 @@ impl nose_detect::Detector for ChannelDetector {
     }
 }
 
-/// Lower + detect + rank clone families for a set of paths — the shared core of `scan`
-/// and `review` (no cache, baseline, or presentation post-processing).
-pub(crate) fn detect_families(
+/// Lower + detect + rank clone families for review's base tree. This keeps
+/// review's conservative default channel policy (`syntax,semantic`) explicit;
+/// scan/query use their own dataset construction and default to `syntax,semantic,near`.
+pub(crate) fn detect_review_families(
     paths: &[PathBuf],
     exclude: &[String],
     mode: Vec<ScanMode>,

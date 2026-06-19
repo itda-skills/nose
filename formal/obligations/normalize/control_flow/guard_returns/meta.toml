@@ -7,6 +7,7 @@ summary = "Guard-return, dead-code-after-return, ternary-return, conjoined-guard
 files = [
   "crates/nose-normalize/src/value_graph/sinks.rs",
   "crates/nose-normalize/src/value_graph/control.rs",
+  "crates/nose-normalize/src/value_graph/control/guards.rs",
   "crates/nose-normalize/src/cfg_norm.rs",
 ]
 symbols = ["guarded", "process_block"]

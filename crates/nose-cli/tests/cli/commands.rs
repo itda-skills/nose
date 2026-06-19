@@ -14,3 +14,5 @@ mod proposal_query;
 mod query_reinvented;
 #[path = "commands/scan_core.rs"]
 mod scan_core;
+#[path = "commands/scan_options.rs"]
+mod scan_options;

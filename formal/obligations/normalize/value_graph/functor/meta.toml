@@ -6,6 +6,7 @@ summary = "Map/filter fusion and count-of-filter normalization preserve List den
 [rust]
 files = [
   "crates/nose-normalize/src/value_graph/collections.rs",
+  "crates/nose-normalize/src/value_graph/collections/hof.rs",
   "crates/nose-normalize/src/idioms.rs",
 ]
 symbols = ["HoFKind::Map", "HoFKind::Filter", "and_preds"]

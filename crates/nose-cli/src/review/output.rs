@@ -143,23 +143,40 @@ pub(crate) fn divergence_items_json(flagged: &[Divergence]) -> Vec<serde_json::V
         .collect()
 }
 
+fn shown_divergences(flagged: &[Divergence], top: Option<usize>) -> &[Divergence] {
+    let limit = top.unwrap_or(30);
+    if limit == 0 || flagged.len() <= limit {
+        flagged
+    } else {
+        &flagged[..limit]
+    }
+}
+
 pub(super) fn review_json(
     flagged: &[Divergence],
     base: &str,
     changed_files: usize,
+    top: Option<usize>,
 ) -> Result<String> {
     use serde_json::json;
+    let shown = shown_divergences(flagged, top);
     Ok(serde_json::to_string_pretty(&json!({
         "schema_version": 1,
         "tool_version": env!("CARGO_PKG_VERSION"),
         "base": base,
         "changed_files": changed_files,
         "inconsistent_families": flagged.len(),
-        "findings": divergence_items_json(flagged),
+        "total_inconsistent_families": flagged.len(),
+        "shown_inconsistent_families": shown.len(),
+        "findings": divergence_items_json(shown),
     }))?)
 }
 
-pub(super) fn review_sarif(flagged: &[Divergence]) -> Result<String> {
+pub(super) fn review_sarif(
+    flagged: &[Divergence],
+    top: Option<usize>,
+    top_zero_spelling: &str,
+) -> Result<String> {
     use serde_json::json;
     let phys = |s: &Site| {
         let message = fragment_context(s).unwrap_or_else(|| site_label(s));
@@ -173,7 +190,8 @@ pub(super) fn review_sarif(flagged: &[Divergence]) -> Result<String> {
     };
     // The SARIF *location* is each un-updated sibling (where a fix may be missing), so a CI
     // annotation lands on the copy the change skipped; the changed copies are related.
-    let results: Vec<_> = flagged
+    let shown = shown_divergences(flagged, top);
+    let results: Vec<_> = shown
         .iter()
         .map(|d| {
             let changed = d
@@ -195,7 +213,7 @@ pub(super) fn review_sarif(flagged: &[Divergence]) -> Result<String> {
             })
         })
         .collect();
-    let run = json!({
+    let mut run = json!({
         "tool": { "driver": {
             "name": "nose",
             "informationUri": "https://github.com/corca-ai/nose",
@@ -207,8 +225,26 @@ pub(super) fn review_sarif(flagged: &[Divergence]) -> Result<String> {
             }]
         }},
         "results": results,
-        "properties": { "inconsistent_families": flagged.len() },
+        "properties": {
+            "inconsistent_families": flagged.len(),
+            "total_families": flagged.len(),
+            "shown_families": shown.len(),
+        },
     });
+    if shown.len() < flagged.len() {
+        run["invocations"] = json!([{
+            "executionSuccessful": true,
+            "toolExecutionNotifications": [{
+                "level": "note",
+                "message": { "text": format!(
+                    "Showing {} of {} divergent clone families (the row limit). \
+                     Pass {top_zero_spelling} to emit every finding.",
+                    shown.len(),
+                    flagged.len(),
+                ) }
+            }]
+        }]);
+    }
     Ok(serde_json::to_string_pretty(&json!({
         "version": "2.1.0",
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",

@@ -4,7 +4,11 @@ kind = "structural-invariant"
 summary = "IL validation requires root, unit roots, and child edges to stay inside the node arena."
 
 [rust]
-files = ["crates/nose-il/src/lib.rs"]
+files = [
+  "crates/nose-il/src/lib.rs",
+  "crates/nose-il/src/il.rs",
+  "crates/nose-il/src/builder.rs",
+]
 symbols = ["validate", "IlBuilder"]
 
 [lean]

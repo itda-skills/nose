@@ -199,7 +199,7 @@ pub(crate) enum Cmd {
         /// `group=FIELD` facet; `id=FAM` or `at=FILE:LINE` open one family (add `full` to
         /// align all copies); `sort=KEY`; `top=N`.
         terms: Vec<String>,
-        /// Output format (`human` or `json`).
+        /// Output format (`human`, `json`, `markdown`, or `sarif`).
         #[arg(long, default_value = "human")]
         format: ReportFormat,
         /// Detection channels to run; omit for `syntax,semantic,near`. Pass a comma-list

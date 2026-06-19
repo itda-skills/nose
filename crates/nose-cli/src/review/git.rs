@@ -90,14 +90,31 @@ impl Drop for BaseWorktree {
     }
 }
 
-/// Re-root each user path under the base worktree (so we scan the base copy of the same
-/// files). A path outside the repo is passed through unchanged.
-pub(super) fn reroot_paths(paths: &[PathBuf], root: &Path, base: &Path) -> Vec<PathBuf> {
+/// Resolve user paths once, relative to the caller's cwd, into repo-relative
+/// pathspecs. Git commands run with `-C <repo-root>`, so passing the raw user
+/// path would reinterpret `src` from a nested cwd as `<repo>/src`.
+pub(super) fn repo_relative_paths(paths: &[PathBuf], root: &Path) -> Vec<PathBuf> {
     paths
         .iter()
         .map(|p| match canonical(p).strip_prefix(root) {
-            Ok(rel) => base.join(rel),
+            Ok(rel) if rel.as_os_str().is_empty() => PathBuf::from("."),
+            Ok(rel) => rel.to_path_buf(),
             Err(_) => p.clone(),
+        })
+        .collect()
+}
+
+/// Re-root each repo-relative path under the base worktree so detection scans
+/// the base copy of the same files the diff pathspec selected.
+pub(super) fn reroot_paths(paths: &[PathBuf], base: &Path) -> Vec<PathBuf> {
+    paths
+        .iter()
+        .map(|p| {
+            if p.is_absolute() {
+                p.clone()
+            } else {
+                base.join(p)
+            }
         })
         .collect()
 }

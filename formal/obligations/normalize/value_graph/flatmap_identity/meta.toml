@@ -5,8 +5,8 @@ summary = "Identity flat-map (flatMap id) canonicalizes to flatten; the modeled 
 
 [rust]
 files = [
-  "crates/nose-normalize/src/value_graph.rs",
   "crates/nose-normalize/src/value_graph/collections.rs",
+  "crates/nose-normalize/src/value_graph/collections/hof.rs",
 ]
 symbols = ["HoFKind::FlatMap"]
 

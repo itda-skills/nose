@@ -64,7 +64,11 @@ class RequiredObligation:
 REQUIRED_OBLIGATIONS = (
     RequiredObligation(
         "il.arena.validity",
-        ("crates/nose-il/src/lib.rs",),
+        (
+            "crates/nose-il/src/lib.rs",
+            "crates/nose-il/src/il.rs",
+            "crates/nose-il/src/builder.rs",
+        ),
         ("validate", "IlBuilder"),
     ),
     RequiredObligation(
@@ -102,7 +106,7 @@ REQUIRED_OBLIGATIONS = (
         ("crates/nose-normalize/src/lib.rs",),
         ("NormalizeOptions", "oracle", "recursion::run"),
     ),
-    # Semantic canons that still live INLINE in value_graph.rs (not in the `value_graph/rules/`
+    # Semantic canons that still live in named value-graph helper modules (not in the `value_graph/rules/`
     # directory the RULE_ROOTS convention auto-requires) — registered here so the gate enforces
     # their Lean evidence and marker exactly like a rule module. PREFER making a new canon a rule
     # module (auto-required by the directory convention): `promise_then` was migrated there;
@@ -110,7 +114,10 @@ REQUIRED_OBLIGATIONS = (
     # stateless rule module can't hold.
     RequiredObligation(
         "normalize.value_graph.pure_inline",
-        ("crates/nose-normalize/src/value_graph.rs",),
+        (
+            "crates/nose-normalize/src/value_graph.rs",
+            "crates/nose-normalize/src/value_graph/inline.rs",
+        ),
         ("eval_inlined_call",),
     ),
     # The near-channel graded witness. Required so the obligation can never be silently

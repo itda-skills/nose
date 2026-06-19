@@ -69,7 +69,7 @@ nose query <path> [FILTER … | group=FIELD | id=FAM | at=FILE:LINE | reinvented
 | `id=FAM` | open one family (any unambiguous id prefix): its copies, the all-copies extraction skeleton, overlapping-family links (`subsumes`/`subsumed_by`), and navigation |
 | `at=FILE:LINE` | open the family whose copy covers that source location — a stable handle across edits (the span-derived `id=` shifts when code moves) |
 | `reinvented` | the **reinvented-helper** view: code that reimplements an existing helper inline (the action is "call it"). Complements `shape=call-existing-helper` (those are the cases the family clusterer caught; these are the ones it did not) |
-| `base=REF` | the **divergent-edit** view (the [`nose review`](review.md) pipeline, surfaced in query): detect families at the git ref, flag the ones a diff changed in one copy but not its siblings — a likely un-propagated fix. Each item carries `fire_eligible` (the conservative proven-shared-logic verdict); `base=REF --fail-on any` is the CI gate (fires only on the proven case) |
+| `base=REF` | the **divergent-edit** view (the [`nose review`](review.md) pipeline, surfaced in query): detect families at the git ref, flag the ones a diff changed in one copy but not its siblings — a likely un-propagated fix. It is its own view, so combine it only with `top=N`, detection flags, `--format`, or `--fail-on any`; ordinary family filters are for the non-`base=` query views. Each item carries `fire_eligible` (the conservative proven-shared-logic verdict); `base=REF --fail-on any` is the CI gate (fires only on the proven case) |
 | `since=FILE` | compare to a saved snapshot (written with `--baseline FILE --write-baseline`) and expose each family's **`status`** (`new`/`changed`/`unchanged`) as a queryable field — the temporal lens. Hides nothing (unlike `--baseline`); `since=B status=new --fail-on any` is the composable gate |
 | `sort=KEY` | `extractability` (default), `value`, `members` (also `sites` and the experimental `hazard` — see [Ranking](#ranking)) |
 | `top=N` | show the first N rows (default 30); `top=0` shows **all** (like the deprecated `scan --top 0`) |
@@ -100,8 +100,12 @@ A typical loop: `nose query .` → `nose query . witness=exact` → `nose query 
 `--cache-dir`, `--ignore-file`, `--semantic-pack`, `--config` — so the dataset it explores is
 configured by flag while scope/sort/top are the DSL's `scope=`/`sort=`/`top=`. It also takes the
 **CI gate** — `--fail-on any` / `--fail-on new` with `--baseline`/`--write-baseline` — and
-drops structured-ignored families, so `nose query <path> --fail-on any` is a drop-in gate (see
-[continuous-integration](continuous-integration.md)).
+drops structured-ignored families. The gate follows the untruncated family selection addressed
+by the query terms (`top=N` only limits display), so `nose query <path> path~api --fail-on any`
+fails only on reportable `path~api` families. See [continuous-integration](continuous-integration.md).
+The `base=` view is the exception: it reuses only detection flags (`--mode`, `--min-size`,
+advanced `--min-lines`, `--exclude`, `--config`), `--ignore-file`, `--format`, `top=N`, and
+`--fail-on any`; report-shaping and baseline flags are rejected instead of ignored.
 
 A named path that doesn't exist is an error (exit non-zero) — a typo'd path in a
 CI gate must fail loudly. A path that exists but contains no supported source

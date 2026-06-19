@@ -1,4 +1,6 @@
-use super::git::{canonical, git_changed_ranges, git_repo_root, reroot_paths, BaseWorktree};
+use super::git::{
+    canonical, git_changed_ranges, git_repo_root, repo_relative_paths, reroot_paths, BaseWorktree,
+};
 use super::output::{print_review_human, review_json, review_sarif};
 use super::*;
 
@@ -10,7 +12,8 @@ pub(crate) fn detect_divergences(args: &ReviewArgs) -> Result<Option<(Vec<Diverg
     let root = git_repo_root().context(
         "nose needs a git repository to compare the working tree to a git ref (`base=`/`--base`)",
     )?;
-    let changed = git_changed_ranges(&root, &args.base, &args.paths)?;
+    let review_paths = repo_relative_paths(&args.paths, &root);
+    let changed = git_changed_ranges(&root, &args.base, &review_paths)?;
     if changed.is_empty() {
         return Ok(None);
     }
@@ -22,8 +25,8 @@ pub(crate) fn detect_divergences(args: &ReviewArgs) -> Result<Option<(Vec<Diverg
     exclude.extend(args.exclude.iter().cloned());
     let min_tokens = args.min_size.or(cfg.min_size).unwrap_or(24);
     let min_lines = args.min_lines.or(cfg.min_lines).unwrap_or(5);
-    let base_paths = reroot_paths(&args.paths, &root, &base_tree.path);
-    let families = crate::detect_families(
+    let base_paths = reroot_paths(&review_paths, &base_tree.path);
+    let families = crate::detect_review_families(
         &base_paths,
         &exclude,
         args.mode.clone(),
@@ -40,7 +43,7 @@ pub(crate) fn detect_divergences(args: &ReviewArgs) -> Result<Option<(Vec<Diverg
     }
 
     // Normalization knobs for the per-flagged-family graded-witness enrichment; must
-    // match how `detect_families` lowered (cfg_norm/dce/block_units default), so the
+    // match how `detect_review_families` lowered (cfg_norm/dce/block_units default), so the
     // re-derived unit roots line up with the family locations' spans.
     let enrich_opts = nose_detect::DetectOptions {
         min_lines,
@@ -74,15 +77,20 @@ pub(crate) fn cmd_review(args: ReviewArgs) -> Result<()> {
         // Nothing reviewable (e.g. an adds-only diff), but the machine formats
         // must still emit their contract — a JSON consumer parses stdout.
         match args.format {
-            ReportFormat::Json => println!("{}", review_json(&[], &args.base, 0)?),
-            ReportFormat::Sarif => println!("{}", review_sarif(&[])?),
+            ReportFormat::Json => println!("{}", review_json(&[], &args.base, 0, args.top)?),
+            ReportFormat::Sarif => println!("{}", review_sarif(&[], args.top, "--top 0")?),
             _ => println!("no changes vs `{}` — nothing to review.", args.base),
         }
         return Ok(());
     };
     match args.format {
-        ReportFormat::Json => println!("{}", review_json(&flagged, &args.base, changed_files)?),
-        ReportFormat::Sarif => println!("{}", review_sarif(&flagged)?),
+        ReportFormat::Json => {
+            println!(
+                "{}",
+                review_json(&flagged, &args.base, changed_files, args.top)?
+            );
+        }
+        ReportFormat::Sarif => println!("{}", review_sarif(&flagged, args.top, "--top 0")?),
         _ => print_review_human(&flagged, &args.base, changed_files, args.top.unwrap_or(30)),
     }
 

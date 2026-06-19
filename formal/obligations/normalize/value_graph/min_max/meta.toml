@@ -6,11 +6,12 @@ summary = "Min/max select idioms and accumulator reductions are commutative and 
 [rust]
 files = [
   "crates/nose-normalize/src/value_graph/canonicalize.rs",
+  "crates/nose-normalize/src/value_graph/canonicalize/selection.rs",
   "crates/nose-normalize/src/value_graph/ops.rs",
-  "crates/nose-normalize/src/value_graph/stdlib.rs",
+  "crates/nose-normalize/src/value_graph/stdlib/integers.rs",
   "crates/nose-normalize/src/idioms.rs",
-  "crates/nose-semantics/src/lib.rs",
   "crates/nose-semantics/src/method_contracts.rs",
+  "crates/nose-semantics/src/method_families.rs",
 ]
 symbols = [
   "minmax_pattern",

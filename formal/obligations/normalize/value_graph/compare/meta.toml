@@ -6,6 +6,7 @@ summary = "Comparison direction, negated comparisons, equality-operand commutati
 [rust]
 files = [
   "crates/nose-normalize/src/value_graph/canonicalize.rs",
+  "crates/nose-normalize/src/value_graph/canonicalize/lattice.rs",
   "crates/nose-normalize/src/value_graph/ops.rs",
   "crates/nose-normalize/src/algebra.rs",
 ]

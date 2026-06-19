@@ -52,7 +52,7 @@ fn query_row(f: &nose_detect::RefactorFamily) -> String {
     format!("{loc}  {metrics}")
 }
 
-/// Render the `base=` divergence view: query's v2 envelope around review's shared finding
+/// Render the `base=` divergence view: query's schema envelope around review's shared finding
 /// JSON, or a concise human report keyed on which copy changed and whether the edit touched
 /// shared logic (the propagation hazard).
 pub(super) fn render_query_base(
@@ -70,6 +70,11 @@ pub(super) fn render_query_base(
             .into_iter()
             .take(limit)
             .collect();
+        let limit_value = match top {
+            Some(0) => serde_json::Value::Null,
+            Some(n) => serde_json::json!(n),
+            None => serde_json::json!(30),
+        };
         println!(
             "{}",
             serde_json::json!({
@@ -81,6 +86,8 @@ pub(super) fn render_query_base(
                 "summary": {
                     "changed_files": changed_files,
                     "divergences": flagged.len(),
+                    "shown_divergences": items.len(),
+                    "limit": limit_value,
                     "fire_eligible": fire_eligible,
                 },
                 "items": items,

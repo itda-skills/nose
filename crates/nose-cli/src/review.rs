@@ -30,6 +30,14 @@ use nose_detect::{EnclosingUnit, FragmentKind, Loc, RefactorFamily};
 pub(crate) use detect::{cmd_review, detect_divergences, divergences_fire};
 pub(crate) use output::divergence_items_json;
 
+pub(crate) fn review_sarif(
+    flagged: &[Divergence],
+    top: Option<usize>,
+    top_zero_spelling: &str,
+) -> Result<String> {
+    output::review_sarif(flagged, top, top_zero_spelling)
+}
+
 pub(crate) struct ReviewArgs {
     pub paths: Vec<PathBuf>,
     pub base: String,

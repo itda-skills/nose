@@ -165,10 +165,15 @@ fn query_dashboard_filter_and_family() {
 
     // Negation (`!~`): a path substring matched by every copy drops the family; a
     // non-matching one keeps it (so a typo'd exclusion can't silently empty the result).
+    let excluded = run(&["query", p, "path!~m.py"]);
     assert!(
-        run(&["query", p, "path!~m.py"]).contains("0 families")
-            || !run(&["query", p, "path!~m.py"]).contains("nose query"),
+        excluded.contains("0 families") || !excluded.contains("nose query"),
         "path!~m.py excludes the all-m.py family"
+    );
+    let excluded_gate = run(&["query", p, "path!~m.py", "--fail-on", "any"]);
+    assert!(
+        excluded_gate.contains("0 families") || !excluded_gate.contains("nose query"),
+        "query --fail-on any gates the filtered selection, not hidden families"
     );
     assert!(
         run(&["query", p, "path!~zzz_absent"]).contains(&format!("nose query {p} id=")),

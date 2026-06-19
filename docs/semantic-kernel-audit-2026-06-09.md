@@ -47,7 +47,7 @@ also cover the relevant hard negatives for raw library payloads, raw HOFs, raw
 - `crates/nose-semantics/src/effects.rs::contracted_builder_append_method_call_args`
   was removed so semantic consumers cannot reopen method semantics from
   selector spelling plus a local language effect row.
-- `crates/nose-normalize/src/value_graph/tests.rs::builder_append_candidate_requires_contract_or_effect_and_seed_context`
+- `crates/nose-normalize/src/value_graph/tests/builders.rs::builder_append_candidate_requires_contract_or_effect_and_seed_context`
   covers the hard negative for a raw `push` method on an active builder seed and
   keeps the positive cases for admitted API evidence and asserted append-effect
   evidence.

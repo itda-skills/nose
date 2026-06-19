@@ -248,3 +248,22 @@ fn fail_on_new_fails_for_changed_family_and_passes_when_clean() {
     let _ = fs::remove_file(&bl);
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn fail_on_new_requires_a_baseline() {
+    let dir = make_project("fail_on_new_nobaseline");
+    let p = dir.to_str().unwrap();
+    // `--fail-on new` compares against a baseline; with no --baseline the gate can never
+    // fire, so it must error rather than silently pass (a CI gate that always passes).
+    let out = Command::new(bin())
+        .args(["scan", p, "--min-size", "12", "--fail-on", "new"])
+        .output()
+        .expect("run scan");
+    assert!(
+        !out.status.success(),
+        "`--fail-on new` without --baseline must error, not silently pass: stdout={} stderr={}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
