@@ -63,6 +63,22 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
                 .collect();
             lo.add(NodeKind::Seq, Payload::None, span, &kids)
         }
+        "compound_literal_expression" => {
+            let kids: Vec<NodeId> = Lowering::named_children(node)
+                .into_iter()
+                .filter(|child| !is_c_type_surface(child.kind()))
+                .map(|c| lower_expr(lo, c))
+                .collect();
+            match kids.as_slice() {
+                [only] => *only,
+                _ => lo.add(
+                    NodeKind::Seq,
+                    Payload::Name(lo.sym("c_compound_literal")),
+                    span,
+                    &kids,
+                ),
+            }
+        }
         // Designated initializer `.field = v` / `[i] = v` → the value (the designator
         // is a field/index name, not behavior).
         "initializer_pair" => node
@@ -73,6 +89,44 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         "field_designator" | "subscript_designator" => lo.var(lo.text(node), span),
         // `offsetof(T, m)` is a compile-time integer constant (like sizeof).
         "offsetof_expression" => lo.add(NodeKind::Lit, Payload::Lit(LitClass::Int), span, &[]),
+        // These can appear under parser `ERROR` or macro-adjacent wrappers in large
+        // real-world headers. Reuse statement/item lowering for the child structure while
+        // leaving the enclosing `ERROR` Raw in place as the honest parse-boundary marker.
+        "function_definition" => lower_func(lo, node),
+        "declaration" => lower_decl(lo, node),
+        "expression_statement"
+        | "if_statement"
+        | "for_statement"
+        | "while_statement"
+        | "do_statement"
+        | "return_statement"
+        | "break_statement"
+        | "continue_statement"
+        | "goto_statement"
+        | "labeled_statement" => lower_stmt(lo, node).unwrap_or_else(|| lo.empty_block(span)),
+        "preproc_if" | "preproc_ifdef" | "preproc_else" | "preproc_elif" | "preproc_elifdef" => {
+            lower_preproc(lo, node)
+        }
+        "preproc_include" => crate::lower::import_tokens(lo, node),
+        "preproc_def"
+        | "preproc_function_def"
+        | "preproc_call"
+        | "preproc_directive"
+        | "comment"
+        | "statement_identifier" => lo.empty_block(span),
+        "case_statement"
+        | "else_clause"
+        | "init_declarator"
+        | "declaration_list"
+        | "gnu_asm_expression"
+        | "gnu_asm_output_operand"
+        | "gnu_asm_output_operand_list"
+        | "gnu_asm_input_operand"
+        | "gnu_asm_input_operand_list"
+        | "gnu_asm_clobber_list"
+        | "gnu_asm_qualifier"
+        | "ms_declspec_modifier" => lower_c_opaque_seq(lo, node),
+        "character" => lo.str_lit(lo.text(node), span),
         // `a, b` comma expression → a sequence of its operands.
         "comma_expression" => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
@@ -89,18 +143,7 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             .unwrap_or_else(|| lo.empty_block(span)),
         // Type-level / declarator nodes reaching expression position (sizeof/casts/
         // compound literals, K&R decls, macro bodies) carry no behavior — erase.
-        "primitive_type"
-        | "sized_type_specifier"
-        | "type_descriptor"
-        | "parameter_declaration"
-        | "parameter_list"
-        | "abstract_pointer_declarator"
-        | "function_declarator"
-        | "storage_class_specifier"
-        | "type_qualifier"
-        | "ms_call_modifier"
-        | "preproc_arg"
-        | "preproc_defined" => lo.empty_block(span),
+        k if is_c_type_surface(k) => lo.empty_block(span),
         _ => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
                 .into_iter()
@@ -109,6 +152,50 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             lo.raw(node.kind(), span, &kids)
         }
     }
+}
+pub(super) fn lower_c_opaque_seq(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .filter(|child| !is_c_type_surface(child.kind()))
+        .map(|child| lower_expr(lo, child))
+        .collect();
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym(&format!("c_{}", node.kind()))),
+        span,
+        &kids,
+    )
+}
+pub(super) fn is_c_type_surface(kind: &str) -> bool {
+    matches!(
+        kind,
+        "primitive_type"
+            | "sized_type_specifier"
+            | "type_descriptor"
+            | "parameter_declaration"
+            | "parameter_list"
+            | "abstract_pointer_declarator"
+            | "function_declarator"
+            | "storage_class_specifier"
+            | "type_qualifier"
+            | "ms_call_modifier"
+            | "preproc_arg"
+            | "preproc_defined"
+            | "field_declaration"
+            | "field_declaration_list"
+            | "pointer_declarator"
+            | "array_declarator"
+            | "parenthesized_declarator"
+            | "type_definition"
+            | "struct_specifier"
+            | "union_specifier"
+            | "enum_specifier"
+            | "enumerator_list"
+            | "macro_type_specifier"
+            | "preproc_params"
+            | "system_lib_string"
+    )
 }
 pub(super) fn lower_number_literal(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);

@@ -16,6 +16,33 @@ pub(super) fn lower_js(src: &str) -> Il {
     .expect("lower js")
 }
 
+pub(super) fn lower_ts_with_interner(src: &str) -> (Il, Interner) {
+    let interner = Interner::new();
+    let il = crate::lower_source(
+        FileId(0),
+        "t.ts",
+        src.as_bytes(),
+        Lang::TypeScript,
+        &interner,
+    )
+    .expect("lower ts");
+    (il, interner)
+}
+
+pub(super) fn raw_names(il: &Il, interner: &Interner) -> Vec<String> {
+    let mut out = Vec::new();
+    for node in &il.nodes {
+        if node.kind != NodeKind::Raw {
+            continue;
+        }
+        let Payload::Name(name) = node.payload else {
+            continue;
+        };
+        out.push(interner.resolve(name).to_string());
+    }
+    out
+}
+
 pub(super) fn unshadowed_global_evidence_count(il: &Il, name: &str) -> usize {
     let expected = stable_symbol_hash(name);
     il.evidence

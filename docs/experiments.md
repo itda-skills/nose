@@ -3261,3 +3261,66 @@ Representative stage checks after the changes: `curl` Markdown `md_accept` dropp
 **5284.7ms** to **67.3ms** on `raylib`, **778.7ms** to **166.7ms** on `sympy`, and
 **3124.8ms** to **87.9ms** on `bulma`, with byte-identical JSON for those three checks. Relevant
 tests: `cargo test -p nose-markdown`, `cargo test -p nose-detect`, and `cargo test -p nose-cli`.
+
+## DA. Language lowering gap tranche: Swift, JS/TS, C, CSS (2026-06-20)
+
+The §CR boundary-vs-gap split made the next worklist concrete: do not chase protocol boundaries,
+and do not paper over tree-sitter `ERROR`; close genuine lowering gaps where a CST surface has a
+meaningful fail-closed IL shape. This tranche worked the four largest actionable fronts in order:
+Swift pattern/key-path/range surfaces, JS/TS object and unary surfaces, C type/preprocessor-adjacent
+surfaces, and CSS extension bookkeeping.
+
+**Baseline.** Full pinned `bench/repos` stats before the tranche:
+
+```text
+files: 67407   IL nodes: 46131611   Raw nodes: 381447 (0.827%)
+= 265323 lowering-gap + 116124 protocol-boundary
+```
+
+Worst fixable gaps were C type/preprocessor surfaces (88,383), Swift pattern/member surfaces
+(61,955), JavaScript/TypeScript object and expression wrappers (47,933 combined), and a small CSS
+tail where non-standard PostCSS surfaces were counted as lowering gaps.
+
+**Fixes shipped.**
+
+- Swift: `enum_entry`, `value_binding_pattern`, `switch_pattern`, key paths, and range operators now
+  lower to explicit Swift shapes instead of generic `Raw` wrappers. Pattern lowering is deliberately
+  exact-closed; it preserves structure without claiming full binding/control-flow equivalence.
+- JS/TS: object spread, computed property names, object methods, `void`, `delete`, JSX element
+  wrappers, and class-expression wrappers now lower to structured nodes. This removes wrapper Raw
+  cascades that hid method bodies and ordinary object-literal structure.
+- C: compound literals and type/preprocessor surfaces no longer leak as lowering gaps, and parser
+  `ERROR` recovery now lowers recognizable declaration/function/statement children under the error
+  parent. The `ERROR` node itself remains Raw, which keeps the parse boundary honest.
+- CSS: PostCSS/import/declaration bookkeeping that does not affect computed-style fingerprints is
+  skipped, while nested at-rules are routed through the CSS rule lowering path. Remaining CSS Raw in
+  the pinned corpus is essentially parser `ERROR`.
+
+**Measured result.** Re-running `cargo run -q -p nose-cli -- stats bench/repos --top 60`:
+
+```text
+files: 67407   IL nodes: 46064044   Raw nodes: 250829 (0.545%)
+= 134722 lowering-gap + 116107 protocol-boundary
+```
+
+| language | gap before | gap after | delta |
+|---|---:|---:|---:|
+| Swift | 61,955 | 33,598 | -28,357 |
+| JavaScript | 26,430 | 10,881 | -15,549 |
+| TypeScript | 21,503 | 5,233 | -16,270 |
+| C | 88,383 | 18,192 | -70,191 |
+| CSS | 3,230 | 2,996 | -234 |
+
+Overall lowering-gap Raw drops **265,323 -> 134,722** (-130,601, about 49%). The residual top gaps
+are now dominated by parse-owned `ERROR`, existing protocol boundaries (`await`, `try`, `defer`,
+channel/select/yield), and a few language-specific tails such as Swift directives/macro call
+surfaces and Python line continuations.
+
+**Regression coverage.** Focused tests were added for each tranche surface, then the frontend and
+CLI guardrails were run:
+
+```text
+cargo test -q -p nose-frontend
+cargo test -q -p nose-cli --test equivalence
+cargo test -q -p nose-cli --test css_html_quality
+```

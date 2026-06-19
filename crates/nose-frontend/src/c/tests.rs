@@ -1,6 +1,23 @@
 use super::*;
 use nose_il::EvidenceKind;
 
+fn raw_names(src: &str) -> Vec<String> {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.c", src.as_bytes(), &interner).expect("lower");
+    il.nodes
+        .iter()
+        .filter_map(|node| {
+            if node.kind != NodeKind::Raw {
+                return None;
+            }
+            let Payload::Name(name) = node.payload else {
+                return None;
+            };
+            Some(interner.resolve(name).to_string())
+        })
+        .collect()
+}
+
 /// Collect every `Op` carried by a `UnOp` node in the lowered IL.
 fn unary_ops(src: &str) -> Vec<Op> {
     let interner = Interner::new();
@@ -353,4 +370,41 @@ fn postfix_increment_with_nested_decrement_in_operand() {
         ops.contains(&Op::Add),
         "outer `++` must lower to Op::Add despite the nested `i--`, got {ops:?}"
     );
+}
+
+#[test]
+fn type_preproc_and_compound_literal_surfaces_do_not_fall_to_generic_raw() {
+    let raw = raw_names(
+        r#"
+#define INC(x) ((x) + 1)
+struct Item {
+    int count;
+    char *name;
+};
+typedef struct Item Item;
+int f(int x) {
+    Item item = (Item){ .count = x, .name = "n" };
+#ifdef USE_INC
+    return INC(item.count);
+#else
+    return item.count;
+#endif
+}
+"#,
+    );
+    for unexpected in [
+        "field_declaration",
+        "field_declaration_list",
+        "preproc_def",
+        "preproc_params",
+        "type_definition",
+        "compound_literal_expression",
+        "struct_specifier",
+        "pointer_declarator",
+    ] {
+        assert!(
+            !raw.iter().any(|name| name == unexpected),
+            "{unexpected} should lower or erase as structured C surface, got {raw:?}"
+        );
+    }
 }

@@ -92,8 +92,10 @@ style) plus adversarial per-rule batteries (the project's primary trust mechanis
 with positive and hard-negative tests. A standalone interpreter oracle (as for the
 imperative languages) is redundant for a declarative domain where the fingerprint is the
 denotation. Lowering coverage is first-class: the [Raw-node ratio](#coverage-and-adding-a-language)
-on real-world `.css` is ~0.2% (the residue is non-standard PostCSS at-statements, left
-as honest `Raw`).
+for CSS distinguishes computed-style gaps from parser-owned residue. Known PostCSS
+bookkeeping surfaces are ignored when they do not affect the computed style; the current
+full-corpus CSS tail is dominated by tree-sitter `ERROR` from generated or malformed
+fixtures, left as honest `Raw`.
 
 ## Declarative languages: HTML markup
 
@@ -180,9 +182,12 @@ is better. `nose stats` distinguishes two kinds of Raw: by-design
 **protocol-boundary** Raw (await, try/`?`, defer, go, channel operations, select,
 yield — fail-closed boundaries, not coverage gaps) from genuine **lowering-gap**
 Raw. It reports `boundary_raw` and tags each unhandled construct `boundary` or
-`gap`. On the current pinned `bench/repos` corpus the overall ratio is in the low
-single-digit percent; run `nose stats` for the current figure, with
-language-specific gaps visible per construct. Check it per language with:
+`gap`. On the current pinned `bench/repos` corpus, after the 2026-06-20
+language-lowering tranche, `nose stats` reports 46,064,044 IL nodes and 250,829
+Raw nodes (0.545%): 134,722 lowering gaps plus 116,107 protocol boundaries. That
+puts fixable lowering-gap Raw at about 0.293% corpus-wide; re-run `nose stats`
+for the current figure, with language-specific gaps visible per construct. Check
+it per language with:
 
 ```sh
 nose stats <paths…>
@@ -191,11 +196,14 @@ nose stats <paths…>
 A high *gap* ratio for a construct (not a by-design boundary) means that construct
 isn't lowering to a meaningful IL shape, so clones involving it won't converge. Closing those
 gaps is how a language becomes a first-class citizen — for example, the Go
-composite-literal/`slice_expression`/`type_assertion` work that took Go from 0.40% to 0.03%,
-or lowering Rust and Python `match` arms to if-chains so pattern-matched code converges with
-its conditional equivalent. The [experiments](experiments.md) log records the full sequence of
-gap closures (Java records, Rust `async` blocks, Go/JS/TS/C/Java/Ruby/Swift `switch`/`case` shapes,
-and more); the convergence-test discipline that keeps each one honest is in
+composite-literal/`slice_expression`/`type_assertion` work that took Go from
+0.40% to 0.03%, lowering Rust and Python `match` arms to if-chains so
+pattern-matched code converges with its conditional equivalent, or the Swift
+pattern/key-path, JS/TS object-surface, C type/preprocessor recovery, and CSS
+extension-surface tranche recorded in [experiments](experiments.md). The log
+records the full sequence of gap closures (Java records, Rust `async` blocks,
+Go/JS/TS/C/Java/Ruby/Swift `switch`/`case` shapes, and more); the
+convergence-test discipline that keeps each one honest is in
 [`CONTRIBUTING`](../CONTRIBUTING.md).
 
 For the planned pack-based language onboarding model, see

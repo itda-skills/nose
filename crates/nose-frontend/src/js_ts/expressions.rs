@@ -1,5 +1,5 @@
 use super::control::{lower_aug_assignment, lower_update};
-use super::declarations::{lower_arrow, lower_func};
+use super::declarations::{lower_arrow, lower_class, lower_field, lower_func};
 use super::globals::{
     lower_callee_expr, lower_constructor_expr, lower_js_static_global_or_var, lower_member_expr,
     lower_own_property_guard_call,
@@ -173,6 +173,18 @@ fn lower_expr_rest(lo: &mut Lowering, node: TsNode) -> NodeId {
         "empty_statement" => lo.empty_block(span),
         // JSX → Call(tag, attrs…, children…); text → string literal.
         "jsx_element" | "jsx_self_closing_element" | "jsx_fragment" => lower_jsx(lo, node),
+        "jsx_opening_element" | "jsx_closing_element" => {
+            let kids: Vec<NodeId> = Lowering::named_children(node)
+                .into_iter()
+                .map(|c| lower_expr(lo, c))
+                .collect();
+            lo.add(
+                NodeKind::Seq,
+                Payload::Name(lo.sym(node.kind())),
+                span,
+                &kids,
+            )
+        }
         "jsx_expression" => node
             .named_child(0)
             .map(|c| lower_expr(lo, c))
@@ -190,6 +202,21 @@ fn lower_expr_rest(lo: &mut Lowering, node: TsNode) -> NodeId {
             let value = node.named_child(0).map(|c| lower_expr(lo, c));
             lo.yield_boundary(span, value)
         }
+        "class" | "class_declaration" | "abstract_class_declaration" => lower_class(lo, node),
+        "class_body" => {
+            let kids: Vec<NodeId> = Lowering::named_children(node)
+                .into_iter()
+                .filter_map(|child| {
+                    if matches!(child.kind(), "field_definition" | "public_field_definition") {
+                        lower_field(lo, child)
+                    } else {
+                        Some(lower_expr(lo, child))
+                    }
+                })
+                .collect();
+            lo.add(NodeKind::Block, Payload::None, span, &kids)
+        }
+        "comment" => lo.empty_block(span),
         "computed_property_name" => node
             .named_child(0)
             .map(|c| lower_expr(lo, c))
@@ -319,10 +346,16 @@ fn lower_unary(lo: &mut Lowering, node: TsNode) -> NodeId {
             lo.add(NodeKind::Call, Payload::None, span, &[callee, arg])
         }
         // `void` and `delete` have JS-specific side-effect/value semantics that strict
-        // exact mode does not prove yet.
+        // exact mode does not prove yet. Keep operand structure for near/diagnostics, but
+        // use a non-admitted Seq tag so strict exact stays closed.
         _ => {
             let inner: Vec<NodeId> = arg_node.into_iter().map(|a| lower_expr(lo, a)).collect();
-            lo.raw(op_text, span, &inner)
+            lo.add(
+                NodeKind::Seq,
+                Payload::Name(lo.sym(&format!("js_{op_text}"))),
+                span,
+                &inner,
+            )
         }
     }
 }
@@ -334,15 +367,23 @@ fn lower_object(lo: &mut Lowering, node: TsNode) -> NodeId {
         match child.kind() {
             "pair" => kids.push(lower_object_pair(lo, child)),
             "shorthand_property_identifier" => kids.push(lower_object_shorthand(lo, child)),
-            // Spread and methods depend on object/runtime semantics that the strict
-            // value graph does not prove yet. Keep the source shape for near mode and
-            // make the containing unit ineligible for exact semantic reporting.
-            "spread_element" | "method_definition" => {
+            // Spread depends on object/runtime semantics that strict exact does not prove
+            // yet. Keep the source shape for near mode while using a non-admitted Seq tag
+            // so the containing object remains exact-closed without cascading Raw wrappers.
+            "spread_element" => {
                 let inner: Vec<NodeId> = Lowering::named_children(child)
                     .into_iter()
                     .map(|c| lower_expr(lo, c))
                     .collect();
-                kids.push(lo.raw(child.kind(), lo.span(child), &inner));
+                kids.push(lo.add(
+                    NodeKind::Seq,
+                    Payload::Name(lo.sym("js_object_spread")),
+                    lo.span(child),
+                    &inner,
+                ));
+            }
+            "method_definition" => {
+                kids.push(lower_func(lo, child, true));
             }
             _ => kids.push(lower_expr(lo, child)),
         }
@@ -374,7 +415,12 @@ fn lower_object_pair_key(lo: &mut Lowering, node: TsNode) -> NodeId {
         .into_iter()
         .map(|c| lower_expr(lo, c))
         .collect();
-    lo.raw(node.kind(), span, &inner)
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("js_computed_property_name")),
+        span,
+        &inner,
+    )
 }
 
 fn static_object_property_key(lo: &Lowering, node: TsNode) -> Option<String> {

@@ -19,6 +19,7 @@ pub(super) fn lower_item(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
         "property_declaration"
         | "protocol_property_declaration"
         | "protocol_property_requirements" => Some(lower_property(lo, node)),
+        "enum_entry" => Some(lower_enum_entry(lo, node)),
         "import_declaration" => Some(lower_import(lo, node)),
         "typealias_declaration"
         | "associatedtype_declaration"
@@ -29,6 +30,36 @@ pub(super) fn lower_item(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
         | "multiline_comment" => None,
         _ => lower_stmt(lo, node),
     }
+}
+pub(super) fn lower_enum_entry(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let mut kids = Vec::new();
+    if let Some(name) = node.child_by_field_name("name").or_else(|| {
+        Lowering::named_children(node)
+            .into_iter()
+            .find(|child| matches!(child.kind(), "simple_identifier" | "identifier"))
+    }) {
+        kids.push(lo.var(lo.text(name), lo.span(name)));
+    }
+    for child in Lowering::named_children(node) {
+        if matches!(
+            child.kind(),
+            "enum_type_parameters" | "parameter" | "tuple_type"
+        ) {
+            kids.push(lo.add(
+                NodeKind::Seq,
+                Payload::Name(lo.sym(&format!("swift_{}", child.kind()))),
+                lo.span(child),
+                &[],
+            ));
+        }
+    }
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("swift_enum_entry")),
+        span,
+        &kids,
+    )
 }
 pub(super) fn lower_import(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);

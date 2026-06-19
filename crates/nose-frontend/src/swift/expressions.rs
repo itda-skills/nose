@@ -44,6 +44,8 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         "prefix_expression" => lower_prefix(lo, node),
         "postfix_expression" => lower_postfix(lo, node),
         "ternary_expression" => lower_ternary(lo, node),
+        "key_path_expression" | "key_path_string_expression" => lower_key_path(lo, node),
+        "value_binding_pattern" | "switch_pattern" | "pattern" => lower_pattern_value(lo, node),
         "if_statement" | "guard_statement" => lower_if(lo, node),
         "switch_statement" => lower_switch(lo, node),
         "call_expression" | "constructor_expression" => lower_call(lo, node),
@@ -188,6 +190,9 @@ pub(super) fn lower_binary_like(lo: &mut Lowering, node: TsNode) -> NodeId {
         if let Some(rewritten) = lower_misnested_swift_boolean_rhs(lo, span, op_text, left, right) {
             return rewritten;
         }
+        if let Some(range) = lower_range_op(lo, span, op_text, left, right) {
+            return range;
+        }
         if let Some(op) = swift_bin_op(op_text) {
             return lo.add(NodeKind::BinOp, Payload::Op(op), span, &[left, right]);
         }
@@ -201,6 +206,11 @@ pub(super) fn lower_binary_like(lo: &mut Lowering, node: TsNode) -> NodeId {
     if kids.len() == 1 {
         kids[0]
     } else if let Some(op_text) = op_text {
+        if let [left, right] = kids.as_slice() {
+            if let Some(range) = lower_range_op(lo, span, op_text, *left, *right) {
+                return range;
+            }
+        }
         lo.raw(&format!("{} {op_text}", node.kind()), span, &kids)
     } else {
         lo.raw(node.kind(), span, &kids)
@@ -248,6 +258,25 @@ pub(super) fn swift_bin_op(text: &str) -> Option<Op> {
         other => common_bin_op(other),
     }
 }
+pub(super) fn lower_range_op(
+    lo: &mut Lowering,
+    span: Span,
+    op_text: &str,
+    left: NodeId,
+    right: NodeId,
+) -> Option<NodeId> {
+    let tag = match op_text {
+        "..<" => "swift_range_half_open",
+        "..." => "swift_range_closed",
+        _ => return None,
+    };
+    Some(lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym(tag)),
+        span,
+        &[left, right],
+    ))
+}
 pub(super) fn lower_prefix(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let op_text = node
@@ -284,6 +313,62 @@ pub(super) fn lower_implicit_member(lo: &mut Lowering, span: Span, member: NodeI
         span,
         &[member],
     )
+}
+pub(super) fn lower_key_path(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .filter(|child| !is_type_level(child.kind()))
+        .map(|child| lower_pattern_value(lo, child))
+        .collect();
+    if kids.is_empty() {
+        return lo.str_lit(lo.text(node), span);
+    }
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("swift_key_path")),
+        span,
+        &kids,
+    )
+}
+pub(super) fn lower_pattern_value(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    match node.kind() {
+        "simple_identifier" | "identifier" | "type_identifier" => lo.var(lo.text(node), span),
+        "self_expression" => lo.var("self", span),
+        k if is_expr_kind(k)
+            && !matches!(
+                k,
+                "value_binding_pattern" | "switch_pattern" | "pattern" | "key_path_expression"
+            ) =>
+        {
+            lower_expr(lo, node)
+        }
+        k if is_type_level(k) => lo.empty_block(span),
+        _ => {
+            let kids: Vec<NodeId> = Lowering::named_children(node)
+                .into_iter()
+                .filter(|child| !is_type_level(child.kind()))
+                .map(|child| lower_pattern_value(lo, child))
+                .collect();
+            match kids.as_slice() {
+                [only]
+                    if matches!(
+                        node.kind(),
+                        "pattern" | "switch_pattern" | "directly_assignable_expression"
+                    ) =>
+                {
+                    *only
+                }
+                _ => lo.add(
+                    NodeKind::Seq,
+                    Payload::Name(lo.sym(&format!("swift_{}", node.kind()))),
+                    span,
+                    &kids,
+                ),
+            }
+        }
+    }
 }
 pub(super) fn lower_postfix(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);

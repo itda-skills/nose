@@ -87,6 +87,9 @@ fn collect_rules(
             // Declaration-level statements with no clone value (and handled, not Raw).
             "import_statement" | "charset_statement" | "namespace_statement" => {}
             other => {
+                if css_ignorable_extension_kind(other) {
+                    continue;
+                }
                 let span = lo.span(child);
                 out.push(lo.raw(other, span, &[]));
             }
@@ -180,6 +183,9 @@ fn collect_block(
                 lower_at_rule(lo, c, out, false, container_kind);
             }
             other => {
+                if css_ignorable_extension_kind(other) {
+                    continue;
+                }
                 let span = lo.span(c);
                 out.push(lo.raw(other, span, &[]));
             }
@@ -326,7 +332,13 @@ fn collect_at_rule_body(
                     out.push(r);
                 }
             }
+            "media_statement" | "supports_statement" | "keyframes_statement" | "at_rule" => {
+                lower_at_rule(lo, c, out, false, container_kind);
+            }
             other => {
+                if css_ignorable_extension_kind(other) {
+                    continue;
+                }
                 let s = lo.span(c);
                 out.push(lo.raw(other, s, &[]));
             }
@@ -386,9 +398,64 @@ fn is_selector_kind(kind: &str) -> bool {
     )
 }
 
+fn css_ignorable_extension_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "at_keyword"
+            | "keyword_query"
+            | "postcss_statement"
+            | "declaration"
+            | "import_statement"
+            | "from"
+    )
+}
+
 /// Collapse internal whitespace runs to single spaces and trim — so source
 /// formatting differences (newlines/indentation inside a selector or value) do not
 /// by themselves split a clone family.
 fn normalize_ws(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn raw_names(src: &str) -> Vec<String> {
+        let interner = Interner::new();
+        let il = lower(FileId(0), "t.css", src.as_bytes(), &interner).expect("lower css");
+        il.nodes
+            .iter()
+            .filter_map(|node| {
+                if node.kind != NodeKind::Raw {
+                    return None;
+                }
+                let Payload::Name(name) = node.payload else {
+                    return None;
+                };
+                Some(interner.resolve(name).to_string())
+            })
+            .collect()
+    }
+
+    #[test]
+    fn postcss_extension_surfaces_do_not_become_lowering_gap_raw() {
+        let raw = raw_names(
+            r#"
+@custom-media --small (max-width: 30em);
+@custom-selector :--heading h1, h2, h3;
+@include mix(1px, 2px, $arg2: 10, 2px 4px 6px);
+.toolbar {
+  @apply --toolbar-theme;
+  color: red;
+}
+"#,
+        );
+        for unexpected in ["at_keyword", "postcss_statement", "declaration", "at_rule"] {
+            assert!(
+                !raw.iter().any(|name| name == unexpected),
+                "{unexpected} should be handled as non-computed-style CSS extension surface, got {raw:?}"
+            );
+        }
+    }
 }

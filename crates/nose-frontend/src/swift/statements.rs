@@ -300,11 +300,7 @@ pub(super) fn lower_switch_label(
     span: Span,
 ) -> NodeId {
     let value = match label.kind() {
-        "switch_pattern" | "pattern" => Lowering::named_children(label)
-            .into_iter()
-            .find(|child| is_expr_kind(child.kind()))
-            .map(|child| lower_expr(lo, child))
-            .unwrap_or_else(|| lo.raw("switch_pattern", span, &[])),
+        "switch_pattern" | "pattern" => lower_pattern_value(lo, label),
         _ => lower_expr(lo, label),
     };
     match scrutinee {

@@ -253,3 +253,43 @@ func fetch(_ key: String) async throws -> Int
     );
     assert!(il.nodes.iter().any(|node| node.kind == NodeKind::Param));
 }
+
+#[test]
+fn swift_pattern_and_keypath_surfaces_do_not_fall_to_generic_raw() {
+    let (il, interner) = il_with_interner(
+        r#"
+enum Direction {
+case north
+case named(String)
+}
+
+func classify(_ value: Direction?, _ xs: [Int]) -> Int {
+if let value = value {
+    switch value {
+    case .north:
+        return xs[keyPath: \.count] > 0 ? 1 : 2
+    case .named(let label):
+        return label.count
+    default:
+        return 0
+    }
+}
+return xs[0..<xs.count].count
+}
+"#,
+    );
+    let raw = raw_names(&il, &interner);
+    for unexpected in [
+        "switch_pattern",
+        "value_binding_pattern",
+        "enum_entry",
+        "key_path_expression",
+        "range_expression ..<",
+        "ternary_expression",
+    ] {
+        assert!(
+            !raw.iter().any(|name| name == unexpected),
+            "{unexpected} should lower to structured IL, got {raw:?}"
+        );
+    }
+}
