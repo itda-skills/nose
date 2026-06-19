@@ -6,6 +6,32 @@ break.
 
 ## [Unreleased]
 
+### Added
+- Added explicit multi-root query analysis with repeatable `nose query --root/-r <path>`, while
+  keeping the single positional-root form compatible. `nose capabilities` now advertises
+  `query.capabilities.multi_root`.
+
+### Changed
+- Tightened the `nose query` surface around evidence and counts: verified evidence labels now
+  distinguish `exact` from `shared-core`, cross-language rows report repeated semantic volume
+  instead of `~0 removable`, query JSON carries `source_comparable`, dashboard JSON exposes the
+  stable `families[]` key, and production reinvented-helper suggestions that only point at test
+  helpers are omitted with explicit counts.
+- Redesigned query baselines as schema v2 `accepted-duplication` files with family ids, member
+  ids, and member source digests. Pre-v2 baseline arrays are no longer supported; regenerate with
+  `nose query <path> --baseline <file> --write-baseline`.
+- Query JSON is now schema v4. Family locations carry member ids, and families reported through
+  `--baseline` carry `baseline_status` diagnostics for new or changed duplication.
+- Split benchmark corpus pruning internals behind the stable `bench/prune_corpus.py` wrapper,
+  moving manifest mechanics into `bench/corpus_prune/core.py` and CLI/self-test orchestration into
+  `bench/corpus_prune/cli.py`.
+
+### Fixed
+- Made checked-out benchmark corpus setup reproducible after pruning: pinned repos are reset
+  before pruning, `.DS_Store` is excluded from prune/digest accounting, and the prune manifest was
+  refreshed for the fresh-corpus result. Manual corpus-verify runs also have a longer timeout and
+  upload logs on cancellation.
+
 ## [0.13.3] - 2026-06-19
 
 ### Changed

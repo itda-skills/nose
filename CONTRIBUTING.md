@@ -176,6 +176,27 @@ installation from "all repositories" to a selected-repositories installation tha
   (there are tests for both). Don't introduce iteration over a `HashMap` in a way
   that reaches the output.
 
+## Changelog discipline
+
+Update `CHANGELOG.md` in the same PR as any notable user-facing or operator-facing
+change. Use the top `## [Unreleased]` section and keep entries short enough that
+release cutting is mostly a mechanical rename.
+
+Add an entry when a PR changes any of these:
+
+- CLI behavior, flags, output wording that users rely on, or help text.
+- Machine-readable contracts such as query JSON, capabilities, SARIF, baseline files, ignore files,
+  or config keys.
+- Detection behavior, ranking, default surface policy, recall/precision gates, or supported
+  languages/domains.
+- CI/release/benchmark workflows that contributors or operators run directly.
+- Performance in a way users would notice or we measured and want release readers to see.
+- Breaking behavior or migration steps, even pre-1.0.
+
+Skip the changelog for purely internal refactors, tests-only changes, typo-only docs edits, and
+metadata churn that does not affect a user, operator, or release reader. If a PR intentionally has
+no changelog entry, say so in the PR body so reviewers do not have to infer it.
+
 ## Releasing
 
 Releases are cut by [cargo-dist](https://opensource.axo.dev/cargo-dist/): push a
@@ -188,8 +209,8 @@ Linux (x86_64 + arm64) archives + checksums and push the `nose` formula to
 `brew install corca-ai/tap/nose` picks up the new version.
 
 ```sh
-# 1. Cut the CHANGELOG: rename `## [Unreleased]` to `## [X.Y.Z] - <date>` and
-#    open a fresh empty `## [Unreleased]` above it.
+# 1. Review `## [Unreleased]`, then cut the CHANGELOG: rename it to
+#    `## [X.Y.Z] - <date>` and open a fresh empty `## [Unreleased]` above it.
 # 2. Bump `version` in the root Cargo.toml ([workspace.package]) — the internal
 #    path deps share it — and land both in the release commit.
 # 3. Tag the release commit and push the tag:
