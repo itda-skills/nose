@@ -6,7 +6,7 @@ break.
 
 ## [Unreleased]
 
-## [0.13.2] - 2026-06-19
+## [0.13.3] - 2026-06-19
 
 ### Changed
 - Removed the old `scan` and `review` CLI surfaces. Use `nose query <path> ...` for clone-family
@@ -14,10 +14,13 @@ break.
 - Bulk `nose query ... all top=0 --format json` rendering now reuses one source-line cache while
   preserving byte-identical JSON. This keeps the existing all-copies `params` contract but avoids
   re-reading and anti-unifying every family independently during JSON output.
+- Rebased the CI line-coverage ratchet to **83%** after the query-only CLI deletion and
+  legacy-prelude merge. Current local `cargo llvm-cov --workspace --summary-only` line coverage is
+  **83.68%**; keep the workflow and `scripts/check-ci-local.sh` in sync.
 
 ### Performance
 - Re-profiled the checked-out `bench/repos` corpus with a release build after the render fix:
-  **150/150 repos succeeded**, **0 repos >= 4s**, **62.044s total**, max **2.948s** (`sympy`).
+  **150/150 repos succeeded**, **0 repos >= 4s**, **82.063s total**, max **3.989s** (`sympy`).
   Representative byte-identical stage checks: `raylib` `query_render` **5284.7ms → 67.3ms**,
   `sympy` **778.7ms → 166.7ms**, and `bulma` **3124.8ms → 87.9ms**.
 
