@@ -222,10 +222,10 @@ The optional `baseline` object has:
 |---|---|---|
 | `path` | string | Baseline file path used for the comparison. |
 | `mode` | string | Baseline report mode; currently `new-only`. |
-| `baseline_families` | integer | Accepted family keys read from the baseline. |
-| `new_families` | integer | Current families with no baseline key or member overlap. |
-| `changed_families` | integer | Current families whose key changed but overlap a recorded baseline member. |
-| `unchanged_families` | integer | Current families whose key exactly matches the baseline. |
+| `baseline_families` | integer | Accepted family records read from the baseline. |
+| `new_families` | integer | Current families with no accepted member or matching member location. |
+| `changed_families` | integer | Current families with accepted-plus-new members, or matching accepted member locations whose source digest changed. |
+| `unchanged_families` | integer | Current families hidden because every current member is already accepted with the same source digest. |
 | `resolved_families` | integer | Baseline families that are no longer present in the current scan. |
 
 ## Ignore fields

@@ -81,7 +81,7 @@ family, the first active entry supplies the metadata.
 
 ## Family IDs
 
-`family_id` is the same key used by baselines. It is derived from the sorted
+`family_id` is the same 16-hex family handle recorded in baselines. It is derived from the sorted
 reported location identities: displayed file path, language, start/end line span,
 unit kind, symbol name, and fragment proof metadata. That makes IDs unique for
 distinct reported families in one run, including hidden exact fragments that
@@ -89,8 +89,9 @@ share the same file and enclosing symbol but live on nearby lines. It also means
 IDs intentionally change when a copy is added, removed, renamed, moved, or when
 the reported span changes.
 
-Baseline comparison records member identities and can classify overlapping
-re-keyed families as `changed`. Structured ignores that select by `family_id` are
+Baseline comparison also records member source digests, so it can keep reshaped
+accepted families hidden and classify edited accepted members as `changed`.
+Structured ignores that select by `family_id` are
 more exact: refresh them after large code motion or after upgrading from older
 nose versions whose IDs omitted span and fragment metadata. Use `paths` and
 `languages` selectors when the acceptance decision should survive routine movement

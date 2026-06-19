@@ -29,26 +29,25 @@ pub(crate) fn apply_query_baseline(
         return Ok(None);
     };
     let accepted = baseline::load(path)?;
-    let comparison = BaselineComparison::new(path, &accepted, families);
-    families.retain(|f| !accepted.keys.contains(&baseline::family_key(f)));
+    let comparison = BaselineComparison::new(path, &accepted, families)?;
+    families.retain(|f| {
+        !comparison
+            .suppressed_keys
+            .contains(&baseline::family_key(f))
+    });
     Ok(Some(comparison))
 }
 
 /// `since=<baseline>`: compare to a saved snapshot WITHOUT hiding anything — the temporal
 /// exploration lens. Unlike `--baseline` (which drops accepted families for the gate), this
-/// keeps every family and lets the caller slice by the `status` field. `nose query <path>
-/// since=B status=new --fail-on any` is the composable equivalent of `--baseline B --fail-on
-/// new`; the two baseline paths converge as the gate folds into query (the divergence-unification).
+/// keeps every family and lets the caller slice by the `status` field. Use `status!=unchanged`
+/// for the reportable new-or-changed set.
 pub(crate) fn compare_since(
     path: &str,
     families: &[nose_detect::RefactorFamily],
 ) -> Result<BaselineComparison> {
     let snapshot = baseline::load(std::path::Path::new(path))?;
-    Ok(BaselineComparison::new(
-        std::path::Path::new(path),
-        &snapshot,
-        families,
-    ))
+    BaselineComparison::new(std::path::Path::new(path), &snapshot, families)
 }
 
 /// A family's status against a `since=` snapshot: `new`/`changed` (in the comparison) or
@@ -59,7 +58,7 @@ pub(crate) fn family_status(
 ) -> &'static str {
     cmp.statuses
         .get(&baseline::family_key(f))
-        .map_or("unchanged", BaselineStatus::as_str)
+        .map_or("unchanged", |status| status.status.as_str())
 }
 
 pub(crate) fn partition_ignored(
@@ -91,10 +90,11 @@ pub(crate) fn enforce_query_fail_on_selection(
         let mut new_families = 0usize;
         let mut changed_families = 0usize;
         for family in reportable {
-            match comparison.statuses.get(&baseline::family_key(family)) {
-                Some(BaselineStatus::Changed) => changed_families += 1,
-                Some(BaselineStatus::New) => new_families += 1,
-                None => {}
+            if let Some(status) = comparison.statuses.get(&baseline::family_key(family)) {
+                match status.status {
+                    BaselineStatus::Changed => changed_families += 1,
+                    BaselineStatus::New => new_families += 1,
+                }
             }
         }
         let reportable_families = new_families + changed_families;

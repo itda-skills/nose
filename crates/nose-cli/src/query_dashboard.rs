@@ -48,6 +48,7 @@ pub(super) fn render_query_dashboard(
     path: &str,
     reinvented_prod: usize,
     json: bool,
+    baseline_cmp: Option<&BaselineComparison>,
     since: Option<&BaselineComparison>,
     markdown: &[nose_markdown::Family],
 ) {
@@ -68,7 +69,7 @@ pub(super) fn render_query_dashboard(
         let top: Vec<_> = def
             .iter()
             .take(5)
-            .map(|f| query_family_json(f, ov, opp, false, since))
+            .map(|f| query_family_json(f, ov, opp, false, baseline_cmp, since))
             .collect();
         println!(
             "{}",

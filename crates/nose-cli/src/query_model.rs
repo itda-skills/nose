@@ -214,7 +214,7 @@ pub(super) fn short_id(id: &str) -> &str {
     &id[..id.len().min(10)]
 }
 
-/// One family as the structured `nose query --format json` object (schema_version 3): all
+/// One family as the structured `nose query --format json` object: all
 /// the evidence a consumer needs to triage without re-parsing a human row. `shared`/`params`
 /// are the all-copies counts (the same the human row shows); `skeleton` is the all-copies
 /// extraction proposal, included only on `full`.
@@ -223,17 +223,20 @@ pub(super) fn query_family_json(
     ov: &SurfaceOverrides,
     opp: &OpportunityGroups,
     full: bool,
+    baseline_cmp: Option<&BaselineComparison>,
     since: Option<&BaselineComparison>,
 ) -> serde_json::Value {
     let (shared, params) = all_copies_shared(f);
-    query_family_json_with_counts(f, ov, opp, full, since, shared, params)
+    query_family_json_with_counts(f, ov, opp, full, baseline_cmp, since, shared, params)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn query_family_json_with_counts(
     f: &nose_detect::RefactorFamily,
     ov: &SurfaceOverrides,
     opp: &OpportunityGroups,
     full: bool,
+    baseline_cmp: Option<&BaselineComparison>,
     since: Option<&BaselineComparison>,
     shared: u32,
     params: u32,
@@ -245,6 +248,7 @@ pub(super) fn query_family_json_with_counts(
         .iter()
         .map(|l| {
             let mut o = serde_json::json!({
+                "id": baseline::member_id(l),
                 "file": l.file, "start": l.start_line, "end": l.end_line,
                 "name": l.name, "lang": l.lang.as_str(),
             });
@@ -294,6 +298,21 @@ pub(super) fn query_family_json_with_counts(
     // Temporal status against a `since=` snapshot (new/changed/unchanged), when one was given.
     if let Some(cmp) = since {
         obj["status"] = serde_json::Value::from(family_status(f, cmp));
+    }
+    if let Some(cmp) = baseline_cmp {
+        if let Some(status) = cmp.statuses.get(&baseline::family_key(f)) {
+            obj["baseline_status"] = serde_json::Value::from(status.status.as_str());
+            obj["baseline_match"] = serde_json::Value::from(status.baseline_match.as_str());
+            obj["matched_baseline_ids"] = serde_json::Value::from(
+                status
+                    .matched_baseline_ids
+                    .iter()
+                    .map(|id| baseline::format_key(*id))
+                    .collect::<Vec<_>>(),
+            );
+            obj["accepted_member_count"] = serde_json::Value::from(status.accepted_member_count);
+            obj["new_member_count"] = serde_json::Value::from(status.new_member_count);
+        }
     }
     // Fold-graph navigation: the actual related family ids, not just a count — so a caller can
     // jump to the fuller overlapping family or open the slices it subsumes (HATEOAS).

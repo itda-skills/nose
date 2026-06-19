@@ -176,13 +176,13 @@ See [divergent edits](divergent-edits.md) for how these findings are ranked and 
 ## Gate CI
 
 `--fail-on any` makes nose exit non-zero when families survive the filters; `--baseline` plus
-`--fail-on new` ignores accepted debt and fails only on *new* duplication. Pin `--mode` in a
+`--fail-on new` ignores accepted debt and fails on new or changed duplication. Pin `--mode` in a
 gate so its surface stays stable across upgrades:
 
 ```sh
 nose query src --mode syntax --fail-on any          # jscpd-style copy-paste gate
 nose query src --baseline .nose-baseline.json --write-baseline   # accept today's state
-nose query src --baseline .nose-baseline.json --fail-on new      # then fail only on new/changed
+nose query src --baseline .nose-baseline.json --fail-on new      # then fail on new/changed
 ```
 
 The full gate, baselines, SARIF, and fast re-runs are in
@@ -199,7 +199,7 @@ The full gate, baselines, SARIF, and fast re-runs are in
 - **[configuration](configuration.md)** — commit a `nose.toml` so CI and teammates
   don't retype long flag lists.
 - **[continuous-integration](continuous-integration.md)** — turn a query into a
-  pass/fail gate that flags only *new* duplication, with baselines and SARIF.
+  pass/fail gate that flags new or changed duplication, with baselines and SARIF.
 - **[clone-types](clone-types.md)** — what `syntax` / `semantic` / `near` cover
   across the Type-1–4 taxonomy, and the honest limits.
 - **[languages](languages.md)** — the supported languages, declarative CSS and HTML

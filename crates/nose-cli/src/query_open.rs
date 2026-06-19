@@ -51,6 +51,7 @@ pub(super) fn render_query_family(
     full: bool,
     path: &str,
     json: bool,
+    baseline_cmp: Option<&BaselineComparison>,
     since: Option<&BaselineComparison>,
 ) {
     let Some(f) = families
@@ -94,7 +95,7 @@ pub(super) fn render_query_family(
                 "path": path,
                 "hint": family_hint(f),
                 "hint_reasons": hint_reasons(f),
-                "family": query_family_json(f, ov, opp, full, since),
+                "family": query_family_json(f, ov, opp, full, baseline_cmp, since),
             })
         );
         return;

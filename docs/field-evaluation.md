@@ -46,7 +46,7 @@ files, ignored M" notice would build trust.
    scanned root or current directory so CI logs and review comments are portable.
 2. **Baseline / incremental adoption.** Existing codebases often show many
    families; a fail-on-any gate is unusable until accepted duplication can be
-   recorded and only *new* duplication is reported.
+   recorded and only new or changed duplication is reported.
 3. **Config file** (`nose.toml`). Real use needs committed settings for
    excludes, thresholds, `min-value`, and `min-members`.
 4. **Test-awareness.** Test files can dominate reports. Duplication among tests
