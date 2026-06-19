@@ -22,7 +22,8 @@ that line are recorded in
 [`scripts/file-length-budgets.json`](../scripts/file-length-budgets.json). A
 budgeted file fails the gate if it grows. It also fails if it shrinks without its
 budget being lowered, so the accepted ceiling moves down whenever a refactor pays
-down debt.
+down debt. The budget map should stay empty once all Rust files are below the
+target.
 
 CI runs the gate against the base ref with `--ratchet-base`, so the budget
 file itself cannot be loosened in the same change: `default_max_lines` may not
@@ -46,9 +47,17 @@ and behavior easier to reason about:
   human/markdown/SARIF scan rendering, and CLI-side timing helpers now live in
   dedicated `nose-cli/src/{cli_args,detect_command,il_command,scan_*,timing}.rs`
   modules;
-- keep shrinking `nose-cli/src/main.rs` by moving bounded report helpers into
-  small sibling modules first; the scan JSON report, baseline comparison view,
-  and family-display text now live outside the command dispatcher;
+- keep the CLI binary root as the process entry point only; command dispatch,
+  scan/review detection setup, path diagnostics, terminal styling, runtime
+  setup, shared report text, and CLI-root tests now live in
+  `nose-cli/src/{command_dispatch,detect_pipeline,path_utils,style,runtime,report_text,main_tests/*}.rs`;
+- keep divergent-edit review split by adapter boundary; review detection policy,
+  git/worktree diff plumbing, output formats, and tests now live under
+  `nose-cli/src/review/`;
+- keep `nose-il` roots as API indexes; units/domains/evidence facets, the arena
+  and lazy indexes, the builder/corpus wrappers, node core/domain/evidence/source
+  facts, and node operators now live in focused `nose-il/src/{unit*,il,builder,corpus,node/*}.rs`
+  modules;
 - keep shared verify-oracle support outside the command dispatcher; the oracle
   battery, behavior hashing, and behavioral-gate tally now live in
   `nose-cli/src/oracle_gate.rs`;

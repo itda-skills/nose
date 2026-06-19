@@ -1,0 +1,217 @@
+use super::*;
+
+fn site_label(s: &Site) -> String {
+    match &s.name {
+        Some(n) if !n.is_empty() => format!("{} ({}:{}-{})", n, s.file, s.start_line, s.end_line),
+        _ => format!("{}:{}-{}", s.file, s.start_line, s.end_line),
+    }
+}
+
+pub(super) fn fragment_context(s: &Site) -> Option<String> {
+    if !s.is_fragment {
+        return None;
+    }
+    let kind = s
+        .fragment_kind
+        .map(|k| {
+            k.reason_code()
+                .strip_prefix("exact-")
+                .unwrap_or(k.reason_code())
+                .to_string()
+        })
+        .unwrap_or_else(|| "fragment".to_string());
+    let reason = s.reason_code.unwrap_or("unknown");
+    let parent = s.enclosing_unit.as_ref().map(|p| {
+        let name = p
+            .name
+            .as_deref()
+            .filter(|n| !n.is_empty())
+            .map(|n| format!(" `{n}`"))
+            .unwrap_or_default();
+        format!(
+            " in {:?}{name} {}:{}-{}",
+            p.kind, p.file, p.start_line, p.end_line
+        )
+    });
+    Some(format!(
+        "{kind} fragment ({reason}){}",
+        parent.unwrap_or_default()
+    ))
+}
+
+pub(super) fn print_review_human(
+    flagged: &[Divergence],
+    base: &str,
+    changed_files: usize,
+    top: usize,
+) {
+    let plural = |n: usize, s: &str| {
+        if n == 1 {
+            s.to_string()
+        } else {
+            format!("{s}s")
+        }
+    };
+    println!(
+        "reviewing changes vs `{base}` · {changed_files} {} changed",
+        plural(changed_files, "file")
+    );
+    if flagged.is_empty() {
+        println!("\n✓ no clone families were changed inconsistently.");
+        return;
+    }
+    let families = if flagged.len() == 1 {
+        "family"
+    } else {
+        "families"
+    };
+    println!(
+        "\n⚠ {} clone {families} changed inconsistently — a copy was edited but its sibling(s) were not:\n",
+        flagged.len(),
+    );
+    for (i, d) in flagged.iter().enumerate() {
+        if top != 0 && i >= top {
+            break;
+        }
+        println!(
+            "#{}  changed: {}  (sim {:.2}){}",
+            i + 1,
+            d.changed
+                .iter()
+                .map(site_label)
+                .collect::<Vec<_>>()
+                .join(", "),
+            d.similarity,
+            if d.fire_eligible {
+                "  [gate: touches shared lines]"
+            } else {
+                ""
+            }
+        );
+        for s in &d.changed {
+            if let Some(context) = fragment_context(s) {
+                println!("      changed context: {context}");
+            }
+        }
+        for s in &d.not_updated {
+            println!("    not updated: {}", site_label(s));
+            if let Some(context) = fragment_context(s) {
+                println!("      context: {context}");
+            }
+        }
+        println!("    → review whether the change should also apply to the sibling(s)\n");
+    }
+    if top != 0 && flagged.len() > top {
+        println!("({} more — pass --top 0 to show all)", flagged.len() - top);
+    }
+}
+
+/// The flagged divergences as JSON objects — shared by `review --format json` and the
+/// `nose query base=<ref>` view, so the two serialize each finding identically (one contract,
+/// reachable from either surface during the unification).
+pub(crate) fn divergence_items_json(flagged: &[Divergence]) -> Vec<serde_json::Value> {
+    use serde_json::json;
+    let site = |s: &Site| {
+        json!({
+            "file": s.file, "name": s.name,
+            "start_line": s.start_line, "end_line": s.end_line, "lang": s.lang,
+            "kind": s.kind,
+            "span_lines": s.span_lines,
+            "span_tokens": s.span_tokens,
+            "is_fragment": s.is_fragment,
+            "fragment_kind": s.fragment_kind,
+            "reason_code": s.reason_code,
+            "enclosing_unit": s.enclosing_unit,
+            "touches_shared": s.touches_shared,
+        })
+    };
+    flagged
+        .iter()
+        .map(|d| {
+            json!({
+                "family_id": d.family_id,
+                "similarity": d.similarity,
+                "complexity": d.complexity,
+                "scope": d.scope,
+                "witness_kind": d.witness_kind,
+                "fire_eligible": d.fire_eligible,
+                "graded": d.graded,
+                "changed": d.changed.iter().map(&site).collect::<Vec<_>>(),
+                "not_updated": d.not_updated.iter().map(&site).collect::<Vec<_>>(),
+            })
+        })
+        .collect()
+}
+
+pub(super) fn review_json(
+    flagged: &[Divergence],
+    base: &str,
+    changed_files: usize,
+) -> Result<String> {
+    use serde_json::json;
+    Ok(serde_json::to_string_pretty(&json!({
+        "schema_version": 1,
+        "tool_version": env!("CARGO_PKG_VERSION"),
+        "base": base,
+        "changed_files": changed_files,
+        "inconsistent_families": flagged.len(),
+        "findings": divergence_items_json(flagged),
+    }))?)
+}
+
+pub(super) fn review_sarif(flagged: &[Divergence]) -> Result<String> {
+    use serde_json::json;
+    let phys = |s: &Site| {
+        let message = fragment_context(s).unwrap_or_else(|| site_label(s));
+        json!({
+            "message": { "text": message },
+            "physicalLocation": {
+                "artifactLocation": { "uri": s.file },
+                "region": { "startLine": s.start_line, "endLine": s.end_line }
+            }
+        })
+    };
+    // The SARIF *location* is each un-updated sibling (where a fix may be missing), so a CI
+    // annotation lands on the copy the change skipped; the changed copies are related.
+    let results: Vec<_> = flagged
+        .iter()
+        .map(|d| {
+            let changed = d
+                .changed
+                .iter()
+                .map(site_label)
+                .collect::<Vec<_>>()
+                .join(", ");
+            json!({
+                "ruleId": "unpropagated-change",
+                "level": "warning",
+                "message": { "text": format!(
+                    "A clone of this code was changed ({changed}) but this copy was not — \
+                     review whether the change should propagate here."
+                ) },
+                "locations": d.not_updated.iter().map(&phys).collect::<Vec<_>>(),
+                "relatedLocations": d.changed.iter().map(&phys).collect::<Vec<_>>(),
+                "properties": { "family_id": d.family_id },
+            })
+        })
+        .collect();
+    let run = json!({
+        "tool": { "driver": {
+            "name": "nose",
+            "informationUri": "https://github.com/corca-ai/nose",
+            "version": env!("CARGO_PKG_VERSION"),
+            "rules": [{
+                "id": "unpropagated-change",
+                "name": "UnpropagatedChange",
+                "shortDescription": { "text": "A clone was changed but a sibling copy was not" }
+            }]
+        }},
+        "results": results,
+        "properties": { "inconsistent_families": flagged.len() },
+    });
+    Ok(serde_json::to_string_pretty(&json!({
+        "version": "2.1.0",
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "runs": [run],
+    }))?)
+}

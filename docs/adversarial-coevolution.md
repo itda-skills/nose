@@ -83,7 +83,7 @@ Rotate campaigns across these; each entry names what to read and what claim to a
    [§BL census / §BU](experiments.md)). Claim: bails are fail-closed and bounded. Attack:
    interpretable shapes the bail taxonomy misclassifies.
 5. **Decidability filters (§2b)** — `declaration_run_ids` and successors in
-   `crates/nose-cli/src/main.rs`, [experiments §BY](experiments.md). Claim: "provably no
+   `crates/nose-cli/src/surfaces.rs`, [experiments §BY](experiments.md). Claim: "provably no
    extraction exists". Attack: spans the classifier accepts that a maintainer *would* act
    on, and fail-open edges that leak.
 6. **Ranking / grouping / hints** — extractability, opportunity grouping

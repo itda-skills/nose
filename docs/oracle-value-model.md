@@ -57,7 +57,7 @@ Two facts matter for everything below:
   *witnessable* — the model is not the gap for finding C.
 - **The oracle now models IEEE-754 floats** (`Value::Float(F64)`, #342 — see §3.3/§6).
   Float *literals* are still kept opaque in the value graph (`LitFloat`, a hash of the
-  source text, so `3.14 ≠ 2.71` — `crates/nose-il/src/node.rs`), but float *arithmetic* is
+  source text, so `3.14 ≠ 2.71` — `crates/nose-il/src/node/core.rs`), but float *arithmetic* is
   interpreted, so the fully-untyped float associativity gap that motivated this doc is
   closed in both the detector and the oracle.
 

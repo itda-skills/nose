@@ -89,7 +89,7 @@ A Cargo workspace; data flows left-to-right through them.
 
 | crate | role |
 |---|---|
-| `nose-il` | arena IL model (`Vec<Node>`, `NodeId(u32)`, out-of-line edges), provenance spans, semantic evidence records, interner, serialization, IR verifier |
+| `nose-il` | arena IL model (`Vec<Node>`, `NodeId(u32)`, out-of-line edges), unit facets, node/evidence catalog, provenance spans, semantic evidence records, interner, serialization, IR verifier |
 | `nose-semantics` | first-party semantic facade: language profiles, evidence/source-fact helpers, type-domain contracts, effect/operator/module/stdlib predicates, API contracts, and exact-channel proof obligations |
 | `nose-frontend` | tree-sitter parse + per-language CST→IL lowering and first-party evidence emission (one module tree per language, incl. declarative CSS/HTML; `<script>`/`<style>`/markup region extraction for Vue/Svelte/HTML) |
 | `nose-normalize` | the normalization passes, inferred immutable binding-domain evidence, and the value graph (GVN) |
