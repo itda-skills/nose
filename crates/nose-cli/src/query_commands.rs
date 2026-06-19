@@ -130,7 +130,241 @@ fn validate_base_query(q: &Query, args: &ScanArgs) -> Result<()> {
     Ok(())
 }
 
-#[allow(clippy::too_many_lines)] // a flat command dispatcher: dashboard / at= / id= / group / list
+struct QueryOutput<'a> {
+    args: &'a ScanArgs,
+    terms: &'a [String],
+    q: &'a Query,
+    path_arg: &'a str,
+    families: &'a [nose_detect::RefactorFamily],
+    reinvented: &'a [nose_detect::ReinventedHelper],
+    scope: &'a ScanScope,
+    settings: &'a ScanSettings,
+    overrides: &'a SurfaceOverrides,
+    opp: &'a OpportunityGroups,
+    baseline_comparison: Option<&'a BaselineComparison>,
+    since: Option<&'a BaselineComparison>,
+}
+
+fn ensure_query_fail_on_is_valid(args: &ScanArgs) -> Result<()> {
+    if matches!(args.fail_on, Some(FailOn::New)) && args.baseline.is_none() {
+        anyhow::bail!(
+            "--fail-on new requires --baseline (it gates on families new vs the baseline)"
+        );
+    }
+    Ok(())
+}
+
+fn activate_query_families(
+    args: &ScanArgs,
+    dataset: &mut ScanDataset,
+) -> Result<Option<BaselineComparison>> {
+    let baseline_comparison = apply_scan_baseline(args, &mut dataset.families)?;
+    let ignore_set = dataset.settings.ignore_set.take();
+    let (active, _ignored) =
+        partition_ignored(std::mem::take(&mut dataset.families), ignore_set.as_ref());
+    dataset.families = active;
+    Ok(baseline_comparison)
+}
+
+fn query_needs_spotclass(q: &Query) -> bool {
+    q.group.as_deref() == Some("spotclass") || q.filters.iter().any(|flt| flt.field == "spotclass")
+}
+
+fn query_uses_status(q: &Query) -> bool {
+    q.group.as_deref() == Some("status") || q.filters.iter().any(|flt| flt.field == "status")
+}
+
+fn query_since<'a>(
+    q: &Query,
+    families: &[nose_detect::RefactorFamily],
+    slot: &'a mut Option<BaselineComparison>,
+) -> Result<Option<&'a BaselineComparison>> {
+    if query_uses_status(q) && q.since.is_none() {
+        anyhow::bail!("`status` needs a snapshot — add `since=<baseline-file>` (write one with `--write-baseline`)");
+    }
+    *slot = match &q.since {
+        Some(p) => Some(compare_since(p, families)?),
+        None => None,
+    };
+    Ok(slot.as_ref())
+}
+
+fn sort_query_families(q: &Query, families: &mut [nose_detect::RefactorFamily]) {
+    if let Some(sk) = q.sort {
+        families.sort_by(|a, b| {
+            sk.score(b)
+                .total_cmp(&sk.score(a))
+                .then(b.value.total_cmp(&a.value))
+                .then_with(|| family_anchor(a).cmp(&family_anchor(b)))
+        });
+    }
+}
+
+fn query_opportunities(
+    families: &[nose_detect::RefactorFamily],
+    overrides: &SurfaceOverrides,
+) -> OpportunityGroups {
+    let default_fams: Vec<&nose_detect::RefactorFamily> = families
+        .iter()
+        .filter(|f| is_default_surface(f, overrides))
+        .collect();
+    OpportunityGroups::from_ranked(&default_fams)
+}
+
+fn render_query_output(ctx: &QueryOutput<'_>) -> Result<bool> {
+    match ctx.args.format {
+        ReportFormat::Markdown | ReportFormat::Sarif => {
+            render_query_report_format(ctx)?;
+            Ok(false)
+        }
+        _ => render_query_exploration(ctx),
+    }
+}
+
+fn render_query_report_format(ctx: &QueryOutput<'_>) -> Result<()> {
+    let selected = query_selection(
+        ctx.families,
+        ctx.overrides,
+        ctx.opp,
+        ctx.q,
+        ctx.path_arg,
+        ctx.since,
+    )?;
+    let top = query_row_limit(ctx.q.top);
+    let shown: Vec<&nose_detect::RefactorFamily> = selected.iter().take(top).copied().collect();
+    if matches!(ctx.args.format, ReportFormat::Sarif) {
+        println!("{}", refactor_sarif(&shown, selected.len())?);
+        return Ok(());
+    }
+    print_refactor_markdown(
+        &selected,
+        &shown,
+        ctx.settings.channels,
+        ctx.baseline_comparison,
+        None,
+        0,
+        None,
+    );
+    // `id=<fam>` is a single-family drilldown: render the extraction skeleton
+    // (and, on `full`, the representative diff) so markdown composes with
+    // `id=`/`full` the way the human/JSON views do (#422). Bulk reports stay a
+    // compact location list — the skeleton is paid only on drilldown.
+    if ctx.q.id.is_some() {
+        for f in &shown {
+            if f.locations.len() >= 2 {
+                markdown_member_proposal(&f.locations);
+                if ctx.q.id_full {
+                    markdown_member_diff(&f.locations[0], &f.locations[1]);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn render_query_exploration(ctx: &QueryOutput<'_>) -> Result<bool> {
+    let json = matches!(ctx.args.format, ReportFormat::Json);
+    if ctx.q.reinvented {
+        render_query_reinvented(ctx.reinvented, ctx.path_arg, ctx.q.top, json);
+        return Ok(false);
+    }
+    if ctx.terms.is_empty() {
+        let reinvented_prod = ctx
+            .reinvented
+            .iter()
+            .filter(|r| !r.container_in_test)
+            .count();
+        let md = markdown::detect_under(&ctx.args.paths[0], &ctx.settings.exclude);
+        let markdown_found = !md.is_empty();
+        render_query_dashboard(
+            ctx.families,
+            ctx.overrides,
+            ctx.opp,
+            ctx.scope,
+            ctx.path_arg,
+            reinvented_prod,
+            json,
+            ctx.since,
+            &md,
+        );
+        return Ok(markdown_found);
+    }
+    if let Some(at) = &ctx.q.at {
+        let idv = baseline::family_id(family_at(ctx.families, at, ctx.path_arg)?);
+        render_query_family_view(ctx, &idv, json);
+    } else if let Some(idv) = &ctx.q.id {
+        render_query_family_view(ctx, idv, json);
+    } else {
+        render_query_list_or_group(ctx, json)?;
+    }
+    Ok(false)
+}
+
+fn render_query_family_view(ctx: &QueryOutput<'_>, idv: &str, json: bool) {
+    render_query_family(
+        ctx.families,
+        ctx.overrides,
+        ctx.opp,
+        idv,
+        ctx.q.id_full,
+        ctx.path_arg,
+        json,
+        ctx.since,
+    );
+}
+
+fn render_query_list_or_group(ctx: &QueryOutput<'_>, json: bool) -> Result<()> {
+    let widen = ctx.q.all || ctx.q.filters.iter().any(|flt| flt.field == "surface");
+    let sel = query_selection(
+        ctx.families,
+        ctx.overrides,
+        ctx.opp,
+        ctx.q,
+        ctx.path_arg,
+        ctx.since,
+    )?;
+    match &ctx.q.group {
+        Some(field) => render_query_group(&sel, field, ctx.terms, ctx.path_arg, json, ctx.since),
+        None => render_query_list(
+            &sel,
+            ctx.overrides,
+            ctx.opp,
+            ctx.q,
+            ctx.terms,
+            ctx.path_arg,
+            widen,
+            json,
+            ctx.since,
+        ),
+    }
+    Ok(())
+}
+
+fn enforce_query_fail_on(ctx: &QueryOutput<'_>) -> Result<()> {
+    let reportable = if ctx.q.reinvented {
+        Vec::new()
+    } else {
+        query_selection(
+            ctx.families,
+            ctx.overrides,
+            ctx.opp,
+            ctx.q,
+            ctx.path_arg,
+            ctx.since,
+        )?
+        .into_iter()
+        .filter(|f| is_default_report_family(f, ctx.overrides))
+        .collect()
+    };
+    enforce_scan_fail_on(
+        ctx.args,
+        ctx.settings.channels,
+        &reportable,
+        ctx.baseline_comparison,
+    );
+    Ok(())
+}
+
 pub(super) fn run_query_cmd(cmd: Cmd) -> Result<()> {
     let Cmd::Query {
         path,
@@ -158,7 +392,6 @@ pub(super) fn run_query_cmd(cmd: Cmd) -> Result<()> {
     // The path as the user typed it — every suggested next-command echoes it so the links
     // are runnable verbatim (the surface takes the path positionally).
     let path_arg = path.to_string_lossy().into_owned();
-    // Build the full dataset (all families); query filters/views work in-memory over it.
     let args = ScanArgs {
         paths: vec![path],
         top: Some(0),
@@ -180,205 +413,44 @@ pub(super) fn run_query_cmd(cmd: Cmd) -> Result<()> {
         min_lines,
         scope: ScopeFilter::All,
     };
-    if matches!(args.fail_on, Some(FailOn::New)) && args.baseline.is_none() {
-        anyhow::bail!(
-            "--fail-on new requires --baseline (it gates on families new vs the baseline)"
-        );
-    }
-    // `base=<git-ref>` is the divergent-edit view (the `nose review` pipeline): it detects at
-    // the ref, not the working tree, so it short-circuits the working-tree dataset entirely.
+    ensure_query_fail_on_is_valid(&args)?;
     if let Some(base_ref) = &q.base {
         return run_query_base(&args, base_ref, &q, &path_arg);
     }
+
     let refs = paths_as_refs(&args.paths);
     let mut dataset = build_scan_dataset(&args, &refs)?;
-    // query is a full surface (#375): prepare the family set exactly as scan does before
-    // rendering — write/apply a baseline, drop ignored families — then run the same CI gate.
     if args.write_baseline {
         return write_scan_baseline(&args, &dataset.families);
     }
-    let baseline_comparison = apply_scan_baseline(&args, &mut dataset.families)?;
-    let ignore_set = dataset.settings.ignore_set.take();
-    let (active, _ignored) =
-        partition_ignored(std::mem::take(&mut dataset.families), ignore_set.as_ref());
-    dataset.families = active;
+    let baseline_comparison = activate_query_families(&args, &mut dataset)?;
     let overrides =
         classify_surface_overrides(&mut dataset.families, &refs, &dataset.settings.exclude);
-    // `spotclass` reads the #315 graded witness, which `build_scan_dataset` does not compute
-    // (re-deriving it is the dominant scan cost — netty: ~2.8s of a ~4.6s near scan). Run that
-    // enrichment only when the query actually filters or groups by `spotclass`, and before the
-    // filter so the class exists to match on; the common query path stays free of it.
-    let needs_spotclass = q.group.as_deref() == Some("spotclass")
-        || q.filters.iter().any(|flt| flt.field == "spotclass");
-    if needs_spotclass {
+    if query_needs_spotclass(&q) {
         enrich_graded_witnesses(&mut dataset.families, &dataset.opts);
     }
-    // `since=<snapshot>` annotates each family with a temporal `status` (new/changed/unchanged)
-    // — an exploration lens over the baseline machinery, not a gate (it hides nothing). The
-    // `status` field is unresolvable without it, so reject the combination loudly.
-    let uses_status =
-        q.group.as_deref() == Some("status") || q.filters.iter().any(|flt| flt.field == "status");
-    if uses_status && q.since.is_none() {
-        anyhow::bail!("`status` needs a snapshot — add `since=<baseline-file>` (write one with `--write-baseline`)");
-    }
-    let since_cmp = match &q.since {
-        Some(p) => Some(compare_since(p, &dataset.families)?),
-        None => None,
+    let mut since_cmp = None;
+    let since = query_since(&q, &dataset.families, &mut since_cmp)?;
+    sort_query_families(&q, &mut dataset.families);
+    let opp = query_opportunities(&dataset.families, &overrides);
+    let output = QueryOutput {
+        args: &args,
+        terms: &terms,
+        q: &q,
+        path_arg: &path_arg,
+        families: &dataset.families,
+        reinvented: &dataset.reinvented,
+        scope: &dataset.scope,
+        settings: &dataset.settings,
+        overrides: &overrides,
+        opp: &opp,
+        baseline_comparison: baseline_comparison.as_ref(),
+        since,
     };
-    let since = since_cmp.as_ref();
-    if let Some(sk) = q.sort {
-        dataset.families.sort_by(|a, b| {
-            sk.score(b)
-                .total_cmp(&sk.score(a))
-                .then(b.value.total_cmp(&a.value))
-                .then_with(|| family_anchor(a).cmp(&family_anchor(b)))
-        });
-    }
-    // Fold overlapping slice families under their best-ranked primary (scan's #263/#264
-    // grouping) so query doesn't double-count or under-report the same region vs scan.
-    let default_fams: Vec<&nose_detect::RefactorFamily> = dataset
-        .families
-        .iter()
-        .filter(|f| is_default_surface(f, &overrides))
-        .collect();
-    let opp = OpportunityGroups::from_ranked(&default_fams);
-    // Markdown is a query domain: a docs-only tree (no code, but real `.md` near-dups) is not
-    // "nothing found". The dashboard sets this so the empty-corpus warning below stays accurate.
-    let mut markdown_found = false;
-    match format {
-        // Report formats (for PRs / code-scanning, like scan's): non-interactive, so they
-        // ignore dashboard/group navigation and just render the family set the query selects,
-        // reusing scan's own formatters (#374 + scan parity).
-        ReportFormat::Markdown | ReportFormat::Sarif => {
-            let selected =
-                query_selection(&dataset.families, &overrides, &opp, &q, &path_arg, since)?;
-            let top = query_row_limit(q.top);
-            let shown: Vec<&nose_detect::RefactorFamily> =
-                selected.iter().take(top).copied().collect();
-            if matches!(format, ReportFormat::Sarif) {
-                println!("{}", refactor_sarif(&shown, selected.len())?);
-            } else {
-                print_refactor_markdown(
-                    &selected,
-                    &shown,
-                    dataset.settings.channels,
-                    baseline_comparison.as_ref(),
-                    None,
-                    0,
-                    None,
-                );
-                // `id=<fam>` is a single-family drilldown: render the extraction skeleton
-                // (and, on `full`, the representative diff) so markdown composes with
-                // `id=`/`full` the way the human/JSON views do (#422). Bulk reports stay a
-                // compact location list — the skeleton is paid only on drilldown.
-                if q.id.is_some() {
-                    for f in &shown {
-                        if f.locations.len() >= 2 {
-                            markdown_member_proposal(&f.locations);
-                            if q.id_full {
-                                markdown_member_diff(&f.locations[0], &f.locations[1]);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        _ => {
-            let json = matches!(format, ReportFormat::Json);
-            if q.reinvented {
-                // The reinvented-helper channel as a query view — code that reimplements an
-                // existing helper (the action is "call it"). Complements (does not duplicate)
-                // `shape=call-existing-helper`: those are the cases the family clusterer caught,
-                // these are the ones it did not.
-                render_query_reinvented(&dataset.reinvented, &path_arg, q.top, json);
-            } else if terms.is_empty() {
-                let reinvented_prod = dataset
-                    .reinvented
-                    .iter()
-                    .filter(|r| !r.container_in_test)
-                    .count();
-                // Markdown near-duplicate prose is a query domain (converged from the former
-                // `nose markdown` command): the dashboard reports `.md` near-dup families
-                // alongside code clones, via the separate `nose-markdown` engine.
-                let md = markdown::detect_under(&args.paths[0], &dataset.settings.exclude);
-                markdown_found = !md.is_empty();
-                render_query_dashboard(
-                    &dataset.families,
-                    &overrides,
-                    &opp,
-                    &dataset.scope,
-                    &path_arg,
-                    reinvented_prod,
-                    json,
-                    since,
-                    &md,
-                );
-            } else if let Some(at) = &q.at {
-                // `at=file:line` → the family whose member span covers that location (stable
-                // across edits, unlike the span-derived id). Resolve to an `id=` open.
-                let idv = baseline::family_id(family_at(&dataset.families, at, &path_arg)?);
-                render_query_family(
-                    &dataset.families,
-                    &overrides,
-                    &opp,
-                    &idv,
-                    q.id_full,
-                    &path_arg,
-                    json,
-                    since,
-                );
-            } else if let Some(idv) = &q.id {
-                render_query_family(
-                    &dataset.families,
-                    &overrides,
-                    &opp,
-                    idv,
-                    q.id_full,
-                    &path_arg,
-                    json,
-                    since,
-                );
-            } else {
-                // Default to the curated default surface (the same families the dashboard
-                // counts and `scan` trusts); `all` or an explicit `surface=` filter widens to
-                // the raw universe.
-                let widen = q.all || q.filters.iter().any(|flt| flt.field == "surface");
-                let sel =
-                    query_selection(&dataset.families, &overrides, &opp, &q, &path_arg, since)?;
-                match &q.group {
-                    Some(field) => render_query_group(&sel, field, &terms, &path_arg, json, since),
-                    None => {
-                        render_query_list(
-                            &sel, &overrides, &opp, &q, &terms, &path_arg, widen, json, since,
-                        );
-                    }
-                }
-            }
-        }
-    }
-    // Warn when discovery found nothing to report, so a mistyped path or unsupported tree
-    // doesn't masquerade as "no duplication found" (and a CI `--fail-on` gate doesn't silently
-    // pass on a bad path). A docs-only tree with markdown near-dups is a real result, so the
-    // dashboard's `markdown_found` suppresses it there.
+    let markdown_found = render_query_output(&output)?;
     if dataset.scope.files == 0 && !markdown_found {
         warn_no_files(&args.paths);
     }
-    // CI gate (same as scan), scoped to the same untruncated family selection the query terms
-    // address. `top=N` stays presentation-only; filters/id/at/status narrow the gate. The
-    // `reinvented` view is a separate helper channel, not a RefactorFamily report.
-    let reportable = if q.reinvented {
-        Vec::new()
-    } else {
-        query_selection(&dataset.families, &overrides, &opp, &q, &path_arg, since)?
-            .into_iter()
-            .filter(|f| is_default_report_family(f, &overrides))
-            .collect()
-    };
-    enforce_scan_fail_on(
-        &args,
-        dataset.settings.channels,
-        &reportable,
-        baseline_comparison.as_ref(),
-    );
+    enforce_query_fail_on(&output)?;
     Ok(())
 }
