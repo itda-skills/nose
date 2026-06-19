@@ -9,8 +9,8 @@ The methodology and headline numbers are summarized in [benchmark](benchmark.md)
 these experiments shaped are in [normalization](normalization.md) and
 [architecture](architecture.md).
 
-The current user-facing `nose scan` command has three channels (`syntax`, `semantic`,
-`near`), described in [usage](usage.md); all share one lower → normalize → feature
+The current user-facing `nose query` command has three channels (`syntax`, `semantic`,
+`near`), described in [usage](usage.md); they share one lower → normalize → feature
 pipeline, with exact semantic matches coming from the value graph.
 
 > **Historical record.** This log spans a pre-v5 era whose measurement code (many
@@ -3193,7 +3193,7 @@ deduplication of value-graph work, not local micro-optimization.
 
 Goal: make `nose query bench/repos/<repo>` finish under **4s for every checked-out corpus repo**
 with a release build, without leaning on local micro-optimizations. The final saved run is
-`target/corpus-query-speed-release-0.13.2-merged/summary.tsv`.
+`target/corpus-query-speed-release-0.13.3/summary.tsv`.
 
 **Baseline symptoms.** The first full pass had three repos over budget: `alamofire` **8.994s**,
 `sympy` **4.673s**, and `raylib` **4.669s**; `curl` was close at **3.793s**. `NOSE_TIME=1`
@@ -3238,23 +3238,23 @@ showed different bottlenecks per repo:
 | repos | 150 |
 | failures | 0 |
 | repos >= 4s | 0 |
-| total wall time | 62.044s |
-| max repo | `sympy` 2.948s |
+| total wall time | 82.063s |
+| max repo | `sympy` 3.989s |
 
 Top final repo times:
 
 | repo | seconds |
 |---|---:|
-| `sympy` | 2.948 |
-| `raylib` | 2.463 |
-| `guava` | 2.387 |
-| `libgdx` | 2.282 |
-| `netty` | 1.925 |
-| `h2database` | 1.818 |
-| `alamofire` | 1.810 |
-| `nushell` | 1.746 |
-| `rxjava` | 1.628 |
-| `sqlalchemy` | 1.579 |
+| `sympy` | 3.989 |
+| `guava` | 3.362 |
+| `raylib` | 3.160 |
+| `libgdx` | 3.030 |
+| `netty` | 2.544 |
+| `h2database` | 2.502 |
+| `nushell` | 2.266 |
+| `rxjava` | 2.247 |
+| `sqlalchemy` | 2.022 |
+| `swift-nio` | 1.943 |
 
 Representative stage checks after the changes: `curl` Markdown `md_accept` dropped from about
 **2108ms** to **538ms** in the Markdown pass; bulk JSON `query_render` then dropped from
