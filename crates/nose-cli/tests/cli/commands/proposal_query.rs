@@ -37,6 +37,77 @@ fn query_top_zero_shows_all_families() {
 }
 
 #[test]
+fn query_accepts_explicit_multi_roots() {
+    let dir = make_project("multi_roots");
+    let a = dir.join("a");
+    let b = dir.join("b");
+    let a = a.to_str().unwrap();
+    let b = b.to_str().unwrap();
+
+    let out = run_raw(&[
+        "query",
+        "-r",
+        a,
+        "-r",
+        b,
+        "all",
+        "top=0",
+        "--mode",
+        "semantic",
+        "--min-size",
+        "1",
+        "--min-lines",
+        "1",
+        "--format",
+        "json",
+    ]);
+    let json = query_json(&out);
+    assert_eq!(json["view"], "list");
+    assert_eq!(json["path"], format!("-r {a} -r {b}"));
+    assert!(
+        family_contains_all(&json, &["a/f.py", "b/f.py"]),
+        "multi-root query should analyze both explicit roots: {json}"
+    );
+
+    let dash = run(&[
+        "query",
+        "-r",
+        a,
+        "-r",
+        b,
+        "--mode",
+        "semantic",
+        "--min-size",
+        "1",
+        "--min-lines",
+        "1",
+    ]);
+    assert!(
+        dash.contains(&format!("nose query -r {a} -r {b} id=")),
+        "multi-root drill links should remain runnable: {dash}"
+    );
+}
+
+#[test]
+fn query_second_path_suggests_explicit_roots() {
+    let dir = make_project("second_path_hint");
+    let a = dir.join("a");
+    let b = dir.join("b");
+    let err = run_fail(&["query", a.to_str().unwrap(), b.to_str().unwrap()]);
+    assert!(
+        err.contains("looks like another path") && err.contains("nose query -r"),
+        "second positional path should explain explicit multi-root syntax: {err}"
+    );
+
+    let explicit_err = run_fail(&["query", "-r", a.to_str().unwrap(), b.to_str().unwrap()]);
+    assert!(
+        explicit_err.contains("When using `--root`/`-r`")
+            && explicit_err.contains("bare arguments are query terms"),
+        "bare path after --root should explain that all roots need -r: {explicit_err}"
+    );
+}
+
+#[test]
 #[allow(clippy::too_many_lines, clippy::cognitive_complexity)] // one end-to-end walk of the query surface
 fn query_dashboard_filter_and_family() {
     // A sizeable 3-copy near family (one operator each) survives the default size floor.

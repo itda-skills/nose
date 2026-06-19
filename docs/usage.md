@@ -31,6 +31,7 @@ from-source `./target/release/nose`.
 | You want to... | Use |
 |---|---|
 | Inspect duplication and act on it | `nose query <path> [terms…]` |
+| Inspect disjoint roots together | `nose query --root <path> --root <path> [terms…]` |
 | Open one family with its extraction skeleton | `nose query <path> id=<fam> full` |
 | Catch a missed sibling edit in a diff or PR | `nose query <path> base=<ref>` |
 | Gate CI on duplication | `nose query <path> --fail-on any` |
@@ -52,12 +53,18 @@ evidence, the best candidates to inspect first, verified-evidence families, dupl
 directory hotspots, and next commands. Add terms to filter, group, sort, or open one
 family; every result includes a runnable `nose query …` command.
 
+To analyze disjoint trees in one run, pass every root explicitly:
+`nose query --root packages --root scripts [terms…]` (short: `-r`). When
+`--root`/`-r` is present, bare arguments are query terms; use `-r` for each
+analyzed path.
+
 `nose query` carries the analysis flags, the `--fail-on` CI gate, and a structured contract: with
 `--format json` every view emits the versioned [query-JSON v3 contract](query-json.md), and
 `--format markdown`/`sarif` produce a ranked report.
 
 ```text
 nose query <path> [FILTER … | group=FIELD | id=FAM | at=FILE:LINE | reinvented | base=REF] [since=FILE] [sort=KEY] [top=N] [full] [all]
+nose query --root <path> --root <path> [FILTER … | group=FIELD | id=FAM | at=FILE:LINE | reinvented | base=REF] …
 ```
 
 | part | meaning |
@@ -230,6 +237,7 @@ mode flags are documented under [Ranking](#ranking) and [Detection modes](#detec
 | `--min-value V` | hide families below this finite non-negative refactoring value (noise floor on large repos) |
 | `--min-size N` | ignore units or syntax copy-paste runs smaller than this size, in IL tokens (default 24) |
 | `--mode MODE` | one or more of `syntax`, `semantic`, `near[:T]`; comma-list or repeatable; when present, replaces the default. Experimental `abstraction[:T]` is accepted but not a stable capabilities mode. |
+| `--root <path>` / `-r <path>` | analyze another root; repeat for multi-root query runs. With `--root`, bare positional arguments are query terms. |
 | `--exclude <glob>` | skip paths matching a gitignore-syntax glob (repeatable) |
 | `--ignore-file <file>` | suppress accepted families using a structured ignore file with reason/owner/expiry metadata |
 | `--semantic-pack <file-or-dir>` | explicitly load local semantic-pack v0 manifest metadata for provenance reporting; external packs are metadata-only today |

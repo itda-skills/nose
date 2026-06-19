@@ -4,6 +4,8 @@
 duplicated-code family dataset — the **machine** form of the
 [exploration surface](usage.md#nose-query). The query contract is *view-shaped*: it mirrors what the human surface shows, so a
 caller drives the same dashboard → slice → open-family loop programmatically.
+For multi-root analysis, use repeated roots:
+`nose query --root <path> --root <path> [terms…] --format json`.
 
 Discover support with [`nose capabilities`](capabilities.md): `schemas.query_json` lists the
 versions the installed binary emits (currently `[3]`).
@@ -17,7 +19,7 @@ Every response is an object with:
 | `schema_version` | `3` |
 | `tool` | `"nose"` |
 | `view` | which surface produced it: `dashboard` \| `list` \| `group` \| `family` \| `reinvented` \| `base` |
-| `path` | the analyzed path, as given |
+| `path` | the analyzed path expression, as given; multi-root commands render the repeated `--root`/`-r` flags |
 
 plus the view-specific body below. Like the human surface, a result is a pure function of
 (repo state, command); an unknown field or enum value is a hard error.

@@ -167,6 +167,7 @@ fn query_capability_flags() -> std::collections::BTreeMap<&'static str, bool> {
         ("ci_fail_gate", true),
         ("family_drilldown", true),
         ("inline_suppression", true),
+        ("multi_root", true),
         ("reinvented_view", true),
         ("semantic_pack_loading", true),
         ("structured_ignores", true),
