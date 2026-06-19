@@ -98,7 +98,32 @@ pub(super) fn lower_computed_property(lo: &mut Lowering, node: TsNode) -> Option
                 .into_iter()
                 .find(|child| child.kind() == "computed_property")
         })
-        .map(|computed| lower_block(lo, computed))
+        .map(|computed| lower_computed_property_body(lo, computed))
+}
+fn lower_computed_property_body(lo: &mut Lowering, computed: TsNode) -> NodeId {
+    let span = lo.span(computed);
+    let blocks: Vec<NodeId> = Lowering::named_children(computed)
+        .into_iter()
+        .filter_map(|child| match child.kind() {
+            "statements" | "function_body" => Some(lower_block(lo, child)),
+            "computed_getter" | "computed_setter" | "computed_modify" => {
+                Some(lower_computed_accessor(lo, child))
+            }
+            _ => None,
+        })
+        .collect();
+    match blocks.as_slice() {
+        [only] => *only,
+        [] => lo.empty_block(span),
+        _ => lo.add(NodeKind::Block, Payload::None, span, &blocks),
+    }
+}
+fn lower_computed_accessor(lo: &mut Lowering, accessor: TsNode) -> NodeId {
+    Lowering::named_children(accessor)
+        .into_iter()
+        .find(|child| matches!(child.kind(), "statements" | "function_body"))
+        .map(|body| lower_block(lo, body))
+        .unwrap_or_else(|| lo.empty_block(lo.span(accessor)))
 }
 pub(super) fn type_surface_name(lo: &Lowering, node: TsNode) -> Option<String> {
     match node.kind() {

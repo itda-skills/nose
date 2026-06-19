@@ -28,6 +28,165 @@ fn local_record_and_annotation_declarations_do_not_fall_to_raw() {
     );
 }
 
+#[test]
+fn declaration_and_statement_surfaces_do_not_fall_to_raw() {
+    let src = r#"
+interface I {
+  int LIMIT = 10;
+  void run(String value);
+}
+enum Color {
+  RED(1), BLUE(2);
+  Color(int code) {}
+}
+class C {
+  static { init(); }
+  void f(Object lock, int x) {
+    assert x > 0;
+    synchronized (lock) {
+      x++;
+    }
+  }
+}
+"#;
+    let raw = raw_names(src);
+    for name in [
+        "assert_statement",
+        "synchronized_statement",
+        "constant_declaration",
+        "method_declaration",
+        "formal_parameters",
+        "formal_parameter",
+        "enum_body_declarations",
+        "static_initializer",
+        "constructor_declaration",
+        "constructor_body",
+    ] {
+        assert!(
+            !raw.iter().any(|raw_name| raw_name == name),
+            "{name} should not lower to Raw: {raw:?}"
+        );
+    }
+    let seq = seq_names(src);
+    assert!(
+        seq.iter().any(|name| name == "java_enum_constant"),
+        "enum constant constructor arguments should be preserved exactly: {seq:?}"
+    );
+}
+
+#[test]
+fn type_surfaces_and_unsigned_shift_do_not_fall_to_raw() {
+    let src = r#"
+class C {
+  Class<?> kind() { return java.util.Map.Entry.class; }
+  int shift(int value, int bits) {
+    value >>>= 1;
+    return value >>> bits;
+  }
+}
+"#;
+    let raw = raw_names(src);
+    for name in [
+        "scoped_type_identifier",
+        "binary_expression >>>",
+        "compound_assignment >>>=",
+    ] {
+        assert!(
+            !raw.iter().any(|raw_name| raw_name == name),
+            "{name} should not lower to Raw: {raw:?}"
+        );
+    }
+    let seq = seq_names(src);
+    assert!(
+        seq.iter()
+            .filter(|name| name.as_str() == "java_unsigned_shift_right")
+            .count()
+            >= 2,
+        "both >>> and >>>= should preserve unsigned-shift semantics: {seq:?}"
+    );
+}
+
+#[test]
+fn module_metadata_surfaces_do_not_fall_to_raw() {
+    let src = r#"
+module com.example.app {
+  requires transitive java.sql;
+  exports com.example.api;
+  opens com.example.internal;
+  uses com.example.Service;
+  provides com.example.Service with com.example.impl.ServiceImpl;
+}
+"#;
+    let raw = raw_names(src);
+    for name in [
+        "module_declaration",
+        "module_body",
+        "requires_module_directive",
+        "requires_modifier",
+        "exports_module_directive",
+        "opens_module_directive",
+        "uses_module_directive",
+        "provides_module_directive",
+    ] {
+        assert!(
+            !raw.iter().any(|raw_name| raw_name == name),
+            "{name} should not lower to Raw: {raw:?}"
+        );
+    }
+    let seq = seq_names(src);
+    for name in [
+        "java_module_declaration",
+        "java_module_body",
+        "java_requires_module_directive",
+        "java_exports_module_directive",
+        "java_opens_module_directive",
+        "java_uses_module_directive",
+        "java_provides_module_directive",
+    ] {
+        assert!(
+            seq.iter().any(|seq_name| seq_name == name),
+            "{name} should preserve module descriptor metadata: {seq:?}"
+        );
+    }
+}
+
+#[test]
+fn labeled_statements_and_compact_constructors_do_not_fall_to_raw() {
+    let src = r#"
+record R(int x) {
+  R {
+    if (x < 0) throw new IllegalArgumentException();
+  }
+}
+class C {
+  void f(int limit) {
+    outer: for (int i = 0; i < limit; i++) {
+      if (i > 3) break outer;
+      if (i == 2) continue outer;
+    }
+  }
+}
+"#;
+    let raw = raw_names(src);
+    for name in ["labeled_statement", "compact_constructor_declaration"] {
+        assert!(
+            !raw.iter().any(|raw_name| raw_name == name),
+            "{name} should not lower to Raw: {raw:?}"
+        );
+    }
+    let seq = seq_names(src);
+    for name in [
+        "java_labeled_statement",
+        "java_labeled_break",
+        "java_labeled_continue",
+    ] {
+        assert!(
+            seq.iter().any(|seq_name| seq_name == name),
+            "{name} should preserve labeled control-flow semantics: {seq:?}"
+        );
+    }
+}
+
 fn unary_ops(src: &str) -> Vec<Op> {
     let interner = Interner::new();
     lower(FileId(0), "T.java", src.as_bytes(), &interner)
@@ -97,6 +256,19 @@ fn raw_names(src: &str) -> Vec<String> {
     il.nodes
         .iter()
         .filter(|node| node.kind == NodeKind::Raw)
+        .filter_map(|node| match node.payload {
+            Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn seq_names(src: &str) -> Vec<String> {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "T.java", src.as_bytes(), &interner).expect("lower");
+    il.nodes
+        .iter()
+        .filter(|node| node.kind == NodeKind::Seq)
         .filter_map(|node| match node.payload {
             Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
             _ => None,

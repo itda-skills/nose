@@ -27,6 +27,12 @@ break.
   `bench/corpus_prune/cli.py`.
 
 ### Fixed
+- Closed the next language-lowering gap tranche across Python, Java, and Swift. Python explicit
+  line continuations no longer leak as semantic Raw nodes; Java declaration/module and unsigned
+  shift-right surfaces lower to structured or exact-closed IL; Swift macro/directive/accessor and
+  Swift-specific operator/literal/range surfaces no longer cascade into Raw wrappers. Full
+  `bench/repos` lowering-gap Raw now reports **82,886** gaps (0.180% of IL nodes), down from
+  **134,722** after the prior tranche.
 - Made checked-out benchmark corpus setup reproducible after pruning: pinned repos are reset
   before pruning, `.DS_Store` is excluded from prune/digest accounting, and the prune manifest was
   refreshed for the fresh-corpus result. Manual corpus-verify runs also have a longer timeout and

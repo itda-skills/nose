@@ -24,6 +24,17 @@ mod statements;
 
 use self::{comprehensions::*, control::*, expressions::*, functions::*, statements::*};
 
+pub(super) fn semantic_named_children(node: TsNode) -> Vec<TsNode> {
+    Lowering::named_children(node)
+        .into_iter()
+        .filter(|child| child.kind() != "line_continuation")
+        .collect()
+}
+
+pub(super) fn first_semantic_named_child(node: TsNode) -> Option<TsNode> {
+    semantic_named_children(node).into_iter().next()
+}
+
 pub(crate) fn lower(
     file: FileId,
     path: &str,

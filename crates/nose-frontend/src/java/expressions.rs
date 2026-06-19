@@ -47,6 +47,9 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
                 // shape — dropping the operator would merge it with `x = y`.
                 let value = match common_bin_op(opt.trim_end_matches('=')) {
                     Some(op) => lo.add(NodeKind::BinOp, Payload::Op(op), span, &[l2, r]),
+                    None if opt.trim_end_matches('=') == ">>>" => {
+                        lower_unsigned_shift_right(lo, span, l2, r)
+                    }
                     None => lo.raw(&format!("compound_assignment {opt}"), span, &[l2, r]),
                 };
                 return lo.add(NodeKind::Assign, Payload::None, span, &[l, value]);
@@ -156,11 +159,13 @@ pub(super) fn lower_expr_rest(lo: &mut Lowering, node: TsNode) -> NodeId {
             .named_child(0)
             .map(|c| lower_expr(lo, c))
             .unwrap_or_else(|| lo.empty_block(span)),
-        // Enum constant `NAME(args)` → a Var (the constant), args carry no flow.
-        "enum_constant" => node
-            .child_by_field_name("name")
-            .map(|n| lo.var(lo.text(n), span))
-            .unwrap_or_else(|| lo.empty_block(span)),
+        "enum_constant" => lower_enum_constant(lo, node),
+        "module_body" => lower_module_body(lo, node),
+        "requires_module_directive"
+        | "exports_module_directive"
+        | "opens_module_directive"
+        | "uses_module_directive"
+        | "provides_module_directive" => lower_module_directive(lo, node),
         // Statement nodes reaching expression position (switch-rule bodies, etc.).
         "block" => lower_block(lo, node),
         "expression_statement" => node
@@ -174,6 +179,7 @@ pub(super) fn lower_expr_rest(lo: &mut Lowering, node: TsNode) -> NodeId {
         | "void_type"
         | "generic_type"
         | "array_type"
+        | "scoped_type_identifier"
         | "dimensions"
         | "type_arguments"
         | "wildcard"
@@ -189,7 +195,8 @@ pub(super) fn lower_expr_rest(lo: &mut Lowering, node: TsNode) -> NodeId {
         | "extends_interfaces"
         | "type_list"
         | "throws"
-        | "modifiers" => lo.empty_block(span),
+        | "modifiers"
+        | "requires_modifier" => lo.empty_block(span),
         _ => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
                 .into_iter()
@@ -198,6 +205,27 @@ pub(super) fn lower_expr_rest(lo: &mut Lowering, node: TsNode) -> NodeId {
             lo.raw(node.kind(), span, &kids)
         }
     }
+}
+pub(super) fn lower_enum_constant(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let mut kids = Vec::new();
+    if let Some(name) = node.child_by_field_name("name") {
+        kids.push(lo.str_lit(lo.text(name), lo.span(name)));
+    }
+    if let Some(args) = node.child_by_field_name("arguments") {
+        for arg in Lowering::named_children(args) {
+            kids.push(lower_expr(lo, arg));
+        }
+    }
+    if let Some(body) = node.child_by_field_name("body") {
+        kids.push(lower_body_declarations(lo, body));
+    }
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("java_enum_constant")),
+        span,
+        &kids,
+    )
 }
 pub(super) fn lower_unary(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
@@ -324,7 +352,31 @@ pub(super) fn is_java_identifier(name: &str) -> bool {
         && chars.all(|c| c == '_' || c == '$' || c.is_ascii_alphanumeric())
 }
 pub(super) fn lower_binary(lo: &mut Lowering, node: TsNode) -> NodeId {
+    if node
+        .child_by_field_name("operator")
+        .is_some_and(|op| lo.text(op) == ">>>")
+    {
+        let span = lo.span(node);
+        let left = node
+            .child_by_field_name("left")
+            .map(|child| lower_expr(lo, child))
+            .unwrap_or_else(|| lo.empty_block(span));
+        let right = node
+            .child_by_field_name("right")
+            .map(|child| lower_expr(lo, child))
+            .unwrap_or_else(|| lo.empty_block(span));
+        return lower_unsigned_shift_right(lo, span, left, right);
+    }
     crate::lower::binary(lo, node, common_bin_op, lower_expr)
+}
+pub(super) fn lower_unsigned_shift_right(
+    lo: &mut Lowering,
+    span: Span,
+    left: NodeId,
+    right: NodeId,
+) -> NodeId {
+    let tag = lo.sym("java_unsigned_shift_right");
+    lo.add(NodeKind::Seq, Payload::Name(tag), span, &[left, right])
 }
 /// `recv.method(args)` → `Call(Field(method, recv), args...)`.
 pub(super) fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {

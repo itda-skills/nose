@@ -114,40 +114,40 @@ pub(super) fn lower_while(lo: &mut Lowering, node: TsNode) -> NodeId {
 }
 pub(super) fn lower_match(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
-    let subject = Lowering::named_children(node)
+    let subject = semantic_named_children(node)
         .into_iter()
         .find(|child| child.kind() != "block")
         .map(|child| lower_expr(lo, child))
         .unwrap_or_else(|| lo.empty_block(span));
-    let clauses: Vec<TsNode> = Lowering::named_children(node)
+    let clauses: Vec<TsNode> = semantic_named_children(node)
         .into_iter()
-        .flat_map(|child| Lowering::named_children(child).into_iter())
+        .flat_map(|child| semantic_named_children(child).into_iter())
         .filter(|child| child.kind() == "case_clause")
         .collect();
 
     let mut acc = lo.empty_block(span);
     for clause in clauses.into_iter().rev() {
         let cspan = lo.span(clause);
-        let body = Lowering::named_children(clause)
+        let body = semantic_named_children(clause)
             .into_iter()
             .rev()
             .find(|child| child.kind() == "block")
             .map(|body| lower_block(lo, body, false))
             .unwrap_or_else(|| lo.empty_block(cspan));
-        let Some(pattern) = Lowering::named_children(clause)
+        let Some(pattern) = semantic_named_children(clause)
             .into_iter()
             .find(|child| child.kind() == "case_pattern")
         else {
             acc = body;
             continue;
         };
-        let pattern_cond = Lowering::named_children(pattern)
+        let pattern_cond = semantic_named_children(pattern)
             .first()
             .and_then(|&child| lower_match_pattern_condition(lo, subject, child, cspan));
-        let guard_cond = Lowering::named_children(clause)
+        let guard_cond = semantic_named_children(clause)
             .into_iter()
             .find(|child| child.kind() == "if_clause")
-            .and_then(|guard| guard.named_child(0))
+            .and_then(first_semantic_named_child)
             .map(|guard| lower_expr(lo, guard));
         let Some(cond) = combine_match_conditions(lo, cspan, pattern_cond, guard_cond) else {
             acc = body;
@@ -174,14 +174,14 @@ pub(super) fn lower_match_pattern_condition(
     }
     if pattern.kind() == "union_pattern" {
         let mut conditions = Vec::new();
-        for child in Lowering::named_children(pattern) {
+        for child in semantic_named_children(pattern) {
             let cond = lower_match_pattern_condition(lo, subject, child, span)?;
             conditions.push(cond);
         }
         return fold_or(lo, span, conditions);
     }
     if pattern.kind() == "as_pattern" {
-        return Lowering::named_children(pattern)
+        return semantic_named_children(pattern)
             .into_iter()
             .find(|child| child.kind() != "as_pattern_target")
             .and_then(|child| lower_match_pattern_condition(lo, subject, child, span));
@@ -226,7 +226,7 @@ pub(super) fn lower_try(lo: &mut Lowering, node: TsNode) -> NodeId {
     // arm, #210.)
     let mut body_stmts = Vec::new();
     if let Some(b) = node.child_by_field_name("body") {
-        for s in Lowering::named_children(b) {
+        for s in semantic_named_children(b) {
             if let Some(id) = lower_stmt(lo, s, false) {
                 body_stmts.push(id);
             }
@@ -236,14 +236,14 @@ pub(super) fn lower_try(lo: &mut Lowering, node: TsNode) -> NodeId {
     // Concatenate all except-clause bodies into one handler block.
     let mut handler_stmts = Vec::new();
     let mut finally_block = None;
-    for child in Lowering::named_children(node) {
+    for child in semantic_named_children(node) {
         match child.kind() {
             "else_clause" => {
-                if let Some(b) = Lowering::named_children(child)
+                if let Some(b) = semantic_named_children(child)
                     .into_iter()
                     .find(|n| n.kind() == "block")
                 {
-                    for s in Lowering::named_children(b) {
+                    for s in semantic_named_children(b) {
                         if let Some(id) = lower_stmt(lo, s, false) {
                             body_stmts.push(id);
                         }
@@ -253,12 +253,12 @@ pub(super) fn lower_try(lo: &mut Lowering, node: TsNode) -> NodeId {
             "except_clause" | "except_group_clause" => {
                 if let Some(b) = child.child_by_field_name("body").or_else(|| {
                     // body is usually the last block child
-                    Lowering::named_children(child)
+                    semantic_named_children(child)
                         .into_iter()
                         .rev()
                         .find(|n| n.kind() == "block")
                 }) {
-                    for s in Lowering::named_children(b) {
+                    for s in semantic_named_children(b) {
                         if let Some(id) = lower_stmt(lo, s, false) {
                             handler_stmts.push(id);
                         }
@@ -266,7 +266,7 @@ pub(super) fn lower_try(lo: &mut Lowering, node: TsNode) -> NodeId {
                 }
             }
             "finally_clause" => {
-                if let Some(b) = Lowering::named_children(child)
+                if let Some(b) = semantic_named_children(child)
                     .into_iter()
                     .find(|n| n.kind() == "block")
                 {

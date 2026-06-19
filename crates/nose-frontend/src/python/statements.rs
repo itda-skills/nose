@@ -39,14 +39,14 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode, in_class: bool) -> Opt
         "while_statement" => Some(lower_while(lo, node)),
         "return_statement" => {
             let mut kids = Vec::new();
-            if let Some(v) = node.named_child(0) {
+            if let Some(v) = first_semantic_named_child(node) {
                 kids.push(lower_expr(lo, v));
             }
             Some(lo.add(NodeKind::Return, Payload::None, span, &kids))
         }
         "raise_statement" => {
             let mut kids = Vec::new();
-            if let Some(v) = node.named_child(0) {
+            if let Some(v) = first_semantic_named_child(node) {
                 kids.push(lower_expr(lo, v));
             }
             Some(lo.add(NodeKind::Throw, Payload::None, span, &kids))
@@ -66,8 +66,7 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode, in_class: bool) -> Opt
         "pass_statement" => Some(lo.empty_block(span)),
         "assert_statement" => {
             // `assert cond[, msg]` → ExprStmt(cond) (msg is incidental)
-            let cond = node
-                .named_child(0)
+            let cond = first_semantic_named_child(node)
                 .map(|c| lower_expr(lo, c))
                 .unwrap_or_else(|| lo.empty_block(span));
             Some(lo.add(NodeKind::ExprStmt, Payload::None, span, &[cond]))
@@ -87,7 +86,7 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode, in_class: bool) -> Opt
         "import_statement" | "import_from_statement" | "future_import_statement" => Some(
             lower_static_import(lo, node).unwrap_or_else(|| crate::lower::import_tokens(lo, node)),
         ),
-        "global_statement" | "nonlocal_statement" | "comment" => None,
+        "global_statement" | "nonlocal_statement" | "comment" | "line_continuation" => None,
         // Anything else in statement position: treat as an expression statement
         // (lower_expr has its own Raw fallback for genuinely unknown nodes).
         _ => {
@@ -174,7 +173,7 @@ pub(super) fn lower_block(lo: &mut Lowering, node: TsNode, in_class: bool) -> No
 pub(super) fn lower_docstring_block(lo: &mut Lowering, node: TsNode, in_class: bool) -> NodeId {
     let span = lo.span(node);
     let mut stmts = Vec::new();
-    for (idx, child) in Lowering::named_children(node).into_iter().enumerate() {
+    for (idx, child) in semantic_named_children(node).into_iter().enumerate() {
         if idx == 0 && is_docstring_stmt(child) {
             continue;
         }
@@ -192,7 +191,7 @@ pub(super) fn is_static_string_doc_expr(node: TsNode) -> bool {
     match node.kind() {
         "string" | "concatenated_string" => !contains_interpolation(node),
         "parenthesized_expression" => {
-            let children = Lowering::named_children(node);
+            let children = semantic_named_children(node);
             children.len() == 1 && is_static_string_doc_expr(children[0])
         }
         _ => false,
@@ -200,7 +199,7 @@ pub(super) fn is_static_string_doc_expr(node: TsNode) -> bool {
 }
 pub(super) fn contains_interpolation(node: TsNode) -> bool {
     node.kind() == "interpolation"
-        || Lowering::named_children(node)
+        || semantic_named_children(node)
             .into_iter()
             .any(contains_interpolation)
 }

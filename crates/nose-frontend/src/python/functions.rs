@@ -91,7 +91,7 @@ pub(super) fn collect_global_declarations(
             // `global` frame.
             "function_definition" | "lambda" => continue,
             "global_statement" => {
-                for child in Lowering::named_children(n) {
+                for child in semantic_named_children(n) {
                     if child.kind() == "identifier" {
                         out.insert(lo.sym(lo.text(child)));
                     }
@@ -99,7 +99,7 @@ pub(super) fn collect_global_declarations(
             }
             _ => {}
         }
-        for child in Lowering::named_children(n) {
+        for child in semantic_named_children(n) {
             stack.push(child);
         }
     }
@@ -116,7 +116,7 @@ pub(super) fn lower_class(lo: &mut Lowering, node: TsNode) -> NodeId {
     body_block
 }
 pub(super) fn lower_params(lo: &mut Lowering, params: TsNode, out: &mut Vec<NodeId>) {
-    for p in Lowering::named_children(params) {
+    for p in semantic_named_children(params) {
         let span = lo.span(p);
         let name = param_name(lo, p);
         let payload = match name {

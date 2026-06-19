@@ -40,6 +40,7 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
         "while_statement" => Some(lower_while(lo, node)),
         "repeat_while_statement" => Some(lower_repeat_while(lo, node)),
         "do_statement" => Some(lower_do(lo, node)),
+        "directive" => Some(lower_directive(lo, node)),
         "discard_statement" => None,
         "line_comment" | "multiline_comment" => None,
         k if is_expr_kind(k) => {
@@ -53,6 +54,36 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
                 .collect();
             Some(lo.raw(node.kind(), span, &kids))
         }
+    }
+}
+pub(super) fn lower_directive(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let tag = swift_directive_tag(lo.text(node));
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .filter(|child| !matches!(child.kind(), "line_comment" | "multiline_comment"))
+        .map(|child| lower_expr(lo, child))
+        .collect();
+    lo.add(NodeKind::Seq, Payload::Name(lo.sym(tag)), span, &kids)
+}
+fn swift_directive_tag(text: &str) -> &'static str {
+    let trimmed = text.trim_start();
+    if trimmed.starts_with("#elseif") {
+        "swift_directive_elseif"
+    } else if trimmed.starts_with("#else") {
+        "swift_directive_else"
+    } else if trimmed.starts_with("#endif") {
+        "swift_directive_endif"
+    } else if trimmed.starts_with("#if") {
+        "swift_directive_if"
+    } else if trimmed.starts_with("#warning") {
+        "swift_directive_warning"
+    } else if trimmed.starts_with("#error") {
+        "swift_directive_error"
+    } else if trimmed.starts_with("#sourceLocation") {
+        "swift_directive_source_location"
+    } else {
+        "swift_directive"
     }
 }
 pub(super) fn lower_control_transfer(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
@@ -102,10 +133,18 @@ pub(super) fn lower_assignment(lo: &mut Lowering, node: TsNode) -> NodeId {
     let read_lhs = lhs_node
         .map(|target| lower_expr(lo, target))
         .unwrap_or_else(|| lo.empty_block(span));
-    let value = op
-        .strip_suffix('=')
-        .and_then(common_bin_op)
-        .map(|op| lo.add(NodeKind::BinOp, Payload::Op(op), span, &[read_lhs, rhs]))
+    let compound_base = swift_compound_assignment_base(&op).or_else(|| {
+        op.strip_suffix('=')
+            .filter(|base| common_bin_op(base).is_some())
+    });
+    let value = compound_base
+        .map(|base| {
+            if let Some(op) = swift_bin_op(base) {
+                lo.add(NodeKind::BinOp, Payload::Op(op), span, &[read_lhs, rhs])
+            } else {
+                lower_swift_specific_infix(lo, span, base, &[read_lhs, rhs])
+            }
+        })
         .unwrap_or_else(|| lo.raw(&format!("assignment {op}"), span, &[read_lhs, rhs]));
     lo.add(NodeKind::Assign, Payload::None, span, &[lhs, value])
 }

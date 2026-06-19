@@ -6,7 +6,7 @@ use super::*;
 /// a JS template literal and a `"…" + x` concatenation.
 pub(super) fn lower_string(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
-    let interps: Vec<TsNode> = Lowering::named_children(node)
+    let interps: Vec<TsNode> = semantic_named_children(node)
         .into_iter()
         .filter(|c| c.kind() == "interpolation")
         .collect();
@@ -56,7 +56,7 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         "lambda" => lower_lambda(lo, node),
         "slice" => lower_slice(lo, node),
         "list" | "tuple" | "set" => {
-            let kids: Vec<NodeId> = Lowering::named_children(node)
+            let kids: Vec<NodeId> = semantic_named_children(node)
                 .into_iter()
                 .map(|c| lower_expr(lo, c))
                 .collect();
@@ -64,7 +64,7 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             lo.add(NodeKind::Seq, Payload::Name(tag), span, &kids)
         }
         "pattern_list" | "expression_list" | "list_pattern" | "tuple_pattern" => {
-            let kids: Vec<NodeId> = Lowering::named_children(node)
+            let kids: Vec<NodeId> = semantic_named_children(node)
                 .into_iter()
                 .map(|c| lower_expr(lo, c))
                 .collect();
@@ -111,8 +111,7 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             .or_else(|| node.named_child(1))
             .map(|r| lower_expr(lo, r))
             .unwrap_or_else(|| lo.empty_block(span)),
-        "if_clause" => node
-            .named_child(0)
+        "if_clause" => first_semantic_named_child(node)
             .map(|c| lower_expr(lo, c))
             .unwrap_or_else(|| lo.empty_block(span)),
         "yield" => {
@@ -120,7 +119,7 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             lo.yield_boundary(span, value)
         }
         _ => {
-            let kids: Vec<NodeId> = Lowering::named_children(node)
+            let kids: Vec<NodeId> = semantic_named_children(node)
                 .into_iter()
                 .map(|c| lower_expr(lo, c))
                 .collect();
@@ -243,7 +242,7 @@ pub(super) fn lower_named_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
 }
 pub(super) fn lower_dotted_name(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
-    let mut parts = Lowering::named_children(node).into_iter();
+    let mut parts = semantic_named_children(node).into_iter();
     let Some(first) = parts.next() else {
         return lo.empty_block(span);
     };
@@ -257,14 +256,14 @@ pub(super) fn lower_dotted_name(lo: &mut Lowering, node: TsNode) -> NodeId {
 pub(super) fn lower_dictionary(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let mut kids = Vec::new();
-    for child in Lowering::named_children(node) {
+    for child in semantic_named_children(node) {
         match child.kind() {
             "pair" => kids.push(lower_dictionary_pair(lo, child)),
             // Dict unpacking has overwrite-order semantics that the strict value
             // graph does not prove yet. Preserve it for near mode, but make the
             // containing function ineligible for exact semantic reporting.
             "dictionary_splat" => {
-                let inner: Vec<NodeId> = Lowering::named_children(child)
+                let inner: Vec<NodeId> = semantic_named_children(child)
                     .into_iter()
                     .map(|c| lower_expr(lo, c))
                     .collect();
@@ -278,7 +277,7 @@ pub(super) fn lower_dictionary(lo: &mut Lowering, node: TsNode) -> NodeId {
 }
 pub(super) fn lower_dictionary_pair(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
-    let kids: Vec<NodeId> = Lowering::named_children(node)
+    let kids: Vec<NodeId> = semantic_named_children(node)
         .into_iter()
         .map(|c| lower_expr(lo, c))
         .collect();
@@ -336,7 +335,7 @@ pub(super) fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
         if args.kind() == "generator_expression" {
             kids.push(lower_comprehension(lo, args));
         } else {
-            for a in Lowering::named_children(args) {
+            for a in semantic_named_children(args) {
                 kids.push(lower_expr(lo, a));
             }
         }
@@ -393,6 +392,9 @@ pub(super) fn lower_comparison(lo: &mut Lowering, node: TsNode) -> NodeId {
     let mut pending: Vec<String> = Vec::new();
     let mut cur = node.walk();
     for c in node.children(&mut cur) {
+        if c.kind() == "line_continuation" {
+            continue;
+        }
         let t = lo.text(c).trim();
         if is_op_tok(t) {
             pending.push(t.to_string());
@@ -440,7 +442,7 @@ pub(super) fn lower_comparison(lo: &mut Lowering, node: TsNode) -> NodeId {
 pub(super) fn lower_ternary(lo: &mut Lowering, node: TsNode) -> NodeId {
     // Python: `then if cond else alt`. Named children order: [then, cond, alt].
     let span = lo.span(node);
-    let kids = Lowering::named_children(node);
+    let kids = semantic_named_children(node);
     let then = kids
         .first()
         .map(|n| lower_expr(lo, *n))

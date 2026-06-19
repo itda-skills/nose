@@ -49,6 +49,34 @@ pub(super) fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
     }
     lo.add(NodeKind::Call, Payload::None, span, &kids)
 }
+pub(super) fn lower_macro_invocation(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let call = lower_call(lo, node);
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("swift_macro_invocation")),
+        span,
+        &[call],
+    )
+}
+pub(super) fn lower_diagnostic(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let mut kids = vec![lo.str_lit(lo.text(node), span)];
+    kids.extend(
+        Lowering::named_children(node)
+            .into_iter()
+            .filter(|child| is_expr_kind(child.kind()))
+            .map(|child| lower_expr(lo, child)),
+    );
+    let tag = if lo.text(node).trim_start().starts_with("#error") {
+        "swift_diagnostic_error"
+    } else if lo.text(node).trim_start().starts_with("#warning") {
+        "swift_diagnostic_warning"
+    } else {
+        "swift_diagnostic"
+    };
+    lo.add(NodeKind::Seq, Payload::Name(lo.sym(tag)), span, &kids)
+}
 pub(super) fn kwarg_name<'a>(lo: &'a Lowering, node: NodeId) -> Option<&'a str> {
     if lo.b.kind(node) != NodeKind::KwArg {
         return None;

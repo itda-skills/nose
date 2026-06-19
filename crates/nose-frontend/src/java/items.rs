@@ -11,14 +11,90 @@ pub(super) fn lower_item(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
         | "record_declaration"
         | "annotation_type_declaration" => Some(lower_type(lo, node)),
         "method_declaration" | "constructor_declaration" => Some(lower_method(lo, node)),
-        "field_declaration" => Some(lower_field(lo, node)),
+        "compact_constructor_declaration" => Some(lower_compact_constructor(lo, node)),
+        "field_declaration" | "constant_declaration" => Some(lower_field(lo, node)),
+        "enum_body_declarations" => Some(lower_body_declarations(lo, node)),
+        "static_initializer" => Some(lower_static_initializer(lo, node)),
         "import_declaration" => {
             Some(lower_import(lo, node).unwrap_or_else(|| crate::lower::import_tokens(lo, node)))
         }
         "package_declaration" => Some(crate::lower::import_tokens(lo, node)),
+        "module_declaration" => Some(lower_module_declaration(lo, node)),
         "line_comment" | "block_comment" => None,
         _ => lower_stmt(lo, node),
     }
+}
+pub(super) fn lower_module_declaration(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .filter_map(|child| match child.kind() {
+            "identifier" | "scoped_identifier" => Some(lo.str_lit(lo.text(child), lo.span(child))),
+            "module_body" => Some(lower_module_body(lo, child)),
+            _ => None,
+        })
+        .collect();
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("java_module_declaration")),
+        span,
+        &kids,
+    )
+}
+pub(super) fn lower_module_body(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .filter_map(|child| match child.kind() {
+            "requires_module_directive"
+            | "exports_module_directive"
+            | "opens_module_directive"
+            | "uses_module_directive"
+            | "provides_module_directive" => Some(lower_module_directive(lo, child)),
+            _ => None,
+        })
+        .collect();
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("java_module_body")),
+        span,
+        &kids,
+    )
+}
+pub(super) fn lower_module_directive(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let tag = format!("java_{}", node.kind());
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .filter_map(|child| match child.kind() {
+            "identifier" | "type_identifier" | "scoped_identifier" | "scoped_type_identifier" => {
+                Some(lo.str_lit(lo.text(child), lo.span(child)))
+            }
+            "requires_modifier" => Some(lo.add(
+                NodeKind::Seq,
+                Payload::Name(lo.sym(&format!("java_requires_modifier_{}", lo.text(child)))),
+                lo.span(child),
+                &[],
+            )),
+            _ => None,
+        })
+        .collect();
+    lo.add(NodeKind::Seq, Payload::Name(lo.sym(&tag)), span, &kids)
+}
+pub(super) fn lower_body_declarations(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .filter_map(|child| lower_item(lo, child))
+        .collect();
+    lo.add(NodeKind::Block, Payload::None, span, &kids)
+}
+pub(super) fn lower_static_initializer(lo: &mut Lowering, node: TsNode) -> NodeId {
+    Lowering::named_children(node)
+        .into_iter()
+        .find(|child| child.kind() == "block")
+        .map(|block| lower_block(lo, block))
+        .unwrap_or_else(|| lo.empty_block(lo.span(node)))
 }
 pub(super) fn lower_import(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
     let span = lo.span(node);
@@ -65,7 +141,11 @@ pub(super) fn lower_type(lo: &mut Lowering, node: TsNode) -> NodeId {
     let mut kids = Vec::new();
     if let Some(body) = node.child_by_field_name("body") {
         for c in Lowering::named_children(body) {
-            if let Some(id) = lower_item(lo, c) {
+            let id = match c.kind() {
+                "enum_constant" => Some(lower_expr(lo, c)),
+                _ => lower_item(lo, c),
+            };
+            if let Some(id) = id {
                 kids.push(id);
             }
         }
@@ -106,6 +186,25 @@ pub(super) fn lower_method(lo: &mut Lowering, node: TsNode) -> NodeId {
         UnitKind::Method,
         name,
         java_method_origin(node, body_node.is_some()),
+    );
+    func
+}
+pub(super) fn lower_compact_constructor(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let body_node = node.child_by_field_name("body").or_else(|| {
+        Lowering::named_children(node)
+            .into_iter()
+            .find(|child| child.kind() == "block" || child.kind() == "constructor_body")
+    });
+    let body = body_node
+        .map(|body| lower_block(lo, body))
+        .unwrap_or_else(|| lo.empty_block(span));
+    let func = lo.add(NodeKind::Func, Payload::None, span, &[body]);
+    lo.push_unit_with_origin(
+        func,
+        UnitKind::Method,
+        None,
+        crate::lower::imperative_callable_origin(UnitSubkind::Constructor, true),
     );
     func
 }

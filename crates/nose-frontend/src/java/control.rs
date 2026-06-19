@@ -31,6 +31,22 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
             }
             Some(lo.add(NodeKind::Return, Payload::None, span, &kids))
         }
+        "assert_statement" => {
+            let cond = node
+                .named_child(0)
+                .map(|expr| lower_expr(lo, expr))
+                .unwrap_or_else(|| lo.empty_block(span));
+            Some(lo.add(NodeKind::ExprStmt, Payload::None, span, &[cond]))
+        }
+        "synchronized_statement" => node
+            .child_by_field_name("body")
+            .map(|body| lower_block(lo, body))
+            .or_else(|| {
+                Lowering::named_children(node)
+                    .into_iter()
+                    .find(|child| child.kind() == "block")
+                    .map(|body| lower_block(lo, body))
+            }),
         "throw_statement" => {
             let mut kids = Vec::new();
             if let Some(v) = node.named_child(0) {
@@ -39,13 +55,66 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
             Some(lo.add(NodeKind::Throw, Payload::None, span, &kids))
         }
         "try_statement" | "try_with_resources_statement" => Some(lower_try(lo, node)),
-        "break_statement" => Some(lo.add(NodeKind::Break, Payload::None, span, &[])),
-        "continue_statement" => Some(lo.add(NodeKind::Continue, Payload::None, span, &[])),
+        "labeled_statement" => Some(lower_labeled_statement(lo, node)),
+        "break_statement" => Some(lower_break_or_continue(lo, node, false)),
+        "continue_statement" => Some(lower_break_or_continue(lo, node, true)),
         ";" | "line_comment" | "block_comment" => None,
         k if is_type_decl(k) => lower_item(lo, node),
         _ => {
             let e = lower_expr(lo, node);
             Some(lo.add(NodeKind::ExprStmt, Payload::None, span, &[e]))
+        }
+    }
+}
+pub(super) fn lower_labeled_statement(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let label = Lowering::named_children(node)
+        .into_iter()
+        .find(|child| child.kind() == "identifier")
+        .map(|label| lo.str_lit(lo.text(label), lo.span(label)))
+        .unwrap_or_else(|| lo.empty_block(span));
+    let body = Lowering::named_children(node)
+        .into_iter()
+        .rev()
+        .find(|child| child.kind() != "identifier")
+        .and_then(|body| lower_stmt(lo, body))
+        .unwrap_or_else(|| lo.empty_block(span));
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("java_labeled_statement")),
+        span,
+        &[label, body],
+    )
+}
+pub(super) fn lower_break_or_continue(
+    lo: &mut Lowering,
+    node: TsNode,
+    is_continue: bool,
+) -> NodeId {
+    let span = lo.span(node);
+    let label = Lowering::named_children(node)
+        .into_iter()
+        .find(|child| child.kind() == "identifier");
+    match (is_continue, label) {
+        (false, None) => lo.add(NodeKind::Break, Payload::None, span, &[]),
+        (true, None) => lo.add(NodeKind::Continue, Payload::None, span, &[]),
+        (false, Some(label)) => {
+            let label = lo.str_lit(lo.text(label), lo.span(label));
+            lo.add(
+                NodeKind::Seq,
+                Payload::Name(lo.sym("java_labeled_break")),
+                span,
+                &[label],
+            )
+        }
+        (true, Some(label)) => {
+            let label = lo.str_lit(lo.text(label), lo.span(label));
+            lo.add(
+                NodeKind::Seq,
+                Payload::Name(lo.sym("java_labeled_continue")),
+                span,
+                &[label],
+            )
         }
     }
 }

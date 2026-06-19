@@ -22,7 +22,14 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             let text = lo.text(node);
             lo.add(NodeKind::Lit, Payload::LitBool(text == "true"), span, &[])
         }
+        "special_literal" => lower_special_literal(lo, node),
         "nil" => lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[]),
+        "bang" => lo.add(
+            NodeKind::Seq,
+            Payload::Name(lo.sym("swift_force_marker")),
+            span,
+            &[],
+        ),
         "array_literal" => lower_seq(lo, node, "array"),
         "dictionary_literal" => lower_dictionary(lo, node),
         "tuple_expression" => lower_tuple(lo, node),
@@ -49,6 +56,9 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         "if_statement" | "guard_statement" => lower_if(lo, node),
         "switch_statement" => lower_switch(lo, node),
         "call_expression" | "constructor_expression" => lower_call(lo, node),
+        "macro_invocation" => lower_macro_invocation(lo, node),
+        "diagnostic" => lower_diagnostic(lo, node),
+        "directive" => lower_directive(lo, node),
         "navigation_expression" | "selector_expression" => lower_navigation(lo, node),
         "lambda_literal" => lower_lambda(lo, node),
         "as_expression" | "check_expression" | "consume_expression" | "value_pack_expansion" => {
@@ -150,6 +160,14 @@ pub(super) fn lower_tuple(lo: &mut Lowering, node: TsNode) -> NodeId {
 }
 pub(super) fn lower_binary_like(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
+    if node.kind() == "fully_open_range" {
+        return lo.add(
+            NodeKind::Seq,
+            Payload::Name(lo.sym("swift_range_fully_open")),
+            span,
+            &[],
+        );
+    }
     let lhs = node
         .child_by_field_name("lhs")
         .or_else(|| node.child_by_field_name("left"))
@@ -190,13 +208,22 @@ pub(super) fn lower_binary_like(lo: &mut Lowering, node: TsNode) -> NodeId {
         if let Some(rewritten) = lower_misnested_swift_boolean_rhs(lo, span, op_text, left, right) {
             return rewritten;
         }
+        if let Some(base_op) = swift_compound_assignment_base(op_text) {
+            let read_left = lower_expr(lo, lhs);
+            let value = if let Some(op) = swift_bin_op(base_op) {
+                lo.add(NodeKind::BinOp, Payload::Op(op), span, &[read_left, right])
+            } else {
+                lower_swift_specific_infix(lo, span, base_op, &[read_left, right])
+            };
+            return lo.add(NodeKind::Assign, Payload::None, span, &[left, value]);
+        }
         if let Some(range) = lower_range_op(lo, span, op_text, left, right) {
             return range;
         }
         if let Some(op) = swift_bin_op(op_text) {
             return lo.add(NodeKind::BinOp, Payload::Op(op), span, &[left, right]);
         }
-        return lo.raw(&format!("{} {op_text}", node.kind()), span, &[left, right]);
+        return lower_swift_specific_infix(lo, span, op_text, &[left, right]);
     }
     let kids: Vec<NodeId> = Lowering::named_children(node)
         .into_iter()
@@ -211,10 +238,43 @@ pub(super) fn lower_binary_like(lo: &mut Lowering, node: TsNode) -> NodeId {
                 return range;
             }
         }
-        lo.raw(&format!("{} {op_text}", node.kind()), span, &kids)
+        lower_swift_specific_infix(lo, span, op_text, &kids)
     } else {
         lo.raw(node.kind(), span, &kids)
     }
+}
+pub(super) fn lower_special_literal(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let literal = lo.str_lit(lo.text(node), span);
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("swift_special_literal")),
+        span,
+        &[literal],
+    )
+}
+pub(super) fn lower_swift_specific_infix(
+    lo: &mut Lowering,
+    span: Span,
+    op_text: &str,
+    kids: &[NodeId],
+) -> NodeId {
+    let tag = match op_text {
+        "===" => "swift_identity_eq".to_string(),
+        "!==" => "swift_identity_ne".to_string(),
+        "&+" => "swift_overflow_add".to_string(),
+        "&-" => "swift_overflow_sub".to_string(),
+        "&*" => "swift_overflow_mul".to_string(),
+        "&<<" => "swift_overflow_shl".to_string(),
+        "&>>" => "swift_overflow_shr".to_string(),
+        "&+=" => "swift_overflow_add_assign".to_string(),
+        "&-=" => "swift_overflow_sub_assign".to_string(),
+        "&*=" => "swift_overflow_mul_assign".to_string(),
+        "&<<=" => "swift_overflow_shl_assign".to_string(),
+        "&>>=" => "swift_overflow_shr_assign".to_string(),
+        other => format!("swift_infix_{other}"),
+    };
+    lo.add(NodeKind::Seq, Payload::Name(lo.sym(&tag)), span, kids)
 }
 pub(super) fn lower_misnested_swift_boolean_rhs(
     lo: &mut Lowering,
@@ -256,6 +316,26 @@ pub(super) fn swift_bin_op(text: &str) -> Option<Op> {
         "||" => Some(Op::Or),
         "..<" | "..." => None,
         other => common_bin_op(other),
+    }
+}
+pub(super) fn swift_compound_assignment_base(text: &str) -> Option<&str> {
+    match text {
+        "+=" => Some("+"),
+        "-=" => Some("-"),
+        "*=" => Some("*"),
+        "/=" => Some("/"),
+        "%=" => Some("%"),
+        "&=" => Some("&"),
+        "|=" => Some("|"),
+        "^=" => Some("^"),
+        "<<=" => Some("<<"),
+        ">>=" => Some(">>"),
+        "&+=" => Some("&+"),
+        "&-=" => Some("&-"),
+        "&*=" => Some("&*"),
+        "&<<=" => Some("&<<"),
+        "&>>=" => Some("&>>"),
+        _ => None,
     }
 }
 pub(super) fn lower_range_op(

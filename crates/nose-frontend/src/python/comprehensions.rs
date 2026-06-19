@@ -2,7 +2,7 @@ use super::*;
 
 pub(super) fn lower_comprehension_pair(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
-    let kids: Vec<NodeId> = Lowering::named_children(node)
+    let kids: Vec<NodeId> = semantic_named_children(node)
         .into_iter()
         .map(|c| lower_expr(lo, c))
         .collect();
@@ -46,7 +46,7 @@ pub(super) fn lower_comprehension(lo: &mut Lowering, node: TsNode) -> NodeId {
     }
     let body_node = node.named_child(0);
 
-    let for_clauses = Lowering::named_children(node)
+    let for_clauses = semantic_named_children(node)
         .into_iter()
         .filter(|c| c.kind() == "for_in_clause")
         .count();
@@ -54,7 +54,7 @@ pub(super) fn lower_comprehension(lo: &mut Lowering, node: TsNode) -> NodeId {
         return lower_multi_clause_comprehension(lo, node, span, body_node);
     }
 
-    let clause = Lowering::named_children(node)
+    let clause = semantic_named_children(node)
         .into_iter()
         .find(|c| c.kind() == "for_in_clause");
     let pattern = clause.and_then(|c| c.child_by_field_name("left").or_else(|| c.named_child(0)));
@@ -64,11 +64,11 @@ pub(super) fn lower_comprehension(lo: &mut Lowering, node: TsNode) -> NodeId {
         .unwrap_or_else(|| lo.empty_block(span));
 
     // Each `if cond` clause wraps the collection in a `HoF(Filter)`.
-    for f in Lowering::named_children(node) {
+    for f in semantic_named_children(node) {
         if f.kind() != "if_clause" {
             continue;
         }
-        if let Some(cn) = f.named_child(0) {
+        if let Some(cn) = first_semantic_named_child(f) {
             let fspan = lo.span(f);
             let cond = lower_expr(lo, cn);
             let flam = comp_lambda(lo, pattern, cond, fspan);
@@ -115,7 +115,7 @@ pub(super) fn lower_multi_clause_comprehension(
 ) -> NodeId {
     // Group each `for` clause with the `if` clauses that follow it, in source order.
     let mut groups: Vec<(TsNode, Vec<TsNode>)> = Vec::new();
-    for c in Lowering::named_children(node) {
+    for c in semantic_named_children(node) {
         match c.kind() {
             "for_in_clause" => groups.push((c, Vec::new())),
             "if_clause" => {
@@ -143,7 +143,7 @@ pub(super) fn lower_multi_clause_comprehension(
             .map(|r| lower_expr(lo, r))
             .unwrap_or_else(|| lo.empty_block(span));
         for ifc in ifs {
-            if let Some(cn) = ifc.named_child(0) {
+            if let Some(cn) = first_semantic_named_child(*ifc) {
                 let fspan = lo.span(*ifc);
                 let cond = lower_expr(lo, cn);
                 let flam = comp_lambda(lo, pattern, cond, fspan);
@@ -175,7 +175,7 @@ pub(super) fn lower_multi_clause_comprehension(
 pub(super) fn push_pattern_params(lo: &mut Lowering, node: TsNode, out: &mut Vec<NodeId>) {
     match node.kind() {
         "tuple_pattern" | "pattern_list" | "tuple" | "list_pattern" => {
-            for c in Lowering::named_children(node) {
+            for c in semantic_named_children(node) {
                 push_pattern_params(lo, c, out);
             }
         }

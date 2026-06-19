@@ -3324,3 +3324,69 @@ cargo test -q -p nose-frontend
 cargo test -q -p nose-cli --test equivalence
 cargo test -q -p nose-cli --test css_html_quality
 ```
+
+## DB. Language lowering residual tranche: Python, Java, Swift (2026-06-20)
+
+The §DA pass left a much smaller and more actionable tail: Python explicit line continuations,
+Java declaration/module surfaces, and Swift macro/directive/accessor/operator cascades. The rule
+stayed the same: close CST wrappers that have a fail-closed IL shape, but do not erase parser-owned
+`ERROR` nodes or protocol boundaries.
+
+**Baseline.** Full pinned `bench/repos` stats before this follow-up:
+
+```text
+files: 67407   IL nodes: 46064044   Raw nodes: 250829 (0.545%)
+= 134722 lowering-gap + 116107 protocol-boundary
+```
+
+Language gaps most relevant to this pass were Python **12,100**, Java **19,533**, and Swift
+**33,598**. In focused subsets, SymPy alone had 8,770 Python `line_continuation` Raw nodes, the
+Java-heavy subset had 15,554 Java gaps, and the Swift subset had 27,682 Swift gaps dominated by
+directives, macro call suffixes, computed accessors, overflow operators, special literals, and
+fully-open ranges.
+
+**Fixes shipped.**
+
+- Python: `line_continuation` is now filtered from semantic child traversal and comparison
+  iteration, so explicit backslashes no longer become semantic Raw nodes in asserts,
+  comprehensions, and other nested expressions.
+- Java: constants, enum body declarations, static initializers, compact constructors, module
+  directives, labeled/assert/synchronized statements, scoped type identifiers, and unsigned
+  shift-right operators now lower to structured or exact-closed IL. Java `>>>` stays distinct from
+  signed `>>`.
+- Swift: macro invocations and diagnostics no longer leak `call_suffix` / `value_argument`
+  wrappers; computed property accessors lower through their statement bodies; Swift-specific
+  identity and overflow/custom operators, special literals, fully-open ranges, and conditional
+  compilation directives lower to Swift-specific exact-closed nodes.
+
+**Measured result.** Re-running `cargo run -q -p nose-cli -- stats bench/repos --top 100`:
+
+```text
+files: 67407   IL nodes: 46051702   Raw nodes: 199028 (0.432%)
+= 82886 lowering-gap + 116142 protocol-boundary
+```
+
+| language | gap before | gap after | delta |
+|---|---:|---:|---:|
+| Python | 12,100 | 3,320 | -8,780 |
+| Java | 19,533 | 2,204 | -17,329 |
+| Swift | 33,598 | 7,871 | -25,727 |
+
+Overall lowering-gap Raw drops **134,722 -> 82,886** (-51,836). The full-corpus top gaps are now
+mostly tree-sitter `ERROR` recovery across C/JS/TS/Go/Swift/Python/Java, plus known protocol
+boundaries (`await`, `try`, `defer`, `go`, channel/select, `yield`). A targeted Swift check on
+`swift-log/Sources/Logging/Locks.swift` confirms conditional compilation `directive` Raw is gone
+there; the remaining gap in that file is parser `ERROR`, so it stays honest Raw.
+
+**Regression coverage.** Focused failing tests were added before each fix, then the final guardrails
+were run:
+
+```text
+cargo test -q -p nose-frontend python::tests -- --nocapture
+cargo test -q -p nose-frontend java::tests -- --nocapture
+cargo test -q -p nose-frontend swift::tests -- --nocapture
+cargo test -q -p nose-frontend
+cargo test -q -p nose-cli --test equivalence
+cargo test -q -p nose-cli --test css_html_quality
+awiki lint --root docs
+```

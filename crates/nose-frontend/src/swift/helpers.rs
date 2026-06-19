@@ -38,7 +38,7 @@ pub(super) fn peel_value_child(lo: &mut Lowering, node: TsNode) -> NodeId {
 pub(super) fn first_expr_child<'a>(node: TsNode<'a>) -> Option<TsNode<'a>> {
     Lowering::named_children(node)
         .into_iter()
-        .find(|child| is_expr_kind(child.kind()))
+        .find(|child| is_expr_kind(child.kind()) && child.kind() != "bang")
 }
 pub(super) fn first_statements_child<'a>(node: TsNode<'a>) -> Option<TsNode<'a>> {
     Lowering::named_children(node)
@@ -77,6 +77,7 @@ pub(super) fn is_expr_kind(kind: &str) -> bool {
             | "constructor_expression"
             | "consume_expression"
             | "dictionary_literal"
+            | "diagnostic"
             | "directly_assignable_expression"
             | "disjunction_expression"
             | "equality_expression"
@@ -90,6 +91,7 @@ pub(super) fn is_expr_kind(kind: &str) -> bool {
             | "key_path_string_expression"
             | "lambda_literal"
             | "line_string_literal"
+            | "macro_invocation"
             | "multi_line_string_literal"
             | "multiplicative_expression"
             | "navigation_expression"

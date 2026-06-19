@@ -25,6 +25,41 @@ fn raw_names(il: &Il, interner: &Interner) -> Vec<String> {
         .collect()
 }
 
+fn seq_names(il: &Il, interner: &Interner) -> Vec<String> {
+    il.nodes
+        .iter()
+        .filter_map(|node| {
+            if node.kind != NodeKind::Seq {
+                return None;
+            }
+            let Payload::Name(name) = node.payload else {
+                return None;
+            };
+            Some(interner.resolve(name).to_string())
+        })
+        .collect()
+}
+
+fn has_assign_rhs_seq(il: &Il, interner: &Interner, expected: &str) -> bool {
+    il.nodes.iter().enumerate().any(|(idx, node)| {
+        if node.kind != NodeKind::Assign {
+            return false;
+        }
+        let children = il.children(NodeId(idx as u32));
+        let [_, rhs] = children else {
+            return false;
+        };
+        let rhs = il.node(*rhs);
+        if rhs.kind != NodeKind::Seq {
+            return false;
+        }
+        let Payload::Name(name) = rhs.payload else {
+            return false;
+        };
+        interner.resolve(name) == expected
+    })
+}
+
 #[test]
 fn function_lowers_to_unit() {
     let il = il(r#"
@@ -290,6 +325,160 @@ return xs[0..<xs.count].count
         assert!(
             !raw.iter().any(|name| name == unexpected),
             "{unexpected} should lower to structured IL, got {raw:?}"
+        );
+    }
+}
+
+#[test]
+fn macro_invocations_do_not_cascade_raw_call_suffixes() {
+    let (il, interner) = il_with_interner(
+        r#"
+func check(_ value: Int) {
+#expect(value == 1)
+#warning("generated fixture")
+}
+"#,
+    );
+    let raw = raw_names(&il, &interner);
+    for unexpected in [
+        "macro_invocation",
+        "call_suffix",
+        "value_arguments",
+        "value_argument",
+    ] {
+        assert!(
+            !raw.iter().any(|name| name == unexpected),
+            "{unexpected} should not stay Raw in macro calls: {raw:?}"
+        );
+    }
+    let seq = seq_names(&il, &interner);
+    assert!(
+        seq.iter().any(|name| name == "swift_macro_invocation"),
+        "macro invocation should use the exact-closed Swift tag: {seq:?}"
+    );
+    assert!(
+        seq.iter().any(|name| name == "swift_diagnostic_warning"),
+        "diagnostic should preserve warning/error kind: {seq:?}"
+    );
+}
+
+#[test]
+fn computed_property_accessors_do_not_fall_to_raw() {
+    let (il, interner) = il_with_interner(
+        r#"
+struct Box {
+var storage: Int
+var value: Int {
+    get { storage }
+    set(newValue) { storage = newValue }
+}
+}
+"#,
+    );
+    let raw = raw_names(&il, &interner);
+    for unexpected in [
+        "computed_getter",
+        "getter_specifier",
+        "computed_setter",
+        "setter_specifier",
+        "computed_property",
+    ] {
+        assert!(
+            !raw.iter().any(|name| name == unexpected),
+            "{unexpected} should lower through accessor bodies: {raw:?}"
+        );
+    }
+}
+
+#[test]
+fn swift_operator_literal_and_range_surfaces_do_not_fall_to_raw() {
+    let (il, interner) = il_with_interner(
+        r#"
+final class Token {}
+
+func risky() throws -> Int { 1 }
+
+func ops(_ a: Int, _ b: Int, _ left: Token, _ right: Token) -> Any {
+var x = a
+x &+= b
+let y = a &+ b
+let z = a &- b
+let w = a &* b
+let id = left === right
+let notId = left !== right
+let slice = [a, b][...]
+let forced = try! risky()
+let info = (#fileID, #line, #function)
+return (x, y, z, w, id, notId, slice, forced, info)
+}
+"#,
+    );
+    let raw = raw_names(&il, &interner);
+    for unexpected in [
+        "infix_expression &+=",
+        "infix_expression &+",
+        "infix_expression &-",
+        "infix_expression &*",
+        "equality_expression ===",
+        "infix_expression !==",
+        "fully_open_range",
+        "bang",
+        "special_literal",
+    ] {
+        assert!(
+            !raw.iter().any(|name| name == unexpected),
+            "{unexpected} should lower to Swift-specific structured IL: {raw:?}"
+        );
+    }
+    let seq = seq_names(&il, &interner);
+    for expected in [
+        "swift_overflow_add",
+        "swift_overflow_sub",
+        "swift_overflow_mul",
+        "swift_identity_eq",
+        "swift_identity_ne",
+        "swift_range_fully_open",
+        "swift_special_literal",
+    ] {
+        assert!(
+            seq.iter().any(|name| name == expected),
+            "{expected} should be preserved as an exact-closed Swift tag: {seq:?}"
+        );
+    }
+    assert!(
+        has_assign_rhs_seq(&il, &interner, "swift_overflow_add"),
+        "&+= should lower as mutation with a Swift overflow-add RHS"
+    );
+}
+
+#[test]
+fn conditional_compilation_directives_do_not_fall_to_raw() {
+    let (il, interner) = il_with_interner(
+        r#"
+#if os(macOS)
+let platform = 1
+#elseif canImport(Glibc)
+let platform = 2
+#else
+let platform = 3
+#endif
+"#,
+    );
+    let raw = raw_names(&il, &interner);
+    assert!(
+        !raw.iter().any(|name| name == "directive"),
+        "conditional compilation directives should lower to Swift-specific markers: {raw:?}"
+    );
+    let seq = seq_names(&il, &interner);
+    for expected in [
+        "swift_directive_if",
+        "swift_directive_elseif",
+        "swift_directive_else",
+        "swift_directive_endif",
+    ] {
+        assert!(
+            seq.iter().any(|name| name == expected),
+            "{expected} should preserve conditional-compilation shape: {seq:?}"
         );
     }
 }

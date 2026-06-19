@@ -2,6 +2,41 @@ use super::*;
 use nose_il::{SourceComprehensionKind, SourceProtocolKind};
 use nose_semantics::source_comprehension_at_node;
 
+fn raw_names(src: &[u8]) -> Vec<String> {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.py", src, &interner).expect("lower");
+    il.nodes
+        .iter()
+        .filter(|node| node.kind == NodeKind::Raw)
+        .filter_map(|node| match node.payload {
+            Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn explicit_line_continuations_do_not_become_raw() {
+    let raw = raw_names(
+        b"def f(classes, i, expected):\n    assert \\\n        classes == expected\n    assert classes == \\\n        expected\n    return \\\n        tuple(c for c in classes[:i] if \\\n        c.__name__ == classes[0].__name__)\n\ndef g(error):\n    raise \\\n        error\n",
+    );
+    assert!(
+        !raw.iter().any(|name| name == "line_continuation"),
+        "line continuations are lexical noise and should not lower to Raw: {raw:?}"
+    );
+}
+
+#[test]
+fn match_guard_line_continuations_do_not_become_raw() {
+    let raw = raw_names(
+        b"def f(value):\n    match value:\n        case y if \\\n            y > 0:\n            return y\n        case _:\n            return 0\n",
+    );
+    assert!(
+        !raw.iter().any(|name| name == "line_continuation"),
+        "line continuations in match guards are lexical noise: {raw:?}"
+    );
+}
+
 #[test]
 fn dynamic_module_rebind_via_globals_and_setattr_marks_the_named_function() {
     // #307: `globals()['helper'] = …` and `setattr(<module>, 'other', …)` reassign a
