@@ -1,5 +1,5 @@
 use super::query_model::*;
-use super::*;
+use crate::legacy_prelude::*;
 
 /// Render the origin-derived "why this hint" reasons (#453) under a family's hint, if any.
 fn print_hint_reasons(f: &nose_detect::RefactorFamily) {

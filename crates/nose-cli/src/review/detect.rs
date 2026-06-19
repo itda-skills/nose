@@ -3,6 +3,9 @@ use super::git::{
 };
 use super::output::{print_review_human, review_json, review_sarif};
 use super::*;
+use crate::detect_pipeline::detect_review_families;
+use crate::scan_source_lines::{varying_spots_of, FileLineCache};
+use crate::scan_witness::enrich_graded_witnesses;
 
 /// The detection half of `review`, split out so the `nose query base=<ref>` view reuses it
 /// verbatim (the unification). Returns the flagged divergences plus how many files changed;
@@ -26,7 +29,7 @@ pub(crate) fn detect_divergences(args: &ReviewArgs) -> Result<Option<(Vec<Diverg
     let min_tokens = args.min_size.or(cfg.min_size).unwrap_or(24);
     let min_lines = args.min_lines.or(cfg.min_lines).unwrap_or(5);
     let base_paths = reroot_paths(&review_paths, &base_tree.path);
-    let families = crate::detect_review_families(
+    let families = detect_review_families(
         &base_paths,
         &exclude,
         args.mode.clone(),
@@ -112,7 +115,7 @@ fn flag_divergences(
     enrich_opts: &nose_detect::DetectOptions,
 ) -> Vec<Divergence> {
     let prefix = canonical(base_root);
-    let mut lines = crate::FileLineCache::default();
+    let mut lines = FileLineCache::default();
     let mut flagged: Vec<Divergence> = Vec::new();
     for orig in families {
         let fam = repo_relative(orig, &prefix);
@@ -131,7 +134,7 @@ fn flag_divergences(
         // cost is paid per flagged family, not per family in the repo.
         let graded = {
             let mut abs = orig.clone();
-            crate::enrich_graded_witnesses(std::slice::from_mut(&mut abs), enrich_opts);
+            enrich_graded_witnesses(std::slice::from_mut(&mut abs), enrich_opts);
             abs.witness.and_then(|w| w.graded)
         };
         // The #245 fire policy input: does the diff touch lines this changed
@@ -257,7 +260,7 @@ fn touches_shared_lines(
     siblings: &[&Loc],
     witness_kind: Option<&'static str>,
     base_root: &Path,
-    lines: &mut crate::FileLineCache,
+    lines: &mut FileLineCache,
     changed: &HashMap<String, Vec<(u32, u32)>>,
 ) -> Option<bool> {
     const SPOT_CAP: usize = 16; // mirrors varying_spots_of's cap
@@ -273,7 +276,7 @@ fn touches_shared_lines(
     let a = abs(member);
     let spots = siblings.iter().find_map(|s| {
         // Same-language siblings only: a cross-language "diff" is all-varying noise.
-        (s.lang == member.lang).then(|| crate::varying_spots_of(&a, &abs(s), lines))?
+        (s.lang == member.lang).then(|| varying_spots_of(&a, &abs(s), lines))?
     })?;
     if spots.len() >= SPOT_CAP {
         return None;

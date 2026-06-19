@@ -1,4 +1,4 @@
-use super::*;
+use crate::legacy_prelude::*;
 
 #[derive(serde::Serialize)]
 pub(super) struct ScanJsonReport<'a> {

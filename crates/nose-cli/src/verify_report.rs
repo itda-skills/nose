@@ -1,4 +1,4 @@
-use super::*;
+use crate::legacy_prelude::*;
 
 /// Behavioral ground truth for the value-add evaluator: each interpretable unit with
 /// a stable hash of its behavior battery (equal hash ⟺ behaviorally equal on the

@@ -13,6 +13,7 @@ mod family_display;
 mod fnv;
 mod ignores;
 mod il_command;
+mod legacy_prelude;
 #[cfg(test)]
 mod main_tests;
 mod markdown;
@@ -47,40 +48,7 @@ mod verify_census;
 mod verify_collect;
 mod verify_report;
 
-use anyhow::{Context, Result};
-use baseline_view::*;
-pub(crate) use cli_args::*;
-pub(crate) use detect_command::*;
-pub(crate) use detect_pipeline::*;
-use diagnostic_commands::*;
-use family_display::*;
-pub(crate) use il_command::*;
-use nose_il::{Corpus, FileId, Interner, Lang};
-use oracle_gate::*;
-pub(crate) use path_utils::*;
-use query_commands::*;
-use query_terms::{family_at, parse_query, QFilter, QOp, Query};
-use rayon::prelude::*;
-pub(crate) use report_text::*;
-pub(crate) use scan_baseline_gate::*;
-use scan_commands::*;
-pub(crate) use scan_human::*;
-use scan_json::{ScanJsonInput, ScanJsonReport};
-pub(crate) use scan_markdown::*;
-pub(crate) use scan_opportunities::*;
-pub(crate) use scan_options::*;
-use scan_report::*;
-pub(crate) use scan_sarif::*;
-pub(crate) use scan_source_lines::*;
-pub(crate) use scan_witness::*;
-use std::path::PathBuf;
-use surfaces::{
-    classify_surface_overrides, effective_surface, family_actionability_reason,
-    is_default_report_family, surface_omission_note, SurfaceOverrides,
-};
-pub(crate) use timing::*;
-use verify_collect::*;
-use verify_report::*;
+use anyhow::Result;
 
 pub fn install_broken_pipe_guard() {
     runtime::install_broken_pipe_guard();

@@ -1,4 +1,4 @@
-use super::*;
+use crate::legacy_prelude::*;
 
 /// Everything the format arms need to render one scan's report.
 pub(super) struct ScanReportView<'a> {

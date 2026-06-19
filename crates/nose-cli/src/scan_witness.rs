@@ -1,4 +1,4 @@
-use super::*;
+use crate::legacy_prelude::*;
 
 pub(crate) fn enrich_witnesses_for_format(
     families: &mut [nose_detect::RefactorFamily],

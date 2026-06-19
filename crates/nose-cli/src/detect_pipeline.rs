@@ -1,4 +1,8 @@
-use super::*;
+use anyhow::{Context, Result};
+use std::path::PathBuf;
+
+use crate::path_utils::paths_as_refs;
+use crate::scan_options::{ScanChannels, ScanMode, REVIEW_DEFAULT_MODES};
 
 struct ChannelDetector {
     name: &'static str,

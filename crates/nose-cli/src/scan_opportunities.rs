@@ -1,4 +1,4 @@
-use super::*;
+use crate::baseline;
 
 pub(crate) fn total_dup_lines_refs(fs: &[&nose_detect::RefactorFamily]) -> u32 {
     fs.iter().map(|f| f.dup_lines).sum()

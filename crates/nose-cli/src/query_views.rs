@@ -1,5 +1,5 @@
 use super::query_model::*;
-use super::*;
+use crate::legacy_prelude::*;
 
 /// The location cell — `file:line  name` — coloured (path dim, symbol bold) with its
 /// *visible* width (sans ANSI) for column alignment.

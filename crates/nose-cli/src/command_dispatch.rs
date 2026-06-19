@@ -1,5 +1,24 @@
-use super::*;
+use anyhow::Result;
 use clap::Parser;
+use std::path::PathBuf;
+
+use crate::cli_args::{Cli, Cmd, ScanArgs, SemanticPackCmd, StatsFormat};
+use crate::detect_command::{cmd_detect, DetectArgs};
+use crate::diagnostic_commands::{
+    cmd_ceiling, cmd_eval, cmd_features, cmd_stats, cmd_value_census,
+};
+use crate::il_command::cmd_il;
+use crate::oracle_gate::cmd_behavioral_gate;
+use crate::oracle_gate::{verify_battery, verify_probes};
+use crate::path_utils::{paths_as_refs, require_paths_exist, warn_if_empty};
+use crate::query_commands::run_query_cmd;
+use crate::scan_commands::cmd_scan;
+use crate::verify_collect::collect_verify_recs;
+use crate::verify_report::{
+    print_verify_exclusions, print_verify_json, report_falsify, report_verify_calibration,
+    report_verify_completeness, report_verify_soundness,
+};
+use crate::{capabilities, review, semantic_pack, verify_census};
 
 pub(crate) fn run() -> Result<()> {
     let cli = Cli::parse();

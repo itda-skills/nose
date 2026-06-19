@@ -19,8 +19,8 @@ case "${1:-}" in
         cat <<'EOF'
 usage: ./scripts/check-ci-local.sh [--fast|--full]
 
-  --fast  rustfmt, file-length ratchet, clippy -D warnings, nose-cli tests,
-          docs wiki lint
+  --fast  rustfmt, file-length and legacy-prelude ratchets,
+          clippy -D warnings, nose-cli tests, docs wiki lint
   --full  full local mirror of CI: format, clippy, docs, release build/tests,
           file-length ratchet, duplication, MSRV, supply-chain, docs wiki,
           formal obligation lint, and Lean proofs
@@ -75,6 +75,12 @@ run_file_length_ratchet() {
     python3 scripts/check-file-lengths.py --ratchet-base origin/main
 }
 
+run_legacy_prelude_ratchet() {
+    need_cmd python3
+    python3 scripts/check-legacy-prelude.py --self-test
+    python3 scripts/check-legacy-prelude.py
+}
+
 run_msrv_check() {
     need_cmd rustup
     local msrv
@@ -101,6 +107,9 @@ cargo fmt --all --check
 
 step "Rust file-length ratchet"
 run_file_length_ratchet
+
+step "CLI legacy-prelude ratchet"
+run_legacy_prelude_ratchet
 
 step "clippy (lints, -D warnings)"
 cargo clippy --all-targets --all-features -- -D warnings

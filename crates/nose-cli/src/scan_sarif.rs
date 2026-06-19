@@ -1,4 +1,8 @@
-use super::*;
+use anyhow::Result;
+
+use crate::baseline;
+use crate::report_text::plural;
+use crate::scan_opportunities::family_hint;
 
 /// Build a SARIF 2.1.0 document — one result per family, every member site a
 /// location so GitHub code-scanning annotates each. The first location is primary;

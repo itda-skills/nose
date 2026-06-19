@@ -1,4 +1,4 @@
-use super::*;
+use crate::legacy_prelude::*;
 
 pub(super) struct IgnoredFamily {
     pub(super) family: nose_detect::RefactorFamily,

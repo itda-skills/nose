@@ -1,4 +1,12 @@
-use super::*;
+use crate::baseline;
+use crate::baseline_view::BaselineComparison;
+use crate::family_display::representative_lines;
+use crate::query_terms::{QFilter, QOp};
+use crate::scan_baseline_gate::family_status;
+use crate::scan_opportunities::OpportunityGroups;
+use crate::scan_source_lines::{anti_unify_all, read_lines};
+use crate::style;
+use crate::surfaces::{effective_surface, SurfaceOverrides};
 
 /// Canonical `witness.kind` for a friendly filter token (`exact`→`exact-value-graph`, …).
 fn witness_alias(v: &str) -> &str {

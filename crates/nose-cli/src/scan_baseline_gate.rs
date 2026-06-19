@@ -1,4 +1,4 @@
-use super::*;
+use crate::legacy_prelude::*;
 
 pub(crate) fn write_scan_baseline(
     args: &ScanArgs,

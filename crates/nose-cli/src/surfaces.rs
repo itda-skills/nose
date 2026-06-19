@@ -1,5 +1,8 @@
 use rayon::prelude::*;
 
+use crate::path_utils::relativize;
+use crate::scan_source_lines::FileLineCache;
+
 /// Compute the surface overrides for every output format and flag generated
 /// locations. The generated index is one head-read per discovered file (#224
 /// — the #216 audit's re2c case) and the declaration scan is one span-read
@@ -108,7 +111,7 @@ fn declaration_run_ids(
     // candidate families, the unique candidate files parse in PARALLEL (the
     // serial per-file AST parse cost +29% wall on sympy), and the final pass
     // classifies against the shared facts.
-    let mut lines = crate::FileLineCache::default();
+    let mut lines = FileLineCache::default();
     let mut candidates: Vec<&nose_detect::RefactorFamily> = Vec::new();
     let mut wanted: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for f in families {
@@ -174,7 +177,7 @@ const DECLARATION_SPAN_CAP: u32 = 80;
 
 fn declaration_run_span(
     loc: &nose_detect::Loc,
-    lines: &mut crate::FileLineCache,
+    lines: &mut FileLineCache,
     facts: &std::collections::HashMap<String, Option<nose_frontend::DeclarationFacts>>,
 ) -> bool {
     if loc.end_line.saturating_sub(loc.start_line) > DECLARATION_SPAN_CAP {
@@ -401,7 +404,7 @@ fn generated_source_index(
     for path in generated_files {
         generated.insert(path.clone());
         if let Some(cwd) = &cwd {
-            generated.insert(crate::relativize(&path, cwd));
+            generated.insert(relativize(&path, cwd));
         }
     }
     generated

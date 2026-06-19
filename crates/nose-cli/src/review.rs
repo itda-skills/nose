@@ -24,7 +24,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::{ReportFormat, ScanMode};
+use crate::scan_options::{ReportFormat, ScanMode};
 use nose_detect::{EnclosingUnit, FragmentKind, Loc, RefactorFamily};
 
 pub(crate) use detect::{cmd_review, detect_divergences, divergences_fire};

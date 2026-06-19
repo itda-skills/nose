@@ -2,7 +2,7 @@ use super::query_dashboard::render_query_dashboard;
 use super::query_model::*;
 use super::query_open::render_query_family;
 use super::query_views::*;
-use super::*;
+use crate::legacy_prelude::*;
 
 /// The flat family set a report format (`--format markdown`/`sarif`) emits for a query: the
 /// single addressed family for `at=`/`id=`, otherwise the same default-surface (or `all`/

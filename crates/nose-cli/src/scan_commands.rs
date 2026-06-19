@@ -1,4 +1,28 @@
-use super::*;
+use anyhow::Result;
+
+use crate::cli_args::ScanArgs;
+use crate::detect_pipeline::{scan_detect_options, scan_detector, validate_exclude_globs};
+use crate::path_utils::{paths_as_refs, relativize, relativize_loc, warn_no_files};
+use crate::scan_baseline_gate::{apply_scan_baseline, partition_ignored, write_scan_baseline};
+use crate::scan_human::select_shown_reportable;
+use crate::scan_opportunities::OpportunityGroups;
+use crate::scan_options::{
+    validate_min_value, FailOn, ReportFormat, ScanChannels, ScanScope, ShowView, SortKey,
+    SCAN_DEFAULT_MODES,
+};
+use crate::scan_report::{
+    enforce_scan_fail_on, print_hotspots_refs, render_scan_report, ScanReportView,
+};
+use crate::scan_source_lines::{
+    corpus_line_idf, family_anchor, is_trivial_line, shared_lines_of, varying_spots_of,
+    FileLineCache,
+};
+use crate::scan_witness::enrich_serialized_witnesses;
+use crate::surfaces::{
+    classify_surface_overrides, is_default_report_family, surface_omission_note,
+};
+use crate::timing::{time_lower, time_stage};
+use crate::{cache, config, ignores};
 
 /// The ranked family dataset shared by `nose scan` and `nose query`: detect, rank,
 /// filter (min-members / min-value / scope), relativize paths, weight shared lines, and
