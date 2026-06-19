@@ -36,8 +36,8 @@ full run here is a green CI. The full gates are:
 | **docs** | `RUSTDOCFLAGS=-D warnings cargo doc --no-deps --workspace` | no broken/private intra-doc links |
 | **build** | `cargo build --release` | the workspace compiles in release |
 | **tests** | `cargo test --release` | the full suite, incl. cross-language convergence |
-| **coverage** | `cargo llvm-cov --workspace --summary-only --fail-under-lines 86` | line coverage stays above the ratchet floor (currently ~86%) |
-| **copy-paste** | `./scripts/check-duplication.sh` | nose run on its own source — substantial duplicate families stay within budget |
+| **coverage** | `cargo llvm-cov --workspace --summary-only --fail-under-lines 86` | line coverage stays above the ratchet floor (currently ~86%); runs before PR merge and release publishing |
+| **copy-paste** | `./scripts/check-duplication.sh` | nose run on its own source, including tests — substantial duplicate families stay within budget |
 | **MSRV** | `cargo +$MSRV check --workspace --all-targets` | the crates still build on the declared minimum Rust (`rust-version` in `Cargo.toml`) |
 | **unused deps** | `cargo machete` | no dependency declared but unused (à la *knip*) |
 | **supply chain** | `cargo deny check` | no advisories/yanked crates, only allowed licenses, no dup/wildcard deps, crates.io-only |
@@ -110,11 +110,13 @@ NOSE_SKIP_PRE_PUSH=1 git push
 
 nose *is* a clone detector, so it polices its own duplication. The gate fails when
 the number of substantial Type-3 near-duplicate families (refactoring value ≥ 40) on
-the crates exceeds the budget committed in `scripts/check-duplication.sh`. The currently
-accepted families are reviewed and recorded in [`docs/dogfooding.md`](docs/dogfooding.md)
-(e.g. the borrow-checker-blocked `generic` node-copy). If your change introduces a
-new substantial family, either factor it out or — with a one-line justification in
-the PR — raise the budget. It is a ratchet, not a fixed wall.
+the crates exceeds the budget committed in `scripts/check-duplication.sh`. The scan
+includes tests as well as production code, so fixture/scaffolding copy-paste is visible
+instead of hidden behind file-length-only pressure. The currently accepted families are
+reviewed and recorded in [`docs/dogfooding.md`](docs/dogfooding.md) (e.g. the
+borrow-checker-blocked `generic` node-copy and reviewed test scaffolding). If your
+change introduces a new substantial family, either factor it out or — with a one-line
+justification in the PR — raise the budget. It is a ratchet, not a fixed wall.
 
 ## Repository CI and automation
 
@@ -174,9 +176,11 @@ installation from "all repositories" to a selected-repositories installation tha
 ## Releasing
 
 Releases are cut by [cargo-dist](https://opensource.axo.dev/cargo-dist/): push a
-`vX.Y.Z` tag matching the workspace version and CI does the rest — it builds the
-macOS (Apple Silicon + Intel) and Linux (x86_64 + arm64) binaries, publishes a
-GitHub Release with the archives + checksums, and pushes the `nose` formula to
+`vX.Y.Z` tag matching the workspace version and CI does the rest. Artifact builds may run
+while the repository quality gates (`.github/workflows/ci.yml`, reused through
+`workflow_call`) are still running, but publishing is blocked until those gates pass. Only
+then does the workflow publish a GitHub Release with the macOS (Apple Silicon + Intel) and
+Linux (x86_64 + arm64) archives + checksums and push the `nose` formula to
 [`corca-ai/homebrew-tap`](https://github.com/corca-ai/homebrew-tap) so
 `brew install corca-ai/tap/nose` picks up the new version.
 
@@ -194,7 +198,8 @@ The tag is what triggers CI, so the CHANGELOG and version bump must land **befor
 it — a tag pushed against a stale `[Unreleased]` ships a release the changelog never
 records.
 
-The pipeline lives in `dist-workspace.toml`; the workflow is **generated** from it
-into `.github/workflows/release.yml` — change the config and re-run `dist generate`,
-don't hand-edit the workflow. Publishing the formula needs the `HOMEBREW_TAP_TOKEN`
-secret (a token with push access to the tap), set on the repo/org.
+The cargo-dist pipeline lives in `dist-workspace.toml`; the artifact-building jobs in
+`.github/workflows/release.yml` are generated from it. The repository-owned quality-gate
+job at the top of that workflow is a local publishing guard; preserve it if regenerating
+the cargo-dist workflow. Publishing the formula needs the `HOMEBREW_TAP_TOKEN` secret
+(a token with push access to the tap), set on the repo/org.

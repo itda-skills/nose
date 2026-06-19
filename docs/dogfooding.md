@@ -5,15 +5,44 @@ refactoring opportunities on its own codebase, act on the genuine ones, and reco
 where the tool is weak. The third-party counterpart is [field evaluation](field-evaluation.md);
 the duplication gate that grew out of this lives in [CONTRIBUTING](../CONTRIBUTING.md).
 
-Original review command: `nose scan crates --exclude tests` (6 Rust crates, 8-language
+Original review scope: the then-production crates only (6 Rust crates, 8-language
 frontends). Result at the start of this review: 34 candidate families, ~662 duplicated
 lines (the arc below took it to 23 / ~411). The numbers are a dated snapshot of *this*
 review pass; re-running on today's larger codebase reports more, since the crates have
 since grown.
 
 The current CI gate is [scripts/check-duplication.sh](../scripts/check-duplication.sh):
-it runs `nose scan crates --exclude tests --mode near --min-value 40` and compares the
-substantial near-duplicate count with the accepted budget recorded in that script.
+it runs `nose scan crates --mode near --min-value 40` and compares the substantial
+near-duplicate count with the accepted budget recorded in that script. Tests are included
+in the current ratchet so fixture/scaffolding copy-paste stays visible instead of being
+policed only by the file-length gate.
+
+## Current tests-included ratchet baseline
+
+Reviewed on 2026-06-19 with the current binary and current tree. The production-only
+default surface reports 24 substantial families; the tests-included default surface
+reports 40. The 16 newly visible default-surface families below are
+accepted as pre-existing debt, not as permission to add more. Raise the budget only when
+a new row is reviewed here.
+
+| family | scope | judgment | action |
+|---|---|---|---|
+| `49cf43940d7ba72c` | mixed | `evidence_with_dependencies` / `evidence` test-support builders repeat across semantics, detect, and normalize; real shared fixture shape, but crossing crate support boundaries. | Track as visible fixture debt; extract only with a deliberate shared evidence-fixture boundary. |
+| `7afae0406480a99e` | mixed | `evidence_anchor_span` appears in JS/TS test support and production evidence helpers; tiny same-purpose accessor. | Candidate for a small helper when the evidence APIs are next touched. |
+| `ade356e2e4f9b3ed` | test | async/generator semantic-boundary CLI tests share arrange/scan/assert scaffolding while preserving different protocol boundaries. | Keep scenario names local; consider a boundary-test DSL if more cases land. |
+| `1267c115f7832175` | test | method-call IL fixture builders differ by receiver/argument shape but share a large construction skeleton. | Candidate for a fixture builder; keep until it improves readability. |
+| `d7dea9009200ed08` | test | receiver-domain fail-closed tests share setup for three distinct evidence-break cases. | Accepted test scaffold; consolidate only around named receiver-domain scenarios. |
+| `248e283bde49aaf6` | test | strict-exact receiver/binding-domain tests share evidence setup across detect unit surfaces. | Visible cross-test debt; extract if a common strict-exact receiver fixture emerges. |
+| `19c05e02a2f2636e` | test | Java collection semantic-boundary tests repeat scan fixtures for related hard negatives. | Accepted scenario scaffolding; table-drive only if diagnostics stay clear. |
+| `4e43a909c838f9fc` | test | guard/library-API CLI tests repeat semantic scan scaffolding for static identity/builtin cases. | Keep as named behavior tests unless a local helper clarifies the scenarios. |
+| `973a8ee2eafd71f6` | test | literal-preservation tests for JS/Python/Ruby share object/dict/hash boundary structure. | Candidate for a language-fixture table; avoid hiding per-language expectations. |
+| `67215082c9c77bb1` | test | cross-language literal convergence tests share module/list/map fixture structure. | Accepted until a fixture table makes failures easier, not harder. |
+| `89981251086618d5` | test | ordered exact-fragment branch tests have large repeated fixture blocks. | Real refactor candidate; this pass reduced return-fragment duplication, ordered-branch files remain next debt. |
+| `90809d0e27461ac4` | test | interpreter field-state tests repeat state construction across read/write scenarios. | Candidate for a state-fixture builder when interpreter tests are next reorganized. |
+| `7d8e2e30a1fae955` | test | ordered conditional/effect exact-fragment tests share large branch fixture shape. | Real refactor candidate; keep visible under the ratchet. |
+| `8f9c8cadbe769f47` | test | HOF demand and strict-exact lazy receiver tests share library-HOF fixture setup. | Accepted cross-boundary test scaffold; extract only if it names the HOF demand scenario. |
+| `f380654d807c1e90` | test | typed/free call IL fixture builders share a construction skeleton. | Candidate for a small fixture builder. |
+| `0a5cdb261739af70` | test | library API admission resolver tests share resolver/evidence setup for node and call paths. | Accepted as paired behavior tests; extract if resolver fixture setup grows again. |
 
 ## Verdict by candidate (critically)
 

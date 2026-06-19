@@ -82,6 +82,28 @@ pub(super) fn has_pair_family(families: &[serde_json::Value], left: &str, right:
     find_pair_family(families, left, right).is_some()
 }
 
+pub(super) fn assert_block_pair_family(
+    families: &[serde_json::Value],
+    out: &str,
+    left: &str,
+    right: &str,
+    negative: &str,
+    context: &str,
+) {
+    let family = find_pair_family(families, left, right)
+        .unwrap_or_else(|| panic!("missing exact {context} family {left}/{right}: {out}"));
+    assert!(
+        family_all_blocks(family),
+        "{context} fragments should report as Block units: {family:?}"
+    );
+    assert!(
+        location_files(family)
+            .iter()
+            .all(|file| !file.ends_with(negative)),
+        "hard negative must not merge into {left}/{right}: {family:?}"
+    );
+}
+
 /// First all-Block family that pairs `left` with `right` and excludes `negative`.
 pub(super) fn find_block_pair_family<'a>(
     families: &'a [serde_json::Value],

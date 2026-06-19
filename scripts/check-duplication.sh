@@ -26,6 +26,12 @@ MIN_VALUE=40   # ignore small/incidental similarity; gate only on substantial fa
 # frontend helpers and the `proven_*` value-graph factories — not new code introduced here. They
 # are dedup candidates (see docs/dogfooding.md); the gate stays a ratchet against NEW duplication
 # on top of this stronger detector.
+# Scope expansion in the quality-gates pass: the gate now scans tests as well as production
+# code. Current binary, current tree: production-only default surface reports 24 substantial
+# families, while the tests-included default surface reports 40. The 16 newly visible
+# test-scope/mixed families are reviewed in docs/dogfooding.md; this is a scope expansion,
+# not a loosening of the old production-only gate.
+#
 # 20 → 21: weight-grading the sub-DAG score (a larger shared computation now scores higher, up to
 # 0.90) lifts one PRE-EXISTING partial-clone family in nose's own source past the substantial
 # (value ≥ 40) line — finer ranking surfacing real debt, not new code. Still a dedup candidate.
@@ -65,9 +71,9 @@ MIN_VALUE=40   # ignore small/incidental similarity; gate only on substantial fa
 # `body_depends_on_iter` / `foreach_effect_body_depends_on_iter` / `single_branch_statement`,
 # folded under the loop-effect family in human output. It is tracked design debt, not code
 # introduced here.
-BUDGET=28      # accepted substantial families today (see docs/dogfooding.md)
+BUDGET=40      # accepted substantial families today (see docs/dogfooding.md)
 BIN="${NOSE_BIN:-./target/release/nose}"
-GATE_ARGS=(scan crates --exclude tests --mode near --min-value "$MIN_VALUE")
+GATE_ARGS=(scan crates --mode near --min-value "$MIN_VALUE")
 
 if [ ! -x "$BIN" ]; then
     echo "error: nose binary not found at '$BIN' (build with: cargo build --release)" >&2
