@@ -50,6 +50,14 @@ break.
   `macro_rule_body` and Swift `availability_condition` are now reported as intentional
   fail-closed boundaries instead of actionable lowering gaps. Full `bench/repos` lowering-gap Raw
   now reports **68,312** gaps (0.148% of IL nodes), down from **77,207**.
+- Closed the next measured high-impact lowering tranche from `nose gap-impact`. Ruby regex,
+  case-equality, spaceship, expression-position `case`, and block-level rescue/else/ensure
+  clauses now lower without parser Raw while keeping Ruby operators as opaque method calls rather
+  than value equality. Rust macro token roots (`crate`/`super`), struct literal shorthand values,
+  and mutable shorthand field-pattern projections now preserve source identity without Raw
+  wrappers. Swift selector literals lower to an exact-closed selector surface, and local
+  `typealias` declarations are ignored as type-only syntax. Full `bench/repos` lowering-gap Raw
+  now reports **65,429** gaps (0.142% of IL nodes), down from **68,312**.
 - Made checked-out benchmark corpus setup reproducible after pruning: pinned repos are reset
   before pruning, `.DS_Store` is excluded from prune/digest accounting, and the prune manifest was
   refreshed for the fresh-corpus result. Manual corpus-verify runs also have a longer timeout and
@@ -61,6 +69,12 @@ break.
   **40.73s -> 16.28s**, `gap-impact bench/repos --top 40` **32.83s -> 16.38s**, `query sympy`
   **5.74s -> 2.86s**, `query raylib` **4.62s -> 2.43s**, and `query alacritty`
   **0.29s -> 0.17s** wall time on the same workspace.
+- Re-ran the lowering performance gate for the Ruby/Rust/Swift tranche. Absolute post-run wall
+  times were higher than the initial baseline because host load shifted during the run, so the
+  slowdown check was controlled against a freshly built `origin/main` in the same machine state:
+  current vs origin was `stats` **23.23s vs 24.39s**, `gap-impact` **24.69s vs 24.48s**, `query
+  sympy` **4.04s vs 4.69s**, repeated `query raylib` **3.34s vs 3.37s**, and `query alacritty`
+  **0.14s vs 0.14s**. No systematic code regression was observed.
 
 ## [0.13.3] - 2026-06-19
 

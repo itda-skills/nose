@@ -92,7 +92,10 @@ pub(super) fn lower_static_projection_pattern(
     }
 }
 pub(super) fn rust_field_projection(lo: &Lowering, node: TsNode) -> Option<(String, String)> {
-    let kids = Lowering::named_children(node);
+    let kids: Vec<TsNode> = Lowering::named_children(node)
+        .into_iter()
+        .filter(|child| child.kind() != "mutable_specifier")
+        .collect();
     let field = kids.first().and_then(|&k| rust_field_name(lo, k))?;
     let local = kids
         .iter()
@@ -103,13 +106,17 @@ pub(super) fn rust_field_projection(lo: &Lowering, node: TsNode) -> Option<(Stri
 }
 pub(super) fn rust_field_name(lo: &Lowering, node: TsNode) -> Option<String> {
     match node.kind() {
-        "field_identifier" | "identifier" => Some(lo.text(node).to_string()),
+        "field_identifier" | "identifier" | "shorthand_field_identifier" => {
+            Some(lo.text(node).to_string())
+        }
         _ => None,
     }
 }
 pub(super) fn rust_binding_name(lo: &Lowering, node: TsNode) -> Option<String> {
     match node.kind() {
-        "identifier" | "field_identifier" => Some(lo.text(node).to_string()),
+        "identifier" | "field_identifier" | "shorthand_field_identifier" => {
+            Some(lo.text(node).to_string())
+        }
         "mut_pattern" | "ref_pattern" | "reference_pattern" => {
             node.named_child(0).and_then(|n| rust_binding_name(lo, n))
         }

@@ -41,7 +41,7 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
         "repeat_while_statement" => Some(lower_repeat_while(lo, node)),
         "do_statement" => Some(lower_do(lo, node)),
         "directive" => Some(lower_directive(lo, node)),
-        "discard_statement" => None,
+        "discard_statement" | "typealias_declaration" | "associatedtype_declaration" => None,
         "line_comment" | "multiline_comment" => None,
         k if is_expr_kind(k) => {
             let expr = lower_expr(lo, node);

@@ -37,6 +37,13 @@ fn raw_names(il: &Il, interner: &Interner) -> Vec<String> {
         .collect()
 }
 
+fn raw_name_set(il: &Il, interner: &Interner) -> Vec<String> {
+    let mut raw = raw_names(il, interner);
+    raw.sort();
+    raw.dedup();
+    raw
+}
+
 fn seq_names(il: &Il, interner: &Interner) -> Vec<String> {
     il.nodes
         .iter()
@@ -46,6 +53,63 @@ fn seq_names(il: &Il, interner: &Interner) -> Vec<String> {
             _ => None,
         })
         .collect()
+}
+
+fn var_names(il: &Il, interner: &Interner) -> Vec<String> {
+    il.nodes
+        .iter()
+        .filter(|node| node.kind == NodeKind::Var)
+        .filter_map(|node| match node.payload {
+            Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn return_seq_var_names(il: &Il, interner: &Interner) -> Vec<String> {
+    let mut out = Vec::new();
+    for (idx, node) in il.nodes.iter().enumerate() {
+        if node.kind != NodeKind::Return {
+            continue;
+        }
+        for child in il.children(NodeId(idx as u32)) {
+            if il.kind(*child) != NodeKind::Seq {
+                continue;
+            }
+            for seq_child in il.children(*child) {
+                if il.kind(*seq_child) != NodeKind::Var {
+                    continue;
+                }
+                if let Payload::Name(sym) = il.node(*seq_child).payload {
+                    out.push(interner.resolve(sym).to_string());
+                }
+            }
+        }
+    }
+    out
+}
+
+fn has_assign_from_field(il: &Il, interner: &Interner, lhs: &str, field: &str) -> bool {
+    il.nodes.iter().enumerate().any(|(idx, node)| {
+        if node.kind != NodeKind::Assign {
+            return false;
+        }
+        let [lhs_id, rhs_id] = il.children(NodeId(idx as u32)) else {
+            return false;
+        };
+        if il.kind(*lhs_id) != NodeKind::Var || il.kind(*rhs_id) != NodeKind::Field {
+            return false;
+        }
+        let lhs_matches = matches!(
+            il.node(*lhs_id).payload,
+            Payload::Name(sym) if interner.resolve(sym) == lhs
+        );
+        let field_matches = matches!(
+            il.node(*rhs_id).payload,
+            Payload::Name(sym) if interner.resolve(sym) == field
+        );
+        lhs_matches && field_matches
+    })
 }
 
 fn unit_names(src: &str) -> Vec<(UnitKind, String)> {
@@ -198,6 +262,24 @@ macro_rules! sample {
 }
 
 #[test]
+fn macro_token_crate_and_super_atoms_do_not_fall_to_raw() {
+    let src = "fn f() { quote! { pub(crate) static VALUE: crate::Kind = super::make(); }; }";
+    let (interner, il) = lower_rust(src);
+
+    let raw = raw_name_set(&il, &interner);
+    assert!(
+        !raw.iter()
+            .any(|name| matches!(name.as_str(), "crate" | "super")),
+        "macro token atoms for crate/super should lower to Vars, not Raw: {raw:?}"
+    );
+    let vars = var_names(&il, &interner);
+    assert!(
+        vars.iter().any(|name| name == "crate") && vars.iter().any(|name| name == "super"),
+        "macro token atoms should still preserve path-root identity: {vars:?}"
+    );
+}
+
+#[test]
 fn if_let_option_patterns_preserve_pattern_surface() {
     let (interner, il) = lower_rust(
         "pub fn f(value: Option<i32>) -> bool { if let None = value { true } else { false } }",
@@ -321,6 +403,44 @@ fn f(kind: Kind, selection: Option<i32>) -> i32 {
     assert!(
         seq.iter().any(|name| name == "rust_tuple_struct_pattern"),
         "nested constructor pattern should preserve its Rust-specific shape: {seq:?}"
+    );
+}
+
+#[test]
+fn struct_literal_shorthand_preserves_value_without_raw() {
+    let src =
+        "struct Point { x: i32, y: i32 }\nfn f(x: i32, z: i32) -> Point { Point { x, y: z } }";
+    let (interner, il) = lower_rust(src);
+
+    let raw = raw_name_set(&il, &interner);
+    assert!(
+        !raw.iter().any(|name| name == "shorthand_field_identifier"),
+        "struct literal shorthand should not fall to Raw: {raw:?}"
+    );
+    let vars = return_seq_var_names(&il, &interner);
+    assert!(
+        vars.iter().any(|name| name == "x") && vars.iter().any(|name| name == "z"),
+        "Point {{ x, y: z }} should preserve both values in the returned literal: {vars:?}"
+    );
+}
+
+#[test]
+fn mutable_struct_field_patterns_do_not_leak_parser_wrappers() {
+    let src =
+        "struct Task { task: i32 }\nfn f(value: Task) { match value { Task { mut task, .. } => task } }";
+    let (interner, il) = lower_rust(src);
+
+    let raw = raw_name_set(&il, &interner);
+    assert!(
+        !raw.iter().any(|name| matches!(
+            name.as_str(),
+            "mutable_specifier" | "shorthand_field_identifier"
+        )),
+        "mutable shorthand field patterns should lower without parser Raw wrappers: {raw:?}"
+    );
+    assert!(
+        has_assign_from_field(&il, &interner, "task", "task"),
+        "mutable shorthand field pattern should project value.task into the task binding"
     );
 }
 

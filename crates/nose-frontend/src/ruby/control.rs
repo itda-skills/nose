@@ -83,9 +83,7 @@ pub(super) fn lower_case(lo: &mut Lowering, node: TsNode) -> NodeId {
                         .map(|e| lower_expr(lo, e))
                         .unwrap_or_else(|| lo.empty_block(span));
                     match scrutinee {
-                        Some(subject) => {
-                            lo.add(NodeKind::BinOp, Payload::Op(Op::Eq), span, &[subject, pv])
-                        }
+                        Some(subject) => ruby_operator_call(lo, span, "===", pv, subject),
                         None => pv,
                     }
                 })
@@ -94,12 +92,7 @@ pub(super) fn lower_case(lo: &mut Lowering, node: TsNode) -> NodeId {
                 .into_iter()
                 .reduce(|a, b| lo.add(NodeKind::BinOp, Payload::Op(Op::Or), span, &[a, b]))
                 .unwrap_or_else(|| match scrutinee {
-                    Some(subject) => lo.add(
-                        NodeKind::BinOp,
-                        Payload::Op(Op::Eq),
-                        span,
-                        &[subject, subject],
-                    ),
+                    Some(subject) => ruby_operator_call(lo, span, "===", subject, subject),
                     None => lo.empty_block(span),
                 });
             acc = lo.add(NodeKind::If, Payload::None, span, &[cond, body, acc]);

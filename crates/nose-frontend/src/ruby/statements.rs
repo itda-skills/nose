@@ -7,17 +7,22 @@ pub(super) fn block_of(lo: &mut Lowering, node: TsNode) -> NodeId {
 /// field's statements only (excluding the `parameters` node).
 pub(super) fn block_body(lo: &mut Lowering, block: TsNode) -> NodeId {
     let span = lo.span(block);
-    match block.child_by_field_name("body") {
-        Some(b) => block_of(lo, b),
-        // some grammars inline statements directly under the block
-        None => {
-            let stmts: Vec<NodeId> = Lowering::named_children(block)
+    let body_node = block.child_by_field_name("body");
+    let children: Vec<TsNode> = body_node.map_or_else(
+        || {
+            Lowering::named_children(block)
                 .into_iter()
-                .filter(|c| c.kind() != "block_parameters")
-                .filter_map(|c| lower_stmt(lo, c))
-                .collect();
-            lo.add(NodeKind::Block, Payload::None, span, &stmts)
-        }
+                .filter(|child| child.kind() != "block_parameters")
+                .collect()
+        },
+        Lowering::named_children,
+    );
+    if body_has_exception_clauses(&children) {
+        exceptional_block_body(lo, span, children)
+    } else if let Some(body) = body_node {
+        block_of(lo, body)
+    } else {
+        block_children_as_statements(lo, span, children)
     }
 }
 /// A method/lambda body: wrap the trailing expression in `Return` (Ruby's implicit
@@ -57,6 +62,19 @@ pub(super) fn exceptional_body_with_return(
     span: Span,
     children: Vec<TsNode>,
 ) -> NodeId {
+    let try_node = exceptional_body_try(lo, span, children);
+    let ret = lo.add(NodeKind::Return, Payload::None, span, &[try_node]);
+    lo.add(NodeKind::Block, Payload::None, span, &[ret])
+}
+pub(super) fn exceptional_block_body(
+    lo: &mut Lowering,
+    span: Span,
+    children: Vec<TsNode>,
+) -> NodeId {
+    let try_node = exceptional_body_try(lo, span, children);
+    lo.add(NodeKind::Block, Payload::None, span, &[try_node])
+}
+pub(super) fn exceptional_body_try(lo: &mut Lowering, span: Span, children: Vec<TsNode>) -> NodeId {
     let first_clause = children
         .iter()
         .position(|child| matches!(child.kind(), "rescue" | "ensure" | "else"))
@@ -73,9 +91,7 @@ pub(super) fn exceptional_body_with_return(
     let body = block_children_as_statements(lo, span, body_children);
     let mut kids = vec![body];
     kids.extend(handlers);
-    let try_node = lo.add(NodeKind::Try, Payload::None, span, &kids);
-    let ret = lo.add(NodeKind::Return, Payload::None, span, &[try_node]);
-    lo.add(NodeKind::Block, Payload::None, span, &[ret])
+    lo.add(NodeKind::Try, Payload::None, span, &kids)
 }
 pub(super) fn block_children_as_statements(
     lo: &mut Lowering,

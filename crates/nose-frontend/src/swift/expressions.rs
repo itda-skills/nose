@@ -59,7 +59,8 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         "macro_invocation" => lower_macro_invocation(lo, node),
         "diagnostic" => lower_diagnostic(lo, node),
         "directive" => lower_directive(lo, node),
-        "navigation_expression" | "selector_expression" => lower_navigation(lo, node),
+        "navigation_expression" => lower_navigation(lo, node),
+        "selector_expression" => lower_selector_expression(lo, node),
         "lambda_literal" => lower_lambda(lo, node),
         "as_expression" | "check_expression" | "consume_expression" | "value_pack_expansion" => {
             peel_value_child(lo, node)

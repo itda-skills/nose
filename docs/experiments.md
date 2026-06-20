@@ -3391,6 +3391,89 @@ cargo test -q -p nose-cli --test css_html_quality
 awiki lint --root docs
 ```
 
+## DE. Ruby/Rust/Swift gap-impact tranche — close the next safe rows (2026-06-20)
+
+After §DD, the remaining worklist was dominated by parser `ERROR` rows and a smaller set of
+high-impact language surfaces. We kept the same measured workflow: capture a release baseline,
+choose only high-impact non-parser rows with local semantics, review with independent subagents,
+then re-run coverage, tests, docs lint, and the release performance gate before merging.
+
+**Baseline.**
+
+```text
+files: 67407   IL nodes: 46087790   Raw nodes: 185458 (0.402%)
+= 68312 lowering-gap + 117146 intentional-boundary
+```
+
+Baseline release timings were `stats_all` **16.27s**, `gap_impact_all` **17.86s**,
+`query_sympy` **2.83s**, `query_raylib` **2.53s**, and `query_alacritty` **0.18s** wall time.
+The top safe non-parser candidates were Ruby `binary =~` / `binary ===` / `then` / exception
+clause spillover, Rust `crate` / `super` / shorthand field surfaces, and Swift
+`selector_expression` / local `typealias_declaration`. Go type-case/goto/fallthrough and broad
+Swift operator rows were deliberately deferred because they need runtime type or CFG semantics.
+
+**Fixes shipped.**
+
+- Ruby: `=~`, `!~`, `===`, and `<=>` now lower as Ruby method-call shape
+  `Call(Field("<op>", receiver), arg)`, not as shared value equality. `case x; when p` now uses
+  `p === x`, expression-position `case` uses the same lowering as statement `case`, and block
+  bodies with `rescue` / `else` / `ensure` reuse the existing `Try` lowering without wrapping the
+  block in an implicit `Return`.
+- Rust: macro token roots `crate` and `super` lower to source-preserving `Var` atoms inside the
+  existing fail-closed macro boundary. Struct literal shorthand preserves the shorthand value, and
+  mutable shorthand field patterns project `value.field` into the local binding instead of leaking
+  `mutable_specifier` / `shorthand_field_identifier` Raw.
+- Swift: selector literals lower to an exact-closed `swift_selector_expression` surface carrying
+  the source text, and local function-body `typealias` declarations are erased as type-only syntax.
+
+**Measured result.**
+
+```text
+files: 67407   IL nodes: 46107930   Raw nodes: 182575 (0.396%)
+= 65429 lowering-gap + 117146 intentional-boundary
+```
+
+Overall lowering-gap Raw drops **68,312 -> 65,429** (-2,883). The affected language gaps were:
+Ruby **4,514 -> 2,923** (-1,591), Rust **3,699 -> 2,697** (-1,002), and Swift **6,870 -> 6,580**
+(-290). The remaining top actionable non-parser rows are now Rust `let_condition`, Python
+`comment`, Go type-case rows, TypeScript decorators, Swift operator rows, Go
+`fallthrough`/`goto`, Swift statement labels, Ruby `body_statement`/`retry`, and Go
+type-instantiation/type-case tails; parser `ERROR` rows still dominate the absolute top.
+
+**Performance gate.** The initial post-run absolute timings were higher than the baseline
+(`stats_all` **24.46s**, `gap_impact_all` **23.34s**, `query_sympy` **4.03s**, `query_raylib`
+**3.71s**, `query_alacritty` **0.23s**), so we controlled for machine-state drift by building
+`origin/main` in a separate worktree and measuring both binaries in the same state. Same-state
+A/B did not show a systematic code regression:
+
+| command | current | origin/main |
+|---|---:|---:|
+| `nose stats bench/repos --top 40` | 23.23s | 24.39s |
+| `nose gap-impact bench/repos --top 40` | 24.69s | 24.48s |
+| `nose query bench/repos/sympy --format json` | 4.04s | 4.69s |
+| repeated `nose query bench/repos/raylib --format json` | 3.34s | 3.37s |
+| repeated `nose query bench/repos/alacritty --format json` | 0.14s | 0.14s |
+
+**Review catches.** The Ruby reviewer found no blocking issue after the operator/case shape was
+changed to method-call semantics, but noted that bare tail-position method `case` still follows
+the broader existing Ruby implicit-return policy. The Rust/Swift reviewer found two blocking Rust
+test gaps: struct literal shorthand was still absent from the returned literal, and mutable
+shorthand field patterns lacked the projection assignment. Both were fixed with stronger tests
+before the final run.
+
+**Regression coverage.**
+
+```text
+cargo test -p nose-frontend
+cargo test -p nose-cli --test equivalence syntax_surfaces
+cargo test -p nose-cli diagnostic_commands
+cargo build --release -p nose-cli
+target/release/nose stats bench/repos --top 80
+target/release/nose gap-impact bench/repos --top 80
+target/release/nose gap-impact bench/repos --top 80 --format json
+awiki lint --root docs
+```
+
 ## DD. Quantified 10-loop lowering tranche — stop treating every Raw as equal (2026-06-20)
 
 After §DC, the user-facing question was no longer "can we lower more?" but "which remaining

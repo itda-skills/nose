@@ -150,3 +150,13 @@ pub(super) fn lower_navigation(lo: &mut Lowering, node: TsNode) -> NodeId {
     }
     base
 }
+pub(super) fn lower_selector_expression(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let source = lo.str_lit(lo.text(node), span);
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("swift_selector_expression")),
+        span,
+        &[source],
+    )
+}

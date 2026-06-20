@@ -494,6 +494,37 @@ func check(_ value: Int) {
 }
 
 #[test]
+fn selector_literals_and_local_typealiases_do_not_fall_to_raw() {
+    let (il, interner) = il_with_interner(
+        r#"
+class C {
+  @objc func foo(_ value: Int) {}
+  func f() {
+    typealias Callback = (Int) -> Void
+    let a = #selector(foo(_:))
+    let b = #selector(getter: C.description)
+  }
+}
+"#,
+    );
+    let raw = raw_names(&il, &interner);
+    for unexpected in ["selector_expression", "typealias_declaration"] {
+        assert!(
+            !raw.iter().any(|name| name == unexpected),
+            "{unexpected} should not stay Raw: {raw:?}"
+        );
+    }
+    let seq = seq_names(&il, &interner);
+    assert!(
+        seq.iter()
+            .filter(|name| name.as_str() == "swift_selector_expression")
+            .count()
+            >= 2,
+        "selector literals should preserve an exact-closed Swift selector tag: {seq:?}"
+    );
+}
+
+#[test]
 fn computed_property_accessors_do_not_fall_to_raw() {
     let (il, interner) = il_with_interner(
         r#"

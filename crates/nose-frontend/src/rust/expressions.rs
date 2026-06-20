@@ -3,9 +3,13 @@ use super::*;
 pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     match node.kind() {
-        "identifier" | "type_identifier" | "field_identifier" | "scoped_identifier" => {
-            lo.var(lo.text(node), span)
-        }
+        "identifier"
+        | "type_identifier"
+        | "field_identifier"
+        | "scoped_identifier"
+        | "crate"
+        | "super"
+        | "shorthand_field_identifier" => lo.var(lo.text(node), span),
         "self" => lo.var("self", span),
         "integer_literal" => {
             let t = lo.text(node);
@@ -104,7 +108,9 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         // expression position via turbofish, casts, and closure/fn param subtrees.
         k if is_type_level(k) => lo.empty_block(span),
         "macro_definition" => lower_macro_definition_shadow(lo, node),
-        "line_comment" | "block_comment" | "attribute_item" => lo.empty_block(span),
+        "line_comment" | "block_comment" | "attribute_item" | "mutable_specifier" => {
+            lo.empty_block(span)
+        }
         _ => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
                 .into_iter()
@@ -183,6 +189,7 @@ pub(super) fn lower_pattern_surface(lo: &mut Lowering, node: TsNode) -> NodeId {
             .into_iter()
             .filter(|child| Some(child.id()) != constructor_id)
             .filter(|child| !is_type_level(child.kind()))
+            .filter(|child| child.kind() != "mutable_specifier")
             .map(|child| lower_expr(lo, child)),
     );
     lo.add(
@@ -362,7 +369,18 @@ pub(super) fn lower_struct_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         .map(|b| {
             Lowering::named_children(b)
                 .into_iter()
-                .filter_map(|f| f.child_by_field_name("value").map(|v| lower_expr(lo, v)))
+                .filter_map(|f| match f.kind() {
+                    "shorthand_field_identifier" | "field_identifier" | "identifier" => {
+                        Some(lower_expr(lo, f))
+                    }
+                    _ => match f.child_by_field_name("value") {
+                        Some(value) => Some(lower_expr(lo, value)),
+                        None => {
+                            let text = lo.text(f).trim();
+                            simple_rust_ident(text).then(|| lo.var(text, lo.span(f)))
+                        }
+                    },
+                })
                 .collect()
         })
         .unwrap_or_default();

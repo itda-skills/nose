@@ -112,6 +112,7 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             .map(|c| lower_expr(lo, c))
             .unwrap_or_else(|| lo.empty_block(span)),
         "if" | "unless" => lower_if(lo, node),
+        "case" => lower_case(lo, node),
         // A guard modifier in expression/tail position (Ruby's implicit return lowers
         // the last statement as an expr) lowers the same as in statement position.
         "if_modifier" | "unless_modifier" => lower_modifier(lo, node),
@@ -220,7 +221,41 @@ pub(super) fn lower_subshell(lo: &mut Lowering, node: TsNode) -> NodeId {
     lo.add(NodeKind::Call, Payload::None, span, &[callee, command])
 }
 pub(super) fn lower_binary(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    if let Some(operator) = node
+        .child_by_field_name("operator")
+        .map(|op| lo.text(op))
+        .filter(|op| ruby_specific_binary_operator(op))
+    {
+        let left = node
+            .child_by_field_name("left")
+            .map(|child| lower_expr(lo, child))
+            .unwrap_or_else(|| lo.empty_block(span));
+        let right = node
+            .child_by_field_name("right")
+            .map(|child| lower_expr(lo, child))
+            .unwrap_or_else(|| lo.empty_block(span));
+        return ruby_operator_call(lo, span, operator, left, right);
+    }
     crate::lower::binary(lo, node, ruby_bin_op, lower_expr)
+}
+pub(super) fn ruby_specific_binary_operator(text: &str) -> bool {
+    matches!(text, "=~" | "!~" | "===" | "<=>")
+}
+pub(super) fn ruby_operator_call(
+    lo: &mut Lowering,
+    span: Span,
+    operator: &str,
+    receiver: NodeId,
+    argument: NodeId,
+) -> NodeId {
+    let callee = lo.add(
+        NodeKind::Field,
+        Payload::Name(lo.sym(operator)),
+        span,
+        &[receiver],
+    );
+    lo.add(NodeKind::Call, Payload::None, span, &[callee, argument])
 }
 pub(super) fn ruby_bin_op(text: &str) -> Option<Op> {
     match text {

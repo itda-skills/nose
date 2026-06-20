@@ -69,6 +69,19 @@ fn node_kinds(src: &str) -> Vec<NodeKind> {
     nodes(src).into_iter().map(|node| node.kind).collect()
 }
 
+fn field_names(src: &str) -> Vec<String> {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.rb", src.as_bytes(), &interner).expect("lower");
+    il.nodes
+        .iter()
+        .filter(|node| node.kind == NodeKind::Field)
+        .filter_map(|node| match node.payload {
+            Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
 fn has_post_test_loop_block(src: &str) -> bool {
     let interner = Interner::new();
     let il = lower(FileId(0), "t.rb", src.as_bytes(), &interner).expect("lower");
@@ -164,6 +177,30 @@ fn method_body_rescue_and_ensure_lower_as_try_without_clause_raw() {
 }
 
 #[test]
+fn block_body_rescue_else_and_ensure_lower_as_try_without_clause_raw() {
+    let src = "it 'defaults' do\n  res = options.instrumenter\nrescue NameError => e then recover(e)\nelse\n  verify(res)\nensure\n  cleanup\nend\n";
+    let raw = raw_names(src);
+    assert!(
+        !raw.iter().any(|name| matches!(
+            name.as_str(),
+            "rescue" | "ensure" | "then" | "else" | "exceptions" | "exception_variable"
+        )),
+        "block-level exception clauses should lower without clause Raw nodes: {raw:?}"
+    );
+    assert!(
+        node_kinds(src).contains(&NodeKind::Try),
+        "block-level exception clauses should lower to Try"
+    );
+    let vars = var_names(src);
+    assert!(
+        vars.iter().any(|name| name == "recover")
+            && vars.iter().any(|name| name == "verify")
+            && vars.iter().any(|name| name == "cleanup"),
+        "rescue, else, and ensure block bodies should be preserved: {vars:?}"
+    );
+}
+
+#[test]
 fn ruby_value_surfaces_do_not_fall_to_raw() {
     let raw = raw_names_without_errors(
         "def f\n  @@count = ?x\n  path = %x(echo hi).chop rescue ''\n  tick while ready?\n  spin until done?\nend\n",
@@ -243,10 +280,38 @@ fn ruby_binary_keywords_lower_and_unmapped_ops_keep_operator_identity() {
         "keyword or should lower to Or: {ops:?}"
     );
 
-    let raw = raw_name_set("x = a <=> b\ny = c === d\n");
+    let fields = field_names("x = a <=> b\ny = c === d\n");
     assert!(
-        raw.contains(&"binary <=>".to_string()) && raw.contains(&"binary ===".to_string()),
-        "unmapped Ruby operators should stay distinct in Raw names: {raw:?}"
+        fields.contains(&"<=>".to_string()) && fields.contains(&"===".to_string()),
+        "Ruby-specific operators should stay distinct as method-call fields: {fields:?}"
+    );
+}
+
+#[test]
+fn ruby_specific_binary_operators_lower_to_distinct_method_calls() {
+    let raw = raw_name_set(
+        "a = CopyrightRx =~ value\nb = CopyrightRx !~ value\nc = AbstractBlock === parent\nd = now <=> later\n",
+    );
+    assert!(
+        !raw.iter().any(|name| matches!(
+            name.as_str(),
+            "binary =~" | "binary !~" | "binary ===" | "binary <=>"
+        )),
+        "Ruby-specific binary operators should no longer fall to Raw: {raw:?}"
+    );
+
+    let fields = field_names(
+        "a = CopyrightRx =~ value\nb = CopyrightRx !~ value\nc = AbstractBlock === parent\nd = now <=> later\n",
+    );
+    for expected in ["=~", "!~", "===", "<=>"] {
+        assert!(
+            fields.iter().any(|name| name == expected),
+            "{expected} method-call field should be preserved distinctly: {fields:?}"
+        );
+    }
+    assert!(
+        !binary_ops("c = AbstractBlock === parent\n").contains(&Op::Eq),
+        "Ruby === must not lower to value equality"
     );
 }
 
@@ -268,16 +333,24 @@ fn keyword_not_lowers_to_not() {
 }
 
 #[test]
-fn case_when_compares_scrutinee_against_pattern() {
-    // `case x when 7 ...` must lower a comparison of the scrutinee against the
-    // pattern `7`; previously the pattern was dropped (cond was `x == x`), so the
-    // literal 7 never appeared in the IL.
+fn case_when_uses_case_equality_against_scrutinee() {
+    // `case x when 7 ...` is Ruby's `7 === x`, not value equality. The pattern
+    // literal must appear and the predicate must stay a Ruby method call.
     let has_seven = nodes("case x\nwhen 7\n  y\nend\n")
         .iter()
         .any(|n| matches!(n.payload, Payload::LitInt(7)));
     assert!(
         has_seven,
         "the `when 7` pattern literal must appear in the lowered IL"
+    );
+    let fields = field_names("case x\nwhen 7\n  y\nend\n");
+    assert!(
+        fields.iter().any(|name| name == "==="),
+        "scrutinee case should use Ruby case-equality method call: {fields:?}"
+    );
+    assert!(
+        !binary_ops("case x\nwhen 7\n  y\nend\n").contains(&Op::Eq),
+        "Ruby case should not lower to value equality"
     );
 }
 
@@ -299,6 +372,27 @@ fn case_else_body_is_preserved() {
     let mut ints = expr_stmt_ints("case\nwhen x > 0\n  1\nelse\n  2\nend\n");
     ints.sort_unstable();
     assert_eq!(ints, vec![1, 2]);
+}
+
+#[test]
+fn expression_case_with_then_lowers_without_case_wrapper_raw() {
+    let src = "def f(authentication_keys)\n  mapping.to.http_authentication_key || case authentication_keys\n  when Array then authentication_keys.first\n  when Hash then authentication_keys.keys.first\n  end\nend\n";
+    let raw = raw_name_set(src);
+    assert!(
+        !raw.iter()
+            .any(|name| matches!(name.as_str(), "case" | "when" | "pattern" | "then")),
+        "case expressions and one-line then bodies should lower without Raw wrappers: {raw:?}"
+    );
+    let ops = binary_ops(src);
+    assert!(
+        ops.contains(&Op::Or) && !ops.contains(&Op::Eq),
+        "case expression should preserve outer || without treating === as Eq: {ops:?}"
+    );
+    let fields = field_names(src);
+    assert!(
+        fields.iter().filter(|name| name.as_str() == "===").count() >= 2,
+        "case expression should compare patterns to the scrutinee with === calls: {fields:?}"
+    );
 }
 
 #[test]
