@@ -456,6 +456,26 @@ fn java_collection_constructor_call_il() -> (Il, Interner, NodeId, NodeId) {
     (finish_il(b, root, Lang::Java), interner, call, callee)
 }
 
+fn js_global_constructor_call_il(receiver: &str) -> (Il, Interner, NodeId, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let callee = b.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern(receiver)),
+        sp(90),
+        &[],
+    );
+    let values = b.add(
+        NodeKind::Seq,
+        Payload::Name(interner.intern("array")),
+        sp(91),
+        &[],
+    );
+    let call = b.add(NodeKind::Call, Payload::None, sp(92), &[callee, values]);
+    let root = b.add(NodeKind::Module, Payload::None, sp(93), &[call]);
+    (finish_il(b, root, Lang::JavaScript), interner, call, callee)
+}
+
 fn push_java_collection_constructor_dependencies(il: &mut Il, call: NodeId, callee: NodeId) {
     il.evidence.push(evidence(
         0,
@@ -479,6 +499,23 @@ fn push_java_collection_constructor_dependencies(il: &mut Il, call: NodeId, call
         binding_symbol,
         EvidenceStatus::Asserted,
         vec![EvidenceId(1)],
+    ));
+}
+
+fn push_js_global_constructor_dependencies(il: &mut Il, call: NodeId, callee: NodeId, name: &str) {
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::source_span(il.node(call).span),
+        EvidenceKind::Source(SourceFactKind::Call(SourceCallKind::Construct)),
+        EvidenceStatus::Asserted,
+    ));
+    il.evidence.push(evidence(
+        1,
+        EvidenceAnchor::node(il.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash(name),
+        }),
+        EvidenceStatus::Asserted,
     ));
 }
 
@@ -1735,6 +1772,210 @@ fn admitted_java_map_entry_resolver_requires_pack_provenance() {
     assert_eq!(occurrence.callee, callee);
     assert_eq!(occurrence.receiver, Some(receiver));
     assert_eq!(occurrence.arg_count, 2);
+}
+
+#[test]
+fn admitted_js_set_constructor_resolver_requires_pack_provenance() {
+    let (il, interner, call, _callee) = js_global_constructor_call_il("Set");
+    assert!(
+        admitted_js_like_set_constructor_at_call(&il, &interner, call).is_none(),
+        "raw JS new Set(...) shape alone must not admit builtin Set constructor semantics"
+    );
+
+    let contract =
+        library_js_like_set_constructor_contract(Lang::JavaScript, "Set").expect("Set contract");
+
+    let (mut missing_dependency, interner, call, _callee) = js_global_constructor_call_il("Set");
+    missing_dependency
+        .evidence
+        .push(js_like_builtin_collection_constructor_record(
+            0,
+            missing_dependency.node(call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[],
+        ));
+    assert!(
+        admitted_js_like_set_constructor_at_call(&missing_dependency, &interner, call).is_none(),
+        "same-span Set evidence without construct/global dependencies is rejected"
+    );
+
+    let (mut wrong_pack, interner, call, callee) = js_global_constructor_call_il("Set");
+    push_js_global_constructor_dependencies(&mut wrong_pack, call, callee, "Set");
+    wrong_pack.evidence.push(library_api_record_with_provenance(
+        2,
+        wrong_pack.node(call).span,
+        contract.id,
+        contract.callee,
+        EvidenceStatus::Asserted,
+        &[0, 1],
+        FIRST_PARTY_PACK_ID,
+        JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
+    ));
+    assert!(
+        admitted_js_like_set_constructor_at_call(&wrong_pack, &interner, call).is_none(),
+        "Set constructor evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, callee) = js_global_constructor_call_il("Set");
+    push_js_global_constructor_dependencies(&mut wrong_producer, call, callee, "Set");
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance(
+            2,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[0, 1],
+            JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
+            "wrong.javascript.builtins.collection-constructor-api",
+        ));
+    assert!(
+        admitted_js_like_set_constructor_at_call(&wrong_producer, &interner, call).is_none(),
+        "Set constructor evidence with the wrong producer is rejected"
+    );
+
+    let (mut wrong_emitter, interner, call, callee) = js_global_constructor_call_il("Set");
+    push_js_global_constructor_dependencies(&mut wrong_emitter, call, callee, "Set");
+    let mut external_record = js_like_builtin_collection_constructor_record(
+        2,
+        wrong_emitter.node(call).span,
+        contract.id,
+        contract.callee,
+        EvidenceStatus::Asserted,
+        &[0, 1],
+    );
+    external_record.provenance.emitter = EvidenceEmitter::External;
+    wrong_emitter.evidence.push(external_record);
+    assert!(
+        admitted_js_like_set_constructor_at_call(&wrong_emitter, &interner, call).is_none(),
+        "Set constructor evidence from an external emitter is rejected"
+    );
+
+    let (mut admitted, interner, call, callee) = js_global_constructor_call_il("Set");
+    push_js_global_constructor_dependencies(&mut admitted, call, callee, "Set");
+    admitted
+        .evidence
+        .push(js_like_builtin_collection_constructor_record(
+            2,
+            admitted.node(call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[0, 1],
+        ));
+    let occurrence = admitted_js_like_set_constructor_at_call(&admitted, &interner, call).unwrap();
+    assert_eq!(
+        occurrence.contract.id,
+        LibraryApiContractId::JsLikeSetConstructor
+    );
+    assert_eq!(occurrence.callee, callee);
+    assert_eq!(occurrence.receiver, None);
+    assert_eq!(occurrence.arg_count, 1);
+}
+
+#[test]
+fn admitted_js_map_constructor_resolver_requires_pack_provenance() {
+    let (il, interner, call, _callee) = js_global_constructor_call_il("Map");
+    assert!(
+        admitted_js_like_map_constructor_at_call(&il, &interner, call).is_none(),
+        "raw JS new Map(...) shape alone must not admit builtin Map constructor semantics"
+    );
+
+    let contract =
+        library_js_like_map_constructor_contract(Lang::JavaScript, "Map").expect("Map contract");
+
+    let (mut missing_dependency, interner, call, _callee) = js_global_constructor_call_il("Map");
+    missing_dependency
+        .evidence
+        .push(js_like_builtin_collection_constructor_record(
+            0,
+            missing_dependency.node(call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[],
+        ));
+    assert!(
+        admitted_js_like_map_constructor_at_call(&missing_dependency, &interner, call).is_none(),
+        "same-span Map evidence without construct/global dependencies is rejected"
+    );
+
+    let (mut wrong_pack, interner, call, callee) = js_global_constructor_call_il("Map");
+    push_js_global_constructor_dependencies(&mut wrong_pack, call, callee, "Map");
+    wrong_pack.evidence.push(library_api_record_with_provenance(
+        2,
+        wrong_pack.node(call).span,
+        contract.id,
+        contract.callee,
+        EvidenceStatus::Asserted,
+        &[0, 1],
+        FIRST_PARTY_PACK_ID,
+        JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
+    ));
+    assert!(
+        admitted_js_like_map_constructor_at_call(&wrong_pack, &interner, call).is_none(),
+        "Map constructor evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, callee) = js_global_constructor_call_il("Map");
+    push_js_global_constructor_dependencies(&mut wrong_producer, call, callee, "Map");
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance(
+            2,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[0, 1],
+            JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
+            "wrong.javascript.builtins.collection-constructor-api",
+        ));
+    assert!(
+        admitted_js_like_map_constructor_at_call(&wrong_producer, &interner, call).is_none(),
+        "Map constructor evidence with the wrong producer is rejected"
+    );
+
+    let (mut wrong_emitter, interner, call, callee) = js_global_constructor_call_il("Map");
+    push_js_global_constructor_dependencies(&mut wrong_emitter, call, callee, "Map");
+    let mut external_record = js_like_builtin_collection_constructor_record(
+        2,
+        wrong_emitter.node(call).span,
+        contract.id,
+        contract.callee,
+        EvidenceStatus::Asserted,
+        &[0, 1],
+    );
+    external_record.provenance.emitter = EvidenceEmitter::External;
+    wrong_emitter.evidence.push(external_record);
+    assert!(
+        admitted_js_like_map_constructor_at_call(&wrong_emitter, &interner, call).is_none(),
+        "Map constructor evidence from an external emitter is rejected"
+    );
+
+    let (mut admitted, interner, call, callee) = js_global_constructor_call_il("Map");
+    push_js_global_constructor_dependencies(&mut admitted, call, callee, "Map");
+    admitted
+        .evidence
+        .push(js_like_builtin_collection_constructor_record(
+            2,
+            admitted.node(call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[0, 1],
+        ));
+    let occurrence = admitted_js_like_map_constructor_at_call(&admitted, &interner, call).unwrap();
+    assert_eq!(
+        occurrence.contract.id,
+        LibraryApiContractId::JsLikeMapConstructor
+    );
+    assert_eq!(occurrence.callee, callee);
+    assert_eq!(occurrence.receiver, None);
+    assert_eq!(occurrence.arg_count, 1);
 }
 
 #[test]

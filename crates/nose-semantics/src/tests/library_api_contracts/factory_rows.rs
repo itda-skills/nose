@@ -229,7 +229,7 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
     assert_eq!(
         library_js_like_map_constructor_contract(Lang::TypeScript, "Map"),
         Some(LibraryMapFactoryContract {
-            pack_id: FIRST_PARTY_PACK_ID,
+            pack_id: JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
             id: LibraryApiContractId::JsLikeMapConstructor,
             callee: LibraryApiCalleeContract::JsGlobalConstructor {
                 receiver: "Map",
@@ -239,6 +239,11 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
                 entry_seq_tag: SEQ_VALUE_COLLECTION,
             },
         })
+    );
+    assert_eq!(
+        library_js_like_set_constructor_contract(Lang::JavaScript, "Set")
+            .map(|contract| contract.pack_id),
+        Some(JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID)
     );
     assert_eq!(
         library_java_map_factory_contract(Lang::Java, "Map", "of"),

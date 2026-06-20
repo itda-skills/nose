@@ -23,7 +23,8 @@ pub(super) use nose_semantics::{
     FIRST_PARTY_PACK_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
     JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID, JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
     JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, JAVA_STDLIB_MAP_FACTORY_PACK_ID,
-    JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID, JS_LIKE_BUILTIN_PROMISE_PACK_ID,
+    JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID, JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
+    JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID, JS_LIKE_BUILTIN_PROMISE_PACK_ID,
     JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
     PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
     PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, RUST_STDLIB_OPTION_PACK_ID,
@@ -255,6 +256,25 @@ pub(super) fn library_api_contract_evidence(
         }),
         dependencies,
     )
+}
+
+pub(super) fn js_like_builtin_collection_constructor_evidence(
+    id: u32,
+    call_span: Span,
+    contract_id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+    arity: u16,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    let mut record =
+        library_api_contract_evidence(id, call_span, contract_id, callee, arity, dependencies);
+    record.provenance.pack_hash = Some(stable_symbol_hash(
+        JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
+    ));
+    record.provenance.rule_hash = Some(stable_symbol_hash(
+        JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
+    ));
+    record
 }
 
 pub(super) fn python_builtin_collection_factory_evidence(

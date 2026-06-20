@@ -23,6 +23,9 @@ fn library_collection_factory_pack_id(id: LibraryApiContractId) -> &'static str 
             JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID
         }
         LibraryApiContractId::RubySetFactory => RUBY_STDLIB_SET_PACK_ID,
+        LibraryApiContractId::JsLikeSetConstructor => {
+            JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
+        }
         _ => FIRST_PARTY_PACK_ID,
     }
 }
@@ -32,6 +35,9 @@ fn library_map_factory_pack_id(id: LibraryApiContractId) -> &'static str {
         LibraryApiContractId::RustStdMapFactory => RUST_STDLIB_MAP_FACTORY_PACK_ID,
         LibraryApiContractId::JavaMapFactory(_) => JAVA_STDLIB_MAP_FACTORY_PACK_ID,
         LibraryApiContractId::JavaMapEntryFactory => JAVA_STDLIB_MAP_ENTRY_PACK_ID,
+        LibraryApiContractId::JsLikeMapConstructor => {
+            JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
+        }
         _ => FIRST_PARTY_PACK_ID,
     }
 }

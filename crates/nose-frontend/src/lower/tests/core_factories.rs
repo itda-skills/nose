@@ -414,6 +414,19 @@ fn assert_js_constructor_result_domains(interner: &Interner) {
     lo.add(NodeKind::Call, Payload::None, sp_at(72), &[set, seq]);
     let set_contract =
         library_js_like_set_constructor_contract(Lang::JavaScript, "Set").expect("Set constructor");
+    let set_records = contract_api_records(&lo.evidence, set_contract.id, set_contract.callee);
+    assert_eq!(
+        set_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
+        ))
+    );
+    assert_eq!(
+        set_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID
+        ))
+    );
     let set_api = contract_api_ids(&lo.evidence, set_contract.id, set_contract.callee);
     assert!(result_domain_depends_on_api(
         &lo.evidence,
@@ -428,6 +441,19 @@ fn assert_js_constructor_result_domains(interner: &Interner) {
     lo.add(NodeKind::Call, Payload::None, sp_at(82), &[map, seq]);
     let map_contract =
         library_js_like_map_constructor_contract(Lang::JavaScript, "Map").expect("Map constructor");
+    let map_records = contract_api_records(&lo.evidence, map_contract.id, map_contract.callee);
+    assert_eq!(
+        map_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
+        ))
+    );
+    assert_eq!(
+        map_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID
+        ))
+    );
     let map_api = contract_api_ids(&lo.evidence, map_contract.id, map_contract.callee);
     assert!(result_domain_depends_on_api(
         &lo.evidence,

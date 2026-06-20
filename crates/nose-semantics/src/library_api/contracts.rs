@@ -38,6 +38,12 @@ pub const JS_LIKE_BUILTIN_ARRAY_PACK_ID: &str = "nose.javascript.builtins.array"
 pub const JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID: &str = "javascript.builtins.array-api";
 pub const JS_LIKE_BUILTIN_ARRAY_FROM_CONTRACT_ID: &str = "map_key_view.wrapper";
 pub const JS_LIKE_BUILTIN_ARRAY_IS_ARRAY_CONTRACT_ID: &str = "js_like.array.is_array";
+pub const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID: &str =
+    "nose.javascript.builtins.collection_constructors";
+pub const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID: &str =
+    "javascript.builtins.collection-constructor-api";
+pub const JS_LIKE_BUILTIN_SET_CONSTRUCTOR_CONTRACT_ID: &str = "js_like.set.constructor";
+pub const JS_LIKE_BUILTIN_MAP_CONSTRUCTOR_CONTRACT_ID: &str = "js_like.map.constructor";
 pub const RUBY_STDLIB_SET_PACK_ID: &str = "nose.ruby.stdlib.set";
 pub const RUBY_STDLIB_SET_PRODUCER_ID: &str = "ruby.stdlib.set-factory-api";
 pub const RUBY_STDLIB_SET_CONTRACT_ID: &str = "ruby.set_factory";

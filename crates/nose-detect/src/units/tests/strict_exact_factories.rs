@@ -38,14 +38,15 @@ fn strict_exact_js_constructor_requires_library_api_evidence() {
 
     let (mut il, call) = js_new_set_il(&interner);
     let set = library_js_like_set_constructor_contract(Lang::JavaScript, "Set").unwrap();
-    il.evidence.push(library_api_contract_evidence(
-        3,
-        sp(13),
-        set.id,
-        set.callee,
-        1,
-        vec![EvidenceId(0), EvidenceId(1)],
-    ));
+    il.evidence
+        .push(js_like_builtin_collection_constructor_evidence(
+            3,
+            sp(13),
+            set.id,
+            set.callee,
+            1,
+            vec![EvidenceId(0), EvidenceId(1)],
+        ));
     let facts = StrictFacts::collect(&il, &interner);
     assert!(strict_exact_set_constructor_collection_safe(
         &il, &interner, &facts, call

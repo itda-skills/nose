@@ -89,6 +89,8 @@ The next code slices are intentionally incremental:
    Promise API occurrence provenance, then
    `nose.javascript.builtins.array` for JS/TS `Array.from` and
    `Array.isArray` API occurrence provenance, then
+   `nose.javascript.builtins.collection_constructors` for JS/TS `new Set(...)`
+   and `new Map(...)` API occurrence provenance, then
    `nose.rust.stdlib.collection_factories` for selected Rust
    `std::collections::{HashSet,BTreeSet,VecDeque}::from`
    collection-factory occurrence provenance, then
@@ -460,6 +462,38 @@ admission provenance checks for `Array.from` and `Array.isArray`; it did not
 add per-node descriptor scans or touch candidate generation. Binary size
 changed 20,161,264 -> 20,161,504 bytes for this slice.
 
+Phase 5 JavaScript builtins collection-constructor measurement note, local run
+on 2026-06-21: product query-regression r15 compared the previous
+`nose.javascript.builtins.array` slice with the
+`nose.javascript.builtins.collection_constructors` slice over the same 9-repo
+subset. Family summaries, locations, fragment buckets, reason-code counts, and
+surface counts were unchanged after ignoring `result_json_bytes`. Each repo's
+JSON grew by exactly 573 bytes from the new top-level `semantic_packs` entry.
+The saved previous and current artifacts are
+`/tmp/nose-473-phase5-js-collections-prev-r15.json` and
+`/tmp/nose-473-phase5-js-collections-current-r15.json`; the previous-slice
+compare summary is `/tmp/nose-473-phase5-js-collections-vs-prev-r15.md`. The
+sequential compare reported one runtime trigger on `boltons`, `lower` 23.2 ms
+-> 29.6 ms and `parse+lower` 17.8 ms -> 24.4 ms, so the same binaries were
+remeasured with repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-js-collections-alternating-r15.json`. Alternating
+aggregate medians were: wall 1171.87 ms -> 1219.40 ms, `parse+lower` 286.80 ms
+-> 264.50 ms, `lower` 378.70 ms -> 374.50 ms, `normalize+extract` 583.20 ms ->
+634.10 ms, and `candidates` 19.80 ms -> 22.50 ms. The alternating r15 cleared
+the `boltons` trigger but showed `junit5` wall and `normalize+extract`
+triggers. Focused `junit5` alternating r30 runs saved at
+`/tmp/nose-473-phase5-js-collections-junit5-alternating-r30.json` reproduced
+the trigger in previous-first order, while the current-first focused r30 run
+saved at
+`/tmp/nose-473-phase5-js-collections-junit5-current-first-alternating-r30.json`
+inverted the result and produced no current-regression trigger. Root-cause note:
+this slice changed static pack metadata, JS/TS `new Set`/`new Map` producer
+provenance, and admission provenance checks for those constructors; it did not
+touch Java lowering, normalize, or candidate generation. Treat the `junit5`
+timing as order/environment-sensitive noise unless a later r30 rerun repeats it
+with both execution orders. Binary size changed 20,161,504 -> 20,161,808 bytes
+for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -536,6 +570,12 @@ changed 20,161,264 -> 20,161,504 bytes for this slice.
   `Array.from` and `Array.isArray` `LibraryApi` occurrence evidence now
   reports `nose.javascript.builtins.array` pack and producer provenance while
   preserving shadowed-`Array` and unsupported-arity hard negatives.
+- JS/TS collection constructor APIs started moving out of the broad
+  compatibility facade. `new Set(...)` and `new Map(...)` `LibraryApi`
+  occurrence evidence now reports
+  `nose.javascript.builtins.collection_constructors` pack and producer
+  provenance while preserving missing construct-source and shadowed-constructor
+  hard negatives.
 - Selected Rust stdlib collection factories started moving out of the broad
   compatibility facade. `std::collections::{HashSet,BTreeSet,VecDeque}::from`
   factory `LibraryApi` occurrence evidence now reports

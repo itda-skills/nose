@@ -64,14 +64,15 @@ fn js_constructor_value_graph_requires_library_api_evidence() {
 
     let (mut il, call) = js_new_set_il(&interner);
     let set = library_js_like_set_constructor_contract(Lang::JavaScript, "Set").unwrap();
-    il.evidence.push(library_api_contract_evidence(
-        3,
-        sp(73),
-        set.id,
-        set.callee,
-        1,
-        vec![EvidenceId(0), EvidenceId(1)],
-    ));
+    il.evidence
+        .push(js_like_builtin_collection_constructor_evidence(
+            3,
+            sp(73),
+            set.id,
+            set.callee,
+            1,
+            vec![EvidenceId(0), EvidenceId(1)],
+        ));
     let mut builder = Builder::new(&il, &interner);
     let admitted = builder.eval(call, &FxHashMap::default());
     assert!(matches!(

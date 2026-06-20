@@ -383,14 +383,15 @@ fn strict_exact_contains_does_not_use_result_domain_as_exact_tree_proof() {
     );
 
     let api = library_js_like_set_constructor_contract(Lang::TypeScript, "Set").unwrap();
-    il.evidence.push(library_api_contract_evidence(
-        0,
-        sp(42),
-        api.id,
-        api.callee,
-        1,
-        Vec::new(),
-    ));
+    il.evidence
+        .push(js_like_builtin_collection_constructor_evidence(
+            0,
+            sp(42),
+            api.id,
+            api.callee,
+            1,
+            Vec::new(),
+        ));
     il.evidence.push(evidence(
         1,
         EvidenceAnchor::node(sp(42), NodeKind::Call),

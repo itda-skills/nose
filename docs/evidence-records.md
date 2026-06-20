@@ -483,8 +483,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   remain dependency-free;
 - first-party lowering emits `LibraryApi` evidence for selected API occurrences
   that remain as raw nodes: JS-like `Array.from(...)`, `Array.isArray(...)`,
-  with `nose.javascript.builtins.array` provenance; `Boolean(...)`,
-  `new Map(...)`, `new Set(...)`, and static
+  with `nose.javascript.builtins.array` provenance; `new Map(...)` and
+  `new Set(...)` with `nose.javascript.builtins.collection_constructors`
+  provenance; `Boolean(...)`, and static
   `indexOf`/`findIndex` membership calls whose receiver has collection
   sequence-surface proof; Python builtin collection factories such as
   `list(...)` when the callee has an unshadowed free-name proof; Python
@@ -550,9 +551,12 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `set`/`frozenset`, pack-owned
   Rust `std::collections::{HashSet,BTreeSet}::from`, pack-owned Java `Set.of`,
   Ruby `Set.new`,
-  and JS-like `new Set` as `Set`; Rust
+  and JS-like `new Set` with
+  `nose.javascript.builtins.collection_constructors` provenance as `Set`; Rust
   `std::collections::{HashMap,BTreeMap}::from`, pack-owned Java
-  `Map.of`/`Map.ofEntries`, and JS-like `new Map` as `Map`; JS-like
+  `Map.of`/`Map.ofEntries`, and JS-like `new Map` with
+  `nose.javascript.builtins.collection_constructors` provenance as `Map`;
+  JS-like
   one-argument `Array.from` with `nose.javascript.builtins.array` provenance as
   `Array`; and JS-like `Promise.resolve` plus admitted Promise `.then` results
   with `nose.javascript.builtins.promise` provenance as `PromiseLike`.
@@ -616,8 +620,9 @@ callers:
   `ImportNamespace`/`ImportBinding` value ops derived from `Import` evidence, so
   raw import `Seq` payloads cannot hash-cons with proof-bearing import values;
 - unshadowed-global symbol proof for JS/TS `Math.*` method contracts,
-  `new Map(...)`/`new Set(...)` constructor contracts, static `Array.from` and
-  `Array.isArray` exact/API gates, and `undefined` nullish-default handling.
+  pack-owned `new Map(...)`/`new Set(...)` constructor contracts, static
+  `Array.from` and `Array.isArray` exact/API gates, and `undefined`
+  nullish-default handling.
   Value-graph nullish
   value semantics are evidence-only for `undefined`; raw spelling plus a
   scope scan no longer reopens that exact path;

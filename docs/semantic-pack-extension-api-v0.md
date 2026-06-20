@@ -454,6 +454,8 @@ implicit v0 packs:
   and `.then` Promise API occurrence contracts;
 - `nose.javascript.builtins.array` owns the current JS/TS `Array.from` and
   `Array.isArray` API occurrence contracts;
+- `nose.javascript.builtins.collection_constructors` owns the current JS/TS
+  `new Set(...)` and `new Map(...)` API occurrence contracts;
 - `nose.rust.stdlib.collection_factories` owns the current selected Rust
   `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection-factory API
   occurrence contracts;

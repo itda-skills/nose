@@ -99,6 +99,10 @@ still being migrated toward it.
   `nose.javascript.builtins.array` descriptor owns JS/TS `Array.from` and
   `Array.isArray` API contract and occurrence producer ids, while shadowed
   `Array` roots and unsupported `Array.from` arities remain hard negatives. The
+  `nose.javascript.builtins.collection_constructors` descriptor owns JS/TS
+  `new Set(...)` and `new Map(...)` API contract and occurrence producer ids,
+  while missing construct-source proof and shadowed constructor roots remain
+  hard negatives. The
   `nose.rust.stdlib.collection_factories` descriptor owns selected Rust
   `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection-factory
   contract and occurrence producer ids, while shadowed `std` roots remain hard
@@ -150,6 +154,8 @@ still being migrated toward it.
   `Promise.resolve` and `.then` Promise API provenance,
   `nose.javascript.builtins.array`, a default builtin stdlib pack for JS/TS
   `Array.from` and `Array.isArray` API provenance,
+  `nose.javascript.builtins.collection_constructors`, a default builtin stdlib
+  pack for JS/TS `new Set(...)` and `new Map(...)` API provenance,
   `nose.rust.stdlib.collection_factories`, a default builtin stdlib pack for
   selected Rust `std::collections` collection-factory API provenance,
   `nose.rust.stdlib.map_factories`, a default builtin stdlib pack for selected
@@ -431,8 +437,11 @@ migrated.
   top-level require, unshadowed-global, macro-invocation source,
   construct-syntax, or regex-literal proof. Selected producer-covered result
   calls emit dependent `Domain` evidence for the result receiver:
-  collection-like factories as `Collection`, set factories/constructors as
-  `Set`, map factories as `Map`, JS-like one-argument `Array.from` with
+  collection-like factories as `Collection`, set factories/constructors
+  including JS-like `new Set` with
+  `nose.javascript.builtins.collection_constructors` provenance as `Set`, map
+  factories including JS-like `new Map` with the same pack provenance as `Map`,
+  JS-like one-argument `Array.from` with
   `nose.javascript.builtins.array` provenance as `Array`, and JS-like
   `Promise.resolve` plus admitted Promise `.then` as `PromiseLike`. Java
   `Arrays.asList(x)` with exactly one argument is excluded because
@@ -761,11 +770,12 @@ migrated.
   semantics, but computed property names are exact-closed until a future
   contract can prove key evaluation, coercion, order, and side-effect behavior.
 - JS/TS `new Map(...)` and `new Set(...)` now require construct-syntax source
-  facts distinct from ordinary calls plus `UnshadowedGlobal` symbol proof for
-  the `Map`/`Set` constructor. With exact-safe static collection or entry
-  arguments they can enter exact matching, including supported immutable
-  module-level Set/Map bindings. Plain `Set(...)`/`Map(...)` calls and locally
-  shadowed constructor names remain exact-closed.
+  facts distinct from ordinary calls, `UnshadowedGlobal` symbol proof for the
+  `Map`/`Set` constructor, and `nose.javascript.builtins.collection_constructors`
+  `LibraryApi` provenance. With exact-safe static collection or entry arguments
+  they can enter exact matching, including supported immutable module-level
+  Set/Map bindings. Plain `Set(...)`/`Map(...)` calls and locally shadowed
+  constructor names remain exact-closed.
 - Static import proof facts now have a typed `ImportFactKind`/`ImportFact`
   facade in `nose-semantics`. First-party frontends emit import binding and
   namespace facts through that contract. The lowered RHS keeps only structural

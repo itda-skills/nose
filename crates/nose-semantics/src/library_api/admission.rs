@@ -210,6 +210,17 @@ fn library_api_record_provenance_matches_contract(
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID))
         }
+        LibraryApiContractId::JsLikeSetConstructor | LibraryApiContractId::JsLikeMapConstructor => {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash
+                    == Some(stable_symbol_hash(
+                        JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
+                    ))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(
+                        JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
+                    ))
+        }
         LibraryApiContractId::RustVecMacroFactory | LibraryApiContractId::RustVecNewFactory => {
             record.provenance.emitter == EvidenceEmitter::FirstParty
                 && record.provenance.pack_hash == Some(stable_symbol_hash(RUST_STDLIB_VEC_PACK_ID))

@@ -37,6 +37,7 @@ ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.python.stdlib.math`,
 `nose.javascript.builtins.promise`,
 `nose.javascript.builtins.array`,
+`nose.javascript.builtins.collection_constructors`,
 `nose.ruby.stdlib.set`, `nose.rust.stdlib.vec`,
 `nose.rust.stdlib.option`,
 `nose.rust.stdlib.collection_factories`, `nose.rust.stdlib.map_factories`,
@@ -199,6 +200,9 @@ previous semantic-kernel tranches.
    The current JavaScript builtins Array slice is
    `nose.javascript.builtins.array`, which owns JS/TS `Array.from` and
    `Array.isArray` API occurrence provenance.
+   The current JavaScript builtins collection-constructor slice is
+   `nose.javascript.builtins.collection_constructors`, which owns JS/TS
+   `new Set(...)` and `new Map(...)` API occurrence provenance.
    The next Rust stdlib collection slice is
    `nose.rust.stdlib.collection_factories`, which owns selected
    `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection-factory API

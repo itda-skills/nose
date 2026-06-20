@@ -517,7 +517,8 @@ impl<'a> Lowering<'a> {
                     contract.id,
                     contract.callee,
                     receiver,
-                    "library_api_js_set_constructor",
+                    contract.pack_id,
+                    JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
                     library_collection_factory_result_domain_for_arity(contract, arg_count),
                 )
             })
@@ -529,7 +530,8 @@ impl<'a> Lowering<'a> {
                             contract.id,
                             contract.callee,
                             receiver,
-                            "library_api_js_map_constructor",
+                            contract.pack_id,
+                            JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
                             Some(library_map_factory_result_domain(contract)),
                         )
                     })
@@ -549,9 +551,9 @@ impl<'a> Lowering<'a> {
             id: contract.0,
             callee: contract.1,
             dependencies,
-            pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
-            rule: contract.3,
-            result_domain: contract.4,
+            pack_id: contract.3,
+            rule: contract.4,
+            result_domain: contract.5,
         })
     }
 }
