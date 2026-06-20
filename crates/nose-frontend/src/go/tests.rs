@@ -47,6 +47,76 @@ fn raw_names(src: &str) -> Vec<String> {
         .collect()
 }
 
+fn seq_names(src: &str) -> Vec<String> {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.go", src.as_bytes(), &interner).expect("lower");
+    il.nodes
+        .iter()
+        .filter(|node| node.kind == NodeKind::Seq)
+        .filter_map(|node| match node.payload {
+            Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn node_kind_count(src: &str, kind: NodeKind) -> usize {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.go", src.as_bytes(), &interner).expect("lower");
+    il.nodes.iter().filter(|node| node.kind == kind).count()
+}
+
+fn call_callee_index_count(src: &str) -> usize {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.go", src.as_bytes(), &interner).expect("lower");
+    il.nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, node)| node.kind == NodeKind::Call)
+        .filter(|(idx, _)| {
+            il.children(NodeId(*idx as u32))
+                .first()
+                .is_some_and(|callee| il.node(*callee).kind == NodeKind::Index)
+        })
+        .count()
+}
+
+fn call_callee_shapes(src: &str) -> Vec<String> {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.go", src.as_bytes(), &interner).expect("lower");
+    il.nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, node)| node.kind == NodeKind::Call)
+        .filter_map(|(idx, _)| il.children(NodeId(idx as u32)).first().copied())
+        .map(|callee| node_shape(&il, callee))
+        .collect()
+}
+
+fn node_shape(il: &Il, id: NodeId) -> String {
+    let node = il.node(id);
+    let children = il.children(id);
+    match node.kind {
+        NodeKind::Var => "Var".to_string(),
+        NodeKind::Field => {
+            let base = children
+                .first()
+                .map(|child| node_shape(il, *child))
+                .unwrap_or_else(|| "Empty".to_string());
+            format!("Field({base})")
+        }
+        NodeKind::Index => {
+            let parts: Vec<String> = children
+                .iter()
+                .map(|child| node_shape(il, *child))
+                .collect();
+            format!("Index({})", parts.join(","))
+        }
+        NodeKind::Seq => "Seq".to_string(),
+        other => format!("{other:?}"),
+    }
+}
+
 fn lit_ints(src: &str) -> Vec<i64> {
     let interner = Interner::new();
     let il = lower(FileId(0), "t.go", src.as_bytes(), &interner).expect("lower");
@@ -106,6 +176,111 @@ fn type_switch_case_types_do_not_leak_into_case_bodies() {
             "pointer_type" | "type_identifier" | "qualified_type" | "slice_type" | "map_type"
         )),
         "type switch case body should not include type-only Raw nodes: {raw:?}"
+    );
+}
+
+#[test]
+fn type_switch_multi_label_types_do_not_leak_into_case_bodies() {
+    let raw = raw_names(
+        "package main\nfunc f(v any) int { switch v.(type) { case *Thing, pkg.Other, []string, map[string]int, nil: return 1; default: return 0 } }\n",
+    );
+    for expected in [
+        "type_case *Thing",
+        "type_case pkg.Other",
+        "type_case []string",
+        "type_case map[string]int",
+        "type_case nil",
+    ] {
+        assert!(
+            raw.iter().any(|name| name == expected),
+            "type-switch labels should stay as explicit fail-closed tests: {raw:?}"
+        );
+        assert!(crate::is_intentional_raw_boundary_tag(expected));
+    }
+    assert!(
+        !raw.iter().any(|name| matches!(
+            name.as_str(),
+            "pointer_type"
+                | "type_identifier"
+                | "qualified_type"
+                | "slice_type"
+                | "map_type"
+                | "parenthesized_type"
+        )),
+        "all type-switch labels should be consumed as tests, not body Raw: {raw:?}"
+    );
+}
+
+#[test]
+fn ambiguous_type_instantiation_expression_preserves_index_reads_without_raw() {
+    let src = "package main\ntype SymbolMap struct { SymbolsForSource [][]Symbol }\ntype Ref struct { SourceIndex int; InnerIndex int }\nfunc (sm SymbolMap) Get(ref Ref) *Symbol { return &sm.SymbolsForSource[ref.SourceIndex][ref.InnerIndex] }\n";
+    let raw = raw_names(src);
+    assert!(
+        !raw.iter().any(|name| matches!(
+            name.as_str(),
+            "type_instantiation_expression" | "type_arguments" | "type_elem"
+        )),
+        "type-instantiation/parser-ambiguous index surfaces should not remain Raw: {raw:?}"
+    );
+    assert!(
+        node_kind_count(src, NodeKind::Index) >= 2,
+        "parser-ambiguous nested index expressions must preserve both index reads"
+    );
+}
+
+#[test]
+fn call_position_type_instantiation_preserves_ambiguous_index_callee() {
+    for src in [
+        "package main\nfunc f(x int) int { return pkg.Max[pkg.Type](x, x) }\n",
+        "package main\nfunc f(xs []int, ys []int) []int { return Max[[]int](xs, ys) }\n",
+    ] {
+        assert_eq!(
+            call_callee_index_count(src),
+            1,
+            "call-position type instantiation is ambiguous without type facts and should preserve the indexed callee: {:?}",
+            call_callee_shapes(src)
+        );
+        assert!(
+            !raw_names(src).iter().any(|name| matches!(
+                name.as_str(),
+                "type_instantiation_expression" | "type_arguments" | "type_elem"
+            )),
+            "type-instantiation wrappers should not remain Raw"
+        );
+    }
+}
+
+#[test]
+fn indexed_function_call_callee_spelling_does_not_trigger_generic_erasure() {
+    for src in [
+        "package main\nfunc f(Max []func(int, int) int, local int, x int, y int) int { return Max[local](x, y) }\n",
+        "package main\nfunc f(Max []func(int, int) int, I int, x int, y int) int { return Max[I](x, y) }\n",
+        "package main\nfunc f(Max []func(int, int) int, int int, x int, y int) int { return Max[int](x, y) }\n",
+        "package main\ntype P struct { Type int }\nfunc f(Max []func(int, int) int, pkg P, x int, y int) int { return Max[pkg.Type](x, y) }\n",
+    ] {
+        assert_eq!(
+            call_callee_index_count(src),
+            1,
+            "value indexed function calls must preserve the indexed callee even when names resemble generic syntax: {:?}",
+            call_callee_shapes(src)
+        );
+    }
+}
+
+#[test]
+fn indexed_function_call_ambiguity_does_not_collapse_to_argument() {
+    let src = "package main\nfunc f(fs []func(int) int, i int, x int) int { return fs[i](x) }\n";
+    let seq = seq_names(src);
+    let callee_shapes = call_callee_shapes(src);
+    assert!(
+        node_kind_count(src, NodeKind::Index) >= 1,
+        "ambiguous indexed function call should preserve the indexed callee read"
+    );
+    assert!(
+        seq.iter()
+            .any(|name| name == "go_type_conversion_or_index_call")
+            || callee_shapes.iter().any(|shape| shape.starts_with("Index(")),
+        "ambiguous indexed function call should fail closed or lower as Call(Index(...), ...), got seq={seq:?} call_callees={callee_shapes:?}"
     );
 }
 

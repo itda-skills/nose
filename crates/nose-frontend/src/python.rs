@@ -27,7 +27,7 @@ use self::{comprehensions::*, control::*, expressions::*, functions::*, statemen
 pub(super) fn semantic_named_children(node: TsNode) -> Vec<TsNode> {
     Lowering::named_children(node)
         .into_iter()
-        .filter(|child| child.kind() != "line_continuation")
+        .filter(|child| !matches!(child.kind(), "comment" | "line_continuation"))
         .collect()
 }
 

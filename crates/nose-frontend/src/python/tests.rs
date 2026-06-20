@@ -15,6 +15,19 @@ fn raw_names(src: &[u8]) -> Vec<String> {
         .collect()
 }
 
+fn seq_names(src: &[u8]) -> Vec<String> {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.py", src, &interner).expect("lower");
+    il.nodes
+        .iter()
+        .filter(|node| node.kind == NodeKind::Seq)
+        .filter_map(|node| match node.payload {
+            Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
 #[test]
 fn explicit_line_continuations_do_not_become_raw() {
     let raw = raw_names(
@@ -23,6 +36,35 @@ fn explicit_line_continuations_do_not_become_raw() {
     assert!(
         !raw.iter().any(|name| name == "line_continuation"),
         "line continuations are lexical noise and should not lower to Raw: {raw:?}"
+    );
+}
+
+#[test]
+fn comments_inside_parenthesized_expressions_are_lexical_noise() {
+    let raw = raw_names(
+        b"def f(x):\n    return (\n        x\n        # preserve formatting comment\n    )\n",
+    );
+    assert!(
+        !raw.iter().any(|name| name == "comment"),
+        "comments are lexical noise and should not lower to Raw: {raw:?}"
+    );
+}
+
+#[test]
+fn dictionary_unpack_lowers_to_fail_closed_surface_without_raw() {
+    let src = b"def f(base, override):\n    return {**base, 'x': 1, **override}\n";
+    let raw = raw_names(src);
+    assert!(
+        !raw.iter().any(|name| name == "dictionary_splat"),
+        "dict unpack should not remain a lowering-gap Raw node: {raw:?}"
+    );
+    let seq = seq_names(src);
+    assert_eq!(
+        seq.iter()
+            .filter(|name| name.as_str() == "python_dictionary_splat")
+            .count(),
+        2,
+        "dict unpack should be preserved as exact-closed Python surfaces: {seq:?}"
     );
 }
 

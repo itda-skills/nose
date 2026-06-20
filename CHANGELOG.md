@@ -30,6 +30,13 @@ break.
   `bench/corpus_prune/cli.py`.
 
 ### Fixed
+- Closed a targeted Python/Go tranche selected from `nose gap-impact`. Python comments inside
+  expression lists and explicit line continuations are now lexical noise, while dictionary unpack
+  entries lower to a fail-closed Python surface instead of actionable Raw. Go type-only surfaces in
+  type switches and parser-ambiguous generic/index syntax no longer leak as Raw wrappers, with
+  call-position type arguments preserved as indexed/fail-closed callee structure instead of being
+  collapsed without type facts, and ambiguous nested index reads kept fail-closed. Full `bench/repos`
+  lowering-gap Raw now reports **60,332** gaps (0.131% of IL nodes), down from **61,092**.
 - Closed the next language-lowering gap tranche across Python, Java, and Swift. Python explicit
   line continuations no longer leak as semantic Raw nodes; Java declaration/module and unsigned
   shift-right surfaces lower to structured or exact-closed IL; Swift macro/directive/accessor and
@@ -71,6 +78,10 @@ break.
   upload logs on cancellation.
 
 ### Performance
+- Re-ran the lowering performance gate for the Python/Go tranche. This pass only changed frontend
+  lowering and did not claim a speedup; post-run wall times were `stats bench/repos --top 40`
+  **19.90s**, `gap-impact bench/repos --top 40` **21.97s**, `query sympy` **3.80s**, `query
+  raylib` **3.25s**, and `query alacritty` **0.19s** on the same workspace.
 - Re-ran the lowering-loop performance gate after the Go/Ruby/Swift/Rust tranche. No abnormal
   slowdown was observed versus the pre-loop release baseline: `stats bench/repos --top 40`
   **40.73s -> 16.28s**, `gap-impact bench/repos --top 40` **32.83s -> 16.38s**, `query sympy`

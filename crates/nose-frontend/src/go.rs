@@ -20,6 +20,28 @@ mod statements;
 
 use self::{assignments::*, control::*, expressions::*, functions::*, statements::*};
 
+pub(super) fn is_type_surface_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "nil"
+            | "array_type"
+            | "channel_type"
+            | "function_type"
+            | "generic_type"
+            | "interface_type"
+            | "map_type"
+            | "parenthesized_type"
+            | "pointer_type"
+            | "qualified_type"
+            | "slice_type"
+            | "struct_type"
+            | "type_arguments"
+            | "type_elem"
+            | "type_identifier"
+            | "type_instantiation_expression"
+    )
+}
+
 pub(crate) fn lower(
     file: FileId,
     path: &str,

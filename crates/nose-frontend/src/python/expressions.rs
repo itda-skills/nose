@@ -33,6 +33,7 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             .named_child(0)
             .map(|c| lower_expr(lo, c))
             .unwrap_or_else(|| lo.empty_block(span)),
+        "comment" | "line_continuation" => lo.empty_block(span),
         "identifier" => lo.var(lo.text(node), span),
         "dotted_name" => lower_dotted_name(lo, node),
         "integer" => {
@@ -267,7 +268,12 @@ pub(super) fn lower_dictionary(lo: &mut Lowering, node: TsNode) -> NodeId {
                     .into_iter()
                     .map(|c| lower_expr(lo, c))
                     .collect();
-                kids.push(lo.raw(child.kind(), lo.span(child), &inner));
+                kids.push(lo.add(
+                    NodeKind::Seq,
+                    Payload::Name(lo.sym("python_dictionary_splat")),
+                    lo.span(child),
+                    &inner,
+                ));
             }
             _ => kids.push(lower_expr(lo, child)),
         }

@@ -181,16 +181,7 @@ pub(super) fn lower_switch(lo: &mut Lowering, node: TsNode) -> NodeId {
             // identically to a constant stub, #210.)
             "type_case" => {
                 let cspan = lo.span(c);
-                let spelling = c
-                    .child_by_field_name("type")
-                    .map(|t| lo.text(t).to_string())
-                    .unwrap_or_else(|| {
-                        Lowering::named_children(c)
-                            .first()
-                            .map(|t| lo.text(*t).to_string())
-                            .unwrap_or_default()
-                    });
-                let test = lo.raw(&format!("type_case {spelling}"), cspan, &[]);
+                let test = lower_type_case_test(lo, cspan, &type_case_labels(c));
                 let blk = lower_case_body(lo, c);
                 cases.push((Some(test), blk));
             }
@@ -211,6 +202,32 @@ pub(super) fn lower_switch(lo: &mut Lowering, node: TsNode) -> NodeId {
         }
     }
     else_node.unwrap_or_else(|| lo.empty_block(span))
+}
+pub(super) fn type_case_labels(case: TsNode) -> Vec<TsNode> {
+    Lowering::named_children(case)
+        .into_iter()
+        .filter(|child| is_type_surface_kind(child.kind()))
+        .collect()
+}
+pub(super) fn lower_type_case_test(lo: &mut Lowering, span: Span, labels: &[TsNode]) -> NodeId {
+    let mut tests: Vec<NodeId> = labels
+        .iter()
+        .map(|label| {
+            lo.raw(
+                &format!("type_case {}", lo.text(*label)),
+                lo.span(*label),
+                &[],
+            )
+        })
+        .collect();
+    if tests.is_empty() {
+        return lo.raw("type_case", span, &[]);
+    }
+    let mut acc = tests.remove(0);
+    for test in tests {
+        acc = lo.add(NodeKind::BinOp, Payload::Op(Op::Or), span, &[acc, test]);
+    }
+    acc
 }
 pub(super) fn lower_switch_case_test(
     lo: &mut Lowering,
@@ -252,9 +269,17 @@ pub(super) fn lower_case_body(lo: &mut Lowering, case: TsNode) -> NodeId {
     // is the body. Skip the test so it doesn't land in the body block.
     let value_id = case.child_by_field_name("value").map(|v| v.id());
     let type_id = case.child_by_field_name("type").map(|v| v.id());
+    let type_label_ids: Vec<_> = if case.kind() == "type_case" {
+        type_case_labels(case)
+            .into_iter()
+            .map(|label| label.id())
+            .collect()
+    } else {
+        Vec::new()
+    };
     let mut stmts = Vec::new();
     for c in stmt_children(case) {
-        if Some(c.id()) == value_id || Some(c.id()) == type_id {
+        if Some(c.id()) == value_id || Some(c.id()) == type_id || type_label_ids.contains(&c.id()) {
             continue;
         }
         if let Some(id) = lower_stmt(lo, c) {

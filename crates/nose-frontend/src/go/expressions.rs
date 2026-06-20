@@ -40,6 +40,7 @@ pub(super) fn lower_expr_with_iota(
         "unary_expression" if iota_value.is_some() => lower_unary_with_iota(lo, node, iota_value),
         "unary_expression" => lower_unary(lo, node),
         "selector_expression" => lower_selector(lo, node),
+        "type_instantiation_expression" => lower_type_instantiation(lo, node),
         "index_expression" => {
             let base = node
                 .child_by_field_name("operand")
@@ -69,10 +70,7 @@ pub(super) fn lower_expr_with_iota(
             .named_child(0)
             .map(|c| lower_expr_with_iota(lo, c, iota_value))
             .unwrap_or_else(|| lo.empty_block(span)),
-        "type_conversion_expression" => node
-            .child_by_field_name("operand")
-            .map(|o| lower_expr_with_iota(lo, o, iota_value))
-            .unwrap_or_else(|| lo.empty_block(span)),
+        "type_conversion_expression" => lower_type_conversion_expression(lo, node, iota_value),
         // A bare `{ … }` initializer (a nested composite, or a body reached
         // directly) → a `Seq` of its elements.
         "literal_value" => {
@@ -97,8 +95,7 @@ pub(super) fn lower_expr_with_iota(
             .unwrap_or_else(|| lo.empty_block(span)),
         // Type expressions in value position (`[]int`, `map[K]V`, `pkg.T`, …) carry
         // no behavior — collapse to an abstract literal so they aren't `Raw` noise.
-        "slice_type" | "map_type" | "array_type" | "pointer_type" | "qualified_type"
-        | "interface_type" | "struct_type" | "channel_type" | "function_type" | "generic_type" => {
+        k if is_type_surface_kind(k) => {
             lo.add(NodeKind::Lit, Payload::Lit(LitClass::Other), span, &[])
         }
         _ => {
@@ -109,6 +106,152 @@ pub(super) fn lower_expr_with_iota(
             lo.raw(node.kind(), span, &kids)
         }
     }
+}
+pub(super) fn lower_type_instantiation(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let Some(operand) = node
+        .child_by_field_name("type")
+        .or_else(|| Lowering::named_children(node).into_iter().next())
+    else {
+        return lo.empty_block(span);
+    };
+    let mut acc = lower_type_surface_as_value(lo, operand);
+    for arg in Lowering::named_children(node)
+        .into_iter()
+        .filter(|arg| arg.id() != operand.id())
+        .flat_map(type_argument_nodes)
+    {
+        let index = lower_type_surface_as_value(lo, arg);
+        acc = lo.add(NodeKind::Index, Payload::None, span, &[acc, index]);
+    }
+    acc
+}
+pub(super) fn lower_type_conversion_expression(
+    lo: &mut Lowering,
+    node: TsNode,
+    iota_value: Option<usize>,
+) -> NodeId {
+    let span = lo.span(node);
+    let operand = node
+        .child_by_field_name("operand")
+        .map(|o| lower_expr_with_iota(lo, o, iota_value))
+        .unwrap_or_else(|| lo.empty_block(span));
+    let Some(type_node) = node.child_by_field_name("type") else {
+        return operand;
+    };
+    if is_ambiguous_type_conversion_callee(type_node) {
+        let callee = lower_type_surface_as_value(lo, type_node);
+        return lo.add(
+            NodeKind::Seq,
+            Payload::Name(lo.sym("go_type_conversion_or_index_call")),
+            span,
+            &[callee, operand],
+        );
+    }
+    operand
+}
+fn is_ambiguous_type_conversion_callee(node: TsNode) -> bool {
+    matches!(
+        node.kind(),
+        "generic_type" | "type_instantiation_expression"
+    )
+}
+pub(super) fn lower_type_surface_as_value(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    match node.kind() {
+        "qualified_type" => lower_qualified_type_as_value(lo, node),
+        "generic_type" => lower_generic_type_as_value(lo, node),
+        "type_arguments" | "type_elem" => lower_type_argument_container_as_value(lo, node),
+        "parenthesized_type" => Lowering::named_children(node)
+            .into_iter()
+            .next()
+            .map(|child| lower_type_surface_as_value(lo, child))
+            .unwrap_or_else(|| lo.empty_block(span)),
+        "type_instantiation_expression" => lower_type_instantiation(lo, node),
+        "type_identifier" | "identifier" | "package_identifier" => lo.var(lo.text(node), span),
+        _ if is_type_surface_kind(node.kind()) => lo.str_lit(lo.text(node), span),
+        _ => lower_expr(lo, node),
+    }
+}
+pub(super) fn lower_generic_type_as_value(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let Some(operand) = node
+        .child_by_field_name("type")
+        .or_else(|| Lowering::named_children(node).into_iter().next())
+    else {
+        return lo.empty_block(span);
+    };
+    let mut acc = lower_type_surface_as_value(lo, operand);
+    let arg_nodes: Vec<TsNode> = node
+        .child_by_field_name("type_arguments")
+        .map(type_argument_nodes)
+        .unwrap_or_else(|| {
+            Lowering::named_children(node)
+                .into_iter()
+                .filter(|arg| arg.id() != operand.id())
+                .flat_map(type_argument_nodes)
+                .collect()
+        });
+    for arg in arg_nodes {
+        let index = lower_type_surface_as_value(lo, arg);
+        acc = lo.add(NodeKind::Index, Payload::None, span, &[acc, index]);
+    }
+    acc
+}
+fn lower_type_argument_container_as_value(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let args = type_argument_nodes(node);
+    if args.is_empty() {
+        return lo.empty_block(span);
+    }
+    if args.len() == 1 && args[0].id() != node.id() {
+        return lower_type_surface_as_value(lo, args[0]);
+    }
+    let kids: Vec<NodeId> = args
+        .into_iter()
+        .map(|arg| {
+            if arg.id() == node.id() {
+                lo.str_lit(lo.text(arg), lo.span(arg))
+            } else {
+                lower_type_surface_as_value(lo, arg)
+            }
+        })
+        .collect();
+    lo.add(NodeKind::Seq, Payload::None, span, &kids)
+}
+fn type_argument_nodes(node: TsNode) -> Vec<TsNode> {
+    match node.kind() {
+        "type_arguments" => Lowering::named_children(node)
+            .into_iter()
+            .flat_map(type_argument_nodes)
+            .collect(),
+        "type_elem" => {
+            let children = Lowering::named_children(node);
+            if children.is_empty() {
+                vec![node]
+            } else {
+                children.into_iter().flat_map(type_argument_nodes).collect()
+            }
+        }
+        _ => vec![node],
+    }
+}
+pub(super) fn lower_qualified_type_as_value(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let mut parts = Lowering::named_children(node).into_iter();
+    let Some(first) = parts.next() else {
+        return lo.var(lo.text(node), span);
+    };
+    let mut acc = lo.var(lo.text(first), lo.span(first));
+    for part in parts {
+        acc = lo.add(
+            NodeKind::Field,
+            Payload::Name(lo.sym(lo.text(part))),
+            lo.span(part),
+            &[acc],
+        );
+    }
+    acc
 }
 pub(super) fn lower_binary_with_iota(
     lo: &mut Lowering,
@@ -235,13 +378,7 @@ pub(super) fn lower_slice_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
 pub(super) fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let mut kids = Vec::new();
-    match node.child_by_field_name("function") {
-        Some(f) => kids.push(lower_expr(lo, f)),
-        None => {
-            let e = lo.empty_block(span);
-            kids.push(e);
-        }
-    }
+    kids.push(lower_call_function(lo, node, None));
     if let Some(args) = node.child_by_field_name("arguments") {
         for a in Lowering::named_children(args) {
             kids.push(lower_expr(lo, a));
@@ -256,19 +393,35 @@ pub(super) fn lower_call_with_iota(
 ) -> NodeId {
     let span = lo.span(node);
     let mut kids = Vec::new();
-    match node.child_by_field_name("function") {
-        Some(f) => kids.push(lower_expr_with_iota(lo, f, iota_value)),
-        None => {
-            let e = lo.empty_block(span);
-            kids.push(e);
-        }
-    }
+    kids.push(lower_call_function(lo, node, iota_value));
     if let Some(args) = node.child_by_field_name("arguments") {
         for a in Lowering::named_children(args) {
             kids.push(lower_expr_with_iota(lo, a, iota_value));
         }
     }
     lo.add(NodeKind::Call, Payload::None, span, &kids)
+}
+pub(super) fn lower_call_function(
+    lo: &mut Lowering,
+    node: TsNode,
+    iota_value: Option<usize>,
+) -> NodeId {
+    let span = lo.span(node);
+    let mut callee = match node.child_by_field_name("function") {
+        Some(f) if iota_value.is_none() => lower_call_callee(lo, f),
+        Some(f) => lower_expr_with_iota(lo, f, iota_value),
+        None => lo.empty_block(span),
+    };
+    if let Some(type_args) = node.child_by_field_name("type_arguments") {
+        for arg in type_argument_nodes(type_args) {
+            let index = lower_type_surface_as_value(lo, arg);
+            callee = lo.add(NodeKind::Index, Payload::None, span, &[callee, index]);
+        }
+    }
+    callee
+}
+pub(super) fn lower_call_callee(lo: &mut Lowering, node: TsNode) -> NodeId {
+    lower_expr(lo, node)
 }
 pub(super) fn lower_binary(lo: &mut Lowering, node: TsNode) -> NodeId {
     // `a &^ b` (bit-clear / AND-NOT) desugars to `a & ^b`; the generic op-map can only

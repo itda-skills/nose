@@ -3391,6 +3391,108 @@ cargo test -q -p nose-cli --test css_html_quality
 awiki lint --root docs
 ```
 
+## DG. Python/Go gap-impact tranche — close lexical and type-surface tails (2026-06-20)
+
+After §DF, the actionable worklist was thin enough that a language-specific pass needed a
+corpus-backed reason to exist. `nose gap-impact` still showed two Python rows and several Go
+type-surface rows with meaningful affected-unit counts, so this pass targeted Python comments and
+dictionary unpacking plus Go type-switch/type-syntax residue.
+
+**Baseline.**
+
+```text
+files: 67407   IL nodes: 46110621   Raw nodes: 181552
+= 61092 lowering-gap + 120460 intentional-boundary
+```
+
+The selected rows were:
+
+| language | surface | raw | files | units | score |
+|---|---|---:|---:|---:|---:|
+| Go | `pointer_type` | 251 | 27 | 65 | 2316.2 |
+| Python | `comment` | 158 | 76 | 76 | 3435.7 |
+| Python | `dictionary_splat` | 145 | 56 | 69 | 2917.9 |
+| Go | `type_identifier` | 93 | 16 | 19 | 660.9 |
+| Go | `type_instantiation_expression` | 61 | 20 | 21 | 754.9 |
+| Go | `parenthesized_type` | 21 | 8 | 15 | 426.4 |
+| Go | `slice_type` / `map_type` / `qualified_type` | 31 | 18 | 22 | 492.7 |
+
+**Fixes shipped.**
+
+- Python comments and explicit line continuations are filtered as lexical trivia wherever
+  semantic children are collected. Comments inside parenthesized expression lists no longer
+  introduce executable Raw.
+- Python dictionary unpack entries (`{**base}`) no longer appear as `Raw("dictionary_splat")`.
+  They lower to a Python-specific exact-closed surface so strict exact matching rejects the dict
+  as unsupported instead of silently pretending that unpacking is ordinary key/value insertion.
+- Go type-switch labels consume every type-only label, including multi-label cases, and keep each
+  label as an intentional fail-closed `type_case ...` test. Remaining type labels no longer leak
+  into case bodies as `pointer_type`, `type_identifier`, `slice_type`, `map_type`, or qualified
+  type Raw.
+- Go parser-ambiguous `type_instantiation_expression` now lowers value-position ambiguity as an
+  index chain, preserving nested reads such as `sm.SymbolsForSource[ref.SourceIndex][ref.InnerIndex]`.
+  Call-position type arguments are preserved as indexed callee structure instead of being
+  collapsed without declaration facts, because names like `int`, `I`, `local`, or `pkg.Type` can be values as well as
+  type names. The final review pass also caught that tree-sitter wraps some parser-ambiguous
+  indexes in `type_arguments`/`type_elem`, and that single-argument indexed function calls like
+  `fs[i](x)` can parse as `type_conversion_expression`. The wrappers are unwrapped before
+  lowering, while the conversion/call ambiguity is kept as a fail-closed
+  `go_type_conversion_or_index_call` surface instead of collapsing to the argument.
+
+**Measured result.**
+
+```text
+files: 67407   IL nodes: 46113701   Raw nodes: 181168
+= 60332 lowering-gap + 120836 intentional-boundary
+```
+
+Overall lowering-gap Raw drops **61,092 -> 60,332** (-760). Total Raw drops
+**181,552 -> 181,168** (-384); the smaller total reduction is expected because Go type-switch
+labels and Python dictionary unpack surfaces remain fail-closed intentional boundaries rather than
+being treated as exact runtime semantics.
+
+| language | surface | baseline raw | post raw | delta |
+|---|---|---:|---:|---:|
+| Go | `pointer_type` | 251 | 0 | -251 |
+| Python | `comment` | 158 | 0 | -158 |
+| Python | `dictionary_splat` | 145 | 0 | -145 |
+| Go | `type_identifier` | 93 | 0 | -93 |
+| Go | `type_instantiation_expression` | 61 | 0 | -61 |
+| Go | `parenthesized_type` | 21 | 0 | -21 |
+| Go | `slice_type` | 16 | 0 | -16 |
+| Go | `map_type` | 9 | 0 | -9 |
+| Go | `qualified_type` | 6 | 0 | -6 |
+
+**Performance gate.** The same release commands completed with these post-run wall times:
+
+| command | after |
+|---|---:|
+| `nose stats bench/repos --top 40` | 19.90s |
+| `nose gap-impact bench/repos --top 40` | 21.97s |
+| `nose query bench/repos/sympy --format json` | 3.80s |
+| `nose query bench/repos/raylib --format json` | 3.25s |
+| `nose query bench/repos/alacritty --format json` | 0.19s |
+
+The pass is reported as a lowering-coverage improvement, not a speedup claim. The modified paths
+are frontend lowering and exact-safety tests; no query or corpus scheduler path changed.
+
+**Regression coverage.**
+
+```text
+cargo fmt --all -- --check
+cargo check --workspace
+cargo test -p nose-frontend --lib
+cargo test -p nose-detect --lib
+cargo test -p nose-cli --test equivalence -- --nocapture
+cargo build --release -p nose-cli
+target/release/nose stats bench/repos --top 120
+target/release/nose gap-impact bench/repos --top 120
+target/release/nose gap-impact bench/repos --top 120 --format json
+target/release/nose query bench/repos/sympy --format json
+target/release/nose query bench/repos/raylib --format json
+target/release/nose query bench/repos/alacritty --format json
+```
+
 ## DF. Rust/TypeScript/Swift/Go gap-impact tranche — close 1-4 together (2026-06-20)
 
 After §DE, `nose gap-impact` still showed a thin but measurable set of safe language rows below

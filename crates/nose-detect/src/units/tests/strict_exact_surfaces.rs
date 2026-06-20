@@ -183,6 +183,30 @@ class Box {
 }
 
 #[test]
+fn strict_exact_rejects_python_dictionary_splat_surface() {
+    let interner = Interner::new();
+    let il = nose_frontend::lower_source(
+        FileId(0),
+        "t.py",
+        b"def merge(base):\n    return {**base, 'x': 1}\n",
+        Lang::Python,
+        &interner,
+    )
+    .expect("lower py");
+    let facts = StrictFacts::collect(&il, &interner);
+    let func = il
+        .units
+        .iter()
+        .find(|unit| unit.kind == UnitKind::Function)
+        .expect("function unit");
+
+    assert!(
+        !strict_exact_safe_tree(&il, &interner, &facts, func.root),
+        "dict unpack has overwrite-order semantics and must stay exact-closed"
+    );
+}
+
+#[test]
 fn raw_append_payload_without_effect_does_not_bypass_mutation_blocking() {
     let interner = Interner::new();
     let mut b = IlBuilder::new(FileId(0));
