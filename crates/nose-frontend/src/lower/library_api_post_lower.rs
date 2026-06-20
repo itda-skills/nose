@@ -472,13 +472,14 @@ fn record_post_lower_java_collection_constructor_library_api(
     } else if type_name != qualified_type {
         return false;
     }
-    let api = post_lower_library_api_evidence_id(
+    let api = post_lower_library_api_evidence_with_pack_id(
         il,
         call,
         contract.id,
         contract.callee,
         arg_count,
-        "library_api_java_collection_constructor",
+        JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
+        JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
         dependencies,
     );
     post_lower_record_library_api_result_domain(

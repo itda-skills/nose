@@ -294,6 +294,19 @@ fn java_empty_collection_constructor_emits_occurrence_evidence() {
         library_api_callee_contract_hash(contract.callee),
     );
     assert_eq!(api.len(), 1);
+    let api_record = il.evidence_record_by_id(api[0]).expect("api record");
+    assert_eq!(
+        api_record.provenance.pack_hash,
+        Some(stable_symbol_hash(
+            JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID
+        ))
+    );
+    assert_eq!(
+        api_record.provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID
+        ))
+    );
     assert!(
         il.evidence.iter().any(|record| {
             record.kind == EvidenceKind::Domain(DomainEvidence::Collection)
@@ -332,6 +345,18 @@ fn java_empty_collection_constructor_wildcard_import_is_dependency_backed() {
             )
         })
         .expect("wildcard java.util import should admit supported ArrayList constructor");
+    assert_eq!(
+        api.provenance.pack_hash,
+        Some(stable_symbol_hash(
+            JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID
+        ))
+    );
+    assert_eq!(
+        api.provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID
+        ))
+    );
     assert!(api.dependencies.iter().any(|id| {
         wildcard.evidence_record_by_id(*id).is_some_and(|record| {
             matches!(
@@ -376,5 +401,23 @@ fn java_empty_collection_constructor_wildcard_import_is_dependency_backed() {
         ),
         0,
         "explicit same-name imports must close java.util wildcard constructor proof"
+    );
+
+    let exact_import_conflict = crate::lower_source(
+            FileId(0),
+            "C.java",
+            b"import other.ArrayList;\nimport java.util.ArrayList;\nclass C { Object f() { return new ArrayList<>(); } }\n",
+            Lang::Java,
+            &interner,
+        )
+        .expect("java lowering should succeed");
+    assert_eq!(
+        library_api_evidence_count_in_records(
+            &exact_import_conflict.evidence,
+            library_api_contract_id_hash(contract.id),
+            library_api_callee_contract_hash(contract.callee),
+        ),
+        0,
+        "conflicting exact imports must close the java.util constructor occurrence"
     );
 }

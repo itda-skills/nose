@@ -91,7 +91,10 @@ The next code slices are intentionally incremental:
    provenance, then `nose.java.stdlib.map_factories` for Java `Map.of` and
    `Map.ofEntries` map-factory occurrence provenance, then
    `nose.java.stdlib.collection_factories` for Java `List.of`, `Set.of`, and
-   `Arrays.asList` collection-factory occurrence provenance;
+   `Arrays.asList` collection-factory occurrence provenance, then
+   `nose.java.stdlib.collection_constructors` for Java empty `new
+   ArrayList<>()` and `new LinkedList<>()` collection-constructor occurrence
+   provenance;
 7. Phase 6: allow external pack influence only after the builtin path is proven;
 8. Phase 7: define adoption and release gates.
 
@@ -285,6 +288,33 @@ static pack metadata, Java std-collection producer provenance, and an admission
 provenance check; it did not touch candidate generation, and product output did
 not drift. Binary size changed 20,143,040 -> 20,143,360 bytes for this slice.
 
+Phase 5 Java stdlib collection-constructor measurement note, local run on
+2026-06-21: product query-regression r15 compared the previous
+`nose.java.stdlib.collection_factories` slice with the
+`nose.java.stdlib.collection_constructors` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, and surface
+counts were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by exactly 538 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-java-constructors-prev-r15.json` and
+`/tmp/nose-473-phase5-java-constructors-current-r15.json`; the previous-slice
+compare summaries are
+`/tmp/nose-473-phase5-java-constructors-vs-prev-r15.md` and
+`/tmp/nose-473-phase5-java-constructors-vs-prev-rerun-r15.md`. Sequential
+compare runs produced expected JSON-byte triggers plus noisy runtime triggers,
+so the same binaries were remeasured with repo-local alternating r15 runs saved
+at `/tmp/nose-473-phase5-java-constructors-alternating-r15.json`: aggregate
+wall time was 1238.33 ms -> 1258.08 ms, `lower` was 394.50 ms -> 393.00 ms,
+`normalize+extract` was 635.00 ms -> 649.20 ms, `candidates` was
+22.40 ms -> 21.90 ms, and `parse+lower` was 301.60 ms -> 297.80 ms. The only
+remaining alternating r15 trigger, `boltons` wall time, was rechecked with a
+focused alternating r30 run saved at
+`/tmp/nose-473-phase5-java-constructors-boltons-alternating-r30.json`; no
+repo/phase trigger remained. Root-cause note: this slice changed static pack
+metadata, Java std-collection-constructor producer provenance, and an admission
+provenance check; it did not touch candidate generation, and product output did
+not drift. Binary size changed 20,143,360 -> 20,143,568 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -367,7 +397,8 @@ not drift. Binary size changed 20,143,040 -> 20,143,360 bytes for this slice.
   compatibility facade. `java.util.List.of`, `Set.of`, and `Arrays.asList`
   factory `LibraryApi` occurrence evidence now reports
   `nose.java.stdlib.collection_factories` pack and producer provenance while
-  preserving missing-import and constructor boundary hard negatives.
+  preserving missing-import and cross-surface constructor boundary hard
+  negatives.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a
   language-, signature-, and integer-domain-constrained first-party contract
   instead of a bare method-name recognizer. Float/NaN-sensitive methods remain a
@@ -395,7 +426,8 @@ not drift. Binary size changed 20,143,040 -> 20,143,360 bytes for this slice.
 - Java empty `ArrayList`/`LinkedList` constructor lowering now consumes a
   `LibraryApiContract` `java.util` constructor row instead of a raw simple-name
   check. Simple names need import proof and no local type shadow before they can
-  seed exact builder-loop equivalence.
+  seed exact builder-loop equivalence, and the occurrence now carries
+  `nose.java.stdlib.collection_constructors` pack provenance.
 - Membership and map-key membership recognition now uses language-scoped method
   contracts before normalization or strict exact matching assigns containment
   semantics. This intentionally closes old name-only paths such as JavaScript
@@ -616,8 +648,8 @@ not drift. Binary size changed 20,143,040 -> 20,143,360 bytes for this slice.
   factories (`List.of`, `Set.of`, `Arrays.asList`) now carrying
   `nose.java.stdlib.collection_factories` provenance, Java map factories
   (`Map.of`/`Map.ofEntries`) with `nose.java.stdlib.map_factories` provenance,
-  compatibility Java APIs (`Map.entry`, `Arrays.stream`), and JS-like regex-literal
-  `.test`. Producers emit call-site `Symbol` dependencies for imported
+  remaining compatibility Java APIs (`Map.entry`, `Arrays.stream`), and JS-like
+  regex-literal `.test`. Producers emit call-site `Symbol` dependencies for imported
   binding/namespace occurrences or `Source` dependencies for regex literals;
   value-graph, idiom, and strict exact consumers consult these records first and
   close fallback on rejected records. Imported occurrence symbols now require

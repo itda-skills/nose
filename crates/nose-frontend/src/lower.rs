@@ -86,6 +86,7 @@ use nose_semantics::{
     sequence_surface_kind_for_tag, type_domain_from_source_text, ImportFactKind,
     LibraryApiCalleeContract, LibraryApiContractId, LibraryApiDependencyCache,
     MethodReceiverContract, StaticIndexMembershipReceiverContract,
+    JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID,
     PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
     PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, RUBY_STDLIB_SET_PACK_ID,

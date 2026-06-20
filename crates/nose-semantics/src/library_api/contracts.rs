@@ -52,6 +52,12 @@ pub const JAVA_STDLIB_COLLECTION_FACTORY_SET_OF_CONTRACT_ID: &str =
     "java.collection_factory.set_of";
 pub const JAVA_STDLIB_COLLECTION_FACTORY_ARRAYS_AS_LIST_CONTRACT_ID: &str =
     "java.collection_factory.arrays_as_list";
+pub const JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID: &str =
+    "nose.java.stdlib.collection_constructors";
+pub const JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID: &str =
+    "java.stdlib.collection-constructor-api";
+pub const JAVA_STDLIB_COLLECTION_CONSTRUCTOR_EMPTY_LIST_CONTRACT_ID: &str =
+    "java.collection_constructor.empty_list";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LibraryApiContractId {

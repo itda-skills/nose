@@ -76,8 +76,11 @@ Trust is separate from channel eligibility.
   `Map.entry` remains in the broad compatibility bucket for a later slice;
   `nose.java.stdlib.collection_factories` owns Java `java.util.List.of`,
   `Set.of`, and `Arrays.asList` collection factory API occurrence provenance
-  while constructors and `Arrays.stream` remain in the broad compatibility
-  bucket for later slices;
+  while `Arrays.stream` remains in the broad compatibility bucket for a later
+  slice;
+  `nose.java.stdlib.collection_constructors` owns Java empty `new
+  ArrayList<>()` and `new LinkedList<>()` collection constructor API occurrence
+  provenance;
   `nose.python.stdlib.type_domain` is the first narrow stdlib pilot pack for
   Python `typing`, `collections.abc`, and `asyncio` type-domain aliases;
   `nose.value_graph.laws` is the first LawPack pilot for selected proof-backed

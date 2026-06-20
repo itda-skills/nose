@@ -287,6 +287,46 @@ fn java_map_factory_call_il() -> (Il, Interner, NodeId, NodeId, NodeId) {
     )
 }
 
+fn java_collection_constructor_call_il() -> (Il, Interner, NodeId, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let callee = b.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern("ArrayList")),
+        sp(87),
+        &[],
+    );
+    let call = b.add(NodeKind::Call, Payload::None, sp(88), &[callee]);
+    let root = b.add(NodeKind::Module, Payload::None, sp(89), &[call]);
+    (finish_il(b, root, Lang::Java), interner, call, callee)
+}
+
+fn push_java_collection_constructor_dependencies(il: &mut Il, call: NodeId, callee: NodeId) {
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::source_span(il.node(call).span),
+        EvidenceKind::Source(SourceFactKind::Call(SourceCallKind::Construct)),
+        EvidenceStatus::Asserted,
+    ));
+    let binding_symbol = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
+        module_hash: stable_symbol_hash("java.util"),
+        exported_hash: stable_symbol_hash("ArrayList"),
+    });
+    il.evidence.push(evidence(
+        1,
+        EvidenceAnchor::binding(sp(87), stable_symbol_hash("ArrayList")),
+        binding_symbol,
+        EvidenceStatus::Asserted,
+    ));
+    il.evidence.push(evidence_with_dependencies(
+        2,
+        EvidenceAnchor::node(il.node(callee).span, NodeKind::Var),
+        binding_symbol,
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(1)],
+    ));
+}
+
 fn push_java_map_import_dependencies(il: &mut Il, receiver: NodeId) {
     let binding_symbol = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
         module_hash: stable_symbol_hash("java.util"),
@@ -1011,6 +1051,98 @@ fn admitted_java_map_factory_resolver_requires_pack_provenance() {
     assert_eq!(occurrence.callee, callee);
     assert_eq!(occurrence.receiver, Some(receiver));
     assert_eq!(occurrence.arg_count, 2);
+}
+
+#[test]
+fn admitted_java_collection_constructor_resolver_requires_pack_provenance() {
+    let (il, interner, call, _callee) = java_collection_constructor_call_il();
+    assert!(
+        admitted_java_collection_constructor_at_call(&il, &interner, call).is_none(),
+        "raw Java new ArrayList<>() call shape alone must not admit stdlib constructor semantics"
+    );
+
+    let contract = library_java_collection_constructor_contract(Lang::Java, "ArrayList", 0)
+        .expect("ArrayList constructor contract");
+
+    let (mut missing_dependency, interner, call, _callee) = java_collection_constructor_call_il();
+    missing_dependency
+        .evidence
+        .push(java_stdlib_collection_constructor_record(
+            0,
+            missing_dependency.node(call).span,
+            contract,
+            0,
+            EvidenceStatus::Asserted,
+            &[],
+        ));
+    assert!(
+        admitted_java_collection_constructor_at_call(&missing_dependency, &interner, call)
+            .is_none(),
+        "same-span Java constructor evidence without construct/import dependencies is rejected"
+    );
+
+    let (mut wrong_pack, interner, call, callee) = java_collection_constructor_call_il();
+    push_java_collection_constructor_dependencies(&mut wrong_pack, call, callee);
+    wrong_pack
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            3,
+            wrong_pack.node(call).span,
+            contract.id,
+            contract.callee,
+            0,
+            EvidenceStatus::Asserted,
+            &[0, 2],
+            FIRST_PARTY_PACK_ID,
+            JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
+        ));
+    assert!(
+        admitted_java_collection_constructor_at_call(&wrong_pack, &interner, call).is_none(),
+        "Java constructor evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, callee) = java_collection_constructor_call_il();
+    push_java_collection_constructor_dependencies(&mut wrong_producer, call, callee);
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            3,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            0,
+            EvidenceStatus::Asserted,
+            &[0, 2],
+            JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
+            "wrong.java.stdlib.collection-constructor-api",
+        ));
+    assert!(
+        admitted_java_collection_constructor_at_call(&wrong_producer, &interner, call).is_none(),
+        "Java constructor evidence with the wrong producer is rejected"
+    );
+
+    let (mut admitted, interner, call, callee) = java_collection_constructor_call_il();
+    push_java_collection_constructor_dependencies(&mut admitted, call, callee);
+    admitted
+        .evidence
+        .push(java_stdlib_collection_constructor_record(
+            3,
+            admitted.node(call).span,
+            contract,
+            0,
+            EvidenceStatus::Asserted,
+            &[0, 2],
+        ));
+
+    let occurrence =
+        admitted_java_collection_constructor_at_call(&admitted, &interner, call).unwrap();
+    assert_eq!(
+        occurrence.contract.id,
+        LibraryApiContractId::JavaCollectionConstructor(JavaCollectionConstructorKind::EmptyList)
+    );
+    assert_eq!(occurrence.callee, callee);
+    assert_eq!(occurrence.receiver, None);
+    assert_eq!(occurrence.arg_count, 0);
 }
 
 #[test]

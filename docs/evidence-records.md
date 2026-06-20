@@ -382,7 +382,9 @@ evidence, or Java `java.util.Map.of`/`Map.ofEntries` factories with
 `nose.java.stdlib.map_factories` provenance-backed `LibraryApi` occurrence
 evidence, or Java `java.util.List.of`/`Set.of`/`Arrays.asList` factories with
 `nose.java.stdlib.collection_factories` provenance-backed `LibraryApi` occurrence
-evidence. Canonical
+evidence, or Java empty `new ArrayList<>()`/`new LinkedList<>()` constructors
+with `nose.java.stdlib.collection_constructors` provenance-backed `LibraryApi`
+occurrence evidence. Canonical
 `Append` still needs `Effect(BuilderAppendCall)`, and the first-party normalize
 producer emits that effect only when the same call also has the same-span
 `LibraryApi` proof for the append API; the effect record depends on that API
@@ -507,7 +509,8 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `nose.java.stdlib.collection_factories` provenance, `Map.of`/`Map.ofEntries`
   with `nose.java.stdlib.map_factories` provenance, `Map.entry`, and
   `Arrays.stream`, plus selected empty
-  `new ArrayList<>()`/`new LinkedList<>()` constructors through exact or
+  `new ArrayList<>()`/`new LinkedList<>()` constructors with
+  `nose.java.stdlib.collection_constructors` provenance through exact or
   wildcard import proof; and JS-like regex-literal `.test(...)`. These records
   depend on the relevant `QualifiedGlobal`, `UnshadowedGlobal`,
   import-backed call-site `Symbol`, `Import::Require`, construct-syntax
@@ -537,8 +540,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   receiver-expression `Domain` evidence: Python `list`/`tuple` and
   `collections.deque`, Rust `Vec::new`, `vec!`, and pack-owned Rust
   `std::collections::VecDeque::from`, pack-owned Java `List.of` and zero- or
-  multi-argument `Arrays.asList`, and selected empty `new ArrayList<>()`/
-  `new LinkedList<>()` as `Collection`; Python `set`/`frozenset`, pack-owned
+  multi-argument `Arrays.asList`, and pack-owned Java empty
+  `new ArrayList<>()`/`new LinkedList<>()` as `Collection`; Python
+  `set`/`frozenset`, pack-owned
   Rust `std::collections::{HashSet,BTreeSet}::from`, pack-owned Java `Set.of`,
   Ruby `Set.new`,
   and JS-like `new Set` as `Set`; Rust
@@ -651,8 +655,9 @@ callers:
   recoverable supported settled value and preserves a Promise boundary in the
   value graph. Value-level CSE paths that only retain source
   spans now also go through span-query resolvers for free-name/imported
-  collection factories, Java/Ruby/Rust collection factories, free-name/Java map
-  factories, Java map entries, map `get`, and map-key view/wrapper calls. The
+  collection factories, Java/Ruby/Rust collection factories, Java collection
+  constructors, free-name/Java map factories, Java map entries, map `get`, and
+  map-key view/wrapper calls. The
   value graph no longer locally recombines those contract rows with `LibraryApi`
   span evidence;
 - value-graph consumers that query by source span re-check the original source

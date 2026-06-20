@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        12
+        13
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -317,6 +317,34 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(java_collections["counts"]["value_laws"], 0);
     assert_eq!(java_collections["counts"]["positive_fixtures"], 3);
     assert_eq!(java_collections["counts"]["hard_negatives"], 2);
+
+    let java_constructors = semantic_pack_by_id(&json, "nose.java.stdlib.collection_constructors");
+    assert_eq!(java_constructors["hash"], "47217e0e2e1f8108");
+    assert_eq!(java_constructors["kind"], "StdlibPack");
+    assert_eq!(
+        java_constructors["display_name"],
+        "nose Java stdlib collection constructor pack"
+    );
+    assert_eq!(java_constructors["source"], "compiled-first-party");
+    assert_eq!(java_constructors["influence"], "evidence-and-contracts");
+    assert_eq!(java_constructors["trust"], "default-first-party");
+    assert_eq!(java_constructors["enabled_by_default"], true);
+    assert_eq!(java_constructors["path"], serde_json::Value::Null);
+    assert_eq!(java_constructors["provider"], "Corca, Inc.");
+    assert_eq!(
+        java_constructors["repository"],
+        "https://github.com/corca-ai/nose"
+    );
+    assert_eq!(java_constructors["license"], "MIT");
+    assert_eq!(
+        json_array_strings(java_constructors, "supported_languages"),
+        vec!["java"]
+    );
+    assert_eq!(java_constructors["counts"]["evidence_producers"], 1);
+    assert_eq!(java_constructors["counts"]["contracts"], 1);
+    assert_eq!(java_constructors["counts"]["value_laws"], 0);
+    assert_eq!(java_constructors["counts"]["positive_fixtures"], 2);
+    assert_eq!(java_constructors["counts"]["hard_negatives"], 3);
 
     let stdlib = semantic_pack_by_id(&json, "nose.python.stdlib.type_domain");
     assert_eq!(stdlib["kind"], "StdlibPack");

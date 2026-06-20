@@ -221,6 +221,17 @@ fn library_api_record_provenance_matches_contract(
                         JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
                     ))
         }
+        LibraryApiContractId::JavaCollectionConstructor(_) => {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash
+                    == Some(stable_symbol_hash(
+                        JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
+                    ))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(
+                        JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
+                    ))
+        }
         LibraryApiContractId::RubySetFactory => {
             record.provenance.emitter == EvidenceEmitter::FirstParty
                 && record.provenance.pack_hash == Some(stable_symbol_hash(RUBY_STDLIB_SET_PACK_ID))

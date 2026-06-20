@@ -31,6 +31,12 @@ pub(super) fn library_api_contract_result_domain_for_arity(
                         LibraryApiContractId::RustStdCollectionFactory => {
                             RUST_STDLIB_COLLECTION_FACTORY_PACK_ID
                         }
+                        LibraryApiContractId::JavaCollectionFactory(_) => {
+                            JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID
+                        }
+                        LibraryApiContractId::JavaCollectionConstructor(_) => {
+                            JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID
+                        }
                         LibraryApiContractId::RubySetFactory => RUBY_STDLIB_SET_PACK_ID,
                         _ => FIRST_PARTY_PACK_ID,
                     },

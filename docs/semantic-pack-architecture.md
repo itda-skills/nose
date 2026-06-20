@@ -37,7 +37,8 @@ ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.ruby.stdlib.set`, `nose.rust.stdlib.vec`,
 `nose.rust.stdlib.collection_factories`, `nose.rust.stdlib.map_factories`,
 `nose.java.stdlib.map_factories`,
-`nose.java.stdlib.collection_factories`, `nose.python.stdlib.type_domain`, and
+`nose.java.stdlib.collection_factories`,
+`nose.java.stdlib.collection_constructors`, `nose.python.stdlib.type_domain`, and
 `nose.value_graph.laws`.
 
 ## Boundary
@@ -194,8 +195,12 @@ previous semantic-kernel tranches.
    The current Java stdlib collection slice is
    `nose.java.stdlib.collection_factories`, which owns `java.util.List.of`,
    `Set.of`, and `Arrays.asList` collection-factory API occurrence provenance
-   while constructors and `Arrays.stream` remain in the broad compatibility
-   bucket until their own slices.
+   while `Arrays.stream` remains in the broad compatibility bucket until its own
+   slice. The current Java stdlib collection-constructor slice is
+   `nose.java.stdlib.collection_constructors`, which owns empty `new
+   ArrayList<>()` and `new LinkedList<>()` collection-constructor API occurrence
+   provenance while `Map.entry` and `Arrays.stream` remain in the broad
+   compatibility bucket until their own slices.
 7. **Phase 6, external influence:** only after the builtin path is proven, start with a
    small data-only external row class behind explicit opt-in trust gates.
 8. **Phase 7, adoption gates:** define `external-opt-in -> builtin-optional` and

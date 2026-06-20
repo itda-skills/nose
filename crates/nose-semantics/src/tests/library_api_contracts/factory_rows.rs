@@ -193,7 +193,7 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
     assert_eq!(
         library_java_collection_constructor_contract(Lang::Java, "ArrayList", 0),
         Some(LibraryCollectionFactoryContract {
-            pack_id: FIRST_PARTY_PACK_ID,
+            pack_id: JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
             id: LibraryApiContractId::JavaCollectionConstructor(
                 JavaCollectionConstructorKind::EmptyList,
             ),
@@ -206,6 +206,11 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
             },
             result: LibraryCollectionFactoryResult::EmptySequence,
         })
+    );
+    assert_eq!(
+        library_java_collection_constructor_contract(Lang::Java, "java.util.LinkedList", 0)
+            .map(|contract| contract.pack_id),
+        Some(JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID)
     );
     assert_eq!(
         library_ruby_set_factory_contract(Lang::Ruby, "Set", "new", 1),

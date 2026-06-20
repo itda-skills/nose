@@ -127,14 +127,14 @@ fn java_collection_constructor_value_graph_uses_library_api_evidence() {
 
     let contract =
         library_java_collection_constructor_contract(Lang::Java, "ArrayList", 0).unwrap();
-    il.evidence.push(library_api_contract_evidence(
-        3,
-        sp(81),
-        contract.id,
-        contract.callee,
-        0,
-        vec![EvidenceId(0), EvidenceId(2)],
-    ));
+    il.evidence
+        .push(java_stdlib_collection_constructor_evidence(
+            3,
+            sp(81),
+            contract,
+            0,
+            vec![EvidenceId(0), EvidenceId(2)],
+        ));
     assert!(matches!(
         eval_op(&il, &interner, call),
         ValOp::Seq(SEQ_VALUE_COLLECTION)

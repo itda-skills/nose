@@ -19,6 +19,7 @@ const RUST_LANGUAGE: &[&str] = &["rust"];
 const NO_PACKAGES: &[&str] = &[];
 const JAVA_STDLIB_MAP_FACTORY_PACKAGES: &[&str] = &["java.util"];
 const JAVA_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["java.util"];
+const JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACKAGES: &[&str] = &["java.util"];
 const PYTHON_BUILTIN_PACKAGES: &[&str] = &["builtins"];
 const PYTHON_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["collections"];
 const PYTHON_STDLIB_TYPE_DOMAIN_PACKAGES: &[&str] = &["typing", "collections.abc", "asyncio"];
@@ -103,6 +104,17 @@ const JAVA_STDLIB_COLLECTION_FACTORY_CONFORMANCE_REFS: &[&str] = &[
     "java-arrays-as-list-positive",
     "java-collection-missing-import-hard-negative",
     "java-collection-constructor-boundary-hard-negative",
+];
+const JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_IDS: &[&str] =
+    &[JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID];
+const JAVA_STDLIB_COLLECTION_CONSTRUCTOR_CONTRACT_IDS: &[&str] =
+    &[JAVA_STDLIB_COLLECTION_CONSTRUCTOR_EMPTY_LIST_CONTRACT_ID];
+const JAVA_STDLIB_COLLECTION_CONSTRUCTOR_CONFORMANCE_REFS: &[&str] = &[
+    "java-arraylist-empty-constructor-positive",
+    "java-linkedlist-empty-constructor-positive",
+    "java-constructor-missing-import-hard-negative",
+    "java-constructor-shadowed-type-hard-negative",
+    "java-constructor-conflicting-import-hard-negative",
 ];
 const RUST_STDLIB_VEC_PRODUCER_IDS: &[&str] = &[RUST_STDLIB_VEC_PRODUCER_ID];
 const RUST_STDLIB_VEC_CONTRACT_IDS: &[&str] = &[
@@ -329,6 +341,22 @@ fn java_stdlib_collection_factory_counts() -> SemanticPackCounts {
             .filter(|id| !id.contains("hard-negative"))
             .count(),
         hard_negatives: JAVA_STDLIB_COLLECTION_FACTORY_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
+fn java_stdlib_collection_constructor_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_IDS.len(),
+        contracts: JAVA_STDLIB_COLLECTION_CONSTRUCTOR_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: JAVA_STDLIB_COLLECTION_CONSTRUCTOR_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: JAVA_STDLIB_COLLECTION_CONSTRUCTOR_CONFORMANCE_REFS
             .iter()
             .filter(|id| id.contains("hard-negative"))
             .count(),
@@ -612,6 +640,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: JAVA_STDLIB_COLLECTION_FACTORY_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: java_stdlib_collection_factory_counts,
+    },
+    BuiltinPackDescriptor {
+        id: JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
+        kind: SemanticPackKind::StdlibPack,
+        display_name: "nose Java stdlib collection constructor pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: JAVA_LANGUAGE,
+        supported_packages: JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACKAGES,
+        language: None,
+        evidence_producer_ids: JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: JAVA_STDLIB_COLLECTION_CONSTRUCTOR_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: JAVA_STDLIB_COLLECTION_CONSTRUCTOR_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: java_stdlib_collection_constructor_counts,
     },
     BuiltinPackDescriptor {
         id: PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,

@@ -457,8 +457,11 @@ implicit v0 packs:
   `Map.entry` remains in the broad compatibility bucket until its own slice;
 - `nose.java.stdlib.collection_factories` owns Java `java.util.List.of`,
   `Set.of`, and `Arrays.asList` collection-factory API occurrence contracts,
-  while constructors and `Arrays.stream` remain in the broad compatibility
-  bucket until their own slices;
+  while `Arrays.stream` remains in the broad compatibility bucket until its own
+  slice;
+- `nose.java.stdlib.collection_constructors` owns Java empty `new
+  ArrayList<>()` and `new LinkedList<>()` collection-constructor API occurrence
+  contracts;
 - protocol/law packs correspond to current builtin protocol operations,
   demand profiles, operator laws, value-domain laws, and named value-graph rule
   modules.
