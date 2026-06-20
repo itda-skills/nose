@@ -29,6 +29,7 @@ pub fn library_api_contract_evidence_for_call(
         saw_library_api_evidence = true;
         if record.status != EvidenceStatus::Asserted
             || api != expected
+            || !library_api_record_provenance_matches_contract(id, record)
             || !il.evidence_dependencies_asserted(record)
             || !library_api_callee_shape_matches(il, interner, node, callee)
             || !library_api_dependencies_match_callee(il, interner, node, callee, record)
@@ -75,6 +76,7 @@ pub fn library_api_contract_evidence_for_node(
         saw_library_api_evidence = true;
         if record.status != EvidenceStatus::Asserted
             || api != expected
+            || !library_api_record_provenance_matches_contract(id, record)
             || !il.evidence_dependencies_asserted(record)
             || !library_api_node_callee_shape_matches(il, interner, node, callee)
             || !library_api_dependencies_match_callee_node(il, interner, node, callee, record)
@@ -139,6 +141,7 @@ pub fn library_api_contract_evidence_at_call_span(
         );
         if record.status != EvidenceStatus::Asserted
             || api != expected
+            || !library_api_record_provenance_matches_contract(query.id, record)
             || !il.evidence_dependencies_asserted(record)
             || (!source_call_matches && !span_query_matches)
         {
@@ -152,6 +155,26 @@ pub fn library_api_contract_evidence_at_call_span(
         LibraryApiEvidenceStatus::Rejected
     } else {
         LibraryApiEvidenceStatus::Missing
+    }
+}
+
+fn library_api_record_provenance_matches_contract(
+    id: LibraryApiContractId,
+    record: &EvidenceRecord,
+) -> bool {
+    match id {
+        LibraryApiContractId::PythonBuiltinCollectionFactory => {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash
+                    == Some(stable_symbol_hash(
+                        PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
+                    ))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(
+                        PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
+                    ))
+        }
+        _ => true,
     }
 }
 

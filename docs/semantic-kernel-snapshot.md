@@ -73,6 +73,10 @@ still being migrated toward it.
   owns the C file-extension identity, `tree-sitter-c` parser binding,
   `nose_frontend::c::lower` lowering entrypoint metadata, and the
   `c.source.cast.unsigned32` source-fact producer id. The
+  `nose.python.builtins.collection_factories` descriptor owns the Python builtin
+  `list`, `set`, `frozenset`, and `tuple` collection-factory contract id and
+  `LibraryApi` occurrence producer id, while shadowed names and wildcard imports
+  remain hard negatives. The
   `nose.python.stdlib.type_domain` descriptor directly exposes its alias
   contract rows so producer id, contract id, conformance refs, and declaration
   counts come from one pack-owned table.
@@ -83,10 +87,12 @@ still being migrated toward it.
   top-level `semantic_packs`. External packs are still `metadata-only`; builtin
   producers remain compiled Rust and are expected to map onto the same
   vocabulary. The first compiled pilots are `nose.lang.c`, a default builtin
-  language pack-shaped surface for C unsigned-cast source provenance, and
-  `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped
-  surface for Python `typing`, `collections.abc`, and `asyncio` type-domain
-  alias evidence.
+  language pack-shaped surface for C unsigned-cast source provenance,
+  `nose.python.builtins.collection_factories`, a default builtin stdlib pack for
+  Python builtin collection-factory API provenance, and
+  `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped surface
+  for Python `typing`, `collections.abc`, and `asyncio` type-domain alias
+  evidence.
 - `nose-frontend` owns tree-sitter parsing, per-language lowering (including the
   declarative CSS/HTML frontends), `<script>`/`<style>`/markup region extraction for
   Vue/Svelte/HTML, source/domain/import/symbol/type/guard/place/effect/API/
@@ -223,6 +229,10 @@ migrated.
   Imported Python stdlib alias-derived `Domain` evidence now carries
   `nose.python.stdlib.type_domain` pack provenance, making this the first
   compiled first-party pack-shaped pilot surface.
+  Python builtin collection-factory `LibraryApi` occurrence evidence for
+  `list`, `set`, `frozenset`, and `tuple` now carries
+  `nose.python.builtins.collection_factories` pack provenance while the existing
+  shadow and wildcard-import hard negatives stay closed.
   `nose-semantics` resolves receiver-domain evidence through a shared
   `DomainRequirement` contract. Consumers check exact receiver node evidence
   first, then immutable binding evidence for local or module variables, then

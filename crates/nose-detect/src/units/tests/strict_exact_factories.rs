@@ -100,11 +100,10 @@ fn strict_exact_python_builtin_factory_requires_library_api_evidence() {
         }),
         Vec::new(),
     ));
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(python_builtin_collection_factory_evidence(
         2,
         sp(43),
-        contract.id,
-        contract.callee,
+        contract,
         1,
         vec![EvidenceId(1)],
     ));

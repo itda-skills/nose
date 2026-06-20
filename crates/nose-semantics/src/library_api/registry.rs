@@ -19,6 +19,12 @@ pub(super) fn library_api_contract_result_domain_for_arity(
         | LibraryApiContractId::JsLikeSetConstructor => {
             library_collection_factory_result_domain_for_arity(
                 LibraryCollectionFactoryContract {
+                    pack_id: match id {
+                        LibraryApiContractId::PythonBuiltinCollectionFactory => {
+                            PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID
+                        }
+                        _ => FIRST_PARTY_PACK_ID,
+                    },
                     id,
                     callee,
                     result: LibraryCollectionFactoryResult::SequenceArgument,

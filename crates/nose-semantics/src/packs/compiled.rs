@@ -14,8 +14,21 @@ const C_LANGUAGE_CONFORMANCE_REFS: &[&str] = &[
 const NO_LANGUAGES: &[&str] = &[];
 const PYTHON_LANGUAGE: &[&str] = &["python"];
 const NO_PACKAGES: &[&str] = &[];
+const PYTHON_BUILTIN_PACKAGES: &[&str] = &["builtins"];
 const PYTHON_STDLIB_TYPE_DOMAIN_PACKAGES: &[&str] = &["typing", "collections.abc", "asyncio"];
 const NO_IDS: &[&str] = &[];
+const PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_IDS: &[&str] =
+    &[PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID];
+const PYTHON_BUILTIN_COLLECTION_FACTORY_CONTRACT_IDS: &[&str] =
+    &[PYTHON_BUILTIN_COLLECTION_FACTORY_CONTRACT_ID];
+const PYTHON_BUILTIN_COLLECTION_FACTORY_CONFORMANCE_REFS: &[&str] = &[
+    "python-builtin-list-factory-positive",
+    "python-builtin-set-factory-positive",
+    "python-builtin-frozenset-factory-positive",
+    "python-builtin-tuple-factory-positive",
+    "python-builtin-list-shadowed-hard-negative",
+    "python-builtin-list-wildcard-import-hard-negative",
+];
 const PYTHON_STDLIB_TYPE_DOMAIN_CONTRACT_IDS: &[&str] =
     &["python.stdlib.type-domain-alias.contract"];
 const PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_IDS: &[&str] = &[PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID];
@@ -118,6 +131,22 @@ fn c_language_counts() -> SemanticPackCounts {
             .filter(|id| !id.contains("hard-negative"))
             .count(),
         hard_negatives: C_LANGUAGE_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
+fn python_builtin_collection_factory_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_IDS.len(),
+        contracts: PYTHON_BUILTIN_COLLECTION_FACTORY_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: PYTHON_BUILTIN_COLLECTION_FACTORY_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: PYTHON_BUILTIN_COLLECTION_FACTORY_CONFORMANCE_REFS
             .iter()
             .filter(|id| id.contains("hard-negative"))
             .count(),
@@ -233,6 +262,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: C_LANGUAGE_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: c_language_counts,
+    },
+    BuiltinPackDescriptor {
+        id: PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
+        kind: SemanticPackKind::StdlibPack,
+        display_name: "nose Python builtins collection factory pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: PYTHON_LANGUAGE,
+        supported_packages: PYTHON_BUILTIN_PACKAGES,
+        language: None,
+        evidence_producer_ids: PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: PYTHON_BUILTIN_COLLECTION_FACTORY_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: PYTHON_BUILTIN_COLLECTION_FACTORY_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: python_builtin_collection_factory_counts,
     },
     BuiltinPackDescriptor {
         id: PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,

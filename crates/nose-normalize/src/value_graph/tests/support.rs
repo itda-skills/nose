@@ -18,8 +18,9 @@ pub(super) use nose_semantics::{
     library_promise_resolve_contract, library_promise_then_contract,
     library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
     library_scalar_integer_method_contract, library_static_index_membership_contract,
-    DomainEvidence, LibraryApiContractId, C_LANGUAGE_PACK_ID,
+    DomainEvidence, LibraryApiContractId, LibraryCollectionFactoryContract, C_LANGUAGE_PACK_ID,
     C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID, FIRST_PARTY_PACK_ID,
+    PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
 };
 pub(super) use rustc_hash::FxHashMap;
 
@@ -223,6 +224,30 @@ pub(super) fn library_api_contract_evidence(
         }),
         dependencies,
     )
+}
+
+pub(super) fn python_builtin_collection_factory_evidence(
+    id: u32,
+    call_span: Span,
+    contract: LibraryCollectionFactoryContract,
+    arity: u16,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    let mut record = library_api_contract_evidence(
+        id,
+        call_span,
+        contract.id,
+        contract.callee,
+        arity,
+        dependencies,
+    );
+    record.provenance.pack_hash = Some(stable_symbol_hash(
+        PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
+    ));
+    record.provenance.rule_hash = Some(stable_symbol_hash(
+        PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
+    ));
+    record
 }
 
 pub(super) fn push_method_call_library_api_evidence(

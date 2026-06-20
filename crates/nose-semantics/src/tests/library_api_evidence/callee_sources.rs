@@ -128,11 +128,10 @@ fn library_api_evidence_resolution_accepts_free_name_backed_callees() {
         }),
         EvidenceStatus::Asserted,
     ));
-    il.evidence.push(library_api_record(
+    il.evidence.push(python_builtin_collection_factory_record(
         1,
         sp(42),
-        contract.id,
-        contract.callee,
+        contract,
         EvidenceStatus::Asserted,
         &[0],
     ));

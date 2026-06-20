@@ -17,6 +17,12 @@ use crate::{
 };
 use nose_il::{stable_symbol_hash, Builtin, DomainEvidence, Lang, SourceFactKind, Span};
 
+pub const PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID: &str =
+    "nose.python.builtins.collection_factories";
+pub const PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID: &str =
+    "python.builtins.collection-factory-api";
+pub const PYTHON_BUILTIN_COLLECTION_FACTORY_CONTRACT_ID: &str = "python.builtin.collection_factory";
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LibraryApiContractId {
     PropertyBuiltin(Builtin),
@@ -170,6 +176,7 @@ pub enum LibraryCollectionFactoryResult {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryCollectionFactoryContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: LibraryCollectionFactoryResult,

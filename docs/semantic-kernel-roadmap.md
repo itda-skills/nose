@@ -75,7 +75,9 @@ The next code slices are intentionally incremental:
 5. Phase 4: use `nose.lang.c` as the first builtin language descriptor slice
    before migrating the remaining language/region packs;
 6. Phase 5: move narrow stdlib/library/law rows behind pack-owned descriptors and shared
-   admitted-contract resolvers;
+   admitted-contract resolvers, starting with
+   `nose.python.builtins.collection_factories` for Python builtin collection
+   factory `LibraryApi` occurrence provenance;
 7. Phase 6: allow external pack influence only after the builtin path is proven;
 8. Phase 7: define adoption and release gates.
 
@@ -90,6 +92,20 @@ Aggregate median wall time was 55.68 ms -> 55.15 ms; `lower` was
 `chi` r15 wall increase was rechecked with 30 alternating runs and measured
 35.00 ms -> 34.29 ms. Binary size changed 20,105,968 -> 20,124,384 bytes for
 the cumulative issue branch.
+
+Phase 5 Python builtins collection-factory measurement note, local run on
+2026-06-20: product query-regression r15 compared `main@d8e0796` with the
+`nose.python.builtins.collection_factories` branch over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, and surface
+counts were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by 2555 bytes from the new top-level `semantic_packs` entry. Aggregate median
+wall time was 56.01 ms -> 55.61 ms; `lower` was 24.70 ms -> 23.90 ms;
+`normalize+extract` was 17.10 ms -> 17.50 ms; `candidates` stayed
+1.10 ms -> 1.10 ms. A noisy compare-run `swift-metrics` wall trigger measured
+28.9 ms -> 39.1 ms; the same final artifact's saved current-baseline run
+measured `swift-metrics` 28.94 ms -> 28.16 ms, so the trigger was treated as
+timing noise. Binary size
+changed 20,105,968 -> 20,124,592 bytes for the cumulative issue branch.
 
 ## History
 
@@ -135,6 +151,11 @@ the cumulative issue branch.
   reports `nose.python.stdlib.type_domain` pack and producer provenance while preserving
   shadow/rebind hard negatives and metadata-only behavior for local external
   manifests.
+- Python builtin collection factories started moving out of the broad
+  compatibility facade. `list`, `set`, `frozenset`, and `tuple` one-argument
+  factory `LibraryApi` occurrence evidence now reports
+  `nose.python.builtins.collection_factories` pack and producer provenance while
+  preserving shadowed-name and wildcard-import hard negatives.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a
   language-, signature-, and integer-domain-constrained first-party contract
   instead of a bare method-name recognizer. Float/NaN-sensitive methods remain a

@@ -16,6 +16,41 @@ fn library_api_record(
     library_api_record_with_arity(id, span, contract_id, callee, 1, status, dependencies)
 }
 
+fn library_api_record_with_provenance(
+    id: u32,
+    span: Span,
+    contract_id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+    pack_id: &str,
+    rule: &str,
+) -> EvidenceRecord {
+    let mut record = library_api_record(id, span, contract_id, callee, status, dependencies);
+    record.provenance.pack_hash = Some(stable_symbol_hash(pack_id));
+    record.provenance.rule_hash = Some(stable_symbol_hash(rule));
+    record
+}
+
+fn python_builtin_collection_factory_record(
+    id: u32,
+    span: Span,
+    contract: LibraryCollectionFactoryContract,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance(
+        id,
+        span,
+        contract.id,
+        contract.callee,
+        status,
+        dependencies,
+        PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
+        PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
+    )
+}
+
 fn library_api_record_with_arity(
     id: u32,
     span: Span,

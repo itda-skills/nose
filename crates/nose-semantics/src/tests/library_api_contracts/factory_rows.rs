@@ -38,6 +38,7 @@ fn library_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_free_name_collection_factory_contract(Lang::Python, "list"),
         Some(LibraryCollectionFactoryContract {
+            pack_id: PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
             id: LibraryApiContractId::PythonBuiltinCollectionFactory,
             callee: LibraryApiCalleeContract::FreeName {
                 name: "list",
@@ -65,6 +66,7 @@ fn library_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_imported_collection_factory_contract(Lang::Python, "collections", "deque"),
         Some(LibraryCollectionFactoryContract {
+            pack_id: FIRST_PARTY_PACK_ID,
             id: LibraryApiContractId::PythonImportedCollectionFactory,
             callee: LibraryApiCalleeContract::ImportedBinding {
                 module: "collections",
@@ -105,6 +107,7 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
     assert_eq!(
         library_java_collection_factory_contract(Lang::Java, "Arrays", "asList"),
         Some(LibraryCollectionFactoryContract {
+            pack_id: FIRST_PARTY_PACK_ID,
             id: LibraryApiContractId::JavaCollectionFactory(
                 JavaCollectionFactoryKind::ArraysAsList,
             ),
@@ -120,6 +123,7 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
     assert_eq!(
         library_java_collection_constructor_contract(Lang::Java, "ArrayList", 0),
         Some(LibraryCollectionFactoryContract {
+            pack_id: FIRST_PARTY_PACK_ID,
             id: LibraryApiContractId::JavaCollectionConstructor(
                 JavaCollectionConstructorKind::EmptyList,
             ),
@@ -136,6 +140,7 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
     assert_eq!(
         library_ruby_set_factory_contract(Lang::Ruby, "Set", "new", 1),
         Some(LibraryCollectionFactoryContract {
+            pack_id: FIRST_PARTY_PACK_ID,
             id: LibraryApiContractId::RubySetFactory,
             callee: LibraryApiCalleeContract::RubyRequireStaticMember {
                 receiver: "Set",

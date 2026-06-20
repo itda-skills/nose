@@ -79,7 +79,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 4);
+    assert_eq!(descriptors.len(), 5);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -89,6 +89,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
         vec![
             FIRST_PARTY_PACK_ID,
             C_LANGUAGE_PACK_ID,
+            PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
             PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
             FIRST_PARTY_VALUE_LAW_PACK_ID
         ]
@@ -130,6 +131,28 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
     assert!(c
         .conformance_refs()
         .contains(&"c-unsigned32-signed-cast-hard-negative"));
+
+    let python_builtins = builtin_pack_descriptor(PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID)
+        .expect("Python builtins descriptor");
+    assert_eq!(python_builtins.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(python_builtins.supported_languages, &["python"]);
+    assert_eq!(python_builtins.supported_packages, &["builtins"]);
+    assert_eq!(
+        python_builtins.evidence_producer_ids,
+        &[PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID]
+    );
+    assert!(python_builtins.source_fact_producer_ids.is_empty());
+    assert_eq!(
+        python_builtins.contract_ids,
+        &[PYTHON_BUILTIN_COLLECTION_FACTORY_CONTRACT_ID]
+    );
+    assert_eq!(python_builtins.counts().evidence_producers, 1);
+    assert_eq!(python_builtins.counts().contracts, 1);
+    assert_eq!(python_builtins.counts().positive_fixtures, 4);
+    assert_eq!(python_builtins.counts().hard_negatives, 2);
+    assert!(python_builtins
+        .conformance_refs()
+        .contains(&"python-builtin-list-wildcard-import-hard-negative"));
 
     let python = builtin_pack_descriptor(PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID)
         .expect("Python stdlib descriptor");
@@ -209,6 +232,28 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(c.hash, stable_symbol_hash(C_LANGUAGE_PACK_ID));
     assert_eq!(c.kind, SemanticPackKind::LanguagePack);
     assert_eq!(c.counts.evidence_producers, 1);
+    let python_builtins = set
+        .packs()
+        .iter()
+        .find(|pack| pack.id == PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID)
+        .expect("Python builtins summary");
+    assert_eq!(
+        python_builtins.id,
+        PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID
+    );
+    assert_eq!(
+        python_builtins.hash,
+        stable_symbol_hash(PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID)
+    );
+    assert_eq!(python_builtins.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(
+        python_builtins.influence,
+        SemanticPackInfluence::EvidenceAndContracts
+    );
+    assert_eq!(python_builtins.counts.evidence_producers, 1);
+    assert_eq!(python_builtins.counts.contracts, 1);
+    assert_eq!(python_builtins.counts.positive_fixtures, 4);
+    assert_eq!(python_builtins.counts.hard_negatives, 2);
     let python = python_stdlib_type_domain_pack();
     assert_eq!(python.id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
     assert_eq!(
@@ -241,11 +286,12 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 5);
+    assert_eq!(set.packs().len(), 6);
     assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
-    assert_eq!(set.packs()[2].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[3].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[4];
+    assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[3].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[4].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[5];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);

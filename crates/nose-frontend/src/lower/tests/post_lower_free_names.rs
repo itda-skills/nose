@@ -9,17 +9,31 @@ fn post_lowering_emits_free_name_and_require_library_api_occurrences() {
 }
 
 fn assert_python_free_name_occurrences(interner: &Interner) {
-    let py = lower_fixture(
-        "builtin.py",
-        b"def f(values):\n    return list(values)\n",
-        Lang::Python,
-        interner,
-    );
+    for factory in ["list", "set", "frozenset", "tuple"] {
+        let src = format!("def f(values):\n    return {factory}(values)\n");
+        let py = lower_fixture("builtin.py", src.as_bytes(), Lang::Python, interner);
+        let py_contract =
+            library_free_name_collection_factory_contract(Lang::Python, factory).unwrap();
+        assert_eq!(
+            contract_api_count(&py.evidence, py_contract.id, py_contract.callee),
+            1
+        );
+        let py_api_records = contract_api_records(&py.evidence, py_contract.id, py_contract.callee);
+        assert_eq!(
+            py_api_records[0].provenance.pack_hash,
+            Some(stable_symbol_hash(
+                nose_semantics::PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID
+            ))
+        );
+        assert_eq!(
+            py_api_records[0].provenance.rule_hash,
+            Some(stable_symbol_hash(
+                PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID
+            ))
+        );
+    }
+
     let py_contract = library_free_name_collection_factory_contract(Lang::Python, "list").unwrap();
-    assert_eq!(
-        contract_api_count(&py.evidence, py_contract.id, py_contract.callee),
-        1
-    );
 
     let shadowed_py = lower_fixture(
         "shadowed.py",

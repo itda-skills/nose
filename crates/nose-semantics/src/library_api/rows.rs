@@ -6,6 +6,15 @@ mod methods;
 
 pub use methods::*;
 
+fn library_collection_factory_pack_id(id: LibraryApiContractId) -> &'static str {
+    match id {
+        LibraryApiContractId::PythonBuiltinCollectionFactory => {
+            PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID
+        }
+        _ => FIRST_PARTY_PACK_ID,
+    }
+}
+
 pub fn library_free_name_collection_factory_contract(
     lang: Lang,
     name: &str,
@@ -25,6 +34,7 @@ pub fn library_free_name_collection_factory_contract(
                 _ => return None,
             };
             Some(LibraryCollectionFactoryContract {
+                pack_id: library_collection_factory_pack_id(id),
                 id,
                 callee: LibraryApiCalleeContract::FreeName {
                     name: matched_name,
@@ -77,6 +87,9 @@ pub fn library_imported_collection_factory_contract(
                 && row.exported == exported
         })
         .map(|row| LibraryCollectionFactoryContract {
+            pack_id: library_collection_factory_pack_id(
+                LibraryApiContractId::PythonImportedCollectionFactory,
+            ),
             id: LibraryApiContractId::PythonImportedCollectionFactory,
             callee: LibraryApiCalleeContract::ImportedBinding {
                 module: row.module,
@@ -146,8 +159,10 @@ pub fn library_java_collection_factory_contract(
     method: &str,
 ) -> Option<LibraryCollectionFactoryContract> {
     let contract = java_collection_factory_contract(lang, receiver, method)?;
+    let id = LibraryApiContractId::JavaCollectionFactory(contract.kind);
     Some(LibraryCollectionFactoryContract {
-        id: LibraryApiContractId::JavaCollectionFactory(contract.kind),
+        pack_id: library_collection_factory_pack_id(id),
+        id,
         callee: LibraryApiCalleeContract::JavaUtilStaticMember {
             receiver: contract.receiver,
             method: contract.method,
@@ -176,8 +191,10 @@ pub fn library_java_collection_constructor_contract(
     arg_count: usize,
 ) -> Option<LibraryCollectionFactoryContract> {
     let contract = java_collection_constructor_contract(lang, type_name, arg_count)?;
+    let id = LibraryApiContractId::JavaCollectionConstructor(contract.kind);
     Some(LibraryCollectionFactoryContract {
-        id: LibraryApiContractId::JavaCollectionConstructor(contract.kind),
+        pack_id: library_collection_factory_pack_id(id),
+        id,
         callee: LibraryApiCalleeContract::JavaUtilConstructor {
             simple_type: contract.simple_type,
             qualified_type: contract.qualified_type,
@@ -250,8 +267,10 @@ pub fn library_ruby_set_factory_contract(
     arg_count: usize,
 ) -> Option<LibraryCollectionFactoryContract> {
     let contract = ruby_set_factory_contract(lang, receiver, method, arg_count)?;
+    let id = LibraryApiContractId::RubySetFactory;
     Some(LibraryCollectionFactoryContract {
-        id: LibraryApiContractId::RubySetFactory,
+        pack_id: library_collection_factory_pack_id(id),
+        id,
         callee: LibraryApiCalleeContract::RubyRequireStaticMember {
             receiver: contract.receiver,
             method: contract.method,
@@ -278,8 +297,10 @@ pub fn library_js_like_set_constructor_contract(
     receiver: &str,
 ) -> Option<LibraryCollectionFactoryContract> {
     let contract = js_like_set_constructor_contract(lang, receiver)?;
+    let id = LibraryApiContractId::JsLikeSetConstructor;
     Some(LibraryCollectionFactoryContract {
-        id: LibraryApiContractId::JsLikeSetConstructor,
+        pack_id: library_collection_factory_pack_id(id),
+        id,
         callee: LibraryApiCalleeContract::JsGlobalConstructor {
             receiver: contract.receiver,
             requires_unshadowed_global: contract.requires_unshadowed_global,
@@ -309,15 +330,19 @@ pub fn library_rust_vec_macro_factory_contract(
     lang: Lang,
     name: &str,
 ) -> Option<LibraryCollectionFactoryContract> {
-    (lang == Lang::Rust && name == "vec").then_some(LibraryCollectionFactoryContract {
-        id: LibraryApiContractId::RustVecMacroFactory,
-        callee: LibraryApiCalleeContract::RustMacro {
-            name: "vec",
-            shadow: LibraryApiShadowPolicy::SameName,
-        },
-        result: LibraryCollectionFactoryResult::VariadicElements {
-            single_arg_spreads_array: false,
-        },
+    (lang == Lang::Rust && name == "vec").then_some({
+        let id = LibraryApiContractId::RustVecMacroFactory;
+        LibraryCollectionFactoryContract {
+            pack_id: library_collection_factory_pack_id(id),
+            id,
+            callee: LibraryApiCalleeContract::RustMacro {
+                name: "vec",
+                shadow: LibraryApiShadowPolicy::SameName,
+            },
+            result: LibraryCollectionFactoryResult::VariadicElements {
+                single_arg_spreads_array: false,
+            },
+        }
     })
 }
 
@@ -326,8 +351,10 @@ pub fn library_rust_vec_new_factory_contract(
     name: &str,
 ) -> Option<LibraryCollectionFactoryContract> {
     let contract = rust_vec_new_factory_contract(lang, name)?;
+    let id = LibraryApiContractId::RustVecNewFactory;
     Some(LibraryCollectionFactoryContract {
-        id: LibraryApiContractId::RustVecNewFactory,
+        pack_id: library_collection_factory_pack_id(id),
+        id,
         callee: LibraryApiCalleeContract::FreeName {
             name: match name {
                 "Vec::new" => "Vec::new",

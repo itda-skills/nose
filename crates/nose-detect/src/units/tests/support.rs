@@ -6,7 +6,8 @@ use nose_il::{
 };
 use nose_semantics::{
     library_api_callee_contract_hash, library_api_contract_id_hash, library_method_call_contract,
-    LibraryApiCalleeContract, FIRST_PARTY_PACK_ID,
+    LibraryApiCalleeContract, LibraryCollectionFactoryContract, FIRST_PARTY_PACK_ID,
+    PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
 };
 
 pub(super) fn sp(line: u32) -> Span {
@@ -51,6 +52,30 @@ pub(super) fn library_api_contract_evidence(
         }),
         dependencies,
     )
+}
+
+pub(super) fn python_builtin_collection_factory_evidence(
+    id: u32,
+    call_span: Span,
+    contract: LibraryCollectionFactoryContract,
+    arity: u16,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    let mut record = library_api_contract_evidence(
+        id,
+        call_span,
+        contract.id,
+        contract.callee,
+        arity,
+        dependencies,
+    );
+    record.provenance.pack_hash = Some(stable_symbol_hash(
+        PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
+    ));
+    record.provenance.rule_hash = Some(stable_symbol_hash(
+        PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
+    ));
+    record
 }
 
 pub(super) fn method_call_library_api_evidence(

@@ -34,11 +34,10 @@ fn free_name_collection_factory_value_graph_requires_library_api_evidence() {
     );
 
     let contract = library_free_name_collection_factory_contract(Lang::Python, "list").unwrap();
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(python_builtin_collection_factory_evidence(
         2,
         sp(23),
-        contract.id,
-        contract.callee,
+        contract,
         1,
         vec![EvidenceId(1)],
     ));

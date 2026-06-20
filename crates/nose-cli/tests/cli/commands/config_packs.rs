@@ -150,6 +150,17 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(c["counts"]["positive_fixtures"], 2);
     assert_eq!(c["counts"]["hard_negatives"], 2);
 
+    let builtins = semantic_pack_by_id(&json, "nose.python.builtins.collection_factories");
+    assert_eq!(builtins["kind"], "StdlibPack");
+    assert_eq!(
+        json_array_strings(builtins, "supported_languages"),
+        vec!["python"]
+    );
+    assert_eq!(builtins["counts"]["evidence_producers"], 1);
+    assert_eq!(builtins["counts"]["contracts"], 1);
+    assert_eq!(builtins["counts"]["positive_fixtures"], 4);
+    assert_eq!(builtins["counts"]["hard_negatives"], 2);
+
     let stdlib = semantic_pack_by_id(&json, "nose.python.stdlib.type_domain");
     assert_eq!(stdlib["kind"], "StdlibPack");
     assert_eq!(
