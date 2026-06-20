@@ -79,7 +79,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 20);
+    assert_eq!(descriptors.len(), 21);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -104,6 +104,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID,
             JS_LIKE_BUILTIN_PROMISE_PACK_ID,
             JS_LIKE_BUILTIN_ARRAY_PACK_ID,
+            JS_LIKE_BUILTIN_BOOLEAN_PACK_ID,
             JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
             PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
             FIRST_PARTY_VALUE_LAW_PACK_ID
@@ -517,6 +518,31 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         .conformance_refs()
         .contains(&"js-array-from-shadowed-hard-negative"));
 
+    let js_boolean = builtin_pack_descriptor(JS_LIKE_BUILTIN_BOOLEAN_PACK_ID)
+        .expect("JavaScript builtins Boolean descriptor");
+    assert_eq!(js_boolean.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(
+        js_boolean.supported_languages,
+        &["javascript", "typescript"]
+    );
+    assert_eq!(js_boolean.supported_packages, &["Boolean"]);
+    assert_eq!(
+        js_boolean.evidence_producer_ids,
+        &[JS_LIKE_BUILTIN_BOOLEAN_PRODUCER_ID]
+    );
+    assert!(js_boolean.source_fact_producer_ids.is_empty());
+    assert_eq!(
+        js_boolean.contract_ids,
+        &[JS_LIKE_BUILTIN_BOOLEAN_CONTRACT_ID]
+    );
+    assert_eq!(js_boolean.counts().evidence_producers, 1);
+    assert_eq!(js_boolean.counts().contracts, 1);
+    assert_eq!(js_boolean.counts().positive_fixtures, 1);
+    assert_eq!(js_boolean.counts().hard_negatives, 2);
+    assert!(js_boolean
+        .conformance_refs()
+        .contains(&"js-boolean-coercion-shadowed-hard-negative"));
+
     let js_collection_constructors =
         builtin_pack_descriptor(JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID)
             .expect("JavaScript builtins collection constructor descriptor");
@@ -882,6 +908,24 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(js_array.counts.contracts, 2);
     assert_eq!(js_array.counts.positive_fixtures, 2);
     assert_eq!(js_array.counts.hard_negatives, 3);
+    let js_boolean = set
+        .packs()
+        .iter()
+        .find(|pack| pack.id == JS_LIKE_BUILTIN_BOOLEAN_PACK_ID)
+        .expect("JavaScript builtins Boolean summary");
+    assert_eq!(
+        js_boolean.hash,
+        stable_symbol_hash(JS_LIKE_BUILTIN_BOOLEAN_PACK_ID)
+    );
+    assert_eq!(js_boolean.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(
+        js_boolean.influence,
+        SemanticPackInfluence::EvidenceAndContracts
+    );
+    assert_eq!(js_boolean.counts.evidence_producers, 1);
+    assert_eq!(js_boolean.counts.contracts, 1);
+    assert_eq!(js_boolean.counts.positive_fixtures, 1);
+    assert_eq!(js_boolean.counts.hard_negatives, 2);
     let js_collection_constructors = set
         .packs()
         .iter()
@@ -953,7 +997,7 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 21);
+    assert_eq!(set.packs().len(), 22);
     assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[3].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
@@ -976,13 +1020,14 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     );
     assert_eq!(set.packs()[15].id, JS_LIKE_BUILTIN_PROMISE_PACK_ID);
     assert_eq!(set.packs()[16].id, JS_LIKE_BUILTIN_ARRAY_PACK_ID);
+    assert_eq!(set.packs()[17].id, JS_LIKE_BUILTIN_BOOLEAN_PACK_ID);
     assert_eq!(
-        set.packs()[17].id,
+        set.packs()[18].id,
         JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
     );
-    assert_eq!(set.packs()[18].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[19].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[20];
+    assert_eq!(set.packs()[19].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[20].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[21];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);

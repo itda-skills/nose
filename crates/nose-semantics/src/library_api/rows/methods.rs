@@ -169,6 +169,7 @@ pub fn library_js_boolean_coercion_contract(
         requires_unshadowed_function: true,
     };
     Some(LibraryStaticGlobalFunctionContract {
+        pack_id: JS_LIKE_BUILTIN_BOOLEAN_PACK_ID,
         id: LibraryApiContractId::JsBooleanCoercion,
         callee: LibraryApiCalleeContract::StaticGlobalFunction {
             function: result.function,

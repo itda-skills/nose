@@ -89,6 +89,8 @@ The next code slices are intentionally incremental:
    Promise API occurrence provenance, then
    `nose.javascript.builtins.array` for JS/TS `Array.from` and
    `Array.isArray` API occurrence provenance, then
+   `nose.javascript.builtins.boolean` for JS/TS `Boolean(...)` API occurrence
+   provenance, then
    `nose.javascript.builtins.collection_constructors` for JS/TS `new Set(...)`
    and `new Map(...)` API occurrence provenance, then
    `nose.rust.stdlib.collection_factories` for selected Rust
@@ -494,6 +496,34 @@ timing as order/environment-sensitive noise unless a later r30 rerun repeats it
 with both execution orders. Binary size changed 20,161,504 -> 20,161,808 bytes
 for this slice.
 
+Phase 5 JavaScript builtins Boolean measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous
+`nose.javascript.builtins.collection_constructors` slice with the
+`nose.javascript.builtins.boolean` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by
+exactly 542 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-js-boolean-prev-r15.json` and
+`/tmp/nose-473-phase5-js-boolean-current-r15.json`; the previous-slice compare
+summary is `/tmp/nose-473-phase5-js-boolean-vs-prev-r15.md`. The sequential
+compare reported one `serde_json` runtime trigger, wall 62.5 ms -> 80.0 ms,
+`parse+lower` 18.3 ms -> 23.6 ms, `lower` 22.9 ms -> 30.7 ms, and
+`normalize+extract` 23.5 ms -> 29.5 ms, so the same binaries were remeasured
+with repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-js-boolean-alternating-r15.json`. Alternating aggregate
+medians were: wall 1359.47 ms -> 1348.68 ms, `parse+lower` 327.40 ms ->
+333.60 ms, `lower` 429.60 ms -> 436.60 ms, `normalize+extract` 704.20 ms ->
+696.70 ms, and `candidates` 24.60 ms -> 23.80 ms. The alternating r15 cleared
+the `serde_json` trigger but showed `junit5` phase-only `parse+lower`/`lower`
+triggers; a focused current-first `junit5` alternating r30 run saved at
+`/tmp/nose-473-phase5-js-boolean-junit5-current-first-alternating-r30.json`
+had no current-regression trigger. Root-cause note: this slice changed static
+pack metadata, JS/TS `Boolean(...)` producer provenance, and admission
+provenance checks for the Boolean contract; it did not add per-node descriptor
+scans or touch normalize/candidate generation logic. Binary size changed
+20,161,808 -> 20,161,984 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -570,6 +600,10 @@ for this slice.
   `Array.from` and `Array.isArray` `LibraryApi` occurrence evidence now
   reports `nose.javascript.builtins.array` pack and producer provenance while
   preserving shadowed-`Array` and unsupported-arity hard negatives.
+- JS/TS Boolean coercion started moving out of the broad compatibility facade.
+  `Boolean(...)` `LibraryApi` occurrence evidence now reports
+  `nose.javascript.builtins.boolean` pack and producer provenance while
+  preserving shadowed-`Boolean` and unsupported-arity hard negatives.
 - JS/TS collection constructor APIs started moving out of the broad
   compatibility facade. `new Set(...)` and `new Map(...)` `LibraryApi`
   occurrence evidence now reports
@@ -694,8 +728,8 @@ for this slice.
 - JS-like `Math.abs`/`Math.min`/`Math.max` stay exact-closed until a signed-zero
   and NaN-aware numeric model exists; Go `math.Abs`/`math.Min`/`math.Max` and
   Java floating `Math.abs`/`Math.min`/`Math.max` stay closed for the same reason.
-  JS record-shape guards using `Boolean(...)` consume a static-global function
-  contract with an unshadowed `Boolean` requirement.
+  JS record-shape guards using `Boolean(...)` consume the pack-owned
+  static-global function contract with an unshadowed `Boolean` requirement.
 - Generic Python/Go free-function builtins now have `LibraryApi` occurrence
   rows. Early idiom canonicalization and value-graph two-argument
   `min(...)`/`max(...)` require admitted occurrence evidence plus integer-domain

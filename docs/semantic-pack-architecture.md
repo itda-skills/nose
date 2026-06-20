@@ -37,6 +37,7 @@ ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.python.stdlib.math`,
 `nose.javascript.builtins.promise`,
 `nose.javascript.builtins.array`,
+`nose.javascript.builtins.boolean`,
 `nose.javascript.builtins.collection_constructors`,
 `nose.ruby.stdlib.set`, `nose.rust.stdlib.vec`,
 `nose.rust.stdlib.option`,
@@ -200,6 +201,9 @@ previous semantic-kernel tranches.
    The current JavaScript builtins Array slice is
    `nose.javascript.builtins.array`, which owns JS/TS `Array.from` and
    `Array.isArray` API occurrence provenance.
+   The current JavaScript builtins Boolean slice is
+   `nose.javascript.builtins.boolean`, which owns JS/TS `Boolean(...)` API
+   occurrence provenance.
    The current JavaScript builtins collection-constructor slice is
    `nose.javascript.builtins.collection_constructors`, which owns JS/TS
    `new Set(...)` and `new Map(...)` API occurrence provenance.

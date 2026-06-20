@@ -38,6 +38,9 @@ pub const JS_LIKE_BUILTIN_ARRAY_PACK_ID: &str = "nose.javascript.builtins.array"
 pub const JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID: &str = "javascript.builtins.array-api";
 pub const JS_LIKE_BUILTIN_ARRAY_FROM_CONTRACT_ID: &str = "map_key_view.wrapper";
 pub const JS_LIKE_BUILTIN_ARRAY_IS_ARRAY_CONTRACT_ID: &str = "js_like.array.is_array";
+pub const JS_LIKE_BUILTIN_BOOLEAN_PACK_ID: &str = "nose.javascript.builtins.boolean";
+pub const JS_LIKE_BUILTIN_BOOLEAN_PRODUCER_ID: &str = "javascript.builtins.boolean-api";
+pub const JS_LIKE_BUILTIN_BOOLEAN_CONTRACT_ID: &str = "js_like.boolean.coercion";
 pub const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID: &str =
     "nose.javascript.builtins.collection_constructors";
 pub const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID: &str =
@@ -350,6 +353,7 @@ pub struct LibraryStaticGlobalMethodContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryStaticGlobalFunctionContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: StaticGlobalFunctionContract,

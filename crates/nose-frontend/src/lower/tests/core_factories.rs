@@ -553,6 +553,20 @@ fn assert_js_constructor_result_domains(interner: &Interner) {
     let boolean = lo.unshadowed_global_var("Boolean", sp_at(102));
     let value = lo.var("value", sp_at(103));
     lo.add(NodeKind::Call, Payload::None, sp_at(104), &[boolean, value]);
+    let boolean_contract =
+        library_js_boolean_coercion_contract(Lang::JavaScript, "Boolean", 1).unwrap();
+    let boolean_records =
+        contract_api_records(&lo.evidence, boolean_contract.id, boolean_contract.callee);
+    assert_eq!(
+        boolean_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_BOOLEAN_PACK_ID
+        ))
+    );
+    assert_eq!(
+        boolean_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(JS_LIKE_BUILTIN_BOOLEAN_PRODUCER_ID))
+    );
     assert_eq!(
         result_domain_any_count_at(&lo.evidence, sp_at(104)),
         0,

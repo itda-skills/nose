@@ -202,8 +202,8 @@ impl<'a> Lowering<'a> {
             id: contract.id,
             callee: contract.callee,
             dependencies,
-            pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
-            rule: "library_api_js_boolean_coercion",
+            pack_id: contract.pack_id,
+            rule: JS_LIKE_BUILTIN_BOOLEAN_PRODUCER_ID,
             result_domain: None,
         })
     }

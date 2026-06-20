@@ -156,6 +156,26 @@ fn js_like_builtin_array_record(
     )
 }
 
+fn js_like_builtin_boolean_record(
+    id: u32,
+    span: Span,
+    contract_id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance(
+        id,
+        span,
+        contract_id,
+        callee,
+        status,
+        dependencies,
+        JS_LIKE_BUILTIN_BOOLEAN_PACK_ID,
+        JS_LIKE_BUILTIN_BOOLEAN_PRODUCER_ID,
+    )
+}
+
 fn js_like_builtin_collection_constructor_record(
     id: u32,
     span: Span,

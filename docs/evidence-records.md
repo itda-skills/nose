@@ -485,7 +485,8 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   that remain as raw nodes: JS-like `Array.from(...)`, `Array.isArray(...)`,
   with `nose.javascript.builtins.array` provenance; `new Map(...)` and
   `new Set(...)` with `nose.javascript.builtins.collection_constructors`
-  provenance; `Boolean(...)`, and static
+  provenance; `Boolean(...)` with `nose.javascript.builtins.boolean`
+  provenance; and static
   `indexOf`/`findIndex` membership calls whose receiver has collection
   sequence-surface proof; Python builtin collection factories such as
   `list(...)` when the callee has an unshadowed free-name proof; Python

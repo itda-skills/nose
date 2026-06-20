@@ -99,6 +99,9 @@ still being migrated toward it.
   `nose.javascript.builtins.array` descriptor owns JS/TS `Array.from` and
   `Array.isArray` API contract and occurrence producer ids, while shadowed
   `Array` roots and unsupported `Array.from` arities remain hard negatives. The
+  `nose.javascript.builtins.boolean` descriptor owns JS/TS `Boolean(...)` API
+  contract and occurrence producer ids, while shadowed `Boolean` roots and
+  unsupported arities remain hard negatives. The
   `nose.javascript.builtins.collection_constructors` descriptor owns JS/TS
   `new Set(...)` and `new Map(...)` API contract and occurrence producer ids,
   while missing construct-source proof and shadowed constructor roots remain
@@ -154,6 +157,8 @@ still being migrated toward it.
   `Promise.resolve` and `.then` Promise API provenance,
   `nose.javascript.builtins.array`, a default builtin stdlib pack for JS/TS
   `Array.from` and `Array.isArray` API provenance,
+  `nose.javascript.builtins.boolean`, a default builtin stdlib pack for JS/TS
+  `Boolean(...)` API provenance,
   `nose.javascript.builtins.collection_constructors`, a default builtin stdlib
   pack for JS/TS `new Set(...)` and `new Map(...)` API provenance,
   `nose.rust.stdlib.collection_factories`, a default builtin stdlib pack for
@@ -464,7 +469,8 @@ migrated.
   shape, and mutation safety.
 - Selected API call occurrences now also have `LibraryApi` evidence records when
   they remain as raw call nodes. First-party lowering emits occurrence evidence
-  for JS-like `Array.from(...)`, `Array.isArray(...)`, `Boolean(...)`,
+  for JS-like `Array.from(...)`, `Array.isArray(...)`, `Boolean(...)` with
+  `nose.javascript.builtins.boolean` provenance,
   `new Map(...)`, `new Set(...)`, and static `indexOf`/`findIndex` membership
   calls whose receiver is a proven static non-float collection literal; Python
   builtin collection factories such as `list(...)` when the callee is proven as
@@ -730,9 +736,9 @@ migrated.
   contract and requires the `Array` global to be unshadowed through the
   qualified-global record's root dependency.
 - JS-like record-shape guards that use `Boolean(value)` as the non-null/truthy
-  clause consume a static-global function contract and require the `Boolean`
-  global to be unshadowed. `value !== null` and `!!value` remain available when
-  their own clauses prove the same record shape. The collapsed
+  clause consume the pack-owned static-global function contract and require the
+  `Boolean` global to be unshadowed. `value !== null` and `!!value` remain
+  available when their own clauses prove the same record shape. The collapsed
   `Seq("record_guard")` is no longer admitted by tag spelling alone: strict
   exact and value-graph paths require matching `SequenceSurface(RecordGuard)` and
   `Guard::JsRecordShape` evidence, including subject identity, null/truthiness

@@ -74,6 +74,7 @@ fn library_coercion_regex_namespace_and_promise_contracts_carry_obligations() {
     assert_eq!(
         library_js_boolean_coercion_contract(Lang::TypeScript, "Boolean", 1),
         Some(LibraryStaticGlobalFunctionContract {
+            pack_id: JS_LIKE_BUILTIN_BOOLEAN_PACK_ID,
             id: LibraryApiContractId::JsBooleanCoercion,
             callee: LibraryApiCalleeContract::StaticGlobalFunction {
                 function: "Boolean",
