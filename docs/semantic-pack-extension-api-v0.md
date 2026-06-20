@@ -458,6 +458,8 @@ implicit v0 packs:
   occurrence contract;
 - `nose.javascript.builtins.regex` owns the current JS/TS regex literal
   `.test(...)` API occurrence contract;
+- `nose.javascript.builtins.static_index_membership` owns the current JS/TS
+  static `indexOf`/`findIndex` membership API occurrence contracts;
 - `nose.javascript.builtins.collection_constructors` owns the current JS/TS
   `new Set(...)` and `new Map(...)` API occurrence contracts;
 - `nose.rust.stdlib.collection_factories` owns the current selected Rust

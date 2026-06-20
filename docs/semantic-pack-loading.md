@@ -77,6 +77,8 @@ Trust is separate from channel eligibility.
   provenance;
   `nose.javascript.builtins.regex` owns JS/TS regex literal `.test(...)` API
   occurrence provenance;
+  `nose.javascript.builtins.static_index_membership` owns JS/TS static
+  `indexOf`/`findIndex` membership API occurrence provenance;
   `nose.javascript.builtins.collection_constructors` owns JS/TS `new Set(...)`
   and `new Map(...)` API occurrence provenance;
   `nose.rust.stdlib.collection_factories` owns selected Rust

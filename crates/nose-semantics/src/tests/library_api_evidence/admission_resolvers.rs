@@ -4,6 +4,7 @@ mod array;
 mod promise;
 mod regex;
 mod span;
+mod static_index;
 
 fn asserted_library_api_node_record(
     id: u32,

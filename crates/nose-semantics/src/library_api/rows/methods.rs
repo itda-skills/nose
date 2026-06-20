@@ -209,6 +209,7 @@ pub fn library_static_index_membership_contract(
 ) -> Option<LibraryStaticIndexMembershipContract> {
     let result = static_index_membership_contract(lang, method, arg_count)?;
     Some(LibraryStaticIndexMembershipContract {
+        pack_id: JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID,
         id: LibraryApiContractId::JsLikeStaticIndexMembership(result.kind),
         callee: LibraryApiCalleeContract::StaticIndexMembershipMethod {
             method: result.method,

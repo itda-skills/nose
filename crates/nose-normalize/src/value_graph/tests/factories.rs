@@ -187,14 +187,15 @@ fn static_index_membership_value_graph_uses_library_api_evidence() {
 
     let contract =
         library_static_index_membership_contract(Lang::JavaScript, "indexOf", 1).unwrap();
-    il.evidence.push(library_api_contract_evidence(
-        1,
-        sp(94),
-        contract.id,
-        contract.callee,
-        1,
-        vec![EvidenceId(0)],
-    ));
+    il.evidence
+        .push(js_like_builtin_static_index_membership_evidence(
+            1,
+            sp(94),
+            contract.id,
+            contract.callee,
+            1,
+            vec![EvidenceId(0)],
+        ));
     assert!(matches!(
         eval_op(&il, &interner, comparison),
         ValOp::Bin(op) if op == Op::In as u32

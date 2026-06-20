@@ -29,6 +29,18 @@ fn js_static_index_membership_emits_occurrence_evidence() {
             )
         })
         .expect("static index membership should emit a LibraryApi occurrence");
+    assert_eq!(
+        api.provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID
+        ))
+    );
+    assert_eq!(
+        api.provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PRODUCER_ID
+        ))
+    );
     assert!(api.dependencies.iter().any(|id| {
         il.evidence_record_by_id(*id).is_some_and(|record| {
             matches!(

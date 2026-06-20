@@ -44,6 +44,14 @@ pub const JS_LIKE_BUILTIN_BOOLEAN_CONTRACT_ID: &str = "js_like.boolean.coercion"
 pub const JS_LIKE_BUILTIN_REGEX_PACK_ID: &str = "nose.javascript.builtins.regex";
 pub const JS_LIKE_BUILTIN_REGEX_PRODUCER_ID: &str = "javascript.builtins.regex-api";
 pub const JS_LIKE_BUILTIN_REGEX_TEST_CONTRACT_ID: &str = "js_like.regex.test";
+pub const JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID: &str =
+    "nose.javascript.builtins.static_index_membership";
+pub const JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PRODUCER_ID: &str =
+    "javascript.builtins.static-index-membership-api";
+pub const JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_INDEX_OF_CONTRACT_ID: &str =
+    "js_like.static_index_membership.index_of";
+pub const JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_FIND_INDEX_CONTRACT_ID: &str =
+    "js_like.static_index_membership.find_index";
 pub const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID: &str =
     "nose.javascript.builtins.collection_constructors";
 pub const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID: &str =
@@ -372,6 +380,7 @@ pub struct LibraryRegexTestContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryStaticIndexMembershipContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: StaticIndexMembershipContract,

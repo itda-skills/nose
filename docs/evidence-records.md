@@ -489,7 +489,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   provenance; regex literal `.test(...)` with
   `nose.javascript.builtins.regex` provenance; and static
   `indexOf`/`findIndex` membership calls whose receiver has collection
-  sequence-surface proof; Python builtin collection factories such as
+  sequence-surface proof with
+  `nose.javascript.builtins.static_index_membership` provenance; Python builtin
+  collection factories such as
   `list(...)` when the callee has an unshadowed free-name proof; Python
   `collections.deque(...)` through imported binding/namespace proof; Python
   `math.prod(...)` with `nose.python.stdlib.math` provenance through imported

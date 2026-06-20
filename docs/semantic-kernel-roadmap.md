@@ -89,12 +89,14 @@ The next code slices are intentionally incremental:
    Promise API occurrence provenance, then
    `nose.javascript.builtins.array` for JS/TS `Array.from` and
    `Array.isArray` API occurrence provenance, then
-   `nose.javascript.builtins.collection_constructors` for JS/TS `new Set(...)`
-   and `new Map(...)` API occurrence provenance, then
    `nose.javascript.builtins.boolean` for JS/TS `Boolean(...)` API occurrence
    provenance, then
    `nose.javascript.builtins.regex` for JS/TS regex literal `.test(...)` API
    occurrence provenance, then
+   `nose.javascript.builtins.static_index_membership` for JS/TS static
+   `indexOf`/`findIndex` membership API occurrence provenance, then
+   `nose.javascript.builtins.collection_constructors` for JS/TS `new Set(...)`
+   and `new Map(...)` API occurrence provenance, then
    `nose.rust.stdlib.collection_factories` for selected Rust
    `std::collections::{HashSet,BTreeSet,VecDeque}::from`
    collection-factory occurrence provenance, then
@@ -555,6 +557,30 @@ logic. Treat the `cmark` previous-first r15 trigger as order/environment noise
 unless a later r30 run repeats it above both the 5% and 5 ms gates. Binary size
 changed 20,161,984 -> 20,162,240 bytes for this slice.
 
+Phase 5 JavaScript builtins static index-membership measurement note, local run
+on 2026-06-21: product query-regression r15 compared the previous
+`nose.javascript.builtins.regex` slice with the
+`nose.javascript.builtins.static_index_membership` slice over the same 9-repo
+subset. Family summaries, locations, fragment buckets, reason-code counts, and
+surface counts were unchanged after ignoring `result_json_bytes`. Each repo's
+JSON grew by exactly 574 bytes from the new top-level `semantic_packs` entry.
+The saved artifacts are `/tmp/nose-473-phase5-js-static-index-prev-r15.json`,
+`/tmp/nose-473-phase5-js-static-index-current-r15.json`, and
+`/tmp/nose-473-phase5-js-static-index-vs-prev-r15.md`. The sequential r15
+compare showed runtime triggers on `gin`, `ky`, and `serde_json`; repo-local
+alternating r15 runs saved at
+`/tmp/nose-473-phase5-js-static-index-alternating-r15.json` cleared all
+5%+5 ms repo/phase investigation triggers. Alternating aggregate medians were
+wall 1249.78 ms -> 1277.32 ms (+2.2%), `parse+lower` 304.40 ms -> 304.50 ms,
+`lower` 400.80 ms -> 397.70 ms, `normalize+extract` 654.80 ms -> 654.70 ms,
+and `candidates` 23.80 ms -> 22.50 ms. Root-cause note: this slice changed
+static pack metadata, JS/TS static `indexOf`/`findIndex` producer provenance,
+and admission provenance checks for the static-index contract; it did not add
+per-node descriptor scans or touch normalize/candidate generation logic. Treat
+the sequential triggers as order/environment-sensitive timing noise unless a
+later alternating run repeats them above both the 5% and 5 ms gates. Binary
+size changed 20,162,240 -> 20,162,432 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -639,6 +665,11 @@ changed 20,161,984 -> 20,162,240 bytes for this slice.
   Regex literal `.test(...)` `LibraryApi` occurrence evidence now reports
   `nose.javascript.builtins.regex` pack and producer provenance while preserving
   non-regex receiver and unsupported-arity hard negatives.
+- JS/TS static index-membership APIs started moving out of the broad
+  compatibility facade. Static `indexOf`/`findIndex` `LibraryApi` occurrence
+  evidence now reports `nose.javascript.builtins.static_index_membership` pack
+  and producer provenance while preserving non-literal receiver and
+  float-literal hard negatives.
 - JS/TS collection constructor APIs started moving out of the broad
   compatibility facade. `new Set(...)` and `new Map(...)` `LibraryApi`
   occurrence evidence now reports

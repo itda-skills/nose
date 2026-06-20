@@ -105,6 +105,10 @@ still being migrated toward it.
   `nose.javascript.builtins.regex` descriptor owns JS/TS regex literal
   `.test(...)` API contract and occurrence producer ids, while non-regex
   receivers and unsupported arities remain hard negatives. The
+  `nose.javascript.builtins.static_index_membership` descriptor owns JS/TS
+  static `indexOf`/`findIndex` membership API contract and occurrence producer
+  ids, while non-literal receivers and float-literal receivers remain hard
+  negatives. The
   `nose.javascript.builtins.collection_constructors` descriptor owns JS/TS
   `new Set(...)` and `new Map(...)` API contract and occurrence producer ids,
   while missing construct-source proof and shadowed constructor roots remain
@@ -164,6 +168,8 @@ still being migrated toward it.
   `Boolean(...)` API provenance,
   `nose.javascript.builtins.regex`, a default builtin stdlib pack for JS/TS
   regex literal `.test(...)` API provenance,
+  `nose.javascript.builtins.static_index_membership`, a default builtin stdlib
+  pack for JS/TS static `indexOf`/`findIndex` membership API provenance,
   `nose.javascript.builtins.collection_constructors`, a default builtin stdlib
   pack for JS/TS `new Set(...)` and `new Map(...)` API provenance,
   `nose.rust.stdlib.collection_factories`, a default builtin stdlib pack for
@@ -478,7 +484,8 @@ migrated.
   `nose.javascript.builtins.boolean` provenance, regex literal `.test(...)`
   with `nose.javascript.builtins.regex` provenance, `new Map(...)`,
   `new Set(...)`, and static `indexOf`/`findIndex` membership calls whose
-  receiver is a proven static non-float collection literal; Python builtin
+  receiver is a proven static non-float collection literal with
+  `nose.javascript.builtins.static_index_membership` provenance; Python builtin
   collection factories such as `list(...)` when the callee is proven as an
   unshadowed free name; Python
   `collections.deque(...)` when the callee is proven through
@@ -774,10 +781,11 @@ migrated.
   sequence tag; it is consumed only by the Go map contract or left as a distinct
   surface.
 - Static JS-like `indexOf`/`findIndex` membership requires a call occurrence
-  whose receiver sequence surface has membership-collection admission. Untagged
-  sequence expressions, destructuring surfaces, and other positional groupings
-  do not become static array membership merely because their children are
-  literals.
+  with `nose.javascript.builtins.static_index_membership` provenance whose
+  receiver sequence surface has membership-collection admission. Untagged
+  sequence expressions, destructuring surfaces, float literals, and other
+  positional groupings do not become static array membership merely because
+  their children are literals.
 - JS/TS object literals preserve static property keys in exact map/object
   semantics, but computed property names are exact-closed until a future
   contract can prove key evaluation, coercion, order, and side-effect behavior.

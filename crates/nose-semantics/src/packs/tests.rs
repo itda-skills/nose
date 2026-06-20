@@ -79,7 +79,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 22);
+    assert_eq!(descriptors.len(), 23);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -106,6 +106,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             JS_LIKE_BUILTIN_ARRAY_PACK_ID,
             JS_LIKE_BUILTIN_BOOLEAN_PACK_ID,
             JS_LIKE_BUILTIN_REGEX_PACK_ID,
+            JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID,
             JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
             PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
             FIRST_PARTY_VALUE_LAW_PACK_ID
@@ -566,6 +567,34 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         .conformance_refs()
         .contains(&"js-regex-test-string-receiver-hard-negative"));
 
+    let js_static_index = builtin_pack_descriptor(JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID)
+        .expect("JavaScript builtins static index membership descriptor");
+    assert_eq!(js_static_index.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(
+        js_static_index.supported_languages,
+        &["javascript", "typescript"]
+    );
+    assert_eq!(js_static_index.supported_packages, &["Array"]);
+    assert_eq!(
+        js_static_index.evidence_producer_ids,
+        &[JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PRODUCER_ID]
+    );
+    assert!(js_static_index.source_fact_producer_ids.is_empty());
+    assert_eq!(
+        js_static_index.contract_ids,
+        &[
+            JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_INDEX_OF_CONTRACT_ID,
+            JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_FIND_INDEX_CONTRACT_ID,
+        ]
+    );
+    assert_eq!(js_static_index.counts().evidence_producers, 1);
+    assert_eq!(js_static_index.counts().contracts, 2);
+    assert_eq!(js_static_index.counts().positive_fixtures, 2);
+    assert_eq!(js_static_index.counts().hard_negatives, 2);
+    assert!(js_static_index
+        .conformance_refs()
+        .contains(&"js-static-index-membership-non-literal-receiver-hard-negative"));
+
     let js_collection_constructors =
         builtin_pack_descriptor(JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID)
             .expect("JavaScript builtins collection constructor descriptor");
@@ -967,6 +996,24 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(js_regex.counts.contracts, 1);
     assert_eq!(js_regex.counts.positive_fixtures, 1);
     assert_eq!(js_regex.counts.hard_negatives, 2);
+    let js_static_index = set
+        .packs()
+        .iter()
+        .find(|pack| pack.id == JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID)
+        .expect("JavaScript builtins static index membership summary");
+    assert_eq!(
+        js_static_index.hash,
+        stable_symbol_hash(JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID)
+    );
+    assert_eq!(js_static_index.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(
+        js_static_index.influence,
+        SemanticPackInfluence::EvidenceAndContracts
+    );
+    assert_eq!(js_static_index.counts.evidence_producers, 1);
+    assert_eq!(js_static_index.counts.contracts, 2);
+    assert_eq!(js_static_index.counts.positive_fixtures, 2);
+    assert_eq!(js_static_index.counts.hard_negatives, 2);
     let js_collection_constructors = set
         .packs()
         .iter()
@@ -1038,7 +1085,7 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 23);
+    assert_eq!(set.packs().len(), 24);
     assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[3].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
@@ -1065,11 +1112,15 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     assert_eq!(set.packs()[18].id, JS_LIKE_BUILTIN_REGEX_PACK_ID);
     assert_eq!(
         set.packs()[19].id,
+        JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID
+    );
+    assert_eq!(
+        set.packs()[20].id,
         JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
     );
-    assert_eq!(set.packs()[20].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[21].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[22];
+    assert_eq!(set.packs()[21].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[22].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[23];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);
