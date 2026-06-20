@@ -19,6 +19,7 @@ fn library_non_factory_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_map_key_view_wrapper_contract(Lang::JavaScript, "Array", "from", 1),
         Some(LibraryMapKeyViewWrapperContract {
+            pack_id: JS_LIKE_BUILTIN_ARRAY_PACK_ID,
             id: LibraryApiContractId::MapKeyViewWrapper,
             callee: LibraryApiCalleeContract::StaticGlobalMethod {
                 receiver: "Array",
@@ -50,6 +51,7 @@ fn library_non_factory_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_js_array_is_array_contract(Lang::JavaScript, "Array", "isArray", 1),
         Some(LibraryStaticGlobalMethodContract {
+            pack_id: JS_LIKE_BUILTIN_ARRAY_PACK_ID,
             id: LibraryApiContractId::JsArrayIsArray,
             callee: LibraryApiCalleeContract::StaticGlobalMethod {
                 receiver: "Array",

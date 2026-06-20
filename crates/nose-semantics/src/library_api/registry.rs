@@ -65,6 +65,7 @@ pub(super) fn library_api_contract_result_domain_for_arity(
         )),
         LibraryApiContractId::MapKeyViewWrapper => Some(
             library_map_key_view_wrapper_result_domain(LibraryMapKeyViewWrapperContract {
+                pack_id: JS_LIKE_BUILTIN_ARRAY_PACK_ID,
                 id,
                 callee,
                 result: MapKeyViewWrapperContract {

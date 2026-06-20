@@ -71,6 +71,8 @@ Trust is separate from channel eligibility.
   occurrence provenance;
   `nose.javascript.builtins.promise` owns JS/TS `Promise.resolve` and `.then`
   Promise API occurrence provenance;
+  `nose.javascript.builtins.array` owns JS/TS `Array.from` and
+  `Array.isArray` API occurrence provenance;
   `nose.rust.stdlib.collection_factories` owns selected Rust
   `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection factory API
   occurrence provenance;

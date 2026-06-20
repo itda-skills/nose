@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        18
+        19
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -474,6 +474,31 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(js_promise["counts"]["value_laws"], 0);
     assert_eq!(js_promise["counts"]["positive_fixtures"], 2);
     assert_eq!(js_promise["counts"]["hard_negatives"], 3);
+
+    let js_array = semantic_pack_by_id(&json, "nose.javascript.builtins.array");
+    assert_eq!(js_array["hash"], "ca9d1142025e589c");
+    assert_eq!(js_array["kind"], "StdlibPack");
+    assert_eq!(
+        js_array["display_name"],
+        "nose JavaScript builtins Array pack"
+    );
+    assert_eq!(js_array["source"], "compiled-first-party");
+    assert_eq!(js_array["influence"], "evidence-and-contracts");
+    assert_eq!(js_array["trust"], "default-first-party");
+    assert_eq!(js_array["enabled_by_default"], true);
+    assert_eq!(js_array["path"], serde_json::Value::Null);
+    assert_eq!(js_array["provider"], "Corca, Inc.");
+    assert_eq!(js_array["repository"], "https://github.com/corca-ai/nose");
+    assert_eq!(js_array["license"], "MIT");
+    assert_eq!(
+        json_array_strings(js_array, "supported_languages"),
+        vec!["javascript", "typescript"]
+    );
+    assert_eq!(js_array["counts"]["evidence_producers"], 1);
+    assert_eq!(js_array["counts"]["contracts"], 2);
+    assert_eq!(js_array["counts"]["value_laws"], 0);
+    assert_eq!(js_array["counts"]["positive_fixtures"], 2);
+    assert_eq!(js_array["counts"]["hard_negatives"], 3);
 
     let stdlib = semantic_pack_by_id(&json, "nose.python.stdlib.type_domain");
     assert_eq!(stdlib["kind"], "StdlibPack");

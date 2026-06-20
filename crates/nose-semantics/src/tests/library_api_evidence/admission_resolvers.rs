@@ -1,5 +1,6 @@
 use super::*;
 
+mod array;
 mod promise;
 mod span;
 

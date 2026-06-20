@@ -62,6 +62,7 @@ pub fn library_map_key_view_wrapper_contract(
         qualified_path: "Array.from",
     };
     Some(LibraryMapKeyViewWrapperContract {
+        pack_id: JS_LIKE_BUILTIN_ARRAY_PACK_ID,
         id: LibraryApiContractId::MapKeyViewWrapper,
         callee: LibraryApiCalleeContract::StaticGlobalMethod {
             receiver: result.receiver,
@@ -143,6 +144,7 @@ pub fn library_js_array_is_array_contract(
         requires_unshadowed_receiver: true,
     };
     Some(LibraryStaticGlobalMethodContract {
+        pack_id: JS_LIKE_BUILTIN_ARRAY_PACK_ID,
         id: LibraryApiContractId::JsArrayIsArray,
         callee: LibraryApiCalleeContract::StaticGlobalMethod {
             receiver: result.receiver,

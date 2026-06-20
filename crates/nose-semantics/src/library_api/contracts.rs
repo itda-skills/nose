@@ -34,6 +34,10 @@ pub const JS_LIKE_BUILTIN_PROMISE_PACK_ID: &str = "nose.javascript.builtins.prom
 pub const JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID: &str = "javascript.builtins.promise-api";
 pub const JS_LIKE_BUILTIN_PROMISE_RESOLVE_CONTRACT_ID: &str = "js_like.promise.factory.resolve";
 pub const JS_LIKE_BUILTIN_PROMISE_THEN_CONTRACT_ID: &str = "js_like.promise.then";
+pub const JS_LIKE_BUILTIN_ARRAY_PACK_ID: &str = "nose.javascript.builtins.array";
+pub const JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID: &str = "javascript.builtins.array-api";
+pub const JS_LIKE_BUILTIN_ARRAY_FROM_CONTRACT_ID: &str = "map_key_view.wrapper";
+pub const JS_LIKE_BUILTIN_ARRAY_IS_ARRAY_CONTRACT_ID: &str = "js_like.array.is_array";
 pub const RUBY_STDLIB_SET_PACK_ID: &str = "nose.ruby.stdlib.set";
 pub const RUBY_STDLIB_SET_PRODUCER_ID: &str = "ruby.stdlib.set-factory-api";
 pub const RUBY_STDLIB_SET_CONTRACT_ID: &str = "ruby.set_factory";
@@ -268,6 +272,7 @@ pub struct LibraryMapKeyViewContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryMapKeyViewWrapperContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: MapKeyViewWrapperContract,
@@ -331,6 +336,7 @@ pub struct LibraryMapGetContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryStaticGlobalMethodContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: StaticGlobalMethodContract,

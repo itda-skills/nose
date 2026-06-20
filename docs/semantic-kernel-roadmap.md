@@ -87,6 +87,8 @@ The next code slices are intentionally incremental:
    `None`, and `and_then` Option API occurrence provenance, then
    `nose.javascript.builtins.promise` for JS/TS `Promise.resolve` and `.then`
    Promise API occurrence provenance, then
+   `nose.javascript.builtins.array` for JS/TS `Array.from` and
+   `Array.isArray` API occurrence provenance, then
    `nose.rust.stdlib.collection_factories` for selected Rust
    `std::collections::{HashSet,BTreeSet,VecDeque}::from`
    collection-factory occurrence provenance, then
@@ -435,6 +437,29 @@ phase trigger above both the 5% and 5 ms gates with a wall-clock trigger, pause
 pack-row migration and instrument the reported phase. Binary size changed
 20,161,056 -> 20,161,264 bytes for this slice.
 
+Phase 5 JavaScript builtins Array measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous
+`nose.javascript.builtins.promise` slice with the
+`nose.javascript.builtins.array` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by
+exactly 538 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-js-array-prev-r15.json` and
+`/tmp/nose-473-phase5-js-array-current-r15.json`; the previous-slice compare
+summary is `/tmp/nose-473-phase5-js-array-vs-prev-r15.md`. The sequential
+compare reported one `chi` wall-clock runtime trigger, 32.8 ms -> 41.4 ms, so
+the same binaries were remeasured with repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-js-array-alternating-r15.json`. Alternating aggregate
+medians were: wall 1180.90 ms -> 1199.87 ms, `parse+lower` 286.60 ms ->
+281.60 ms, `lower` 380.80 ms -> 372.80 ms, `normalize+extract` 601.40 ms ->
+614.30 ms, and `candidates` 21.90 ms -> 21.60 ms. The alternating recheck had
+no repo/phase triggers above both the 5% and 5 ms gates. Root-cause note: this
+slice changed static pack metadata, JS/TS Array producer provenance, and
+admission provenance checks for `Array.from` and `Array.isArray`; it did not
+add per-node descriptor scans or touch candidate generation. Binary size
+changed 20,161,264 -> 20,161,504 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -507,6 +532,10 @@ pack-row migration and instrument the reported phase. Binary size changed
   `nose.javascript.builtins.promise` pack and producer provenance while
   preserving shadowed-`Promise`, missing Promise-like receiver, and unsafe
   thenable assimilation hard negatives.
+- JS/TS Array APIs started moving out of the broad compatibility facade.
+  `Array.from` and `Array.isArray` `LibraryApi` occurrence evidence now
+  reports `nose.javascript.builtins.array` pack and producer provenance while
+  preserving shadowed-`Array` and unsupported-arity hard negatives.
 - Selected Rust stdlib collection factories started moving out of the broad
   compatibility facade. `std::collections::{HashSet,BTreeSet,VecDeque}::from`
   factory `LibraryApi` occurrence evidence now reports

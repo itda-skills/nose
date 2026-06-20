@@ -94,8 +94,8 @@ impl<'a> Lowering<'a> {
                     contract.result.qualified_path,
                     contract.result.requires_unshadowed_receiver,
                     contract.result.receiver,
-                    nose_semantics::FIRST_PARTY_PACK_ID,
-                    "library_api_js_array_is_array",
+                    contract.pack_id,
+                    JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID,
                     None,
                 )
             })
@@ -108,8 +108,8 @@ impl<'a> Lowering<'a> {
                             contract.result.qualified_path,
                             true,
                             contract.result.receiver,
-                            nose_semantics::FIRST_PARTY_PACK_ID,
-                            "library_api_map_key_view_wrapper",
+                            contract.pack_id,
+                            JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID,
                             Some(library_map_key_view_wrapper_result_domain(contract)),
                         )
                     },

@@ -23,6 +23,7 @@ const JAVA_STDLIB_MAP_ENTRY_PACKAGES: &[&str] = &["java.util"];
 const JAVA_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["java.util"];
 const JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACKAGES: &[&str] = &["java.util"];
 const JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACKAGES: &[&str] = &["java.util"];
+const JS_LIKE_BUILTIN_ARRAY_PACKAGES: &[&str] = &["Array"];
 const JS_LIKE_BUILTIN_PROMISE_PACKAGES: &[&str] = &["Promise"];
 const PYTHON_BUILTIN_PACKAGES: &[&str] = &["builtins"];
 const PYTHON_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["collections"];
@@ -75,6 +76,18 @@ const JS_LIKE_BUILTIN_PROMISE_CONFORMANCE_REFS: &[&str] = &[
     "js-promise-resolve-shadowed-hard-negative",
     "js-promise-then-missing-receiver-hard-negative",
     "js-promise-resolve-thenable-hard-negative",
+];
+const JS_LIKE_BUILTIN_ARRAY_PRODUCER_IDS: &[&str] = &[JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID];
+const JS_LIKE_BUILTIN_ARRAY_CONTRACT_IDS: &[&str] = &[
+    JS_LIKE_BUILTIN_ARRAY_FROM_CONTRACT_ID,
+    JS_LIKE_BUILTIN_ARRAY_IS_ARRAY_CONTRACT_ID,
+];
+const JS_LIKE_BUILTIN_ARRAY_CONFORMANCE_REFS: &[&str] = &[
+    "js-array-from-positive",
+    "js-array-is-array-positive",
+    "js-array-from-shadowed-hard-negative",
+    "js-array-from-unsupported-arity-hard-negative",
+    "js-array-is-array-shadowed-hard-negative",
 ];
 const RUBY_STDLIB_SET_PRODUCER_IDS: &[&str] = &[RUBY_STDLIB_SET_PRODUCER_ID];
 const RUBY_STDLIB_SET_CONTRACT_IDS: &[&str] = &[RUBY_STDLIB_SET_CONTRACT_ID];
@@ -348,6 +361,22 @@ fn js_like_builtin_promise_counts() -> SemanticPackCounts {
             .filter(|id| !id.contains("hard-negative"))
             .count(),
         hard_negatives: JS_LIKE_BUILTIN_PROMISE_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
+fn js_like_builtin_array_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: JS_LIKE_BUILTIN_ARRAY_PRODUCER_IDS.len(),
+        contracts: JS_LIKE_BUILTIN_ARRAY_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: JS_LIKE_BUILTIN_ARRAY_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: JS_LIKE_BUILTIN_ARRAY_CONFORMANCE_REFS
             .iter()
             .filter(|id| id.contains("hard-negative"))
             .count(),
@@ -889,6 +918,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: JS_LIKE_BUILTIN_PROMISE_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: js_like_builtin_promise_counts,
+    },
+    BuiltinPackDescriptor {
+        id: JS_LIKE_BUILTIN_ARRAY_PACK_ID,
+        kind: SemanticPackKind::StdlibPack,
+        display_name: "nose JavaScript builtins Array pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: JS_LIKE_LANGUAGE,
+        supported_packages: JS_LIKE_BUILTIN_ARRAY_PACKAGES,
+        language: None,
+        evidence_producer_ids: JS_LIKE_BUILTIN_ARRAY_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: JS_LIKE_BUILTIN_ARRAY_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: JS_LIKE_BUILTIN_ARRAY_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: js_like_builtin_array_counts,
     },
     BuiltinPackDescriptor {
         id: PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,

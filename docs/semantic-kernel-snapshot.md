@@ -96,6 +96,9 @@ still being migrated toward it.
   and `.then` Promise API contract and occurrence producer ids, while shadowed
   `Promise`, missing Promise-like receiver proof, and unsafe thenable
   assimilation remain hard negatives. The
+  `nose.javascript.builtins.array` descriptor owns JS/TS `Array.from` and
+  `Array.isArray` API contract and occurrence producer ids, while shadowed
+  `Array` roots and unsupported `Array.from` arities remain hard negatives. The
   `nose.rust.stdlib.collection_factories` descriptor owns selected Rust
   `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection-factory
   contract and occurrence producer ids, while shadowed `std` roots remain hard
@@ -145,6 +148,8 @@ still being migrated toward it.
   `None`, and `and_then` Option API provenance,
   `nose.javascript.builtins.promise`, a default builtin stdlib pack for JS/TS
   `Promise.resolve` and `.then` Promise API provenance,
+  `nose.javascript.builtins.array`, a default builtin stdlib pack for JS/TS
+  `Array.from` and `Array.isArray` API provenance,
   `nose.rust.stdlib.collection_factories`, a default builtin stdlib pack for
   selected Rust `std::collections` collection-factory API provenance,
   `nose.rust.stdlib.map_factories`, a default builtin stdlib pack for selected
@@ -427,9 +432,10 @@ migrated.
   construct-syntax, or regex-literal proof. Selected producer-covered result
   calls emit dependent `Domain` evidence for the result receiver:
   collection-like factories as `Collection`, set factories/constructors as
-  `Set`, map factories as `Map`, JS-like one-argument `Array.from` as
-  `Array`, and JS-like `Promise.resolve` plus admitted Promise `.then` as
-  `PromiseLike`. Java `Arrays.asList(x)` with exactly one argument is excluded because
+  `Set`, map factories as `Map`, JS-like one-argument `Array.from` with
+  `nose.javascript.builtins.array` provenance as `Array`, and JS-like
+  `Promise.resolve` plus admitted Promise `.then` as `PromiseLike`. Java
+  `Arrays.asList(x)` with exactly one argument is excluded because
   array-spread versus single-element provenance is ambiguous without additional
   proof. `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`, `math.prod`,
   `Arrays.stream`, map `get`, iterator adapters, and generic method contracts do

@@ -483,7 +483,8 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   remain dependency-free;
 - first-party lowering emits `LibraryApi` evidence for selected API occurrences
   that remain as raw nodes: JS-like `Array.from(...)`, `Array.isArray(...)`,
-  `Boolean(...)`, `new Map(...)`, `new Set(...)`, and static
+  with `nose.javascript.builtins.array` provenance; `Boolean(...)`,
+  `new Map(...)`, `new Set(...)`, and static
   `indexOf`/`findIndex` membership calls whose receiver has collection
   sequence-surface proof; Python builtin collection factories such as
   `list(...)` when the callee has an unshadowed free-name proof; Python
@@ -552,7 +553,7 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   and JS-like `new Set` as `Set`; Rust
   `std::collections::{HashMap,BTreeMap}::from`, pack-owned Java
   `Map.of`/`Map.ofEntries`, and JS-like `new Map` as `Map`; JS-like
-  one-argument `Array.from` as
+  one-argument `Array.from` with `nose.javascript.builtins.array` provenance as
   `Array`; and JS-like `Promise.resolve` plus admitted Promise `.then` results
   with `nose.javascript.builtins.promise` provenance as `PromiseLike`.
   `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`,
@@ -615,15 +616,17 @@ callers:
   `ImportNamespace`/`ImportBinding` value ops derived from `Import` evidence, so
   raw import `Seq` payloads cannot hash-cons with proof-bearing import values;
 - unshadowed-global symbol proof for JS/TS `Math.*` method contracts,
-  `new Map(...)`/`new Set(...)` constructor contracts, static `Array.isArray`
-  exact gates, and `undefined` nullish-default handling. Value-graph nullish
+  `new Map(...)`/`new Set(...)` constructor contracts, static `Array.from` and
+  `Array.isArray` exact/API gates, and `undefined` nullish-default handling.
+  Value-graph nullish
   value semantics are evidence-only for `undefined`; raw spelling plus a
   scope scan no longer reopens that exact path;
 - qualified-global symbol proof for selected JS/TS API paths: own-property
   guard evidence depends on `Object.hasOwn` or
   `Object.prototype.hasOwnProperty.call`, and map-key view wrappers require
-  evidence for `Array.from`. Those `QualifiedGlobal` records themselves depend
-  on the appropriate unshadowed root proof, so path-shaped text or a detached API
+  evidence for `Array.from`; static Array gates require evidence for
+  `Array.isArray`. Those `QualifiedGlobal` records themselves depend on the
+  appropriate unshadowed root proof, so path-shaped text or a detached API
   record does not prove identity;
 - selected `LibraryApiContract` consumers now consult `LibraryApi` occurrence
   evidence first for the migrated JS-like, Python builtin/imported, Rust
