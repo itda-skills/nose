@@ -451,6 +451,7 @@ pub(crate) fn assert_query_json_reports_semantic_packs(json: &serde_json::Value)
         "nose.java.stdlib.collection_factories",
         "nose.java.stdlib.collection_constructors",
         "nose.java.stdlib.static_collection_adapters",
+        "nose.protocols.iterator_identity_adapters",
         "nose.javascript.builtins.promise",
         "nose.javascript.builtins.array",
         "nose.javascript.builtins.boolean",

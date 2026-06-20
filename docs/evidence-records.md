@@ -503,6 +503,10 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `nose.rust.stdlib.option` provenance when Option receiver or selector proof is
   satisfied, primitive integer `abs`/`min`/`max`/`clamp` receiver methods with
   `nose.rust.stdlib.integer_methods` provenance when exact integer receiver
+  proof is present, Rust
+  `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
+  `.stream()` iterator identity adapters with
+  `nose.protocols.iterator_identity_adapters` provenance when protocol receiver
   proof is present, and selected
   `std::collections::{HashSet,BTreeSet,VecDeque}::from(...)` factory paths with
   `nose.rust.stdlib.collection_factories` provenance when their root-shadow
@@ -659,10 +663,11 @@ callers:
   assign cross-language or library semantics;
 - normalize idiom canonicalization shares the admitted occurrence resolver layer
   for supported free-function builtins, generic receiver-method contracts, map
-  `get`, map-key views, iterator identity adapters, Java `Arrays.stream`, Java
-  map entries, Rust `Some(...)`, Rust map factory receiver proof, and HOF
-  receiver proof instead of locally recombining selector strings with
-  `LibraryApi` evidence checks.
+  `get`, map-key views, iterator identity adapters with
+  `nose.protocols.iterator_identity_adapters` provenance, Java `Arrays.stream`,
+  Java map entries, Rust `Some(...)`, Rust map factory receiver proof, and HOF
+  receiver proof instead of locally recombining selector strings with `LibraryApi`
+  evidence checks.
   Test fixtures may still use row constructors to mint synthetic evidence
   records;
 - value-graph direct API eval paths, node-level API consumers, and provider

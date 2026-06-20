@@ -49,6 +49,7 @@ ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.java.stdlib.collection_factories`,
 `nose.java.stdlib.collection_constructors`,
 `nose.java.stdlib.static_collection_adapters`,
+`nose.protocols.iterator_identity_adapters`,
 `nose.python.stdlib.type_domain`, and
 `nose.value_graph.laws`.
 
@@ -241,6 +242,11 @@ previous semantic-kernel tranches.
    provenance. The current Java stdlib static collection adapter slice is
    `nose.java.stdlib.static_collection_adapters`, which owns
    `java.util.Arrays.stream` API occurrence provenance.
+   The current iterator identity adapter protocol slice is
+   `nose.protocols.iterator_identity_adapters`, which owns Rust
+   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
+   `.stream()` API occurrence provenance under the shared receiver-proof
+   contract.
 7. **Phase 6, external influence:** only after the builtin path is proven, start with a
    small data-only external row class behind explicit opt-in trust gates.
 8. **Phase 7, adoption gates:** define `external-opt-in -> builtin-optional` and

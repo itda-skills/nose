@@ -321,6 +321,28 @@ fn rust_stdlib_integer_method_record(
     )
 }
 
+fn iterator_identity_adapter_record(
+    id: u32,
+    span: Span,
+    contract_id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+    arity: u16,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance_and_arity(
+        id,
+        span,
+        contract_id,
+        callee,
+        arity,
+        status,
+        dependencies,
+        ITERATOR_IDENTITY_ADAPTER_PACK_ID,
+        ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID,
+    )
+}
+
 fn rust_stdlib_collection_factory_record(
     id: u32,
     span: Span,

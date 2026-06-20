@@ -168,6 +168,7 @@ fn library_iterator_adapter_and_method_call_contracts_carry_obligations() {
     assert_eq!(
         library_iterator_identity_adapter_contract(Lang::Rust, "collect", 0),
         Some(LibraryIteratorIdentityAdapterContract {
+            pack_id: ITERATOR_IDENTITY_ADAPTER_PACK_ID,
             id: LibraryApiContractId::IteratorIdentityAdapter,
             callee: LibraryApiCalleeContract::IteratorAdapterMethod {
                 method: "collect",

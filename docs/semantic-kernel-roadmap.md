@@ -113,7 +113,10 @@ The next code slices are intentionally incremental:
    provenance, then `nose.java.stdlib.map_entries` for Java `Map.entry`
    map-entry occurrence provenance, then
    `nose.java.stdlib.static_collection_adapters` for Java `Arrays.stream`
-   static collection adapter occurrence provenance;
+   static collection adapter occurrence provenance, then
+   `nose.protocols.iterator_identity_adapters` for Rust
+   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
+   `.stream()` iterator identity adapter occurrence provenance;
 7. Phase 6: allow external pack influence only after the builtin path is proven;
 8. Phase 7: define adoption and release gates.
 
@@ -614,6 +617,36 @@ as order/environment-sensitive timing noise unless a later alternating run
 repeats them above both gates. Binary size changed 20,162,432 -> 20,162,672
 bytes for this slice.
 
+Phase 5 iterator identity adapter protocol-pack measurement note, local run on
+2026-06-21: product query-regression r15 compared the previous
+`nose.rust.stdlib.integer_methods` slice with the
+`nose.protocols.iterator_identity_adapters` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, surface
+counts, and family shapes were unchanged after ignoring `result_json_bytes`.
+Each repo's JSON grew by exactly 548 bytes from the new top-level
+`semantic_packs` entry. The saved artifacts are
+`/tmp/nose-473-phase5-iterator-identity-prev-r15.json`,
+`/tmp/nose-473-phase5-iterator-identity-current-r15.json` for output-byte
+inspection, and `/tmp/nose-473-phase5-iterator-identity-vs-prev-r15.md` for the
+sequential compare. The sequential r15 compare showed zero harness
+investigation triggers. A repo-local alternating r15 run saved at
+`/tmp/nose-473-phase5-iterator-identity-alternating-r15.json` had aggregate wall
+1512.10 ms -> 1525.72 ms (+0.9%), `parse+lower` 368.50 ms -> 359.00 ms, `lower`
+476.40 ms -> 470.60 ms, `normalize+extract` 769.80 ms -> 781.40 ms, and
+`candidates` 27.70 ms -> 26.80 ms. Under the stricter #473 5%+5 ms gate,
+alternating r15 showed wall-only triggers on `boltons` and `gin`. A focused
+alternating r30 rerun saved at
+`/tmp/nose-473-phase5-iterator-identity-boltons-gin-focused-alternating-r30.json`
+cleared `boltons`; `gin` still had a wall-only trigger at 57.05 ms -> 65.88 ms
+(+15.5%), while `parse+lower`, `lower`, `normalize+extract`, and `candidates`
+all stayed below the 5 ms floor. Root-cause note: this slice adds static
+protocol-pack metadata, iterator identity adapter producer provenance, and an
+admission provenance check for an existing shared resolver path; it does not add
+per-node descriptor scans or repeated registry walks on hot paths. The remaining
+`gin` signal is not attributed to a measured product phase and should be
+rechecked if a later slice repeats a wall-only trigger. Binary size changed
+20,162,672 -> 20,162,928 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -745,6 +778,11 @@ bytes for this slice.
   evidence now reports `nose.java.stdlib.static_collection_adapters` pack and
   producer provenance while preserving missing-import and shadowed-`Arrays` hard
   negatives.
+- Iterator identity adapters started moving out of the broad compatibility
+  facade. Rust `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned`
+  and Java `.stream()` `LibraryApi` occurrence evidence now reports
+  `nose.protocols.iterator_identity_adapters` pack and producer provenance while
+  preserving non-protocol receiver and unsupported-arity hard negatives.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a
   language-, signature-, integer-domain-, and pack-provenance-constrained
   contract instead of a bare method-name recognizer. Float/NaN-sensitive methods

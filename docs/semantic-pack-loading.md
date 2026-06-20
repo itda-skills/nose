@@ -100,6 +100,9 @@ Trust is separate from channel eligibility.
   provenance;
   `nose.java.stdlib.static_collection_adapters` owns Java
   `java.util.Arrays.stream` static collection adapter API occurrence provenance;
+  `nose.protocols.iterator_identity_adapters` owns Rust
+  `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
+  `.stream()` iterator identity adapter API occurrence provenance;
   `nose.python.stdlib.type_domain` is the first narrow stdlib pilot pack for
   Python `typing`, `collections.abc`, and `asyncio` type-domain aliases;
   `nose.value_graph.laws` is the first LawPack pilot for selected proof-backed
@@ -114,7 +117,9 @@ Trust is separate from channel eligibility.
 `nose query --format json` validates configured and CLI-provided semantic-pack
 paths before analysis and reports the active builtin/local pack set in the
 top-level `semantic_packs` array. Local external packs remain metadata-only
-while builtin compiled packs report `evidence-and-contracts` influence.
+while builtin compiled packs report `evidence-and-contracts` influence. Builtin
+pack order in this array follows the compiled registry's stable reporting order;
+roadmap and snapshot prose may group packs by migration narrative instead.
 
 ## Current limits
 

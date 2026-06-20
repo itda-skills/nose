@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        24
+        25
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -477,6 +477,34 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(java_static_adapters["counts"]["value_laws"], 0);
     assert_eq!(java_static_adapters["counts"]["positive_fixtures"], 1);
     assert_eq!(java_static_adapters["counts"]["hard_negatives"], 2);
+
+    let iterator_identity = semantic_pack_by_id(&json, "nose.protocols.iterator_identity_adapters");
+    assert_eq!(iterator_identity["hash"], "554b807e3806a6af");
+    assert_eq!(iterator_identity["kind"], "ProtocolPack");
+    assert_eq!(
+        iterator_identity["display_name"],
+        "nose iterator identity adapter protocol pack"
+    );
+    assert_eq!(iterator_identity["source"], "compiled-first-party");
+    assert_eq!(iterator_identity["influence"], "evidence-and-contracts");
+    assert_eq!(iterator_identity["trust"], "default-first-party");
+    assert_eq!(iterator_identity["enabled_by_default"], true);
+    assert_eq!(iterator_identity["path"], serde_json::Value::Null);
+    assert_eq!(iterator_identity["provider"], "Corca, Inc.");
+    assert_eq!(
+        iterator_identity["repository"],
+        "https://github.com/corca-ai/nose"
+    );
+    assert_eq!(iterator_identity["license"], "MIT");
+    assert_eq!(
+        json_array_strings(iterator_identity, "supported_languages"),
+        vec!["java", "rust"]
+    );
+    assert_eq!(iterator_identity["counts"]["evidence_producers"], 1);
+    assert_eq!(iterator_identity["counts"]["contracts"], 1);
+    assert_eq!(iterator_identity["counts"]["value_laws"], 0);
+    assert_eq!(iterator_identity["counts"]["positive_fixtures"], 3);
+    assert_eq!(iterator_identity["counts"]["hard_negatives"], 2);
 
     let js_promise = semantic_pack_by_id(&json, "nose.javascript.builtins.promise");
     assert_eq!(js_promise["hash"], "db20255756aa3abc");

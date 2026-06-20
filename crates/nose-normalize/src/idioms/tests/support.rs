@@ -9,7 +9,8 @@ pub(super) use nose_il::{
 pub(super) use nose_semantics::{
     library_free_function_builtin_contract, library_free_name_map_factory_contract,
     library_iterator_identity_adapter_contract, library_map_get_contract,
-    library_map_key_view_contract, library_method_call_contract,
+    library_map_key_view_contract, library_method_call_contract, LibraryApiContractId,
+    ITERATOR_IDENTITY_ADAPTER_PACK_ID, ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID,
 };
 
 pub(super) fn sp() -> Span {
@@ -117,7 +118,7 @@ pub(super) fn push_receiver_method_library_api_evidence(
     let dependencies =
         nose_semantics::library_api_receiver_dependencies_for_call(il, interner, call, contract.1)?;
     let id = next_evidence_id(il);
-    il.evidence.push(evidence_with_dependencies(
+    let mut record = evidence_with_dependencies(
         id,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -127,7 +128,13 @@ pub(super) fn push_receiver_method_library_api_evidence(
         }),
         EvidenceStatus::Asserted,
         dependencies,
-    ));
+    );
+    if contract.0 == LibraryApiContractId::IteratorIdentityAdapter {
+        record.provenance.pack_hash = Some(stable_symbol_hash(ITERATOR_IDENTITY_ADAPTER_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID));
+    }
+    il.evidence.push(record);
     Some(EvidenceId(id))
 }
 

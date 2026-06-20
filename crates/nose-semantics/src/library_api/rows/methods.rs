@@ -324,6 +324,7 @@ pub fn library_iterator_identity_adapter_contract(
         receiver: IteratorAdapterReceiverContract::ExactIterableValue,
     };
     Some(LibraryIteratorIdentityAdapterContract {
+        pack_id: ITERATOR_IDENTITY_ADAPTER_PACK_ID,
         id: LibraryApiContractId::IteratorIdentityAdapter,
         callee: LibraryApiCalleeContract::IteratorAdapterMethod {
             method,
@@ -401,10 +402,10 @@ pub fn library_receiver_method_api_contract(
         .or_else(|| {
             library_iterator_identity_adapter_contract(lang, method, arg_count).map(|contract| {
                 LibraryReceiverMethodApiContract {
-                    pack_id: FIRST_PARTY_PACK_ID,
+                    pack_id: contract.pack_id,
                     id: contract.id,
                     callee: contract.callee,
-                    rule: "library_api_iterator_identity_adapter",
+                    rule: ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID,
                     result_domain: None,
                 }
             })

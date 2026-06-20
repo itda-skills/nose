@@ -79,7 +79,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 24);
+    assert_eq!(descriptors.len(), 25);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -103,6 +103,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
             JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
             JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID,
+            ITERATOR_IDENTITY_ADAPTER_PACK_ID,
             JS_LIKE_BUILTIN_PROMISE_PACK_ID,
             JS_LIKE_BUILTIN_ARRAY_PACK_ID,
             JS_LIKE_BUILTIN_BOOLEAN_PACK_ID,
@@ -497,6 +498,39 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
     assert!(java_static_adapters
         .conformance_refs()
         .contains(&"java-arrays-stream-shadowed-arrays-hard-negative"));
+
+    let iterator_identity_adapters = builtin_pack_descriptor(ITERATOR_IDENTITY_ADAPTER_PACK_ID)
+        .expect("iterator identity adapter protocol descriptor");
+    assert_eq!(
+        iterator_identity_adapters.kind,
+        SemanticPackKind::ProtocolPack
+    );
+    assert_eq!(
+        iterator_identity_adapters.supported_languages,
+        &["java", "rust"]
+    );
+    assert_eq!(
+        iterator_identity_adapters.supported_packages,
+        &["core::iter", "java.util.stream"]
+    );
+    assert_eq!(
+        iterator_identity_adapters.evidence_producer_ids,
+        &[ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID]
+    );
+    assert!(iterator_identity_adapters
+        .source_fact_producer_ids
+        .is_empty());
+    assert_eq!(
+        iterator_identity_adapters.contract_ids,
+        &[ITERATOR_IDENTITY_ADAPTER_CONTRACT_ID]
+    );
+    assert_eq!(iterator_identity_adapters.counts().evidence_producers, 1);
+    assert_eq!(iterator_identity_adapters.counts().contracts, 1);
+    assert_eq!(iterator_identity_adapters.counts().positive_fixtures, 3);
+    assert_eq!(iterator_identity_adapters.counts().hard_negatives, 2);
+    assert!(iterator_identity_adapters
+        .conformance_refs()
+        .contains(&"iterator-identity-non-iterable-receiver-hard-negative"));
 
     let js_promise = builtin_pack_descriptor(JS_LIKE_BUILTIN_PROMISE_PACK_ID)
         .expect("JavaScript builtins Promise descriptor");
@@ -973,6 +1007,27 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(java_static_adapters.counts.contracts, 1);
     assert_eq!(java_static_adapters.counts.positive_fixtures, 1);
     assert_eq!(java_static_adapters.counts.hard_negatives, 2);
+    let iterator_identity_adapters = set
+        .packs()
+        .iter()
+        .find(|pack| pack.id == ITERATOR_IDENTITY_ADAPTER_PACK_ID)
+        .expect("iterator identity adapter protocol summary");
+    assert_eq!(
+        iterator_identity_adapters.hash,
+        stable_symbol_hash(ITERATOR_IDENTITY_ADAPTER_PACK_ID)
+    );
+    assert_eq!(
+        iterator_identity_adapters.kind,
+        SemanticPackKind::ProtocolPack
+    );
+    assert_eq!(
+        iterator_identity_adapters.influence,
+        SemanticPackInfluence::EvidenceAndContracts
+    );
+    assert_eq!(iterator_identity_adapters.counts.evidence_producers, 1);
+    assert_eq!(iterator_identity_adapters.counts.contracts, 1);
+    assert_eq!(iterator_identity_adapters.counts.positive_fixtures, 3);
+    assert_eq!(iterator_identity_adapters.counts.hard_negatives, 2);
     let js_promise = set
         .packs()
         .iter()
@@ -1134,7 +1189,7 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 25);
+    assert_eq!(set.packs().len(), 26);
     assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[3].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
@@ -1156,21 +1211,22 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
         set.packs()[15].id,
         JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID
     );
-    assert_eq!(set.packs()[16].id, JS_LIKE_BUILTIN_PROMISE_PACK_ID);
-    assert_eq!(set.packs()[17].id, JS_LIKE_BUILTIN_ARRAY_PACK_ID);
-    assert_eq!(set.packs()[18].id, JS_LIKE_BUILTIN_BOOLEAN_PACK_ID);
-    assert_eq!(set.packs()[19].id, JS_LIKE_BUILTIN_REGEX_PACK_ID);
+    assert_eq!(set.packs()[16].id, ITERATOR_IDENTITY_ADAPTER_PACK_ID);
+    assert_eq!(set.packs()[17].id, JS_LIKE_BUILTIN_PROMISE_PACK_ID);
+    assert_eq!(set.packs()[18].id, JS_LIKE_BUILTIN_ARRAY_PACK_ID);
+    assert_eq!(set.packs()[19].id, JS_LIKE_BUILTIN_BOOLEAN_PACK_ID);
+    assert_eq!(set.packs()[20].id, JS_LIKE_BUILTIN_REGEX_PACK_ID);
     assert_eq!(
-        set.packs()[20].id,
+        set.packs()[21].id,
         JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID
     );
     assert_eq!(
-        set.packs()[21].id,
+        set.packs()[22].id,
         JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
     );
-    assert_eq!(set.packs()[22].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[23].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[24];
+    assert_eq!(set.packs()[23].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[24].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[25];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);

@@ -76,6 +76,9 @@ pub const RUST_STDLIB_OPTION_NONE_CONTRACT_ID: &str = "rust.option.none.sentinel
 pub const RUST_STDLIB_OPTION_AND_THEN_CONTRACT_ID: &str = "rust.option.and_then";
 pub const RUST_STDLIB_INTEGER_METHOD_PACK_ID: &str = "nose.rust.stdlib.integer_methods";
 pub const RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID: &str = "rust.stdlib.integer-method-api";
+pub const ITERATOR_IDENTITY_ADAPTER_PACK_ID: &str = "nose.protocols.iterator_identity_adapters";
+pub const ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID: &str = "protocols.iterator-identity-adapter-api";
+pub const ITERATOR_IDENTITY_ADAPTER_CONTRACT_ID: &str = "iterator.identity_adapter";
 pub const RUST_STDLIB_COLLECTION_FACTORY_PACK_ID: &str = "nose.rust.stdlib.collection_factories";
 pub const RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID: &str = "rust.stdlib.collection-factory-api";
 pub const RUST_STDLIB_COLLECTION_FACTORY_CONTRACT_ID: &str = "rust.std.collection_factory";
@@ -418,6 +421,7 @@ pub struct LibraryPromiseThenContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryIteratorIdentityAdapterContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: IteratorIdentityAdapterContract,

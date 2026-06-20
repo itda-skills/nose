@@ -140,6 +140,10 @@ still being migrated toward it.
   `java.util.Arrays.stream` static collection adapter contract and occurrence
   producer ids, while missing imports and shadowed `Arrays` roots remain hard
   negatives. The
+  `nose.protocols.iterator_identity_adapters` descriptor owns Rust
+  `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
+  `.stream()` iterator identity adapter contract and occurrence producer ids,
+  while non-protocol receivers and unsupported arities remain hard negatives. The
   `nose.python.stdlib.type_domain` descriptor directly exposes its alias
   contract rows so producer id, contract id, conformance refs, and declaration
   counts come from one pack-owned table.
@@ -194,6 +198,8 @@ still being migrated toward it.
   `nose.java.stdlib.static_collection_adapters`, a default builtin stdlib pack
   for Java `java.util.Arrays.stream` static collection adapter API provenance,
   and
+  `nose.protocols.iterator_identity_adapters`, a default builtin protocol pack
+  for Rust iterator identity adapters and Java `.stream()` API provenance, and
   `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped surface
   for Python `typing`, `collections.abc`, and `asyncio` type-domain alias
   evidence.
@@ -421,11 +427,13 @@ migrated.
 - Promise `.then` has a JS-like library API contract. Exact beta-reduction also
   requires Promise-like receiver proof and a supported settled-value producer;
   arbitrary `.then` methods and unsupported thenables remain opaque.
-- Rust iterator identity adapters (`iter`, `into_iter`, `collect`, `to_vec`,
-  `copied`, `cloned`) are language-, arity-, and receiver-proof constrained
-  through `LibraryApiContract` and admitted `LibraryApi` occurrence evidence.
-  Normalize's exact protocol receiver admission consumes this same contract
-  instead of accepting same-named methods from other languages.
+- Rust iterator identity adapters (`iter`, `into_iter`, `iter_mut`, `collect`,
+  `to_vec`, `copied`, `cloned`) are language-, arity-, and receiver-proof
+  constrained through `LibraryApiContract` and admitted `LibraryApi` occurrence
+  evidence with `nose.protocols.iterator_identity_adapters` provenance. Java
+  `.stream()` uses the same protocol pack. Normalize's exact protocol receiver
+  admission consumes this same contract instead of accepting same-named methods
+  from other languages.
 - Rust method `zip(...)` is admitted as a protocol-pair operation only through
   the Rust library method-call occurrence contract and exact protocol proof for
   both sides.

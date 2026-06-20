@@ -481,6 +481,9 @@ implicit v0 packs:
   contracts;
 - `nose.java.stdlib.static_collection_adapters` owns Java
   `java.util.Arrays.stream` static collection adapter API occurrence contracts;
+- `nose.protocols.iterator_identity_adapters` owns the current Rust
+  `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
+  `.stream()` iterator identity adapter API occurrence contracts;
 - protocol/law packs correspond to current builtin protocol operations,
   demand profiles, operator laws, value-domain laws, and named value-graph rule
   modules.

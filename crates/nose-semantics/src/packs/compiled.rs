@@ -13,6 +13,7 @@ const C_LANGUAGE_CONFORMANCE_REFS: &[&str] = &[
 ];
 const JS_LIKE_LANGUAGE: &[&str] = &["javascript", "typescript"];
 const JAVA_LANGUAGE: &[&str] = &["java"];
+const JAVA_RUST_LANGUAGE: &[&str] = &["java", "rust"];
 const NO_LANGUAGES: &[&str] = &[];
 const PYTHON_LANGUAGE: &[&str] = &["python"];
 const RUBY_LANGUAGE: &[&str] = &["ruby"];
@@ -23,6 +24,7 @@ const JAVA_STDLIB_MAP_ENTRY_PACKAGES: &[&str] = &["java.util"];
 const JAVA_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["java.util"];
 const JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACKAGES: &[&str] = &["java.util"];
 const JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACKAGES: &[&str] = &["java.util"];
+const ITERATOR_IDENTITY_ADAPTER_PACKAGES: &[&str] = &["core::iter", "java.util.stream"];
 const JS_LIKE_BUILTIN_ARRAY_PACKAGES: &[&str] = &["Array"];
 const JS_LIKE_BUILTIN_BOOLEAN_PACKAGES: &[&str] = &["Boolean"];
 const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACKAGES: &[&str] = &["Map", "Set"];
@@ -242,6 +244,15 @@ const JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_CONFORMANCE_REFS: &[&str] = &[
     "java-arrays-stream-positive",
     "java-arrays-stream-missing-import-hard-negative",
     "java-arrays-stream-shadowed-arrays-hard-negative",
+];
+const ITERATOR_IDENTITY_ADAPTER_PRODUCER_IDS: &[&str] = &[ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID];
+const ITERATOR_IDENTITY_ADAPTER_CONTRACT_IDS: &[&str] = &[ITERATOR_IDENTITY_ADAPTER_CONTRACT_ID];
+const ITERATOR_IDENTITY_ADAPTER_CONFORMANCE_REFS: &[&str] = &[
+    "rust-iterator-identity-iter-positive",
+    "rust-iterator-identity-collect-positive",
+    "java-iterator-identity-stream-positive",
+    "iterator-identity-non-iterable-receiver-hard-negative",
+    "iterator-identity-unsupported-arity-hard-negative",
 ];
 const RUST_STDLIB_VEC_PRODUCER_IDS: &[&str] = &[RUST_STDLIB_VEC_PRODUCER_ID];
 const RUST_STDLIB_VEC_CONTRACT_IDS: &[&str] = &[
@@ -666,6 +677,22 @@ fn java_stdlib_static_collection_adapter_counts() -> SemanticPackCounts {
     }
 }
 
+fn iterator_identity_adapter_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: ITERATOR_IDENTITY_ADAPTER_PRODUCER_IDS.len(),
+        contracts: ITERATOR_IDENTITY_ADAPTER_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: ITERATOR_IDENTITY_ADAPTER_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: ITERATOR_IDENTITY_ADAPTER_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
 fn rust_stdlib_vec_counts() -> SemanticPackCounts {
     SemanticPackCounts {
         evidence_producers: RUST_STDLIB_VEC_PRODUCER_IDS.len(),
@@ -1057,6 +1084,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: java_stdlib_static_collection_adapter_counts,
+    },
+    BuiltinPackDescriptor {
+        id: ITERATOR_IDENTITY_ADAPTER_PACK_ID,
+        kind: SemanticPackKind::ProtocolPack,
+        display_name: "nose iterator identity adapter protocol pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: JAVA_RUST_LANGUAGE,
+        supported_packages: ITERATOR_IDENTITY_ADAPTER_PACKAGES,
+        language: None,
+        evidence_producer_ids: ITERATOR_IDENTITY_ADAPTER_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: ITERATOR_IDENTITY_ADAPTER_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: ITERATOR_IDENTITY_ADAPTER_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: iterator_identity_adapter_counts,
     },
     BuiltinPackDescriptor {
         id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
