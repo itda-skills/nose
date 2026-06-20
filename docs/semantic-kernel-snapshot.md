@@ -69,7 +69,9 @@ still being migrated toward it.
   split into focused modules under `src/` and `src/library_api/`. Compiled
   builtin packs now have a small `BuiltinPackDescriptor` registry that feeds
   the existing `SemanticPackSummary` compatibility output without changing
-  analysis behavior.
+  analysis behavior. The `nose.python.stdlib.type_domain` descriptor directly
+  exposes its alias contract rows so producer id, contract id, conformance refs,
+  and declaration counts come from one pack-owned table.
 - The external pack API is documented as a v0 manifest/schema with examples.
   `nose-semantics` can validate local manifest files/directories as metadata,
   `nose semantic-pack check` validates local manifests plus declared fixture

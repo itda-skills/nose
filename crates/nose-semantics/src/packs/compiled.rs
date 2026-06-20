@@ -10,6 +10,7 @@ const PYTHON_STDLIB_TYPE_DOMAIN_CONTRACT_IDS: &[&str] =
 const PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_IDS: &[&str] = &[PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID];
 const PYTHON_STDLIB_TYPE_DOMAIN_HARD_NEGATIVE_REFS: &[&str] =
     &["python-typing-domain-wrong-module-hard-negative"];
+const NO_TYPE_DOMAIN_ALIAS_CONTRACTS: &[FirstPartyTypeDomainAliasContract] = &[];
 
 #[derive(Clone, Copy, Debug)]
 pub struct BuiltinPackDescriptor {
@@ -22,6 +23,7 @@ pub struct BuiltinPackDescriptor {
     pub supported_packages: &'static [&'static str],
     pub evidence_producer_ids: &'static [&'static str],
     pub contract_ids: &'static [&'static str],
+    pub type_domain_alias_contracts: &'static [FirstPartyTypeDomainAliasContract],
     static_value_law_ids: &'static [&'static str],
     dynamic_value_law_ids: Option<fn() -> Vec<&'static str>>,
     static_conformance_refs: &'static [&'static str],
@@ -163,6 +165,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         evidence_producer_ids: NO_IDS,
         contract_ids: NO_IDS,
         static_value_law_ids: NO_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
         dynamic_value_law_ids: None,
         static_conformance_refs: NO_IDS,
         dynamic_conformance_refs: None,
@@ -178,6 +181,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         supported_packages: PYTHON_STDLIB_TYPE_DOMAIN_PACKAGES,
         evidence_producer_ids: PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_IDS,
         contract_ids: PYTHON_STDLIB_TYPE_DOMAIN_CONTRACT_IDS,
+        type_domain_alias_contracts: PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS,
         static_value_law_ids: NO_IDS,
         dynamic_value_law_ids: None,
         static_conformance_refs: NO_IDS,
@@ -194,6 +198,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         supported_packages: NO_PACKAGES,
         evidence_producer_ids: NO_IDS,
         contract_ids: NO_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
         static_value_law_ids: NO_IDS,
         dynamic_value_law_ids: Some(value_graph_law_ids),
         static_conformance_refs: NO_IDS,

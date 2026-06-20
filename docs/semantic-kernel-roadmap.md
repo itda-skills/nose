@@ -120,7 +120,7 @@ The next code slices are intentionally incremental:
 - The first first-party pack pilot moved Python stdlib type-domain aliases from
   a raw helper table into a pack-shaped contract row set. Imported
   `typing`, `collections.abc`, and `asyncio` alias-derived `Domain` evidence now
-  reports `nose.python.stdlib.type_domain` provenance while preserving
+  reports `nose.python.stdlib.type_domain` pack and producer provenance while preserving
   shadow/rebind hard negatives and metadata-only behavior for local external
   manifests.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a

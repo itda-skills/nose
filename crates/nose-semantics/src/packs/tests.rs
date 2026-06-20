@@ -119,6 +119,22 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         python.contract_ids,
         &["python.stdlib.type-domain-alias.contract"]
     );
+    assert_eq!(
+        python.type_domain_alias_contracts,
+        PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS
+    );
+    assert!(python
+        .type_domain_alias_contracts
+        .iter()
+        .all(|row| row.pack_id == PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID));
+    assert!(python
+        .type_domain_alias_contracts
+        .iter()
+        .all(|row| row.producer_id == PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID));
+    assert!(python
+        .type_domain_alias_contracts
+        .iter()
+        .all(|row| python.contract_ids.contains(&row.contract_id)));
     assert_eq!(python.counts().evidence_producers, 1);
     assert_eq!(python.counts().contracts, 1);
     assert_eq!(

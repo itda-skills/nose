@@ -196,6 +196,55 @@ fn query_json_reports_cli_semantic_pack_metadata_without_changing_families() {
 }
 
 #[test]
+fn external_pack_mirroring_builtin_type_domain_vocabulary_stays_metadata_only() {
+    let dir = make_project("semantic_pack_type_domain_mirror");
+    let pack = dir.join("pack.json");
+    let mirror = semantic_pack_manifest("com.example.python-stdlib-type-domain-mirror")
+        .replace(
+            "python.library-api.example",
+            "python.stdlib.type-domain-alias-domain",
+        )
+        .replace("LibraryApi.Contract", "Domain.TypeAlias")
+        .replace(
+            "python.example.contract",
+            "python.stdlib.type-domain-alias.contract",
+        )
+        .replace("Example", "PythonStdlibTypeDomainAlias");
+    fs::write(&pack, mirror).unwrap();
+
+    let without_pack = query_json(&run(&[
+        "query",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--format",
+        "json",
+    ]));
+    let with_pack = query_json(&run(&[
+        "query",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--semantic-pack",
+        pack.to_str().unwrap(),
+        "--format",
+        "json",
+    ]));
+
+    assert_eq!(
+        query_families(&with_pack),
+        query_families(&without_pack),
+        "a local external pack mirroring builtin type-domain row ids must stay metadata-only"
+    );
+    let reported = semantic_pack_by_id(&with_pack, "com.example.python-stdlib-type-domain-mirror");
+    assert_eq!(reported["source"], "local-manifest");
+    assert_eq!(reported["influence"], "metadata-only");
+    assert_eq!(reported["counts"]["evidence_producers"], 1);
+    assert_eq!(reported["counts"]["contracts"], 1);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn semantic_pack_check_json_reports_conformance_success() {
     let dir = make_project("semantic_pack_check_ok");
     let fixture_dir = dir.join("fixtures");

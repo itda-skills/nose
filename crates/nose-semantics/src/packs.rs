@@ -5,9 +5,9 @@
 //! require occurrence evidence and kernel-owned admission checks.
 
 use crate::{
-    pack_facing_value_laws, PackTrust, FIRST_PARTY_PACK_ID, FIRST_PARTY_VALUE_LAW_PACK_ID,
-    PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
-    PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID,
+    pack_facing_value_laws, FirstPartyTypeDomainAliasContract, PackTrust, FIRST_PARTY_PACK_ID,
+    FIRST_PARTY_VALUE_LAW_PACK_ID, PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS,
+    PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID, PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID,
 };
 use nose_il::stable_symbol_hash;
 use serde::Deserialize;
