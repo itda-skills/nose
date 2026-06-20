@@ -375,7 +375,10 @@ evidence, or Rust `Vec::new`/`vec!` factories with `nose.rust.stdlib.vec`
 provenance-backed `LibraryApi` occurrence evidence, or selected Rust
 `std::collections::{HashSet,BTreeSet,VecDeque}::from` factories with
 `nose.rust.stdlib.collection_factories` provenance-backed `LibraryApi`
-occurrence evidence. Canonical
+occurrence evidence, or selected Rust
+`std::collections::{HashMap,BTreeMap}::from` factories with
+`nose.rust.stdlib.map_factories` provenance-backed `LibraryApi` occurrence
+evidence. Canonical
 `Append` still needs `Effect(BuilderAppendCall)`, and the first-party normalize
 producer emits that effect only when the same call also has the same-span
 `LibraryApi` proof for the append API; the effect record depends on that API
@@ -486,8 +489,10 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   selected `Some(_)` pattern selectors, bare `None`, and selected
   `std::collections::{HashSet,BTreeSet,VecDeque}::from(...)` factory paths with
   `nose.rust.stdlib.collection_factories` provenance when their root-shadow
-  policy is proven. Rust stdlib map factories are still covered by the broad
-  compatibility producer. The selector occurrence does not by itself
+  policy is proven, and selected
+  `std::collections::{HashMap,BTreeMap}::from(...)` factory paths with
+  `nose.rust.stdlib.map_factories` provenance when their root-shadow policy is
+  proven. The selector occurrence does not by itself
   prove the pattern semantics: `Some(_)` value-graph presence predicates also
   require the Rust tuple-struct wildcard `Source::Pattern` fact. JS/TS/Java
   `length` property reads whose

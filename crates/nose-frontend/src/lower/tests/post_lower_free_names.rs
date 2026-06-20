@@ -263,10 +263,51 @@ fn assert_go_and_rust_free_name_occurrences(interner: &Interner) {
         rust_hashmap_contract.id,
         rust_hashmap_contract.callee,
     );
+    assert_eq!(rust_hashmap_api_records.len(), 1);
     assert_eq!(
         rust_hashmap_api_records[0].provenance.pack_hash,
-        Some(stable_symbol_hash(nose_semantics::FIRST_PARTY_PACK_ID)),
-        "Rust map factories stay in the broad compatibility pack for a later slice"
+        Some(stable_symbol_hash(rust_hashmap_contract.pack_id))
+    );
+    assert_eq!(
+        rust_hashmap_api_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(RUST_STDLIB_MAP_FACTORY_PRODUCER_ID))
+    );
+
+    let rust_btreemap = lower_fixture(
+        "btreemap.rs",
+        b"fn f() { let xs = std::collections::BTreeMap::from([(\"red\", 1)]); }",
+        Lang::Rust,
+        interner,
+    );
+    let rust_btreemap_contract =
+        library_free_name_map_factory_contract(Lang::Rust, "std::collections::BTreeMap::from")
+            .unwrap();
+    let rust_btreemap_api_records = contract_api_records(
+        &rust_btreemap.evidence,
+        rust_btreemap_contract.id,
+        rust_btreemap_contract.callee,
+    );
+    assert_eq!(rust_btreemap_api_records.len(), 1);
+    assert_eq!(
+        rust_btreemap_api_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(rust_btreemap_contract.pack_id))
+    );
+    assert_eq!(
+        rust_btreemap_api_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(RUST_STDLIB_MAP_FACTORY_PRODUCER_ID))
+    );
+
+    let rust_collection_api_records = contract_api_records(
+        &rust_hashset.evidence,
+        rust_hashset_contract.id,
+        rust_hashset_contract.callee,
+    );
+    assert_eq!(
+        rust_collection_api_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::RUST_STDLIB_COLLECTION_FACTORY_PACK_ID,
+        )),
+        "Rust collection factories stay owned by the collection factory pack"
     );
 
     let rust_shadowed_std = lower_fixture(
@@ -284,6 +325,21 @@ fn assert_go_and_rust_free_name_occurrences(interner: &Interner) {
         0,
         "local std module must shadow std::collections::HashSet::from"
     );
+    let rust_map_shadowed_std = lower_fixture(
+        "hashmap_shadowed_std.rs",
+        b"mod std { pub mod collections { pub struct HashMap; } }\nfn f() { let xs = std::collections::HashMap::from([(\"red\", 1)]); }",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        contract_api_count(
+            &rust_map_shadowed_std.evidence,
+            rust_hashmap_contract.id,
+            rust_hashmap_contract.callee
+        ),
+        0,
+        "local std module must shadow std::collections::HashMap::from"
+    );
 
     let rust_type_alias_std = lower_fixture(
         "hashset_type_alias_std.rs",
@@ -299,6 +355,21 @@ fn assert_go_and_rust_free_name_occurrences(interner: &Interner) {
         ),
         0,
         "Rust type aliases named std must shadow std::collections factories"
+    );
+    let rust_map_type_alias_std = lower_fixture(
+        "hashmap_type_alias_std.rs",
+        b"struct Custom;\ntype std = Custom;\nfn f() { let xs = std::collections::HashMap::from([(\"red\", 1)]); }",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        contract_api_count(
+            &rust_map_type_alias_std.evidence,
+            rust_hashmap_contract.id,
+            rust_hashmap_contract.callee
+        ),
+        0,
+        "Rust type aliases named std must shadow std::collections map factories"
     );
 
     let rust_type_alias_shadow = lower_fixture(

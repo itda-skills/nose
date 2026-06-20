@@ -93,6 +93,7 @@ fn library_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_free_name_map_factory_contract(Lang::Rust, "std::collections::HashMap::from"),
         Some(LibraryMapFactoryContract {
+            pack_id: RUST_STDLIB_MAP_FACTORY_PACK_ID,
             id: LibraryApiContractId::RustStdMapFactory,
             callee: LibraryApiCalleeContract::FreeName {
                 name: "std::collections::HashMap::from",
@@ -195,6 +196,7 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
     assert_eq!(
         library_js_like_map_constructor_contract(Lang::TypeScript, "Map"),
         Some(LibraryMapFactoryContract {
+            pack_id: FIRST_PARTY_PACK_ID,
             id: LibraryApiContractId::JsLikeMapConstructor,
             callee: LibraryApiCalleeContract::JsGlobalConstructor {
                 receiver: "Map",
@@ -202,6 +204,20 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
             },
             result: LibraryMapFactoryResult::EntrySequence {
                 entry_seq_tag: SEQ_VALUE_COLLECTION,
+            },
+        })
+    );
+    assert_eq!(
+        library_java_map_factory_contract(Lang::Java, "Map", "of"),
+        Some(LibraryMapFactoryContract {
+            pack_id: FIRST_PARTY_PACK_ID,
+            id: LibraryApiContractId::JavaMapFactory(JavaMapFactoryKind::Of),
+            callee: LibraryApiCalleeContract::JavaUtilStaticMember {
+                receiver: "Map",
+                method: "of",
+            },
+            result: LibraryMapFactoryResult::JavaFactory {
+                kind: JavaMapFactoryKind::Of,
             },
         })
     );

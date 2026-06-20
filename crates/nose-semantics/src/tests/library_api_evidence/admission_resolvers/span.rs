@@ -177,6 +177,119 @@ fn admitted_span_factory_resolver_requires_import_backed_api_occurrence() {
 }
 
 #[test]
+fn admitted_span_rust_std_map_factory_requires_pack_provenance() {
+    let (mut wrong_pack, interner, call, callee) = rust_std_map_factory_call_il();
+    let contract =
+        library_free_name_map_factory_contract(Lang::Rust, "std::collections::HashMap::from")
+            .expect("Rust HashMap::from contract");
+    let occurrence = LibraryApiSpanCall {
+        call_span: Some(wrong_pack.node(call).span),
+        callee_span: Some(wrong_pack.node(callee).span),
+        receiver_span: None,
+        arg_count: 1,
+    };
+    wrong_pack.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_pack.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("std::collections::HashMap::from"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_pack.evidence.push(library_api_record_with_provenance(
+        1,
+        wrong_pack.node(call).span,
+        contract.id,
+        contract.callee,
+        EvidenceStatus::Asserted,
+        &[0],
+        FIRST_PARTY_PACK_ID,
+        RUST_STDLIB_MAP_FACTORY_PRODUCER_ID,
+    ));
+    assert!(
+        admitted_free_name_map_factory_at_call_span(&wrong_pack, &interner, occurrence, |name| {
+            name == "std::collections::HashMap::from"
+        })
+        .is_none(),
+        "span-backed Rust map factory evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, callee) = rust_std_map_factory_call_il();
+    let occurrence = LibraryApiSpanCall {
+        call_span: Some(wrong_producer.node(call).span),
+        callee_span: Some(wrong_producer.node(callee).span),
+        receiver_span: None,
+        arg_count: 1,
+    };
+    wrong_producer.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_producer.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("std::collections::HashMap::from"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance(
+            1,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[0],
+            RUST_STDLIB_MAP_FACTORY_PACK_ID,
+            "wrong.rust.stdlib.map-factory-api",
+        ));
+    assert!(
+        admitted_free_name_map_factory_at_call_span(
+            &wrong_producer,
+            &interner,
+            occurrence,
+            |name| name == "std::collections::HashMap::from",
+        )
+        .is_none(),
+        "span-backed Rust map factory evidence with the wrong producer is rejected"
+    );
+
+    let (mut admitted, interner, call, callee) = rust_std_map_factory_call_il();
+    let occurrence = LibraryApiSpanCall {
+        call_span: Some(admitted.node(call).span),
+        callee_span: Some(admitted.node(callee).span),
+        receiver_span: None,
+        arg_count: 1,
+    };
+    admitted.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(admitted.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("std::collections::HashMap::from"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    admitted.evidence.push(rust_stdlib_map_factory_record(
+        1,
+        admitted.node(call).span,
+        contract,
+        EvidenceStatus::Asserted,
+        &[0],
+    ));
+    let resolved =
+        admitted_free_name_map_factory_at_call_span(&admitted, &interner, occurrence, |name| {
+            name == "std::collections::HashMap::from"
+        })
+        .unwrap();
+    assert_eq!(
+        resolved.contract.id,
+        LibraryApiContractId::RustStdMapFactory
+    );
+    assert_eq!(resolved.call_span, Some(admitted.node(call).span));
+    assert_eq!(resolved.callee_span, Some(admitted.node(callee).span));
+    assert_eq!(resolved.receiver_span, None);
+    assert_eq!(resolved.arg_count, 1);
+}
+
+#[test]
 fn admitted_span_imported_collection_factory_rejects_namespace_dependency_for_bare_callee() {
     let (mut il, interner, call, callee) = python_deque_factory_call_il();
     let namespace_symbol = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {

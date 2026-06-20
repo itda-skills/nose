@@ -124,8 +124,13 @@ fn post_lower_free_name_library_api_contract(
                 .map(|contract| PostLowerLibraryApiContract {
                     id: contract.id,
                     callee: contract.callee,
-                    pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
-                    rule: "library_api_free_name_map_factory",
+                    pack_id: contract.pack_id,
+                    rule: match contract.id {
+                        LibraryApiContractId::RustStdMapFactory => {
+                            RUST_STDLIB_MAP_FACTORY_PRODUCER_ID
+                        }
+                        _ => "library_api_free_name_map_factory",
+                    },
                     result_domain: Some(library_map_factory_result_domain(contract)),
                 })
         })

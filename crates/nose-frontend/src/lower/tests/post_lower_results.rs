@@ -186,6 +186,38 @@ fn assert_rust_and_ruby_factory_result_domains(interner: &Interner) {
         &map_api,
     ));
 
+    let rust_btreemap = lower_fixture(
+        "btree_map.rs",
+        b"fn f() { let xs = std::collections::BTreeMap::from([(\"red\", 1)]); }",
+        Lang::Rust,
+        interner,
+    );
+    let btreemap_contract =
+        library_free_name_map_factory_contract(Lang::Rust, "std::collections::BTreeMap::from")
+            .unwrap();
+    let btreemap_api = contract_api_ids(
+        &rust_btreemap.evidence,
+        btreemap_contract.id,
+        btreemap_contract.callee,
+    );
+    assert!(result_domain_depends_on_any_api(
+        &rust_btreemap.evidence,
+        DomainEvidence::Map,
+        &btreemap_api,
+    ));
+
+    let rust_map_shadowed_std = lower_fixture(
+        "hashmap_shadowed_std.rs",
+        b"mod std { pub mod collections { pub struct HashMap; } }\nfn f() { let xs = std::collections::HashMap::from([(\"red\", 1)]); }",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        result_domain_record_count(&rust_map_shadowed_std.evidence, DomainEvidence::Map),
+        0,
+        "local std module must not emit stdlib HashMap result-domain evidence"
+    );
+
     let ruby = lower_fixture(
         "set.rb",
         b"require \"set\"\n\ndef f(values)\n  Set.new(values)\nend\n",

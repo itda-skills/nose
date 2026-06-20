@@ -23,6 +23,13 @@ fn library_collection_factory_pack_id(id: LibraryApiContractId) -> &'static str 
     }
 }
 
+fn library_map_factory_pack_id(id: LibraryApiContractId) -> &'static str {
+    match id {
+        LibraryApiContractId::RustStdMapFactory => RUST_STDLIB_MAP_FACTORY_PACK_ID,
+        _ => FIRST_PARTY_PACK_ID,
+    }
+}
+
 pub fn library_free_name_collection_factory_contract(
     lang: Lang,
     name: &str,
@@ -136,6 +143,7 @@ pub fn library_free_name_map_factory_contract(
                 _ => return None,
             };
             Some(LibraryMapFactoryContract {
+                pack_id: library_map_factory_pack_id(id),
                 id,
                 callee: LibraryApiCalleeContract::FreeName {
                     name: matched_name,
@@ -220,8 +228,10 @@ pub fn library_java_map_factory_contract(
     method: &str,
 ) -> Option<LibraryMapFactoryContract> {
     let contract = java_map_factory_contract(lang, receiver, method)?;
+    let id = LibraryApiContractId::JavaMapFactory(contract.kind);
     Some(LibraryMapFactoryContract {
-        id: LibraryApiContractId::JavaMapFactory(contract.kind),
+        pack_id: library_map_factory_pack_id(id),
+        id,
         callee: LibraryApiCalleeContract::JavaUtilStaticMember {
             receiver: contract.receiver,
             method: contract.method,
@@ -322,8 +332,10 @@ pub fn library_js_like_map_constructor_contract(
     receiver: &str,
 ) -> Option<LibraryMapFactoryContract> {
     let contract = js_like_map_constructor_contract(lang, receiver)?;
+    let id = LibraryApiContractId::JsLikeMapConstructor;
     Some(LibraryMapFactoryContract {
-        id: LibraryApiContractId::JsLikeMapConstructor,
+        pack_id: library_map_factory_pack_id(id),
+        id,
         callee: LibraryApiCalleeContract::JsGlobalConstructor {
             receiver: contract.receiver,
             requires_unshadowed_global: contract.requires_unshadowed_global,

@@ -21,6 +21,7 @@ const PYTHON_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["collections"];
 const PYTHON_STDLIB_TYPE_DOMAIN_PACKAGES: &[&str] = &["typing", "collections.abc", "asyncio"];
 const RUBY_STDLIB_SET_PACKAGES: &[&str] = &["set"];
 const RUST_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["std::collections"];
+const RUST_STDLIB_MAP_FACTORY_PACKAGES: &[&str] = &["std::collections"];
 const RUST_STDLIB_VEC_PACKAGES: &[&str] = &["std::vec", "alloc::vec"];
 const NO_IDS: &[&str] = &[];
 const PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_IDS: &[&str] =
@@ -66,6 +67,14 @@ const RUST_STDLIB_COLLECTION_FACTORY_CONFORMANCE_REFS: &[&str] = &[
     "rust-std-collections-vecdeque-from-positive",
     "rust-std-collections-shadowed-std-hard-negative",
     "rust-std-collections-type-alias-std-hard-negative",
+];
+const RUST_STDLIB_MAP_FACTORY_PRODUCER_IDS: &[&str] = &[RUST_STDLIB_MAP_FACTORY_PRODUCER_ID];
+const RUST_STDLIB_MAP_FACTORY_CONTRACT_IDS: &[&str] = &[RUST_STDLIB_MAP_FACTORY_CONTRACT_ID];
+const RUST_STDLIB_MAP_FACTORY_CONFORMANCE_REFS: &[&str] = &[
+    "rust-std-map-hashmap-from-positive",
+    "rust-std-map-btreemap-from-positive",
+    "rust-std-map-shadowed-std-hard-negative",
+    "rust-std-map-type-alias-std-hard-negative",
 ];
 const RUST_STDLIB_VEC_PRODUCER_IDS: &[&str] = &[RUST_STDLIB_VEC_PRODUCER_ID];
 const RUST_STDLIB_VEC_CONTRACT_IDS: &[&str] = &[
@@ -244,6 +253,22 @@ fn rust_stdlib_collection_factory_counts() -> SemanticPackCounts {
             .filter(|id| !id.contains("hard-negative"))
             .count(),
         hard_negatives: RUST_STDLIB_COLLECTION_FACTORY_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
+fn rust_stdlib_map_factory_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: RUST_STDLIB_MAP_FACTORY_PRODUCER_IDS.len(),
+        contracts: RUST_STDLIB_MAP_FACTORY_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: RUST_STDLIB_MAP_FACTORY_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: RUST_STDLIB_MAP_FACTORY_CONFORMANCE_REFS
             .iter()
             .filter(|id| id.contains("hard-negative"))
             .count(),
@@ -470,6 +495,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: RUST_STDLIB_COLLECTION_FACTORY_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: rust_stdlib_collection_factory_counts,
+    },
+    BuiltinPackDescriptor {
+        id: RUST_STDLIB_MAP_FACTORY_PACK_ID,
+        kind: SemanticPackKind::StdlibPack,
+        display_name: "nose Rust stdlib map factory pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: RUST_LANGUAGE,
+        supported_packages: RUST_STDLIB_MAP_FACTORY_PACKAGES,
+        language: None,
+        evidence_producer_ids: RUST_STDLIB_MAP_FACTORY_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: RUST_STDLIB_MAP_FACTORY_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: RUST_STDLIB_MAP_FACTORY_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: rust_stdlib_map_factory_counts,
     },
     BuiltinPackDescriptor {
         id: PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,

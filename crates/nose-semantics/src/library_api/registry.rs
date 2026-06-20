@@ -45,6 +45,10 @@ pub(super) fn library_api_contract_result_domain_for_arity(
         | LibraryApiContractId::JavaMapFactory(_)
         | LibraryApiContractId::JsLikeMapConstructor => Some(library_map_factory_result_domain(
             LibraryMapFactoryContract {
+                pack_id: match id {
+                    LibraryApiContractId::RustStdMapFactory => RUST_STDLIB_MAP_FACTORY_PACK_ID,
+                    _ => FIRST_PARTY_PACK_ID,
+                },
                 id,
                 callee,
                 result: LibraryMapFactoryResult::EntrySequence {

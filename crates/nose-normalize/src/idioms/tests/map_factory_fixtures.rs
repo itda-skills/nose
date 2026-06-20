@@ -86,7 +86,7 @@ pub(super) fn push_rust_hash_map_library_api_evidence(il: &mut Il) {
         EvidenceStatus::Asserted,
     ));
     let api_id = next_evidence_id(il);
-    il.evidence.push(evidence_with_dependencies(
+    let mut record = evidence_with_dependencies(
         api_id,
         EvidenceAnchor::node(sp(), NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -96,5 +96,10 @@ pub(super) fn push_rust_hash_map_library_api_evidence(il: &mut Il) {
         }),
         EvidenceStatus::Asserted,
         vec![EvidenceId(symbol_id)],
+    );
+    record.provenance.pack_hash = Some(stable_symbol_hash(contract.pack_id));
+    record.provenance.rule_hash = Some(stable_symbol_hash(
+        nose_semantics::RUST_STDLIB_MAP_FACTORY_PRODUCER_ID,
     ));
+    il.evidence.push(record);
 }

@@ -233,6 +233,31 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(rust_collections["counts"]["positive_fixtures"], 3);
     assert_eq!(rust_collections["counts"]["hard_negatives"], 2);
 
+    let rust_maps = semantic_pack_by_id(&json, "nose.rust.stdlib.map_factories");
+    assert_eq!(rust_maps["hash"], "418077a33dc67531");
+    assert_eq!(rust_maps["kind"], "StdlibPack");
+    assert_eq!(
+        rust_maps["display_name"],
+        "nose Rust stdlib map factory pack"
+    );
+    assert_eq!(rust_maps["source"], "compiled-first-party");
+    assert_eq!(rust_maps["influence"], "evidence-and-contracts");
+    assert_eq!(rust_maps["trust"], "default-first-party");
+    assert_eq!(rust_maps["enabled_by_default"], true);
+    assert_eq!(rust_maps["path"], serde_json::Value::Null);
+    assert_eq!(rust_maps["provider"], "Corca, Inc.");
+    assert_eq!(rust_maps["repository"], "https://github.com/corca-ai/nose");
+    assert_eq!(rust_maps["license"], "MIT");
+    assert_eq!(
+        json_array_strings(rust_maps, "supported_languages"),
+        vec!["rust"]
+    );
+    assert_eq!(rust_maps["counts"]["evidence_producers"], 1);
+    assert_eq!(rust_maps["counts"]["contracts"], 1);
+    assert_eq!(rust_maps["counts"]["value_laws"], 0);
+    assert_eq!(rust_maps["counts"]["positive_fixtures"], 2);
+    assert_eq!(rust_maps["counts"]["hard_negatives"], 2);
+
     let stdlib = semantic_pack_by_id(&json, "nose.python.stdlib.type_domain");
     assert_eq!(stdlib["kind"], "StdlibPack");
     assert_eq!(

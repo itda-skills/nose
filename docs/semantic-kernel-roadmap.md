@@ -85,7 +85,10 @@ The next code slices are intentionally incremental:
    `nose.rust.stdlib.vec` for Rust `Vec::new` and `vec!` collection-factory
    occurrence provenance, then `nose.rust.stdlib.collection_factories` for
    selected Rust `std::collections::{HashSet,BTreeSet,VecDeque}::from`
-   collection-factory occurrence provenance;
+   collection-factory occurrence provenance, then
+   `nose.rust.stdlib.map_factories` for selected Rust
+   `std::collections::{HashMap,BTreeMap}::from` map-factory occurrence
+   provenance;
 7. Phase 6: allow external pack influence only after the builtin path is proven;
 8. Phase 7: define adoption and release gates.
 
@@ -214,6 +217,28 @@ gates, pause pack-row migration and instrument the product query path before
 committing more stdlib/library rows. Binary size changed 20,142,096 ->
 20,142,368 bytes for this slice.
 
+Phase 5 Rust stdlib map-factory measurement note, local run on 2026-06-20:
+product query-regression r15 compared the previous
+`nose.rust.stdlib.collection_factories` slice with the
+`nose.rust.stdlib.map_factories` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by 517
+bytes from the new top-level `semantic_packs` entry. The saved current artifact
+is `/tmp/nose-473-phase5-rust-map-current-r15.json`, and the previous-slice
+compare summary is `/tmp/nose-473-phase5-rust-map-vs-prev-r15.md`. The
+sequential compare showed expected metadata drift plus noisy runtime triggers,
+so the same binaries were remeasured with repo-local alternating r15 runs saved
+at `/tmp/nose-473-phase5-rust-map-alternating-r15.json`: aggregate wall time
+1249.69 ms -> 1282.62 ms, `lower` 389.20 ms -> 391.40 ms,
+`normalize+extract` 652.30 ms -> 647.90 ms, and `candidates` 23.10 ms ->
+22.80 ms. The remaining alternating r15 wall-only triggers on `boltons`,
+`serde_json`, and `liquid` were rechecked with focused alternating r30 runs
+saved at `/tmp/nose-473-phase5-rust-map-focused-alternating-r30.json`; no
+repo/phase triggers remained. Root-cause note: this slice changed static pack
+metadata, Rust std-map producer provenance, and an admission provenance check;
+it did not touch candidate generation, and product output did not drift. Binary
+size changed 20,142,368 -> 20,142,768 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -281,8 +306,12 @@ committing more stdlib/library rows. Binary size changed 20,142,096 ->
   compatibility facade. `std::collections::{HashSet,BTreeSet,VecDeque}::from`
   factory `LibraryApi` occurrence evidence now reports
   `nose.rust.stdlib.collection_factories` pack and producer provenance while
-  preserving shadowed-`std` hard negatives. Rust stdlib map factories remain a
-  separate future slice.
+  preserving shadowed-`std` hard negatives.
+- Selected Rust stdlib map factories started moving out of the broad
+  compatibility facade. `std::collections::{HashMap,BTreeMap}::from` factory
+  `LibraryApi` occurrence evidence now reports
+  `nose.rust.stdlib.map_factories` pack and producer provenance while preserving
+  shadowed-`std` hard negatives.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a
   language-, signature-, and integer-domain-constrained first-party contract
   instead of a bare method-name recognizer. Float/NaN-sensitive methods remain a

@@ -68,6 +68,9 @@ Trust is separate from channel eligibility.
   `nose.rust.stdlib.collection_factories` owns selected Rust
   `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection factory API
   occurrence provenance;
+  `nose.rust.stdlib.map_factories` owns selected Rust
+  `std::collections::{HashMap,BTreeMap}::from` map factory API occurrence
+  provenance;
   `nose.python.stdlib.type_domain` is the first narrow stdlib pilot pack for
   Python `typing`, `collections.abc`, and `asyncio` type-domain aliases;
   `nose.value_graph.laws` is the first LawPack pilot for selected proof-backed

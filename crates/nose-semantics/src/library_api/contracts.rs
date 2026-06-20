@@ -37,6 +37,9 @@ pub const RUST_STDLIB_VEC_NEW_CONTRACT_ID: &str = "rust.vec.new_factory";
 pub const RUST_STDLIB_COLLECTION_FACTORY_PACK_ID: &str = "nose.rust.stdlib.collection_factories";
 pub const RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID: &str = "rust.stdlib.collection-factory-api";
 pub const RUST_STDLIB_COLLECTION_FACTORY_CONTRACT_ID: &str = "rust.std.collection_factory";
+pub const RUST_STDLIB_MAP_FACTORY_PACK_ID: &str = "nose.rust.stdlib.map_factories";
+pub const RUST_STDLIB_MAP_FACTORY_PRODUCER_ID: &str = "rust.stdlib.map-factory-api";
+pub const RUST_STDLIB_MAP_FACTORY_CONTRACT_ID: &str = "rust.std.map_factory";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LibraryApiContractId {
@@ -205,6 +208,7 @@ pub enum LibraryMapFactoryResult {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryMapFactoryContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: LibraryMapFactoryResult,
