@@ -89,6 +89,9 @@ still being migrated toward it.
   `nose.rust.stdlib.vec` descriptor owns Rust `Vec::new` and `vec!`
   collection-factory contract and occurrence producer ids, while shadowed `Vec`
   roots and shadowed `vec` macros remain hard negatives. The
+  `nose.rust.stdlib.option` descriptor owns Rust `Some`, `None`, and
+  `and_then` Option API contract and occurrence producer ids, while shadowed
+  Option selectors and non-Option receivers remain hard negatives. The
   `nose.rust.stdlib.collection_factories` descriptor owns selected Rust
   `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection-factory
   contract and occurrence producer ids, while shadowed `std` roots remain hard
@@ -134,6 +137,8 @@ still being migrated toward it.
   collection-factory API provenance,
   `nose.rust.stdlib.vec`, a default builtin stdlib pack for Rust `Vec::new` and
   `vec!` collection-factory API provenance,
+  `nose.rust.stdlib.option`, a default builtin stdlib pack for Rust `Some`,
+  `None`, and `and_then` Option API provenance,
   `nose.rust.stdlib.collection_factories`, a default builtin stdlib pack for
   selected Rust `std::collections` collection-factory API provenance,
   `nose.rust.stdlib.map_factories`, a default builtin stdlib pack for selected

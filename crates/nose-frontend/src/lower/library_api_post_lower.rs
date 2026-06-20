@@ -166,8 +166,8 @@ fn post_lower_free_name_library_api_contract(
                 |contract| PostLowerLibraryApiContract {
                     id: contract.id,
                     callee: contract.callee,
-                    pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
-                    rule: "library_api_rust_option_some_constructor",
+                    pack_id: contract.pack_id,
+                    rule: RUST_STDLIB_OPTION_PRODUCER_ID,
                     result_domain: Some(contract.result_domain),
                 },
             )
@@ -290,13 +290,14 @@ fn record_post_lower_rust_option_none_library_api(
     let Some(symbol_dependency) = post_lower_unshadowed_symbol_evidence_id(il, var, name) else {
         return false;
     };
-    let api = post_lower_library_api_node_evidence_id(
+    let api = post_lower_library_api_node_evidence_with_pack_id(
         il,
         var,
         contract.id,
         contract.callee,
         0,
-        "library_api_rust_option_none_sentinel",
+        contract.pack_id,
+        RUST_STDLIB_OPTION_PRODUCER_ID,
         vec![symbol_dependency],
     );
     post_lower_record_library_api_node_result_domain(il, var, contract.result_domain, api);
@@ -326,13 +327,14 @@ fn record_post_lower_rust_option_some_pattern_library_api(
     let Some(symbol_dependency) = post_lower_unshadowed_symbol_evidence_id(il, var, name) else {
         return false;
     };
-    post_lower_library_api_node_evidence_id(
+    post_lower_library_api_node_evidence_with_pack_id(
         il,
         var,
         contract.id,
         contract.callee,
         1,
-        "library_api_rust_option_some_pattern",
+        contract.pack_id,
+        RUST_STDLIB_OPTION_PRODUCER_ID,
         vec![symbol_dependency],
     );
     true
@@ -523,12 +525,13 @@ fn record_post_lower_receiver_method_library_api(
     ) else {
         return false;
     };
-    let api = post_lower_library_api_evidence_id(
+    let api = post_lower_library_api_evidence_with_pack_id(
         il,
         call,
         contract.id,
         contract.callee,
         arg_count,
+        contract.pack_id,
         contract.rule,
         dependencies,
     );

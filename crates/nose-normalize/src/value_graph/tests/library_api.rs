@@ -210,7 +210,7 @@ fn rust_some_wildcard_pattern_value_graph_requires_library_api_and_source_patter
             name_hash: stable_symbol_hash("Some"),
         }),
     ));
-    il.evidence.push(evidence_with_dependencies(
+    il.evidence.push(rust_option_evidence_with_dependencies(
         2,
         EvidenceAnchor::node(sp(168), NodeKind::Var),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -302,7 +302,7 @@ fn rust_option_none_pattern_value_graph_requires_library_api_evidence() {
             name_hash: stable_symbol_hash("None"),
         }),
     ));
-    il.evidence.push(evidence_with_dependencies(
+    il.evidence.push(rust_option_evidence_with_dependencies(
         1,
         EvidenceAnchor::node(sp(172), NodeKind::Var),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {

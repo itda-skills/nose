@@ -374,6 +374,7 @@ pub fn library_receiver_method_api_contract(
 ) -> Option<LibraryReceiverMethodApiContract> {
     library_map_get_contract(lang, method, arg_count)
         .map(|contract| LibraryReceiverMethodApiContract {
+            pack_id: FIRST_PARTY_PACK_ID,
             id: contract.id,
             callee: contract.callee,
             rule: "library_api_map_get",
@@ -382,6 +383,7 @@ pub fn library_receiver_method_api_contract(
         .or_else(|| {
             library_map_key_view_contract(lang, method, arg_count).map(|contract| {
                 LibraryReceiverMethodApiContract {
+                    pack_id: FIRST_PARTY_PACK_ID,
                     id: contract.id,
                     callee: contract.callee,
                     rule: "library_api_map_key_view",
@@ -392,6 +394,7 @@ pub fn library_receiver_method_api_contract(
         .or_else(|| {
             library_iterator_identity_adapter_contract(lang, method, arg_count).map(|contract| {
                 LibraryReceiverMethodApiContract {
+                    pack_id: FIRST_PARTY_PACK_ID,
                     id: contract.id,
                     callee: contract.callee,
                     rule: "library_api_iterator_identity_adapter",
@@ -402,6 +405,7 @@ pub fn library_receiver_method_api_contract(
         .or_else(|| {
             library_scalar_integer_method_contract(lang, method, arg_count).map(|contract| {
                 LibraryReceiverMethodApiContract {
+                    pack_id: FIRST_PARTY_PACK_ID,
                     id: contract.id,
                     callee: contract.callee,
                     rule: "library_api_scalar_integer_method",
@@ -412,9 +416,10 @@ pub fn library_receiver_method_api_contract(
         .or_else(|| {
             library_rust_option_and_then_contract(lang, method, arg_count).map(|contract| {
                 LibraryReceiverMethodApiContract {
+                    pack_id: contract.pack_id,
                     id: contract.id,
                     callee: contract.callee,
-                    rule: "library_api_rust_option_and_then",
+                    rule: RUST_STDLIB_OPTION_PRODUCER_ID,
                     result_domain: None,
                 }
             })
@@ -422,6 +427,7 @@ pub fn library_receiver_method_api_contract(
         .or_else(|| {
             library_promise_then_contract(lang, method, arg_count).map(|contract| {
                 LibraryReceiverMethodApiContract {
+                    pack_id: FIRST_PARTY_PACK_ID,
                     id: contract.id,
                     callee: contract.callee,
                     rule: "library_api_promise_then",
@@ -432,6 +438,7 @@ pub fn library_receiver_method_api_contract(
         .or_else(|| {
             library_method_call_contract(lang, method, arg_count).map(|contract| {
                 LibraryReceiverMethodApiContract {
+                    pack_id: FIRST_PARTY_PACK_ID,
                     id: contract.id,
                     callee: contract.callee,
                     rule: "library_api_method_call",

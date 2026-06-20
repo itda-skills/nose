@@ -29,6 +29,7 @@ const PYTHON_STDLIB_TYPE_DOMAIN_PACKAGES: &[&str] = &["typing", "collections.abc
 const RUBY_STDLIB_SET_PACKAGES: &[&str] = &["set"];
 const RUST_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["std::collections"];
 const RUST_STDLIB_MAP_FACTORY_PACKAGES: &[&str] = &["std::collections"];
+const RUST_STDLIB_OPTION_PACKAGES: &[&str] = &["std::option", "core::option"];
 const RUST_STDLIB_VEC_PACKAGES: &[&str] = &["std::vec", "alloc::vec"];
 const NO_IDS: &[&str] = &[];
 const PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_IDS: &[&str] =
@@ -89,6 +90,20 @@ const RUST_STDLIB_MAP_FACTORY_CONFORMANCE_REFS: &[&str] = &[
     "rust-std-map-btreemap-from-positive",
     "rust-std-map-shadowed-std-hard-negative",
     "rust-std-map-type-alias-std-hard-negative",
+];
+const RUST_STDLIB_OPTION_PRODUCER_IDS: &[&str] = &[RUST_STDLIB_OPTION_PRODUCER_ID];
+const RUST_STDLIB_OPTION_CONTRACT_IDS: &[&str] = &[
+    RUST_STDLIB_OPTION_SOME_CONTRACT_ID,
+    RUST_STDLIB_OPTION_NONE_CONTRACT_ID,
+    RUST_STDLIB_OPTION_AND_THEN_CONTRACT_ID,
+];
+const RUST_STDLIB_OPTION_CONFORMANCE_REFS: &[&str] = &[
+    "rust-option-some-positive",
+    "rust-option-none-positive",
+    "rust-option-and-then-positive",
+    "rust-option-some-shadow-hard-negative",
+    "rust-option-none-shadow-hard-negative",
+    "rust-option-and-then-non-option-hard-negative",
 ];
 const JAVA_STDLIB_MAP_FACTORY_PRODUCER_IDS: &[&str] = &[JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID];
 const JAVA_STDLIB_MAP_FACTORY_CONTRACT_IDS: &[&str] = &[
@@ -351,6 +366,22 @@ fn rust_stdlib_map_factory_counts() -> SemanticPackCounts {
             .filter(|id| !id.contains("hard-negative"))
             .count(),
         hard_negatives: RUST_STDLIB_MAP_FACTORY_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
+fn rust_stdlib_option_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: RUST_STDLIB_OPTION_PRODUCER_IDS.len(),
+        contracts: RUST_STDLIB_OPTION_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: RUST_STDLIB_OPTION_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: RUST_STDLIB_OPTION_CONFORMANCE_REFS
             .iter()
             .filter(|id| id.contains("hard-negative"))
             .count(),
@@ -657,6 +688,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: RUST_STDLIB_VEC_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: rust_stdlib_vec_counts,
+    },
+    BuiltinPackDescriptor {
+        id: RUST_STDLIB_OPTION_PACK_ID,
+        kind: SemanticPackKind::StdlibPack,
+        display_name: "nose Rust stdlib Option pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: RUST_LANGUAGE,
+        supported_packages: RUST_STDLIB_OPTION_PACKAGES,
+        language: None,
+        evidence_producer_ids: RUST_STDLIB_OPTION_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: RUST_STDLIB_OPTION_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: RUST_STDLIB_OPTION_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: rust_stdlib_option_counts,
     },
     BuiltinPackDescriptor {
         id: RUST_STDLIB_COLLECTION_FACTORY_PACK_ID,

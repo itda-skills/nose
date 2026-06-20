@@ -83,8 +83,10 @@ The next code slices are intentionally incremental:
    provenance, then `nose.ruby.stdlib.set` for Ruby `Set.new(...)`
    collection-factory occurrence provenance backed by `require "set"`, then
    `nose.rust.stdlib.vec` for Rust `Vec::new` and `vec!` collection-factory
-   occurrence provenance, then `nose.rust.stdlib.collection_factories` for
-   selected Rust `std::collections::{HashSet,BTreeSet,VecDeque}::from`
+   occurrence provenance, then `nose.rust.stdlib.option` for Rust `Some`,
+   `None`, and `and_then` Option API occurrence provenance, then
+   `nose.rust.stdlib.collection_factories` for selected Rust
+   `std::collections::{HashSet,BTreeSet,VecDeque}::from`
    collection-factory occurrence provenance, then
    `nose.rust.stdlib.map_factories` for selected Rust
    `std::collections::{HashMap,BTreeMap}::from` map-factory occurrence
@@ -382,6 +384,26 @@ producer provenance, and an admission provenance check; it did not add per-node
 descriptor scans or touch candidate generation. Binary size changed 20,160,512
 -> 20,160,720 bytes for this slice.
 
+Phase 5 Rust stdlib Option measurement note, local run on 2026-06-21: product
+query-regression r15 compared the previous `nose.python.stdlib.math` slice with
+the `nose.rust.stdlib.option` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by
+exactly 505 bytes from the new top-level `semantic_packs` entry. The saved
+sequential previous and current artifacts are
+`/tmp/nose-473-phase5-rust-option-prev-r15-seq.json` and
+`/tmp/nose-473-phase5-rust-option-current-r15-seq.json`; the previous-slice
+compare summary is `/tmp/nose-473-phase5-rust-option-vs-prev-r15-seq.md`.
+The compare reported one JSON-byte metadata investigation trigger on `ky` and no
+runtime triggers. Aggregate sequential saved artifact medians were: wall
+1193.20 ms -> 1196.06 ms, `lower` 381.90 ms -> 374.50 ms,
+`normalize+extract` 617.40 ms -> 609.60 ms, `candidates` 21.80 ms -> 20.70 ms,
+and `parse+lower` 294.80 ms -> 291.20 ms. Root-cause note: this slice changed
+static pack metadata, Rust Option producer provenance, and admission provenance
+checks for `Some`, `None`, and `and_then`; it did not add per-node descriptor
+scans or touch candidate generation. Binary size changed 20,160,720 ->
+20,161,056 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -445,6 +467,10 @@ descriptor scans or touch candidate generation. Binary size changed 20,160,512
   compatibility facade. `Vec::new` and `vec!` factory `LibraryApi` occurrence
   evidence now reports `nose.rust.stdlib.vec` pack and producer provenance while
   preserving shadowed-`Vec` and shadowed-macro hard negatives.
+- Rust stdlib Option APIs started moving out of the broad compatibility facade.
+  `Some`, `None`, and `and_then` `LibraryApi` occurrence evidence now reports
+  `nose.rust.stdlib.option` pack and producer provenance while preserving
+  shadowed selector and non-Option receiver hard negatives.
 - Selected Rust stdlib collection factories started moving out of the broad
   compatibility facade. `std::collections::{HashSet,BTreeSet,VecDeque}::from`
   factory `LibraryApi` occurrence evidence now reports

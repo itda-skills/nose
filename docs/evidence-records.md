@@ -493,7 +493,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `vec!(...)` with `nose.rust.stdlib.vec` provenance when macro-invocation
   source syntax and macro-name shadow policy are proven, `Vec::new()` with the
   same pack provenance when the root-shadow policy is proven, `Some(...)`,
-  selected `Some(_)` pattern selectors, bare `None`, and selected
+  selected `Some(_)` pattern selectors, bare `None`, and `and_then(...)` with
+  `nose.rust.stdlib.option` provenance when Option receiver or selector proof is
+  satisfied, and selected
   `std::collections::{HashSet,BTreeSet,VecDeque}::from(...)` factory paths with
   `nose.rust.stdlib.collection_factories` provenance when their root-shadow
   policy is proven, and selected

@@ -67,6 +67,8 @@ Trust is separate from channel eligibility.
   factory API occurrence provenance;
   `nose.rust.stdlib.vec` owns Rust `Vec::new` and `vec!` collection factory API
   occurrence provenance;
+  `nose.rust.stdlib.option` owns Rust `Some`, `None`, and `and_then` Option API
+  occurrence provenance;
   `nose.rust.stdlib.collection_factories` owns selected Rust
   `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection factory API
   occurrence provenance;

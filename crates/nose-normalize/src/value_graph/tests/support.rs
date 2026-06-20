@@ -25,7 +25,8 @@ pub(super) use nose_semantics::{
     JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, JAVA_STDLIB_MAP_FACTORY_PACK_ID,
     JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
     PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
-    PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+    PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, RUST_STDLIB_OPTION_PACK_ID,
+    RUST_STDLIB_OPTION_PRODUCER_ID,
 };
 pub(super) use rustc_hash::FxHashMap;
 
@@ -67,6 +68,18 @@ pub(super) fn evidence_with_dependencies(
         dependencies,
         status: EvidenceStatus::Asserted,
     }
+}
+
+pub(super) fn rust_option_evidence_with_dependencies(
+    id: u32,
+    anchor: EvidenceAnchor,
+    kind: EvidenceKind,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    let mut record = evidence_with_dependencies(id, anchor, kind, dependencies);
+    record.provenance.pack_hash = Some(stable_symbol_hash(RUST_STDLIB_OPTION_PACK_ID));
+    record.provenance.rule_hash = Some(stable_symbol_hash(RUST_STDLIB_OPTION_PRODUCER_ID));
+    record
 }
 
 pub(super) fn imported_binding_symbol(module: &str, exported: &str) -> EvidenceKind {

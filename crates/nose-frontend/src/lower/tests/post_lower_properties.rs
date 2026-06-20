@@ -73,6 +73,9 @@ fn assert_rust_option_occurrences(interner: &Interner) {
         1,
     );
     assert_eq!(some_api.len(), 1);
+    let some_records =
+        contract_api_records(&rust_some.evidence, some_contract.id, some_contract.callee);
+    assert_rust_option_record_provenance(some_records[0]);
     assert!(result_domain_depends_on_api(
         &rust_some.evidence,
         some_call,
@@ -97,6 +100,12 @@ fn assert_rust_option_occurrences(interner: &Interner) {
         1,
     );
     assert_eq!(some_pattern_api.len(), 1);
+    let some_pattern_records = contract_api_records(
+        &rust_some_pattern.evidence,
+        some_contract.id,
+        some_contract.callee,
+    );
+    assert_rust_option_record_provenance(some_pattern_records[0]);
     assert!(
         !result_domain_depends_on_api_at_node(
             &rust_some_pattern.evidence,
@@ -126,6 +135,9 @@ fn assert_rust_option_occurrences(interner: &Interner) {
         0,
     );
     assert_eq!(none_api.len(), 1);
+    let none_records =
+        contract_api_records(&rust_none.evidence, none_contract.id, none_contract.callee);
+    assert_rust_option_record_provenance(none_records[0]);
     assert!(result_domain_depends_on_api_at_node(
         &rust_none.evidence,
         none_var,
@@ -148,5 +160,18 @@ fn assert_rust_option_occurrences(interner: &Interner) {
         ),
         0,
         "local Rust Some item must close the std Option constructor occurrence"
+    );
+}
+
+fn assert_rust_option_record_provenance(record: &EvidenceRecord) {
+    assert_eq!(
+        record.provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::RUST_STDLIB_OPTION_PACK_ID
+        ))
+    );
+    assert_eq!(
+        record.provenance.rule_hash,
+        Some(stable_symbol_hash(RUST_STDLIB_OPTION_PRODUCER_ID))
     );
 }

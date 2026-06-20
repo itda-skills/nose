@@ -79,7 +79,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 16);
+    assert_eq!(descriptors.len(), 17);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -94,6 +94,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             PYTHON_STDLIB_MATH_PACK_ID,
             RUBY_STDLIB_SET_PACK_ID,
             RUST_STDLIB_VEC_PACK_ID,
+            RUST_STDLIB_OPTION_PACK_ID,
             RUST_STDLIB_COLLECTION_FACTORY_PACK_ID,
             RUST_STDLIB_MAP_FACTORY_PACK_ID,
             JAVA_STDLIB_MAP_FACTORY_PACK_ID,
@@ -258,6 +259,35 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
     assert!(rust_vec
         .conformance_refs()
         .contains(&"rust-vec-new-shadowed-hard-negative"));
+
+    let rust_option =
+        builtin_pack_descriptor(RUST_STDLIB_OPTION_PACK_ID).expect("Rust stdlib Option descriptor");
+    assert_eq!(rust_option.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(rust_option.supported_languages, &["rust"]);
+    assert_eq!(
+        rust_option.supported_packages,
+        &["std::option", "core::option"]
+    );
+    assert_eq!(
+        rust_option.evidence_producer_ids,
+        &[RUST_STDLIB_OPTION_PRODUCER_ID]
+    );
+    assert!(rust_option.source_fact_producer_ids.is_empty());
+    assert_eq!(
+        rust_option.contract_ids,
+        &[
+            RUST_STDLIB_OPTION_SOME_CONTRACT_ID,
+            RUST_STDLIB_OPTION_NONE_CONTRACT_ID,
+            RUST_STDLIB_OPTION_AND_THEN_CONTRACT_ID,
+        ]
+    );
+    assert_eq!(rust_option.counts().evidence_producers, 1);
+    assert_eq!(rust_option.counts().contracts, 3);
+    assert_eq!(rust_option.counts().positive_fixtures, 3);
+    assert_eq!(rust_option.counts().hard_negatives, 3);
+    assert!(rust_option
+        .conformance_refs()
+        .contains(&"rust-option-and-then-non-option-hard-negative"));
 
     let rust_stdlib_collections = builtin_pack_descriptor(RUST_STDLIB_COLLECTION_FACTORY_PACK_ID)
         .expect("Rust stdlib collection factory descriptor");
@@ -579,6 +609,24 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(rust_vec.counts.contracts, 2);
     assert_eq!(rust_vec.counts.positive_fixtures, 2);
     assert_eq!(rust_vec.counts.hard_negatives, 2);
+    let rust_option = set
+        .packs()
+        .iter()
+        .find(|pack| pack.id == RUST_STDLIB_OPTION_PACK_ID)
+        .expect("Rust stdlib Option summary");
+    assert_eq!(
+        rust_option.hash,
+        stable_symbol_hash(RUST_STDLIB_OPTION_PACK_ID)
+    );
+    assert_eq!(rust_option.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(
+        rust_option.influence,
+        SemanticPackInfluence::EvidenceAndContracts
+    );
+    assert_eq!(rust_option.counts.evidence_producers, 1);
+    assert_eq!(rust_option.counts.contracts, 3);
+    assert_eq!(rust_option.counts.positive_fixtures, 3);
+    assert_eq!(rust_option.counts.hard_negatives, 3);
     let rust_stdlib_collections = set
         .packs()
         .iter()
@@ -755,29 +803,30 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 17);
+    assert_eq!(set.packs().len(), 18);
     assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[3].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[4].id, PYTHON_STDLIB_MATH_PACK_ID);
     assert_eq!(set.packs()[5].id, RUBY_STDLIB_SET_PACK_ID);
     assert_eq!(set.packs()[6].id, RUST_STDLIB_VEC_PACK_ID);
-    assert_eq!(set.packs()[7].id, RUST_STDLIB_COLLECTION_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[8].id, RUST_STDLIB_MAP_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[9].id, JAVA_STDLIB_MAP_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[10].id, JAVA_STDLIB_MAP_ENTRY_PACK_ID);
-    assert_eq!(set.packs()[11].id, JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[7].id, RUST_STDLIB_OPTION_PACK_ID);
+    assert_eq!(set.packs()[8].id, RUST_STDLIB_COLLECTION_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[9].id, RUST_STDLIB_MAP_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[10].id, JAVA_STDLIB_MAP_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[11].id, JAVA_STDLIB_MAP_ENTRY_PACK_ID);
+    assert_eq!(set.packs()[12].id, JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(
-        set.packs()[12].id,
+        set.packs()[13].id,
         JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID
     );
     assert_eq!(
-        set.packs()[13].id,
+        set.packs()[14].id,
         JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID
     );
-    assert_eq!(set.packs()[14].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[15].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[16];
+    assert_eq!(set.packs()[15].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[16].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[17];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);

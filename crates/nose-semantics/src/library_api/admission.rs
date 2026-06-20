@@ -201,6 +201,15 @@ fn library_api_record_provenance_matches_contract(
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(RUST_STDLIB_VEC_PRODUCER_ID))
         }
+        LibraryApiContractId::RustOptionSomeConstructor
+        | LibraryApiContractId::RustOptionNoneSentinel
+        | LibraryApiContractId::RustOptionAndThen => {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash
+                    == Some(stable_symbol_hash(RUST_STDLIB_OPTION_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(RUST_STDLIB_OPTION_PRODUCER_ID))
+        }
         LibraryApiContractId::RustStdCollectionFactory => {
             record.provenance.emitter == EvidenceEmitter::FirstParty
                 && record.provenance.pack_hash

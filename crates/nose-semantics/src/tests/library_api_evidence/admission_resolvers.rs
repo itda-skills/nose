@@ -25,6 +25,24 @@ fn asserted_library_api_node_record(
     )
 }
 
+fn asserted_library_api_node_record_with_provenance(
+    id: u32,
+    il: &Il,
+    node: NodeId,
+    contract_id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+    arity: u16,
+    dependencies: &[u32],
+    pack_id: &str,
+    rule: &str,
+) -> EvidenceRecord {
+    let mut record =
+        asserted_library_api_node_record(id, il, node, contract_id, callee, arity, dependencies);
+    record.provenance.pack_hash = Some(stable_symbol_hash(pack_id));
+    record.provenance.rule_hash = Some(stable_symbol_hash(rule));
+    record
+}
+
 fn js_length_field_il() -> (Il, Interner, NodeId, NodeId) {
     let interner = Interner::new();
     let mut b = IlBuilder::new(FileId(0));
@@ -57,6 +75,35 @@ fn rust_some_call_il() -> (Il, Interner, NodeId, NodeId) {
     let call = b.add(NodeKind::Call, Payload::None, sp(47), &[callee, value]);
     let root = b.add(NodeKind::Func, Payload::None, sp(48), &[call]);
     (finish_il(b, root, Lang::Rust), interner, call, callee)
+}
+
+fn rust_none_node_il() -> (Il, Interner, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let none = b.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern("None")),
+        sp(49),
+        &[],
+    );
+    let root = b.add(NodeKind::Func, Payload::None, sp(50), &[none]);
+    (finish_il(b, root, Lang::Rust), interner, none)
+}
+
+fn rust_option_and_then_call_il() -> (Il, Interner, NodeId, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let receiver = b.add(NodeKind::Var, Payload::Cid(0), sp(51), &[]);
+    let callee = b.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("and_then")),
+        sp(52),
+        &[receiver],
+    );
+    let callback = b.add(NodeKind::Func, Payload::None, sp(53), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(54), &[callee, callback]);
+    let root = b.add(NodeKind::Func, Payload::None, sp(55), &[call]);
+    (finish_il(b, root, Lang::Rust), interner, call, receiver)
 }
 
 fn rust_vec_new_call_il() -> (Il, Interner, NodeId, NodeId) {
@@ -465,11 +512,12 @@ fn admitted_library_api_call_resolvers_require_evidence() {
     let contract = library_rust_option_some_constructor_contract(Lang::Rust, "Some", 1)
         .expect("Rust Some constructor contract");
     let (mut missing_dependency, interner, call, _callee) = rust_some_call_il();
-    missing_dependency.evidence.push(library_api_record(
+    missing_dependency.evidence.push(rust_stdlib_option_record(
         0,
         missing_dependency.node(call).span,
         contract.id,
         contract.callee,
+        1,
         EvidenceStatus::Asserted,
         &[],
     ));
@@ -477,6 +525,81 @@ fn admitted_library_api_call_resolvers_require_evidence() {
         admitted_rust_option_some_constructor_at_call(&missing_dependency, &interner, call)
             .is_none(),
         "same-span API occurrence without its callee dependency is still rejected"
+    );
+
+    let (mut wrong_pack, interner, call, callee) = rust_some_call_il();
+    wrong_pack.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_pack.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("Some"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_pack.evidence.push(library_api_record_with_provenance(
+        1,
+        wrong_pack.node(call).span,
+        contract.id,
+        contract.callee,
+        EvidenceStatus::Asserted,
+        &[0],
+        FIRST_PARTY_PACK_ID,
+        RUST_STDLIB_OPTION_PRODUCER_ID,
+    ));
+    assert!(
+        admitted_rust_option_some_constructor_at_call(&wrong_pack, &interner, call).is_none(),
+        "Rust Option Some evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, callee) = rust_some_call_il();
+    wrong_producer.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_producer.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("Some"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance(
+            1,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[0],
+            RUST_STDLIB_OPTION_PACK_ID,
+            "wrong.rust.stdlib.option-api",
+        ));
+    assert!(
+        admitted_rust_option_some_constructor_at_call(&wrong_producer, &interner, call).is_none(),
+        "Rust Option Some evidence with the wrong producer is rejected"
+    );
+
+    let (mut wrong_emitter, interner, call, callee) = rust_some_call_il();
+    wrong_emitter.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_emitter.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("Some"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    let mut external_record = rust_stdlib_option_record(
+        1,
+        wrong_emitter.node(call).span,
+        contract.id,
+        contract.callee,
+        1,
+        EvidenceStatus::Asserted,
+        &[0],
+    );
+    external_record.provenance.emitter = EvidenceEmitter::External;
+    wrong_emitter.evidence.push(external_record);
+    assert!(
+        admitted_rust_option_some_constructor_at_call(&wrong_emitter, &interner, call).is_none(),
+        "Rust Option Some evidence from an external emitter is rejected"
     );
 
     let (mut admitted, interner, call, callee) = rust_some_call_il();
@@ -488,11 +611,12 @@ fn admitted_library_api_call_resolvers_require_evidence() {
         }),
         EvidenceStatus::Asserted,
     ));
-    admitted.evidence.push(library_api_record(
+    admitted.evidence.push(rust_stdlib_option_record(
         1,
         admitted.node(call).span,
         contract.id,
         contract.callee,
+        1,
         EvidenceStatus::Asserted,
         &[0],
     ));
@@ -572,7 +696,7 @@ fn admitted_node_resolvers_require_api_occurrence_evidence() {
     let (mut missing_dependency, interner, _call, callee) = rust_some_call_il();
     missing_dependency
         .evidence
-        .push(asserted_library_api_node_record(
+        .push(asserted_library_api_node_record_with_provenance(
             0,
             &missing_dependency,
             callee,
@@ -580,6 +704,8 @@ fn admitted_node_resolvers_require_api_occurrence_evidence() {
             some_contract.callee,
             1,
             &[],
+            RUST_STDLIB_OPTION_PACK_ID,
+            RUST_STDLIB_OPTION_PRODUCER_ID,
         ));
     assert!(
         admitted_rust_option_some_constructor_at_node(&missing_dependency, &interner, callee)
@@ -596,15 +722,19 @@ fn admitted_node_resolvers_require_api_occurrence_evidence() {
         }),
         EvidenceStatus::Asserted,
     ));
-    admitted.evidence.push(asserted_library_api_node_record(
-        1,
-        &admitted,
-        callee,
-        some_contract.id,
-        some_contract.callee,
-        1,
-        &[0],
-    ));
+    admitted
+        .evidence
+        .push(asserted_library_api_node_record_with_provenance(
+            1,
+            &admitted,
+            callee,
+            some_contract.id,
+            some_contract.callee,
+            1,
+            &[0],
+            RUST_STDLIB_OPTION_PACK_ID,
+            RUST_STDLIB_OPTION_PRODUCER_ID,
+        ));
     let resolved =
         admitted_rust_option_some_constructor_at_node(&admitted, &interner, callee).unwrap();
     assert_eq!(
@@ -614,6 +744,231 @@ fn admitted_node_resolvers_require_api_occurrence_evidence() {
     assert_eq!(resolved.node, callee);
     assert_eq!(resolved.receiver, None);
     assert_eq!(resolved.arg_count, 1);
+}
+
+#[test]
+fn admitted_rust_option_none_sentinel_resolver_requires_pack_provenance() {
+    let (il, interner, none) = rust_none_node_il();
+    assert!(
+        admitted_rust_option_none_sentinel_at_node(&il, &interner, none).is_none(),
+        "raw Rust None node alone must not admit Option sentinel semantics"
+    );
+
+    let contract = library_rust_option_none_sentinel_contract(Lang::Rust, "None")
+        .expect("Rust None sentinel contract");
+    let (mut wrong_pack, interner, none) = rust_none_node_il();
+    wrong_pack.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_pack.node(none).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("None"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_pack
+        .evidence
+        .push(asserted_library_api_node_record_with_provenance(
+            1,
+            &wrong_pack,
+            none,
+            contract.id,
+            contract.callee,
+            0,
+            &[0],
+            FIRST_PARTY_PACK_ID,
+            RUST_STDLIB_OPTION_PRODUCER_ID,
+        ));
+    assert!(
+        admitted_rust_option_none_sentinel_at_node(&wrong_pack, &interner, none).is_none(),
+        "Rust Option None evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, none) = rust_none_node_il();
+    wrong_producer.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_producer.node(none).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("None"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_producer
+        .evidence
+        .push(asserted_library_api_node_record_with_provenance(
+            1,
+            &wrong_producer,
+            none,
+            contract.id,
+            contract.callee,
+            0,
+            &[0],
+            RUST_STDLIB_OPTION_PACK_ID,
+            "wrong.rust.stdlib.option-api",
+        ));
+    assert!(
+        admitted_rust_option_none_sentinel_at_node(&wrong_producer, &interner, none).is_none(),
+        "Rust Option None evidence with the wrong producer is rejected"
+    );
+
+    let (mut wrong_emitter, interner, none) = rust_none_node_il();
+    wrong_emitter.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_emitter.node(none).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("None"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    let mut external_record = asserted_library_api_node_record_with_provenance(
+        1,
+        &wrong_emitter,
+        none,
+        contract.id,
+        contract.callee,
+        0,
+        &[0],
+        RUST_STDLIB_OPTION_PACK_ID,
+        RUST_STDLIB_OPTION_PRODUCER_ID,
+    );
+    external_record.provenance.emitter = EvidenceEmitter::External;
+    wrong_emitter.evidence.push(external_record);
+    assert!(
+        admitted_rust_option_none_sentinel_at_node(&wrong_emitter, &interner, none).is_none(),
+        "Rust Option None evidence from an external emitter is rejected"
+    );
+
+    let (mut admitted, interner, none) = rust_none_node_il();
+    admitted.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(admitted.node(none).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("None"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    admitted
+        .evidence
+        .push(asserted_library_api_node_record_with_provenance(
+            1,
+            &admitted,
+            none,
+            contract.id,
+            contract.callee,
+            0,
+            &[0],
+            RUST_STDLIB_OPTION_PACK_ID,
+            RUST_STDLIB_OPTION_PRODUCER_ID,
+        ));
+    assert_eq!(
+        admitted_rust_option_none_sentinel_at_node(&admitted, &interner, none)
+            .expect("Rust None should admit")
+            .id,
+        LibraryApiContractId::RustOptionNoneSentinel
+    );
+}
+
+#[test]
+fn admitted_rust_option_and_then_resolver_requires_pack_provenance() {
+    let (il, interner, call, _receiver) = rust_option_and_then_call_il();
+    assert!(
+        admitted_rust_option_and_then_at_call(&il, &interner, call).is_none(),
+        "raw Rust and_then call shape alone must not admit Option semantics"
+    );
+
+    let contract = library_rust_option_and_then_contract(Lang::Rust, "and_then", 1)
+        .expect("Rust Option and_then contract");
+    let (mut wrong_pack, interner, call, receiver) = rust_option_and_then_call_il();
+    wrong_pack.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_pack.node(receiver).span, NodeKind::Var),
+        EvidenceKind::Domain(DomainEvidence::Option),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_pack.evidence.push(library_api_record_with_provenance(
+        1,
+        wrong_pack.node(call).span,
+        contract.id,
+        contract.callee,
+        EvidenceStatus::Asserted,
+        &[0],
+        FIRST_PARTY_PACK_ID,
+        RUST_STDLIB_OPTION_PRODUCER_ID,
+    ));
+    assert!(
+        admitted_rust_option_and_then_at_call(&wrong_pack, &interner, call).is_none(),
+        "Rust Option and_then evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, receiver) = rust_option_and_then_call_il();
+    wrong_producer.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_producer.node(receiver).span, NodeKind::Var),
+        EvidenceKind::Domain(DomainEvidence::Option),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance(
+            1,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[0],
+            RUST_STDLIB_OPTION_PACK_ID,
+            "wrong.rust.stdlib.option-api",
+        ));
+    assert!(
+        admitted_rust_option_and_then_at_call(&wrong_producer, &interner, call).is_none(),
+        "Rust Option and_then evidence with the wrong producer is rejected"
+    );
+
+    let (mut wrong_emitter, interner, call, receiver) = rust_option_and_then_call_il();
+    wrong_emitter.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_emitter.node(receiver).span, NodeKind::Var),
+        EvidenceKind::Domain(DomainEvidence::Option),
+        EvidenceStatus::Asserted,
+    ));
+    let mut external_record = rust_stdlib_option_record(
+        1,
+        wrong_emitter.node(call).span,
+        contract.id,
+        contract.callee,
+        1,
+        EvidenceStatus::Asserted,
+        &[0],
+    );
+    external_record.provenance.emitter = EvidenceEmitter::External;
+    wrong_emitter.evidence.push(external_record);
+    assert!(
+        admitted_rust_option_and_then_at_call(&wrong_emitter, &interner, call).is_none(),
+        "Rust Option and_then evidence from an external emitter is rejected"
+    );
+
+    let (mut admitted, interner, call, receiver) = rust_option_and_then_call_il();
+    admitted.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(admitted.node(receiver).span, NodeKind::Var),
+        EvidenceKind::Domain(DomainEvidence::Option),
+        EvidenceStatus::Asserted,
+    ));
+    admitted.evidence.push(rust_stdlib_option_record(
+        1,
+        admitted.node(call).span,
+        contract.id,
+        contract.callee,
+        1,
+        EvidenceStatus::Asserted,
+        &[0],
+    ));
+    let occurrence = admitted_rust_option_and_then_at_call(&admitted, &interner, call).unwrap();
+    assert_eq!(
+        occurrence.contract.id,
+        LibraryApiContractId::RustOptionAndThen
+    );
+    assert_eq!(occurrence.receiver, Some(receiver));
+    assert_eq!(occurrence.arg_count, 1);
 }
 
 #[test]

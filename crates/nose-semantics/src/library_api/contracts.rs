@@ -37,6 +37,11 @@ pub const RUST_STDLIB_VEC_PACK_ID: &str = "nose.rust.stdlib.vec";
 pub const RUST_STDLIB_VEC_PRODUCER_ID: &str = "rust.stdlib.vec-factory-api";
 pub const RUST_STDLIB_VEC_MACRO_CONTRACT_ID: &str = "rust.vec.macro_factory";
 pub const RUST_STDLIB_VEC_NEW_CONTRACT_ID: &str = "rust.vec.new_factory";
+pub const RUST_STDLIB_OPTION_PACK_ID: &str = "nose.rust.stdlib.option";
+pub const RUST_STDLIB_OPTION_PRODUCER_ID: &str = "rust.stdlib.option-api";
+pub const RUST_STDLIB_OPTION_SOME_CONTRACT_ID: &str = "rust.option.some.constructor";
+pub const RUST_STDLIB_OPTION_NONE_CONTRACT_ID: &str = "rust.option.none.sentinel";
+pub const RUST_STDLIB_OPTION_AND_THEN_CONTRACT_ID: &str = "rust.option.and_then";
 pub const RUST_STDLIB_COLLECTION_FACTORY_PACK_ID: &str = "nose.rust.stdlib.collection_factories";
 pub const RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID: &str = "rust.stdlib.collection-factory-api";
 pub const RUST_STDLIB_COLLECTION_FACTORY_CONTRACT_ID: &str = "rust.std.collection_factory";
@@ -408,6 +413,7 @@ pub struct LibraryScalarIntegerMethodContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryRustOptionConstructorContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result_domain: DomainEvidence,
@@ -415,6 +421,7 @@ pub struct LibraryRustOptionConstructorContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryRustOptionSentinelContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result_domain: DomainEvidence,
@@ -427,6 +434,7 @@ pub struct RustOptionAndThenContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryRustOptionAndThenContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: RustOptionAndThenContract,
@@ -441,6 +449,7 @@ pub struct LibraryFreeFunctionBuiltinContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryReceiverMethodApiContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub rule: &'static str,

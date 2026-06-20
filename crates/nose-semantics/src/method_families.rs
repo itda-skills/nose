@@ -132,6 +132,7 @@ pub fn library_rust_option_some_constructor_contract(
     let name = rust_option_some_selector_name(lang, name)?;
     let shadow = rust_option_some_constructor_contract(lang, name)?;
     Some(LibraryRustOptionConstructorContract {
+        pack_id: RUST_STDLIB_OPTION_PACK_ID,
         id: LibraryApiContractId::RustOptionSomeConstructor,
         callee: LibraryApiCalleeContract::FreeName {
             name,
@@ -148,6 +149,7 @@ pub fn library_rust_option_none_sentinel_contract(
     let name = rust_option_none_selector_name(lang, name)?;
     let shadow = rust_option_none_sentinel_contract(lang, name)?;
     Some(LibraryRustOptionSentinelContract {
+        pack_id: RUST_STDLIB_OPTION_PACK_ID,
         id: LibraryApiContractId::RustOptionNoneSentinel,
         callee: LibraryApiCalleeContract::FreeName {
             name,
@@ -166,6 +168,7 @@ pub fn library_rust_option_and_then_contract(
         return None;
     }
     Some(LibraryRustOptionAndThenContract {
+        pack_id: RUST_STDLIB_OPTION_PACK_ID,
         id: LibraryApiContractId::RustOptionAndThen,
         callee: LibraryApiCalleeContract::Method {
             method: "and_then",

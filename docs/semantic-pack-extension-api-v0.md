@@ -448,6 +448,8 @@ implicit v0 packs:
   product-reduction API occurrence contract;
 - `nose.rust.stdlib.vec` owns the current Rust `Vec::new` and `vec!`
   collection-factory API occurrence contracts;
+- `nose.rust.stdlib.option` owns the current Rust `Some`, `None`, and
+  `and_then` Option API occurrence contracts;
 - `nose.rust.stdlib.collection_factories` owns the current selected Rust
   `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection-factory API
   occurrence contracts;

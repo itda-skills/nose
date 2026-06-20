@@ -11,7 +11,7 @@ use nose_semantics::{
     library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
     LibraryApiCalleeContract, LibraryApiDependencyCache, MethodBuiltinArgs,
     MethodEffectReceiverContract, MethodReceiverContract, MethodSemanticContract,
-    FIRST_PARTY_PACK_ID,
+    FIRST_PARTY_PACK_ID, RUST_STDLIB_OPTION_PRODUCER_ID,
 };
 
 pub(crate) fn run(il: &mut Il, interner: &Interner) {
@@ -76,7 +76,7 @@ fn record_rust_option_some_library_api(il: &mut Il, interner: &Interner, call: N
     let Some(symbol_dependency) = unshadowed_symbol_evidence_id(il, callee, name) else {
         return false;
     };
-    let api = upsert_first_party_evidence(
+    let api = upsert_first_party_evidence_with_pack_id(
         il,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -84,7 +84,8 @@ fn record_rust_option_some_library_api(il: &mut Il, interner: &Interner, call: N
             callee_hash: library_api_callee_contract_hash(contract.callee),
             arity: arg_count as u16,
         }),
-        "library_api_rust_option_some_constructor",
+        contract.pack_id,
+        RUST_STDLIB_OPTION_PRODUCER_ID,
         vec![symbol_dependency],
     );
     record_library_api_result_domain(il, call, contract.result_domain, api);
@@ -326,7 +327,7 @@ fn record_rust_option_none_library_api(il: &mut Il, interner: &Interner, var: No
     let Some(symbol_dependency) = unshadowed_symbol_evidence_id(il, var, name) else {
         return false;
     };
-    let api = upsert_first_party_evidence(
+    let api = upsert_first_party_evidence_with_pack_id(
         il,
         EvidenceAnchor::node(il.node(var).span, NodeKind::Var),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -334,7 +335,8 @@ fn record_rust_option_none_library_api(il: &mut Il, interner: &Interner, var: No
             callee_hash: library_api_callee_contract_hash(contract.callee),
             arity: 0,
         }),
-        "library_api_rust_option_none_sentinel",
+        contract.pack_id,
+        RUST_STDLIB_OPTION_PRODUCER_ID,
         vec![symbol_dependency],
     );
     record_library_api_node_result_domain(il, var, contract.result_domain, api);
@@ -373,7 +375,7 @@ fn record_receiver_method_library_api(
     ) else {
         return false;
     };
-    upsert_first_party_evidence(
+    upsert_first_party_evidence_with_pack_id(
         il,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -381,6 +383,7 @@ fn record_receiver_method_library_api(
             callee_hash: library_api_callee_contract_hash(contract.callee),
             arity: arg_count as u16,
         }),
+        contract.pack_id,
         contract.rule,
         dependencies,
     );
@@ -521,7 +524,25 @@ fn upsert_first_party_evidence(
     rule: &str,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceId {
-    let pack_hash = stable_symbol_hash(FIRST_PARTY_PACK_ID);
+    upsert_first_party_evidence_with_pack_id(
+        il,
+        anchor,
+        kind,
+        FIRST_PARTY_PACK_ID,
+        rule,
+        dependencies,
+    )
+}
+
+fn upsert_first_party_evidence_with_pack_id(
+    il: &mut Il,
+    anchor: EvidenceAnchor,
+    kind: EvidenceKind,
+    pack_id: &str,
+    rule: &str,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceId {
+    let pack_hash = stable_symbol_hash(pack_id);
     let rule_hash = stable_symbol_hash(rule);
     let mut found = None;
     // Index-backed (see `effect_evidence::upsert`): only same-span records can
@@ -542,7 +563,7 @@ fn upsert_first_party_evidence(
         }
     }
     found.unwrap_or_else(|| {
-        il.find_or_push_first_party_evidence(anchor, kind, FIRST_PARTY_PACK_ID, rule, dependencies)
+        il.find_or_push_first_party_evidence(anchor, kind, pack_id, rule, dependencies)
     })
 }
 
