@@ -182,6 +182,21 @@ fn assert_python_deque_factory_result_domain(interner: &Interner) {
     );
 }
 
+fn assert_java_collection_factory_record_provenance(record: &EvidenceRecord) {
+    assert_eq!(
+        record.provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID
+        ))
+    );
+    assert_eq!(
+        record.provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID
+        ))
+    );
+}
+
 fn assert_java_factory_result_domains(interner: &Interner) {
     let mut lo = Lowering::new(FileId(0), b"", Lang::Java, interner);
     import_binding(&mut lo, sp_at(10), "List", "java.util", "List");
@@ -203,6 +218,9 @@ fn assert_java_of_factory_result_domains(lo: &mut Lowering, interner: &Interner)
         &[list_callee, item],
     );
     let contract = library_java_collection_factory_contract(Lang::Java, "List", "of").unwrap();
+    let list_records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(list_records.len(), 1);
+    assert_java_collection_factory_record_provenance(list_records[0]);
     let list_api = contract_api_ids(&lo.evidence, contract.id, contract.callee);
     assert!(result_domain_depends_on_api(
         &lo.evidence,
@@ -221,6 +239,9 @@ fn assert_java_of_factory_result_domains(lo: &mut Lowering, interner: &Interner)
         &[set_callee, item],
     );
     let contract = library_java_collection_factory_contract(Lang::Java, "Set", "of").unwrap();
+    let set_records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(set_records.len(), 1);
+    assert_java_collection_factory_record_provenance(set_records[0]);
     let set_api = contract_api_ids(&lo.evidence, contract.id, contract.callee);
     assert!(result_domain_depends_on_api(
         &lo.evidence,
@@ -271,6 +292,12 @@ fn assert_java_arrays_and_map_entry_result_domains(lo: &mut Lowering, interner: 
         sp_at(49),
         &[as_list_callee, maybe_array],
     );
+    let as_list_contract =
+        library_java_collection_factory_contract(Lang::Java, "Arrays", "asList").unwrap();
+    let as_list_records =
+        contract_api_records(&lo.evidence, as_list_contract.id, as_list_contract.callee);
+    assert_eq!(as_list_records.len(), 1);
+    assert_java_collection_factory_record_provenance(as_list_records[0]);
     assert_eq!(
         result_domain_any_count_at(&lo.evidence, sp_at(49)),
         0,
@@ -287,8 +314,10 @@ fn assert_java_arrays_and_map_entry_result_domains(lo: &mut Lowering, interner: 
         sp_at(59),
         &[as_list_callee, red, blue],
     );
-    let as_list_contract =
-        library_java_collection_factory_contract(Lang::Java, "Arrays", "asList").unwrap();
+    let as_list_records =
+        contract_api_records(&lo.evidence, as_list_contract.id, as_list_contract.callee);
+    assert_eq!(as_list_records.len(), 2);
+    assert_java_collection_factory_record_provenance(as_list_records[1]);
     let as_list_api = library_api_evidence_ids_at(
         &lo.evidence,
         sp_at(59),

@@ -174,6 +174,27 @@ fn rust_stdlib_map_factory_record(
     )
 }
 
+fn java_stdlib_collection_factory_record(
+    id: u32,
+    span: Span,
+    contract: LibraryCollectionFactoryContract,
+    arity: u16,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance_and_arity(
+        id,
+        span,
+        contract.id,
+        contract.callee,
+        arity,
+        status,
+        dependencies,
+        JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
+        JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+    )
+}
+
 fn java_stdlib_map_factory_record(
     id: u32,
     span: Span,
@@ -270,11 +291,11 @@ fn java_list_of_import_evidence_il(
         EvidenceStatus::Asserted,
         vec![EvidenceId(0)],
     ));
-    il.evidence.push(library_api_record(
+    il.evidence.push(java_stdlib_collection_factory_record(
         2,
         sp(34),
-        contract.id,
-        contract.callee,
+        contract,
+        1,
         EvidenceStatus::Asserted,
         &[1],
     ));

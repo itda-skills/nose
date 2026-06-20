@@ -86,11 +86,10 @@ fn java_collection_factory_value_graph_uses_library_api_evidence() {
         eval_proven_collection_op(&il, &interner, call).is_none(),
         "java.util import proof alone must not prove the migrated Java factory"
     );
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(java_stdlib_collection_factory_evidence(
         2,
         sp(75),
-        contract.id,
-        contract.callee,
+        contract,
         2,
         vec![EvidenceId(1)],
     ));

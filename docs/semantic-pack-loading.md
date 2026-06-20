@@ -74,6 +74,10 @@ Trust is separate from channel eligibility.
   `nose.java.stdlib.map_factories` owns Java `java.util.Map.of` and
   `java.util.Map.ofEntries` map factory API occurrence provenance while
   `Map.entry` remains in the broad compatibility bucket for a later slice;
+  `nose.java.stdlib.collection_factories` owns Java `java.util.List.of`,
+  `Set.of`, and `Arrays.asList` collection factory API occurrence provenance
+  while constructors and `Arrays.stream` remain in the broad compatibility
+  bucket for later slices;
   `nose.python.stdlib.type_domain` is the first narrow stdlib pilot pack for
   Python `typing`, `collections.abc`, and `asyncio` type-domain aliases;
   `nose.value_graph.laws` is the first LawPack pilot for selected proof-backed

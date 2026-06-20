@@ -306,7 +306,7 @@ impl<'a> Lowering<'a> {
                         contract.id,
                         contract.callee,
                         contract.pack_id,
-                        "library_api_java_collection_factory",
+                        JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
                         library_collection_factory_result_domain_for_arity(contract, arg_count),
                     )
                 })

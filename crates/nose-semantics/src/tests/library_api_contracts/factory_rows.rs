@@ -147,9 +147,37 @@ fn library_api_contracts_carry_identity_and_result_obligations() {
 #[test]
 fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
     assert_eq!(
+        library_java_collection_factory_contract(Lang::Java, "List", "of"),
+        Some(LibraryCollectionFactoryContract {
+            pack_id: JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
+            id: LibraryApiContractId::JavaCollectionFactory(JavaCollectionFactoryKind::ListOf),
+            callee: LibraryApiCalleeContract::JavaUtilStaticMember {
+                receiver: "List",
+                method: "of",
+            },
+            result: LibraryCollectionFactoryResult::VariadicElements {
+                single_arg_spreads_array: false,
+            },
+        })
+    );
+    assert_eq!(
+        library_java_collection_factory_contract(Lang::Java, "Set", "of"),
+        Some(LibraryCollectionFactoryContract {
+            pack_id: JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
+            id: LibraryApiContractId::JavaCollectionFactory(JavaCollectionFactoryKind::SetOf),
+            callee: LibraryApiCalleeContract::JavaUtilStaticMember {
+                receiver: "Set",
+                method: "of",
+            },
+            result: LibraryCollectionFactoryResult::VariadicElements {
+                single_arg_spreads_array: false,
+            },
+        })
+    );
+    assert_eq!(
         library_java_collection_factory_contract(Lang::Java, "Arrays", "asList"),
         Some(LibraryCollectionFactoryContract {
-            pack_id: FIRST_PARTY_PACK_ID,
+            pack_id: JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
             id: LibraryApiContractId::JavaCollectionFactory(
                 JavaCollectionFactoryKind::ArraysAsList,
             ),

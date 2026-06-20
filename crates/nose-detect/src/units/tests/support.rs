@@ -7,6 +7,7 @@ use nose_il::{
 use nose_semantics::{
     library_api_callee_contract_hash, library_api_contract_id_hash, library_method_call_contract,
     LibraryApiCalleeContract, LibraryCollectionFactoryContract, FIRST_PARTY_PACK_ID,
+    JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID, JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
     PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
 };
 
@@ -104,14 +105,13 @@ pub(super) fn push_java_factory_contract_evidence(
     contract_id: nose_semantics::LibraryApiContractId,
     callee: LibraryApiCalleeContract,
 ) {
-    il.evidence.push(library_api_contract_evidence(
-        2,
-        sp(25),
-        contract_id,
-        callee,
-        2,
-        vec![EvidenceId(1)],
+    let mut record =
+        library_api_contract_evidence(2, sp(25), contract_id, callee, 2, vec![EvidenceId(1)]);
+    record.provenance.pack_hash = Some(stable_symbol_hash(JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID));
+    record.provenance.rule_hash = Some(stable_symbol_hash(
+        JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
     ));
+    il.evidence.push(record);
     il.evidence.push(method_call_library_api_evidence(
         3,
         Lang::Java,

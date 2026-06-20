@@ -95,7 +95,10 @@ still being migrated toward it.
   The `nose.java.stdlib.map_factories` descriptor owns Java `java.util.Map.of`
   and `Map.ofEntries` map-factory contract and occurrence producer ids, while
   missing `java.util.Map` imports and `Map.entry` boundary cases remain hard
-  negatives. The
+  negatives. The `nose.java.stdlib.collection_factories` descriptor owns Java
+  `java.util.List.of`, `Set.of`, and `Arrays.asList` collection-factory
+  contract and occurrence producer ids, while missing imports and constructor
+  boundary cases remain hard negatives. The
   `nose.python.stdlib.type_domain` descriptor directly exposes its alias
   contract rows so producer id, contract id, conformance refs, and declaration
   counts come from one pack-owned table.
@@ -121,6 +124,9 @@ still being migrated toward it.
   Rust `std::collections` map-factory API provenance, and
   `nose.java.stdlib.map_factories`, a default builtin stdlib pack for Java
   `java.util.Map.of` and `Map.ofEntries` map-factory API provenance, and
+  `nose.java.stdlib.collection_factories`, a default builtin stdlib pack for
+  Java `java.util.List.of`, `Set.of`, and `Arrays.asList` collection-factory
+  API provenance, and
   `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped surface
   for Python `typing`, `collections.abc`, and `asyncio` type-domain alias
   evidence.
@@ -284,6 +290,10 @@ migrated.
   `java.util.Map.of` and `Map.ofEntries` map-factory `LibraryApi` occurrence
   evidence now carries `nose.java.stdlib.map_factories` pack provenance while
   missing-import and `Map.entry` boundary cases stay closed.
+  Java stdlib `java.util.List.of`, `Set.of`, and `Arrays.asList`
+  collection-factory `LibraryApi` occurrence evidence now carries
+  `nose.java.stdlib.collection_factories` pack provenance while missing-import
+  and constructor boundary cases stay closed.
   `nose-semantics` resolves receiver-domain evidence through a shared
   `DomainRequirement` contract. Consumers check exact receiver node evidence
   first, then immutable binding evidence for local or module variables, then
@@ -408,8 +418,9 @@ migrated.
   `require "set"; Set.new(...)` when an earlier top-level `Import::Require("set")`
   depends on unshadowed `require` proof and unshadowed `Set` receiver proof
   exists; Java `java.util` static factories/adapters such as `List.of`,
-  `Set.of`, `Arrays.asList`, `Map.of`/`Map.ofEntries` with
-  `nose.java.stdlib.map_factories` provenance, `Map.entry`, and
+  `Set.of`, and `Arrays.asList` with
+  `nose.java.stdlib.collection_factories` provenance, `Map.of`/`Map.ofEntries`
+  with `nose.java.stdlib.map_factories` provenance, `Map.entry`, and
   `Arrays.stream`, plus selected empty `new ArrayList<>()`/`new LinkedList<>()`
   constructors; and JS-like regex-literal `.test(...)`. These records depend on
   the relevant `QualifiedGlobal`,

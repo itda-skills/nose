@@ -89,7 +89,9 @@ The next code slices are intentionally incremental:
    `nose.rust.stdlib.map_factories` for selected Rust
    `std::collections::{HashMap,BTreeMap}::from` map-factory occurrence
    provenance, then `nose.java.stdlib.map_factories` for Java `Map.of` and
-   `Map.ofEntries` map-factory occurrence provenance;
+   `Map.ofEntries` map-factory occurrence provenance, then
+   `nose.java.stdlib.collection_factories` for Java `List.of`, `Set.of`, and
+   `Arrays.asList` collection-factory occurrence provenance;
 7. Phase 6: allow external pack influence only after the builtin path is proven;
 8. Phase 7: define adoption and release gates.
 
@@ -263,6 +265,26 @@ metadata, Java std-map producer provenance, and an admission provenance check;
 it did not touch candidate generation, and product output did not drift. Binary
 size changed 20,142,768 -> 20,143,040 bytes for this slice.
 
+Phase 5 Java stdlib collection-factory measurement note, local run on
+2026-06-20: product query-regression r15 compared the previous
+`nose.java.stdlib.map_factories` slice with the
+`nose.java.stdlib.collection_factories` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, and surface
+counts were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by exactly 531 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-java-collections-prev-r15.json` and
+`/tmp/nose-473-phase5-java-collections-current-r15.json`; the previous-slice
+compare summary is
+`/tmp/nose-473-phase5-java-collections-vs-prev-r15.md`. The compare produced
+only expected JSON-byte investigation triggers and no runtime triggers.
+Aggregate median wall time was 1495.85 ms -> 1230.24 ms, `lower` was
+445.70 ms -> 384.00 ms, `normalize+extract` was 814.70 ms -> 633.70 ms, and
+`candidates` was 29.50 ms -> 22.30 ms. Root-cause note: this slice changed
+static pack metadata, Java std-collection producer provenance, and an admission
+provenance check; it did not touch candidate generation, and product output did
+not drift. Binary size changed 20,143,040 -> 20,143,360 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -341,6 +363,11 @@ size changed 20,142,768 -> 20,143,040 bytes for this slice.
   occurrence evidence now reports `nose.java.stdlib.map_factories` pack and
   producer provenance while preserving missing-import and `Map.entry` boundary
   hard negatives.
+- Java stdlib collection factories started moving out of the broad
+  compatibility facade. `java.util.List.of`, `Set.of`, and `Arrays.asList`
+  factory `LibraryApi` occurrence evidence now reports
+  `nose.java.stdlib.collection_factories` pack and producer provenance while
+  preserving missing-import and constructor boundary hard negatives.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a
   language-, signature-, and integer-domain-constrained first-party contract
   instead of a bare method-name recognizer. Float/NaN-sensitive methods remain a
@@ -585,10 +612,11 @@ size changed 20,142,768 -> 20,143,040 bytes for this slice.
   dependency-broken records.
 - The next `LibraryApi` occurrence evidence slice extended the same
   dependency-backed path to selected import/source-backed APIs: Python
-  `collections.deque`, Python `math.prod`, Java `java.util` static
-  factories/adapters (`List.of`, `Set.of`, `Arrays.asList`,
-  `Map.of`/`Map.ofEntries` with `nose.java.stdlib.map_factories` provenance,
-  `Map.entry`, `Arrays.stream`), and JS-like regex-literal
+  `collections.deque`, Python `math.prod`, Java `java.util` static collection
+  factories (`List.of`, `Set.of`, `Arrays.asList`) now carrying
+  `nose.java.stdlib.collection_factories` provenance, Java map factories
+  (`Map.of`/`Map.ofEntries`) with `nose.java.stdlib.map_factories` provenance,
+  compatibility Java APIs (`Map.entry`, `Arrays.stream`), and JS-like regex-literal
   `.test`. Producers emit call-site `Symbol` dependencies for imported
   binding/namespace occurrences or `Source` dependencies for regex literals;
   value-graph, idiom, and strict exact consumers consult these records first and

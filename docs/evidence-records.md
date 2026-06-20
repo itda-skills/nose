@@ -380,6 +380,8 @@ occurrence evidence, or selected Rust
 `nose.rust.stdlib.map_factories` provenance-backed `LibraryApi` occurrence
 evidence, or Java `java.util.Map.of`/`Map.ofEntries` factories with
 `nose.java.stdlib.map_factories` provenance-backed `LibraryApi` occurrence
+evidence, or Java `java.util.List.of`/`Set.of`/`Arrays.asList` factories with
+`nose.java.stdlib.collection_factories` provenance-backed `LibraryApi` occurrence
 evidence. Canonical
 `Append` still needs `Effect(BuilderAppendCall)`, and the first-party normalize
 producer emits that effect only when the same call also has the same-span
@@ -501,9 +503,10 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   receiver proof is satisfied; Ruby
   earlier top-level `require "set"; Set.new(...)` through `Import::Require`
   plus unshadowed `require` and `Set` proof; Java `java.util` static
-  factories/adapters including `List.of`, `Set.of`, `Arrays.asList`,
-  `Map.of`/`Map.ofEntries` with `nose.java.stdlib.map_factories` provenance,
-  `Map.entry`, and `Arrays.stream`, plus selected empty
+  factories/adapters including `List.of`, `Set.of`, and `Arrays.asList` with
+  `nose.java.stdlib.collection_factories` provenance, `Map.of`/`Map.ofEntries`
+  with `nose.java.stdlib.map_factories` provenance, `Map.entry`, and
+  `Arrays.stream`, plus selected empty
   `new ArrayList<>()`/`new LinkedList<>()` constructors through exact or
   wildcard import proof; and JS-like regex-literal `.test(...)`. These records
   depend on the relevant `QualifiedGlobal`, `UnshadowedGlobal`,
@@ -533,10 +536,11 @@ First-party frontends now emit these facts as `EvidenceRecord`:
 - selected `LibraryApi` producer-covered result calls emit dependent
   receiver-expression `Domain` evidence: Python `list`/`tuple` and
   `collections.deque`, Rust `Vec::new`, `vec!`, and pack-owned Rust
-  `std::collections::VecDeque::from`, Java `List.of` and zero- or
+  `std::collections::VecDeque::from`, pack-owned Java `List.of` and zero- or
   multi-argument `Arrays.asList`, and selected empty `new ArrayList<>()`/
   `new LinkedList<>()` as `Collection`; Python `set`/`frozenset`, pack-owned
-  Rust `std::collections::{HashSet,BTreeSet}::from`, Java `Set.of`, Ruby `Set.new`,
+  Rust `std::collections::{HashSet,BTreeSet}::from`, pack-owned Java `Set.of`,
+  Ruby `Set.new`,
   and JS-like `new Set` as `Set`; Rust
   `std::collections::{HashMap,BTreeMap}::from`, pack-owned Java
   `Map.of`/`Map.ofEntries`, and JS-like `new Map` as `Map`; JS-like
