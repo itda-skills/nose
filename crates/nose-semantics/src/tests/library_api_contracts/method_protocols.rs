@@ -264,6 +264,14 @@ fn scalar_integer_methods_are_language_and_signature_constrained() {
         scalar_integer_method_contract(Lang::JavaScript, "abs", 0),
         None
     );
+
+    let rust_clamp = library_scalar_integer_method_contract(Lang::Rust, "clamp", 2)
+        .expect("Rust clamp library contract");
+    assert_eq!(rust_clamp.pack_id, RUST_STDLIB_INTEGER_METHOD_PACK_ID);
+
+    let java_abs = library_scalar_integer_method_contract(Lang::Java, "abs", 1)
+        .expect("Java Math.abs library contract");
+    assert_eq!(java_abs.pack_id, FIRST_PARTY_PACK_ID);
 }
 
 #[test]

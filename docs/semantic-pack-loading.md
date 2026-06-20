@@ -69,6 +69,8 @@ Trust is separate from channel eligibility.
   occurrence provenance;
   `nose.rust.stdlib.option` owns Rust `Some`, `None`, and `and_then` Option API
   occurrence provenance;
+  `nose.rust.stdlib.integer_methods` owns primitive integer
+  `abs`/`min`/`max`/`clamp` method API occurrence provenance;
   `nose.javascript.builtins.promise` owns JS/TS `Promise.resolve` and `.then`
   Promise API occurrence provenance;
   `nose.javascript.builtins.array` owns JS/TS `Array.from` and

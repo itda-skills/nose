@@ -58,6 +58,10 @@ pub const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID: &str =
     "javascript.builtins.collection-constructor-api";
 pub const JS_LIKE_BUILTIN_SET_CONSTRUCTOR_CONTRACT_ID: &str = "js_like.set.constructor";
 pub const JS_LIKE_BUILTIN_MAP_CONSTRUCTOR_CONTRACT_ID: &str = "js_like.map.constructor";
+pub const SCALAR_INTEGER_METHOD_ABS_CONTRACT_ID: &str = "scalar_integer_method.abs";
+pub const SCALAR_INTEGER_METHOD_MIN_CONTRACT_ID: &str = "scalar_integer_method.min";
+pub const SCALAR_INTEGER_METHOD_MAX_CONTRACT_ID: &str = "scalar_integer_method.max";
+pub const SCALAR_INTEGER_METHOD_CLAMP_CONTRACT_ID: &str = "scalar_integer_method.clamp";
 pub const RUBY_STDLIB_SET_PACK_ID: &str = "nose.ruby.stdlib.set";
 pub const RUBY_STDLIB_SET_PRODUCER_ID: &str = "ruby.stdlib.set-factory-api";
 pub const RUBY_STDLIB_SET_CONTRACT_ID: &str = "ruby.set_factory";
@@ -70,6 +74,8 @@ pub const RUST_STDLIB_OPTION_PRODUCER_ID: &str = "rust.stdlib.option-api";
 pub const RUST_STDLIB_OPTION_SOME_CONTRACT_ID: &str = "rust.option.some.constructor";
 pub const RUST_STDLIB_OPTION_NONE_CONTRACT_ID: &str = "rust.option.none.sentinel";
 pub const RUST_STDLIB_OPTION_AND_THEN_CONTRACT_ID: &str = "rust.option.and_then";
+pub const RUST_STDLIB_INTEGER_METHOD_PACK_ID: &str = "nose.rust.stdlib.integer_methods";
+pub const RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID: &str = "rust.stdlib.integer-method-api";
 pub const RUST_STDLIB_COLLECTION_FACTORY_PACK_ID: &str = "nose.rust.stdlib.collection_factories";
 pub const RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID: &str = "rust.stdlib.collection-factory-api";
 pub const RUST_STDLIB_COLLECTION_FACTORY_CONTRACT_ID: &str = "rust.std.collection_factory";
@@ -441,6 +447,7 @@ pub struct LibraryPropertyBuiltinContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryScalarIntegerMethodContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: ScalarIntegerMethodContract,

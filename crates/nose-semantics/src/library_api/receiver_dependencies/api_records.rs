@@ -194,6 +194,21 @@ pub(in crate::library_api) fn library_api_dependency_id_for_canonical_builtin_ca
             continue;
         };
         let callee = library_api_callee_contract_for_hash(il.meta.lang, id, callee_hash);
+        if matches!(
+            (il.meta.lang, id, callee),
+            (
+                Lang::Rust,
+                LibraryApiContractId::ScalarIntegerMethod(_),
+                None
+            )
+        ) {
+            return None;
+        }
+        if callee.is_some_and(|callee_contract| {
+            !library_api_record_provenance_matches_contract(id, callee_contract, record)
+        }) {
+            return None;
+        }
         if !accepts(record, id, callee, arity) {
             return None;
         }

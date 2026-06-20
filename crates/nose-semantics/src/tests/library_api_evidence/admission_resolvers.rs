@@ -3,6 +3,7 @@ use super::*;
 mod array;
 mod promise;
 mod regex;
+mod scalar_integer;
 mod span;
 mod static_index;
 

@@ -37,6 +37,7 @@ pub(in crate::library_api) use registry::{
 pub use resolvers::*;
 pub use rows::*;
 
+pub(in crate::library_api) use admission::library_api_record_provenance_matches_contract;
 pub use admission::{
     library_api_contract_evidence_at_call_span, library_api_contract_evidence_for_call,
     library_api_contract_evidence_for_node,

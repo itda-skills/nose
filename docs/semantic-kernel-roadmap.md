@@ -85,6 +85,8 @@ The next code slices are intentionally incremental:
    `nose.rust.stdlib.vec` for Rust `Vec::new` and `vec!` collection-factory
    occurrence provenance, then `nose.rust.stdlib.option` for Rust `Some`,
    `None`, and `and_then` Option API occurrence provenance, then
+   `nose.rust.stdlib.integer_methods` for Rust primitive integer
+   `abs`/`min`/`max`/`clamp` method API occurrence provenance, then
    `nose.javascript.builtins.promise` for JS/TS `Promise.resolve` and `.then`
    Promise API occurrence provenance, then
    `nose.javascript.builtins.array` for JS/TS `Array.from` and
@@ -581,6 +583,37 @@ the sequential triggers as order/environment-sensitive timing noise unless a
 later alternating run repeats them above both the 5% and 5 ms gates. Binary
 size changed 20,162,240 -> 20,162,432 bytes for this slice.
 
+Phase 5 Rust stdlib integer-method measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous
+`nose.javascript.builtins.static_index_membership` slice with the
+`nose.rust.stdlib.integer_methods` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by
+exactly 522 bytes from the new top-level `semantic_packs` entry. The saved
+artifacts are `/tmp/nose-473-phase5-rust-integer-prev-r15.json`,
+`/tmp/nose-473-phase5-rust-integer-current-r15.json`, and
+`/tmp/nose-473-phase5-rust-integer-vs-prev-r15.md`. The final sequential r15
+compare showed runtime triggers on `gin`, `junit5`, `ky`, `liquid`, and
+`serde_json`; the full-subset alternating r15 run saved at
+`/tmp/nose-473-phase5-rust-integer-alternating-r15.json` showed aggregate wall
+1435.17 ms -> 1447.21 ms (+0.8%), `parse+lower` 349.20 ms -> 350.00 ms,
+`lower` 454.10 ms -> 470.40 ms, `normalize+extract` 736.80 ms -> 749.90 ms,
+and `candidates` 24.90 ms -> 25.60 ms, with remaining repo/phase triggers on
+`serde_json` wall and lower. A focused alternating r30 rerun over `serde_json`,
+saved at
+`/tmp/nose-473-phase5-rust-integer-serde-json-focused-alternating-r30.json`,
+cleared all 5%+5 ms triggers; focused aggregate wall was 58.38 ms -> 59.42 ms
+(+1.8%), `parse+lower` 17.90 ms -> 17.05 ms, `lower` 23.20 ms -> 23.40 ms,
+`normalize+extract` 23.90 ms -> 23.00 ms, and `candidates` 1.55 ms -> 1.60 ms.
+Root-cause note: this slice adds static pack metadata, Rust primitive integer
+method producer provenance, and callee-aware admission provenance checks for
+exact-integer receiver methods, including canonical builtin dependency
+admission; it does not add per-node descriptor scans or touch candidate
+generation logic. Treat the sequential and full-subset r15 repo-local triggers
+as order/environment-sensitive timing noise unless a later alternating run
+repeats them above both gates. Binary size changed 20,162,432 -> 20,162,672
+bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -648,6 +681,12 @@ size changed 20,162,240 -> 20,162,432 bytes for this slice.
   `Some`, `None`, and `and_then` `LibraryApi` occurrence evidence now reports
   `nose.rust.stdlib.option` pack and producer provenance while preserving
   shadowed selector and non-Option receiver hard negatives.
+- Rust stdlib integer methods started moving out of the broad compatibility
+  facade. Primitive integer `abs`, `min`, `max`, and `clamp` `LibraryApi`
+  occurrence evidence now reports `nose.rust.stdlib.integer_methods` pack and
+  producer provenance while preserving non-integer receiver and
+  unsupported-arity hard negatives. Java `Math.*` scalar integer methods remain
+  under the compatibility facade until a Java-specific slice migrates them.
 - JS/TS Promise APIs started moving out of the broad compatibility facade.
   `Promise.resolve` and `.then` `LibraryApi` occurrence evidence now reports
   `nose.javascript.builtins.promise` pack and producer provenance while
@@ -707,9 +746,9 @@ size changed 20,162,240 -> 20,162,432 bytes for this slice.
   producer provenance while preserving missing-import and shadowed-`Arrays` hard
   negatives.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a
-  language-, signature-, and integer-domain-constrained first-party contract
-  instead of a bare method-name recognizer. Float/NaN-sensitive methods remain a
-  separate future contract.
+  language-, signature-, integer-domain-, and pack-provenance-constrained
+  contract instead of a bare method-name recognizer. Float/NaN-sensitive methods
+  remain a separate future contract.
 - Exact fragment IL-surface proofs for Java `this.field`, Java `return this`,
   non-overloadable C/Go/Java index assignment, and single-item builder append
   calls moved into `nose-semantics`, so predicate and contract paths no longer

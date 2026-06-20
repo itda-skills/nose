@@ -19,6 +19,22 @@ fn python_len_canonical_call_il() -> (Il, NodeId) {
     canonical_builtin_call_il(Lang::Python, Builtin::Len, &[arg], b, arg)
 }
 
+fn rust_integer_canonical_builtin_call_il(builtin: Builtin, arg_count: usize) -> (Il, NodeId) {
+    let mut b = IlBuilder::new(FileId(0));
+    let args = (0..arg_count)
+        .map(|idx| {
+            b.add(
+                NodeKind::Var,
+                Payload::Cid(idx as u32),
+                sp(90 + idx as u32),
+                &[],
+            )
+        })
+        .collect::<Vec<_>>();
+    let root = args[0];
+    canonical_builtin_call_il(Lang::Rust, builtin, &args, b, root)
+}
+
 #[test]
 fn canonical_builtin_admission_requires_language_core_or_library_api_evidence() {
     let (mut il, call) = python_len_canonical_call_il();
@@ -37,6 +53,68 @@ fn canonical_builtin_admission_requires_language_core_or_library_api_evidence() 
     ));
     assert!(admitted_builtin_semantics_at_call(&il, call, Builtin::Len));
     assert!(!admitted_builtin_semantics_at_call(&il, call, Builtin::Abs));
+}
+
+#[test]
+fn rust_integer_canonical_builtin_requires_integer_method_pack_provenance() {
+    for (builtin, method, source_arity, canonical_arg_count) in [
+        (Builtin::Abs, "abs", 0, 1),
+        (Builtin::Min, "min", 1, 2),
+        (Builtin::Max, "max", 1, 2),
+    ] {
+        let contract = library_scalar_integer_method_contract(Lang::Rust, method, source_arity)
+            .expect("Rust integer method contract");
+
+        let (mut wrong_pack, call) =
+            rust_integer_canonical_builtin_call_il(builtin, canonical_arg_count);
+        let receiver = wrong_pack.children(call)[0];
+        wrong_pack.evidence.push(evidence(
+            0,
+            EvidenceAnchor::node(wrong_pack.node(receiver).span, wrong_pack.kind(receiver)),
+            EvidenceKind::Domain(DomainEvidence::Integer),
+            EvidenceStatus::Asserted,
+        ));
+        wrong_pack
+            .evidence
+            .push(library_api_record_with_provenance_and_arity(
+                1,
+                wrong_pack.node(call).span,
+                contract.id,
+                contract.callee,
+                source_arity as u16,
+                EvidenceStatus::Asserted,
+                &[0],
+                FIRST_PARTY_PACK_ID,
+                RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID,
+            ));
+        assert!(
+            !admitted_builtin_semantics_at_call(&wrong_pack, call, builtin),
+            "canonical Rust {method} builtin must reject compatibility-pack evidence"
+        );
+
+        let (mut admitted, call) =
+            rust_integer_canonical_builtin_call_il(builtin, canonical_arg_count);
+        let receiver = admitted.children(call)[0];
+        admitted.evidence.push(evidence(
+            0,
+            EvidenceAnchor::node(admitted.node(receiver).span, admitted.kind(receiver)),
+            EvidenceKind::Domain(DomainEvidence::Integer),
+            EvidenceStatus::Asserted,
+        ));
+        admitted.evidence.push(rust_stdlib_integer_method_record(
+            1,
+            admitted.node(call).span,
+            contract.id,
+            contract.callee,
+            source_arity as u16,
+            EvidenceStatus::Asserted,
+            &[0],
+        ));
+        assert!(
+            admitted_builtin_semantics_at_call(&admitted, call, builtin),
+            "canonical Rust {method} builtin should admit the builtin-pack evidence"
+        );
+    }
 }
 
 #[test]

@@ -92,6 +92,9 @@ still being migrated toward it.
   `nose.rust.stdlib.option` descriptor owns Rust `Some`, `None`, and
   `and_then` Option API contract and occurrence producer ids, while shadowed
   Option selectors and non-Option receivers remain hard negatives. The
+  `nose.rust.stdlib.integer_methods` descriptor owns Rust primitive integer
+  `abs`/`min`/`max`/`clamp` method API contract and occurrence producer ids,
+  while non-integer receivers and unsupported arities remain hard negatives. The
   `nose.javascript.builtins.promise` descriptor owns JS/TS `Promise.resolve`
   and `.then` Promise API contract and occurrence producer ids, while shadowed
   `Promise`, missing Promise-like receiver proof, and unsafe thenable
@@ -160,6 +163,8 @@ still being migrated toward it.
   `vec!` collection-factory API provenance,
   `nose.rust.stdlib.option`, a default builtin stdlib pack for Rust `Some`,
   `None`, and `and_then` Option API provenance,
+  `nose.rust.stdlib.integer_methods`, a default builtin stdlib pack for Rust
+  primitive integer `abs`/`min`/`max`/`clamp` method API provenance,
   `nose.javascript.builtins.promise`, a default builtin stdlib pack for JS/TS
   `Promise.resolve` and `.then` Promise API provenance,
   `nose.javascript.builtins.array`, a default builtin stdlib pack for JS/TS
@@ -493,6 +498,9 @@ migrated.
   `from collections import deque as Values`, or `import collections;
   collections.deque(...)`; Python `import math; math.prod(...)`; Rust
   `vec!(...)` when source syntax proves a macro invocation, `Vec::new()`, and selected
+  primitive integer `abs`/`min`/`max`/`clamp` receiver methods with
+  `nose.rust.stdlib.integer_methods` provenance when exact integer receiver
+  proof is present, and selected
   `std::collections::{HashSet,BTreeSet,VecDeque,HashMap,BTreeMap}::from(...)`
   factory paths when their root-shadow policy is proven; Ruby
   `require "set"; Set.new(...)` when an earlier top-level `Import::Require("set")`
@@ -527,8 +535,9 @@ migrated.
   backed by `LibraryApiContract`: map `get`, map-key views, iterator identity
   adapters, and generic language-scoped method-call contracts such as
   collection/map membership, map defaulting, count methods,
-  string/collection predicates, Rust scalar integer methods, Rust
-  `Option::and_then`, Rust `zip`, and HOF/reduction methods. The
+  string/collection predicates, Rust scalar integer methods with
+  `nose.rust.stdlib.integer_methods` provenance, Rust `Option::and_then`, Rust
+  `zip`, and HOF/reduction methods. The
   occurrence record is admitted only for the exact language/method/arity row and
   depends on receiver proof: node/binding/parameter `Domain`, `SequenceSurface`,
   imported namespace or unshadowed-global `Symbol`, or a nested admitted
@@ -627,7 +636,8 @@ migrated.
   resolvers in `nose-semantics` for method, imported-namespace function,
   iterator-adapter, Rust Option/`Vec::new`, direct factory/constructor eval,
   node-level property builtins, Rust `Some` callee-node checks, static
-  index-membership, Rust scalar integer method calls, and builder append API
+  index-membership, Rust scalar integer method calls under
+  `nose.rust.stdlib.integer_methods`, and builder append API
   admission instead of recombining raw selector parsing with evidence admission
   locally. Normalize idiom canonicalization uses the same resolver layer for
   supported free-function builtins, generic method contracts, HOF receiver

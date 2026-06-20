@@ -411,11 +411,16 @@ pub fn library_receiver_method_api_contract(
         })
         .or_else(|| {
             library_scalar_integer_method_contract(lang, method, arg_count).map(|contract| {
+                let rule = if contract.pack_id == RUST_STDLIB_INTEGER_METHOD_PACK_ID {
+                    RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID
+                } else {
+                    "library_api_scalar_integer_method"
+                };
                 LibraryReceiverMethodApiContract {
-                    pack_id: FIRST_PARTY_PACK_ID,
+                    pack_id: contract.pack_id,
                     id: contract.id,
                     callee: contract.callee,
-                    rule: "library_api_scalar_integer_method",
+                    rule,
                     result_domain: None,
                 }
             })

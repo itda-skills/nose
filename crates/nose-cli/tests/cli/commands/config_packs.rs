@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        23
+        24
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -258,6 +258,34 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(rust_option["counts"]["value_laws"], 0);
     assert_eq!(rust_option["counts"]["positive_fixtures"], 3);
     assert_eq!(rust_option["counts"]["hard_negatives"], 3);
+
+    let rust_integer_methods = semantic_pack_by_id(&json, "nose.rust.stdlib.integer_methods");
+    assert_eq!(rust_integer_methods["hash"], "ce3664f7abe81ee9");
+    assert_eq!(rust_integer_methods["kind"], "StdlibPack");
+    assert_eq!(
+        rust_integer_methods["display_name"],
+        "nose Rust stdlib integer method pack"
+    );
+    assert_eq!(rust_integer_methods["source"], "compiled-first-party");
+    assert_eq!(rust_integer_methods["influence"], "evidence-and-contracts");
+    assert_eq!(rust_integer_methods["trust"], "default-first-party");
+    assert_eq!(rust_integer_methods["enabled_by_default"], true);
+    assert_eq!(rust_integer_methods["path"], serde_json::Value::Null);
+    assert_eq!(rust_integer_methods["provider"], "Corca, Inc.");
+    assert_eq!(
+        rust_integer_methods["repository"],
+        "https://github.com/corca-ai/nose"
+    );
+    assert_eq!(rust_integer_methods["license"], "MIT");
+    assert_eq!(
+        json_array_strings(rust_integer_methods, "supported_languages"),
+        vec!["rust"]
+    );
+    assert_eq!(rust_integer_methods["counts"]["evidence_producers"], 1);
+    assert_eq!(rust_integer_methods["counts"]["contracts"], 4);
+    assert_eq!(rust_integer_methods["counts"]["value_laws"], 0);
+    assert_eq!(rust_integer_methods["counts"]["positive_fixtures"], 4);
+    assert_eq!(rust_integer_methods["counts"]["hard_negatives"], 2);
 
     let rust_collections = semantic_pack_by_id(&json, "nose.rust.stdlib.collection_factories");
     assert_eq!(rust_collections["hash"], "c0913f2d5652c20f");

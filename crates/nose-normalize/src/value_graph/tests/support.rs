@@ -28,7 +28,8 @@ pub(super) use nose_semantics::{
     JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID, JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID,
     JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PRODUCER_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
     PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
-    PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, RUST_STDLIB_OPTION_PACK_ID,
+    PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, RUST_STDLIB_INTEGER_METHOD_PACK_ID,
+    RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID, RUST_STDLIB_OPTION_PACK_ID,
     RUST_STDLIB_OPTION_PRODUCER_ID,
 };
 pub(super) use rustc_hash::FxHashMap;
@@ -297,6 +298,21 @@ pub(super) fn js_like_builtin_static_index_membership_evidence(
     record
 }
 
+pub(super) fn rust_stdlib_integer_method_evidence(
+    id: u32,
+    call_span: Span,
+    contract_id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+    arity: u16,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    let mut record =
+        library_api_contract_evidence(id, call_span, contract_id, callee, arity, dependencies);
+    record.provenance.pack_hash = Some(stable_symbol_hash(RUST_STDLIB_INTEGER_METHOD_PACK_ID));
+    record.provenance.rule_hash = Some(stable_symbol_hash(RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID));
+    record
+}
+
 pub(super) fn python_builtin_collection_factory_evidence(
     id: u32,
     call_span: Span,
@@ -449,14 +465,33 @@ pub(super) fn push_library_api_evidence_for_callee(
     let dependencies =
         nose_semantics::library_api_receiver_dependencies_for_call(il, interner, call, callee)
             .expect("library api receiver dependencies");
-    il.evidence.push(library_api_contract_evidence(
-        id,
-        il.node(call).span,
-        contract_id,
-        callee,
-        arity,
-        dependencies,
-    ));
+    let record = if matches!(contract_id, LibraryApiContractId::ScalarIntegerMethod(_))
+        && matches!(
+            callee,
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactInteger,
+                ..
+            }
+        ) {
+        rust_stdlib_integer_method_evidence(
+            id,
+            il.node(call).span,
+            contract_id,
+            callee,
+            arity,
+            dependencies,
+        )
+    } else {
+        library_api_contract_evidence(
+            id,
+            il.node(call).span,
+            contract_id,
+            callee,
+            arity,
+            dependencies,
+        )
+    };
+    il.evidence.push(record);
 }
 
 pub(super) fn eval_proven_collection_op(

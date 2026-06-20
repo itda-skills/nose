@@ -29,7 +29,7 @@ pub fn library_api_contract_evidence_for_call(
         saw_library_api_evidence = true;
         if record.status != EvidenceStatus::Asserted
             || api != expected
-            || !library_api_record_provenance_matches_contract(id, record)
+            || !library_api_record_provenance_matches_contract(id, callee, record)
             || !il.evidence_dependencies_asserted(record)
             || !library_api_callee_shape_matches(il, interner, node, callee)
             || !library_api_dependencies_match_callee(il, interner, node, callee, record)
@@ -76,7 +76,7 @@ pub fn library_api_contract_evidence_for_node(
         saw_library_api_evidence = true;
         if record.status != EvidenceStatus::Asserted
             || api != expected
-            || !library_api_record_provenance_matches_contract(id, record)
+            || !library_api_record_provenance_matches_contract(id, callee, record)
             || !il.evidence_dependencies_asserted(record)
             || !library_api_node_callee_shape_matches(il, interner, node, callee)
             || !library_api_dependencies_match_callee_node(il, interner, node, callee, record)
@@ -141,7 +141,7 @@ pub fn library_api_contract_evidence_at_call_span(
         );
         if record.status != EvidenceStatus::Asserted
             || api != expected
-            || !library_api_record_provenance_matches_contract(query.id, record)
+            || !library_api_record_provenance_matches_contract(query.id, query.callee, record)
             || !il.evidence_dependencies_asserted(record)
             || (!source_call_matches && !span_query_matches)
         {
@@ -158,8 +158,9 @@ pub fn library_api_contract_evidence_at_call_span(
     }
 }
 
-fn library_api_record_provenance_matches_contract(
+pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
     id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
     record: &EvidenceRecord,
 ) -> bool {
     match id {
@@ -260,6 +261,21 @@ fn library_api_record_provenance_matches_contract(
                     == Some(stable_symbol_hash(RUST_STDLIB_OPTION_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(RUST_STDLIB_OPTION_PRODUCER_ID))
+        }
+        LibraryApiContractId::ScalarIntegerMethod(_)
+            if matches!(
+                callee,
+                LibraryApiCalleeContract::Method {
+                    receiver: MethodReceiverContract::ExactInteger,
+                    ..
+                }
+            ) =>
+        {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash
+                    == Some(stable_symbol_hash(RUST_STDLIB_INTEGER_METHOD_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID))
         }
         LibraryApiContractId::RustStdCollectionFactory => {
             record.provenance.emitter == EvidenceEmitter::FirstParty

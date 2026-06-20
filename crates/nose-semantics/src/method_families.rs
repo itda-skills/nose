@@ -111,7 +111,12 @@ pub fn library_scalar_integer_method_contract(
 ) -> Option<LibraryScalarIntegerMethodContract> {
     let result = scalar_integer_method_contract_shape(lang, method, arg_count)?;
     let method = library_method_selector_name(method)?;
+    let pack_id = match (lang, result.receiver) {
+        (Lang::Rust, MethodReceiverContract::ExactInteger) => RUST_STDLIB_INTEGER_METHOD_PACK_ID,
+        _ => FIRST_PARTY_PACK_ID,
+    };
     Some(LibraryScalarIntegerMethodContract {
+        pack_id,
         id: LibraryApiContractId::ScalarIntegerMethod(result.semantic),
         callee: LibraryApiCalleeContract::Method {
             method,

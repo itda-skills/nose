@@ -443,6 +443,7 @@ pub(crate) fn assert_query_json_reports_semantic_packs(json: &serde_json::Value)
         "nose.ruby.stdlib.set",
         "nose.rust.stdlib.vec",
         "nose.rust.stdlib.option",
+        "nose.rust.stdlib.integer_methods",
         "nose.rust.stdlib.collection_factories",
         "nose.rust.stdlib.map_factories",
         "nose.java.stdlib.map_factories",

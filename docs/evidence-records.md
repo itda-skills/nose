@@ -501,7 +501,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   same pack provenance when the root-shadow policy is proven, `Some(...)`,
   selected `Some(_)` pattern selectors, bare `None`, and `and_then(...)` with
   `nose.rust.stdlib.option` provenance when Option receiver or selector proof is
-  satisfied, and selected
+  satisfied, primitive integer `abs`/`min`/`max`/`clamp` receiver methods with
+  `nose.rust.stdlib.integer_methods` provenance when exact integer receiver
+  proof is present, and selected
   `std::collections::{HashSet,BTreeSet,VecDeque}::from(...)` factory paths with
   `nose.rust.stdlib.collection_factories` provenance when their root-shadow
   policy is proven, and selected
@@ -536,8 +538,8 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   occurrence evidence for selected receiver methods that remain as raw call
   nodes: map `get`, map-key views, iterator identity adapters, and the
   language-scoped method-call contracts currently used for collection/map
-  membership, map defaulting, count, predicates, Rust scalar integer methods,
-  Rust `Option::and_then`, Rust `zip`, HOF, and reduction methods. Property
+  membership, map defaulting, count, predicates, pack-owned Rust scalar integer
+  methods, Rust `Option::and_then`, Rust `zip`, HOF, and reduction methods. Property
   cardinality such as JS/TS `length` is modeled as `Property`, not as a method
   call. The post-binding refresh exists because immutable
   binding-domain evidence is inferred after lowering; the final refresh exists
@@ -668,7 +670,8 @@ callers:
   they still have the source `Call` or `Field` node. This includes direct
   factory/constructor eval, property builtins such as JS/TS/Java `.length`, Rust
   `Some` callee-node checks, static index-membership, Rust scalar integer method
-  calls, builder append API admission, pack-owned Promise `resolve`, and
+  calls under `nose.rust.stdlib.integer_methods`, builder append API admission,
+  pack-owned Promise `resolve`, and
   Promise `.then` contract lookup. Promise continuation reduction additionally requires a
   recoverable supported settled value and preserves a Promise boundary in the
   value graph. Value-level CSE paths that only retain source

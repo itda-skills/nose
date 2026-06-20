@@ -43,6 +43,7 @@ ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.javascript.builtins.collection_constructors`,
 `nose.ruby.stdlib.set`, `nose.rust.stdlib.vec`,
 `nose.rust.stdlib.option`,
+`nose.rust.stdlib.integer_methods`,
 `nose.rust.stdlib.collection_factories`, `nose.rust.stdlib.map_factories`,
 `nose.java.stdlib.map_factories`, `nose.java.stdlib.map_entries`,
 `nose.java.stdlib.collection_factories`,
@@ -185,18 +186,23 @@ previous semantic-kernel tranches.
    narrow builtin pack ids and shared admitted-contract resolvers. The first
    slice is `nose.python.builtins.collection_factories`, which owns Python
    `list`, `set`, `frozenset`, and `tuple` collection-factory API occurrence
-   provenance. The next stdlib slice is
+   provenance. The Python stdlib collection slice is
    `nose.python.stdlib.collection_factories`, which owns `collections.deque`
    imported binding, alias, and namespace collection-factory API occurrence
    provenance. The current Python stdlib math slice is
    `nose.python.stdlib.math`, which owns `math.prod` imported namespace product
-   reduction API occurrence provenance. The next stdlib slice is
+   reduction API occurrence provenance. The Ruby stdlib Set slice is
    `nose.ruby.stdlib.set`, which owns Ruby `require "set"; Set.new(...)`
    collection-factory API occurrence provenance.
-   The next Rust stdlib slice is `nose.rust.stdlib.vec`, which owns Rust
+   The Rust stdlib Vec slice is `nose.rust.stdlib.vec`, which owns Rust
    `Vec::new` and `vec!` collection-factory API occurrence provenance.
    The current Rust stdlib Option slice is `nose.rust.stdlib.option`, which
    owns Rust `Some`, `None`, and `and_then` Option API occurrence provenance.
+   The current Rust stdlib integer-method slice is
+   `nose.rust.stdlib.integer_methods`, which owns primitive integer
+   `abs`/`min`/`max`/`clamp` method API occurrence provenance. Java `Math.*`
+   scalar integer methods remain in the broad compatibility facade until a
+   Java-specific slice migrates them.
    The current JavaScript builtins Promise slice is
    `nose.javascript.builtins.promise`, which owns JS/TS `Promise.resolve` and
    `.then` Promise API occurrence provenance.
@@ -215,10 +221,10 @@ previous semantic-kernel tranches.
    The current JavaScript builtins collection-constructor slice is
    `nose.javascript.builtins.collection_constructors`, which owns JS/TS
    `new Set(...)` and `new Map(...)` API occurrence provenance.
-   The next Rust stdlib collection slice is
+   The Rust stdlib collection slice is
    `nose.rust.stdlib.collection_factories`, which owns selected
    `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection-factory API
-   occurrence provenance. The next Rust stdlib map slice is
+   occurrence provenance. The Rust stdlib map slice is
    `nose.rust.stdlib.map_factories`, which owns selected
    `std::collections::{HashMap,BTreeMap}::from` map-factory API occurrence
    provenance. The current Java stdlib map slice is
