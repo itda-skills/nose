@@ -210,7 +210,7 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
     assert_eq!(
         library_java_map_factory_contract(Lang::Java, "Map", "of"),
         Some(LibraryMapFactoryContract {
-            pack_id: FIRST_PARTY_PACK_ID,
+            pack_id: JAVA_STDLIB_MAP_FACTORY_PACK_ID,
             id: LibraryApiContractId::JavaMapFactory(JavaMapFactoryKind::Of),
             callee: LibraryApiCalleeContract::JavaUtilStaticMember {
                 receiver: "Map",
@@ -218,6 +218,30 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
             },
             result: LibraryMapFactoryResult::JavaFactory {
                 kind: JavaMapFactoryKind::Of,
+            },
+        })
+    );
+    assert_eq!(
+        library_java_map_factory_contract(Lang::Java, "Map", "ofEntries"),
+        Some(LibraryMapFactoryContract {
+            pack_id: JAVA_STDLIB_MAP_FACTORY_PACK_ID,
+            id: LibraryApiContractId::JavaMapFactory(JavaMapFactoryKind::OfEntries),
+            callee: LibraryApiCalleeContract::JavaUtilStaticMember {
+                receiver: "Map",
+                method: "ofEntries",
+            },
+            result: LibraryMapFactoryResult::JavaFactory {
+                kind: JavaMapFactoryKind::OfEntries,
+            },
+        })
+    );
+    assert_eq!(
+        library_java_map_entry_contract(Lang::Java, "Map", "entry"),
+        Some(LibraryMapEntryFactoryContract {
+            id: LibraryApiContractId::JavaMapEntryFactory,
+            callee: LibraryApiCalleeContract::JavaUtilStaticMember {
+                receiver: "Map",
+                method: "entry",
             },
         })
     );

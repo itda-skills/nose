@@ -26,6 +26,7 @@ fn library_collection_factory_pack_id(id: LibraryApiContractId) -> &'static str 
 fn library_map_factory_pack_id(id: LibraryApiContractId) -> &'static str {
     match id {
         LibraryApiContractId::RustStdMapFactory => RUST_STDLIB_MAP_FACTORY_PACK_ID,
+        LibraryApiContractId::JavaMapFactory(_) => JAVA_STDLIB_MAP_FACTORY_PACK_ID,
         _ => FIRST_PARTY_PACK_ID,
     }
 }

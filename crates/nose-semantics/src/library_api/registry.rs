@@ -47,6 +47,7 @@ pub(super) fn library_api_contract_result_domain_for_arity(
             LibraryMapFactoryContract {
                 pack_id: match id {
                     LibraryApiContractId::RustStdMapFactory => RUST_STDLIB_MAP_FACTORY_PACK_ID,
+                    LibraryApiContractId::JavaMapFactory(_) => JAVA_STDLIB_MAP_FACTORY_PACK_ID,
                     _ => FIRST_PARTY_PACK_ID,
                 },
                 id,

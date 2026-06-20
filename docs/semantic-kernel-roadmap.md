@@ -88,7 +88,8 @@ The next code slices are intentionally incremental:
    collection-factory occurrence provenance, then
    `nose.rust.stdlib.map_factories` for selected Rust
    `std::collections::{HashMap,BTreeMap}::from` map-factory occurrence
-   provenance;
+   provenance, then `nose.java.stdlib.map_factories` for Java `Map.of` and
+   `Map.ofEntries` map-factory occurrence provenance;
 7. Phase 6: allow external pack influence only after the builtin path is proven;
 8. Phase 7: define adoption and release gates.
 
@@ -239,6 +240,29 @@ metadata, Rust std-map producer provenance, and an admission provenance check;
 it did not touch candidate generation, and product output did not drift. Binary
 size changed 20,142,368 -> 20,142,768 bytes for this slice.
 
+Phase 5 Java stdlib map-factory measurement note, local run on 2026-06-20:
+product query-regression r15 compared the previous
+`nose.rust.stdlib.map_factories` slice with the
+`nose.java.stdlib.map_factories` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by 517
+bytes from the new top-level `semantic_packs` entry. The saved previous and
+current artifacts are `/tmp/nose-473-phase5-java-map-prev-r15.json` and
+`/tmp/nose-473-phase5-java-map-current-r15.json`; the previous-slice compare
+summary is `/tmp/nose-473-phase5-java-map-vs-prev-r15.md`. The sequential
+compare showed expected metadata drift plus noisy runtime triggers, so the same
+binaries were remeasured with repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-java-map-alternating-r15.json`: aggregate wall time
+1447.61 ms -> 1439.27 ms, `lower` 440.70 ms -> 431.50 ms,
+`normalize+extract` 736.30 ms -> 749.20 ms, and `candidates` 24.90 ms ->
+25.50 ms. The remaining alternating r15 triggers on `serde_json` wall time and
+`junit5` `normalize+extract` were rechecked with focused alternating r30 runs
+saved at `/tmp/nose-473-phase5-java-map-focused-alternating-r30.json`; no
+repo/phase triggers remained. Root-cause note: this slice changed static pack
+metadata, Java std-map producer provenance, and an admission provenance check;
+it did not touch candidate generation, and product output did not drift. Binary
+size changed 20,142,768 -> 20,143,040 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -312,6 +336,11 @@ size changed 20,142,368 -> 20,142,768 bytes for this slice.
   `LibraryApi` occurrence evidence now reports
   `nose.rust.stdlib.map_factories` pack and producer provenance while preserving
   shadowed-`std` hard negatives.
+- Java stdlib map factories started moving out of the broad compatibility
+  facade. `java.util.Map.of` and `Map.ofEntries` factory `LibraryApi`
+  occurrence evidence now reports `nose.java.stdlib.map_factories` pack and
+  producer provenance while preserving missing-import and `Map.entry` boundary
+  hard negatives.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a
   language-, signature-, and integer-domain-constrained first-party contract
   instead of a bare method-name recognizer. Float/NaN-sensitive methods remain a
@@ -557,8 +586,9 @@ size changed 20,142,368 -> 20,142,768 bytes for this slice.
 - The next `LibraryApi` occurrence evidence slice extended the same
   dependency-backed path to selected import/source-backed APIs: Python
   `collections.deque`, Python `math.prod`, Java `java.util` static
-  factories/adapters (`List.of`, `Set.of`, `Arrays.asList`, `Map.of`,
-  `Map.ofEntries`, `Map.entry`, `Arrays.stream`), and JS-like regex-literal
+  factories/adapters (`List.of`, `Set.of`, `Arrays.asList`,
+  `Map.of`/`Map.ofEntries` with `nose.java.stdlib.map_factories` provenance,
+  `Map.entry`, `Arrays.stream`), and JS-like regex-literal
   `.test`. Producers emit call-site `Symbol` dependencies for imported
   binding/namespace occurrences or `Source` dependencies for regex literals;
   value-graph, idiom, and strict exact consumers consult these records first and

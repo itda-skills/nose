@@ -133,6 +133,13 @@ fn query_json_reports_builtin_semantic_packs() {
         "--format",
         "json",
     ]));
+    assert_eq!(
+        json["semantic_packs"]
+            .as_array()
+            .expect("semantic_packs should be an array")
+            .len(),
+        11
+    );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
     assert_eq!(first_party["source"], "compiled-first-party");
@@ -257,6 +264,31 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(rust_maps["counts"]["value_laws"], 0);
     assert_eq!(rust_maps["counts"]["positive_fixtures"], 2);
     assert_eq!(rust_maps["counts"]["hard_negatives"], 2);
+
+    let java_maps = semantic_pack_by_id(&json, "nose.java.stdlib.map_factories");
+    assert_eq!(java_maps["hash"], "1eecb2960193782f");
+    assert_eq!(java_maps["kind"], "StdlibPack");
+    assert_eq!(
+        java_maps["display_name"],
+        "nose Java stdlib map factory pack"
+    );
+    assert_eq!(java_maps["source"], "compiled-first-party");
+    assert_eq!(java_maps["influence"], "evidence-and-contracts");
+    assert_eq!(java_maps["trust"], "default-first-party");
+    assert_eq!(java_maps["enabled_by_default"], true);
+    assert_eq!(java_maps["path"], serde_json::Value::Null);
+    assert_eq!(java_maps["provider"], "Corca, Inc.");
+    assert_eq!(java_maps["repository"], "https://github.com/corca-ai/nose");
+    assert_eq!(java_maps["license"], "MIT");
+    assert_eq!(
+        json_array_strings(java_maps, "supported_languages"),
+        vec!["java"]
+    );
+    assert_eq!(java_maps["counts"]["evidence_producers"], 1);
+    assert_eq!(java_maps["counts"]["contracts"], 2);
+    assert_eq!(java_maps["counts"]["value_laws"], 0);
+    assert_eq!(java_maps["counts"]["positive_fixtures"], 2);
+    assert_eq!(java_maps["counts"]["hard_negatives"], 2);
 
     let stdlib = semantic_pack_by_id(&json, "nose.python.stdlib.type_domain");
     assert_eq!(stdlib["kind"], "StdlibPack");

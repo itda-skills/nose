@@ -255,6 +255,58 @@ fn java_arrays_stream_call_il() -> (Il, Interner, NodeId, NodeId) {
     (finish_il(b, root, Lang::Java), interner, call, receiver)
 }
 
+fn java_map_factory_call_il() -> (Il, Interner, NodeId, NodeId, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let local = interner.intern("Map");
+    let lhs = b.add(NodeKind::Var, Payload::Name(local), sp(80), &[]);
+    let rhs = b.add(NodeKind::Seq, Payload::None, sp(80), &[]);
+    let import = b.add(NodeKind::Assign, Payload::None, sp(80), &[lhs, rhs]);
+    let receiver = b.add(NodeKind::Var, Payload::Name(local), sp(81), &[]);
+    let callee = b.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("of")),
+        sp(82),
+        &[receiver],
+    );
+    let key = b.add(
+        NodeKind::Lit,
+        Payload::LitStr(stable_symbol_hash("red")),
+        sp(83),
+        &[],
+    );
+    let value = b.add(NodeKind::Lit, Payload::LitInt(1), sp(84), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(85), &[callee, key, value]);
+    let root = b.add(NodeKind::Module, Payload::None, sp(86), &[import, call]);
+    (
+        finish_il(b, root, Lang::Java),
+        interner,
+        call,
+        callee,
+        receiver,
+    )
+}
+
+fn push_java_map_import_dependencies(il: &mut Il, receiver: NodeId) {
+    let binding_symbol = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
+        module_hash: stable_symbol_hash("java.util"),
+        exported_hash: stable_symbol_hash("Map"),
+    });
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::binding(sp(80), stable_symbol_hash("Map")),
+        binding_symbol,
+        EvidenceStatus::Asserted,
+    ));
+    il.evidence.push(evidence_with_dependencies(
+        1,
+        EvidenceAnchor::node(il.node(receiver).span, NodeKind::Var),
+        binding_symbol,
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(0)],
+    ));
+}
+
 #[test]
 fn admitted_library_api_call_resolvers_require_evidence() {
     let (il, interner, call, _callee) = rust_some_call_il();
@@ -785,6 +837,94 @@ fn admitted_rust_std_map_factory_resolver_requires_pack_provenance() {
     assert_eq!(occurrence.callee, callee);
     assert_eq!(occurrence.receiver, None);
     assert_eq!(occurrence.arg_count, 1);
+}
+
+#[test]
+fn admitted_java_map_factory_resolver_requires_pack_provenance() {
+    let (il, interner, call, _callee, _receiver) = java_map_factory_call_il();
+    assert!(
+        admitted_java_map_factory_at_call(&il, &interner, call).is_none(),
+        "raw Java Map.of(...) shape alone must not admit stdlib map factory semantics"
+    );
+
+    let contract =
+        library_java_map_factory_contract(Lang::Java, "Map", "of").expect("Map.of contract");
+
+    let (mut missing_dependency, interner, call, _callee, _receiver) = java_map_factory_call_il();
+    missing_dependency
+        .evidence
+        .push(java_stdlib_map_factory_record(
+            0,
+            missing_dependency.node(call).span,
+            contract,
+            2,
+            EvidenceStatus::Asserted,
+            &[],
+        ));
+    assert!(
+        admitted_java_map_factory_at_call(&missing_dependency, &interner, call).is_none(),
+        "same-span Java Map.of evidence without import dependency is rejected"
+    );
+
+    let (mut wrong_pack, interner, call, _callee, receiver) = java_map_factory_call_il();
+    push_java_map_import_dependencies(&mut wrong_pack, receiver);
+    wrong_pack
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            2,
+            wrong_pack.node(call).span,
+            contract.id,
+            contract.callee,
+            2,
+            EvidenceStatus::Asserted,
+            &[1],
+            FIRST_PARTY_PACK_ID,
+            JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID,
+        ));
+    assert!(
+        admitted_java_map_factory_at_call(&wrong_pack, &interner, call).is_none(),
+        "Java Map.of evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, _callee, receiver) = java_map_factory_call_il();
+    push_java_map_import_dependencies(&mut wrong_producer, receiver);
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            2,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            2,
+            EvidenceStatus::Asserted,
+            &[1],
+            JAVA_STDLIB_MAP_FACTORY_PACK_ID,
+            "wrong.java.stdlib.map-factory-api",
+        ));
+    assert!(
+        admitted_java_map_factory_at_call(&wrong_producer, &interner, call).is_none(),
+        "Java Map.of evidence with the wrong producer is rejected"
+    );
+
+    let (mut admitted, interner, call, callee, receiver) = java_map_factory_call_il();
+    push_java_map_import_dependencies(&mut admitted, receiver);
+    admitted.evidence.push(java_stdlib_map_factory_record(
+        2,
+        admitted.node(call).span,
+        contract,
+        2,
+        EvidenceStatus::Asserted,
+        &[1],
+    ));
+
+    let occurrence = admitted_java_map_factory_at_call(&admitted, &interner, call).unwrap();
+    assert_eq!(
+        occurrence.contract.id,
+        LibraryApiContractId::JavaMapFactory(JavaMapFactoryKind::Of)
+    );
+    assert_eq!(occurrence.callee, callee);
+    assert_eq!(occurrence.receiver, Some(receiver));
+    assert_eq!(occurrence.arg_count, 2);
 }
 
 #[test]

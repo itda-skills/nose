@@ -8,7 +8,7 @@ use nose_il::{
 };
 use nose_semantics::{
     library_api_contract_evidence_for_call, library_java_map_factory_contract,
-    LibraryApiEvidenceStatus,
+    LibraryApiEvidenceStatus, JAVA_STDLIB_MAP_FACTORY_PACK_ID, JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID,
 };
 
 #[test]
@@ -22,7 +22,7 @@ fn java_map_provider_requires_library_api_evidence_for_snapshot() {
     );
 
     let mut missing_api = provider;
-    remove_library_api_evidence_by_rule(&mut missing_api, "library_api_java_map_factory");
+    remove_library_api_evidence_by_rule(&mut missing_api, JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID);
     assert_eq!(
         resolve_snapshot_count(missing_api, importer, &interner),
         0,
@@ -36,12 +36,14 @@ fn java_map_provider_snapshot_copies_library_api_dependency_closure() {
     let provider_src = "import java.util.Map;\nclass Tables { static final Map<String, Integer> LOOKUP = Map.of(\"red\", 1, \"blue\", 2); }\n";
     let (provider, importer) = java_provider_and_importer(provider_src, &interner);
     let importer = resolve_importer(provider, importer, &interner);
-    let api_rule = stable_symbol_hash("library_api_java_map_factory");
+    let api_rule = stable_symbol_hash(JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID);
+    let api_pack = stable_symbol_hash(JAVA_STDLIB_MAP_FACTORY_PACK_ID);
     let api = importer
         .evidence
         .iter()
         .find(|record| {
             matches!(record.kind, EvidenceKind::LibraryApi(_))
+                && record.provenance.pack_hash == Some(api_pack)
                 && record.provenance.rule_hash == Some(api_rule)
         })
         .expect("copied Java Map.of snapshot should retain LibraryApi evidence");
@@ -126,7 +128,7 @@ fn java_map_of_entries_provider_requires_outer_and_entry_library_api_evidence() 
     );
 
     let mut missing_outer = provider.clone();
-    remove_library_api_evidence_by_rule(&mut missing_outer, "library_api_java_map_factory");
+    remove_library_api_evidence_by_rule(&mut missing_outer, JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID);
     assert_eq!(
         resolve_snapshot_count(missing_outer, importer.clone(), &interner),
         0,

@@ -36,7 +36,8 @@ ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.python.stdlib.collection_factories`,
 `nose.ruby.stdlib.set`, `nose.rust.stdlib.vec`,
 `nose.rust.stdlib.collection_factories`, `nose.rust.stdlib.map_factories`,
-`nose.python.stdlib.type_domain`, and `nose.value_graph.laws`.
+`nose.java.stdlib.map_factories`, `nose.python.stdlib.type_domain`, and
+`nose.value_graph.laws`.
 
 ## Boundary
 
@@ -185,7 +186,10 @@ previous semantic-kernel tranches.
    occurrence provenance. The next Rust stdlib map slice is
    `nose.rust.stdlib.map_factories`, which owns selected
    `std::collections::{HashMap,BTreeMap}::from` map-factory API occurrence
-   provenance.
+   provenance. The next Java stdlib map slice is
+   `nose.java.stdlib.map_factories`, which owns `java.util.Map.of` and
+   `java.util.Map.ofEntries` map-factory API occurrence provenance while
+   `Map.entry` remains in the broad compatibility bucket until its own slice.
 7. **Phase 6, external influence:** only after the builtin path is proven, start with a
    small data-only external row class behind explicit opt-in trust gates.
 8. **Phase 7, adoption gates:** define `external-opt-in -> builtin-optional` and

@@ -267,11 +267,10 @@ fn push_java_map_lookup_evidence(
         }),
     ));
     push_imported_binding_use(il, 1, import_span, 2, receiver_span, "java.util", "Map");
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(java_stdlib_map_factory_evidence(
         3,
         call_span,
-        contract.id,
-        contract.callee,
+        contract,
         4,
         vec![EvidenceId(2)],
     ));

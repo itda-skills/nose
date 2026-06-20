@@ -240,6 +240,18 @@ fn assert_java_of_factory_result_domains(lo: &mut Lowering, interner: &Interner)
         &[map_callee, key, value],
     );
     let contract = library_java_map_factory_contract(Lang::Java, "Map", "of").unwrap();
+    let map_records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(map_records.len(), 1);
+    assert_eq!(
+        map_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JAVA_STDLIB_MAP_FACTORY_PACK_ID
+        ))
+    );
+    assert_eq!(
+        map_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID))
+    );
     let map_api = contract_api_ids(&lo.evidence, contract.id, contract.callee);
     assert!(result_domain_depends_on_api(
         &lo.evidence,
@@ -302,9 +314,16 @@ fn assert_java_arrays_and_map_entry_result_domains(lo: &mut Lowering, interner: 
         &[entry_callee, key, value],
     );
     let entry_contract = library_java_map_entry_contract(Lang::Java, "Map", "entry").unwrap();
+    let entry_records =
+        contract_api_records(&lo.evidence, entry_contract.id, entry_contract.callee);
+    assert_eq!(entry_records.len(), 1);
     assert_eq!(
-        contract_api_count(&lo.evidence, entry_contract.id, entry_contract.callee),
-        1
+        entry_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(nose_semantics::FIRST_PARTY_PACK_ID))
+    );
+    assert_eq!(
+        entry_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash("library_api_java_map_entry_factory"))
     );
     assert_eq!(
         result_domain_any_count_at(&lo.evidence, sp_at(54)),

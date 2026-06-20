@@ -299,12 +299,13 @@ impl<'a> Lowering<'a> {
         arg_count: usize,
     ) -> Option<LibraryApiEvidencePlan> {
         let (receiver_node, receiver, method) = self.static_member_callee(callee)?;
-        let (id, callee_contract, rule, result_domain) =
+        let (id, callee_contract, pack_id, rule, result_domain) =
             library_java_collection_factory_contract(self.lang, receiver, method)
                 .map(|contract| {
                     (
                         contract.id,
                         contract.callee,
+                        contract.pack_id,
                         "library_api_java_collection_factory",
                         library_collection_factory_result_domain_for_arity(contract, arg_count),
                     )
@@ -314,7 +315,8 @@ impl<'a> Lowering<'a> {
                         (
                             contract.id,
                             contract.callee,
-                            "library_api_java_map_factory",
+                            contract.pack_id,
+                            JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID,
                             Some(library_map_factory_result_domain(contract)),
                         )
                     })
@@ -327,6 +329,7 @@ impl<'a> Lowering<'a> {
                             (
                                 contract.id,
                                 contract.callee,
+                                nose_semantics::FIRST_PARTY_PACK_ID,
                                 "library_api_java_map_entry_factory",
                                 None,
                             )
@@ -340,6 +343,7 @@ impl<'a> Lowering<'a> {
                         (
                             contract.id,
                             contract.callee,
+                            nose_semantics::FIRST_PARTY_PACK_ID,
                             "library_api_java_static_collection_adapter",
                             None,
                         )
@@ -349,6 +353,7 @@ impl<'a> Lowering<'a> {
             receiver_node,
             id,
             callee_contract,
+            pack_id,
             rule,
             result_domain,
         )
@@ -359,6 +364,7 @@ impl<'a> Lowering<'a> {
         receiver_node: NodeId,
         id: LibraryApiContractId,
         callee_contract: LibraryApiCalleeContract,
+        pack_id: &'static str,
         rule: &'static str,
         result_domain: Option<DomainEvidence>,
     ) -> Option<LibraryApiEvidencePlan> {
@@ -378,7 +384,7 @@ impl<'a> Lowering<'a> {
             id,
             callee: callee_contract,
             dependencies: vec![dependency],
-            pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
+            pack_id,
             rule,
             result_domain,
         })

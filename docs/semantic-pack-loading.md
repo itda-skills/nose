@@ -71,6 +71,9 @@ Trust is separate from channel eligibility.
   `nose.rust.stdlib.map_factories` owns selected Rust
   `std::collections::{HashMap,BTreeMap}::from` map factory API occurrence
   provenance;
+  `nose.java.stdlib.map_factories` owns Java `java.util.Map.of` and
+  `java.util.Map.ofEntries` map factory API occurrence provenance while
+  `Map.entry` remains in the broad compatibility bucket for a later slice;
   `nose.python.stdlib.type_domain` is the first narrow stdlib pilot pack for
   Python `typing`, `collections.abc`, and `asyncio` type-domain aliases;
   `nose.value_graph.laws` is the first LawPack pilot for selected proof-backed

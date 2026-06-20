@@ -40,6 +40,10 @@ pub const RUST_STDLIB_COLLECTION_FACTORY_CONTRACT_ID: &str = "rust.std.collectio
 pub const RUST_STDLIB_MAP_FACTORY_PACK_ID: &str = "nose.rust.stdlib.map_factories";
 pub const RUST_STDLIB_MAP_FACTORY_PRODUCER_ID: &str = "rust.stdlib.map-factory-api";
 pub const RUST_STDLIB_MAP_FACTORY_CONTRACT_ID: &str = "rust.std.map_factory";
+pub const JAVA_STDLIB_MAP_FACTORY_PACK_ID: &str = "nose.java.stdlib.map_factories";
+pub const JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID: &str = "java.stdlib.map-factory-api";
+pub const JAVA_STDLIB_MAP_FACTORY_OF_CONTRACT_ID: &str = "java.map_factory.of";
+pub const JAVA_STDLIB_MAP_FACTORY_OF_ENTRIES_CONTRACT_ID: &str = "java.map_factory.of_entries";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LibraryApiContractId {

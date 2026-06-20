@@ -223,6 +223,30 @@ The top-level value is always an object:
       }
     },
     {
+      "id": "nose.java.stdlib.map_factories",
+      "hash": "1eecb2960193782f",
+      "kind": "StdlibPack",
+      "version": "<version>",
+      "display_name": "nose Java stdlib map factory pack",
+      "trust": "default-first-party",
+      "enabled_by_default": true,
+      "source": "compiled-first-party",
+      "influence": "evidence-and-contracts",
+      "provider": "Corca, Inc.",
+      "repository": "https://github.com/corca-ai/nose",
+      "license": "MIT",
+      "supported_languages": [
+        "java"
+      ],
+      "counts": {
+        "evidence_producers": 1,
+        "contracts": 2,
+        "value_laws": 0,
+        "positive_fixtures": 2,
+        "hard_negatives": 2
+      }
+    },
+    {
       "id": "nose.python.stdlib.type_domain",
       "hash": "783a582a461f58f3",
       "kind": "StdlibPack",
@@ -343,7 +367,7 @@ same breakdown for families with at least one exact fragment location. That make
 | `tool_version` | string | The `nose` package version that emitted the report. |
 | `scope.files` | integer | Number of supported source files scanned after ignores and excludes. |
 | `scope.languages` | array | Per-language file counts, largest first. |
-| `semantic_packs` | array, optional in v1 | Active semantic packs for this scan. Binaries that advertise `scan.capabilities.semantic_pack_loading` in [capabilities](capabilities.md) emit it and include compiled builtin packs such as `nose.first_party`, `nose.lang.c`, `nose.python.builtins.collection_factories`, `nose.python.stdlib.collection_factories`, `nose.ruby.stdlib.set`, `nose.rust.stdlib.vec`, `nose.rust.stdlib.collection_factories`, `nose.rust.stdlib.map_factories`, `nose.python.stdlib.type_domain`, and `nose.value_graph.laws`; local `--semantic-pack`/config packs are listed with `metadata-only` influence. Older v1 binaries omit this field. |
+| `semantic_packs` | array, optional in v1 | Active semantic packs for this scan. Binaries that advertise `scan.capabilities.semantic_pack_loading` in [capabilities](capabilities.md) emit it and include compiled builtin packs such as `nose.first_party`, `nose.lang.c`, `nose.python.builtins.collection_factories`, `nose.python.stdlib.collection_factories`, `nose.ruby.stdlib.set`, `nose.rust.stdlib.vec`, `nose.rust.stdlib.collection_factories`, `nose.rust.stdlib.map_factories`, `nose.java.stdlib.map_factories`, `nose.python.stdlib.type_domain`, and `nose.value_graph.laws`; local `--semantic-pack`/config packs are listed with `metadata-only` influence. Older v1 binaries omit this field. |
 | `ranking.sort` | string | Sort key used for `families`: `extractability` (default), `value`, `sites`, or `hazard`. |
 | `ranking.total_families` | integer | Active families remaining after rank-time pruning, filters, baseline suppression, and structured ignores, before `--top`. |
 | `ranking.shown_families` | integer | Families present in `families`. |

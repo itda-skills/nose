@@ -79,7 +79,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 10);
+    assert_eq!(descriptors.len(), 11);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -95,6 +95,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             RUST_STDLIB_VEC_PACK_ID,
             RUST_STDLIB_COLLECTION_FACTORY_PACK_ID,
             RUST_STDLIB_MAP_FACTORY_PACK_ID,
+            JAVA_STDLIB_MAP_FACTORY_PACK_ID,
             PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
             FIRST_PARTY_VALUE_LAW_PACK_ID
         ]
@@ -277,6 +278,34 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
     assert!(rust_stdlib_maps
         .conformance_refs()
         .contains(&"rust-std-map-shadowed-std-hard-negative"));
+
+    let java_stdlib_maps = builtin_pack_descriptor(JAVA_STDLIB_MAP_FACTORY_PACK_ID)
+        .expect("Java stdlib map factory descriptor");
+    assert_eq!(java_stdlib_maps.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(java_stdlib_maps.supported_languages, &["java"]);
+    assert_eq!(java_stdlib_maps.supported_packages, &["java.util"]);
+    assert_eq!(
+        java_stdlib_maps.evidence_producer_ids,
+        &[JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID]
+    );
+    assert!(java_stdlib_maps.source_fact_producer_ids.is_empty());
+    assert_eq!(
+        java_stdlib_maps.contract_ids,
+        &[
+            JAVA_STDLIB_MAP_FACTORY_OF_CONTRACT_ID,
+            JAVA_STDLIB_MAP_FACTORY_OF_ENTRIES_CONTRACT_ID
+        ]
+    );
+    assert_eq!(java_stdlib_maps.counts().evidence_producers, 1);
+    assert_eq!(java_stdlib_maps.counts().contracts, 2);
+    assert_eq!(java_stdlib_maps.counts().positive_fixtures, 2);
+    assert_eq!(java_stdlib_maps.counts().hard_negatives, 2);
+    assert!(java_stdlib_maps
+        .conformance_refs()
+        .contains(&"java-map-missing-import-hard-negative"));
+    assert!(!java_stdlib_maps
+        .contract_ids
+        .contains(&"java.map_entry_factory"));
 
     let python = builtin_pack_descriptor(PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID)
         .expect("Python stdlib descriptor");
@@ -462,6 +491,24 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(rust_stdlib_maps.counts.contracts, 1);
     assert_eq!(rust_stdlib_maps.counts.positive_fixtures, 2);
     assert_eq!(rust_stdlib_maps.counts.hard_negatives, 2);
+    let java_stdlib_maps = set
+        .packs()
+        .iter()
+        .find(|pack| pack.id == JAVA_STDLIB_MAP_FACTORY_PACK_ID)
+        .expect("Java stdlib map factory summary");
+    assert_eq!(
+        java_stdlib_maps.hash,
+        stable_symbol_hash(JAVA_STDLIB_MAP_FACTORY_PACK_ID)
+    );
+    assert_eq!(java_stdlib_maps.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(
+        java_stdlib_maps.influence,
+        SemanticPackInfluence::EvidenceAndContracts
+    );
+    assert_eq!(java_stdlib_maps.counts.evidence_producers, 1);
+    assert_eq!(java_stdlib_maps.counts.contracts, 2);
+    assert_eq!(java_stdlib_maps.counts.positive_fixtures, 2);
+    assert_eq!(java_stdlib_maps.counts.hard_negatives, 2);
     let python = python_stdlib_type_domain_pack();
     assert_eq!(python.id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
     assert_eq!(
@@ -494,7 +541,7 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 11);
+    assert_eq!(set.packs().len(), 12);
     assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[3].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
@@ -502,9 +549,10 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     assert_eq!(set.packs()[5].id, RUST_STDLIB_VEC_PACK_ID);
     assert_eq!(set.packs()[6].id, RUST_STDLIB_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[7].id, RUST_STDLIB_MAP_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[8].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[9].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[10];
+    assert_eq!(set.packs()[8].id, JAVA_STDLIB_MAP_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[9].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[10].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[11];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);

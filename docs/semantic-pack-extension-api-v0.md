@@ -452,6 +452,9 @@ implicit v0 packs:
 - `nose.rust.stdlib.map_factories` owns the current selected Rust
   `std::collections::{HashMap,BTreeMap}::from` map-factory API occurrence
   contracts;
+- `nose.java.stdlib.map_factories` owns Java `java.util.Map.of` and
+  `java.util.Map.ofEntries` map-factory API occurrence contracts, while
+  `Map.entry` remains in the broad compatibility bucket until its own slice;
 - protocol/law packs correspond to current builtin protocol operations,
   demand profiles, operator laws, value-domain laws, and named value-graph rule
   modules.

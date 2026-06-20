@@ -378,6 +378,8 @@ provenance-backed `LibraryApi` occurrence evidence, or selected Rust
 occurrence evidence, or selected Rust
 `std::collections::{HashMap,BTreeMap}::from` factories with
 `nose.rust.stdlib.map_factories` provenance-backed `LibraryApi` occurrence
+evidence, or Java `java.util.Map.of`/`Map.ofEntries` factories with
+`nose.java.stdlib.map_factories` provenance-backed `LibraryApi` occurrence
 evidence. Canonical
 `Append` still needs `Effect(BuilderAppendCall)`, and the first-party normalize
 producer emits that effect only when the same call also has the same-span
@@ -499,8 +501,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   receiver proof is satisfied; Ruby
   earlier top-level `require "set"; Set.new(...)` through `Import::Require`
   plus unshadowed `require` and `Set` proof; Java `java.util` static
-  factories/adapters including `List.of`, `Set.of`, `Arrays.asList`, `Map.of`,
-  `Map.ofEntries`, `Map.entry`, and `Arrays.stream`, plus selected empty
+  factories/adapters including `List.of`, `Set.of`, `Arrays.asList`,
+  `Map.of`/`Map.ofEntries` with `nose.java.stdlib.map_factories` provenance,
+  `Map.entry`, and `Arrays.stream`, plus selected empty
   `new ArrayList<>()`/`new LinkedList<>()` constructors through exact or
   wildcard import proof; and JS-like regex-literal `.test(...)`. These records
   depend on the relevant `QualifiedGlobal`, `UnshadowedGlobal`,
@@ -535,8 +538,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `new LinkedList<>()` as `Collection`; Python `set`/`frozenset`, pack-owned
   Rust `std::collections::{HashSet,BTreeSet}::from`, Java `Set.of`, Ruby `Set.new`,
   and JS-like `new Set` as `Set`; Rust
-  `std::collections::{HashMap,BTreeMap}::from`, Java `Map.of`/`Map.ofEntries`,
-  and JS-like `new Map` as `Map`; JS-like one-argument `Array.from` as
+  `std::collections::{HashMap,BTreeMap}::from`, pack-owned Java
+  `Map.of`/`Map.ofEntries`, and JS-like `new Map` as `Map`; JS-like
+  one-argument `Array.from` as
   `Array`; and JS-like `Promise.resolve` plus admitted Promise `.then` results
   as `PromiseLike`. `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`,
   `math.prod`, `Arrays.stream`, map `get`, iterator adapters, and generic

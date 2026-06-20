@@ -290,6 +290,107 @@ fn admitted_span_rust_std_map_factory_requires_pack_provenance() {
 }
 
 #[test]
+fn admitted_span_java_map_factory_requires_pack_provenance() {
+    let (mut wrong_pack, interner, call, callee, receiver) = java_map_factory_call_il();
+    let contract =
+        library_java_map_factory_contract(Lang::Java, "Map", "of").expect("Map.of contract");
+    let occurrence = LibraryApiSpanCall {
+        call_span: Some(wrong_pack.node(call).span),
+        callee_span: Some(wrong_pack.node(callee).span),
+        receiver_span: Some(wrong_pack.node(receiver).span),
+        arg_count: 2,
+    };
+    push_java_map_import_dependencies(&mut wrong_pack, receiver);
+    wrong_pack
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            2,
+            wrong_pack.node(call).span,
+            contract.id,
+            contract.callee,
+            2,
+            EvidenceStatus::Asserted,
+            &[1],
+            FIRST_PARTY_PACK_ID,
+            JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID,
+        ));
+    assert!(
+        admitted_java_map_factory_at_call_span(
+            &wrong_pack,
+            &interner,
+            occurrence,
+            stable_symbol_hash("of"),
+        )
+        .is_none(),
+        "span-backed Java Map.of evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, callee, receiver) = java_map_factory_call_il();
+    let occurrence = LibraryApiSpanCall {
+        call_span: Some(wrong_producer.node(call).span),
+        callee_span: Some(wrong_producer.node(callee).span),
+        receiver_span: Some(wrong_producer.node(receiver).span),
+        arg_count: 2,
+    };
+    push_java_map_import_dependencies(&mut wrong_producer, receiver);
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            2,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            2,
+            EvidenceStatus::Asserted,
+            &[1],
+            JAVA_STDLIB_MAP_FACTORY_PACK_ID,
+            "wrong.java.stdlib.map-factory-api",
+        ));
+    assert!(
+        admitted_java_map_factory_at_call_span(
+            &wrong_producer,
+            &interner,
+            occurrence,
+            stable_symbol_hash("of"),
+        )
+        .is_none(),
+        "span-backed Java Map.of evidence with the wrong producer is rejected"
+    );
+
+    let (mut admitted, interner, call, callee, receiver) = java_map_factory_call_il();
+    let occurrence = LibraryApiSpanCall {
+        call_span: Some(admitted.node(call).span),
+        callee_span: Some(admitted.node(callee).span),
+        receiver_span: Some(admitted.node(receiver).span),
+        arg_count: 2,
+    };
+    push_java_map_import_dependencies(&mut admitted, receiver);
+    admitted.evidence.push(java_stdlib_map_factory_record(
+        2,
+        admitted.node(call).span,
+        contract,
+        2,
+        EvidenceStatus::Asserted,
+        &[1],
+    ));
+    let resolved = admitted_java_map_factory_at_call_span(
+        &admitted,
+        &interner,
+        occurrence,
+        stable_symbol_hash("of"),
+    )
+    .unwrap();
+    assert_eq!(
+        resolved.contract.id,
+        LibraryApiContractId::JavaMapFactory(JavaMapFactoryKind::Of)
+    );
+    assert_eq!(resolved.call_span, Some(admitted.node(call).span));
+    assert_eq!(resolved.callee_span, Some(admitted.node(callee).span));
+    assert_eq!(resolved.receiver_span, Some(admitted.node(receiver).span));
+    assert_eq!(resolved.arg_count, 2);
+}
+
+#[test]
 fn admitted_span_imported_collection_factory_rejects_namespace_dependency_for_bare_callee() {
     let (mut il, interner, call, callee) = python_deque_factory_call_il();
     let namespace_symbol = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
