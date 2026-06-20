@@ -244,12 +244,37 @@ pub fn source_operator_at_node(il: &Il, node: NodeId) -> Option<SourceOperatorKi
 
 pub fn source_cast_at_node(il: &Il, node: NodeId) -> Option<SourceCastKind> {
     let span = il.node(node).span;
-    match evidence_at_span(il, span, |evidence| match evidence {
-        EvidenceKind::Source(SourceFactKind::Cast(cast)) => Some(cast),
-        _ => None,
-    }) {
-        EvidenceResolution::Found(cast) => Some(cast),
-        EvidenceResolution::Ambiguous | EvidenceResolution::Missing => None,
+    let mut found = None;
+    for record in il.evidence_anchored_at(span) {
+        if !record.anchor.matches_span(span) {
+            continue;
+        }
+        let EvidenceKind::Source(SourceFactKind::Cast(cast)) = record.kind else {
+            continue;
+        };
+        if record.status != EvidenceStatus::Asserted
+            || !il.evidence_dependencies_asserted(record)
+            || !source_cast_provenance_admitted(record, cast)
+        {
+            return None;
+        }
+        match found {
+            None => found = Some(cast),
+            Some(existing) if existing == cast => {}
+            Some(_) => return None,
+        }
+    }
+    found
+}
+
+fn source_cast_provenance_admitted(record: &EvidenceRecord, cast: SourceCastKind) -> bool {
+    match cast {
+        SourceCastKind::CUnsigned32 => {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash == Some(stable_symbol_hash(C_LANGUAGE_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID))
+        }
     }
 }
 

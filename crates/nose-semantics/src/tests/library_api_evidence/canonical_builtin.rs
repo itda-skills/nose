@@ -322,6 +322,21 @@ fn c_unsigned_cast_builtin_admission_requires_source_cast_evidence() {
         EvidenceKind::Source(SourceFactKind::Cast(SourceCastKind::CUnsigned32)),
         EvidenceStatus::Asserted,
     ));
+    assert!(
+        !admitted_builtin_semantics_at_call(&il, call, Builtin::UnsignedCast32),
+        "wrong-pack source facts must not admit C unsigned-cast semantics"
+    );
+
+    let mut b = IlBuilder::new(FileId(0));
+    let arg = b.add(NodeKind::Var, Payload::Cid(0), sp(39), &[]);
+    let (mut il, call) =
+        canonical_builtin_call_il(Lang::C, Builtin::UnsignedCast32, &[arg], b, arg);
+    il.evidence.push(c_unsigned_32_source_cast_evidence(
+        10,
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+        EvidenceStatus::Asserted,
+        Vec::new(),
+    ));
     assert!(admitted_builtin_semantics_at_call(
         &il,
         call,

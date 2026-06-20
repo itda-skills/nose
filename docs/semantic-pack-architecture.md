@@ -161,7 +161,9 @@ previous semantic-kernel tranches.
    end-to-end descriptor-backed builtin stdlib pack.
 5. **Phase 4, builtin language slice:** add one `nose.lang.<language>` descriptor that
    owns language identity, parser/lowering metadata, and source-fact producer
-   metadata while preserving behavior.
+   metadata while preserving behavior. The first vertical slice is
+   `nose.lang.c`, covering the existing C parser/lowering binding and the
+   explicit unsigned 32-bit byte-lane cast source-fact producer.
 6. **Phase 5, builtin stdlib/library/law packs:** move official semantic rows behind
    narrow builtin pack ids and shared admitted-contract resolvers.
 7. **Phase 6, external influence:** only after the builtin path is proven, start with a

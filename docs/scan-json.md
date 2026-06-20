@@ -55,6 +55,30 @@ The top-level value is always an object:
       }
     },
     {
+      "id": "nose.lang.c",
+      "hash": "caf93c8ad52e27ab",
+      "kind": "LanguagePack",
+      "version": "<version>",
+      "display_name": "nose C language pack",
+      "trust": "default-first-party",
+      "enabled_by_default": true,
+      "source": "compiled-first-party",
+      "influence": "evidence-and-contracts",
+      "provider": "Corca, Inc.",
+      "repository": "https://github.com/corca-ai/nose",
+      "license": "MIT",
+      "supported_languages": [
+        "c"
+      ],
+      "counts": {
+        "evidence_producers": 1,
+        "contracts": 0,
+        "value_laws": 0,
+        "positive_fixtures": 2,
+        "hard_negatives": 2
+      }
+    },
+    {
       "id": "nose.python.stdlib.type_domain",
       "hash": "783a582a461f58f3",
       "kind": "StdlibPack",
@@ -175,7 +199,7 @@ same breakdown for families with at least one exact fragment location. That make
 | `tool_version` | string | The `nose` package version that emitted the report. |
 | `scope.files` | integer | Number of supported source files scanned after ignores and excludes. |
 | `scope.languages` | array | Per-language file counts, largest first. |
-| `semantic_packs` | array, optional in v1 | Active semantic packs for this scan. Binaries that advertise `scan.capabilities.semantic_pack_loading` in [capabilities](capabilities.md) emit it and include compiled builtin packs such as `nose.first_party`, `nose.python.stdlib.type_domain`, and `nose.value_graph.laws`; local `--semantic-pack`/config packs are listed with `metadata-only` influence. Older v1 binaries omit this field. |
+| `semantic_packs` | array, optional in v1 | Active semantic packs for this scan. Binaries that advertise `scan.capabilities.semantic_pack_loading` in [capabilities](capabilities.md) emit it and include compiled builtin packs such as `nose.first_party`, `nose.lang.c`, `nose.python.stdlib.type_domain`, and `nose.value_graph.laws`; local `--semantic-pack`/config packs are listed with `metadata-only` influence. Older v1 binaries omit this field. |
 | `ranking.sort` | string | Sort key used for `families`: `extractability` (default), `value`, `sites`, or `hazard`. |
 | `ranking.total_families` | integer | Active families remaining after rank-time pruning, filters, baseline suppression, and structured ignores, before `--top`. |
 | `ranking.shown_families` | integer | Families present in `families`. |

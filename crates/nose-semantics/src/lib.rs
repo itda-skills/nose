@@ -63,7 +63,9 @@ pub use free_builtins::*;
 pub use guard_evidence::*;
 pub use import_facts::*;
 pub(crate) use language_profile::js_like_lang;
-pub use language_profile::{semantics, LanguageProfile};
+pub use language_profile::{
+    semantics, LanguageProfile, C_LANGUAGE_PACK_ID, C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID,
+};
 pub use library_api::*;
 use library_api::{
     language_core_builtin_at_call, library_api_dependency_id_for_normalized_hof,

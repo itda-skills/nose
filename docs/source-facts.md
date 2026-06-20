@@ -106,7 +106,8 @@ fall back to a side-table mirror when source evidence is missing.
 - C lowering emits source facts for explicit unsigned 32-bit byte-lane casts.
   Direct casts such as `(unsigned int)a[0]` are dependency-free source facts;
   alias casts such as `(u32)a[0]` or `(word)a[0]` depend on the corresponding
-  exact-spelling C type-alias evidence.
+  exact-spelling C type-alias evidence. These records now carry `nose.lang.c`
+  pack provenance and the `c.source.cast.unsigned32` producer id.
 - Rust lowering emits source facts for macro invocation syntax, half-open versus
   inclusive range expressions, tuple-struct single-wildcard patterns such as
   `Some(_)`, `.await`, async blocks, and `?` error propagation.

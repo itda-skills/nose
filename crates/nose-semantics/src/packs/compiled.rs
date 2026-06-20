@@ -1,5 +1,16 @@
 use super::*;
+use nose_il::Lang;
 
+const C_LANGUAGE: &[&str] = &["c"];
+const C_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["c", "h"];
+const C_LANGUAGE_EVIDENCE_PRODUCER_IDS: &[&str] = &[C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID];
+const C_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID];
+const C_LANGUAGE_CONFORMANCE_REFS: &[&str] = &[
+    "c-unsigned32-byte-lane-cast-positive",
+    "c-unsigned32-alias-cast-positive",
+    "c-unsigned32-signed-cast-hard-negative",
+    "c-unsigned32-non-byte-lane-hard-negative",
+];
 const NO_LANGUAGES: &[&str] = &[];
 const PYTHON_LANGUAGE: &[&str] = &["python"];
 const NO_PACKAGES: &[&str] = &[];
@@ -12,6 +23,14 @@ const PYTHON_STDLIB_TYPE_DOMAIN_HARD_NEGATIVE_REFS: &[&str] =
     &["python-typing-domain-wrong-module-hard-negative"];
 const NO_TYPE_DOMAIN_ALIAS_CONTRACTS: &[FirstPartyTypeDomainAliasContract] = &[];
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct BuiltinLanguageBinding {
+    pub lang: Lang,
+    pub file_extensions: &'static [&'static str],
+    pub parser: &'static str,
+    pub lowering_entrypoint: &'static str,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct BuiltinPackDescriptor {
     pub id: &'static str,
@@ -21,7 +40,9 @@ pub struct BuiltinPackDescriptor {
     pub enabled_by_default: bool,
     pub supported_languages: &'static [&'static str],
     pub supported_packages: &'static [&'static str],
+    pub language: Option<BuiltinLanguageBinding>,
     pub evidence_producer_ids: &'static [&'static str],
+    pub source_fact_producer_ids: &'static [&'static str],
     pub contract_ids: &'static [&'static str],
     pub type_domain_alias_contracts: &'static [FirstPartyTypeDomainAliasContract],
     static_value_law_ids: &'static [&'static str],
@@ -84,6 +105,22 @@ fn empty_counts() -> SemanticPackCounts {
         value_laws: 0,
         positive_fixtures: 0,
         hard_negatives: 0,
+    }
+}
+
+fn c_language_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: C_LANGUAGE_EVIDENCE_PRODUCER_IDS.len(),
+        contracts: 0,
+        value_laws: 0,
+        positive_fixtures: C_LANGUAGE_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: C_LANGUAGE_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
     }
 }
 
@@ -162,7 +199,9 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         enabled_by_default: true,
         supported_languages: NO_LANGUAGES,
         supported_packages: NO_PACKAGES,
+        language: None,
         evidence_producer_ids: NO_IDS,
+        source_fact_producer_ids: NO_IDS,
         contract_ids: NO_IDS,
         static_value_law_ids: NO_IDS,
         type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
@@ -172,6 +211,30 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         counts: empty_counts,
     },
     BuiltinPackDescriptor {
+        id: C_LANGUAGE_PACK_ID,
+        kind: SemanticPackKind::LanguagePack,
+        display_name: "nose C language pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: C_LANGUAGE,
+        supported_packages: NO_PACKAGES,
+        language: Some(BuiltinLanguageBinding {
+            lang: Lang::C,
+            file_extensions: C_LANGUAGE_FILE_EXTENSIONS,
+            parser: "tree-sitter-c",
+            lowering_entrypoint: "nose_frontend::c::lower",
+        }),
+        evidence_producer_ids: C_LANGUAGE_EVIDENCE_PRODUCER_IDS,
+        source_fact_producer_ids: C_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
+        contract_ids: NO_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: C_LANGUAGE_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: c_language_counts,
+    },
+    BuiltinPackDescriptor {
         id: PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
         kind: SemanticPackKind::StdlibPack,
         display_name: "nose Python stdlib type-domain pack",
@@ -179,7 +242,9 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         enabled_by_default: true,
         supported_languages: PYTHON_LANGUAGE,
         supported_packages: PYTHON_STDLIB_TYPE_DOMAIN_PACKAGES,
+        language: None,
         evidence_producer_ids: PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
         contract_ids: PYTHON_STDLIB_TYPE_DOMAIN_CONTRACT_IDS,
         type_domain_alias_contracts: PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS,
         static_value_law_ids: NO_IDS,
@@ -196,7 +261,9 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         enabled_by_default: true,
         supported_languages: NO_LANGUAGES,
         supported_packages: NO_PACKAGES,
+        language: None,
         evidence_producer_ids: NO_IDS,
+        source_fact_producer_ids: NO_IDS,
         contract_ids: NO_IDS,
         type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
         static_value_law_ids: NO_IDS,

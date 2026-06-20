@@ -364,7 +364,8 @@ Admission currently comes from either a same-span admitted
 `LibraryApi` occurrence record whose contract id maps to that builtin, or a
 narrow first-party language-core lowering: Go map lookup-ok `Contains`, Go
 `range` `Enumerate`, Python dict-comprehension `DictEntry`, JS-like `for-in`
-`Keys`, or C `UnsignedCast32` with `Source(Cast(CUnsigned32))`. Canonical
+`Keys`, or C `UnsignedCast32` with `nose.lang.c` provenance-backed
+`Source(Cast(CUnsigned32))`. Canonical
 `Append` still needs `Effect(BuilderAppendCall)`, and the first-party normalize
 producer emits that effect only when the same call also has the same-span
 `LibraryApi` proof for the append API; the effect record depends on that API

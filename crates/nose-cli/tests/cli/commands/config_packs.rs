@@ -141,6 +141,15 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(first_party["enabled_by_default"], true);
     assert!(first_party["path"].is_null());
 
+    let c = semantic_pack_by_id(&json, "nose.lang.c");
+    assert_eq!(c["kind"], "LanguagePack");
+    assert_eq!(c["source"], "compiled-first-party");
+    assert_eq!(json_array_strings(c, "supported_languages"), vec!["c"]);
+    assert_eq!(c["counts"]["evidence_producers"], 1);
+    assert_eq!(c["counts"]["contracts"], 0);
+    assert_eq!(c["counts"]["positive_fixtures"], 2);
+    assert_eq!(c["counts"]["hard_negatives"], 2);
+
     let stdlib = semantic_pack_by_id(&json, "nose.python.stdlib.type_domain");
     assert_eq!(stdlib["kind"], "StdlibPack");
     assert_eq!(

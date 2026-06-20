@@ -59,7 +59,12 @@ fn first_party_profile_wraps_each_language() {
     for &lang in ALL_LANGS {
         let profile = semantics(lang);
         assert_eq!(profile.lang(), lang);
-        assert_eq!(profile.pack_id(), FIRST_PARTY_PACK_ID);
+        let expected_pack_id = if lang == Lang::C {
+            C_LANGUAGE_PACK_ID
+        } else {
+            FIRST_PARTY_PACK_ID
+        };
+        assert_eq!(profile.pack_id(), expected_pack_id);
         assert_eq!(profile.trust(), PackTrust::DefaultFirstParty);
     }
 }

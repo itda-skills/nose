@@ -2,6 +2,9 @@
 
 use super::*;
 
+pub const C_LANGUAGE_PACK_ID: &str = "nose.lang.c";
+pub const C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID: &str = "c.source.cast.unsigned32";
+
 /// A first-party language profile. Keep this cheap and copyable; callers use it as a
 /// named semantic boundary around currently-supported language behavior.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -37,7 +40,10 @@ impl LanguageProfile {
     }
 
     pub fn pack_id(self) -> &'static str {
-        FIRST_PARTY_PACK_ID
+        match self.lang {
+            Lang::C => C_LANGUAGE_PACK_ID,
+            _ => FIRST_PARTY_PACK_ID,
+        }
     }
 
     pub fn trust(self) -> PackTrust {

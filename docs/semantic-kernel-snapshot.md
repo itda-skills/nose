@@ -69,19 +69,24 @@ still being migrated toward it.
   split into focused modules under `src/` and `src/library_api/`. Compiled
   builtin packs now have a small `BuiltinPackDescriptor` registry that feeds
   the existing `SemanticPackSummary` compatibility output without changing
-  analysis behavior. The `nose.python.stdlib.type_domain` descriptor directly
-  exposes its alias contract rows so producer id, contract id, conformance refs,
-  and declaration counts come from one pack-owned table.
+  analysis behavior. The first builtin language descriptor is `nose.lang.c`; it
+  owns the C file-extension identity, `tree-sitter-c` parser binding,
+  `nose_frontend::c::lower` lowering entrypoint metadata, and the
+  `c.source.cast.unsigned32` source-fact producer id. The
+  `nose.python.stdlib.type_domain` descriptor directly exposes its alias
+  contract rows so producer id, contract id, conformance refs, and declaration
+  counts come from one pack-owned table.
 - The external pack API is documented as a v0 manifest/schema with examples.
   `nose-semantics` can validate local manifest files/directories as metadata,
   `nose semantic-pack check` validates local manifests plus declared fixture
   assets, and `nose query --format json` reports active builtin/local packs in
   top-level `semantic_packs`. External packs are still `metadata-only`; builtin
   producers remain compiled Rust and are expected to map onto the same
-  vocabulary. The first compiled pilot is `nose.python.stdlib.type_domain`, a
-  default builtin stdlib
-  pack-shaped surface for Python `typing`, `collections.abc`, and
-  `asyncio` type-domain alias evidence.
+  vocabulary. The first compiled pilots are `nose.lang.c`, a default builtin
+  language pack-shaped surface for C unsigned-cast source provenance, and
+  `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped
+  surface for Python `typing`, `collections.abc`, and `asyncio` type-domain
+  alias evidence.
 - `nose-frontend` owns tree-sitter parsing, per-language lowering (including the
   declarative CSS/HTML frontends), `<script>`/`<style>`/markup region extraction for
   Vue/Svelte/HTML, source/domain/import/symbol/type/guard/place/effect/API/
@@ -249,10 +254,11 @@ migrated.
   typedefs and direct quote includes emit `Type(CTypeAlias)` evidence for the
   currently supported exact-spelling `unsigned char` and unsigned 32-bit
   aliases; included aliases depend on `Import(CQuoteInclude)`. Alias-based
-  `Domain(ByteArray)` parameter facts and `Source(Cast(CUnsigned32))` facts
-  depend on those type records. The C u16/u32 byte-pack value-graph laws consume
-  the first-party C byte-pack contract, byte-array domain proof, and source-cast
-  proof where the u32 high lane requires it; raw `UnsignedCast32` payloads stay
+  `Domain(ByteArray)` parameter facts and `nose.lang.c` provenance-backed
+  `Source(Cast(CUnsigned32))` facts depend on those type records. The C u16/u32
+  byte-pack value-graph laws consume the first-party C byte-pack contract,
+  byte-array domain proof, and source-cast proof where the u32 high lane
+  requires it; raw `UnsignedCast32` payloads stay
   opaque without source-cast evidence.
 - Property builtin contracts are language-constrained occurrence contracts, not
   selector guesses. JS/TS/Vue/Svelte/HTML and Java `length` reads are admitted

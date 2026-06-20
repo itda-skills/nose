@@ -5,9 +5,10 @@
 //! require occurrence evidence and kernel-owned admission checks.
 
 use crate::{
-    pack_facing_value_laws, FirstPartyTypeDomainAliasContract, PackTrust, FIRST_PARTY_PACK_ID,
-    FIRST_PARTY_VALUE_LAW_PACK_ID, PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS,
-    PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID, PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID,
+    pack_facing_value_laws, FirstPartyTypeDomainAliasContract, PackTrust, C_LANGUAGE_PACK_ID,
+    C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID, FIRST_PARTY_PACK_ID, FIRST_PARTY_VALUE_LAW_PACK_ID,
+    PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
+    PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID,
 };
 use nose_il::stable_symbol_hash;
 use serde::Deserialize;
@@ -19,7 +20,8 @@ mod validation;
 
 pub use compiled::{
     builtin_pack_descriptor, builtin_pack_descriptors, first_party_semantic_pack,
-    first_party_value_law_pack, python_stdlib_type_domain_pack, BuiltinPackDescriptor,
+    first_party_value_law_pack, python_stdlib_type_domain_pack, BuiltinLanguageBinding,
+    BuiltinPackDescriptor,
 };
 pub use loading::{
     check_semantic_pack_conformance, discover_manifest_paths, load_local_manifest,

@@ -137,6 +137,26 @@ fn evidence_with_dependencies(
     }
 }
 
+fn c_unsigned_32_source_cast_evidence(
+    id: u32,
+    anchor: EvidenceAnchor,
+    status: EvidenceStatus,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor,
+        kind: EvidenceKind::Source(SourceFactKind::Cast(SourceCastKind::CUnsigned32)),
+        provenance: EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(C_LANGUAGE_PACK_ID)),
+            rule_hash: Some(stable_symbol_hash(C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID)),
+        },
+        dependencies,
+        status,
+    }
+}
+
 fn push_node_effect(il: &mut Il, id: u32, node: NodeId, effect: EffectEvidenceKind) -> EvidenceId {
     push_node_effect_with_dependencies(il, id, node, effect, Vec::new())
 }

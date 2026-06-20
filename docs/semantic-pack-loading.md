@@ -53,6 +53,8 @@ Trust is separate from channel eligibility.
   uses compatibility labels such as `compiled-first-party` and
   `default-first-party`; docs and new implementation work should use
   `builtin`. `nose.first_party` is the temporary broad compatibility facade;
+  `nose.lang.c` is the first narrow builtin language pack slice for C file
+  identity, parser/lowering metadata, and unsigned-cast source provenance;
   `nose.python.stdlib.type_domain` is the first narrow stdlib pilot pack for
   Python `typing`, `collections.abc`, and `asyncio` type-domain aliases;
   `nose.value_graph.laws` is the first LawPack pilot for selected proof-backed

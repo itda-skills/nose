@@ -18,7 +18,8 @@ pub(super) use nose_semantics::{
     library_promise_resolve_contract, library_promise_then_contract,
     library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
     library_scalar_integer_method_contract, library_static_index_membership_contract,
-    DomainEvidence, LibraryApiContractId, FIRST_PARTY_PACK_ID,
+    DomainEvidence, LibraryApiContractId, C_LANGUAGE_PACK_ID,
+    C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID, FIRST_PARTY_PACK_ID,
 };
 pub(super) use rustc_hash::FxHashMap;
 
@@ -173,11 +174,19 @@ pub(super) fn push_source_comprehension(
 }
 
 pub(super) fn push_source_cast(il: &mut Il, id: u32, span: Span, kind: SourceCastKind) {
-    il.evidence.push(evidence(
+    let mut record = evidence(
         id,
         EvidenceAnchor::source_span(span),
         EvidenceKind::Source(SourceFactKind::Cast(kind)),
-    ));
+    );
+    match kind {
+        SourceCastKind::CUnsigned32 => {
+            record.provenance.pack_hash = Some(stable_symbol_hash(C_LANGUAGE_PACK_ID));
+            record.provenance.rule_hash =
+                Some(stable_symbol_hash(C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID));
+        }
+    }
+    il.evidence.push(record);
 }
 
 pub(super) fn push_source_range(il: &mut Il, id: u32, span: Span, kind: SourceRangeKind) {

@@ -72,12 +72,24 @@ The next code slices are intentionally incremental:
    v5 and update capabilities;
 4. Phase 3: make `nose.python.stdlib.type_domain` the first end-to-end reference builtin
    stdlib pack;
-5. Phase 4: add one `nose.lang.<language>` builtin language descriptor before migrating
-   the remaining language/region packs;
+5. Phase 4: use `nose.lang.c` as the first builtin language descriptor slice
+   before migrating the remaining language/region packs;
 6. Phase 5: move narrow stdlib/library/law rows behind pack-owned descriptors and shared
    admitted-contract resolvers;
 7. Phase 6: allow external pack influence only after the builtin path is proven;
 8. Phase 7: define adoption and release gates.
+
+Phase 4 C-slice measurement note, local run on 2026-06-20: product
+query-regression r15 compared `main@d8e0796` with the `nose.lang.c` branch over
+the 9-repo subset. Family summaries, locations, fragment buckets, reason-code
+counts, and surface counts were unchanged after ignoring `result_json_bytes`.
+The expected JSON byte drift came from top-level `semantic_packs` metadata.
+Aggregate median wall time was 55.68 ms -> 55.15 ms; `lower` was
+23.50 ms -> 23.50 ms; `normalize+extract` was 16.70 ms -> 18.10 ms, a
+1.40 ms move under the 5 ms floor; `candidates` was 1.20 ms -> 1.10 ms. A noisy
+`chi` r15 wall increase was rechecked with 30 alternating runs and measured
+35.00 ms -> 34.29 ms. Binary size changed 20,105,968 -> 20,124,384 bytes for
+the cumulative issue branch.
 
 ## History
 
