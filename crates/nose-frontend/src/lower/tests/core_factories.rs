@@ -348,11 +348,13 @@ fn assert_java_arrays_and_map_entry_result_domains(lo: &mut Lowering, interner: 
     assert_eq!(entry_records.len(), 1);
     assert_eq!(
         entry_records[0].provenance.pack_hash,
-        Some(stable_symbol_hash(nose_semantics::FIRST_PARTY_PACK_ID))
+        Some(stable_symbol_hash(
+            nose_semantics::JAVA_STDLIB_MAP_ENTRY_PACK_ID
+        ))
     );
     assert_eq!(
         entry_records[0].provenance.rule_hash,
-        Some(stable_symbol_hash("library_api_java_map_entry_factory"))
+        Some(stable_symbol_hash(JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID))
     );
     assert_eq!(
         result_domain_any_count_at(&lo.evidence, sp_at(54)),

@@ -44,6 +44,9 @@ pub const JAVA_STDLIB_MAP_FACTORY_PACK_ID: &str = "nose.java.stdlib.map_factorie
 pub const JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID: &str = "java.stdlib.map-factory-api";
 pub const JAVA_STDLIB_MAP_FACTORY_OF_CONTRACT_ID: &str = "java.map_factory.of";
 pub const JAVA_STDLIB_MAP_FACTORY_OF_ENTRIES_CONTRACT_ID: &str = "java.map_factory.of_entries";
+pub const JAVA_STDLIB_MAP_ENTRY_PACK_ID: &str = "nose.java.stdlib.map_entries";
+pub const JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID: &str = "java.stdlib.map-entry-api";
+pub const JAVA_STDLIB_MAP_ENTRY_CONTRACT_ID: &str = "java.map_entry_factory";
 pub const JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID: &str = "nose.java.stdlib.collection_factories";
 pub const JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID: &str = "java.stdlib.collection-factory-api";
 pub const JAVA_STDLIB_COLLECTION_FACTORY_LIST_OF_CONTRACT_ID: &str =
@@ -234,6 +237,7 @@ pub struct LibraryMapFactoryContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryMapEntryFactoryContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
 }

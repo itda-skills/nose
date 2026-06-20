@@ -271,6 +271,7 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
     assert_eq!(
         library_java_map_entry_contract(Lang::Java, "Map", "entry"),
         Some(LibraryMapEntryFactoryContract {
+            pack_id: JAVA_STDLIB_MAP_ENTRY_PACK_ID,
             id: LibraryApiContractId::JavaMapEntryFactory,
             callee: LibraryApiCalleeContract::JavaUtilStaticMember {
                 receiver: "Map",

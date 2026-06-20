@@ -8,7 +8,8 @@ use nose_il::{
 };
 use nose_semantics::{
     library_api_contract_evidence_for_call, library_java_map_factory_contract,
-    LibraryApiEvidenceStatus, JAVA_STDLIB_MAP_FACTORY_PACK_ID, JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID,
+    LibraryApiEvidenceStatus, JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID, JAVA_STDLIB_MAP_FACTORY_PACK_ID,
+    JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID,
 };
 
 #[test]
@@ -136,7 +137,7 @@ fn java_map_of_entries_provider_requires_outer_and_entry_library_api_evidence() 
     );
 
     let mut missing_entry = provider;
-    remove_library_api_evidence_by_rule(&mut missing_entry, "library_api_java_map_entry_factory");
+    remove_library_api_evidence_by_rule(&mut missing_entry, JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID);
     assert_eq!(
         resolve_snapshot_count(missing_entry, importer, &interner),
         0,

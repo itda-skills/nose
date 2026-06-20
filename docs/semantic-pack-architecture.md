@@ -36,7 +36,7 @@ ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.python.stdlib.collection_factories`,
 `nose.ruby.stdlib.set`, `nose.rust.stdlib.vec`,
 `nose.rust.stdlib.collection_factories`, `nose.rust.stdlib.map_factories`,
-`nose.java.stdlib.map_factories`,
+`nose.java.stdlib.map_factories`, `nose.java.stdlib.map_entries`,
 `nose.java.stdlib.collection_factories`,
 `nose.java.stdlib.collection_constructors`, `nose.python.stdlib.type_domain`, and
 `nose.value_graph.laws`.
@@ -190,8 +190,9 @@ previous semantic-kernel tranches.
    `std::collections::{HashMap,BTreeMap}::from` map-factory API occurrence
    provenance. The current Java stdlib map slice is
    `nose.java.stdlib.map_factories`, which owns `java.util.Map.of` and
-   `java.util.Map.ofEntries` map-factory API occurrence provenance while
-   `Map.entry` remains in the broad compatibility bucket until its own slice.
+   `java.util.Map.ofEntries` map-factory API occurrence provenance. The current
+   Java stdlib map-entry slice is `nose.java.stdlib.map_entries`, which owns
+   `java.util.Map.entry` map-entry API occurrence provenance.
    The current Java stdlib collection slice is
    `nose.java.stdlib.collection_factories`, which owns `java.util.List.of`,
    `Set.of`, and `Arrays.asList` collection-factory API occurrence provenance
@@ -199,8 +200,8 @@ previous semantic-kernel tranches.
    slice. The current Java stdlib collection-constructor slice is
    `nose.java.stdlib.collection_constructors`, which owns empty `new
    ArrayList<>()` and `new LinkedList<>()` collection-constructor API occurrence
-   provenance while `Map.entry` and `Arrays.stream` remain in the broad
-   compatibility bucket until their own slices.
+   provenance while `Arrays.stream` remains in the broad compatibility bucket
+   until its own slice.
 7. **Phase 6, external influence:** only after the builtin path is proven, start with a
    small data-only external row class behind explicit opt-in trust gates.
 8. **Phase 7, adoption gates:** define `external-opt-in -> builtin-optional` and

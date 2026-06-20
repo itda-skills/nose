@@ -507,9 +507,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   plus unshadowed `require` and `Set` proof; Java `java.util` static
   factories/adapters including `List.of`, `Set.of`, and `Arrays.asList` with
   `nose.java.stdlib.collection_factories` provenance, `Map.of`/`Map.ofEntries`
-  with `nose.java.stdlib.map_factories` provenance, `Map.entry`, and
-  `Arrays.stream`, plus selected empty
-  `new ArrayList<>()`/`new LinkedList<>()` constructors with
+  with `nose.java.stdlib.map_factories` provenance, `Map.entry` with
+  `nose.java.stdlib.map_entries` provenance, and compatibility-facade
+  `Arrays.stream`, plus selected empty `new ArrayList<>()`/`new LinkedList<>()` constructors with
   `nose.java.stdlib.collection_constructors` provenance through exact or
   wildcard import proof; and JS-like regex-literal `.test(...)`. These records
   depend on the relevant `QualifiedGlobal`, `UnshadowedGlobal`,
@@ -640,9 +640,10 @@ callers:
   assign cross-language or library semantics;
 - normalize idiom canonicalization shares the admitted occurrence resolver layer
   for supported free-function builtins, generic receiver-method contracts, map
-  `get`, map-key views, iterator identity adapters, Java `Arrays.stream`, Rust
-  `Some(...)`, Rust map factory receiver proof, and HOF receiver proof instead
-  of locally recombining selector strings with `LibraryApi` evidence checks.
+  `get`, map-key views, iterator identity adapters, Java `Arrays.stream`, Java
+  map entries, Rust `Some(...)`, Rust map factory receiver proof, and HOF
+  receiver proof instead of locally recombining selector strings with
+  `LibraryApi` evidence checks.
   Test fixtures may still use row constructors to mint synthetic evidence
   records;
 - value-graph direct API eval paths, node-level API consumers, and provider

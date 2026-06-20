@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        13
+        14
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -289,6 +289,34 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(java_maps["counts"]["value_laws"], 0);
     assert_eq!(java_maps["counts"]["positive_fixtures"], 2);
     assert_eq!(java_maps["counts"]["hard_negatives"], 2);
+
+    let java_entries = semantic_pack_by_id(&json, "nose.java.stdlib.map_entries");
+    assert_eq!(java_entries["hash"], "70b8bbc16bb60219");
+    assert_eq!(java_entries["kind"], "StdlibPack");
+    assert_eq!(
+        java_entries["display_name"],
+        "nose Java stdlib map entry pack"
+    );
+    assert_eq!(java_entries["source"], "compiled-first-party");
+    assert_eq!(java_entries["influence"], "evidence-and-contracts");
+    assert_eq!(java_entries["trust"], "default-first-party");
+    assert_eq!(java_entries["enabled_by_default"], true);
+    assert_eq!(java_entries["path"], serde_json::Value::Null);
+    assert_eq!(java_entries["provider"], "Corca, Inc.");
+    assert_eq!(
+        java_entries["repository"],
+        "https://github.com/corca-ai/nose"
+    );
+    assert_eq!(java_entries["license"], "MIT");
+    assert_eq!(
+        json_array_strings(java_entries, "supported_languages"),
+        vec!["java"]
+    );
+    assert_eq!(java_entries["counts"]["evidence_producers"], 1);
+    assert_eq!(java_entries["counts"]["contracts"], 1);
+    assert_eq!(java_entries["counts"]["value_laws"], 0);
+    assert_eq!(java_entries["counts"]["positive_fixtures"], 1);
+    assert_eq!(java_entries["counts"]["hard_negatives"], 2);
 
     let java_collections = semantic_pack_by_id(&json, "nose.java.stdlib.collection_factories");
     assert_eq!(java_collections["hash"], "e784159038ce0c8d");

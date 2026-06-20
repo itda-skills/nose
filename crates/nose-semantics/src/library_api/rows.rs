@@ -31,6 +31,7 @@ fn library_map_factory_pack_id(id: LibraryApiContractId) -> &'static str {
     match id {
         LibraryApiContractId::RustStdMapFactory => RUST_STDLIB_MAP_FACTORY_PACK_ID,
         LibraryApiContractId::JavaMapFactory(_) => JAVA_STDLIB_MAP_FACTORY_PACK_ID,
+        LibraryApiContractId::JavaMapEntryFactory => JAVA_STDLIB_MAP_ENTRY_PACK_ID,
         _ => FIRST_PARTY_PACK_ID,
     }
 }
@@ -265,6 +266,7 @@ pub fn library_java_map_entry_contract(
     method: &str,
 ) -> Option<LibraryMapEntryFactoryContract> {
     java_map_entry_contract(lang, receiver, method).then_some(LibraryMapEntryFactoryContract {
+        pack_id: library_map_factory_pack_id(LibraryApiContractId::JavaMapEntryFactory),
         id: LibraryApiContractId::JavaMapEntryFactory,
         callee: LibraryApiCalleeContract::JavaUtilStaticMember {
             receiver: "Map",

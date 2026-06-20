@@ -287,6 +287,49 @@ fn java_map_factory_call_il() -> (Il, Interner, NodeId, NodeId, NodeId) {
     )
 }
 
+fn java_map_entry_call_il() -> (Il, Interner, NodeId, NodeId, NodeId) {
+    java_map_entry_call_il_with_arg_count(2)
+}
+
+fn java_map_entry_call_il_with_arg_count(
+    arg_count: usize,
+) -> (Il, Interner, NodeId, NodeId, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let local = interner.intern("Map");
+    let lhs = b.add(NodeKind::Var, Payload::Name(local), sp(80), &[]);
+    let rhs = b.add(NodeKind::Seq, Payload::None, sp(80), &[]);
+    let import = b.add(NodeKind::Assign, Payload::None, sp(80), &[lhs, rhs]);
+    let receiver = b.add(NodeKind::Var, Payload::Name(local), sp(81), &[]);
+    let callee = b.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("entry")),
+        sp(82),
+        &[receiver],
+    );
+    let key = b.add(
+        NodeKind::Lit,
+        Payload::LitStr(stable_symbol_hash("red")),
+        sp(83),
+        &[],
+    );
+    let value = b.add(NodeKind::Lit, Payload::LitInt(1), sp(84), &[]);
+    let extra = b.add(NodeKind::Lit, Payload::LitInt(2), sp(85), &[]);
+    let mut children = vec![callee, key, value];
+    if arg_count > 2 {
+        children.push(extra);
+    }
+    let call = b.add(NodeKind::Call, Payload::None, sp(86), &children);
+    let root = b.add(NodeKind::Module, Payload::None, sp(86), &[import, call]);
+    (
+        finish_il(b, root, Lang::Java),
+        interner,
+        call,
+        callee,
+        receiver,
+    )
+}
+
 fn java_collection_constructor_call_il() -> (Il, Interner, NodeId, NodeId) {
     let interner = Interner::new();
     let mut b = IlBuilder::new(FileId(0));
@@ -1047,6 +1090,110 @@ fn admitted_java_map_factory_resolver_requires_pack_provenance() {
     assert_eq!(
         occurrence.contract.id,
         LibraryApiContractId::JavaMapFactory(JavaMapFactoryKind::Of)
+    );
+    assert_eq!(occurrence.callee, callee);
+    assert_eq!(occurrence.receiver, Some(receiver));
+    assert_eq!(occurrence.arg_count, 2);
+}
+
+#[test]
+fn admitted_java_map_entry_resolver_requires_pack_provenance() {
+    let (il, interner, call, _callee, _receiver) = java_map_entry_call_il();
+    assert!(
+        admitted_java_map_entry_at_call(&il, &interner, call).is_none(),
+        "raw Java Map.entry(...) shape alone must not admit stdlib map-entry semantics"
+    );
+
+    let contract =
+        library_java_map_entry_contract(Lang::Java, "Map", "entry").expect("Map.entry contract");
+
+    let (mut missing_dependency, interner, call, _callee, _receiver) = java_map_entry_call_il();
+    missing_dependency
+        .evidence
+        .push(java_stdlib_map_entry_record(
+            0,
+            missing_dependency.node(call).span,
+            contract,
+            2,
+            EvidenceStatus::Asserted,
+            &[],
+        ));
+    assert!(
+        admitted_java_map_entry_at_call(&missing_dependency, &interner, call).is_none(),
+        "same-span Java Map.entry evidence without import dependency is rejected"
+    );
+
+    let (mut wrong_pack, interner, call, _callee, receiver) = java_map_entry_call_il();
+    push_java_map_import_dependencies(&mut wrong_pack, receiver);
+    wrong_pack
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            2,
+            wrong_pack.node(call).span,
+            contract.id,
+            contract.callee,
+            2,
+            EvidenceStatus::Asserted,
+            &[1],
+            FIRST_PARTY_PACK_ID,
+            JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID,
+        ));
+    assert!(
+        admitted_java_map_entry_at_call(&wrong_pack, &interner, call).is_none(),
+        "Java Map.entry evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, _callee, receiver) = java_map_entry_call_il();
+    push_java_map_import_dependencies(&mut wrong_producer, receiver);
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            2,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            2,
+            EvidenceStatus::Asserted,
+            &[1],
+            JAVA_STDLIB_MAP_ENTRY_PACK_ID,
+            "wrong.java.stdlib.map-entry-api",
+        ));
+    assert!(
+        admitted_java_map_entry_at_call(&wrong_producer, &interner, call).is_none(),
+        "Java Map.entry evidence with the wrong producer is rejected"
+    );
+
+    let (mut wrong_arity, interner, call, _callee, receiver) =
+        java_map_entry_call_il_with_arg_count(3);
+    push_java_map_import_dependencies(&mut wrong_arity, receiver);
+    wrong_arity.evidence.push(java_stdlib_map_entry_record(
+        2,
+        wrong_arity.node(call).span,
+        contract,
+        3,
+        EvidenceStatus::Asserted,
+        &[1],
+    ));
+    assert!(
+        admitted_java_map_entry_at_call(&wrong_arity, &interner, call).is_none(),
+        "Java Map.entry evidence with unsupported arity is rejected"
+    );
+
+    let (mut admitted, interner, call, callee, receiver) = java_map_entry_call_il();
+    push_java_map_import_dependencies(&mut admitted, receiver);
+    admitted.evidence.push(java_stdlib_map_entry_record(
+        2,
+        admitted.node(call).span,
+        contract,
+        2,
+        EvidenceStatus::Asserted,
+        &[1],
+    ));
+
+    let occurrence = admitted_java_map_entry_at_call(&admitted, &interner, call).unwrap();
+    assert_eq!(
+        occurrence.contract.id,
+        LibraryApiContractId::JavaMapEntryFactory
     );
     assert_eq!(occurrence.callee, callee);
     assert_eq!(occurrence.receiver, Some(receiver));

@@ -237,6 +237,27 @@ fn java_stdlib_map_factory_record(
     )
 }
 
+fn java_stdlib_map_entry_record(
+    id: u32,
+    span: Span,
+    contract: LibraryMapEntryFactoryContract,
+    arity: u16,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance_and_arity(
+        id,
+        span,
+        contract.id,
+        contract.callee,
+        arity,
+        status,
+        dependencies,
+        JAVA_STDLIB_MAP_ENTRY_PACK_ID,
+        JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID,
+    )
+}
+
 fn library_api_record_with_arity(
     id: u32,
     span: Span,

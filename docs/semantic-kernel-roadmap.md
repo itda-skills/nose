@@ -94,7 +94,8 @@ The next code slices are intentionally incremental:
    `Arrays.asList` collection-factory occurrence provenance, then
    `nose.java.stdlib.collection_constructors` for Java empty `new
    ArrayList<>()` and `new LinkedList<>()` collection-constructor occurrence
-   provenance;
+   provenance, then `nose.java.stdlib.map_entries` for Java `Map.entry`
+   map-entry occurrence provenance;
 7. Phase 6: allow external pack influence only after the builtin path is proven;
 8. Phase 7: define adoption and release gates.
 
@@ -315,6 +316,26 @@ metadata, Java std-collection-constructor producer provenance, and an admission
 provenance check; it did not touch candidate generation, and product output did
 not drift. Binary size changed 20,143,360 -> 20,143,568 bytes for this slice.
 
+Phase 5 Java stdlib map-entry measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous
+`nose.java.stdlib.collection_constructors` slice with the
+`nose.java.stdlib.map_entries` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by
+exactly 513 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-java-map-entry-prev-r15.json` and
+`/tmp/nose-473-phase5-java-map-entry-current-r15.json`; the previous-slice
+compare summary is `/tmp/nose-473-phase5-java-map-entry-vs-prev-r15.md`. The
+compare produced only expected JSON-byte investigation triggers and no runtime
+triggers. Aggregate median wall time was 1437.25 ms -> 1259.62 ms, `lower` was
+440.70 ms -> 396.70 ms, `normalize+extract` was 732.60 ms -> 658.40 ms,
+`candidates` was 31.60 ms -> 22.30 ms, and `parse+lower` was
+343.40 ms -> 302.50 ms. Root-cause note: this slice changed static pack
+metadata, Java std-map-entry producer provenance, and an admission provenance
+check; it did not touch candidate generation, and product output did not drift.
+Binary size changed 20,143,568 -> 20,160,336 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -391,8 +412,12 @@ not drift. Binary size changed 20,143,360 -> 20,143,568 bytes for this slice.
 - Java stdlib map factories started moving out of the broad compatibility
   facade. `java.util.Map.of` and `Map.ofEntries` factory `LibraryApi`
   occurrence evidence now reports `nose.java.stdlib.map_factories` pack and
-  producer provenance while preserving missing-import and `Map.entry` boundary
-  hard negatives.
+  producer provenance while preserving missing-import and cross-surface
+  `Map.entry` boundary hard negatives.
+- Java stdlib map entries started moving out of the broad compatibility facade.
+  `java.util.Map.entry` `LibraryApi` occurrence evidence now reports
+  `nose.java.stdlib.map_entries` pack and producer provenance while preserving
+  missing-import and shadowed-`Map` hard negatives.
 - Java stdlib collection factories started moving out of the broad
   compatibility facade. `java.util.List.of`, `Set.of`, and `Arrays.asList`
   factory `LibraryApi` occurrence evidence now reports
@@ -648,8 +673,9 @@ not drift. Binary size changed 20,143,360 -> 20,143,568 bytes for this slice.
   factories (`List.of`, `Set.of`, `Arrays.asList`) now carrying
   `nose.java.stdlib.collection_factories` provenance, Java map factories
   (`Map.of`/`Map.ofEntries`) with `nose.java.stdlib.map_factories` provenance,
-  remaining compatibility Java APIs (`Map.entry`, `Arrays.stream`), and JS-like
-  regex-literal `.test`. Producers emit call-site `Symbol` dependencies for imported
+  Java map entries (`Map.entry`) with `nose.java.stdlib.map_entries`
+  provenance, the remaining compatibility Java API (`Arrays.stream`), and
+  JS-like regex-literal `.test`. Producers emit call-site `Symbol` dependencies for imported
   binding/namespace occurrences or `Source` dependencies for regex literals;
   value-graph, idiom, and strict exact consumers consult these records first and
   close fallback on rejected records. Imported occurrence symbols now require

@@ -94,7 +94,10 @@ still being migrated toward it.
   occurrence producer ids, while shadowed `std` roots remain hard negatives.
   The `nose.java.stdlib.map_factories` descriptor owns Java `java.util.Map.of`
   and `Map.ofEntries` map-factory contract and occurrence producer ids, while
-  missing `java.util.Map` imports and `Map.entry` boundary cases remain hard
+  missing `java.util.Map` imports and cross-surface `Map.entry` boundary cases
+  remain hard negatives. The `nose.java.stdlib.map_entries` descriptor owns Java
+  `java.util.Map.entry` map-entry contract and occurrence producer ids, while
+  missing `java.util.Map` imports and shadowed `Map` roots remain hard
   negatives. The `nose.java.stdlib.collection_factories` descriptor owns Java
   `java.util.List.of`, `Set.of`, and `Arrays.asList` collection-factory
   contract and occurrence producer ids, while missing imports and
@@ -128,6 +131,8 @@ still being migrated toward it.
   Rust `std::collections` map-factory API provenance, and
   `nose.java.stdlib.map_factories`, a default builtin stdlib pack for Java
   `java.util.Map.of` and `Map.ofEntries` map-factory API provenance, and
+  `nose.java.stdlib.map_entries`, a default builtin stdlib pack for Java
+  `java.util.Map.entry` map-entry API provenance, and
   `nose.java.stdlib.collection_factories`, a default builtin stdlib pack for
   Java `java.util.List.of`, `Set.of`, and `Arrays.asList` collection-factory
   API provenance, and
@@ -296,7 +301,10 @@ migrated.
   provenance while shadowed `std` roots stay closed. Java stdlib
   `java.util.Map.of` and `Map.ofEntries` map-factory `LibraryApi` occurrence
   evidence now carries `nose.java.stdlib.map_factories` pack provenance while
-  missing-import and `Map.entry` boundary cases stay closed.
+  missing-import and cross-surface `Map.entry` boundary cases stay closed.
+  Java stdlib `java.util.Map.entry` map-entry `LibraryApi` occurrence evidence
+  now carries `nose.java.stdlib.map_entries` pack provenance while
+  missing-import and shadowed-root cases stay closed.
   Java stdlib `java.util.List.of`, `Set.of`, and `Arrays.asList`
   collection-factory `LibraryApi` occurrence evidence now carries
   `nose.java.stdlib.collection_factories` pack provenance while missing-import
@@ -374,7 +382,7 @@ migrated.
   pattern tests instead of lowering them directly to null/not-null builtins, so
   Option absence/presence is admitted only through the contract-backed occurrence
   path plus required source-surface evidence.
-- Collection factory, map factory, and selected constructor identity now have an
+- Collection factory, map factory, map-entry, and selected constructor identity now have an
   internal `LibraryApiContract`
   shape in `nose-semantics`. It separates API identity from result eligibility,
   so callers can distinguish "this is Java `Arrays.asList`" from "this argument
@@ -431,7 +439,8 @@ migrated.
   exists; Java `java.util` static factories/adapters such as `List.of`,
   `Set.of`, and `Arrays.asList` with
   `nose.java.stdlib.collection_factories` provenance, `Map.of`/`Map.ofEntries`
-  with `nose.java.stdlib.map_factories` provenance, `Map.entry`, and
+  with `nose.java.stdlib.map_factories` provenance, `Map.entry` with
+  `nose.java.stdlib.map_entries` provenance, and compatibility-facade
   `Arrays.stream`, plus selected empty `new ArrayList<>()`/`new LinkedList<>()`
   constructors with `nose.java.stdlib.collection_constructors` provenance; and
   JS-like regex-literal `.test(...)`. These records depend on

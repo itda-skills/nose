@@ -72,8 +72,9 @@ Trust is separate from channel eligibility.
   `std::collections::{HashMap,BTreeMap}::from` map factory API occurrence
   provenance;
   `nose.java.stdlib.map_factories` owns Java `java.util.Map.of` and
-  `java.util.Map.ofEntries` map factory API occurrence provenance while
-  `Map.entry` remains in the broad compatibility bucket for a later slice;
+  `java.util.Map.ofEntries` map factory API occurrence provenance;
+  `nose.java.stdlib.map_entries` owns Java `java.util.Map.entry` map-entry API
+  occurrence provenance;
   `nose.java.stdlib.collection_factories` owns Java `java.util.List.of`,
   `Set.of`, and `Arrays.asList` collection factory API occurrence provenance
   while `Arrays.stream` remains in the broad compatibility bucket for a later

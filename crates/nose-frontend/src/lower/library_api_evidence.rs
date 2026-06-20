@@ -329,8 +329,8 @@ impl<'a> Lowering<'a> {
                             (
                                 contract.id,
                                 contract.callee,
-                                nose_semantics::FIRST_PARTY_PACK_ID,
-                                "library_api_java_map_entry_factory",
+                                contract.pack_id,
+                                JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID,
                                 None,
                             )
                         })

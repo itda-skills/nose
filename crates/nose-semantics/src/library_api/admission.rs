@@ -212,6 +212,13 @@ fn library_api_record_provenance_matches_contract(
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID))
         }
+        LibraryApiContractId::JavaMapEntryFactory => {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash
+                    == Some(stable_symbol_hash(JAVA_STDLIB_MAP_ENTRY_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID))
+        }
         LibraryApiContractId::JavaCollectionFactory(_) => {
             record.provenance.emitter == EvidenceEmitter::FirstParty
                 && record.provenance.pack_hash

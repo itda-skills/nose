@@ -453,8 +453,9 @@ implicit v0 packs:
   `std::collections::{HashMap,BTreeMap}::from` map-factory API occurrence
   contracts;
 - `nose.java.stdlib.map_factories` owns Java `java.util.Map.of` and
-  `java.util.Map.ofEntries` map-factory API occurrence contracts, while
-  `Map.entry` remains in the broad compatibility bucket until its own slice;
+  `java.util.Map.ofEntries` map-factory API occurrence contracts;
+- `nose.java.stdlib.map_entries` owns Java `java.util.Map.entry` map-entry API
+  occurrence contracts;
 - `nose.java.stdlib.collection_factories` owns Java `java.util.List.of`,
   `Set.of`, and `Arrays.asList` collection-factory API occurrence contracts,
   while `Arrays.stream` remains in the broad compatibility bucket until its own
