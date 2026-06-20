@@ -195,6 +195,14 @@ fn library_api_record_provenance_matches_contract(
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(PYTHON_STDLIB_MATH_PRODUCER_ID))
         }
+        LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve)
+        | LibraryApiContractId::PromiseThen => {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash
+                    == Some(stable_symbol_hash(JS_LIKE_BUILTIN_PROMISE_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID))
+        }
         LibraryApiContractId::RustVecMacroFactory | LibraryApiContractId::RustVecNewFactory => {
             record.provenance.emitter == EvidenceEmitter::FirstParty
                 && record.provenance.pack_hash == Some(stable_symbol_hash(RUST_STDLIB_VEC_PACK_ID))

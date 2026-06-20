@@ -4,6 +4,7 @@ use super::*;
 fn post_lowering_emits_property_and_rust_option_occurrences() {
     let interner = Interner::new();
     assert_ts_length_property_occurrences(&interner);
+    assert_ts_promise_then_occurrences(&interner);
     assert_rust_option_occurrences(&interner);
 }
 
@@ -52,6 +53,30 @@ fn assert_ts_length_property_occurrences(interner: &Interner) {
         1,
         "HOF result property access should carry LibraryApi occurrence evidence"
     );
+}
+
+fn assert_ts_promise_then_occurrences(interner: &Interner) {
+    let ts = lower_fixture(
+        "t.ts",
+        b"function f(p: Promise<number>) { return p.then((x: number) => x); }\n",
+        Lang::TypeScript,
+        interner,
+    );
+    let contract = nose_semantics::library_promise_then_contract(Lang::TypeScript, "then", 1)
+        .expect("Promise.then contract");
+    let then_records = contract_api_records(&ts.evidence, contract.id, contract.callee);
+    assert_eq!(
+        then_records.len(),
+        1,
+        "Promise-like receiver .then should carry LibraryApi occurrence evidence"
+    );
+    assert_js_like_promise_record_provenance(then_records[0]);
+    let then_api = contract_api_ids(&ts.evidence, contract.id, contract.callee);
+    assert!(result_domain_depends_on_any_api(
+        &ts.evidence,
+        DomainEvidence::PromiseLike,
+        &then_api,
+    ));
 }
 
 fn assert_rust_option_occurrences(interner: &Interner) {
@@ -173,5 +198,18 @@ fn assert_rust_option_record_provenance(record: &EvidenceRecord) {
     assert_eq!(
         record.provenance.rule_hash,
         Some(stable_symbol_hash(RUST_STDLIB_OPTION_PRODUCER_ID))
+    );
+}
+
+fn assert_js_like_promise_record_provenance(record: &EvidenceRecord) {
+    assert_eq!(
+        record.provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_PROMISE_PACK_ID
+        ))
+    );
+    assert_eq!(
+        record.provenance.rule_hash,
+        Some(stable_symbol_hash(JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID))
     );
 }

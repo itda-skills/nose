@@ -554,7 +554,8 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `Map.of`/`Map.ofEntries`, and JS-like `new Map` as `Map`; JS-like
   one-argument `Array.from` as
   `Array`; and JS-like `Promise.resolve` plus admitted Promise `.then` results
-  as `PromiseLike`. `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`,
+  with `nose.javascript.builtins.promise` provenance as `PromiseLike`.
+  `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`,
   `math.prod`, `Arrays.stream`, map `get`, iterator adapters, and generic
   method contracts do not emit `Domain` records because their results are not
   simple receiver domains under the current vocabulary;
@@ -655,8 +656,8 @@ callers:
   they still have the source `Call` or `Field` node. This includes direct
   factory/constructor eval, property builtins such as JS/TS/Java `.length`, Rust
   `Some` callee-node checks, static index-membership, Rust scalar integer method
-  calls, builder append API admission, Promise `resolve`, and Promise `.then`
-  contract lookup. Promise continuation reduction additionally requires a
+  calls, builder append API admission, pack-owned Promise `resolve`, and
+  Promise `.then` contract lookup. Promise continuation reduction additionally requires a
   recoverable supported settled value and preserves a Promise boundary in the
   value graph. Value-level CSE paths that only retain source
   spans now also go through span-query resolvers for free-name/imported

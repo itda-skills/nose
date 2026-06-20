@@ -450,6 +450,8 @@ implicit v0 packs:
   collection-factory API occurrence contracts;
 - `nose.rust.stdlib.option` owns the current Rust `Some`, `None`, and
   `and_then` Option API occurrence contracts;
+- `nose.javascript.builtins.promise` owns the current JS/TS `Promise.resolve`
+  and `.then` Promise API occurrence contracts;
 - `nose.rust.stdlib.collection_factories` owns the current selected Rust
   `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection-factory API
   occurrence contracts;

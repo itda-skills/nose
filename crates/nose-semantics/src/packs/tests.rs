@@ -79,7 +79,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 17);
+    assert_eq!(descriptors.len(), 18);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -102,6 +102,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
             JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
             JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID,
+            JS_LIKE_BUILTIN_PROMISE_PACK_ID,
             PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
             FIRST_PARTY_VALUE_LAW_PACK_ID
         ]
@@ -461,6 +462,34 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         .conformance_refs()
         .contains(&"java-arrays-stream-shadowed-arrays-hard-negative"));
 
+    let js_promise = builtin_pack_descriptor(JS_LIKE_BUILTIN_PROMISE_PACK_ID)
+        .expect("JavaScript builtins Promise descriptor");
+    assert_eq!(js_promise.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(
+        js_promise.supported_languages,
+        &["javascript", "typescript"]
+    );
+    assert_eq!(js_promise.supported_packages, &["Promise"]);
+    assert_eq!(
+        js_promise.evidence_producer_ids,
+        &[JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID]
+    );
+    assert!(js_promise.source_fact_producer_ids.is_empty());
+    assert_eq!(
+        js_promise.contract_ids,
+        &[
+            JS_LIKE_BUILTIN_PROMISE_RESOLVE_CONTRACT_ID,
+            JS_LIKE_BUILTIN_PROMISE_THEN_CONTRACT_ID,
+        ]
+    );
+    assert_eq!(js_promise.counts().evidence_producers, 1);
+    assert_eq!(js_promise.counts().contracts, 2);
+    assert_eq!(js_promise.counts().positive_fixtures, 2);
+    assert_eq!(js_promise.counts().hard_negatives, 3);
+    assert!(js_promise
+        .conformance_refs()
+        .contains(&"js-promise-resolve-shadowed-hard-negative"));
+
     let python = builtin_pack_descriptor(PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID)
         .expect("Python stdlib descriptor");
     assert_eq!(python.kind, SemanticPackKind::StdlibPack);
@@ -753,6 +782,24 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(java_static_adapters.counts.contracts, 1);
     assert_eq!(java_static_adapters.counts.positive_fixtures, 1);
     assert_eq!(java_static_adapters.counts.hard_negatives, 2);
+    let js_promise = set
+        .packs()
+        .iter()
+        .find(|pack| pack.id == JS_LIKE_BUILTIN_PROMISE_PACK_ID)
+        .expect("JavaScript builtins Promise summary");
+    assert_eq!(
+        js_promise.hash,
+        stable_symbol_hash(JS_LIKE_BUILTIN_PROMISE_PACK_ID)
+    );
+    assert_eq!(js_promise.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(
+        js_promise.influence,
+        SemanticPackInfluence::EvidenceAndContracts
+    );
+    assert_eq!(js_promise.counts.evidence_producers, 1);
+    assert_eq!(js_promise.counts.contracts, 2);
+    assert_eq!(js_promise.counts.positive_fixtures, 2);
+    assert_eq!(js_promise.counts.hard_negatives, 3);
     let python_stdlib_math = set
         .packs()
         .iter()
@@ -803,7 +850,7 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 18);
+    assert_eq!(set.packs().len(), 19);
     assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[3].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
@@ -824,9 +871,10 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
         set.packs()[14].id,
         JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID
     );
-    assert_eq!(set.packs()[15].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[16].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[17];
+    assert_eq!(set.packs()[15].id, JS_LIKE_BUILTIN_PROMISE_PACK_ID);
+    assert_eq!(set.packs()[16].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[17].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[18];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);

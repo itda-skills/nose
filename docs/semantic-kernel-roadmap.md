@@ -85,6 +85,8 @@ The next code slices are intentionally incremental:
    `nose.rust.stdlib.vec` for Rust `Vec::new` and `vec!` collection-factory
    occurrence provenance, then `nose.rust.stdlib.option` for Rust `Some`,
    `None`, and `and_then` Option API occurrence provenance, then
+   `nose.javascript.builtins.promise` for JS/TS `Promise.resolve` and `.then`
+   Promise API occurrence provenance, then
    `nose.rust.stdlib.collection_factories` for selected Rust
    `std::collections::{HashSet,BTreeSet,VecDeque}::from`
    collection-factory occurrence provenance, then
@@ -404,6 +406,35 @@ checks for `Some`, `None`, and `and_then`; it did not add per-node descriptor
 scans or touch candidate generation. Binary size changed 20,160,720 ->
 20,161,056 bytes for this slice.
 
+Phase 5 JavaScript builtins Promise measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous `nose.rust.stdlib.option`
+slice with the `nose.javascript.builtins.promise` slice over the same 9-repo
+subset. Family summaries, locations, fragment buckets, reason-code counts, and
+surface counts were unchanged after ignoring `result_json_bytes`. Each repo's
+JSON grew by exactly 542 bytes from the new top-level `semantic_packs` entry.
+The saved previous and current artifacts are
+`/tmp/nose-473-phase5-js-promise-prev-r15.json` and
+`/tmp/nose-473-phase5-js-promise-current-r15.json`; the previous-slice compare
+summary is `/tmp/nose-473-phase5-js-promise-vs-prev-r15.md`. The sequential
+compare reported expected JSON-byte metadata triggers plus a noisy
+`serde_json` lower/parse+lower runtime trigger, so the same binaries were
+remeasured with repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-js-promise-alternating-r15.json`. Alternating aggregate
+medians were: wall 1195.82 ms -> 1184.36 ms, `lower` 362.90 ms ->
+369.70 ms, `normalize+extract` 631.10 ms -> 607.40 ms, `candidates`
+22.30 ms -> 20.70 ms, and `parse+lower` 274.80 ms -> 275.40 ms. The
+alternating recheck still showed a `boltons` phase-only trigger for `lower`
+22.70 ms -> 28.30 ms and `parse+lower` 18.10 ms -> 23.40 ms; `boltons` wall
+time stayed neutral at 70.18 ms -> 70.52 ms, so this was treated as timing
+redistribution/noise rather than a product-path regression. Root-cause note:
+this slice changed static pack metadata, JS/TS Promise producer
+provenance, and admission provenance checks for `Promise.resolve` and `.then`;
+it did not add per-node descriptor scans or touch candidate generation.
+Follow-up under issue #473: if the next Phase 5 slice or an r30 rerun repeats a
+phase trigger above both the 5% and 5 ms gates with a wall-clock trigger, pause
+pack-row migration and instrument the reported phase. Binary size changed
+20,161,056 -> 20,161,264 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -471,6 +502,11 @@ scans or touch candidate generation. Binary size changed 20,160,720 ->
   `Some`, `None`, and `and_then` `LibraryApi` occurrence evidence now reports
   `nose.rust.stdlib.option` pack and producer provenance while preserving
   shadowed selector and non-Option receiver hard negatives.
+- JS/TS Promise APIs started moving out of the broad compatibility facade.
+  `Promise.resolve` and `.then` `LibraryApi` occurrence evidence now reports
+  `nose.javascript.builtins.promise` pack and producer provenance while
+  preserving shadowed-`Promise`, missing Promise-like receiver, and unsafe
+  thenable assimilation hard negatives.
 - Selected Rust stdlib collection factories started moving out of the broad
   compatibility facade. `std::collections::{HashSet,BTreeSet,VecDeque}::from`
   factory `LibraryApi` occurrence evidence now reports

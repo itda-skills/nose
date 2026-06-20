@@ -125,6 +125,7 @@ fn library_coercion_regex_namespace_and_promise_contracts_carry_obligations() {
     assert_eq!(
         library_promise_then_contract(Lang::Vue, "then", 1),
         Some(LibraryPromiseThenContract {
+            pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
             id: LibraryApiContractId::PromiseThen,
             callee: LibraryApiCalleeContract::AsyncMethod {
                 method: "then",
@@ -139,6 +140,7 @@ fn library_coercion_regex_namespace_and_promise_contracts_carry_obligations() {
     assert_eq!(
         library_promise_resolve_contract(Lang::TypeScript, "Promise", "resolve", 1),
         Some(LibraryPromiseFactoryContract {
+            pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
             id: LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve),
             callee: LibraryApiCalleeContract::StaticGlobalMethod {
                 receiver: "Promise",

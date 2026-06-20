@@ -255,6 +255,7 @@ pub fn library_promise_then_contract(
         demand: promise_then_demand_effect_profile(),
     };
     Some(LibraryPromiseThenContract {
+        pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
         id: LibraryApiContractId::PromiseThen,
         callee: LibraryApiCalleeContract::AsyncMethod {
             method: "then",
@@ -281,6 +282,7 @@ pub fn library_promise_resolve_contract(
         result_domain: DomainEvidence::PromiseLike,
     };
     Some(LibraryPromiseFactoryContract {
+        pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
         id: LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve),
         callee: LibraryApiCalleeContract::StaticGlobalMethod {
             receiver: result.receiver,
@@ -427,10 +429,10 @@ pub fn library_receiver_method_api_contract(
         .or_else(|| {
             library_promise_then_contract(lang, method, arg_count).map(|contract| {
                 LibraryReceiverMethodApiContract {
-                    pack_id: FIRST_PARTY_PACK_ID,
+                    pack_id: contract.pack_id,
                     id: contract.id,
                     callee: contract.callee,
-                    rule: "library_api_promise_then",
+                    rule: JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
                     result_domain: Some(DomainEvidence::PromiseLike),
                 }
             })

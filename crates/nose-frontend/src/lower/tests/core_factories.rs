@@ -468,6 +468,18 @@ fn assert_js_constructor_result_domains(interner: &Interner) {
     );
     let resolve_contract =
         library_promise_resolve_contract(Lang::JavaScript, "Promise", "resolve", 1).unwrap();
+    let resolve_records =
+        contract_api_records(&lo.evidence, resolve_contract.id, resolve_contract.callee);
+    assert_eq!(
+        resolve_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_PROMISE_PACK_ID
+        ))
+    );
+    assert_eq!(
+        resolve_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID))
+    );
     let resolve_api = contract_api_ids(&lo.evidence, resolve_contract.id, resolve_contract.callee);
     assert!(result_domain_depends_on_api(
         &lo.evidence,
