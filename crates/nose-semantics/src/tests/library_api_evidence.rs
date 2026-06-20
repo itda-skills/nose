@@ -26,7 +26,32 @@ fn library_api_record_with_provenance(
     pack_id: &str,
     rule: &str,
 ) -> EvidenceRecord {
-    let mut record = library_api_record(id, span, contract_id, callee, status, dependencies);
+    library_api_record_with_provenance_and_arity(
+        id,
+        span,
+        contract_id,
+        callee,
+        1,
+        status,
+        dependencies,
+        pack_id,
+        rule,
+    )
+}
+
+fn library_api_record_with_provenance_and_arity(
+    id: u32,
+    span: Span,
+    contract_id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+    arity: u16,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+    pack_id: &str,
+    rule: &str,
+) -> EvidenceRecord {
+    let mut record =
+        library_api_record_with_arity(id, span, contract_id, callee, arity, status, dependencies);
     record.provenance.pack_hash = Some(stable_symbol_hash(pack_id));
     record.provenance.rule_hash = Some(stable_symbol_hash(rule));
     record
@@ -87,6 +112,28 @@ fn ruby_stdlib_set_record(
         RUBY_STDLIB_SET_PACK_ID,
         RUBY_STDLIB_SET_PRODUCER_ID,
     )
+}
+
+fn rust_stdlib_vec_record(
+    id: u32,
+    span: Span,
+    contract: LibraryCollectionFactoryContract,
+    arity: u16,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    let mut record = library_api_record_with_arity(
+        id,
+        span,
+        contract.id,
+        contract.callee,
+        arity,
+        status,
+        dependencies,
+    );
+    record.provenance.pack_hash = Some(stable_symbol_hash(RUST_STDLIB_VEC_PACK_ID));
+    record.provenance.rule_hash = Some(stable_symbol_hash(RUST_STDLIB_VEC_PRODUCER_ID));
+    record
 }
 
 fn library_api_record_with_arity(

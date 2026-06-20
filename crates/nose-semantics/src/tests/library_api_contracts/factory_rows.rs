@@ -100,6 +100,32 @@ fn library_api_contracts_carry_identity_and_result_obligations() {
         LibraryApiShadowPolicy::RustStdRootForStdPath,
         |_| false
     ));
+    assert_eq!(
+        library_rust_vec_macro_factory_contract(Lang::Rust, "vec"),
+        Some(LibraryCollectionFactoryContract {
+            pack_id: RUST_STDLIB_VEC_PACK_ID,
+            id: LibraryApiContractId::RustVecMacroFactory,
+            callee: LibraryApiCalleeContract::RustMacro {
+                name: "vec",
+                shadow: LibraryApiShadowPolicy::SameName,
+            },
+            result: LibraryCollectionFactoryResult::VariadicElements {
+                single_arg_spreads_array: false,
+            },
+        })
+    );
+    assert_eq!(
+        library_rust_vec_new_factory_contract(Lang::Rust, "Vec::new"),
+        Some(LibraryCollectionFactoryContract {
+            pack_id: RUST_STDLIB_VEC_PACK_ID,
+            id: LibraryApiContractId::RustVecNewFactory,
+            callee: LibraryApiCalleeContract::FreeName {
+                name: "Vec::new",
+                shadow: LibraryApiShadowPolicy::ExplicitRoot("Vec"),
+            },
+            result: LibraryCollectionFactoryResult::EmptySequence,
+        })
+    );
 }
 
 #[test]

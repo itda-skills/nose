@@ -14,11 +14,13 @@ const C_LANGUAGE_CONFORMANCE_REFS: &[&str] = &[
 const NO_LANGUAGES: &[&str] = &[];
 const PYTHON_LANGUAGE: &[&str] = &["python"];
 const RUBY_LANGUAGE: &[&str] = &["ruby"];
+const RUST_LANGUAGE: &[&str] = &["rust"];
 const NO_PACKAGES: &[&str] = &[];
 const PYTHON_BUILTIN_PACKAGES: &[&str] = &["builtins"];
 const PYTHON_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["collections"];
 const PYTHON_STDLIB_TYPE_DOMAIN_PACKAGES: &[&str] = &["typing", "collections.abc", "asyncio"];
 const RUBY_STDLIB_SET_PACKAGES: &[&str] = &["set"];
+const RUST_STDLIB_VEC_PACKAGES: &[&str] = &["std::vec", "alloc::vec"];
 const NO_IDS: &[&str] = &[];
 const PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_IDS: &[&str] =
     &[PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID];
@@ -52,6 +54,17 @@ const RUBY_STDLIB_SET_CONFORMANCE_REFS: &[&str] = &[
     "ruby-set-missing-require-hard-negative",
     "ruby-set-shadowed-hard-negative",
     "ruby-set-mutated-hard-negative",
+];
+const RUST_STDLIB_VEC_PRODUCER_IDS: &[&str] = &[RUST_STDLIB_VEC_PRODUCER_ID];
+const RUST_STDLIB_VEC_CONTRACT_IDS: &[&str] = &[
+    RUST_STDLIB_VEC_MACRO_CONTRACT_ID,
+    RUST_STDLIB_VEC_NEW_CONTRACT_ID,
+];
+const RUST_STDLIB_VEC_CONFORMANCE_REFS: &[&str] = &[
+    "rust-vec-macro-factory-positive",
+    "rust-vec-new-factory-positive",
+    "rust-vec-macro-shadowed-hard-negative",
+    "rust-vec-new-shadowed-hard-negative",
 ];
 const PYTHON_STDLIB_TYPE_DOMAIN_CONTRACT_IDS: &[&str] =
     &["python.stdlib.type-domain-alias.contract"];
@@ -203,6 +216,22 @@ fn ruby_stdlib_set_counts() -> SemanticPackCounts {
             .filter(|id| !id.contains("hard-negative"))
             .count(),
         hard_negatives: RUBY_STDLIB_SET_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
+fn rust_stdlib_vec_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: RUST_STDLIB_VEC_PRODUCER_IDS.len(),
+        contracts: RUST_STDLIB_VEC_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: RUST_STDLIB_VEC_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: RUST_STDLIB_VEC_CONFORMANCE_REFS
             .iter()
             .filter(|id| id.contains("hard-negative"))
             .count(),
@@ -375,6 +404,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: RUBY_STDLIB_SET_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: ruby_stdlib_set_counts,
+    },
+    BuiltinPackDescriptor {
+        id: RUST_STDLIB_VEC_PACK_ID,
+        kind: SemanticPackKind::StdlibPack,
+        display_name: "nose Rust stdlib Vec pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: RUST_LANGUAGE,
+        supported_packages: RUST_STDLIB_VEC_PACKAGES,
+        language: None,
+        evidence_producer_ids: RUST_STDLIB_VEC_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: RUST_STDLIB_VEC_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: RUST_STDLIB_VEC_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: rust_stdlib_vec_counts,
     },
     BuiltinPackDescriptor {
         id: PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,

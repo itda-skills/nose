@@ -59,6 +59,35 @@ fn rust_some_call_il() -> (Il, Interner, NodeId, NodeId) {
     (finish_il(b, root, Lang::Rust), interner, call, callee)
 }
 
+fn rust_vec_new_call_il() -> (Il, Interner, NodeId, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let callee = b.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern("Vec::new")),
+        sp(49),
+        &[],
+    );
+    let call = b.add(NodeKind::Call, Payload::None, sp(50), &[callee]);
+    let root = b.add(NodeKind::Func, Payload::None, sp(51), &[call]);
+    (finish_il(b, root, Lang::Rust), interner, call, callee)
+}
+
+fn rust_vec_macro_call_il() -> (Il, Interner, NodeId, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let callee = b.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern("vec")),
+        sp(52),
+        &[],
+    );
+    let value = b.add(NodeKind::Lit, Payload::LitInt(1), sp(53), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(54), &[callee, value]);
+    let root = b.add(NodeKind::Func, Payload::None, sp(55), &[call]);
+    (finish_il(b, root, Lang::Rust), interner, call, callee)
+}
+
 fn python_list_factory_call_il() -> (Il, Interner, NodeId, NodeId) {
     let interner = Interner::new();
     let mut b = IlBuilder::new(FileId(0));
@@ -508,6 +537,234 @@ fn admitted_collection_factory_resolver_requires_api_occurrence_evidence() {
     assert_eq!(
         occurrence.contract.id,
         LibraryApiContractId::PythonBuiltinCollectionFactory
+    );
+    assert_eq!(occurrence.callee, callee);
+    assert_eq!(occurrence.receiver, None);
+    assert_eq!(occurrence.arg_count, 1);
+}
+
+#[test]
+fn admitted_rust_vec_new_factory_resolver_requires_pack_provenance() {
+    let (il, interner, call, _callee) = rust_vec_new_call_il();
+    assert!(
+        admitted_rust_vec_new_factory_at_call(&il, &interner, call).is_none(),
+        "raw Rust Vec::new() call shape alone must not admit stdlib Vec semantics"
+    );
+
+    let contract =
+        library_rust_vec_new_factory_contract(Lang::Rust, "Vec::new").expect("Vec::new contract");
+
+    let (mut missing_dependency, interner, call, _callee) = rust_vec_new_call_il();
+    missing_dependency.evidence.push(rust_stdlib_vec_record(
+        0,
+        missing_dependency.node(call).span,
+        contract,
+        0,
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    assert!(
+        admitted_rust_vec_new_factory_at_call(&missing_dependency, &interner, call).is_none(),
+        "same-span Vec::new evidence without callee dependency is rejected"
+    );
+
+    let (mut wrong_pack, interner, call, callee) = rust_vec_new_call_il();
+    wrong_pack.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_pack.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("Vec::new"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_pack
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            1,
+            wrong_pack.node(call).span,
+            contract.id,
+            contract.callee,
+            0,
+            EvidenceStatus::Asserted,
+            &[0],
+            FIRST_PARTY_PACK_ID,
+            RUST_STDLIB_VEC_PRODUCER_ID,
+        ));
+    assert!(
+        admitted_rust_vec_new_factory_at_call(&wrong_pack, &interner, call).is_none(),
+        "Rust Vec::new evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, callee) = rust_vec_new_call_il();
+    wrong_producer.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_producer.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("Vec::new"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            1,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            0,
+            EvidenceStatus::Asserted,
+            &[0],
+            RUST_STDLIB_VEC_PACK_ID,
+            "wrong.rust.stdlib.vec-factory-api",
+        ));
+    assert!(
+        admitted_rust_vec_new_factory_at_call(&wrong_producer, &interner, call).is_none(),
+        "Rust Vec::new evidence with the wrong producer is rejected"
+    );
+
+    let (mut admitted, interner, call, callee) = rust_vec_new_call_il();
+    admitted.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(admitted.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("Vec::new"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    admitted.evidence.push(rust_stdlib_vec_record(
+        1,
+        admitted.node(call).span,
+        contract,
+        0,
+        EvidenceStatus::Asserted,
+        &[0],
+    ));
+
+    let occurrence = admitted_rust_vec_new_factory_at_call(&admitted, &interner, call).unwrap();
+    assert_eq!(
+        occurrence.contract.id,
+        LibraryApiContractId::RustVecNewFactory
+    );
+    assert_eq!(occurrence.callee, callee);
+    assert_eq!(occurrence.receiver, None);
+    assert_eq!(occurrence.arg_count, 0);
+}
+
+#[test]
+fn admitted_rust_vec_macro_factory_resolver_requires_pack_provenance() {
+    let (il, interner, call, _callee) = rust_vec_macro_call_il();
+    assert!(
+        admitted_rust_vec_macro_factory_at_call(&il, &interner, call).is_none(),
+        "raw Rust vec! macro call shape alone must not admit stdlib Vec semantics"
+    );
+
+    let contract =
+        library_rust_vec_macro_factory_contract(Lang::Rust, "vec").expect("vec! contract");
+
+    let (mut missing_dependency, interner, call, _callee) = rust_vec_macro_call_il();
+    missing_dependency.evidence.push(rust_stdlib_vec_record(
+        0,
+        missing_dependency.node(call).span,
+        contract,
+        1,
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    assert!(
+        admitted_rust_vec_macro_factory_at_call(&missing_dependency, &interner, call).is_none(),
+        "same-span vec! evidence without macro/source dependencies is rejected"
+    );
+
+    let (mut wrong_pack, interner, call, callee) = rust_vec_macro_call_il();
+    wrong_pack.evidence.push(evidence(
+        0,
+        EvidenceAnchor::source_span(wrong_pack.node(call).span),
+        EvidenceKind::Source(SourceFactKind::Call(SourceCallKind::MacroInvocation)),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_pack.evidence.push(evidence(
+        1,
+        EvidenceAnchor::node(wrong_pack.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("vec"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_pack.evidence.push(library_api_record_with_provenance(
+        2,
+        wrong_pack.node(call).span,
+        contract.id,
+        contract.callee,
+        EvidenceStatus::Asserted,
+        &[0, 1],
+        FIRST_PARTY_PACK_ID,
+        RUST_STDLIB_VEC_PRODUCER_ID,
+    ));
+    assert!(
+        admitted_rust_vec_macro_factory_at_call(&wrong_pack, &interner, call).is_none(),
+        "Rust vec! evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, callee) = rust_vec_macro_call_il();
+    wrong_producer.evidence.push(evidence(
+        0,
+        EvidenceAnchor::source_span(wrong_producer.node(call).span),
+        EvidenceKind::Source(SourceFactKind::Call(SourceCallKind::MacroInvocation)),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_producer.evidence.push(evidence(
+        1,
+        EvidenceAnchor::node(wrong_producer.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("vec"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance(
+            2,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[0, 1],
+            RUST_STDLIB_VEC_PACK_ID,
+            "wrong.rust.stdlib.vec-factory-api",
+        ));
+    assert!(
+        admitted_rust_vec_macro_factory_at_call(&wrong_producer, &interner, call).is_none(),
+        "Rust vec! evidence with the wrong producer is rejected"
+    );
+
+    let (mut admitted, interner, call, callee) = rust_vec_macro_call_il();
+    admitted.evidence.push(evidence(
+        0,
+        EvidenceAnchor::source_span(admitted.node(call).span),
+        EvidenceKind::Source(SourceFactKind::Call(SourceCallKind::MacroInvocation)),
+        EvidenceStatus::Asserted,
+    ));
+    admitted.evidence.push(evidence(
+        1,
+        EvidenceAnchor::node(admitted.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("vec"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    admitted.evidence.push(rust_stdlib_vec_record(
+        2,
+        admitted.node(call).span,
+        contract,
+        1,
+        EvidenceStatus::Asserted,
+        &[0, 1],
+    ));
+
+    let occurrence = admitted_rust_vec_macro_factory_at_call(&admitted, &interner, call).unwrap();
+    assert_eq!(
+        occurrence.contract.id,
+        LibraryApiContractId::RustVecMacroFactory
     );
     assert_eq!(occurrence.callee, callee);
     assert_eq!(occurrence.receiver, None);

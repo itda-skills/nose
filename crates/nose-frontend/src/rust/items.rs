@@ -15,9 +15,9 @@ pub(super) fn lower_item(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
             lower_static_import(lo, node).unwrap_or_else(|| crate::lower::import_tokens(lo, node)),
         ),
         "macro_definition" => Some(lower_macro_definition_shadow(lo, node)),
-        // type aliases, attributes: no behavior to model
-        "type_item"
-        | "attribute_item"
+        "type_item" => Some(lower_type_alias_shadow(lo, node)),
+        // attributes: no behavior to model
+        "attribute_item"
         | "inner_attribute_item"
         // trait method/const declarations without a body: no behavior to model
         | "function_signature_item"
@@ -154,6 +154,13 @@ pub(super) fn rust_item_name(lo: &mut Lowering, node: TsNode) -> Option<Symbol> 
                 .find(|child| matches!(child.kind(), "identifier" | "type_identifier"))
         })
         .map(|n| lo.sym(lo.text(n)))
+}
+pub(super) fn lower_type_alias_shadow(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let payload = rust_item_name(lo, node)
+        .map(Payload::Name)
+        .unwrap_or(Payload::None);
+    lo.add(NodeKind::Block, payload, span, &[])
 }
 /// A struct/enum field or enum variant → an `Assign(name, type-as-literal)` so the
 /// shape of the data structure is captured.

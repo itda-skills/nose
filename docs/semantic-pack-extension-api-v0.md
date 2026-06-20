@@ -441,9 +441,11 @@ implicit v0 packs:
   containers emit source, symbol, import, domain, guard, place/effect,
   call-target, and sequence-surface evidence;
 - stdlib packs declare library API occurrence contracts such as Python builtins,
-  Python `math.prod`, Rust `Vec::new`, Rust `Option` constructors, Java
-  `java.util` factories, JS-like globals, regex literal methods, selected
-  property builtins, receiver-method APIs, and builder append APIs;
+  Python `math.prod`, Rust `Option` constructors, Java `java.util` factories,
+  JS-like globals, regex literal methods, selected property builtins,
+  receiver-method APIs, and builder append APIs;
+- `nose.rust.stdlib.vec` owns the current Rust `Vec::new` and `vec!`
+  collection-factory API occurrence contracts;
 - protocol/law packs correspond to current builtin protocol operations,
   demand profiles, operator laws, value-domain laws, and named value-graph rule
   modules.

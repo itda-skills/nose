@@ -371,7 +371,8 @@ occurrence evidence, or Python imported `collections.deque` collection
 factories with `nose.python.stdlib.collection_factories` provenance-backed
 `LibraryApi` occurrence evidence, or Ruby `require "set"; Set.new(...)`
 factories with `nose.ruby.stdlib.set` provenance-backed `LibraryApi` occurrence
-evidence. Canonical
+evidence, or Rust `Vec::new`/`vec!` factories with `nose.rust.stdlib.vec`
+provenance-backed `LibraryApi` occurrence evidence. Canonical
 `Append` still needs `Effect(BuilderAppendCall)`, and the first-party normalize
 producer emits that effect only when the same call also has the same-span
 `LibraryApi` proof for the append API; the effect record depends on that API
@@ -476,10 +477,12 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `list(...)` when the callee has an unshadowed free-name proof; Python
   `collections.deque(...)` through imported binding/namespace proof; Python
   `math.prod(...)` through imported namespace proof; Rust
-  `vec!(...)` when macro-invocation source syntax and macro-name shadow policy
-  are proven, `Vec::new()`, `Some(...)`, selected `Some(_)` pattern selectors,
-  bare `None`, and selected `std::collections::*::from(...)` factory paths when
-  their root-shadow policy is proven. The selector occurrence does not by itself
+  `vec!(...)` with `nose.rust.stdlib.vec` provenance when macro-invocation
+  source syntax and macro-name shadow policy are proven, `Vec::new()` with the
+  same pack provenance when the root-shadow policy is proven, `Some(...)`,
+  selected `Some(_)` pattern selectors, bare `None`, and selected
+  `std::collections::*::from(...)` factory paths when their root-shadow policy
+  is proven. The selector occurrence does not by itself
   prove the pattern semantics: `Some(_)` value-graph presence predicates also
   require the Rust tuple-struct wildcard `Source::Pattern` fact. JS/TS/Java
   `length` property reads whose

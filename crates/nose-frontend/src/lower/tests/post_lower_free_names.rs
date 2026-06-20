@@ -138,6 +138,62 @@ fn assert_go_and_rust_free_name_occurrences(interner: &Interner) {
         contract_api_count(&rust.evidence, rust_contract.id, rust_contract.callee),
         1
     );
+    let rust_api_records =
+        contract_api_records(&rust.evidence, rust_contract.id, rust_contract.callee);
+    assert_eq!(
+        rust_api_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(rust_contract.pack_id))
+    );
+    assert_eq!(
+        rust_api_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(RUST_STDLIB_VEC_PRODUCER_ID))
+    );
+
+    let qualified_rust = lower_fixture(
+        "qualified_vec.rs",
+        b"fn f() { let xs = std::vec::Vec::new(); }",
+        Lang::Rust,
+        interner,
+    );
+    let qualified_rust_contract =
+        library_rust_vec_new_factory_contract(Lang::Rust, "std::vec::Vec::new").unwrap();
+    assert_eq!(
+        contract_api_count(
+            &qualified_rust.evidence,
+            qualified_rust_contract.id,
+            qualified_rust_contract.callee
+        ),
+        1
+    );
+    let qualified_rust_api_records = contract_api_records(
+        &qualified_rust.evidence,
+        qualified_rust_contract.id,
+        qualified_rust_contract.callee,
+    );
+    assert_eq!(
+        qualified_rust_api_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(qualified_rust_contract.pack_id))
+    );
+    assert_eq!(
+        qualified_rust_api_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(RUST_STDLIB_VEC_PRODUCER_ID))
+    );
+
+    let rust_type_alias_shadow = lower_fixture(
+        "vec_type_alias_shadow.rs",
+        b"struct Custom;\nimpl Custom { fn new() -> Self { Custom } }\ntype Vec = Custom;\nfn f() { let xs = Vec::new(); }",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        contract_api_count(
+            &rust_type_alias_shadow.evidence,
+            rust_contract.id,
+            rust_contract.callee
+        ),
+        0,
+        "Rust type aliases named Vec must shadow stdlib Vec::new"
+    );
 
     let rust_macro = lower_fixture(
         "vec_macro.rs",
@@ -153,6 +209,19 @@ fn assert_go_and_rust_free_name_occurrences(interner: &Interner) {
             rust_macro_contract.callee
         ),
         1
+    );
+    let rust_macro_api_records = contract_api_records(
+        &rust_macro.evidence,
+        rust_macro_contract.id,
+        rust_macro_contract.callee,
+    );
+    assert_eq!(
+        rust_macro_api_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(rust_macro_contract.pack_id))
+    );
+    assert_eq!(
+        rust_macro_api_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(RUST_STDLIB_VEC_PRODUCER_ID))
     );
 
     let rust_function_call = lower_fixture(

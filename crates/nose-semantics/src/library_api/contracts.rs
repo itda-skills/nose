@@ -30,6 +30,10 @@ pub const PYTHON_STDLIB_COLLECTION_FACTORY_CONTRACT_ID: &str = "python.imported.
 pub const RUBY_STDLIB_SET_PACK_ID: &str = "nose.ruby.stdlib.set";
 pub const RUBY_STDLIB_SET_PRODUCER_ID: &str = "ruby.stdlib.set-factory-api";
 pub const RUBY_STDLIB_SET_CONTRACT_ID: &str = "ruby.set_factory";
+pub const RUST_STDLIB_VEC_PACK_ID: &str = "nose.rust.stdlib.vec";
+pub const RUST_STDLIB_VEC_PRODUCER_ID: &str = "rust.stdlib.vec-factory-api";
+pub const RUST_STDLIB_VEC_MACRO_CONTRACT_ID: &str = "rust.vec.macro_factory";
+pub const RUST_STDLIB_VEC_NEW_CONTRACT_ID: &str = "rust.vec.new_factory";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LibraryApiContractId {

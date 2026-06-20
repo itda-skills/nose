@@ -183,6 +183,28 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(ruby_set["counts"]["positive_fixtures"], 3);
     assert_eq!(ruby_set["counts"]["hard_negatives"], 3);
 
+    let rust_vec = semantic_pack_by_id(&json, "nose.rust.stdlib.vec");
+    assert_eq!(rust_vec["hash"], "cc787cbb5aa0a87c");
+    assert_eq!(rust_vec["kind"], "StdlibPack");
+    assert_eq!(rust_vec["display_name"], "nose Rust stdlib Vec pack");
+    assert_eq!(rust_vec["source"], "compiled-first-party");
+    assert_eq!(rust_vec["influence"], "evidence-and-contracts");
+    assert_eq!(rust_vec["trust"], "default-first-party");
+    assert_eq!(rust_vec["enabled_by_default"], true);
+    assert_eq!(rust_vec["path"], serde_json::Value::Null);
+    assert_eq!(rust_vec["provider"], "Corca, Inc.");
+    assert_eq!(rust_vec["repository"], "https://github.com/corca-ai/nose");
+    assert_eq!(rust_vec["license"], "MIT");
+    assert_eq!(
+        json_array_strings(rust_vec, "supported_languages"),
+        vec!["rust"]
+    );
+    assert_eq!(rust_vec["counts"]["evidence_producers"], 1);
+    assert_eq!(rust_vec["counts"]["contracts"], 2);
+    assert_eq!(rust_vec["counts"]["value_laws"], 0);
+    assert_eq!(rust_vec["counts"]["positive_fixtures"], 2);
+    assert_eq!(rust_vec["counts"]["hard_negatives"], 2);
+
     let stdlib = semantic_pack_by_id(&json, "nose.python.stdlib.type_domain");
     assert_eq!(stdlib["kind"], "StdlibPack");
     assert_eq!(

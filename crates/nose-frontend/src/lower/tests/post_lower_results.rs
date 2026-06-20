@@ -65,6 +65,55 @@ fn assert_rust_and_ruby_factory_result_domains(interner: &Interner) {
         &vec_api,
     ));
 
+    let qualified_rust_vec = lower_fixture(
+        "qualified_vec.rs",
+        b"fn f() { let xs = std::vec::Vec::new(); }",
+        Lang::Rust,
+        interner,
+    );
+    let qualified_vec_contract =
+        library_rust_vec_new_factory_contract(Lang::Rust, "std::vec::Vec::new").unwrap();
+    let qualified_vec_api = contract_api_ids(
+        &qualified_rust_vec.evidence,
+        qualified_vec_contract.id,
+        qualified_vec_contract.callee,
+    );
+    assert!(result_domain_depends_on_any_api(
+        &qualified_rust_vec.evidence,
+        DomainEvidence::Collection,
+        &qualified_vec_api,
+    ));
+
+    let rust_vec_alias_shadow = lower_fixture(
+        "vec_type_alias_shadow.rs",
+        b"struct Custom;\nimpl Custom { fn new() -> Self { Custom } }\ntype Vec = Custom;\nfn f() { let xs = Vec::new(); }",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        result_domain_record_count(&rust_vec_alias_shadow.evidence, DomainEvidence::Collection),
+        0,
+        "Rust type aliases named Vec must not emit stdlib Vec result-domain evidence"
+    );
+
+    let rust_vec_macro = lower_fixture(
+        "vec_macro.rs",
+        b"fn f() { let xs = vec![1, 2]; }",
+        Lang::Rust,
+        interner,
+    );
+    let vec_macro_contract = library_rust_vec_macro_factory_contract(Lang::Rust, "vec").unwrap();
+    let vec_macro_api = contract_api_ids(
+        &rust_vec_macro.evidence,
+        vec_macro_contract.id,
+        vec_macro_contract.callee,
+    );
+    assert!(result_domain_depends_on_any_api(
+        &rust_vec_macro.evidence,
+        DomainEvidence::Collection,
+        &vec_macro_api,
+    ));
+
     let rust_map = lower_fixture(
         "hash_map.rs",
         b"fn f() { let xs = std::collections::HashMap::from([(\"red\", 1)]); }",

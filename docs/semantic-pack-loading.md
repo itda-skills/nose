@@ -63,6 +63,8 @@ Trust is separate from channel eligibility.
   provenance;
   `nose.ruby.stdlib.set` owns Ruby `require "set"; Set.new(...)` collection
   factory API occurrence provenance;
+  `nose.rust.stdlib.vec` owns Rust `Vec::new` and `vec!` collection factory API
+  occurrence provenance;
   `nose.python.stdlib.type_domain` is the first narrow stdlib pilot pack for
   Python `typing`, `collections.abc`, and `asyncio` type-domain aliases;
   `nose.value_graph.laws` is the first LawPack pilot for selected proof-backed

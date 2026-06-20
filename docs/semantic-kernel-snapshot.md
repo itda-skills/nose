@@ -83,6 +83,9 @@ still being migrated toward it.
   `nose.ruby.stdlib.set` descriptor owns Ruby `Set.new` collection-factory
   contract and occurrence producer ids, while missing `require "set"`, shadowed
   `Set`, and mutated local sets remain hard negatives. The
+  `nose.rust.stdlib.vec` descriptor owns Rust `Vec::new` and `vec!`
+  collection-factory contract and occurrence producer ids, while shadowed `Vec`
+  roots and shadowed `vec` macros remain hard negatives. The
   `nose.python.stdlib.type_domain` descriptor directly exposes its alias
   contract rows so producer id, contract id, conformance refs, and declaration
   counts come from one pack-owned table.
@@ -99,7 +102,9 @@ still being migrated toward it.
   `nose.python.stdlib.collection_factories`, a default builtin stdlib pack for
   Python `collections.deque` collection-factory API provenance,
   `nose.ruby.stdlib.set`, a default builtin stdlib pack for Ruby `Set.new`
-  collection-factory API provenance, and
+  collection-factory API provenance,
+  `nose.rust.stdlib.vec`, a default builtin stdlib pack for Rust `Vec::new` and
+  `vec!` collection-factory API provenance, and
   `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped surface
   for Python `typing`, `collections.abc`, and `asyncio` type-domain alias
   evidence.
@@ -250,6 +255,9 @@ migrated.
   Ruby stdlib `Set.new` collection-factory `LibraryApi` occurrence evidence now
   carries `nose.ruby.stdlib.set` pack provenance while missing-require,
   shadowed-`Set`, and mutated-set hard negatives stay closed.
+  Rust stdlib `Vec::new` and `vec!` collection-factory `LibraryApi` occurrence
+  evidence now carries `nose.rust.stdlib.vec` pack provenance while shadowed
+  `Vec` roots and shadowed `vec` macros stay closed.
   `nose-semantics` resolves receiver-domain evidence through a shared
   `DomainRequirement` contract. Consumers check exact receiver node evidence
   first, then immutable binding evidence for local or module variables, then
@@ -798,9 +806,9 @@ language.
   demand/effect abstraction.
 - External producer execution does not exist. New languages and libraries that
   affect analysis must still be added inside the main crates.
-- Query JSON does not yet expose active pack-level provenance. Selected findings
-  can expose internal law provenance, but active builtin/local pack reporting is
-  still a #473 follow-up.
+- Query JSON now exposes the active builtin/local pack set at top level, but
+  family/member-level pack provenance is still limited. Selected findings can
+  expose internal law provenance; local external packs remain metadata-only.
 - Builtin and external responsibility boundaries are documented and represented
   in the internal facade as provenance/trust policy. Loaded external manifests
   remain metadata-only until a producer runtime and executable fixture/oracle

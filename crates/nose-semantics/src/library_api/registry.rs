@@ -26,6 +26,8 @@ pub(super) fn library_api_contract_result_domain_for_arity(
                         LibraryApiContractId::PythonImportedCollectionFactory => {
                             PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID
                         }
+                        LibraryApiContractId::RustVecMacroFactory
+                        | LibraryApiContractId::RustVecNewFactory => RUST_STDLIB_VEC_PACK_ID,
                         LibraryApiContractId::RubySetFactory => RUBY_STDLIB_SET_PACK_ID,
                         _ => FIRST_PARTY_PACK_ID,
                     },

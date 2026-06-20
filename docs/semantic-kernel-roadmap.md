@@ -81,7 +81,9 @@ The next code slices are intentionally incremental:
    `nose.python.stdlib.collection_factories` for Python `collections.deque`
    imported binding, alias, and namespace collection-factory occurrence
    provenance, then `nose.ruby.stdlib.set` for Ruby `Set.new(...)`
-   collection-factory occurrence provenance backed by `require "set"`;
+   collection-factory occurrence provenance backed by `require "set"`, then
+   `nose.rust.stdlib.vec` for Rust `Vec::new` and `vec!` collection-factory
+   occurrence provenance;
 7. Phase 6: allow external pack influence only after the builtin path is proven;
 8. Phase 7: define adoption and release gates.
 
@@ -150,6 +152,35 @@ redistribution on `cmark` and `parse+lower` timing redistribution on `junit5`;
 aggregate wall time and the measured product path did not regress. Binary size
 changed 20,124,864 -> 20,125,104 bytes for this slice.
 
+Phase 5 Rust stdlib Vec measurement note, local run on 2026-06-20: product
+query-regression r15 compared the previous `nose.ruby.stdlib.set` slice with
+the `nose.rust.stdlib.vec` slice over the same 9-repo subset. Family summaries,
+locations, fragment buckets, reason-code counts, and surface counts were
+unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by 499
+bytes from the new top-level `semantic_packs` entry. The saved current artifact
+is `/tmp/nose-473-phase5-rust-vec-current-r15.json`, and the previous-slice
+compare summary is `/tmp/nose-473-phase5-rust-vec-vs-prev-r15.md`; it produced
+only JSON-byte metadata triggers and no runtime triggers. The saved
+previous-slice aggregate wall time was 1205.85 ms -> 1213.33 ms, `lower`
+384.60 ms -> 375.80 ms, `normalize+extract` 609.50 ms -> 628.60 ms, and
+`candidates` 21.20 ms -> 22.20 ms. A cumulative compare against the original
+main baseline saved at `/tmp/nose-473-phase5-rust-vec-compare-r15.md` showed
+the same expected metadata drift plus a noisy sequential `serde_json` runtime
+trigger. Repo-local main/current alternating r15 runs saved at
+`/tmp/nose-473-phase5-rust-vec-alternating-r15.json` measured aggregate wall
+time 1244.34 ms -> 1226.48 ms, `lower` 385.60 ms -> 381.10 ms,
+`normalize+extract` 606.00 ms -> 624.80 ms, and `candidates` 22.20 ms ->
+22.40 ms. The remaining cumulative alternating triggers were `wall` timing on
+`boltons` and `normalize+extract` timing on `cmark`; neither path exercises the
+Rust Vec pack, and aggregate wall time did not regress. Root-cause note: this
+slice changed static pack metadata, Rust frontend shadow/provenance ids, and
+admission provenance checks; it did not touch candidate generation, and product
+output did not drift. Follow-up under issue #473: if the next Phase 5 slice or
+an r30 cumulative rerun repeats the `boltons` or `cmark` triggers above both the
+5% and 5 ms gates, pause pack-row migration and instrument the reported phase
+before committing more stdlib/library rows. Binary size changed 20,125,104 ->
+20,142,096 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -209,6 +240,10 @@ changed 20,124,864 -> 20,125,104 bytes for this slice.
   occurrence evidence now reports `nose.ruby.stdlib.set` pack and producer
   provenance while preserving missing-require, shadowed-`Set`, and mutated-set
   hard negatives.
+- Rust stdlib Vec collection factories started moving out of the broad
+  compatibility facade. `Vec::new` and `vec!` factory `LibraryApi` occurrence
+  evidence now reports `nose.rust.stdlib.vec` pack and producer provenance while
+  preserving shadowed-`Vec` and shadowed-macro hard negatives.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a
   language-, signature-, and integer-domain-constrained first-party contract
   instead of a bare method-name recognizer. Float/NaN-sensitive methods remain a

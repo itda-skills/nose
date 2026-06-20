@@ -79,7 +79,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 7);
+    assert_eq!(descriptors.len(), 8);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -92,6 +92,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
             PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
             RUBY_STDLIB_SET_PACK_ID,
+            RUST_STDLIB_VEC_PACK_ID,
             PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
             FIRST_PARTY_VALUE_LAW_PACK_ID
         ]
@@ -202,6 +203,31 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
     assert!(ruby_set
         .conformance_refs()
         .contains(&"ruby-set-missing-require-hard-negative"));
+
+    let rust_vec =
+        builtin_pack_descriptor(RUST_STDLIB_VEC_PACK_ID).expect("Rust stdlib Vec descriptor");
+    assert_eq!(rust_vec.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(rust_vec.supported_languages, &["rust"]);
+    assert_eq!(rust_vec.supported_packages, &["std::vec", "alloc::vec"]);
+    assert_eq!(
+        rust_vec.evidence_producer_ids,
+        &[RUST_STDLIB_VEC_PRODUCER_ID]
+    );
+    assert!(rust_vec.source_fact_producer_ids.is_empty());
+    assert_eq!(
+        rust_vec.contract_ids,
+        &[
+            RUST_STDLIB_VEC_MACRO_CONTRACT_ID,
+            RUST_STDLIB_VEC_NEW_CONTRACT_ID
+        ]
+    );
+    assert_eq!(rust_vec.counts().evidence_producers, 1);
+    assert_eq!(rust_vec.counts().contracts, 2);
+    assert_eq!(rust_vec.counts().positive_fixtures, 2);
+    assert_eq!(rust_vec.counts().hard_negatives, 2);
+    assert!(rust_vec
+        .conformance_refs()
+        .contains(&"rust-vec-new-shadowed-hard-negative"));
 
     let python = builtin_pack_descriptor(PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID)
         .expect("Python stdlib descriptor");
@@ -336,6 +362,21 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(ruby_set.counts.contracts, 1);
     assert_eq!(ruby_set.counts.positive_fixtures, 3);
     assert_eq!(ruby_set.counts.hard_negatives, 3);
+    let rust_vec = set
+        .packs()
+        .iter()
+        .find(|pack| pack.id == RUST_STDLIB_VEC_PACK_ID)
+        .expect("Rust stdlib Vec summary");
+    assert_eq!(rust_vec.hash, stable_symbol_hash(RUST_STDLIB_VEC_PACK_ID));
+    assert_eq!(rust_vec.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(
+        rust_vec.influence,
+        SemanticPackInfluence::EvidenceAndContracts
+    );
+    assert_eq!(rust_vec.counts.evidence_producers, 1);
+    assert_eq!(rust_vec.counts.contracts, 2);
+    assert_eq!(rust_vec.counts.positive_fixtures, 2);
+    assert_eq!(rust_vec.counts.hard_negatives, 2);
     let python = python_stdlib_type_domain_pack();
     assert_eq!(python.id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
     assert_eq!(
@@ -368,14 +409,15 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 8);
+    assert_eq!(set.packs().len(), 9);
     assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[3].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[4].id, RUBY_STDLIB_SET_PACK_ID);
-    assert_eq!(set.packs()[5].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[6].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[7];
+    assert_eq!(set.packs()[5].id, RUST_STDLIB_VEC_PACK_ID);
+    assert_eq!(set.packs()[6].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[7].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[8];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);

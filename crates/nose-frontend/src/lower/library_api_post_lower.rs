@@ -132,7 +132,7 @@ fn post_lower_free_name_library_api_contract(
                     id: contract.id,
                     callee: contract.callee,
                     pack_id: contract.pack_id,
-                    rule: "library_api_rust_vec_macro_factory",
+                    rule: RUST_STDLIB_VEC_PRODUCER_ID,
                     result_domain: library_collection_factory_result_domain_for_arity(
                         contract, arg_count,
                     ),
@@ -147,7 +147,7 @@ fn post_lower_free_name_library_api_contract(
                     id: contract.id,
                     callee: contract.callee,
                     pack_id: contract.pack_id,
-                    rule: "library_api_rust_vec_new_factory",
+                    rule: RUST_STDLIB_VEC_PRODUCER_ID,
                     result_domain: library_collection_factory_result_domain_for_arity(
                         contract, arg_count,
                     ),
