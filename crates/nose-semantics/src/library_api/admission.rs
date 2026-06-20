@@ -277,6 +277,20 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID))
         }
+        LibraryApiContractId::ScalarIntegerMethod(_)
+            if matches!(
+                callee,
+                LibraryApiCalleeContract::Method {
+                    receiver: MethodReceiverContract::UnshadowedGlobal("Math"),
+                    ..
+                }
+            ) =>
+        {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash == Some(stable_symbol_hash(JAVA_STDLIB_MATH_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(JAVA_STDLIB_MATH_PRODUCER_ID))
+        }
         LibraryApiContractId::IteratorIdentityAdapter => {
             record.provenance.emitter == EvidenceEmitter::FirstParty
                 && record.provenance.pack_hash

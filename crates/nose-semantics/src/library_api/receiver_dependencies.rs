@@ -53,7 +53,14 @@ pub fn library_api_receiver_dependencies_for_call_with_cache(
     match callee {
         LibraryApiCalleeContract::Method { method, receiver } => {
             let receiver_node = method_callee_receiver(il, interner, callee_node, method)?;
-            method_receiver_dependency_ids(il, interner, receiver_node, receiver, args, cache)
+            let mut dependencies =
+                method_receiver_dependency_ids(il, interner, receiver_node, receiver, args, cache)?;
+            if receiver == MethodReceiverContract::UnshadowedGlobal("Math") {
+                dependencies.extend(integer_value_argument_dependency_ids(
+                    il, interner, args, cache,
+                )?);
+            }
+            Some(dependencies)
         }
         LibraryApiCalleeContract::IteratorAdapterMethod { method, receiver } => {
             let receiver_node = method_callee_receiver(il, interner, callee_node, method)?;
@@ -87,6 +94,37 @@ pub fn library_api_property_dependencies_for_field_with_cache(
     }
     let receiver_node = il.children(field).first().copied()?;
     method_receiver_dependency_ids(il, interner, receiver_node, receiver, &[], cache)
+}
+
+fn integer_value_argument_dependency_ids(
+    il: &Il,
+    interner: &Interner,
+    args: &[NodeId],
+    cache: &mut LibraryApiDependencyCache,
+) -> Option<Vec<EvidenceId>> {
+    let mut dependencies = Vec::new();
+    for &arg in args {
+        if matches!(il.node(arg).payload, Payload::LitInt(_)) {
+            continue;
+        }
+        let dependency = domain_dependency_id_for_receiver_requirement(
+            il,
+            interner,
+            arg,
+            DomainRequirement::Integer,
+            cache,
+        )
+        .or_else(|| {
+            library_api_dependency_id_for_receiver_domain_requirement(
+                il,
+                interner,
+                arg,
+                DomainRequirement::Integer,
+            )
+        })?;
+        dependencies.push(dependency);
+    }
+    Some(dependencies)
 }
 
 pub(in crate::library_api) fn method_receiver_dependency_ids(

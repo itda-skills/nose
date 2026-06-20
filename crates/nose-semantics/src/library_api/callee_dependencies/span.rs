@@ -59,6 +59,7 @@ pub(in crate::library_api) fn library_api_dependencies_match_callee_at_span(
             library_api_dependencies_match_method_callee_at_span(
                 il,
                 interner,
+                call_span,
                 callee_span,
                 receiver_span,
                 callee,
@@ -327,6 +328,7 @@ pub(in crate::library_api) fn library_api_dependencies_match_static_member_calle
 pub(in crate::library_api) fn library_api_dependencies_match_method_callee_at_span(
     il: &Il,
     interner: &Interner,
+    call_span: Span,
     callee_span: Option<Span>,
     receiver_span: Option<Span>,
     callee: LibraryApiCalleeContract,
@@ -334,12 +336,26 @@ pub(in crate::library_api) fn library_api_dependencies_match_method_callee_at_sp
 ) -> bool {
     match callee {
         LibraryApiCalleeContract::Method { method, receiver } => {
-            callee_span.is_some_and(|span| field_method_at_span(il, interner, span, method))
-                && receiver_span.is_some_and(|span| {
-                    method_receiver_dependencies_at_span(il, interner, span, receiver).is_some_and(
-                        |dependencies| dependency_ids_are_present(record, &dependencies),
-                    )
-                })
+            if !callee_span.is_some_and(|span| field_method_at_span(il, interner, span, method)) {
+                return false;
+            }
+            if receiver == MethodReceiverContract::UnshadowedGlobal("Math") {
+                let Some(source_call) = node_at_span_with_kind(il, call_span, NodeKind::Call)
+                else {
+                    return false;
+                };
+                return library_api_receiver_dependencies_for_call(
+                    il,
+                    interner,
+                    source_call,
+                    callee,
+                )
+                .is_some_and(|dependencies| dependency_ids_are_present(record, &dependencies));
+            }
+            receiver_span.is_some_and(|span| {
+                method_receiver_dependencies_at_span(il, interner, span, receiver)
+                    .is_some_and(|dependencies| dependency_ids_are_present(record, &dependencies))
+            })
         }
         LibraryApiCalleeContract::IteratorAdapterMethod { method, receiver } => {
             callee_span.is_some_and(|span| field_method_at_span(il, interner, span, method))

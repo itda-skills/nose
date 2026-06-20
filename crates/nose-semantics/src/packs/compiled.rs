@@ -23,6 +23,7 @@ const JAVA_STDLIB_MAP_FACTORY_PACKAGES: &[&str] = &["java.util"];
 const JAVA_STDLIB_MAP_ENTRY_PACKAGES: &[&str] = &["java.util"];
 const JAVA_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["java.util"];
 const JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACKAGES: &[&str] = &["java.util"];
+const JAVA_STDLIB_MATH_PACKAGES: &[&str] = &["java.lang"];
 const JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACKAGES: &[&str] = &["java.util"];
 const ITERATOR_IDENTITY_ADAPTER_PACKAGES: &[&str] = &["core::iter", "java.util.stream"];
 const JS_LIKE_BUILTIN_ARRAY_PACKAGES: &[&str] = &["Array"];
@@ -192,6 +193,20 @@ const RUST_STDLIB_INTEGER_METHOD_CONFORMANCE_REFS: &[&str] = &[
     "rust-integer-method-clamp-positive",
     "rust-integer-method-non-integer-receiver-hard-negative",
     "rust-integer-method-unsupported-arity-hard-negative",
+];
+const JAVA_STDLIB_MATH_PRODUCER_IDS: &[&str] = &[JAVA_STDLIB_MATH_PRODUCER_ID];
+const JAVA_STDLIB_MATH_CONTRACT_IDS: &[&str] = &[
+    SCALAR_INTEGER_METHOD_ABS_CONTRACT_ID,
+    SCALAR_INTEGER_METHOD_MIN_CONTRACT_ID,
+    SCALAR_INTEGER_METHOD_MAX_CONTRACT_ID,
+];
+const JAVA_STDLIB_MATH_CONFORMANCE_REFS: &[&str] = &[
+    "java-math-abs-positive",
+    "java-math-min-positive",
+    "java-math-max-positive",
+    "java-math-shadowed-math-hard-negative",
+    "java-math-non-integer-argument-hard-negative",
+    "java-math-unsupported-arity-hard-negative",
 ];
 const JAVA_STDLIB_MAP_FACTORY_PRODUCER_IDS: &[&str] = &[JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID];
 const JAVA_STDLIB_MAP_FACTORY_CONTRACT_IDS: &[&str] = &[
@@ -613,6 +628,22 @@ fn java_stdlib_map_factory_counts() -> SemanticPackCounts {
     }
 }
 
+fn java_stdlib_math_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: JAVA_STDLIB_MATH_PRODUCER_IDS.len(),
+        contracts: JAVA_STDLIB_MATH_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: JAVA_STDLIB_MATH_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: JAVA_STDLIB_MATH_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
 fn java_stdlib_map_entry_counts() -> SemanticPackCounts {
     SemanticPackCounts {
         evidence_producers: JAVA_STDLIB_MAP_ENTRY_PRODUCER_IDS.len(),
@@ -989,6 +1020,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: RUST_STDLIB_MAP_FACTORY_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: rust_stdlib_map_factory_counts,
+    },
+    BuiltinPackDescriptor {
+        id: JAVA_STDLIB_MATH_PACK_ID,
+        kind: SemanticPackKind::StdlibPack,
+        display_name: "nose Java stdlib Math pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: JAVA_LANGUAGE,
+        supported_packages: JAVA_STDLIB_MATH_PACKAGES,
+        language: None,
+        evidence_producer_ids: JAVA_STDLIB_MATH_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: JAVA_STDLIB_MATH_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: JAVA_STDLIB_MATH_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: java_stdlib_math_counts,
     },
     BuiltinPackDescriptor {
         id: JAVA_STDLIB_MAP_FACTORY_PACK_ID,

@@ -87,6 +87,8 @@ The next code slices are intentionally incremental:
    `None`, and `and_then` Option API occurrence provenance, then
    `nose.rust.stdlib.integer_methods` for Rust primitive integer
    `abs`/`min`/`max`/`clamp` method API occurrence provenance, then
+   `nose.java.stdlib.math` for Java `Math.abs`, `Math.min`, and `Math.max`
+   scalar integer API occurrence provenance, then
    `nose.javascript.builtins.promise` for JS/TS `Promise.resolve` and `.then`
    Promise API occurrence provenance, then
    `nose.javascript.builtins.array` for JS/TS `Array.from` and
@@ -647,6 +649,27 @@ per-node descriptor scans or repeated registry walks on hot paths. The remaining
 rechecked if a later slice repeats a wall-only trigger. Binary size changed
 20,162,672 -> 20,162,928 bytes for this slice.
 
+Phase 5 Java stdlib Math pack measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous
+`nose.protocols.iterator_identity_adapters` slice with the
+`nose.java.stdlib.math` slice over the same 9-repo subset. Family summaries,
+locations, fragment buckets, reason-code counts, surface counts, and family
+shapes were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by exactly 501 bytes from the new top-level `semantic_packs` entry. The saved
+artifacts are `/tmp/nose-473-phase5-java-math-prev-r15.json`,
+`/tmp/nose-473-phase5-java-math-current-r15.json`, and
+`/tmp/nose-473-phase5-java-math-vs-prev-r15.md`. The sequential r15 compare
+showed zero harness investigation triggers. The mean of per-repo medians moved
+wall 143.60 ms -> 134.82 ms (-6.1%), `parse+lower` 34.27 ms -> 32.32 ms,
+`lower` 44.78 ms -> 41.90 ms, `normalize+extract` 74.48 ms -> 69.98 ms, and
+`candidates` 2.48 ms -> 2.37 ms. Root-cause note: this slice adds static
+stdlib-pack metadata, Java Math producer provenance, and fail-closed admission
+provenance/dependency checks for existing scalar-integer exact and canonical
+paths; it does not add per-node descriptor scans or repeated registry walks on
+hot paths. The extra dependency checks are gated by the Java Math receiver
+contract or canonical scalar-integer evidence. Binary size changed
+20,162,928 -> 20,180,832 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -718,8 +741,12 @@ rechecked if a later slice repeats a wall-only trigger. Binary size changed
   facade. Primitive integer `abs`, `min`, `max`, and `clamp` `LibraryApi`
   occurrence evidence now reports `nose.rust.stdlib.integer_methods` pack and
   producer provenance while preserving non-integer receiver and
-  unsupported-arity hard negatives. Java `Math.*` scalar integer methods remain
-  under the compatibility facade until a Java-specific slice migrates them.
+  unsupported-arity hard negatives.
+- Java stdlib Math scalar integer APIs started moving out of the broad
+  compatibility facade. `Math.abs`, `Math.min`, and `Math.max` `LibraryApi`
+  occurrence evidence now reports `nose.java.stdlib.math` pack and producer
+  provenance while preserving missing unshadowed-`Math` proof, non-integer
+  value-argument, and unsupported-arity hard negatives.
 - JS/TS Promise APIs started moving out of the broad compatibility facade.
   `Promise.resolve` and `.then` `LibraryApi` occurrence evidence now reports
   `nose.javascript.builtins.promise` pack and producer provenance while
@@ -853,8 +880,9 @@ rechecked if a later slice repeats a wall-only trigger. Binary size changed
   namespace function contract with missing-import and overwritten-binding hard
   negatives.
 - Java integer `Math.abs`/`Math.min`/`Math.max` moved out of frontend text-only
-  lowering and into scalar-integer method contracts that require an unshadowed
-  `Math` receiver plus integer-domain proof for value arguments.
+  lowering and into scalar-integer method contracts with
+  `nose.java.stdlib.math` provenance, an unshadowed `Math` receiver, and
+  integer-domain proof for value arguments.
 - JS-like `undefined` moved from unconditional frontend null lowering to an
   unshadowed-global nullish contract, preserving shadowed binding hard negatives.
 - Strict exact gates now consume the same nullish-global proof, so temp-bound
@@ -1034,7 +1062,9 @@ rechecked if a later slice repeats a wall-only trigger. Binary size changed
   (`Map.of`/`Map.ofEntries`) with `nose.java.stdlib.map_factories` provenance,
   Java map entries (`Map.entry`) with `nose.java.stdlib.map_entries`
   provenance, Java static collection adapters (`Arrays.stream`) with
-  `nose.java.stdlib.static_collection_adapters` provenance, and
+  `nose.java.stdlib.static_collection_adapters` provenance, Java Math scalar
+  integer APIs (`Math.abs`/`Math.min`/`Math.max`) with
+  `nose.java.stdlib.math` provenance, and
   JS-like regex-literal `.test`. Producers emit call-site `Symbol` dependencies for imported
   binding/namespace occurrences or `Source` dependencies for regex literals;
   value-graph, idiom, and strict exact consumers consult these records first and

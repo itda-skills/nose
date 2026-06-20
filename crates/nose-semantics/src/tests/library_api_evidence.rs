@@ -321,6 +321,28 @@ fn rust_stdlib_integer_method_record(
     )
 }
 
+fn java_stdlib_math_record(
+    id: u32,
+    span: Span,
+    contract_id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+    arity: u16,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance_and_arity(
+        id,
+        span,
+        contract_id,
+        callee,
+        arity,
+        status,
+        dependencies,
+        JAVA_STDLIB_MATH_PACK_ID,
+        JAVA_STDLIB_MATH_PRODUCER_ID,
+    )
+}
+
 fn iterator_identity_adapter_record(
     id: u32,
     span: Span,

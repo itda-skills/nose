@@ -71,6 +71,8 @@ Trust is separate from channel eligibility.
   occurrence provenance;
   `nose.rust.stdlib.integer_methods` owns primitive integer
   `abs`/`min`/`max`/`clamp` method API occurrence provenance;
+  `nose.java.stdlib.math` owns Java `Math.abs`, `Math.min`, and `Math.max`
+  scalar integer API occurrence provenance;
   `nose.javascript.builtins.promise` owns JS/TS `Promise.resolve` and `.then`
   Promise API occurrence provenance;
   `nose.javascript.builtins.array` owns JS/TS `Array.from` and

@@ -113,6 +113,7 @@ pub fn library_scalar_integer_method_contract(
     let method = library_method_selector_name(method)?;
     let pack_id = match (lang, result.receiver) {
         (Lang::Rust, MethodReceiverContract::ExactInteger) => RUST_STDLIB_INTEGER_METHOD_PACK_ID,
+        (Lang::Java, MethodReceiverContract::UnshadowedGlobal("Math")) => JAVA_STDLIB_MATH_PACK_ID,
         _ => FIRST_PARTY_PACK_ID,
     };
     Some(LibraryScalarIntegerMethodContract {

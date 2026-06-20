@@ -452,6 +452,8 @@ implicit v0 packs:
   `and_then` Option API occurrence contracts;
 - `nose.rust.stdlib.integer_methods` owns the current Rust primitive integer
   `abs`/`min`/`max`/`clamp` method API occurrence contracts;
+- `nose.java.stdlib.math` owns the current Java `Math.abs`, `Math.min`, and
+  `Math.max` scalar integer API occurrence contracts;
 - `nose.javascript.builtins.promise` owns the current JS/TS `Promise.resolve`
   and `.then` Promise API occurrence contracts;
 - `nose.javascript.builtins.array` owns the current JS/TS `Array.from` and

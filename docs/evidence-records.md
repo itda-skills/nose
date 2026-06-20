@@ -503,7 +503,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `nose.rust.stdlib.option` provenance when Option receiver or selector proof is
   satisfied, primitive integer `abs`/`min`/`max`/`clamp` receiver methods with
   `nose.rust.stdlib.integer_methods` provenance when exact integer receiver
-  proof is present, Rust
+  proof is present, Java `Math.abs`, `Math.min`, and `Math.max` scalar integer
+  APIs with `nose.java.stdlib.math` provenance when unshadowed `Math` and
+  integer-domain proof are present, Rust
   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
   `.stream()` iterator identity adapters with
   `nose.protocols.iterator_identity_adapters` provenance when protocol receiver
@@ -629,7 +631,8 @@ callers:
 - value-graph internal import identity now uses dedicated
   `ImportNamespace`/`ImportBinding` value ops derived from `Import` evidence, so
   raw import `Seq` payloads cannot hash-cons with proof-bearing import values;
-- unshadowed-global symbol proof for JS/TS `Math.*` method contracts,
+- unshadowed-global symbol proof for Java `Math.*` scalar integer contracts,
+  JS/TS `Math.*` method boundaries,
   pack-owned `new Map(...)`/`new Set(...)` constructor contracts, regex literal
   `.test(...)` contracts, static `Array.from` and `Array.isArray` exact/API
   gates, and `undefined` nullish-default handling.
@@ -645,7 +648,7 @@ callers:
   record does not prove identity;
 - selected `LibraryApiContract` consumers now consult `LibraryApi` occurrence
   evidence first for the migrated JS-like, Python builtin/imported, Rust
-  free-name/path/Option/scalar, Ruby require-backed, Java static/property,
+  free-name/path/Option/scalar, Ruby require-backed, Java Math/static/property,
   regex-literal, property, and receiver-method surfaces;
   conflicting or dependency-broken API evidence keeps
   the value-graph, idiom, and strict exact paths closed. Missing API evidence is
@@ -675,8 +678,9 @@ callers:
   they still have the source `Call` or `Field` node. This includes direct
   factory/constructor eval, property builtins such as JS/TS/Java `.length`, Rust
   `Some` callee-node checks, static index-membership, Rust scalar integer method
-  calls under `nose.rust.stdlib.integer_methods`, builder append API admission,
-  pack-owned Promise `resolve`, and
+  calls under `nose.rust.stdlib.integer_methods`, Java Math scalar integer calls
+  under `nose.java.stdlib.math`, builder append API admission, pack-owned
+  Promise `resolve`, and
   Promise `.then` contract lookup. Promise continuation reduction additionally requires a
   recoverable supported settled value and preserves a Promise boundary in the
   value graph. Value-level CSE paths that only retain source

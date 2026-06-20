@@ -35,6 +35,47 @@ fn rust_integer_canonical_builtin_call_il(builtin: Builtin, arg_count: usize) ->
     canonical_builtin_call_il(Lang::Rust, builtin, &args, b, root)
 }
 
+fn java_math_canonical_builtin_call_il(builtin: Builtin, arg_count: usize) -> (Il, NodeId) {
+    let mut b = IlBuilder::new(FileId(0));
+    let args = (0..arg_count)
+        .map(|idx| {
+            b.add(
+                NodeKind::Var,
+                Payload::Cid(idx as u32),
+                sp(120 + idx as u32),
+                &[],
+            )
+        })
+        .collect::<Vec<_>>();
+    let root = args[0];
+    canonical_builtin_call_il(Lang::Java, builtin, &args, b, root)
+}
+
+fn push_java_math_canonical_dependencies(il: &mut Il, call: NodeId) -> Vec<u32> {
+    let call_span = il.node(call).span;
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(call_span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("Math"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    let args = il.children(call).to_vec();
+    let mut dependencies = vec![0];
+    for (idx, arg) in args.into_iter().enumerate() {
+        let id = 1 + idx as u32;
+        il.evidence.push(evidence(
+            id,
+            EvidenceAnchor::node(il.node(arg).span, il.kind(arg)),
+            EvidenceKind::Domain(DomainEvidence::Integer),
+            EvidenceStatus::Asserted,
+        ));
+        dependencies.push(id);
+    }
+    dependencies
+}
+
 #[test]
 fn canonical_builtin_admission_requires_language_core_or_library_api_evidence() {
     let (mut il, call) = python_len_canonical_call_il();
@@ -113,6 +154,100 @@ fn rust_integer_canonical_builtin_requires_integer_method_pack_provenance() {
         assert!(
             admitted_builtin_semantics_at_call(&admitted, call, builtin),
             "canonical Rust {method} builtin should admit the builtin-pack evidence"
+        );
+    }
+}
+
+#[test]
+fn java_math_canonical_builtin_requires_math_pack_provenance() {
+    for (builtin, method, source_arity, canonical_arg_count) in [
+        (Builtin::Abs, "abs", 1, 1),
+        (Builtin::Min, "min", 2, 2),
+        (Builtin::Max, "max", 2, 2),
+    ] {
+        let contract = library_scalar_integer_method_contract(Lang::Java, method, source_arity)
+            .expect("Java Math integer method contract");
+
+        let (mut missing_dependency, call) =
+            java_math_canonical_builtin_call_il(builtin, canonical_arg_count);
+        missing_dependency.evidence.push(java_stdlib_math_record(
+            1,
+            missing_dependency.node(call).span,
+            contract.id,
+            contract.callee,
+            source_arity as u16,
+            EvidenceStatus::Asserted,
+            &[],
+        ));
+        assert!(
+            !admitted_builtin_semantics_at_call(&missing_dependency, call, builtin),
+            "canonical Java Math {method} builtin must reject evidence without Math/integer dependencies"
+        );
+
+        let (mut wrong_pack, call) =
+            java_math_canonical_builtin_call_il(builtin, canonical_arg_count);
+        let dependencies = push_java_math_canonical_dependencies(&mut wrong_pack, call);
+        wrong_pack
+            .evidence
+            .push(library_api_record_with_provenance_and_arity(
+                10,
+                wrong_pack.node(call).span,
+                contract.id,
+                contract.callee,
+                source_arity as u16,
+                EvidenceStatus::Asserted,
+                &dependencies,
+                FIRST_PARTY_PACK_ID,
+                JAVA_STDLIB_MATH_PRODUCER_ID,
+            ));
+        assert!(
+            !admitted_builtin_semantics_at_call(&wrong_pack, call, builtin),
+            "canonical Java Math {method} builtin must reject compatibility-pack evidence"
+        );
+
+        let LibraryApiCalleeContract::Method {
+            method: callee_method,
+            ..
+        } = contract.callee
+        else {
+            unreachable!("Java Math contract is a method contract");
+        };
+        let forged_callee = LibraryApiCalleeContract::Method {
+            method: callee_method,
+            receiver: MethodReceiverContract::ExactInteger,
+        };
+        let (mut unresolved_callee_il, call) =
+            java_math_canonical_builtin_call_il(builtin, canonical_arg_count);
+        let dependencies = push_java_math_canonical_dependencies(&mut unresolved_callee_il, call);
+        unresolved_callee_il.evidence.push(java_stdlib_math_record(
+            10,
+            unresolved_callee_il.node(call).span,
+            contract.id,
+            forged_callee,
+            source_arity as u16,
+            EvidenceStatus::Asserted,
+            &dependencies,
+        ));
+        assert!(
+            !admitted_builtin_semantics_at_call(&unresolved_callee_il, call, builtin),
+            "canonical Java Math {method} builtin must reject unresolved callee hashes"
+        );
+
+        let (mut admitted, call) =
+            java_math_canonical_builtin_call_il(builtin, canonical_arg_count);
+        let dependencies = push_java_math_canonical_dependencies(&mut admitted, call);
+        admitted.evidence.push(java_stdlib_math_record(
+            10,
+            admitted.node(call).span,
+            contract.id,
+            contract.callee,
+            source_arity as u16,
+            EvidenceStatus::Asserted,
+            &dependencies,
+        ));
+        assert!(
+            admitted_builtin_semantics_at_call(&admitted, call, builtin),
+            "canonical Java Math {method} builtin should admit the math-pack evidence"
         );
     }
 }

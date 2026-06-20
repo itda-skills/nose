@@ -95,6 +95,10 @@ still being migrated toward it.
   `nose.rust.stdlib.integer_methods` descriptor owns Rust primitive integer
   `abs`/`min`/`max`/`clamp` method API contract and occurrence producer ids,
   while non-integer receivers and unsupported arities remain hard negatives. The
+  `nose.java.stdlib.math` descriptor owns Java `Math.abs`, `Math.min`, and
+  `Math.max` scalar integer API contract and occurrence producer ids, while
+  missing unshadowed `Math` proof, non-integer value arguments, and unsupported
+  arities remain hard negatives. The
   `nose.javascript.builtins.promise` descriptor owns JS/TS `Promise.resolve`
   and `.then` Promise API contract and occurrence producer ids, while shadowed
   `Promise`, missing Promise-like receiver proof, and unsafe thenable
@@ -169,6 +173,8 @@ still being migrated toward it.
   `None`, and `and_then` Option API provenance,
   `nose.rust.stdlib.integer_methods`, a default builtin stdlib pack for Rust
   primitive integer `abs`/`min`/`max`/`clamp` method API provenance,
+  `nose.java.stdlib.math`, a default builtin stdlib pack for Java `Math.abs`,
+  `Math.min`, and `Math.max` scalar integer API provenance,
   `nose.javascript.builtins.promise`, a default builtin stdlib pack for JS/TS
   `Promise.resolve` and `.then` Promise API provenance,
   `nose.javascript.builtins.array`, a default builtin stdlib pack for JS/TS
@@ -434,6 +440,11 @@ migrated.
   `.stream()` uses the same protocol pack. Normalize's exact protocol receiver
   admission consumes this same contract instead of accepting same-named methods
   from other languages.
+- Java `Math.abs`, `Math.min`, and `Math.max` scalar integer APIs are language-,
+  arity-, receiver-, and integer-domain constrained through admitted
+  `LibraryApi` occurrence evidence with `nose.java.stdlib.math` provenance.
+  JS/TS `Math.*` and Java floating `Math.*` forms remain exact-closed at the
+  signed-zero/NaN boundary.
 - Rust method `zip(...)` is admitted as a protocol-pair operation only through
   the Rust library method-call occurrence contract and exact protocol proof for
   both sides.
@@ -508,7 +519,9 @@ migrated.
   `vec!(...)` when source syntax proves a macro invocation, `Vec::new()`, and selected
   primitive integer `abs`/`min`/`max`/`clamp` receiver methods with
   `nose.rust.stdlib.integer_methods` provenance when exact integer receiver
-  proof is present, and selected
+  proof is present, Java `Math.abs`, `Math.min`, and `Math.max` scalar integer
+  APIs with `nose.java.stdlib.math` provenance when unshadowed `Math` and
+  integer-domain proof are present, and selected
   `std::collections::{HashSet,BTreeSet,VecDeque,HashMap,BTreeMap}::from(...)`
   factory paths when their root-shadow policy is proven; Ruby
   `require "set"; Set.new(...)` when an earlier top-level `Import::Require("set")`
@@ -544,8 +557,9 @@ migrated.
   adapters, and generic language-scoped method-call contracts such as
   collection/map membership, map defaulting, count methods,
   string/collection predicates, Rust scalar integer methods with
-  `nose.rust.stdlib.integer_methods` provenance, Rust `Option::and_then`, Rust
-  `zip`, and HOF/reduction methods. The
+  `nose.rust.stdlib.integer_methods` provenance, Java Math scalar integer
+  methods with `nose.java.stdlib.math` provenance, Rust `Option::and_then`,
+  Rust `zip`, and HOF/reduction methods. The
   occurrence record is admitted only for the exact language/method/arity row and
   depends on receiver proof: node/binding/parameter `Domain`, `SequenceSurface`,
   imported namespace or unshadowed-global `Symbol`, or a nested admitted
@@ -645,9 +659,10 @@ migrated.
   iterator-adapter, Rust Option/`Vec::new`, direct factory/constructor eval,
   node-level property builtins, Rust `Some` callee-node checks, static
   index-membership, Rust scalar integer method calls under
-  `nose.rust.stdlib.integer_methods`, and builder append API
-  admission instead of recombining raw selector parsing with evidence admission
-  locally. Normalize idiom canonicalization uses the same resolver layer for
+  `nose.rust.stdlib.integer_methods`, Java Math scalar integer calls under
+  `nose.java.stdlib.math`, and builder append API admission instead of
+  recombining raw selector parsing with evidence admission locally. Normalize
+  idiom canonicalization uses the same resolver layer for
   supported free-function builtins, generic method contracts, HOF receiver
   proof, map `get`, map-key views, iterator/static collection adapters, Rust
   `Some(...)`, Rust map factory receiver proof, Promise `resolve`, and Promise
@@ -729,12 +744,12 @@ migrated.
   reduction only when the receiver is proven to be the imported `math` namespace.
   Bare globals named `math` and overwritten module bindings stay exact-closed.
 - Java integer `Math.abs`/`Math.min`/`Math.max` now lower through scalar-integer
-  method contracts with an unshadowed `Math` receiver requirement plus
-  integer-domain proof for value arguments instead of frontend text-only builtin
-  lowering. JS-like `Math.abs`/`Math.min`/`Math.max` stay exact-closed until a
-  signed-zero and NaN-aware numeric model exists; Go `math.Abs`/`math.Min`/
-  `math.Max` and Java floating `Math.abs`/`Math.min`/`Math.max` stay closed for
-  the same reason.
+  method contracts with `nose.java.stdlib.math` provenance, an unshadowed
+  `Math` receiver requirement, and integer-domain proof for value arguments
+  instead of frontend text-only builtin lowering. JS-like
+  `Math.abs`/`Math.min`/`Math.max` stay exact-closed until a signed-zero and
+  NaN-aware numeric model exists; Go `math.Abs`/`math.Min`/`math.Max` and Java
+  floating `Math.abs`/`Math.min`/`Math.max` stay closed for the same reason.
 - Two-argument free `min(...)`/`max(...)` normalization consumes the Python
   free-function builtin `LibraryApi` occurrence contract plus integer-domain
   proof. Same-named functions from other languages, including JS `min(...)`,

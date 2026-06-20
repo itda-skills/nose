@@ -194,19 +194,7 @@ pub(in crate::library_api) fn library_api_dependency_id_for_canonical_builtin_ca
             continue;
         };
         let callee = library_api_callee_contract_for_hash(il.meta.lang, id, callee_hash);
-        if matches!(
-            (il.meta.lang, id, callee),
-            (
-                Lang::Rust,
-                LibraryApiContractId::ScalarIntegerMethod(_),
-                None
-            )
-        ) {
-            return None;
-        }
-        if callee.is_some_and(|callee_contract| {
-            !library_api_record_provenance_matches_contract(id, callee_contract, record)
-        }) {
+        if !canonical_record_provenance_and_dependencies_match(il, call, record, id, callee) {
             return None;
         }
         if !accepts(record, id, callee, arity) {
@@ -222,6 +210,106 @@ pub(in crate::library_api) fn library_api_dependency_id_for_canonical_builtin_ca
         }
     }
     found
+}
+
+fn canonical_record_provenance_and_dependencies_match(
+    il: &Il,
+    call: NodeId,
+    record: &EvidenceRecord,
+    id: LibraryApiContractId,
+    callee: Option<LibraryApiCalleeContract>,
+) -> bool {
+    let Some(callee) = callee else {
+        return !matches!(id, LibraryApiContractId::ScalarIntegerMethod(_));
+    };
+    if !library_api_record_provenance_matches_contract(id, callee, record) {
+        return false;
+    }
+    match (id, callee) {
+        (
+            LibraryApiContractId::ScalarIntegerMethod(_),
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactInteger,
+                ..
+            },
+        ) => il
+            .children(call)
+            .first()
+            .is_some_and(|&arg| canonical_integer_arg_dependency_present(il, record, arg)),
+        (
+            LibraryApiContractId::ScalarIntegerMethod(_),
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::UnshadowedGlobal("Math"),
+                ..
+            },
+        ) => {
+            canonical_record_has_unshadowed_math_dependency(il, call, record)
+                && il
+                    .children(call)
+                    .iter()
+                    .all(|&arg| canonical_integer_arg_dependency_present(il, record, arg))
+        }
+        _ => true,
+    }
+}
+
+fn canonical_record_has_unshadowed_math_dependency(
+    il: &Il,
+    call: NodeId,
+    record: &EvidenceRecord,
+) -> bool {
+    let call_span = il.node(call).span;
+    let expected = SymbolEvidenceKind::UnshadowedGlobal {
+        name_hash: stable_symbol_hash("Math"),
+    };
+    record.dependencies.iter().any(|&id| {
+        let Some(dependency) = il.evidence_record_by_id(id) else {
+            return false;
+        };
+        let EvidenceAnchor::Node {
+            span,
+            kind: NodeKind::Var,
+        } = dependency.anchor
+        else {
+            return false;
+        };
+        dependency.status == EvidenceStatus::Asserted
+            && dependency.kind == EvidenceKind::Symbol(expected)
+            && span.file == call_span.file
+            && span.start_byte >= call_span.start_byte
+            && span.end_byte <= call_span.end_byte
+    })
+}
+
+fn canonical_integer_arg_dependency_present(il: &Il, record: &EvidenceRecord, arg: NodeId) -> bool {
+    if matches!(il.node(arg).payload, Payload::LitInt(_)) {
+        return true;
+    }
+    let expected = EvidenceKind::Domain(DomainEvidence::Integer);
+    record.dependencies.iter().any(|&id| {
+        let Some(dependency) = il.evidence_record_by_id(id) else {
+            return false;
+        };
+        if dependency.status != EvidenceStatus::Asserted || dependency.kind != expected {
+            return false;
+        }
+        match dependency.anchor {
+            EvidenceAnchor::Node { span, kind } => {
+                span == il.node(arg).span && kind == il.kind(arg)
+            }
+            EvidenceAnchor::Param { span } => {
+                let Payload::Cid(cid) = il.node(arg).payload else {
+                    return false;
+                };
+                il.nodes.iter().any(|node| {
+                    node.kind == NodeKind::Param
+                        && node.span == span
+                        && matches!(node.payload, Payload::Cid(param_cid) if param_cid == cid)
+                })
+            }
+            _ => false,
+        }
+    })
 }
 
 pub(in crate::library_api) fn library_api_record_models_canonical_builtin(
