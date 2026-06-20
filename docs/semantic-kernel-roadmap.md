@@ -89,10 +89,12 @@ The next code slices are intentionally incremental:
    Promise API occurrence provenance, then
    `nose.javascript.builtins.array` for JS/TS `Array.from` and
    `Array.isArray` API occurrence provenance, then
-   `nose.javascript.builtins.boolean` for JS/TS `Boolean(...)` API occurrence
-   provenance, then
    `nose.javascript.builtins.collection_constructors` for JS/TS `new Set(...)`
    and `new Map(...)` API occurrence provenance, then
+   `nose.javascript.builtins.boolean` for JS/TS `Boolean(...)` API occurrence
+   provenance, then
+   `nose.javascript.builtins.regex` for JS/TS regex literal `.test(...)` API
+   occurrence provenance, then
    `nose.rust.stdlib.collection_factories` for selected Rust
    `std::collections::{HashSet,BTreeSet,VecDeque}::from`
    collection-factory occurrence provenance, then
@@ -524,6 +526,35 @@ provenance checks for the Boolean contract; it did not add per-node descriptor
 scans or touch normalize/candidate generation logic. Binary size changed
 20,161,808 -> 20,161,984 bytes for this slice.
 
+Phase 5 JavaScript builtins regex measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous
+`nose.javascript.builtins.boolean` slice with the
+`nose.javascript.builtins.regex` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by
+exactly 539 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-js-regex-prev-r15.json` and
+`/tmp/nose-473-phase5-js-regex-current-r15.json`; the final previous-slice
+compare summary is `/tmp/nose-473-phase5-js-regex-vs-prev-r15-seq2.md`.
+The final sequential r15 compare had no repo/phase investigation triggers.
+Repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-js-regex-alternating-r15.json` measured aggregate wall
+time 1248.84 ms -> 1238.08 ms, `parse+lower` 274.00 ms -> 293.40 ms, `lower`
+378.00 ms -> 386.20 ms, `normalize+extract` 646.00 ms -> 641.40 ms, and
+`candidates` 23.30 ms -> 19.60 ms. The alternating r15 had a `cmark`
+wall/`normalize+extract` trigger in previous-first order, but a focused
+current-first `cmark` alternating r30 run saved at
+`/tmp/nose-473-phase5-js-regex-cmark-current-first-alternating-r30.json`
+measured wall 366.29 ms -> 376.13 ms (+2.7%) and `normalize+extract`
+325.00 ms -> 332.85 ms (+2.4%), below the 5% gate. Root-cause note: this
+slice changed static pack metadata, JS/TS regex literal `.test(...)` producer
+provenance, and admission provenance checks for the regex test contract; it did
+not add per-node descriptor scans or touch normalize/candidate generation
+logic. Treat the `cmark` previous-first r15 trigger as order/environment noise
+unless a later r30 run repeats it above both the 5% and 5 ms gates. Binary size
+changed 20,161,984 -> 20,162,240 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -604,6 +635,10 @@ scans or touch normalize/candidate generation logic. Binary size changed
   `Boolean(...)` `LibraryApi` occurrence evidence now reports
   `nose.javascript.builtins.boolean` pack and producer provenance while
   preserving shadowed-`Boolean` and unsupported-arity hard negatives.
+- JS/TS regex test APIs started moving out of the broad compatibility facade.
+  Regex literal `.test(...)` `LibraryApi` occurrence evidence now reports
+  `nose.javascript.builtins.regex` pack and producer provenance while preserving
+  non-regex receiver and unsupported-arity hard negatives.
 - JS/TS collection constructor APIs started moving out of the broad
   compatibility facade. `new Set(...)` and `new Map(...)` `LibraryApi`
   occurrence evidence now reports

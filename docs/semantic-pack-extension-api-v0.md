@@ -456,6 +456,8 @@ implicit v0 packs:
   `Array.isArray` API occurrence contracts;
 - `nose.javascript.builtins.boolean` owns the current JS/TS `Boolean(...)` API
   occurrence contract;
+- `nose.javascript.builtins.regex` owns the current JS/TS regex literal
+  `.test(...)` API occurrence contract;
 - `nose.javascript.builtins.collection_constructors` owns the current JS/TS
   `new Set(...)` and `new Map(...)` API occurrence contracts;
 - `nose.rust.stdlib.collection_factories` owns the current selected Rust

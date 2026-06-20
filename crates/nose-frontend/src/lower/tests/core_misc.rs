@@ -88,6 +88,17 @@ fn core_lowering_emits_java_and_regex_library_api_occurrences() {
         ),
         1
     );
+    let regex_records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(
+        regex_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_REGEX_PACK_ID
+        ))
+    );
+    assert_eq!(
+        regex_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(JS_LIKE_BUILTIN_REGEX_PRODUCER_ID))
+    );
 }
 
 #[test]

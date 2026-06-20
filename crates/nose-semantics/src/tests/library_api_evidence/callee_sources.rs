@@ -84,7 +84,7 @@ fn library_api_evidence_resolution_accepts_source_backed_callees() {
         EvidenceKind::Source(SourceFactKind::Literal(SourceLiteralKind::Regex)),
         EvidenceStatus::Asserted,
     ));
-    il.evidence.push(library_api_record(
+    il.evidence.push(js_like_builtin_regex_record(
         1,
         sp(23),
         contract.id,

@@ -102,6 +102,9 @@ still being migrated toward it.
   `nose.javascript.builtins.boolean` descriptor owns JS/TS `Boolean(...)` API
   contract and occurrence producer ids, while shadowed `Boolean` roots and
   unsupported arities remain hard negatives. The
+  `nose.javascript.builtins.regex` descriptor owns JS/TS regex literal
+  `.test(...)` API contract and occurrence producer ids, while non-regex
+  receivers and unsupported arities remain hard negatives. The
   `nose.javascript.builtins.collection_constructors` descriptor owns JS/TS
   `new Set(...)` and `new Map(...)` API contract and occurrence producer ids,
   while missing construct-source proof and shadowed constructor roots remain
@@ -159,6 +162,8 @@ still being migrated toward it.
   `Array.from` and `Array.isArray` API provenance,
   `nose.javascript.builtins.boolean`, a default builtin stdlib pack for JS/TS
   `Boolean(...)` API provenance,
+  `nose.javascript.builtins.regex`, a default builtin stdlib pack for JS/TS
+  regex literal `.test(...)` API provenance,
   `nose.javascript.builtins.collection_constructors`, a default builtin stdlib
   pack for JS/TS `new Set(...)` and `new Map(...)` API provenance,
   `nose.rust.stdlib.collection_factories`, a default builtin stdlib pack for
@@ -470,11 +475,12 @@ migrated.
 - Selected API call occurrences now also have `LibraryApi` evidence records when
   they remain as raw call nodes. First-party lowering emits occurrence evidence
   for JS-like `Array.from(...)`, `Array.isArray(...)`, `Boolean(...)` with
-  `nose.javascript.builtins.boolean` provenance,
-  `new Map(...)`, `new Set(...)`, and static `indexOf`/`findIndex` membership
-  calls whose receiver is a proven static non-float collection literal; Python
-  builtin collection factories such as `list(...)` when the callee is proven as
-  an unshadowed free name; Python
+  `nose.javascript.builtins.boolean` provenance, regex literal `.test(...)`
+  with `nose.javascript.builtins.regex` provenance, `new Map(...)`,
+  `new Set(...)`, and static `indexOf`/`findIndex` membership calls whose
+  receiver is a proven static non-float collection literal; Python builtin
+  collection factories such as `list(...)` when the callee is proven as an
+  unshadowed free name; Python
   `collections.deque(...)` when the callee is proven through
   `from collections import deque`, an alias such as
   `from collections import deque as Values`, or `import collections;
@@ -782,6 +788,10 @@ migrated.
   they can enter exact matching, including supported immutable module-level
   Set/Map bindings. Plain `Set(...)`/`Map(...)` calls and locally shadowed
   constructor names remain exact-closed.
+- JS/TS regex literal `.test(...)` now requires regex-literal source fact proof
+  plus `nose.javascript.builtins.regex` `LibraryApi` provenance. String
+  receivers or unsupported arities remain exact-closed even when the selector is
+  named `test`.
 - Static import proof facts now have a typed `ImportFactKind`/`ImportFact`
   facade in `nose-semantics`. First-party frontends emit import binding and
   namespace facts through that contract. The lowered RHS keeps only structural

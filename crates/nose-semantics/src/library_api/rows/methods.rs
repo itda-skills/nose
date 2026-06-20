@@ -192,6 +192,7 @@ pub fn library_regex_test_contract(
         required_receiver_fact: SourceFactKind::Literal(SourceLiteralKind::Regex),
     };
     Some(LibraryRegexTestContract {
+        pack_id: JS_LIKE_BUILTIN_REGEX_PACK_ID,
         id: LibraryApiContractId::RegexTest,
         callee: LibraryApiCalleeContract::RegexLiteralMethod {
             method: result.method,

@@ -41,6 +41,9 @@ pub const JS_LIKE_BUILTIN_ARRAY_IS_ARRAY_CONTRACT_ID: &str = "js_like.array.is_a
 pub const JS_LIKE_BUILTIN_BOOLEAN_PACK_ID: &str = "nose.javascript.builtins.boolean";
 pub const JS_LIKE_BUILTIN_BOOLEAN_PRODUCER_ID: &str = "javascript.builtins.boolean-api";
 pub const JS_LIKE_BUILTIN_BOOLEAN_CONTRACT_ID: &str = "js_like.boolean.coercion";
+pub const JS_LIKE_BUILTIN_REGEX_PACK_ID: &str = "nose.javascript.builtins.regex";
+pub const JS_LIKE_BUILTIN_REGEX_PRODUCER_ID: &str = "javascript.builtins.regex-api";
+pub const JS_LIKE_BUILTIN_REGEX_TEST_CONTRACT_ID: &str = "js_like.regex.test";
 pub const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID: &str =
     "nose.javascript.builtins.collection_constructors";
 pub const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID: &str =
@@ -361,6 +364,7 @@ pub struct LibraryStaticGlobalFunctionContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryRegexTestContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: RegexTestContract,

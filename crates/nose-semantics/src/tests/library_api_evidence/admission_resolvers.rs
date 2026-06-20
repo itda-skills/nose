@@ -2,6 +2,7 @@ use super::*;
 
 mod array;
 mod promise;
+mod regex;
 mod span;
 
 fn asserted_library_api_node_record(

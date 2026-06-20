@@ -75,6 +75,8 @@ Trust is separate from channel eligibility.
   `Array.isArray` API occurrence provenance;
   `nose.javascript.builtins.boolean` owns JS/TS `Boolean(...)` API occurrence
   provenance;
+  `nose.javascript.builtins.regex` owns JS/TS regex literal `.test(...)` API
+  occurrence provenance;
   `nose.javascript.builtins.collection_constructors` owns JS/TS `new Set(...)`
   and `new Map(...)` API occurrence provenance;
   `nose.rust.stdlib.collection_factories` owns selected Rust

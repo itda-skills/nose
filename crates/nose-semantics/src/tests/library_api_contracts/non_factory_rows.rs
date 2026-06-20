@@ -89,6 +89,7 @@ fn library_coercion_regex_namespace_and_promise_contracts_carry_obligations() {
     assert_eq!(
         library_regex_test_contract(Lang::JavaScript, "test", 1),
         Some(LibraryRegexTestContract {
+            pack_id: JS_LIKE_BUILTIN_REGEX_PACK_ID,
             id: LibraryApiContractId::RegexTest,
             callee: LibraryApiCalleeContract::RegexLiteralMethod {
                 method: "test",

@@ -486,7 +486,8 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   with `nose.javascript.builtins.array` provenance; `new Map(...)` and
   `new Set(...)` with `nose.javascript.builtins.collection_constructors`
   provenance; `Boolean(...)` with `nose.javascript.builtins.boolean`
-  provenance; and static
+  provenance; regex literal `.test(...)` with
+  `nose.javascript.builtins.regex` provenance; and static
   `indexOf`/`findIndex` membership calls whose receiver has collection
   sequence-surface proof; Python builtin collection factories such as
   `list(...)` when the callee has an unshadowed free-name proof; Python
@@ -621,9 +622,9 @@ callers:
   `ImportNamespace`/`ImportBinding` value ops derived from `Import` evidence, so
   raw import `Seq` payloads cannot hash-cons with proof-bearing import values;
 - unshadowed-global symbol proof for JS/TS `Math.*` method contracts,
-  pack-owned `new Map(...)`/`new Set(...)` constructor contracts, static
-  `Array.from` and `Array.isArray` exact/API gates, and `undefined`
-  nullish-default handling.
+  pack-owned `new Map(...)`/`new Set(...)` constructor contracts, regex literal
+  `.test(...)` contracts, static `Array.from` and `Array.isArray` exact/API
+  gates, and `undefined` nullish-default handling.
   Value-graph nullish
   value semantics are evidence-only for `undefined`; raw spelling plus a
   scope scan no longer reopens that exact path;

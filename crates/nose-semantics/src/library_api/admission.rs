@@ -217,6 +217,13 @@ fn library_api_record_provenance_matches_contract(
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(JS_LIKE_BUILTIN_BOOLEAN_PRODUCER_ID))
         }
+        LibraryApiContractId::RegexTest => {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash
+                    == Some(stable_symbol_hash(JS_LIKE_BUILTIN_REGEX_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(JS_LIKE_BUILTIN_REGEX_PRODUCER_ID))
+        }
         LibraryApiContractId::JsLikeSetConstructor | LibraryApiContractId::JsLikeMapConstructor => {
             record.provenance.emitter == EvidenceEmitter::FirstParty
                 && record.provenance.pack_hash

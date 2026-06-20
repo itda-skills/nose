@@ -27,6 +27,7 @@ const JS_LIKE_BUILTIN_ARRAY_PACKAGES: &[&str] = &["Array"];
 const JS_LIKE_BUILTIN_BOOLEAN_PACKAGES: &[&str] = &["Boolean"];
 const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACKAGES: &[&str] = &["Map", "Set"];
 const JS_LIKE_BUILTIN_PROMISE_PACKAGES: &[&str] = &["Promise"];
+const JS_LIKE_BUILTIN_REGEX_PACKAGES: &[&str] = &["RegExp"];
 const PYTHON_BUILTIN_PACKAGES: &[&str] = &["builtins"];
 const PYTHON_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["collections"];
 const PYTHON_STDLIB_MATH_PACKAGES: &[&str] = &["math"];
@@ -97,6 +98,13 @@ const JS_LIKE_BUILTIN_BOOLEAN_CONFORMANCE_REFS: &[&str] = &[
     "js-boolean-coercion-positive",
     "js-boolean-coercion-shadowed-hard-negative",
     "js-boolean-coercion-unsupported-arity-hard-negative",
+];
+const JS_LIKE_BUILTIN_REGEX_PRODUCER_IDS: &[&str] = &[JS_LIKE_BUILTIN_REGEX_PRODUCER_ID];
+const JS_LIKE_BUILTIN_REGEX_CONTRACT_IDS: &[&str] = &[JS_LIKE_BUILTIN_REGEX_TEST_CONTRACT_ID];
+const JS_LIKE_BUILTIN_REGEX_CONFORMANCE_REFS: &[&str] = &[
+    "js-regex-test-positive",
+    "js-regex-test-string-receiver-hard-negative",
+    "js-regex-test-unsupported-arity-hard-negative",
 ];
 const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_IDS: &[&str] =
     &[JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID];
@@ -415,6 +423,22 @@ fn js_like_builtin_boolean_counts() -> SemanticPackCounts {
             .filter(|id| !id.contains("hard-negative"))
             .count(),
         hard_negatives: JS_LIKE_BUILTIN_BOOLEAN_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
+fn js_like_builtin_regex_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: JS_LIKE_BUILTIN_REGEX_PRODUCER_IDS.len(),
+        contracts: JS_LIKE_BUILTIN_REGEX_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: JS_LIKE_BUILTIN_REGEX_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: JS_LIKE_BUILTIN_REGEX_CONFORMANCE_REFS
             .iter()
             .filter(|id| id.contains("hard-negative"))
             .count(),
@@ -1010,6 +1034,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: JS_LIKE_BUILTIN_BOOLEAN_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: js_like_builtin_boolean_counts,
+    },
+    BuiltinPackDescriptor {
+        id: JS_LIKE_BUILTIN_REGEX_PACK_ID,
+        kind: SemanticPackKind::StdlibPack,
+        display_name: "nose JavaScript builtins RegExp pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: JS_LIKE_LANGUAGE,
+        supported_packages: JS_LIKE_BUILTIN_REGEX_PACKAGES,
+        language: None,
+        evidence_producer_ids: JS_LIKE_BUILTIN_REGEX_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: JS_LIKE_BUILTIN_REGEX_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: JS_LIKE_BUILTIN_REGEX_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: js_like_builtin_regex_counts,
     },
     BuiltinPackDescriptor {
         id: JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
