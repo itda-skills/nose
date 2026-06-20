@@ -235,6 +235,58 @@ fn python_len_builtin_call_il() -> (Il, Interner, NodeId, NodeId) {
     (finish_il(b, root, Lang::Python), interner, call, callee)
 }
 
+fn python_math_prod_call_il() -> (Il, Interner, NodeId, NodeId) {
+    python_math_prod_call_il_with_arg_count(1)
+}
+
+fn python_math_prod_call_il_with_arg_count(arg_count: usize) -> (Il, Interner, NodeId, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let math = b.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern("math")),
+        sp(66),
+        &[],
+    );
+    let callee = b.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("prod")),
+        sp(67),
+        &[math],
+    );
+    let mut children = vec![callee];
+    for idx in 0..arg_count {
+        children.push(b.add(
+            NodeKind::Var,
+            Payload::Cid(idx as u32),
+            sp(68 + idx as u32),
+            &[],
+        ));
+    }
+    let call = b.add(NodeKind::Call, Payload::None, sp(70), &children);
+    let root = b.add(NodeKind::Func, Payload::None, sp(71), &[call]);
+    (finish_il(b, root, Lang::Python), interner, call, math)
+}
+
+fn push_python_math_namespace_dependencies(il: &mut Il, receiver: NodeId) {
+    let namespace_symbol = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+        module_hash: stable_symbol_hash("math"),
+    });
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::binding(sp(66), stable_symbol_hash("math")),
+        namespace_symbol,
+        EvidenceStatus::Asserted,
+    ));
+    il.evidence.push(evidence_with_dependencies(
+        1,
+        EvidenceAnchor::node(il.node(receiver).span, NodeKind::Var),
+        namespace_symbol,
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(0)],
+    ));
+}
+
 fn java_arrays_stream_call_il() -> (Il, Interner, NodeId, NodeId) {
     java_arrays_stream_call_il_with_arg_count(1)
 }
@@ -611,6 +663,123 @@ fn admitted_free_function_builtin_resolver_requires_api_occurrence_evidence() {
     assert_eq!(occurrence.contract.result.builtin, Builtin::Len);
     assert_eq!(occurrence.callee, callee);
     assert_eq!(occurrence.receiver, None);
+    assert_eq!(occurrence.arg_count, 1);
+}
+
+#[test]
+fn admitted_imported_namespace_function_resolver_requires_pack_provenance() {
+    let (il, interner, call, _receiver) = python_math_prod_call_il();
+    assert!(
+        admitted_imported_namespace_function_at_call(&il, &interner, call).is_none(),
+        "raw Python math.prod(...) call shape alone must not admit imported namespace semantics"
+    );
+
+    let contract = library_imported_namespace_function_contract(Lang::Python, "prod", 1)
+        .expect("Python math.prod contract");
+    let (mut missing_dependency, interner, call, _receiver) = python_math_prod_call_il();
+    missing_dependency.evidence.push(python_stdlib_math_record(
+        0,
+        missing_dependency.node(call).span,
+        contract,
+        1,
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    assert!(
+        admitted_imported_namespace_function_at_call(&missing_dependency, &interner, call)
+            .is_none(),
+        "same-span Python math.prod evidence without namespace dependency is rejected"
+    );
+
+    let (mut wrong_pack, interner, call, receiver) = python_math_prod_call_il();
+    push_python_math_namespace_dependencies(&mut wrong_pack, receiver);
+    wrong_pack
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            2,
+            wrong_pack.node(call).span,
+            contract.id,
+            contract.callee,
+            1,
+            EvidenceStatus::Asserted,
+            &[1],
+            FIRST_PARTY_PACK_ID,
+            PYTHON_STDLIB_MATH_PRODUCER_ID,
+        ));
+    assert!(
+        admitted_imported_namespace_function_at_call(&wrong_pack, &interner, call).is_none(),
+        "Python math.prod evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, receiver) = python_math_prod_call_il();
+    push_python_math_namespace_dependencies(&mut wrong_producer, receiver);
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            2,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            1,
+            EvidenceStatus::Asserted,
+            &[1],
+            PYTHON_STDLIB_MATH_PACK_ID,
+            "wrong.python.stdlib.math-api",
+        ));
+    assert!(
+        admitted_imported_namespace_function_at_call(&wrong_producer, &interner, call).is_none(),
+        "Python math.prod evidence with the wrong producer is rejected"
+    );
+
+    let (mut wrong_emitter, interner, call, receiver) = python_math_prod_call_il();
+    push_python_math_namespace_dependencies(&mut wrong_emitter, receiver);
+    let mut external_record = python_stdlib_math_record(
+        2,
+        wrong_emitter.node(call).span,
+        contract,
+        1,
+        EvidenceStatus::Asserted,
+        &[1],
+    );
+    external_record.provenance.emitter = EvidenceEmitter::External;
+    wrong_emitter.evidence.push(external_record);
+    assert!(
+        admitted_imported_namespace_function_at_call(&wrong_emitter, &interner, call).is_none(),
+        "Python math.prod evidence from an external emitter is rejected"
+    );
+
+    let (mut wrong_arity, interner, call, receiver) = python_math_prod_call_il_with_arg_count(3);
+    push_python_math_namespace_dependencies(&mut wrong_arity, receiver);
+    wrong_arity.evidence.push(python_stdlib_math_record(
+        2,
+        wrong_arity.node(call).span,
+        contract,
+        3,
+        EvidenceStatus::Asserted,
+        &[1],
+    ));
+    assert!(
+        admitted_imported_namespace_function_at_call(&wrong_arity, &interner, call).is_none(),
+        "Python math.prod evidence with unsupported arity is rejected"
+    );
+
+    let (mut admitted, interner, call, receiver) = python_math_prod_call_il();
+    push_python_math_namespace_dependencies(&mut admitted, receiver);
+    admitted.evidence.push(python_stdlib_math_record(
+        2,
+        admitted.node(call).span,
+        contract,
+        1,
+        EvidenceStatus::Asserted,
+        &[1],
+    ));
+
+    let occurrence =
+        admitted_imported_namespace_function_at_call(&admitted, &interner, call).unwrap();
+    let field_callee = admitted.children(call)[0];
+    assert_eq!(occurrence.contract.id, contract.id);
+    assert_eq!(occurrence.callee, field_callee);
+    assert_eq!(occurrence.receiver, Some(receiver));
     assert_eq!(occurrence.arg_count, 1);
 }
 

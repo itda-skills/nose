@@ -100,6 +100,7 @@ fn library_coercion_regex_namespace_and_promise_contracts_carry_obligations() {
     assert_eq!(
         library_imported_namespace_function_contract(Lang::Python, "prod", 2),
         Some(LibraryImportedNamespaceFunctionContract {
+            pack_id: PYTHON_STDLIB_MATH_PACK_ID,
             id: LibraryApiContractId::ImportedNamespaceFunction(
                 ImportedNamespaceFunctionSemantic::ProductReduction {
                     op: Op::Mul,

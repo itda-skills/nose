@@ -287,8 +287,8 @@ impl<'a> Lowering<'a> {
             id: contract.id,
             callee: contract.callee,
             dependencies: vec![dependency],
-            pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
-            rule: "library_api_imported_namespace_function",
+            pack_id: contract.pack_id,
+            rule: PYTHON_STDLIB_MATH_PRODUCER_ID,
             result_domain: None,
         })
     }

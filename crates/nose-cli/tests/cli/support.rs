@@ -439,6 +439,7 @@ pub(crate) fn assert_query_json_reports_semantic_packs(json: &serde_json::Value)
         "nose.lang.c",
         "nose.python.builtins.collection_factories",
         "nose.python.stdlib.collection_factories",
+        "nose.python.stdlib.math",
         "nose.ruby.stdlib.set",
         "nose.rust.stdlib.vec",
         "nose.rust.stdlib.collection_factories",

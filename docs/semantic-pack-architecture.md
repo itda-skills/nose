@@ -34,6 +34,7 @@ compiled semantic knowledge that has not yet moved behind narrower builtin pack
 ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.python.builtins.collection_factories`,
 `nose.python.stdlib.collection_factories`,
+`nose.python.stdlib.math`,
 `nose.ruby.stdlib.set`, `nose.rust.stdlib.vec`,
 `nose.rust.stdlib.collection_factories`, `nose.rust.stdlib.map_factories`,
 `nose.java.stdlib.map_factories`, `nose.java.stdlib.map_entries`,
@@ -180,8 +181,11 @@ previous semantic-kernel tranches.
    provenance. The next stdlib slice is
    `nose.python.stdlib.collection_factories`, which owns `collections.deque`
    imported binding, alias, and namespace collection-factory API occurrence
-   provenance. The next stdlib slice is `nose.ruby.stdlib.set`, which owns Ruby
-   `require "set"; Set.new(...)` collection-factory API occurrence provenance.
+   provenance. The current Python stdlib math slice is
+   `nose.python.stdlib.math`, which owns `math.prod` imported namespace product
+   reduction API occurrence provenance. The next stdlib slice is
+   `nose.ruby.stdlib.set`, which owns Ruby `require "set"; Set.new(...)`
+   collection-factory API occurrence provenance.
    The next Rust stdlib slice is `nose.rust.stdlib.vec`, which owns Rust
    `Vec::new` and `vec!` collection-factory API occurrence provenance.
    The next Rust stdlib collection slice is

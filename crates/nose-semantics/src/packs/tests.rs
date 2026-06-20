@@ -79,7 +79,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 15);
+    assert_eq!(descriptors.len(), 16);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -91,6 +91,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             C_LANGUAGE_PACK_ID,
             PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
             PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
+            PYTHON_STDLIB_MATH_PACK_ID,
             RUBY_STDLIB_SET_PACK_ID,
             RUST_STDLIB_VEC_PACK_ID,
             RUST_STDLIB_COLLECTION_FACTORY_PACK_ID,
@@ -191,6 +192,28 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
     assert!(python_stdlib_collections
         .conformance_refs()
         .contains(&"python-collections-deque-wrong-module-hard-negative"));
+
+    let python_stdlib_math =
+        builtin_pack_descriptor(PYTHON_STDLIB_MATH_PACK_ID).expect("Python stdlib math descriptor");
+    assert_eq!(python_stdlib_math.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(python_stdlib_math.supported_languages, &["python"]);
+    assert_eq!(python_stdlib_math.supported_packages, &["math"]);
+    assert_eq!(
+        python_stdlib_math.evidence_producer_ids,
+        &[PYTHON_STDLIB_MATH_PRODUCER_ID]
+    );
+    assert!(python_stdlib_math.source_fact_producer_ids.is_empty());
+    assert_eq!(
+        python_stdlib_math.contract_ids,
+        &[PYTHON_STDLIB_MATH_PROD_CONTRACT_ID]
+    );
+    assert_eq!(python_stdlib_math.counts().evidence_producers, 1);
+    assert_eq!(python_stdlib_math.counts().contracts, 1);
+    assert_eq!(python_stdlib_math.counts().positive_fixtures, 1);
+    assert_eq!(python_stdlib_math.counts().hard_negatives, 2);
+    assert!(python_stdlib_math
+        .conformance_refs()
+        .contains(&"python-math-prod-wrong-namespace-hard-negative"));
 
     let ruby_set =
         builtin_pack_descriptor(RUBY_STDLIB_SET_PACK_ID).expect("Ruby stdlib Set descriptor");
@@ -682,6 +705,24 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(java_static_adapters.counts.contracts, 1);
     assert_eq!(java_static_adapters.counts.positive_fixtures, 1);
     assert_eq!(java_static_adapters.counts.hard_negatives, 2);
+    let python_stdlib_math = set
+        .packs()
+        .iter()
+        .find(|pack| pack.id == PYTHON_STDLIB_MATH_PACK_ID)
+        .expect("Python stdlib math summary");
+    assert_eq!(
+        python_stdlib_math.hash,
+        stable_symbol_hash(PYTHON_STDLIB_MATH_PACK_ID)
+    );
+    assert_eq!(python_stdlib_math.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(
+        python_stdlib_math.influence,
+        SemanticPackInfluence::EvidenceAndContracts
+    );
+    assert_eq!(python_stdlib_math.counts.evidence_producers, 1);
+    assert_eq!(python_stdlib_math.counts.contracts, 1);
+    assert_eq!(python_stdlib_math.counts.positive_fixtures, 1);
+    assert_eq!(python_stdlib_math.counts.hard_negatives, 2);
     let python = python_stdlib_type_domain_pack();
     assert_eq!(python.id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
     assert_eq!(
@@ -714,28 +755,29 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 16);
+    assert_eq!(set.packs().len(), 17);
     assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[3].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[4].id, RUBY_STDLIB_SET_PACK_ID);
-    assert_eq!(set.packs()[5].id, RUST_STDLIB_VEC_PACK_ID);
-    assert_eq!(set.packs()[6].id, RUST_STDLIB_COLLECTION_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[7].id, RUST_STDLIB_MAP_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[8].id, JAVA_STDLIB_MAP_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[9].id, JAVA_STDLIB_MAP_ENTRY_PACK_ID);
-    assert_eq!(set.packs()[10].id, JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[4].id, PYTHON_STDLIB_MATH_PACK_ID);
+    assert_eq!(set.packs()[5].id, RUBY_STDLIB_SET_PACK_ID);
+    assert_eq!(set.packs()[6].id, RUST_STDLIB_VEC_PACK_ID);
+    assert_eq!(set.packs()[7].id, RUST_STDLIB_COLLECTION_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[8].id, RUST_STDLIB_MAP_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[9].id, JAVA_STDLIB_MAP_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[10].id, JAVA_STDLIB_MAP_ENTRY_PACK_ID);
+    assert_eq!(set.packs()[11].id, JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(
-        set.packs()[11].id,
+        set.packs()[12].id,
         JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID
     );
     assert_eq!(
-        set.packs()[12].id,
+        set.packs()[13].id,
         JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID
     );
-    assert_eq!(set.packs()[13].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[14].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[15];
+    assert_eq!(set.packs()[14].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[15].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[16];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);

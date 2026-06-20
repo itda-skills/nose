@@ -80,6 +80,9 @@ still being migrated toward it.
   `nose.python.stdlib.collection_factories` descriptor owns Python
   `collections.deque` collection-factory contract and occurrence producer ids,
   while missing imports and wrong modules remain hard negatives. The
+  `nose.python.stdlib.math` descriptor owns Python `math.prod` product-reduction
+  contract and occurrence producer ids, while missing imports, wrong modules,
+  and shadowed `math` bindings remain hard negatives. The
   `nose.ruby.stdlib.set` descriptor owns Ruby `Set.new` collection-factory
   contract and occurrence producer ids, while missing `require "set"`, shadowed
   `Set`, and mutated local sets remain hard negatives. The
@@ -125,6 +128,8 @@ still being migrated toward it.
   Python builtin collection-factory API provenance, and
   `nose.python.stdlib.collection_factories`, a default builtin stdlib pack for
   Python `collections.deque` collection-factory API provenance,
+  `nose.python.stdlib.math`, a default builtin stdlib pack for Python
+  `math.prod` product-reduction API provenance,
   `nose.ruby.stdlib.set`, a default builtin stdlib pack for Ruby `Set.new`
   collection-factory API provenance,
   `nose.rust.stdlib.vec`, a default builtin stdlib pack for Rust `Vec::new` and

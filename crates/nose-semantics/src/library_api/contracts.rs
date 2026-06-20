@@ -27,6 +27,9 @@ pub const PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID: &str =
 pub const PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID: &str =
     "python.stdlib.collection-factory-api";
 pub const PYTHON_STDLIB_COLLECTION_FACTORY_CONTRACT_ID: &str = "python.imported.collection_factory";
+pub const PYTHON_STDLIB_MATH_PACK_ID: &str = "nose.python.stdlib.math";
+pub const PYTHON_STDLIB_MATH_PRODUCER_ID: &str = "python.stdlib.math-api";
+pub const PYTHON_STDLIB_MATH_PROD_CONTRACT_ID: &str = "python.math.prod.reduction";
 pub const RUBY_STDLIB_SET_PACK_ID: &str = "nose.ruby.stdlib.set";
 pub const RUBY_STDLIB_SET_PRODUCER_ID: &str = "ruby.stdlib.set-factory-api";
 pub const RUBY_STDLIB_SET_CONTRACT_ID: &str = "ruby.set_factory";
@@ -347,6 +350,7 @@ pub struct LibraryStaticIndexMembershipContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryImportedNamespaceFunctionContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: ImportedNamespaceFunctionContract,

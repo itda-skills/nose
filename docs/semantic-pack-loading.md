@@ -61,6 +61,8 @@ Trust is separate from channel eligibility.
   `nose.python.stdlib.collection_factories` owns Python `collections.deque`
   imported binding, alias, and namespace collection factory API occurrence
   provenance;
+  `nose.python.stdlib.math` owns Python `math.prod` imported namespace product
+  reduction API occurrence provenance;
   `nose.ruby.stdlib.set` owns Ruby `require "set"; Set.new(...)` collection
   factory API occurrence provenance;
   `nose.rust.stdlib.vec` owns Rust `Vec::new` and `vec!` collection factory API

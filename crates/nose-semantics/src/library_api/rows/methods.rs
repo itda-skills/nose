@@ -232,6 +232,7 @@ pub fn library_imported_namespace_function_contract(
         _ => return None,
     };
     Some(LibraryImportedNamespaceFunctionContract {
+        pack_id: PYTHON_STDLIB_MATH_PACK_ID,
         id: LibraryApiContractId::ImportedNamespaceFunction(result.semantic),
         callee: LibraryApiCalleeContract::ImportedNamespaceFunction {
             module: result.module,

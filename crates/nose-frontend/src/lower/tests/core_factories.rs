@@ -148,6 +148,17 @@ fn core_lowering_emits_import_backed_library_api_occurrences() {
         ),
         1
     );
+    let records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(
+        records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::PYTHON_STDLIB_MATH_PACK_ID
+        ))
+    );
+    assert_eq!(
+        records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(PYTHON_STDLIB_MATH_PRODUCER_ID))
+    );
 }
 
 #[test]

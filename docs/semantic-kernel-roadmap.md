@@ -363,6 +363,25 @@ Root-cause note: this slice changed static pack metadata, Java
 not add per-node descriptor scans or touch candidate generation. Binary size
 changed 20,160,336 -> 20,160,512 bytes for this slice.
 
+Phase 5 Python stdlib math measurement note, local run on 2026-06-21: product
+query-regression r15 compared the previous
+`nose.java.stdlib.static_collection_adapters` slice with the
+`nose.python.stdlib.math` slice over the same 9-repo subset. Family summaries,
+locations, fragment buckets, reason-code counts, and surface counts were
+unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by exactly
+507 bytes from the new top-level `semantic_packs` entry. The saved previous and
+current artifacts are `/tmp/nose-473-phase5-python-math-prev-r15.json` and
+`/tmp/nose-473-phase5-python-math-current-r15.json`; the previous-slice compare
+summary is `/tmp/nose-473-phase5-python-math-vs-prev-r15.md`. The compare
+reported one JSON-byte metadata investigation trigger on `ky` and no runtime
+triggers. Aggregate saved artifact medians were: wall 1218.98 ms -> 1224.87 ms,
+`lower` 388.30 ms -> 381.90 ms, `normalize+extract` 606.30 ms -> 641.60 ms,
+`candidates` 22.20 ms -> 22.70 ms, and `parse+lower` 303.00 ms -> 291.20 ms.
+Root-cause note: this slice changed static pack metadata, Python `math.prod`
+producer provenance, and an admission provenance check; it did not add per-node
+descriptor scans or touch candidate generation. Binary size changed 20,160,512
+-> 20,160,720 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,

@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        15
+        16
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -178,6 +178,28 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(collections["counts"]["contracts"], 1);
     assert_eq!(collections["counts"]["positive_fixtures"], 3);
     assert_eq!(collections["counts"]["hard_negatives"], 2);
+
+    let math = semantic_pack_by_id(&json, "nose.python.stdlib.math");
+    assert_eq!(math["hash"], "9abb9da5e7aa81e0");
+    assert_eq!(math["kind"], "StdlibPack");
+    assert_eq!(math["display_name"], "nose Python stdlib math pack");
+    assert_eq!(math["source"], "compiled-first-party");
+    assert_eq!(math["influence"], "evidence-and-contracts");
+    assert_eq!(math["trust"], "default-first-party");
+    assert_eq!(math["enabled_by_default"], true);
+    assert_eq!(math["path"], serde_json::Value::Null);
+    assert_eq!(math["provider"], "Corca, Inc.");
+    assert_eq!(math["repository"], "https://github.com/corca-ai/nose");
+    assert_eq!(math["license"], "MIT");
+    assert_eq!(
+        json_array_strings(math, "supported_languages"),
+        vec!["python"]
+    );
+    assert_eq!(math["counts"]["evidence_producers"], 1);
+    assert_eq!(math["counts"]["contracts"], 1);
+    assert_eq!(math["counts"]["value_laws"], 0);
+    assert_eq!(math["counts"]["positive_fixtures"], 1);
+    assert_eq!(math["counts"]["hard_negatives"], 2);
 
     let ruby_set = semantic_pack_by_id(&json, "nose.ruby.stdlib.set");
     assert_eq!(ruby_set["kind"], "StdlibPack");

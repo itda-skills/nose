@@ -24,6 +24,7 @@ const JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACKAGES: &[&str] = &["java.util"];
 const JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACKAGES: &[&str] = &["java.util"];
 const PYTHON_BUILTIN_PACKAGES: &[&str] = &["builtins"];
 const PYTHON_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["collections"];
+const PYTHON_STDLIB_MATH_PACKAGES: &[&str] = &["math"];
 const PYTHON_STDLIB_TYPE_DOMAIN_PACKAGES: &[&str] = &["typing", "collections.abc", "asyncio"];
 const RUBY_STDLIB_SET_PACKAGES: &[&str] = &["set"];
 const RUST_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["std::collections"];
@@ -52,6 +53,13 @@ const PYTHON_STDLIB_COLLECTION_FACTORY_CONFORMANCE_REFS: &[&str] = &[
     "python-collections-deque-imported-namespace-positive",
     "python-collections-deque-missing-import-hard-negative",
     "python-collections-deque-wrong-module-hard-negative",
+];
+const PYTHON_STDLIB_MATH_PRODUCER_IDS: &[&str] = &[PYTHON_STDLIB_MATH_PRODUCER_ID];
+const PYTHON_STDLIB_MATH_CONTRACT_IDS: &[&str] = &[PYTHON_STDLIB_MATH_PROD_CONTRACT_ID];
+const PYTHON_STDLIB_MATH_CONFORMANCE_REFS: &[&str] = &[
+    "python-math-prod-positive",
+    "python-math-prod-local-shadow-hard-negative",
+    "python-math-prod-wrong-namespace-hard-negative",
 ];
 const RUBY_STDLIB_SET_PRODUCER_IDS: &[&str] = &[RUBY_STDLIB_SET_PRODUCER_ID];
 const RUBY_STDLIB_SET_CONTRACT_IDS: &[&str] = &[RUBY_STDLIB_SET_CONTRACT_ID];
@@ -279,6 +287,22 @@ fn python_stdlib_collection_factory_counts() -> SemanticPackCounts {
             .filter(|id| !id.contains("hard-negative"))
             .count(),
         hard_negatives: PYTHON_STDLIB_COLLECTION_FACTORY_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
+fn python_stdlib_math_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: PYTHON_STDLIB_MATH_PRODUCER_IDS.len(),
+        contracts: PYTHON_STDLIB_MATH_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: PYTHON_STDLIB_MATH_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: PYTHON_STDLIB_MATH_CONFORMANCE_REFS
             .iter()
             .filter(|id| id.contains("hard-negative"))
             .count(),
@@ -576,6 +600,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: PYTHON_STDLIB_COLLECTION_FACTORY_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: python_stdlib_collection_factory_counts,
+    },
+    BuiltinPackDescriptor {
+        id: PYTHON_STDLIB_MATH_PACK_ID,
+        kind: SemanticPackKind::StdlibPack,
+        display_name: "nose Python stdlib math pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: PYTHON_LANGUAGE,
+        supported_packages: PYTHON_STDLIB_MATH_PACKAGES,
+        language: None,
+        evidence_producer_ids: PYTHON_STDLIB_MATH_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: PYTHON_STDLIB_MATH_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: PYTHON_STDLIB_MATH_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: python_stdlib_math_counts,
     },
     BuiltinPackDescriptor {
         id: RUBY_STDLIB_SET_PACK_ID,

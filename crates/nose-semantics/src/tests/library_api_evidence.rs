@@ -95,6 +95,27 @@ fn python_stdlib_collection_factory_record(
     )
 }
 
+fn python_stdlib_math_record(
+    id: u32,
+    span: Span,
+    contract: LibraryImportedNamespaceFunctionContract,
+    arity: u16,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance_and_arity(
+        id,
+        span,
+        contract.id,
+        contract.callee,
+        arity,
+        status,
+        dependencies,
+        PYTHON_STDLIB_MATH_PACK_ID,
+        PYTHON_STDLIB_MATH_PRODUCER_ID,
+    )
+}
+
 fn ruby_stdlib_set_record(
     id: u32,
     span: Span,

@@ -488,7 +488,8 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   sequence-surface proof; Python builtin collection factories such as
   `list(...)` when the callee has an unshadowed free-name proof; Python
   `collections.deque(...)` through imported binding/namespace proof; Python
-  `math.prod(...)` through imported namespace proof; Rust
+  `math.prod(...)` with `nose.python.stdlib.math` provenance through imported
+  namespace proof; Rust
   `vec!(...)` with `nose.rust.stdlib.vec` provenance when macro-invocation
   source syntax and macro-name shadow policy are proven, `Vec::new()` with the
   same pack provenance when the root-shadow policy is proven, `Some(...)`,
