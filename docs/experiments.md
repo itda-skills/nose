@@ -3391,6 +3391,81 @@ cargo test -q -p nose-cli --test css_html_quality
 awiki lint --root docs
 ```
 
+## DH. Parser-artifact hygiene and unsupported-header routing (2026-06-20)
+
+After §DG, the largest `gap-impact` rows were no longer ordinary lowering misses. They were parser
+`ERROR` rows dominated by files that should not have reached the supported-language parsers at all:
+ANSI-highlighted syntax-test output carrying real source suffixes, binary test assets such as a
+PNG named `fake.js`, and C++ headers routed to the C frontend through `.h`.
+
+**Baseline.**
+
+```text
+files: 67407   IL nodes: 46113701   Raw nodes: 181168
+= 60332 lowering-gap + 120836 intentional-boundary
+parser ERROR Raw: 56895
+```
+
+The largest parser-error rows were C `ERROR` (18,124 Raw; samples under
+`antlr4/runtime/Cpp/.../*.h`), JavaScript `ERROR` (9,923 Raw; `bat` highlighted output plus
+Prettier fixtures), Swift `ERROR` (5,145 Raw; mostly `bat` highlighted output), TypeScript `ERROR`
+(4,302 Raw; mostly `bat` highlighted output), Go `ERROR` (3,931 Raw; `bat` highlighted output plus
+etcd), and Python/Ruby/Rust/Java/CSS `ERROR` rows similarly inflated by highlighted or malformed
+fixtures.
+
+**Fixes shipped.**
+
+- Source-extension files that contain binary-source evidence are skipped before lowering. The
+  guard is intentionally narrow: NUL bytes or common binary file magic (PNG/JPEG/GIF/PDF/ZIP).
+- ANSI-highlighted output files are skipped when repeated raw CSI escape sequences appear in the
+  source bytes. This catches syntax-highlighting fixtures without relying on a project-specific
+  `bat/tests/syntax-tests/highlighted` path.
+- `.h` files still route to C by default, but a header that strongly looks like C++ (`namespace`,
+  `template`, `class`, `std::`, or access specifiers after comments/strings are masked) is skipped
+  instead of being parsed as C. This is a dialect-routing guard, not C++ support.
+
+**Measured result.**
+
+```text
+files: 66916   IL nodes: 45852725   Raw nodes: 149276
+= 28444 lowering-gap + 120832 intentional-boundary
+parser ERROR Raw: 25219
+```
+
+Overall lowering-gap Raw drops **60,332 -> 28,444** (-31,888, -52.9%). Parser `ERROR` Raw drops
+**56,895 -> 25,219** (-31,676, -55.7%). The file count drops by 491 because these artifacts are
+not source analysis inputs.
+
+| language | baseline `ERROR` Raw | post `ERROR` Raw | delta |
+|---|---:|---:|---:|
+| C | 18,124 | 13,531 | -4,593 |
+| CSS | 2,991 | 2,040 | -951 |
+| Go | 3,931 | 708 | -3,223 |
+| HTML | 2,781 | 2,781 | 0 |
+| Java | 2,073 | 5 | -2,068 |
+| JavaScript | 9,923 | 4,917 | -5,006 |
+| Python | 2,599 | 31 | -2,568 |
+| Ruby | 2,632 | 23 | -2,609 |
+| Rust | 2,394 | 369 | -2,025 |
+| Swift | 5,145 | 725 | -4,420 |
+| TypeScript | 4,302 | 89 | -4,213 |
+
+The residual top parser rows are now mostly real unsupported or intentionally malformed inputs:
+C `ERROR` in Vim/libsodium/sqlite/raylib/curl, JavaScript `ERROR` concentrated in Prettier parser
+fixtures, HTML malformed pages, CSS Less/error fixtures, Go etcd tests, and Swift real-source parser
+tails. Those are a different work item from corpus hygiene.
+
+**Regression coverage.**
+
+```text
+cargo fmt --all -- --check
+cargo test -p nose-frontend lower_corpus_skips -- --nocapture
+cargo test -p nose-frontend --lib
+cargo build --release -p nose-cli
+target/release/nose gap-impact bench/repos --top 160 --format json
+target/release/nose stats bench/repos --top 80 --format json
+```
+
 ## DG. Python/Go gap-impact tranche — close lexical and type-surface tails (2026-06-20)
 
 After §DF, the actionable worklist was thin enough that a language-specific pass needed a

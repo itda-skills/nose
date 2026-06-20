@@ -30,6 +30,11 @@ break.
   `bench/corpus_prune/cli.py`.
 
 ### Fixed
+- Corpus lowering now skips source-extension artifacts that are not analyzable source: binary
+  files with source suffixes, ANSI-highlighted output files, and obvious C++ `.h` headers that
+  were previously routed to the C parser. On the pinned `bench/repos` corpus this cuts parser
+  `ERROR` Raw from **56,895** to **25,219** and full lowering-gap Raw from **60,332** to
+  **28,444**.
 - Closed a targeted Python/Go tranche selected from `nose gap-impact`. Python comments inside
   expression lists and explicit line continuations are now lexical noise, while dictionary unpack
   entries lower to a fail-closed Python surface instead of actionable Raw. Go type-only surfaces in

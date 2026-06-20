@@ -30,6 +30,10 @@ Nine **imperative** base languages, each with its own CST→IL lowering module t
 | Ruby | `.rb` |
 | Swift | `.swift` |
 
+`.h` files are treated as C headers unless their source strongly indicates unsupported C++
+(`namespace`, `template`, `class`, `std::`, or access specifiers after comments/strings are
+ignored); those are skipped rather than parsed as C.
+
 JSX and TSX are handled by the JavaScript/TypeScript lowering path (the type syntax is
 erased during [normalization](normalization.md)). Their **JSX markup** is lowered into
 the shared declarative markup IL (below), not an imperative call tree — so a React
@@ -183,12 +187,12 @@ is better. `nose stats` distinguishes genuine **lowering-gap** Raw from by-desig
 channel operations, select, yield), plus syntax/preprocessor boundaries that must
 stay fail-closed (for example Rust `macro_rule_body` and Swift availability checks).
 It reports `boundary_raw` and tags each unhandled construct `boundary` or `gap`. On
-the current pinned `bench/repos` corpus, after the 2026-06-20 Python/Go
-high-impact lowering pass, `nose stats` reports 46,113,701 IL nodes and
-181,168 Raw nodes (0.393%): 60,332 lowering gaps plus 120,836 intentional
-boundaries. That puts fixable lowering-gap Raw at about 0.131% corpus-wide; re-run
-`nose stats` for the current figure, with language-specific gaps visible per
-construct. Check it per language with:
+the current pinned `bench/repos` corpus, after the 2026-06-20 parser-artifact
+hygiene/routing pass, `nose stats` reports 45,852,725 IL nodes and 149,276 Raw
+nodes (0.326%): 28,444 lowering gaps plus 120,832 intentional boundaries. That
+puts fixable lowering-gap Raw at about 0.062% corpus-wide; re-run `nose stats`
+for the current figure, with language-specific gaps visible per construct. Check
+it per language with:
 
 ```sh
 nose stats <paths…>
