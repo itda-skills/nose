@@ -457,12 +457,12 @@ implicit v0 packs:
 - `nose.java.stdlib.map_entries` owns Java `java.util.Map.entry` map-entry API
   occurrence contracts;
 - `nose.java.stdlib.collection_factories` owns Java `java.util.List.of`,
-  `Set.of`, and `Arrays.asList` collection-factory API occurrence contracts,
-  while `Arrays.stream` remains in the broad compatibility bucket until its own
-  slice;
+  `Set.of`, and `Arrays.asList` collection-factory API occurrence contracts;
 - `nose.java.stdlib.collection_constructors` owns Java empty `new
   ArrayList<>()` and `new LinkedList<>()` collection-constructor API occurrence
   contracts;
+- `nose.java.stdlib.static_collection_adapters` owns Java
+  `java.util.Arrays.stream` static collection adapter API occurrence contracts;
 - protocol/law packs correspond to current builtin protocol operations,
   demand profiles, operator laws, value-domain laws, and named value-graph rule
   modules.

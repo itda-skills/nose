@@ -343,8 +343,8 @@ impl<'a> Lowering<'a> {
                         (
                             contract.id,
                             contract.callee,
-                            nose_semantics::FIRST_PARTY_PACK_ID,
-                            "library_api_java_static_collection_adapter",
+                            contract.pack_id,
+                            JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PRODUCER_ID,
                             None,
                         )
                     })

@@ -95,7 +95,9 @@ The next code slices are intentionally incremental:
    `nose.java.stdlib.collection_constructors` for Java empty `new
    ArrayList<>()` and `new LinkedList<>()` collection-constructor occurrence
    provenance, then `nose.java.stdlib.map_entries` for Java `Map.entry`
-   map-entry occurrence provenance;
+   map-entry occurrence provenance, then
+   `nose.java.stdlib.static_collection_adapters` for Java `Arrays.stream`
+   static collection adapter occurrence provenance;
 7. Phase 6: allow external pack influence only after the builtin path is proven;
 8. Phase 7: define adoption and release gates.
 
@@ -336,6 +338,31 @@ metadata, Java std-map-entry producer provenance, and an admission provenance
 check; it did not touch candidate generation, and product output did not drift.
 Binary size changed 20,143,568 -> 20,160,336 bytes for this slice.
 
+Phase 5 Java stdlib static-collection-adapter measurement note, local run on
+2026-06-21: product query-regression r15 compared the previous
+`nose.java.stdlib.map_entries` slice with the
+`nose.java.stdlib.static_collection_adapters` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, and surface
+counts were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by exactly 544 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-java-static-adapter-prev-r15.json` and
+`/tmp/nose-473-phase5-java-static-adapter-current-r15.json`; the previous-slice
+compare summary is
+`/tmp/nose-473-phase5-java-static-adapter-vs-prev-r15.md`. Aggregate saved
+artifact medians were: wall 1319.06 ms -> 1339.31 ms, `lower` 421.30 ms ->
+420.00 ms, `normalize+extract` 679.70 ms -> 697.40 ms, `candidates` 23.70 ms ->
+23.80 ms, and `parse+lower` 324.10 ms -> 314.10 ms. The compare run reported
+no product-output triggers besides expected JSON-byte metadata drift, but noisy
+runtime investigation triggers appeared on `ky` and `serde_json`. A focused
+wall-only alternating r30 recheck cleared those wall triggers: `ky` 44.50 ms ->
+44.45 ms and `serde_json` 65.68 ms -> 62.98 ms. The recheck artifact is
+`/tmp/nose-473-phase5-java-static-adapter-focused-alternating-r30.json`.
+Root-cause note: this slice changed static pack metadata, Java
+`Arrays.stream` producer provenance, and an admission provenance check; it did
+not add per-node descriptor scans or touch candidate generation. Binary size
+changed 20,160,336 -> 20,160,512 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -423,6 +450,11 @@ Binary size changed 20,143,568 -> 20,160,336 bytes for this slice.
   factory `LibraryApi` occurrence evidence now reports
   `nose.java.stdlib.collection_factories` pack and producer provenance while
   preserving missing-import and cross-surface constructor boundary hard
+  negatives.
+- Java stdlib static collection adapters started moving out of the broad
+  compatibility facade. `java.util.Arrays.stream` `LibraryApi` occurrence
+  evidence now reports `nose.java.stdlib.static_collection_adapters` pack and
+  producer provenance while preserving missing-import and shadowed-`Arrays` hard
   negatives.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a
   language-, signature-, and integer-domain-constrained first-party contract
@@ -674,7 +706,8 @@ Binary size changed 20,143,568 -> 20,160,336 bytes for this slice.
   `nose.java.stdlib.collection_factories` provenance, Java map factories
   (`Map.of`/`Map.ofEntries`) with `nose.java.stdlib.map_factories` provenance,
   Java map entries (`Map.entry`) with `nose.java.stdlib.map_entries`
-  provenance, the remaining compatibility Java API (`Arrays.stream`), and
+  provenance, Java static collection adapters (`Arrays.stream`) with
+  `nose.java.stdlib.static_collection_adapters` provenance, and
   JS-like regex-literal `.test`. Producers emit call-site `Symbol` dependencies for imported
   binding/namespace occurrences or `Source` dependencies for regex literals;
   value-graph, idiom, and strict exact consumers consult these records first and

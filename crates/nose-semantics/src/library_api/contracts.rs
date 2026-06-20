@@ -61,6 +61,11 @@ pub const JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID: &str =
     "java.stdlib.collection-constructor-api";
 pub const JAVA_STDLIB_COLLECTION_CONSTRUCTOR_EMPTY_LIST_CONTRACT_ID: &str =
     "java.collection_constructor.empty_list";
+pub const JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID: &str =
+    "nose.java.stdlib.static_collection_adapters";
+pub const JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PRODUCER_ID: &str =
+    "java.stdlib.static-collection-adapter-api";
+pub const JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_CONTRACT_ID: &str = "static.collection_adapter";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LibraryApiContractId {
@@ -370,6 +375,7 @@ pub struct LibraryIteratorIdentityAdapterContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryStaticCollectionAdapterContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: StaticCollectionAdapterContract,

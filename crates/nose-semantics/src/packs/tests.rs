@@ -79,7 +79,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 14);
+    assert_eq!(descriptors.len(), 15);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -99,6 +99,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             JAVA_STDLIB_MAP_ENTRY_PACK_ID,
             JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
             JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
+            JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID,
             PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
             FIRST_PARTY_VALUE_LAW_PACK_ID
         ]
@@ -384,6 +385,29 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         .conformance_refs()
         .contains(&"java-constructor-conflicting-import-hard-negative"));
 
+    let java_static_adapters =
+        builtin_pack_descriptor(JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID)
+            .expect("Java stdlib static collection adapter descriptor");
+    assert_eq!(java_static_adapters.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(java_static_adapters.supported_languages, &["java"]);
+    assert_eq!(java_static_adapters.supported_packages, &["java.util"]);
+    assert_eq!(
+        java_static_adapters.evidence_producer_ids,
+        &[JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PRODUCER_ID]
+    );
+    assert!(java_static_adapters.source_fact_producer_ids.is_empty());
+    assert_eq!(
+        java_static_adapters.contract_ids,
+        &[JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_CONTRACT_ID]
+    );
+    assert_eq!(java_static_adapters.counts().evidence_producers, 1);
+    assert_eq!(java_static_adapters.counts().contracts, 1);
+    assert_eq!(java_static_adapters.counts().positive_fixtures, 1);
+    assert_eq!(java_static_adapters.counts().hard_negatives, 2);
+    assert!(java_static_adapters
+        .conformance_refs()
+        .contains(&"java-arrays-stream-shadowed-arrays-hard-negative"));
+
     let python = builtin_pack_descriptor(PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID)
         .expect("Python stdlib descriptor");
     assert_eq!(python.kind, SemanticPackKind::StdlibPack);
@@ -640,6 +664,24 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(java_stdlib_constructors.counts.contracts, 1);
     assert_eq!(java_stdlib_constructors.counts.positive_fixtures, 2);
     assert_eq!(java_stdlib_constructors.counts.hard_negatives, 3);
+    let java_static_adapters = set
+        .packs()
+        .iter()
+        .find(|pack| pack.id == JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID)
+        .expect("Java stdlib static collection adapter summary");
+    assert_eq!(
+        java_static_adapters.hash,
+        stable_symbol_hash(JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID)
+    );
+    assert_eq!(java_static_adapters.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(
+        java_static_adapters.influence,
+        SemanticPackInfluence::EvidenceAndContracts
+    );
+    assert_eq!(java_static_adapters.counts.evidence_producers, 1);
+    assert_eq!(java_static_adapters.counts.contracts, 1);
+    assert_eq!(java_static_adapters.counts.positive_fixtures, 1);
+    assert_eq!(java_static_adapters.counts.hard_negatives, 2);
     let python = python_stdlib_type_domain_pack();
     assert_eq!(python.id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
     assert_eq!(
@@ -672,7 +714,7 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 15);
+    assert_eq!(set.packs().len(), 16);
     assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[3].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
@@ -687,9 +729,13 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
         set.packs()[11].id,
         JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID
     );
-    assert_eq!(set.packs()[12].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[13].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[14];
+    assert_eq!(
+        set.packs()[12].id,
+        JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID
+    );
+    assert_eq!(set.packs()[13].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[14].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[15];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);

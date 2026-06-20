@@ -76,12 +76,12 @@ Trust is separate from channel eligibility.
   `nose.java.stdlib.map_entries` owns Java `java.util.Map.entry` map-entry API
   occurrence provenance;
   `nose.java.stdlib.collection_factories` owns Java `java.util.List.of`,
-  `Set.of`, and `Arrays.asList` collection factory API occurrence provenance
-  while `Arrays.stream` remains in the broad compatibility bucket for a later
-  slice;
+  `Set.of`, and `Arrays.asList` collection factory API occurrence provenance;
   `nose.java.stdlib.collection_constructors` owns Java empty `new
   ArrayList<>()` and `new LinkedList<>()` collection constructor API occurrence
   provenance;
+  `nose.java.stdlib.static_collection_adapters` owns Java
+  `java.util.Arrays.stream` static collection adapter API occurrence provenance;
   `nose.python.stdlib.type_domain` is the first narrow stdlib pilot pack for
   Python `typing`, `collections.abc`, and `asyncio` type-domain aliases;
   `nose.value_graph.laws` is the first LawPack pilot for selected proof-backed

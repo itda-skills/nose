@@ -508,8 +508,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   factories/adapters including `List.of`, `Set.of`, and `Arrays.asList` with
   `nose.java.stdlib.collection_factories` provenance, `Map.of`/`Map.ofEntries`
   with `nose.java.stdlib.map_factories` provenance, `Map.entry` with
-  `nose.java.stdlib.map_entries` provenance, and compatibility-facade
-  `Arrays.stream`, plus selected empty `new ArrayList<>()`/`new LinkedList<>()` constructors with
+  `nose.java.stdlib.map_entries` provenance, `Arrays.stream` with
+  `nose.java.stdlib.static_collection_adapters` provenance, plus selected empty
+  `new ArrayList<>()`/`new LinkedList<>()` constructors with
   `nose.java.stdlib.collection_constructors` provenance through exact or
   wildcard import proof; and JS-like regex-literal `.test(...)`. These records
   depend on the relevant `QualifiedGlobal`, `UnshadowedGlobal`,

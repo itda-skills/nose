@@ -371,6 +371,23 @@ fn assert_java_arrays_and_map_entry_result_domains(lo: &mut Lowering, interner: 
         sp_at(63),
         &[stream_callee, values],
     );
+    let stream_contract =
+        library_static_collection_adapter_contract(Lang::Java, "Arrays", "stream", 1).unwrap();
+    let stream_records =
+        contract_api_records(&lo.evidence, stream_contract.id, stream_contract.callee);
+    assert_eq!(stream_records.len(), 1);
+    assert_eq!(
+        stream_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID
+        ))
+    );
+    assert_eq!(
+        stream_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PRODUCER_ID
+        ))
+    );
     assert_eq!(
         result_domain_any_count_at(&lo.evidence, sp_at(63)),
         0,

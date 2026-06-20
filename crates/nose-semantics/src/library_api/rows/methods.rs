@@ -339,6 +339,7 @@ pub fn library_static_collection_adapter_contract(
         exported: "Arrays",
     };
     Some(LibraryStaticCollectionAdapterContract {
+        pack_id: JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID,
         id: LibraryApiContractId::StaticCollectionAdapter,
         callee: LibraryApiCalleeContract::JavaUtilStaticMember {
             receiver: result.exported,

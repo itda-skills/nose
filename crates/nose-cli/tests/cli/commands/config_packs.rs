@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        14
+        15
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -373,6 +373,35 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(java_constructors["counts"]["value_laws"], 0);
     assert_eq!(java_constructors["counts"]["positive_fixtures"], 2);
     assert_eq!(java_constructors["counts"]["hard_negatives"], 3);
+
+    let java_static_adapters =
+        semantic_pack_by_id(&json, "nose.java.stdlib.static_collection_adapters");
+    assert_eq!(java_static_adapters["hash"], "6fe217885f0a8fe8");
+    assert_eq!(java_static_adapters["kind"], "StdlibPack");
+    assert_eq!(
+        java_static_adapters["display_name"],
+        "nose Java stdlib static collection adapter pack"
+    );
+    assert_eq!(java_static_adapters["source"], "compiled-first-party");
+    assert_eq!(java_static_adapters["influence"], "evidence-and-contracts");
+    assert_eq!(java_static_adapters["trust"], "default-first-party");
+    assert_eq!(java_static_adapters["enabled_by_default"], true);
+    assert_eq!(java_static_adapters["path"], serde_json::Value::Null);
+    assert_eq!(java_static_adapters["provider"], "Corca, Inc.");
+    assert_eq!(
+        java_static_adapters["repository"],
+        "https://github.com/corca-ai/nose"
+    );
+    assert_eq!(java_static_adapters["license"], "MIT");
+    assert_eq!(
+        json_array_strings(java_static_adapters, "supported_languages"),
+        vec!["java"]
+    );
+    assert_eq!(java_static_adapters["counts"]["evidence_producers"], 1);
+    assert_eq!(java_static_adapters["counts"]["contracts"], 1);
+    assert_eq!(java_static_adapters["counts"]["value_laws"], 0);
+    assert_eq!(java_static_adapters["counts"]["positive_fixtures"], 1);
+    assert_eq!(java_static_adapters["counts"]["hard_negatives"], 2);
 
     let stdlib = semantic_pack_by_id(&json, "nose.python.stdlib.type_domain");
     assert_eq!(stdlib["kind"], "StdlibPack");

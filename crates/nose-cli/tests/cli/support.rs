@@ -447,6 +447,7 @@ pub(crate) fn assert_query_json_reports_semantic_packs(json: &serde_json::Value)
         "nose.java.stdlib.map_entries",
         "nose.java.stdlib.collection_factories",
         "nose.java.stdlib.collection_constructors",
+        "nose.java.stdlib.static_collection_adapters",
         "nose.python.stdlib.type_domain",
         "nose.value_graph.laws",
     ] {

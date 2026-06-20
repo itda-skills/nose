@@ -174,6 +174,7 @@ fn library_iterator_adapter_and_method_call_contracts_carry_obligations() {
     assert_eq!(
         library_static_collection_adapter_contract(Lang::Java, "Arrays", "stream", 1),
         Some(LibraryStaticCollectionAdapterContract {
+            pack_id: JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID,
             id: LibraryApiContractId::StaticCollectionAdapter,
             callee: LibraryApiCalleeContract::JavaUtilStaticMember {
                 receiver: "Arrays",

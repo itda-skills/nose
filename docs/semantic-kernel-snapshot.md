@@ -106,6 +106,10 @@ still being migrated toward it.
   `new ArrayList<>()` and `new LinkedList<>()` collection-constructor contract
   and occurrence producer ids, while missing imports, local type shadows, and
   conflicting explicit imports remain hard negatives. The
+  `nose.java.stdlib.static_collection_adapters` descriptor owns Java
+  `java.util.Arrays.stream` static collection adapter contract and occurrence
+  producer ids, while missing imports and shadowed `Arrays` roots remain hard
+  negatives. The
   `nose.python.stdlib.type_domain` descriptor directly exposes its alias
   contract rows so producer id, contract id, conformance refs, and declaration
   counts come from one pack-owned table.
@@ -139,6 +143,9 @@ still being migrated toward it.
   `nose.java.stdlib.collection_constructors`, a default builtin stdlib pack for
   Java empty `new ArrayList<>()` and `new LinkedList<>()` collection-constructor
   API provenance, and
+  `nose.java.stdlib.static_collection_adapters`, a default builtin stdlib pack
+  for Java `java.util.Arrays.stream` static collection adapter API provenance,
+  and
   `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped surface
   for Python `typing`, `collections.abc`, and `asyncio` type-domain alias
   evidence.
@@ -313,6 +320,10 @@ migrated.
   `LibraryApi` occurrence evidence now carries
   `nose.java.stdlib.collection_constructors` pack provenance while
   missing-import, local-shadow, and conflicting-import cases stay closed.
+  Java stdlib `java.util.Arrays.stream` static collection adapter `LibraryApi`
+  occurrence evidence now carries
+  `nose.java.stdlib.static_collection_adapters` pack provenance while
+  missing-import and shadowed-root cases stay closed.
   `nose-semantics` resolves receiver-domain evidence through a shared
   `DomainRequirement` contract. Consumers check exact receiver node evidence
   first, then immutable binding evidence for local or module variables, then
@@ -440,9 +451,10 @@ migrated.
   `Set.of`, and `Arrays.asList` with
   `nose.java.stdlib.collection_factories` provenance, `Map.of`/`Map.ofEntries`
   with `nose.java.stdlib.map_factories` provenance, `Map.entry` with
-  `nose.java.stdlib.map_entries` provenance, and compatibility-facade
-  `Arrays.stream`, plus selected empty `new ArrayList<>()`/`new LinkedList<>()`
-  constructors with `nose.java.stdlib.collection_constructors` provenance; and
+  `nose.java.stdlib.map_entries` provenance, `Arrays.stream` with
+  `nose.java.stdlib.static_collection_adapters` provenance, plus selected empty
+  `new ArrayList<>()`/`new LinkedList<>()` constructors with
+  `nose.java.stdlib.collection_constructors` provenance; and
   JS-like regex-literal `.test(...)`. These records depend on
   the relevant `QualifiedGlobal`,
   `UnshadowedGlobal`, import-backed call-site `Symbol`, `Import::Require`,
