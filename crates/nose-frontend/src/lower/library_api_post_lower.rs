@@ -380,13 +380,14 @@ fn record_post_lower_ruby_static_member_library_api(
     else {
         return false;
     };
-    let api = post_lower_library_api_evidence_id(
+    let api = post_lower_library_api_evidence_with_pack_id(
         il,
         call,
         contract.id,
         contract.callee,
         arg_count,
-        "library_api_ruby_require_static_member",
+        RUBY_STDLIB_SET_PACK_ID,
+        RUBY_STDLIB_SET_PRODUCER_ID,
         vec![receiver_dependency, require_dependency],
     );
     post_lower_record_library_api_result_domain(

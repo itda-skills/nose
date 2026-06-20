@@ -80,7 +80,8 @@ The next code slices are intentionally incremental:
    factory `LibraryApi` occurrence provenance, then
    `nose.python.stdlib.collection_factories` for Python `collections.deque`
    imported binding, alias, and namespace collection-factory occurrence
-   provenance;
+   provenance, then `nose.ruby.stdlib.set` for Ruby `Set.new(...)`
+   collection-factory occurrence provenance backed by `require "set"`;
 7. Phase 6: allow external pack influence only after the builtin path is proven;
 8. Phase 7: define adoption and release gates.
 
@@ -126,6 +127,28 @@ alternating aggregate wall time was 1278.26 ms -> 1239.00 ms (-3.1%);
 No alternating repo/phase exceeded both the 5% and 5 ms investigation trigger.
 Binary size changed 20,105,968 -> 20,124,864 bytes for the cumulative issue
 branch.
+
+Phase 5 Ruby stdlib Set measurement note, local run on 2026-06-20: product
+query-regression r15 compared the previous
+`nose.python.stdlib.collection_factories` slice with the
+`nose.ruby.stdlib.set` slice over the same 9-repo subset. Family summaries,
+locations, fragment buckets, reason-code counts, and surface counts were
+unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by 499
+bytes from the new top-level `semantic_packs` entry. The previous-slice compare
+produced only JSON-byte metadata triggers and no runtime triggers. The saved
+current artifact is `/tmp/nose-473-phase5-ruby-set-current-r15.json`, and the
+previous-slice compare summary is
+`/tmp/nose-473-phase5-ruby-set-vs-prev-r15.md`. A cumulative compare against
+the original main baseline saved at `/tmp/nose-473-phase5-ruby-set-compare-r15.md`
+showed the same expected metadata drift plus noisy sequential runtime triggers.
+Repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-ruby-set-alternating-r15.json` measured aggregate wall
+time 1279.12 ms -> 1196.62 ms, `lower` 389.60 ms -> 389.70 ms,
+`normalize+extract` 680.40 ms -> 601.40 ms, and `candidates` 22.80 ms ->
+18.60 ms. The remaining alternating triggers were `parse+lower`/`lower` timing
+redistribution on `cmark` and `parse+lower` timing redistribution on `junit5`;
+aggregate wall time and the measured product path did not regress. Binary size
+changed 20,124,864 -> 20,125,104 bytes for this slice.
 
 ## History
 
@@ -181,6 +204,11 @@ branch.
   factory `LibraryApi` occurrence evidence now reports
   `nose.python.stdlib.collection_factories` pack and producer provenance while
   preserving missing-import and wrong-module hard negatives.
+- Ruby stdlib `Set.new` collection factories started moving out of the broad
+  compatibility facade. `require "set"; Set.new(...)` factory `LibraryApi`
+  occurrence evidence now reports `nose.ruby.stdlib.set` pack and producer
+  provenance while preserving missing-require, shadowed-`Set`, and mutated-set
+  hard negatives.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a
   language-, signature-, and integer-domain-constrained first-party contract
   instead of a bare method-name recognizer. Float/NaN-sensitive methods remain a

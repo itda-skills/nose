@@ -89,6 +89,78 @@ fn python_deque_factory_call_il() -> (Il, Interner, NodeId, NodeId) {
     (finish_il(b, root, Lang::Python), interner, call, callee)
 }
 
+fn ruby_set_factory_call_il() -> (Il, Interner, NodeId, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let require = b.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern("require")),
+        sp(70),
+        &[],
+    );
+    let require_arg = b.add(
+        NodeKind::Lit,
+        Payload::LitStr(stable_symbol_hash("set")),
+        sp(71),
+        &[],
+    );
+    let require_call = b.add(
+        NodeKind::Call,
+        Payload::None,
+        sp(72),
+        &[require, require_arg],
+    );
+    let receiver = b.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern("Set")),
+        sp(73),
+        &[],
+    );
+    let callee = b.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("new")),
+        sp(74),
+        &[receiver],
+    );
+    let value = b.add(NodeKind::Var, Payload::Cid(0), sp(75), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(76), &[callee, value]);
+    let root = b.add(
+        NodeKind::Module,
+        Payload::None,
+        sp(77),
+        &[require_call, call],
+    );
+    (finish_il(b, root, Lang::Ruby), interner, call, receiver)
+}
+
+fn push_ruby_set_require_dependencies(il: &mut Il, receiver: NodeId) {
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(il.node(receiver).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("Set"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    il.evidence.push(evidence(
+        1,
+        EvidenceAnchor::node(sp(70), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("require"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    il.evidence.push(evidence_with_dependencies(
+        2,
+        EvidenceAnchor::source_span(span(70, 72, 1)),
+        EvidenceKind::Import(ImportEvidenceKind::Require {
+            module_hash: stable_symbol_hash("set"),
+        }),
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(1)],
+    ));
+}
+
 fn python_len_builtin_call_il() -> (Il, Interner, NodeId, NodeId) {
     let interner = Interner::new();
     let mut b = IlBuilder::new(FileId(0));
@@ -566,6 +638,84 @@ fn admitted_imported_collection_factory_resolver_requires_pack_provenance() {
     );
     assert_eq!(occurrence.callee, callee);
     assert_eq!(occurrence.receiver, None);
+    assert_eq!(occurrence.arg_count, 1);
+}
+
+#[test]
+fn admitted_ruby_set_factory_resolver_requires_pack_provenance() {
+    let (il, interner, call, _receiver) = ruby_set_factory_call_il();
+    assert!(
+        admitted_ruby_set_factory_at_call(&il, &interner, call).is_none(),
+        "raw Ruby Set.new(...) call shape alone must not admit stdlib Set semantics"
+    );
+
+    let contract =
+        library_ruby_set_factory_contract(Lang::Ruby, "Set", "new", 1).expect("Set.new contract");
+
+    let (mut missing_dependency, interner, call, _receiver) = ruby_set_factory_call_il();
+    missing_dependency.evidence.push(ruby_stdlib_set_record(
+        0,
+        missing_dependency.node(call).span,
+        contract,
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    assert!(
+        admitted_ruby_set_factory_at_call(&missing_dependency, &interner, call).is_none(),
+        "same-span Ruby Set.new evidence without Set/require dependencies is rejected"
+    );
+
+    let (mut wrong_pack, interner, call, receiver) = ruby_set_factory_call_il();
+    push_ruby_set_require_dependencies(&mut wrong_pack, receiver);
+    wrong_pack.evidence.push(library_api_record_with_provenance(
+        3,
+        wrong_pack.node(call).span,
+        contract.id,
+        contract.callee,
+        EvidenceStatus::Asserted,
+        &[0, 2],
+        FIRST_PARTY_PACK_ID,
+        RUBY_STDLIB_SET_PRODUCER_ID,
+    ));
+    assert!(
+        admitted_ruby_set_factory_at_call(&wrong_pack, &interner, call).is_none(),
+        "Ruby Set.new evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, receiver) = ruby_set_factory_call_il();
+    push_ruby_set_require_dependencies(&mut wrong_producer, receiver);
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance(
+            3,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[0, 2],
+            RUBY_STDLIB_SET_PACK_ID,
+            "wrong.ruby.stdlib.set-factory-api",
+        ));
+    assert!(
+        admitted_ruby_set_factory_at_call(&wrong_producer, &interner, call).is_none(),
+        "Ruby Set.new evidence with the wrong producer is rejected"
+    );
+
+    let (mut admitted, interner, call, receiver) = ruby_set_factory_call_il();
+    push_ruby_set_require_dependencies(&mut admitted, receiver);
+    admitted.evidence.push(ruby_stdlib_set_record(
+        3,
+        admitted.node(call).span,
+        contract,
+        EvidenceStatus::Asserted,
+        &[0, 2],
+    ));
+
+    let occurrence = admitted_ruby_set_factory_at_call(&admitted, &interner, call).unwrap();
+    let field_callee = admitted.children(call)[0];
+    assert_eq!(occurrence.contract.id, LibraryApiContractId::RubySetFactory);
+    assert_eq!(occurrence.callee, field_callee);
+    assert_eq!(occurrence.receiver, Some(receiver));
     assert_eq!(occurrence.arg_count, 1);
 }
 

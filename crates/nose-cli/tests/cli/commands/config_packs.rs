@@ -172,6 +172,17 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(collections["counts"]["positive_fixtures"], 3);
     assert_eq!(collections["counts"]["hard_negatives"], 2);
 
+    let ruby_set = semantic_pack_by_id(&json, "nose.ruby.stdlib.set");
+    assert_eq!(ruby_set["kind"], "StdlibPack");
+    assert_eq!(
+        json_array_strings(ruby_set, "supported_languages"),
+        vec!["ruby"]
+    );
+    assert_eq!(ruby_set["counts"]["evidence_producers"], 1);
+    assert_eq!(ruby_set["counts"]["contracts"], 1);
+    assert_eq!(ruby_set["counts"]["positive_fixtures"], 3);
+    assert_eq!(ruby_set["counts"]["hard_negatives"], 3);
+
     let stdlib = semantic_pack_by_id(&json, "nose.python.stdlib.type_domain");
     assert_eq!(stdlib["kind"], "StdlibPack");
     assert_eq!(

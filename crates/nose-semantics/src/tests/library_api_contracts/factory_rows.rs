@@ -140,7 +140,7 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
     assert_eq!(
         library_ruby_set_factory_contract(Lang::Ruby, "Set", "new", 1),
         Some(LibraryCollectionFactoryContract {
-            pack_id: FIRST_PARTY_PACK_ID,
+            pack_id: RUBY_STDLIB_SET_PACK_ID,
             id: LibraryApiContractId::RubySetFactory,
             callee: LibraryApiCalleeContract::RubyRequireStaticMember {
                 receiver: "Set",

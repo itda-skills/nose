@@ -79,7 +79,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 6);
+    assert_eq!(descriptors.len(), 7);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -91,6 +91,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             C_LANGUAGE_PACK_ID,
             PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
             PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
+            RUBY_STDLIB_SET_PACK_ID,
             PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
             FIRST_PARTY_VALUE_LAW_PACK_ID
         ]
@@ -182,6 +183,25 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
     assert!(python_stdlib_collections
         .conformance_refs()
         .contains(&"python-collections-deque-wrong-module-hard-negative"));
+
+    let ruby_set =
+        builtin_pack_descriptor(RUBY_STDLIB_SET_PACK_ID).expect("Ruby stdlib Set descriptor");
+    assert_eq!(ruby_set.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(ruby_set.supported_languages, &["ruby"]);
+    assert_eq!(ruby_set.supported_packages, &["set"]);
+    assert_eq!(
+        ruby_set.evidence_producer_ids,
+        &[RUBY_STDLIB_SET_PRODUCER_ID]
+    );
+    assert!(ruby_set.source_fact_producer_ids.is_empty());
+    assert_eq!(ruby_set.contract_ids, &[RUBY_STDLIB_SET_CONTRACT_ID]);
+    assert_eq!(ruby_set.counts().evidence_producers, 1);
+    assert_eq!(ruby_set.counts().contracts, 1);
+    assert_eq!(ruby_set.counts().positive_fixtures, 3);
+    assert_eq!(ruby_set.counts().hard_negatives, 3);
+    assert!(ruby_set
+        .conformance_refs()
+        .contains(&"ruby-set-missing-require-hard-negative"));
 
     let python = builtin_pack_descriptor(PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID)
         .expect("Python stdlib descriptor");
@@ -301,6 +321,21 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(python_stdlib_collections.counts.contracts, 1);
     assert_eq!(python_stdlib_collections.counts.positive_fixtures, 3);
     assert_eq!(python_stdlib_collections.counts.hard_negatives, 2);
+    let ruby_set = set
+        .packs()
+        .iter()
+        .find(|pack| pack.id == RUBY_STDLIB_SET_PACK_ID)
+        .expect("Ruby stdlib Set summary");
+    assert_eq!(ruby_set.hash, stable_symbol_hash(RUBY_STDLIB_SET_PACK_ID));
+    assert_eq!(ruby_set.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(
+        ruby_set.influence,
+        SemanticPackInfluence::EvidenceAndContracts
+    );
+    assert_eq!(ruby_set.counts.evidence_producers, 1);
+    assert_eq!(ruby_set.counts.contracts, 1);
+    assert_eq!(ruby_set.counts.positive_fixtures, 3);
+    assert_eq!(ruby_set.counts.hard_negatives, 3);
     let python = python_stdlib_type_domain_pack();
     assert_eq!(python.id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
     assert_eq!(
@@ -333,13 +368,14 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 7);
+    assert_eq!(set.packs().len(), 8);
     assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[3].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[4].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[5].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[6];
+    assert_eq!(set.packs()[4].id, RUBY_STDLIB_SET_PACK_ID);
+    assert_eq!(set.packs()[5].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[6].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[7];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);

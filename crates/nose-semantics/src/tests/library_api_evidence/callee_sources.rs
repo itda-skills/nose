@@ -272,11 +272,10 @@ fn library_api_evidence_resolution_accepts_require_backed_callees() {
         EvidenceStatus::Asserted,
         vec![EvidenceId(1)],
     ));
-    il.evidence.push(library_api_record(
+    il.evidence.push(ruby_stdlib_set_record(
         3,
         sp(53),
-        contract.id,
-        contract.callee,
+        contract,
         EvidenceStatus::Asserted,
         &[0, 2],
     ));

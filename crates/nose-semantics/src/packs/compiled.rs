@@ -13,10 +13,12 @@ const C_LANGUAGE_CONFORMANCE_REFS: &[&str] = &[
 ];
 const NO_LANGUAGES: &[&str] = &[];
 const PYTHON_LANGUAGE: &[&str] = &["python"];
+const RUBY_LANGUAGE: &[&str] = &["ruby"];
 const NO_PACKAGES: &[&str] = &[];
 const PYTHON_BUILTIN_PACKAGES: &[&str] = &["builtins"];
 const PYTHON_STDLIB_COLLECTION_FACTORY_PACKAGES: &[&str] = &["collections"];
 const PYTHON_STDLIB_TYPE_DOMAIN_PACKAGES: &[&str] = &["typing", "collections.abc", "asyncio"];
+const RUBY_STDLIB_SET_PACKAGES: &[&str] = &["set"];
 const NO_IDS: &[&str] = &[];
 const PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_IDS: &[&str] =
     &[PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID];
@@ -40,6 +42,16 @@ const PYTHON_STDLIB_COLLECTION_FACTORY_CONFORMANCE_REFS: &[&str] = &[
     "python-collections-deque-imported-namespace-positive",
     "python-collections-deque-missing-import-hard-negative",
     "python-collections-deque-wrong-module-hard-negative",
+];
+const RUBY_STDLIB_SET_PRODUCER_IDS: &[&str] = &[RUBY_STDLIB_SET_PRODUCER_ID];
+const RUBY_STDLIB_SET_CONTRACT_IDS: &[&str] = &[RUBY_STDLIB_SET_CONTRACT_ID];
+const RUBY_STDLIB_SET_CONFORMANCE_REFS: &[&str] = &[
+    "ruby-set-new-include-positive",
+    "ruby-set-new-member-positive",
+    "ruby-set-local-positive",
+    "ruby-set-missing-require-hard-negative",
+    "ruby-set-shadowed-hard-negative",
+    "ruby-set-mutated-hard-negative",
 ];
 const PYTHON_STDLIB_TYPE_DOMAIN_CONTRACT_IDS: &[&str] =
     &["python.stdlib.type-domain-alias.contract"];
@@ -175,6 +187,22 @@ fn python_stdlib_collection_factory_counts() -> SemanticPackCounts {
             .filter(|id| !id.contains("hard-negative"))
             .count(),
         hard_negatives: PYTHON_STDLIB_COLLECTION_FACTORY_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
+fn ruby_stdlib_set_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: RUBY_STDLIB_SET_PRODUCER_IDS.len(),
+        contracts: RUBY_STDLIB_SET_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: RUBY_STDLIB_SET_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: RUBY_STDLIB_SET_CONFORMANCE_REFS
             .iter()
             .filter(|id| id.contains("hard-negative"))
             .count(),
@@ -328,6 +356,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: PYTHON_STDLIB_COLLECTION_FACTORY_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: python_stdlib_collection_factory_counts,
+    },
+    BuiltinPackDescriptor {
+        id: RUBY_STDLIB_SET_PACK_ID,
+        kind: SemanticPackKind::StdlibPack,
+        display_name: "nose Ruby stdlib Set pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: RUBY_LANGUAGE,
+        supported_packages: RUBY_STDLIB_SET_PACKAGES,
+        language: None,
+        evidence_producer_ids: RUBY_STDLIB_SET_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: RUBY_STDLIB_SET_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: RUBY_STDLIB_SET_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: ruby_stdlib_set_counts,
     },
     BuiltinPackDescriptor {
         id: PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,

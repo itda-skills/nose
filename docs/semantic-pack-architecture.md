@@ -34,7 +34,8 @@ compiled semantic knowledge that has not yet moved behind narrower builtin pack
 ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.python.builtins.collection_factories`,
 `nose.python.stdlib.collection_factories`,
-`nose.python.stdlib.type_domain`, and `nose.value_graph.laws`.
+`nose.ruby.stdlib.set`, `nose.python.stdlib.type_domain`, and
+`nose.value_graph.laws`.
 
 ## Boundary
 
@@ -173,7 +174,8 @@ previous semantic-kernel tranches.
    provenance. The next stdlib slice is
    `nose.python.stdlib.collection_factories`, which owns `collections.deque`
    imported binding, alias, and namespace collection-factory API occurrence
-   provenance.
+   provenance. The next stdlib slice is `nose.ruby.stdlib.set`, which owns Ruby
+   `require "set"; Set.new(...)` collection-factory API occurrence provenance.
 7. **Phase 6, external influence:** only after the builtin path is proven, start with a
    small data-only external row class behind explicit opt-in trust gates.
 8. **Phase 7, adoption gates:** define `external-opt-in -> builtin-optional` and

@@ -198,6 +198,16 @@ fn assert_ruby_require_occurrences(interner: &Interner) {
         contract_api_count(&ruby.evidence, ruby_contract.id, ruby_contract.callee),
         1
     );
+    let ruby_api_records =
+        contract_api_records(&ruby.evidence, ruby_contract.id, ruby_contract.callee);
+    assert_eq!(
+        ruby_api_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(RUBY_STDLIB_SET_PACK_ID))
+    );
+    assert_eq!(
+        ruby_api_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(RUBY_STDLIB_SET_PRODUCER_ID))
+    );
 
     let missing_require = lower_fixture(
         "set_missing_require.rb",

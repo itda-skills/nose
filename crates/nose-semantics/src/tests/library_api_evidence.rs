@@ -70,6 +70,25 @@ fn python_stdlib_collection_factory_record(
     )
 }
 
+fn ruby_stdlib_set_record(
+    id: u32,
+    span: Span,
+    contract: LibraryCollectionFactoryContract,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance(
+        id,
+        span,
+        contract.id,
+        contract.callee,
+        status,
+        dependencies,
+        RUBY_STDLIB_SET_PACK_ID,
+        RUBY_STDLIB_SET_PRODUCER_ID,
+    )
+}
+
 fn library_api_record_with_arity(
     id: u32,
     span: Span,

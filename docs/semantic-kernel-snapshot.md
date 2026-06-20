@@ -80,6 +80,9 @@ still being migrated toward it.
   `nose.python.stdlib.collection_factories` descriptor owns Python
   `collections.deque` collection-factory contract and occurrence producer ids,
   while missing imports and wrong modules remain hard negatives. The
+  `nose.ruby.stdlib.set` descriptor owns Ruby `Set.new` collection-factory
+  contract and occurrence producer ids, while missing `require "set"`, shadowed
+  `Set`, and mutated local sets remain hard negatives. The
   `nose.python.stdlib.type_domain` descriptor directly exposes its alias
   contract rows so producer id, contract id, conformance refs, and declaration
   counts come from one pack-owned table.
@@ -94,7 +97,9 @@ still being migrated toward it.
   `nose.python.builtins.collection_factories`, a default builtin stdlib pack for
   Python builtin collection-factory API provenance, and
   `nose.python.stdlib.collection_factories`, a default builtin stdlib pack for
-  Python `collections.deque` collection-factory API provenance, and
+  Python `collections.deque` collection-factory API provenance,
+  `nose.ruby.stdlib.set`, a default builtin stdlib pack for Ruby `Set.new`
+  collection-factory API provenance, and
   `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped surface
   for Python `typing`, `collections.abc`, and `asyncio` type-domain alias
   evidence.
@@ -242,6 +247,9 @@ migrated.
   occurrence evidence now carries
   `nose.python.stdlib.collection_factories` pack provenance while missing-import
   and wrong-module hard negatives stay closed.
+  Ruby stdlib `Set.new` collection-factory `LibraryApi` occurrence evidence now
+  carries `nose.ruby.stdlib.set` pack provenance while missing-require,
+  shadowed-`Set`, and mutated-set hard negatives stay closed.
   `nose-semantics` resolves receiver-domain evidence through a shared
   `DomainRequirement` contract. Consumers check exact receiver node evidence
   first, then immutable binding evidence for local or module variables, then

@@ -87,7 +87,8 @@ use nose_semantics::{
     LibraryApiCalleeContract, LibraryApiContractId, LibraryApiDependencyCache,
     MethodReceiverContract, StaticIndexMembershipReceiverContract,
     PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
-    PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+    PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, RUBY_STDLIB_SET_PACK_ID,
+    RUBY_STDLIB_SET_PRODUCER_ID,
 };
 use tree_sitter::Node as TsNode;
 

@@ -27,6 +27,9 @@ pub const PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID: &str =
 pub const PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID: &str =
     "python.stdlib.collection-factory-api";
 pub const PYTHON_STDLIB_COLLECTION_FACTORY_CONTRACT_ID: &str = "python.imported.collection_factory";
+pub const RUBY_STDLIB_SET_PACK_ID: &str = "nose.ruby.stdlib.set";
+pub const RUBY_STDLIB_SET_PRODUCER_ID: &str = "ruby.stdlib.set-factory-api";
+pub const RUBY_STDLIB_SET_CONTRACT_ID: &str = "ruby.set_factory";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LibraryApiContractId {
