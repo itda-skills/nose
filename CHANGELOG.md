@@ -30,6 +30,8 @@ break.
   `bench/corpus_prune/cli.py`.
 
 ### Fixed
+- Fixed repository CI by splitting overlong frontend test modules below the file-length ratchet
+  limit, without changing the covered test behavior.
 - Corpus lowering now skips source-extension artifacts that are not analyzable source: binary
   files with source suffixes, ANSI-highlighted output files, and obvious C++ `.h` headers that
   were previously routed to the C parser. On the pinned `bench/repos` corpus this cuts parser

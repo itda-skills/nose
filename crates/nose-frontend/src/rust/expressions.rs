@@ -2,33 +2,10 @@ use super::*;
 
 pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
+    if let Some(lowered) = lower_expr_atom(lo, node, span) {
+        return lowered;
+    }
     match node.kind() {
-        "identifier"
-        | "type_identifier"
-        | "field_identifier"
-        | "scoped_identifier"
-        | "crate"
-        | "super"
-        | "shorthand_field_identifier" => lo.var(lo.text(node), span),
-        "self" => lo.var("self", span),
-        "integer_literal" => {
-            let t = lo.text(node);
-            lo.int_lit(strip_rust_decimal_int_suffix(t), span)
-        }
-        "float_literal" => lo.float_lit(lo.text(node), span),
-        "negative_literal" => lower_negative_literal(lo, node),
-        "string_literal" | "raw_string_literal" | "char_literal" => {
-            let t = lo.text(node);
-            lo.str_lit(t, span)
-        }
-        "boolean_literal" => {
-            let b = lo.text(node) == "true";
-            lo.add(NodeKind::Lit, Payload::LitBool(b), span, &[])
-        }
-        "unit_expression" => lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[]),
-        "block" => lower_block(lo, node),
-        "let_condition" => lower_let_condition(lo, node),
-        "let_chain" => lower_let_chain(lo, node),
         "binary_expression" => lower_binary(lo, node),
         "unary_expression" => lower_unary(lo, node),
         "assignment_expression" => {
@@ -122,6 +99,40 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         }
     }
 }
+
+fn lower_expr_atom(lo: &mut Lowering, node: TsNode, span: Span) -> Option<NodeId> {
+    let lowered = match node.kind() {
+        "identifier"
+        | "type_identifier"
+        | "field_identifier"
+        | "scoped_identifier"
+        | "crate"
+        | "super"
+        | "shorthand_field_identifier" => lo.var(lo.text(node), span),
+        "self" => lo.var("self", span),
+        "integer_literal" => {
+            let t = lo.text(node);
+            lo.int_lit(strip_rust_decimal_int_suffix(t), span)
+        }
+        "float_literal" => lo.float_lit(lo.text(node), span),
+        "negative_literal" => lower_negative_literal(lo, node),
+        "string_literal" | "raw_string_literal" | "char_literal" => {
+            let t = lo.text(node);
+            lo.str_lit(t, span)
+        }
+        "boolean_literal" => {
+            let b = lo.text(node) == "true";
+            lo.add(NodeKind::Lit, Payload::LitBool(b), span, &[])
+        }
+        "unit_expression" => lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[]),
+        "block" => lower_block(lo, node),
+        "let_condition" => lower_let_condition(lo, node),
+        "let_chain" => lower_let_chain(lo, node),
+        _ => return None,
+    };
+    Some(lowered)
+}
+
 pub(super) fn is_type_level(k: &str) -> bool {
     matches!(
         k,

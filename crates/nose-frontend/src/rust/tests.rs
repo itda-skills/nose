@@ -202,7 +202,7 @@ fn let_chain_preserves_all_conjuncts_without_raw_let_condition() {
         "let-chain should keep every boolean conjunct, got {ops:?}"
     );
     assert!(
-        ops.iter().any(|&op| op == Op::Eq),
+        ops.contains(&Op::Eq),
         "let-chain should preserve the pattern test as equality-style matching, got {ops:?}"
     );
 }
@@ -219,7 +219,7 @@ fn leading_if_let_chain_condition_is_not_dropped() {
     );
     let ops = binop_ops(&il);
     assert!(
-        ops.iter().any(|&op| op == Op::And) && ops.iter().any(|&op| op == Op::Eq),
+        ops.contains(&Op::And) && ops.contains(&Op::Eq),
         "leading if-let chain should keep both the pattern test and trailing guard, got {ops:?}"
     );
 }

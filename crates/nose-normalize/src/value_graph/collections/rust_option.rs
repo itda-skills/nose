@@ -41,9 +41,7 @@ impl<'a> Builder<'a> {
             return None;
         }
         let kids = self.il.children(node);
-        let Some(callee) = kids.first().copied() else {
-            return None;
-        };
+        let callee = kids.first().copied()?;
         if !self.is_rust_option_some_node(callee) {
             return None;
         }

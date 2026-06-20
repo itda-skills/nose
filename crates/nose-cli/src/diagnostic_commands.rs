@@ -298,17 +298,31 @@ struct GapImpactAcc {
 }
 
 pub(super) fn cmd_gap_impact(paths: Vec<PathBuf>, top: usize, json: bool) -> Result<()> {
-    use nose_il::{NodeId, NodeKind, Payload, Span};
-    use std::collections::{BTreeMap, HashMap};
-
     require_paths_exist(&paths)?;
     let refs = paths_as_refs(&paths);
     let corpus = nose_frontend::lower_corpus_many(&refs);
     warn_if_empty(&corpus, &paths);
 
     let coverage = nose_frontend::coverage(&corpus, usize::MAX);
-    let mut rows: BTreeMap<(String, String), GapImpactAcc> = BTreeMap::new();
+    let rows = top_gap_impact_rows(&corpus, top);
+    let report = GapImpactReport {
+        files: coverage.files,
+        total_nodes: coverage.total_nodes,
+        raw_nodes: coverage.raw_nodes,
+        lowering_gap_raw: coverage.raw_nodes.saturating_sub(coverage.boundary_raw),
+        intentional_boundary_raw: coverage.boundary_raw,
+        rows,
+    };
+    emit_gap_impact_report(&report, json)
+}
 
+fn collect_gap_impact_accs(
+    corpus: &Corpus,
+) -> std::collections::BTreeMap<(String, String), GapImpactAcc> {
+    use nose_il::{NodeId, NodeKind, Payload, Span};
+    use std::collections::{BTreeMap, HashMap};
+
+    let mut rows: BTreeMap<(String, String), GapImpactAcc> = BTreeMap::new();
     for il in &corpus.files {
         let lang = il.meta.lang.name().to_string();
         let path = il.meta.path.clone();
@@ -360,41 +374,13 @@ pub(super) fn cmd_gap_impact(paths: Vec<PathBuf>, top: usize, json: bool) -> Res
             }
         }
     }
+    rows
+}
 
-    let mut rows: Vec<GapImpactRow> = rows
+fn top_gap_impact_rows(corpus: &Corpus, top: usize) -> Vec<GapImpactRow> {
+    let mut rows: Vec<GapImpactRow> = collect_gap_impact_accs(corpus)
         .into_iter()
-        .map(|((lang, surface_kind), acc)| {
-            let files = acc.files.len();
-            let units = acc.units.len();
-            let repos = acc.repos.len();
-            let score = actionability_score(files, units, acc.unit_lines, acc.raw_count);
-            let mut top_repos: Vec<RepoCount> = acc
-                .repo_counts
-                .into_iter()
-                .map(|(repo, count)| RepoCount { repo, count })
-                .collect();
-            top_repos.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.repo.cmp(&b.repo)));
-            top_repos.truncate(5);
-            let kind = if surface_kind == "ERROR" {
-                "parser-error"
-            } else {
-                "lowering-gap"
-            };
-            GapImpactRow {
-                lang,
-                surface_kind,
-                raw_count: acc.raw_count,
-                files,
-                units,
-                unit_nodes: acc.unit_nodes,
-                unit_lines: acc.unit_lines,
-                repos,
-                actionability_score: score,
-                kind: kind.to_string(),
-                top_repos,
-                samples: acc.samples.into_iter().take(5).collect(),
-            }
-        })
+        .map(gap_impact_row)
         .collect();
     rows.sort_by(|a, b| {
         b.actionability_score
@@ -404,16 +390,43 @@ pub(super) fn cmd_gap_impact(paths: Vec<PathBuf>, top: usize, json: bool) -> Res
             .then_with(|| a.surface_kind.cmp(&b.surface_kind))
     });
     rows.truncate(top);
+    rows
+}
 
-    let report = GapImpactReport {
-        files: coverage.files,
-        total_nodes: coverage.total_nodes,
-        raw_nodes: coverage.raw_nodes,
-        lowering_gap_raw: coverage.raw_nodes.saturating_sub(coverage.boundary_raw),
-        intentional_boundary_raw: coverage.boundary_raw,
-        rows,
+fn gap_impact_row(((lang, surface_kind), acc): ((String, String), GapImpactAcc)) -> GapImpactRow {
+    let files = acc.files.len();
+    let units = acc.units.len();
+    let repos = acc.repos.len();
+    let score = actionability_score(files, units, acc.unit_lines, acc.raw_count);
+    let mut top_repos: Vec<RepoCount> = acc
+        .repo_counts
+        .into_iter()
+        .map(|(repo, count)| RepoCount { repo, count })
+        .collect();
+    top_repos.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.repo.cmp(&b.repo)));
+    top_repos.truncate(5);
+    let kind = if surface_kind == "ERROR" {
+        "parser-error"
+    } else {
+        "lowering-gap"
     };
+    GapImpactRow {
+        lang,
+        surface_kind,
+        raw_count: acc.raw_count,
+        files,
+        units,
+        unit_nodes: acc.unit_nodes,
+        unit_lines: acc.unit_lines,
+        repos,
+        actionability_score: score,
+        kind: kind.to_string(),
+        top_repos,
+        samples: acc.samples.into_iter().take(5).collect(),
+    }
+}
 
+fn emit_gap_impact_report(report: &GapImpactReport, json: bool) -> Result<()> {
     if json {
         println!("{}", serde_json::to_string_pretty(&report)?);
         return Ok(());

@@ -202,6 +202,12 @@ fn lower_expr_rest(lo: &mut Lowering, node: TsNode) -> NodeId {
             let value = node.named_child(0).map(|c| lower_expr(lo, c));
             lo.yield_boundary(span, value)
         }
+        _ => lower_expr_tail(lo, node, span),
+    }
+}
+
+fn lower_expr_tail(lo: &mut Lowering, node: TsNode, span: Span) -> NodeId {
+    match node.kind() {
         "class" | "class_declaration" | "abstract_class_declaration" => lower_class(lo, node),
         "class_body" => {
             let kids: Vec<NodeId> = Lowering::named_children(node)

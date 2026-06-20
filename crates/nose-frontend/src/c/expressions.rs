@@ -2,45 +2,10 @@ use super::*;
 
 pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
+    if let Some(lowered) = lower_expr_core(lo, node, span) {
+        return lowered;
+    }
     match node.kind() {
-        // GCC statement-expression `({ stmt; …; expr; })` reaches here via
-        // `parenthesized_expression`; lower its body as a Block so the inner
-        // statements route through `lower_stmt` instead of falling to Raw.
-        "compound_statement" => lower_block(lo, node),
-        // `sizeof x` / `sizeof(T)` is a compile-time integer constant; the operand is
-        // often a type (which would itself be Raw), so lower to an int literal.
-        "sizeof_expression" => lo.add(NodeKind::Lit, Payload::Lit(LitClass::Int), span, &[]),
-        "identifier" | "field_identifier" | "type_identifier" => {
-            if lo.text(node) == "NULL" {
-                lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[])
-            } else {
-                lo.var(lo.text(node), span)
-            }
-        }
-        "number_literal" => lower_number_literal(lo, node),
-        "string_literal" | "concatenated_string" | "char_literal" => {
-            let t = lo.text(node);
-            lo.str_lit(t, span)
-        }
-        "true" => lo.add(NodeKind::Lit, Payload::LitBool(true), span, &[]),
-        "false" => lo.add(NodeKind::Lit, Payload::LitBool(false), span, &[]),
-        "null" => lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[]),
-        "binary_expression" => lower_binary(lo, node),
-        "unary_expression" => lower_unary(lo, node),
-        // `*p`, `&x` pointer ops, and parentheses peel to the operand. Most casts keep
-        // the historical behavior too, but explicit unsigned 32-bit casts are proof facts
-        // for C byte-pack shifts such as `((u32)a[0]) << 24`.
-        "cast_expression" => lower_cast(lo, node),
-        "pointer_expression" | "parenthesized_expression" => node
-            .child_by_field_name("argument")
-            .or_else(|| node.child_by_field_name("value"))
-            .or_else(|| node.named_child(node.named_child_count().saturating_sub(1)))
-            .map(|c| lower_expr(lo, c))
-            .unwrap_or_else(|| lo.empty_block(span)),
-        "assignment_expression" => lower_assignment(lo, node),
-        "update_expression" => lower_update(lo, node),
-        "call_expression" => lower_call(lo, node),
-        "field_expression" => lower_field_expr(lo, node),
         "subscript_expression" => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
                 .into_iter()
@@ -108,6 +73,12 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             lower_preproc(lo, node)
         }
         "preproc_include" => crate::lower::import_tokens(lo, node),
+        _ => lower_expr_tail(lo, node, span),
+    }
+}
+
+fn lower_expr_tail(lo: &mut Lowering, node: TsNode, span: Span) -> NodeId {
+    match node.kind() {
         "preproc_def"
         | "preproc_function_def"
         | "preproc_call"
@@ -153,6 +124,52 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         }
     }
 }
+
+fn lower_expr_core(lo: &mut Lowering, node: TsNode, span: Span) -> Option<NodeId> {
+    let lowered = match node.kind() {
+        // GCC statement-expression `({ stmt; ...; expr; })` reaches here via
+        // `parenthesized_expression`; lower its body as a Block so the inner
+        // statements route through `lower_stmt` instead of falling to Raw.
+        "compound_statement" => lower_block(lo, node),
+        // `sizeof x` / `sizeof(T)` is a compile-time integer constant; the operand is
+        // often a type (which would itself be Raw), so lower to an int literal.
+        "sizeof_expression" => lo.add(NodeKind::Lit, Payload::Lit(LitClass::Int), span, &[]),
+        "identifier" | "field_identifier" | "type_identifier" => {
+            if lo.text(node) == "NULL" {
+                lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[])
+            } else {
+                lo.var(lo.text(node), span)
+            }
+        }
+        "number_literal" => lower_number_literal(lo, node),
+        "string_literal" | "concatenated_string" | "char_literal" => {
+            let t = lo.text(node);
+            lo.str_lit(t, span)
+        }
+        "true" => lo.add(NodeKind::Lit, Payload::LitBool(true), span, &[]),
+        "false" => lo.add(NodeKind::Lit, Payload::LitBool(false), span, &[]),
+        "null" => lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[]),
+        "binary_expression" => lower_binary(lo, node),
+        "unary_expression" => lower_unary(lo, node),
+        // `*p`, `&x` pointer ops, and parentheses peel to the operand. Most casts keep
+        // the historical behavior too, but explicit unsigned 32-bit casts are proof facts
+        // for C byte-pack shifts such as `((u32)a[0]) << 24`.
+        "cast_expression" => lower_cast(lo, node),
+        "pointer_expression" | "parenthesized_expression" => node
+            .child_by_field_name("argument")
+            .or_else(|| node.child_by_field_name("value"))
+            .or_else(|| node.named_child(node.named_child_count().saturating_sub(1)))
+            .map(|c| lower_expr(lo, c))
+            .unwrap_or_else(|| lo.empty_block(span)),
+        "assignment_expression" => lower_assignment(lo, node),
+        "update_expression" => lower_update(lo, node),
+        "call_expression" => lower_call(lo, node),
+        "field_expression" => lower_field_expr(lo, node),
+        _ => return None,
+    };
+    Some(lowered)
+}
+
 pub(super) fn lower_c_opaque_seq(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let kids: Vec<NodeId> = Lowering::named_children(node)
