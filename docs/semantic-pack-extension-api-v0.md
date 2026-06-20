@@ -446,6 +446,9 @@ implicit v0 packs:
   receiver-method APIs, and builder append APIs;
 - `nose.rust.stdlib.vec` owns the current Rust `Vec::new` and `vec!`
   collection-factory API occurrence contracts;
+- `nose.rust.stdlib.collection_factories` owns the current selected Rust
+  `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection-factory API
+  occurrence contracts;
 - protocol/law packs correspond to current builtin protocol operations,
   demand profiles, operator laws, value-domain laws, and named value-graph rule
   modules.

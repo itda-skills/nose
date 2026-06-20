@@ -86,6 +86,10 @@ still being migrated toward it.
   `nose.rust.stdlib.vec` descriptor owns Rust `Vec::new` and `vec!`
   collection-factory contract and occurrence producer ids, while shadowed `Vec`
   roots and shadowed `vec` macros remain hard negatives. The
+  `nose.rust.stdlib.collection_factories` descriptor owns selected Rust
+  `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection-factory
+  contract and occurrence producer ids, while shadowed `std` roots remain hard
+  negatives. The
   `nose.python.stdlib.type_domain` descriptor directly exposes its alias
   contract rows so producer id, contract id, conformance refs, and declaration
   counts come from one pack-owned table.
@@ -104,7 +108,9 @@ still being migrated toward it.
   `nose.ruby.stdlib.set`, a default builtin stdlib pack for Ruby `Set.new`
   collection-factory API provenance,
   `nose.rust.stdlib.vec`, a default builtin stdlib pack for Rust `Vec::new` and
-  `vec!` collection-factory API provenance, and
+  `vec!` collection-factory API provenance,
+  `nose.rust.stdlib.collection_factories`, a default builtin stdlib pack for
+  selected Rust `std::collections` collection-factory API provenance, and
   `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped surface
   for Python `typing`, `collections.abc`, and `asyncio` type-domain alias
   evidence.
@@ -258,6 +264,11 @@ migrated.
   Rust stdlib `Vec::new` and `vec!` collection-factory `LibraryApi` occurrence
   evidence now carries `nose.rust.stdlib.vec` pack provenance while shadowed
   `Vec` roots and shadowed `vec` macros stay closed.
+  Selected Rust stdlib `std::collections::{HashSet,BTreeSet,VecDeque}::from`
+  collection-factory `LibraryApi` occurrence evidence now carries
+  `nose.rust.stdlib.collection_factories` pack provenance while shadowed `std`
+  roots stay closed. Rust stdlib map factories remain in the broad
+  compatibility facade for a later map-focused slice.
   `nose-semantics` resolves receiver-domain evidence through a shared
   `DomainRequirement` contract. Consumers check exact receiver node evidence
   first, then immutable binding evidence for local or module variables, then

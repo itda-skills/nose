@@ -102,6 +102,9 @@ fn post_lower_free_name_library_api_contract(
                 LibraryApiContractId::PythonBuiltinCollectionFactory => {
                     PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID
                 }
+                LibraryApiContractId::RustStdCollectionFactory => {
+                    RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID
+                }
                 _ => "library_api_free_name_collection_factory",
             };
             PostLowerLibraryApiContract {

@@ -83,7 +83,9 @@ The next code slices are intentionally incremental:
    provenance, then `nose.ruby.stdlib.set` for Ruby `Set.new(...)`
    collection-factory occurrence provenance backed by `require "set"`, then
    `nose.rust.stdlib.vec` for Rust `Vec::new` and `vec!` collection-factory
-   occurrence provenance;
+   occurrence provenance, then `nose.rust.stdlib.collection_factories` for
+   selected Rust `std::collections::{HashSet,BTreeSet,VecDeque}::from`
+   collection-factory occurrence provenance;
 7. Phase 6: allow external pack influence only after the builtin path is proven;
 8. Phase 7: define adoption and release gates.
 
@@ -181,6 +183,37 @@ an r30 cumulative rerun repeats the `boltons` or `cmark` triggers above both the
 before committing more stdlib/library rows. Binary size changed 20,125,104 ->
 20,142,096 bytes for this slice.
 
+Phase 5 Rust stdlib collection-factory measurement note, local run on
+2026-06-20: product query-regression r15 compared the previous
+`nose.rust.stdlib.vec` slice with the
+`nose.rust.stdlib.collection_factories` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, and surface
+counts were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by 531 bytes from the new top-level `semantic_packs` entry. The saved current
+artifact is `/tmp/nose-473-phase5-rust-collections-current-r15.json`, and the
+previous-slice compare summary is
+`/tmp/nose-473-phase5-rust-collections-vs-prev-r15.md`. The previous-slice
+sequential compare showed expected metadata drift plus noisy runtime triggers,
+so the same binaries were remeasured with repo-local alternating r15 runs saved
+at `/tmp/nose-473-phase5-rust-collections-alternating-r15.json`: aggregate wall
+time 1941.69 ms -> 1913.39 ms, `lower` 569.00 ms -> 559.00 ms,
+`normalize+extract` 1034.90 ms -> 1039.40 ms, and `candidates` 39.30 ms ->
+37.30 ms. A remaining previous-slice alternating trigger was `gin` wall timing;
+the same final binary compared cumulatively against original main with
+repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-rust-collections-main-alternating-r15.json` had no
+repo/phase triggers and measured aggregate wall time 1311.99 ms -> 1351.51 ms,
+`lower` 427.20 ms -> 430.10 ms, `normalize+extract` 660.10 ms -> 676.90 ms,
+and `candidates` 23.50 ms -> 24.00 ms; the prior cumulative `boltons` and
+`cmark` triggers from the Rust Vec slice did not recur. Root-cause note: this
+slice changed static pack metadata, Rust std-collection producer provenance, and
+an admission provenance check; it did not touch candidate generation, and
+product output did not drift. Follow-up under issue #473: if the next Phase 5
+slice or an r30 rerun repeats the `gin` wall trigger above both the 5% and 5 ms
+gates, pause pack-row migration and instrument the product query path before
+committing more stdlib/library rows. Binary size changed 20,142,096 ->
+20,142,368 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -244,6 +277,12 @@ before committing more stdlib/library rows. Binary size changed 20,125,104 ->
   compatibility facade. `Vec::new` and `vec!` factory `LibraryApi` occurrence
   evidence now reports `nose.rust.stdlib.vec` pack and producer provenance while
   preserving shadowed-`Vec` and shadowed-macro hard negatives.
+- Selected Rust stdlib collection factories started moving out of the broad
+  compatibility facade. `std::collections::{HashSet,BTreeSet,VecDeque}::from`
+  factory `LibraryApi` occurrence evidence now reports
+  `nose.rust.stdlib.collection_factories` pack and producer provenance while
+  preserving shadowed-`std` hard negatives. Rust stdlib map factories remain a
+  separate future slice.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a
   language-, signature-, and integer-domain-constrained first-party contract
   instead of a bare method-name recognizer. Float/NaN-sensitive methods remain a

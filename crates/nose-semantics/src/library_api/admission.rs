@@ -189,6 +189,15 @@ fn library_api_record_provenance_matches_contract(
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(RUST_STDLIB_VEC_PRODUCER_ID))
         }
+        LibraryApiContractId::RustStdCollectionFactory => {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash
+                    == Some(stable_symbol_hash(RUST_STDLIB_COLLECTION_FACTORY_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(
+                        RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+                    ))
+        }
         LibraryApiContractId::RubySetFactory => {
             record.provenance.emitter == EvidenceEmitter::FirstParty
                 && record.provenance.pack_hash == Some(stable_symbol_hash(RUBY_STDLIB_SET_PACK_ID))

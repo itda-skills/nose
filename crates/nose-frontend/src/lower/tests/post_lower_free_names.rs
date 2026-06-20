@@ -179,6 +179,128 @@ fn assert_go_and_rust_free_name_occurrences(interner: &Interner) {
         Some(stable_symbol_hash(RUST_STDLIB_VEC_PRODUCER_ID))
     );
 
+    let rust_hashset = lower_fixture(
+        "hashset.rs",
+        b"fn f() { let xs = std::collections::HashSet::from([1, 2]); }",
+        Lang::Rust,
+        interner,
+    );
+    let rust_hashset_contract = library_free_name_collection_factory_contract(
+        Lang::Rust,
+        "std::collections::HashSet::from",
+    )
+    .unwrap();
+    assert_eq!(
+        contract_api_count(
+            &rust_hashset.evidence,
+            rust_hashset_contract.id,
+            rust_hashset_contract.callee
+        ),
+        1
+    );
+    let rust_hashset_api_records = contract_api_records(
+        &rust_hashset.evidence,
+        rust_hashset_contract.id,
+        rust_hashset_contract.callee,
+    );
+    assert_eq!(
+        rust_hashset_api_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(rust_hashset_contract.pack_id))
+    );
+    assert_eq!(
+        rust_hashset_api_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID
+        ))
+    );
+
+    let rust_btreeset = lower_fixture(
+        "btreeset.rs",
+        b"fn f() { let xs = std::collections::BTreeSet::from([1, 2]); }",
+        Lang::Rust,
+        interner,
+    );
+    let rust_btreeset_contract = library_free_name_collection_factory_contract(
+        Lang::Rust,
+        "std::collections::BTreeSet::from",
+    )
+    .unwrap();
+    assert_eq!(
+        contract_api_count(
+            &rust_btreeset.evidence,
+            rust_btreeset_contract.id,
+            rust_btreeset_contract.callee
+        ),
+        1
+    );
+    let rust_btreeset_api_records = contract_api_records(
+        &rust_btreeset.evidence,
+        rust_btreeset_contract.id,
+        rust_btreeset_contract.callee,
+    );
+    assert_eq!(
+        rust_btreeset_api_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(rust_btreeset_contract.pack_id))
+    );
+    assert_eq!(
+        rust_btreeset_api_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID
+        ))
+    );
+
+    let rust_hashmap = lower_fixture(
+        "hashmap.rs",
+        b"fn f() { let xs = std::collections::HashMap::from([(\"red\", 1)]); }",
+        Lang::Rust,
+        interner,
+    );
+    let rust_hashmap_contract =
+        library_free_name_map_factory_contract(Lang::Rust, "std::collections::HashMap::from")
+            .unwrap();
+    let rust_hashmap_api_records = contract_api_records(
+        &rust_hashmap.evidence,
+        rust_hashmap_contract.id,
+        rust_hashmap_contract.callee,
+    );
+    assert_eq!(
+        rust_hashmap_api_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(nose_semantics::FIRST_PARTY_PACK_ID)),
+        "Rust map factories stay in the broad compatibility pack for a later slice"
+    );
+
+    let rust_shadowed_std = lower_fixture(
+        "hashset_shadowed_std.rs",
+        b"mod std { pub mod collections { pub struct HashSet; } }\nfn f() { let xs = std::collections::HashSet::from([1, 2]); }",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        contract_api_count(
+            &rust_shadowed_std.evidence,
+            rust_hashset_contract.id,
+            rust_hashset_contract.callee
+        ),
+        0,
+        "local std module must shadow std::collections::HashSet::from"
+    );
+
+    let rust_type_alias_std = lower_fixture(
+        "hashset_type_alias_std.rs",
+        b"struct Custom;\ntype std = Custom;\nfn f() { let xs = std::collections::HashSet::from([1, 2]); }",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        contract_api_count(
+            &rust_type_alias_std.evidence,
+            rust_hashset_contract.id,
+            rust_hashset_contract.callee
+        ),
+        0,
+        "Rust type aliases named std must shadow std::collections factories"
+    );
+
     let rust_type_alias_shadow = lower_fixture(
         "vec_type_alias_shadow.rs",
         b"struct Custom;\nimpl Custom { fn new() -> Self { Custom } }\ntype Vec = Custom;\nfn f() { let xs = Vec::new(); }",

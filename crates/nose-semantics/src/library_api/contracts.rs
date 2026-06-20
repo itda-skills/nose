@@ -34,6 +34,9 @@ pub const RUST_STDLIB_VEC_PACK_ID: &str = "nose.rust.stdlib.vec";
 pub const RUST_STDLIB_VEC_PRODUCER_ID: &str = "rust.stdlib.vec-factory-api";
 pub const RUST_STDLIB_VEC_MACRO_CONTRACT_ID: &str = "rust.vec.macro_factory";
 pub const RUST_STDLIB_VEC_NEW_CONTRACT_ID: &str = "rust.vec.new_factory";
+pub const RUST_STDLIB_COLLECTION_FACTORY_PACK_ID: &str = "nose.rust.stdlib.collection_factories";
+pub const RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID: &str = "rust.stdlib.collection-factory-api";
+pub const RUST_STDLIB_COLLECTION_FACTORY_CONTRACT_ID: &str = "rust.std.collection_factory";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LibraryApiContractId {

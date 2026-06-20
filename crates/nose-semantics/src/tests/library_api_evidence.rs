@@ -136,6 +136,25 @@ fn rust_stdlib_vec_record(
     record
 }
 
+fn rust_stdlib_collection_factory_record(
+    id: u32,
+    span: Span,
+    contract: LibraryCollectionFactoryContract,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance(
+        id,
+        span,
+        contract.id,
+        contract.callee,
+        status,
+        dependencies,
+        RUST_STDLIB_COLLECTION_FACTORY_PACK_ID,
+        RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+    )
+}
+
 fn library_api_record_with_arity(
     id: u32,
     span: Span,

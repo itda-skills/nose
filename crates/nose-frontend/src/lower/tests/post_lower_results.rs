@@ -96,6 +96,62 @@ fn assert_rust_and_ruby_factory_result_domains(interner: &Interner) {
         "Rust type aliases named Vec must not emit stdlib Vec result-domain evidence"
     );
 
+    let rust_hashset = lower_fixture(
+        "hashset.rs",
+        b"fn f() { let xs = std::collections::HashSet::from([1, 2]); }",
+        Lang::Rust,
+        interner,
+    );
+    let hashset_contract = library_free_name_collection_factory_contract(
+        Lang::Rust,
+        "std::collections::HashSet::from",
+    )
+    .unwrap();
+    let hashset_api = contract_api_ids(
+        &rust_hashset.evidence,
+        hashset_contract.id,
+        hashset_contract.callee,
+    );
+    assert!(result_domain_depends_on_any_api(
+        &rust_hashset.evidence,
+        DomainEvidence::Set,
+        &hashset_api,
+    ));
+
+    let rust_vecdeque = lower_fixture(
+        "vecdeque.rs",
+        b"fn f() { let xs = std::collections::VecDeque::from([1, 2]); }",
+        Lang::Rust,
+        interner,
+    );
+    let vecdeque_contract = library_free_name_collection_factory_contract(
+        Lang::Rust,
+        "std::collections::VecDeque::from",
+    )
+    .unwrap();
+    let vecdeque_api = contract_api_ids(
+        &rust_vecdeque.evidence,
+        vecdeque_contract.id,
+        vecdeque_contract.callee,
+    );
+    assert!(result_domain_depends_on_any_api(
+        &rust_vecdeque.evidence,
+        DomainEvidence::Collection,
+        &vecdeque_api,
+    ));
+
+    let rust_shadowed_std = lower_fixture(
+        "hashset_shadowed_std.rs",
+        b"mod std { pub mod collections { pub struct HashSet; } }\nfn f() { let xs = std::collections::HashSet::from([1, 2]); }",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        result_domain_record_count(&rust_shadowed_std.evidence, DomainEvidence::Set),
+        0,
+        "local std module must not emit stdlib HashSet result-domain evidence"
+    );
+
     let rust_vec_macro = lower_fixture(
         "vec_macro.rs",
         b"fn f() { let xs = vec![1, 2]; }",

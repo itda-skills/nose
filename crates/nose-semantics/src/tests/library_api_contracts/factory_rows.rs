@@ -76,6 +76,21 @@ fn library_api_contracts_carry_identity_and_result_obligations() {
         })
     );
     assert_eq!(
+        library_free_name_collection_factory_contract(
+            Lang::Rust,
+            "std::collections::HashSet::from",
+        ),
+        Some(LibraryCollectionFactoryContract {
+            pack_id: RUST_STDLIB_COLLECTION_FACTORY_PACK_ID,
+            id: LibraryApiContractId::RustStdCollectionFactory,
+            callee: LibraryApiCalleeContract::FreeName {
+                name: "std::collections::HashSet::from",
+                shadow: LibraryApiShadowPolicy::RustStdRootForStdPath,
+            },
+            result: LibraryCollectionFactoryResult::SequenceArgument,
+        })
+    );
+    assert_eq!(
         library_free_name_map_factory_contract(Lang::Rust, "std::collections::HashMap::from"),
         Some(LibraryMapFactoryContract {
             id: LibraryApiContractId::RustStdMapFactory,

@@ -372,7 +372,10 @@ factories with `nose.python.stdlib.collection_factories` provenance-backed
 `LibraryApi` occurrence evidence, or Ruby `require "set"; Set.new(...)`
 factories with `nose.ruby.stdlib.set` provenance-backed `LibraryApi` occurrence
 evidence, or Rust `Vec::new`/`vec!` factories with `nose.rust.stdlib.vec`
-provenance-backed `LibraryApi` occurrence evidence. Canonical
+provenance-backed `LibraryApi` occurrence evidence, or selected Rust
+`std::collections::{HashSet,BTreeSet,VecDeque}::from` factories with
+`nose.rust.stdlib.collection_factories` provenance-backed `LibraryApi`
+occurrence evidence. Canonical
 `Append` still needs `Effect(BuilderAppendCall)`, and the first-party normalize
 producer emits that effect only when the same call also has the same-span
 `LibraryApi` proof for the append API; the effect record depends on that API
@@ -481,8 +484,10 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   source syntax and macro-name shadow policy are proven, `Vec::new()` with the
   same pack provenance when the root-shadow policy is proven, `Some(...)`,
   selected `Some(_)` pattern selectors, bare `None`, and selected
-  `std::collections::*::from(...)` factory paths when their root-shadow policy
-  is proven. The selector occurrence does not by itself
+  `std::collections::{HashSet,BTreeSet,VecDeque}::from(...)` factory paths with
+  `nose.rust.stdlib.collection_factories` provenance when their root-shadow
+  policy is proven. Rust stdlib map factories are still covered by the broad
+  compatibility producer. The selector occurrence does not by itself
   prove the pattern semantics: `Some(_)` value-graph presence predicates also
   require the Rust tuple-struct wildcard `Source::Pattern` fact. JS/TS/Java
   `length` property reads whose
@@ -519,11 +524,11 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   matching;
 - selected `LibraryApi` producer-covered result calls emit dependent
   receiver-expression `Domain` evidence: Python `list`/`tuple` and
-  `collections.deque`, Rust `Vec::new`, `vec!`, and
-  `std::collections::VecDeque::from`, Java `List.of` and zero- or multi-argument
-  `Arrays.asList`, and selected empty `new ArrayList<>()`/`new LinkedList<>()`
-  as `Collection`; Python `set`/`frozenset`, Rust
-  `std::collections::{HashSet,BTreeSet}::from`, Java `Set.of`, Ruby `Set.new`,
+  `collections.deque`, Rust `Vec::new`, `vec!`, and pack-owned Rust
+  `std::collections::VecDeque::from`, Java `List.of` and zero- or
+  multi-argument `Arrays.asList`, and selected empty `new ArrayList<>()`/
+  `new LinkedList<>()` as `Collection`; Python `set`/`frozenset`, pack-owned
+  Rust `std::collections::{HashSet,BTreeSet}::from`, Java `Set.of`, Ruby `Set.new`,
   and JS-like `new Set` as `Set`; Rust
   `std::collections::{HashMap,BTreeMap}::from`, Java `Map.of`/`Map.ofEntries`,
   and JS-like `new Map` as `Map`; JS-like one-argument `Array.from` as
