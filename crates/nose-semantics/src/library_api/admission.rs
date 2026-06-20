@@ -298,6 +298,12 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID))
         }
+        LibraryApiContractId::MapGet => {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash == Some(stable_symbol_hash(MAP_GET_PROTOCOL_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(MAP_GET_PROTOCOL_PRODUCER_ID))
+        }
         LibraryApiContractId::RustStdCollectionFactory => {
             record.provenance.emitter == EvidenceEmitter::FirstParty
                 && record.provenance.pack_hash

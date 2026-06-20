@@ -58,6 +58,9 @@ pub const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID: &str =
     "javascript.builtins.collection-constructor-api";
 pub const JS_LIKE_BUILTIN_SET_CONSTRUCTOR_CONTRACT_ID: &str = "js_like.set.constructor";
 pub const JS_LIKE_BUILTIN_MAP_CONSTRUCTOR_CONTRACT_ID: &str = "js_like.map.constructor";
+pub const MAP_GET_PROTOCOL_PACK_ID: &str = "nose.protocols.map_get";
+pub const MAP_GET_PROTOCOL_PRODUCER_ID: &str = "protocols.map-get-api";
+pub const MAP_GET_CONTRACT_ID: &str = "map.get";
 pub const SCALAR_INTEGER_METHOD_ABS_CONTRACT_ID: &str = "scalar_integer_method.abs";
 pub const SCALAR_INTEGER_METHOD_MIN_CONTRACT_ID: &str = "scalar_integer_method.min";
 pub const SCALAR_INTEGER_METHOD_MAX_CONTRACT_ID: &str = "scalar_integer_method.max";
@@ -360,6 +363,7 @@ pub fn library_map_key_view_wrapper_result_domain(
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryMapGetContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: MapGetContract,

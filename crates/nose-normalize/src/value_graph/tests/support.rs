@@ -27,7 +27,8 @@ pub(super) use nose_semantics::{
     JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
     JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID, JS_LIKE_BUILTIN_PROMISE_PACK_ID,
     JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID, JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID,
-    JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PRODUCER_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
+    JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PRODUCER_ID, MAP_GET_PROTOCOL_PACK_ID,
+    MAP_GET_PROTOCOL_PRODUCER_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
     PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
     PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, RUST_STDLIB_INTEGER_METHOD_PACK_ID,
     RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID, RUST_STDLIB_OPTION_PACK_ID,
@@ -329,6 +330,21 @@ pub(super) fn java_stdlib_math_evidence(
     record
 }
 
+pub(super) fn map_get_protocol_evidence(
+    id: u32,
+    call_span: Span,
+    contract_id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+    arity: u16,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    let mut record =
+        library_api_contract_evidence(id, call_span, contract_id, callee, arity, dependencies);
+    record.provenance.pack_hash = Some(stable_symbol_hash(MAP_GET_PROTOCOL_PACK_ID));
+    record.provenance.rule_hash = Some(stable_symbol_hash(MAP_GET_PROTOCOL_PRODUCER_ID));
+    record
+}
+
 pub(super) fn python_builtin_collection_factory_evidence(
     id: u32,
     call_span: Span,
@@ -507,6 +523,15 @@ pub(super) fn push_library_api_evidence_for_callee(
         )
     {
         java_stdlib_math_evidence(
+            id,
+            il.node(call).span,
+            contract_id,
+            callee,
+            arity,
+            dependencies,
+        )
+    } else if matches!(contract_id, LibraryApiContractId::MapGet) {
+        map_get_protocol_evidence(
             id,
             il.node(call).span,
             contract_id,

@@ -135,7 +135,7 @@ pub fn library_api_dependency_id_for_canonical_builtin_call(
     builtin: Builtin,
 ) -> Option<EvidenceId> {
     library_api_dependency_id_for_canonical_builtin_call_contract(il, call, |record, id, _, _| {
-        library_api_record_models_canonical_builtin(il, record, id, builtin)
+        library_api_record_models_canonical_builtin(il, call, record, id, builtin)
     })
 }
 
@@ -150,7 +150,7 @@ pub fn library_api_dependency_id_for_canonical_builtin_method_call(
         il,
         call,
         |record, id, callee, arity| {
-            library_api_record_models_canonical_builtin(il, record, id, builtin)
+            library_api_record_models_canonical_builtin(il, call, record, id, builtin)
                 && callee == Some(expected_callee)
                 && arity == expected_arity
         },
@@ -314,6 +314,7 @@ fn canonical_integer_arg_dependency_present(il: &Il, record: &EvidenceRecord, ar
 
 pub(in crate::library_api) fn library_api_record_models_canonical_builtin(
     il: &Il,
+    call: NodeId,
     record: &EvidenceRecord,
     id: LibraryApiContractId,
     builtin: Builtin,
@@ -321,11 +322,12 @@ pub(in crate::library_api) fn library_api_record_models_canonical_builtin(
     if library_api_contract_id_builtin_result(id) == Some(builtin) {
         return true;
     }
-    library_api_record_models_rust_map_get_default(il, record, id, builtin)
+    library_api_record_models_rust_map_get_default(il, call, record, id, builtin)
 }
 
 pub(in crate::library_api) fn library_api_record_models_rust_map_get_default(
     il: &Il,
+    call: NodeId,
     record: &EvidenceRecord,
     id: LibraryApiContractId,
     builtin: Builtin,
@@ -354,13 +356,22 @@ pub(in crate::library_api) fn library_api_record_models_rust_map_get_default(
     else {
         return false;
     };
-    evidence_depends_on_library_api_contract(il, record, LibraryApiContractId::MapGet)
+    let Some(&map_receiver) = il.children(call).first() else {
+        return false;
+    };
+    evidence_depends_on_library_api_contract(
+        il,
+        record,
+        LibraryApiContractId::MapGet,
+        Some(map_receiver),
+    )
 }
 
 pub(in crate::library_api) fn evidence_depends_on_library_api_contract(
     il: &Il,
     record: &EvidenceRecord,
     expected_id: LibraryApiContractId,
+    required_receiver: Option<NodeId>,
 ) -> bool {
     record.dependencies.iter().any(|&id| {
         let Some(dependency) = il.evidence_record_by_id(id) else {
@@ -371,13 +382,95 @@ pub(in crate::library_api) fn evidence_depends_on_library_api_contract(
         {
             return false;
         }
-        let EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract { contract_hash, .. }) =
-            dependency.kind
+        let EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
+            contract_hash,
+            callee_hash,
+            arity,
+        }) = dependency.kind
         else {
             return false;
         };
-        library_api_contract_id_from_hash(contract_hash) == Some(expected_id)
+        let Some(actual_id) = library_api_contract_id_from_hash(contract_hash) else {
+            return false;
+        };
+        if actual_id != expected_id {
+            return false;
+        }
+        let Some(callee) =
+            library_api_callee_contract_for_hash(il.meta.lang, actual_id, callee_hash)
+        else {
+            return false;
+        };
+        library_api_record_provenance_matches_contract(actual_id, callee, dependency)
+            && library_api_dependency_record_has_expected_arity(actual_id, arity)
+            && library_api_dependency_record_has_required_dependencies(
+                il,
+                dependency,
+                actual_id,
+                required_receiver,
+            )
     })
+}
+
+fn library_api_dependency_record_has_expected_arity(id: LibraryApiContractId, arity: u16) -> bool {
+    match id {
+        LibraryApiContractId::MapGet => arity == 1,
+        _ => true,
+    }
+}
+
+fn library_api_dependency_record_has_required_dependencies(
+    il: &Il,
+    record: &EvidenceRecord,
+    id: LibraryApiContractId,
+    required_receiver: Option<NodeId>,
+) -> bool {
+    match id {
+        LibraryApiContractId::MapGet => required_receiver.is_some_and(|receiver| {
+            library_api_record_depends_on_receiver_domain(il, record, receiver, DomainEvidence::Map)
+        }),
+        _ => true,
+    }
+}
+
+fn library_api_record_depends_on_receiver_domain(
+    il: &Il,
+    record: &EvidenceRecord,
+    receiver: NodeId,
+    expected: DomainEvidence,
+) -> bool {
+    record.dependencies.iter().any(|&id| {
+        let Some(dependency) = il.evidence_record_by_id(id) else {
+            return false;
+        };
+        dependency.status == EvidenceStatus::Asserted
+            && il.evidence_dependencies_asserted(dependency)
+            && dependency.kind == EvidenceKind::Domain(expected)
+            && domain_dependency_matches_canonical_receiver(il, dependency.anchor, receiver)
+    })
+}
+
+fn domain_dependency_matches_canonical_receiver(
+    il: &Il,
+    anchor: EvidenceAnchor,
+    receiver: NodeId,
+) -> bool {
+    match anchor {
+        EvidenceAnchor::Node { span, kind } => {
+            span == il.node(receiver).span && kind == il.kind(receiver)
+        }
+        EvidenceAnchor::Param { span } => {
+            let Payload::Cid(cid) = il.node(receiver).payload else {
+                return false;
+            };
+            il.nodes.iter().any(|node| {
+                node.kind == NodeKind::Param
+                    && node.span == span
+                    && matches!(node.payload, Payload::Cid(param_cid) if param_cid == cid)
+            })
+        }
+        _ => false,
+    }
 }
 
 pub(in crate::library_api) fn library_api_contract_id_builtin_result(

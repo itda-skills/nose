@@ -7,7 +7,8 @@ pub(super) use nose_il::{
 use nose_normalize::{normalize, NormalizeOptions};
 use nose_semantics::{
     library_api_callee_contract_hash, library_api_contract_id_hash, library_map_get_contract,
-    library_method_call_contract, FIRST_PARTY_PACK_ID,
+    library_method_call_contract, FIRST_PARTY_PACK_ID, MAP_GET_PROTOCOL_PACK_ID,
+    MAP_GET_PROTOCOL_PRODUCER_ID,
 };
 
 pub(super) fn sp(line: u32) -> Span {
@@ -92,7 +93,7 @@ pub(super) fn map_get_library_api_evidence(
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceRecord {
     let contract = library_map_get_contract(lang, method, 1).expect("map get contract");
-    evidence(
+    let mut record = evidence(
         id,
         EvidenceAnchor::node(call_span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -101,7 +102,10 @@ pub(super) fn map_get_library_api_evidence(
             arity: 1,
         }),
         dependencies,
-    )
+    );
+    record.provenance.pack_hash = Some(stable_symbol_hash(MAP_GET_PROTOCOL_PACK_ID));
+    record.provenance.rule_hash = Some(stable_symbol_hash(MAP_GET_PROTOCOL_PRODUCER_ID));
+    record
 }
 
 pub(super) fn call_target_evidence(

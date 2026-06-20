@@ -483,6 +483,8 @@ implicit v0 packs:
   contracts;
 - `nose.java.stdlib.static_collection_adapters` owns Java
   `java.util.Arrays.stream` static collection adapter API occurrence contracts;
+- `nose.protocols.map_get` owns Java/Rust/JS-family `map.get(key)` API
+  occurrence contracts under exact-map receiver proof;
 - `nose.protocols.iterator_identity_adapters` owns the current Rust
   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
   `.stream()` iterator identity adapter API occurrence contracts;

@@ -116,6 +116,8 @@ The next code slices are intentionally incremental:
    map-entry occurrence provenance, then
    `nose.java.stdlib.static_collection_adapters` for Java `Arrays.stream`
    static collection adapter occurrence provenance, then
+   `nose.protocols.map_get` for Java/Rust/JS-family `map.get(key)` occurrence
+   provenance, then
    `nose.protocols.iterator_identity_adapters` for Rust
    `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
    `.stream()` iterator identity adapter occurrence provenance;
@@ -670,6 +672,30 @@ hot paths. The extra dependency checks are gated by the Java Math receiver
 contract or canonical scalar-integer evidence. Binary size changed
 20,162,928 -> 20,180,832 bytes for this slice.
 
+Phase 5 map-get protocol pack measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous `nose.java.stdlib.math`
+slice with the `nose.protocols.map_get` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, surface
+counts, and family shapes were unchanged after ignoring `result_json_bytes`.
+Each repo's JSON grew by exactly 559 bytes from the new top-level
+`semantic_packs` entry. The saved primary artifacts are
+`/tmp/nose-473-phase5-map-get-prev-r15.json`,
+`/tmp/nose-473-phase5-map-get-current-r15.json`, and
+`/tmp/nose-473-phase5-map-get-vs-prev-r15.md`. The first sequential r15 compare
+showed zero harness investigation triggers. A repeated full-subset r15 compare
+under a noisier runtime window showed triggers on `chi`, `gin`, and `junit5`;
+focused r30 reruns for those three repos cleared triggers in both directions:
+`/tmp/nose-473-phase5-map-get-focused-chi-gin-junit5-prev-vs-current-r30.md`
+and
+`/tmp/nose-473-phase5-map-get-focused-chi-gin-junit5-current-vs-prev-r30.md`.
+Root-cause note: this slice adds static protocol-pack metadata, map-get producer
+provenance, and fail-closed admission checks for existing source/span/canonical
+MapGet resolver paths. The extra nested-dependency checks are gated by the Rust
+`get(...).unwrap_or(...)` canonical defaulting path and verify MapGet arity plus
+receiver-anchored map proof; the slice does not add per-node descriptor scans or
+repeated registry walks on hot paths. Binary size changed 20,180,832 ->
+20,181,264 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -805,6 +831,10 @@ contract or canonical scalar-integer evidence. Binary size changed
   evidence now reports `nose.java.stdlib.static_collection_adapters` pack and
   producer provenance while preserving missing-import and shadowed-`Arrays` hard
   negatives.
+- Map-get protocol occurrences started moving out of the broad compatibility
+  facade. Java/Rust/JS-family `map.get(key)` `LibraryApi` occurrence evidence
+  now reports `nose.protocols.map_get` pack and producer provenance while
+  preserving exact-map receiver and unsupported-arity hard negatives.
 - Iterator identity adapters started moving out of the broad compatibility
   facade. Rust `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned`
   and Java `.stream()` `LibraryApi` occurrence evidence now reports
@@ -1064,7 +1094,8 @@ contract or canonical scalar-integer evidence. Binary size changed
   provenance, Java static collection adapters (`Arrays.stream`) with
   `nose.java.stdlib.static_collection_adapters` provenance, Java Math scalar
   integer APIs (`Math.abs`/`Math.min`/`Math.max`) with
-  `nose.java.stdlib.math` provenance, and
+  `nose.java.stdlib.math` provenance, Java/Rust/JS-family map-get occurrences
+  with `nose.protocols.map_get` provenance, and
   JS-like regex-literal `.test`. Producers emit call-site `Symbol` dependencies for imported
   binding/namespace occurrences or `Source` dependencies for regex literals;
   value-graph, idiom, and strict exact consumers consult these records first and
@@ -1118,8 +1149,8 @@ contract or canonical scalar-integer evidence. Binary size changed
   deliberately excludes lookalikes, Java single-argument `Arrays.asList(x)`
   without element-provenance proof, and non-container results such as
   `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`, `math.prod`,
-  `Arrays.stream`, map `get`, promise `.then`, iterator adapters, and generic
-  method contracts.
+  `Arrays.stream`, pack-proven map `get`, promise `.then`, iterator adapters,
+  and generic method contracts.
 - Immutable local/module binding domains now produce binding-anchored `Domain`
   evidence during normalization when the initializer has asserted sequence or
   result-domain evidence, the binding is single-assignment in the current scope,
@@ -1135,9 +1166,10 @@ contract or canonical scalar-integer evidence. Binary size changed
   binding proofs apply only when visible at the receiver use site.
 - The receiver-method `LibraryApi` occurrence slice moved broad method-family
   consumers behind dependency-backed call occurrence records. First-party
-  lowering now emits occurrence evidence for map `get`, map-key views, iterator
-  identity adapters, and language-scoped method-call contracts only when the
-  exact language/method/arity row and receiver proof are present. Normalize runs
+  lowering now emits occurrence evidence for pack-proven map `get`, map-key
+  views, iterator identity adapters, and language-scoped method-call contracts
+  only when the exact language/method/arity row and receiver proof are present.
+  Normalize runs
   receiver-method refresh passes after immutable binding-domain inference and
   after final CFG/dataflow/algebra rewrites, so binding receivers such as
   `VALUES.contains(x)` can depend on the current binding or sequence-domain
@@ -1297,7 +1329,7 @@ contract or canonical scalar-integer evidence. Binary size changed
   effect-proven append remain raw-payload eligible.
 - Rust `get(key).unwrap_or(default)` now admits the canonical map
   `GetOrDefault` builtin through the exact `unwrap_or` `LibraryApi` occurrence
-  plus its admitted nested `MapGet` dependency, instead of treating
+  plus its admitted nested pack-proven `MapGet` dependency, instead of treating
   `ValueOrDefault` selector semantics as sufficient for map defaulting.
 - Raw `Seq` spelling no longer feeds value-graph sequence tags. Missing
   `SequenceSurface` or guard evidence now produces the untagged value instead of
@@ -1345,16 +1377,16 @@ contract or canonical scalar-integer evidence. Binary size changed
 - The idiom/value-graph resolver cleanup moved supported normalize idiom
   canonicalization and direct value-graph API consumers behind shared
   `nose-semantics` admitted occurrence resolvers. This covers free-function
-  builtins, generic receiver-method contracts, map `get`, map-key views,
-  iterator identity adapters, Java static collection adapters, Rust `Some(...)`,
-  Rust map factory receiver proof, static index-membership, and Rust scalar
-  integer methods where the source `Call` node is still available.
+  builtins, generic receiver-method contracts, pack-proven map `get`, map-key
+  views, iterator identity adapters, Java static collection adapters, Rust
+  `Some(...)`, Rust map factory receiver proof, static index-membership, and
+  Rust scalar integer methods where the source `Call` node is still available.
 - The value-graph span-query resolver cleanup moved value-level CSE consumers
   that no longer carry a source `Call` node behind dedicated `nose-semantics`
   admitted span resolvers. Free-name/imported collection factories,
   Java/Ruby/Rust collection factories, free-name/Java map factories, Java map
-  entries, map `get`, and map-key view/wrapper calls now resolve contract
-  identity and `LibraryApi` occurrence evidence in one place.
+  entries, pack-proven map `get`, and map-key view/wrapper calls now resolve
+  contract identity and `LibraryApi` occurrence evidence in one place.
 - The node-level/API resolver cleanup moved property builtin field admission,
   Rust `Some` callee-node admission, HOF receiver proof in desugaring, and
   promise `.then` contract lookup behind shared admitted occurrence resolvers.

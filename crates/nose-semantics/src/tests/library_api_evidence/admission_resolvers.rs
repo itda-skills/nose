@@ -2,6 +2,7 @@ use super::*;
 
 mod array;
 mod iterator_adapter;
+mod map_get;
 mod promise;
 mod regex;
 mod scalar_integer;

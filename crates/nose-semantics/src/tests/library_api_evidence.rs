@@ -343,6 +343,37 @@ fn java_stdlib_math_record(
     )
 }
 
+fn map_get_protocol_record(
+    id: u32,
+    span: Span,
+    contract: LibraryMapGetContract,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    map_get_protocol_record_with_arity(id, span, contract, 1, status, dependencies)
+}
+
+fn map_get_protocol_record_with_arity(
+    id: u32,
+    span: Span,
+    contract: LibraryMapGetContract,
+    arity: u16,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance_and_arity(
+        id,
+        span,
+        contract.id,
+        contract.callee,
+        arity,
+        status,
+        dependencies,
+        MAP_GET_PROTOCOL_PACK_ID,
+        MAP_GET_PROTOCOL_PRODUCER_ID,
+    )
+}
+
 fn iterator_identity_adapter_record(
     id: u32,
     span: Span,

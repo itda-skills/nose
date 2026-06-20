@@ -37,6 +37,7 @@ fn library_non_factory_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_map_get_contract(Lang::Rust, "get", 1),
         Some(LibraryMapGetContract {
+            pack_id: MAP_GET_PROTOCOL_PACK_ID,
             id: LibraryApiContractId::MapGet,
             callee: LibraryApiCalleeContract::Method {
                 method: "get",

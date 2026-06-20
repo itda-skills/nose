@@ -45,11 +45,10 @@ fn admitted_span_resolver_requires_api_occurrence_evidence() {
         receiver_span: Some(missing_dependency.node(receiver).span),
         arg_count: 1,
     };
-    missing_dependency.evidence.push(library_api_record(
+    missing_dependency.evidence.push(map_get_protocol_record(
         0,
         missing_dependency.node(call).span,
-        contract.id,
-        contract.callee,
+        contract,
         EvidenceStatus::Asserted,
         &[],
     ));
@@ -77,11 +76,10 @@ fn admitted_span_resolver_requires_api_occurrence_evidence() {
         EvidenceKind::Domain(DomainEvidence::Map),
         EvidenceStatus::Asserted,
     ));
-    admitted.evidence.push(library_api_record(
+    admitted.evidence.push(map_get_protocol_record(
         1,
         admitted.node(call).span,
-        contract.id,
-        contract.callee,
+        contract,
         EvidenceStatus::Asserted,
         &[0],
     ));

@@ -109,6 +109,7 @@ pub fn library_map_get_contract(
         receiver: MethodReceiverContract::ExactMap,
     };
     Some(LibraryMapGetContract {
+        pack_id: MAP_GET_PROTOCOL_PACK_ID,
         id: LibraryApiContractId::MapGet,
         callee: LibraryApiCalleeContract::Method {
             method: result.method,
@@ -382,10 +383,10 @@ pub fn library_receiver_method_api_contract(
 ) -> Option<LibraryReceiverMethodApiContract> {
     library_map_get_contract(lang, method, arg_count)
         .map(|contract| LibraryReceiverMethodApiContract {
-            pack_id: FIRST_PARTY_PACK_ID,
+            pack_id: contract.pack_id,
             id: contract.id,
             callee: contract.callee,
-            rule: "library_api_map_get",
+            rule: MAP_GET_PROTOCOL_PRODUCER_ID,
             result_domain: None,
         })
         .or_else(|| {

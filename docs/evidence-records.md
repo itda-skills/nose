@@ -395,7 +395,8 @@ alone, the dependency chain must prove that specialization. For example, Rust
 `unwrap_or` is an option defaulting API in isolation, but the canonical
 `GetOrDefault(map, key, default)` builtin is admitted only when the same
 `unwrap_or` occurrence has the Rust `RustMapGetOrExactOption` receiver contract
-and depends on an admitted `MapGet` occurrence for the exact receiver.
+and depends on an admitted pack-proven `MapGet` occurrence for the exact
+receiver.
 
 Imported API occurrence evidence is not a broad name guess. A call-site
 `Symbol(ImportedBinding)` or `Symbol(ImportedNamespace)` dependency must itself
@@ -505,7 +506,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `nose.rust.stdlib.integer_methods` provenance when exact integer receiver
   proof is present, Java `Math.abs`, `Math.min`, and `Math.max` scalar integer
   APIs with `nose.java.stdlib.math` provenance when unshadowed `Math` and
-  integer-domain proof are present, Rust
+  integer-domain proof are present, Java/Rust/JS-family `map.get(key)` lookups
+  with `nose.protocols.map_get` provenance when exact-map receiver proof is
+  present, Rust
   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
   `.stream()` iterator identity adapters with
   `nose.protocols.iterator_identity_adapters` provenance when protocol receiver
@@ -658,15 +661,15 @@ callers:
   argument, entry-shape, mutation, `Source`, `Domain`, and `SequenceSurface`
   obligations, but API occurrence admission itself is shared where covered;
 - strict exact consumers share the same admitted occurrence resolver layer for
-  selected method, map-get, map-key-view, regex, JS static/global, static-index,
-  iterator-adapter, Rust Option sentinel, Rust `Vec::new`, and first-party
+  selected method, pack-proven map-get, map-key-view, regex, JS static/global,
+  static-index, iterator-adapter, Rust Option sentinel, Rust `Vec::new`, and first-party
   collection/map factory and constructor paths instead of locally recombining
   selector strings with evidence checks. Opaque same-callee exact identity
   remains separate: it can keep identical calls comparable, but it does not
   assign cross-language or library semantics;
 - normalize idiom canonicalization shares the admitted occurrence resolver layer
-  for supported free-function builtins, generic receiver-method contracts, map
-  `get`, map-key views, iterator identity adapters with
+  for supported free-function builtins, generic receiver-method contracts,
+  pack-proven map `get`, map-key views, iterator identity adapters with
   `nose.protocols.iterator_identity_adapters` provenance, Java `Arrays.stream`,
   Java map entries, Rust `Some(...)`, Rust map factory receiver proof, and HOF
   receiver proof instead of locally recombining selector strings with `LibraryApi`
@@ -686,8 +689,8 @@ callers:
   value graph. Value-level CSE paths that only retain source
   spans now also go through span-query resolvers for free-name/imported
   collection factories, Java/Ruby/Rust collection factories, Java collection
-  constructors, free-name/Java map factories, Java map entries, map `get`, and
-  map-key view/wrapper calls. The
+  constructors, free-name/Java map factories, Java map entries, pack-proven map
+  `get`, and map-key view/wrapper calls. The
   value graph no longer locally recombines those contract rows with `LibraryApi`
   span evidence;
 - value-graph consumers that query by source span re-check the original source
