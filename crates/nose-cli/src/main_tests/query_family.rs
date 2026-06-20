@@ -165,6 +165,46 @@ fn query_family_json_carries_proof_depth() {
 }
 
 #[test]
+fn query_family_json_carries_raw_detector_metrics() {
+    let ov = SurfaceOverrides {
+        generated_sources: std::collections::HashSet::new(),
+        declaration_run_ids: std::collections::HashSet::new(),
+    };
+    let empty = OpportunityGroups::default();
+    let mut f = fam(2, 3, &[Some("a"), Some("b"), Some("c")]);
+    f.mean_sem = 123.5;
+    f.mean_score = 0.82;
+    f.mean_lines = 17;
+    f.shared_weight = 11.25;
+    f.dup_lines = 34;
+    f.shared_lines = 9;
+    f.params = 4;
+    f.value = 456.0;
+    f.scope = "mixed";
+
+    let j = query_family_json(&f, &ov, &empty, false, None, None);
+    assert_eq!(
+        j["metrics"],
+        serde_json::json!({
+            "mean_sem": 123.5,
+            "members": 3,
+            "modules": 3,
+            "files": 3,
+            "languages": 2,
+            "mean_score": 0.82,
+            "mean_lines": 17,
+            "shared_weight": 11.25,
+            "params": 4,
+            "scope": "mixed",
+            "value": 456.0,
+            "dup_lines": 34,
+            "shared_lines": 9,
+        }),
+        "query-json family metrics preserve detector features for evaluation tooling: {j}"
+    );
+}
+
+#[test]
 fn hint_prefers_calling_the_existing_helper() {
     let mut f = fam(1, 2, &[None, None, None]);
     f.locations = vec![

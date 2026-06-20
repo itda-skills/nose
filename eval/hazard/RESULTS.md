@@ -40,34 +40,42 @@ rate at ~1.1% (family) — matching the literature's 1–3% release-level rate.
 > The clean, directly-observed **G1** label (some siblings changed, others not — no
 > fragile bug-fix attribution) remains the real validation below.
 
-## Refresh — current main (re-mined 2026-06-06)
+## Refresh — 0.14.0 release candidate (re-mined 2026-06-20)
 
-Re-ran the full pipeline against the current detector — HEAD after the #43–#65 Type-4
-exact-fragment / proof-obligation / flat-map work, **+189 commits past the v1 corpus's
-`nose 0.5.0` build** — on the same cached clones. Per the
-[release checklist](../../docs/hazard-release-checklist.md), detection output changed so
-the dataset was regenerated, but the **formula still holds** (weights stable, best
-candidate AUC unchanged) → no re-calibration; the shipped `hazard()` is untouched.
+Re-ran the full pipeline against `nose 0.14.0` for the release checklist. This release
+changes detection output through query JSON schema v4, source-artifact filtering, and
+measured language-lowering fixes, so the dataset was regenerated. Every event carries
+`nose_ver = "nose 0.14.0"`.
 
-| | v1 (0.5.0 early) | refresh (current main) | Δ |
-|---|---|---|---|
-| families | 15,199 | 14,942 | −1.7% |
-| ever-G1 | 24.8% | 24.8% | — |
-| true cross-language families (langs > 1) | 37 | 36 | −1 |
-| **v5 (shipped) G1 AUC** | **0.644** | **0.641** | −0.003 |
-| v7 G1 AUC | 0.659 | 0.655 | −0.004 |
-| logistic G1 AUC | 0.639 | 0.635 | −0.004 |
+The **formula still holds**: the shipped v5 formula improved on the clean G1 label, the
+original size-led formula is still worse, and the only higher candidate (`v7`, param
+dampening) is within 0.002 AUC while depending on a parameter term we still do not want
+to bake into the formula. No re-calibration; the shipped `hazard()` is untouched.
 
-Every shift is within leave-one-repo-out noise; weight signs and order are unchanged
-(`mean_lines` +0.45 top, `mean_sem` −0.27 anti-predictive, `invisibility` +0.15). The
-large Type-4 engine expansion barely moved the function-level family backbone the corpus
-is built on, and did **not** populate the structurally-rare cross-language stratum
-(37 → 36) — reconfirming, from a fresh angle, that the ~0.60 structural ceiling is
-invariant to detection quality (a strong harm ranker still needs the semantic layer).
+| | v1 (0.5.0 early) | 2026-06-06 refresh | 0.14.0 refresh | Δ vs 2026-06-06 |
+|---|---|---|---|---|
+| events | 462,569 | — | 432,113 | — |
+| families | 15,199 | 14,942 | 14,712 | −1.5% |
+| ever-G1 | 24.8% | 24.8% | 29.0% | +4.2 pp |
+| true cross-language families (langs > 1) | 37 | 36 | 55 | +19 |
+| **v5 (shipped) G1 AUC** | **0.644** | **0.641** | **0.691** | +0.050 |
+| v7 G1 AUC | 0.659 | 0.655 | 0.693 | +0.038 |
+| logistic G1 AUC | 0.639 | 0.635 | 0.658 | +0.023 |
 
-> **Tooling fix made during this refresh:** `mine.py` still invoked the pre-consolidation
-> `--threshold` flag, which the current CLI rejects (→ 0 families on every snapshot, a
-> silently-broken refresh). Updated to the inline `--mode near:T` syntax.
+Core weight directions are unchanged: line/edit surface, invisibility, and dispersion
+remain positive, while semantic size remains anti-predictive for G1 (`mean_lines` +0.581,
+`invisibility` +0.321, `modules` +0.272, `mean_sem` −0.140). `params` is positive in this
+logistic refresh (+0.154), but the candidate that mentions params is a dampener and only
+ties shipped v5 within noise; keep params out of `hazard()` until a stable harm signal
+justifies it.
+
+Automatic G2 numbers also moved upward (`v5` AUC 0.809), but this label is still the
+known low-precision bug-fix proxy described below, not a validated harm target.
+
+> **Tooling fix made during this refresh:** `mine.py` still assumed pre-v4 query JSON
+> locations (`start_line`/`end_line`) and top-level raw feature fields. Query JSON schema
+> v4 now carries `locations[].{start,end}` plus a documented `metrics` object, and
+> `mine.py` reads both the v4 and legacy shapes.
 
 ## Headline finding — the literature-derived formula was mis-specified
 

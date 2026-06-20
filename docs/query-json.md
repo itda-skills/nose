@@ -71,6 +71,7 @@ proven-shared-logic verdict the gate fires on.
 | `members` | number of copies |
 | `files` / `dirs` / `languages` | distinct files / directories / languages the copies span |
 | `source_comparable` | `false` for cross-language families, where source lines cannot be anti-unified directly; those rows display repeated semantic volume rather than shared/removable source lines |
+| `metrics` | raw detector feature object for evaluation/ranking integrations; see below |
 | `shared` | lines invariant across **all** copies (the all-copies anti-unification count) |
 | `rep_lines` | the representative copy's line count (`shared` of `rep_lines` are shared) |
 | `params` | varying spots the extracted helper would parameterize |
@@ -91,6 +92,11 @@ proven-shared-logic verdict the gate fires on.
 | `subsumed_by` | (present when this family is a slice, in any view) the `id=` handle of the fuller overlapping family this one is a slice of |
 | `locations[]` | every copy: `{id, file, start, end, name, lang}` where `id` is the member id used by baseline diagnostics; when the frontend knows source-origin facts the location also carries `origin` (domains/body/region facets such as `type-contract`, `style`, `markup`, `declaration-only`, or `vue-sfc`); the `existing_helper` member also carries `role: "existing-helper"`; a sub-dag clone's member carries `shared_subdag: [start, end]` — where the proven shared computation lives at that site |
 | `skeleton` | (only with `full`) the all-copies extraction-skeleton lines, each varying spot a `⟨param N: class⟩` placeholder (`class` = `literal`/`name`/`call`/`expr`/`block` — a coarse value-class hint for the helper signature) |
+
+`metrics` carries the raw `RefactorFamily` features before query's view-specific display fields
+such as `shared`, `rep_lines`, and `removable` are computed: `mean_sem`, `members`, `modules`,
+`files`, `languages`, `mean_score`, `mean_lines`, `shared_weight`, `params`, `scope`, `value`,
+`dup_lines`, and `shared_lines`.
 
 `surface` uses the default-surface curation policy. `generated` includes families wholly
 in generated/distributed output and CSS source-plus-compiled/minified build pipelines; a

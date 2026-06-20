@@ -64,6 +64,25 @@ FEAT_KEYS = ("mean_sem", "members", "modules", "files", "languages", "mean_score
              "shared_lines")
 
 
+def line_span(loc):
+    """Return a location span from either query-json v4 or the older scan-shaped JSON."""
+    start = loc.get("start", loc.get("start_line"))
+    end = loc.get("end", loc.get("end_line"))
+    if start is None or end is None:
+        raise KeyError(f"location missing line span: {sorted(loc)}")
+    return int(start), int(end)
+
+
+def family_features(fam):
+    """Detector features used by hazard tuning.
+
+    query-json v4 carries these under `metrics`; older mined JSON exposed them as top-level
+    family fields. Keep both readers so historical samples and fresh release refreshes work.
+    """
+    metrics = fam.get("metrics") or fam
+    return {k: metrics[k] for k in FEAT_KEYS}
+
+
 def fam_key(members):
     """Stable cross-revision identity: hash of the sorted (file, name) member set."""
     sig = "\x00".join(sorted(f"{f}\x01{n}" for (f, n, _s, _e) in members))
@@ -87,9 +106,12 @@ def families(jdoc, repo_abs):
         locs = f["locations"]
         if any(not l.get("name") for l in locs) or len(locs) < 2:
             continue
-        members = [(rel(l["file"]), l["name"], l["start_line"], l["end_line"]) for l in locs]
+        members = []
+        for loc in locs:
+            start, end = line_span(loc)
+            members.append((rel(loc["file"]), loc["name"], start, end))
         out.append({"members": members, "key": fam_key(members),
-                    "feats": {k: f[k] for k in FEAT_KEYS}})
+                    "feats": family_features(f)})
     return out
 
 

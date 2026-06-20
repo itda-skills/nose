@@ -6,6 +6,8 @@ break.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-06-20
+
 ### Added
 - Added explicit multi-root query analysis with repeatable `nose query --root/-r <path>`, while
   keeping the single positional-root form compatible. `nose capabilities` now advertises
@@ -15,96 +17,47 @@ break.
   instead of by Raw count alone.
 
 ### Changed
-- Tightened the `nose query` surface around evidence and counts: verified evidence labels now
-  distinguish `exact` from `shared-core`, cross-language rows report repeated semantic volume
-  instead of `~0 removable`, query JSON carries `source_comparable`, dashboard JSON exposes the
-  stable `families[]` key, and production reinvented-helper suggestions that only point at test
-  helpers are omitted with explicit counts.
+- Tightened the `nose query` machine-readable contract. Query JSON is now schema v4, family
+  locations carry member ids, `--baseline` families carry `baseline_status`, query rows expose
+  `source_comparable`, family objects carry raw detector `metrics` for evaluation tooling,
+  dashboard JSON exposes the stable `families[]` key, verified evidence labels distinguish
+  `exact` from `shared-core`, and cross-language rows report repeated semantic volume instead of
+  `~0 removable`.
 - Redesigned query baselines as schema v2 `accepted-duplication` files with family ids, member
   ids, and member source digests. Pre-v2 baseline arrays are no longer supported; regenerate with
   `nose query <path> --baseline <file> --write-baseline`.
-- Query JSON is now schema v4. Family locations carry member ids, and families reported through
-  `--baseline` carry `baseline_status` diagnostics for new or changed duplication.
+- Production reinvented-helper suggestions that only point at test helpers are now omitted with
+  explicit counts.
 - Split benchmark corpus pruning internals behind the stable `bench/prune_corpus.py` wrapper,
   moving manifest mechanics into `bench/corpus_prune/core.py` and CLI/self-test orchestration into
   `bench/corpus_prune/cli.py`.
 
 ### Fixed
-- Fixed repository CI by splitting overlong frontend test modules below the file-length ratchet
-  limit, without changing the covered test behavior.
 - Corpus lowering now skips source-extension artifacts that are not analyzable source: binary
   files with source suffixes, ANSI-highlighted output files, and obvious C++ `.h` headers that
   were previously routed to the C parser. On the pinned `bench/repos` corpus this cuts parser
   `ERROR` Raw from **56,895** to **25,219** and full lowering-gap Raw from **60,332** to
   **28,444**.
-- Closed a targeted Python/Go tranche selected from `nose gap-impact`. Python comments inside
-  expression lists and explicit line continuations are now lexical noise, while dictionary unpack
-  entries lower to a fail-closed Python surface instead of actionable Raw. Go type-only surfaces in
-  type switches and parser-ambiguous generic/index syntax no longer leak as Raw wrappers, with
-  call-position type arguments preserved as indexed/fail-closed callee structure instead of being
-  collapsed without type facts, and ambiguous nested index reads kept fail-closed. Full `bench/repos`
-  lowering-gap Raw now reports **60,332** gaps (0.131% of IL nodes), down from **61,092**.
-- Closed the next language-lowering gap tranche across Python, Java, and Swift. Python explicit
-  line continuations no longer leak as semantic Raw nodes; Java declaration/module and unsigned
-  shift-right surfaces lower to structured or exact-closed IL; Swift macro/directive/accessor and
-  Swift-specific operator/literal/range surfaces no longer cascade into Raw wrappers. Full
-  `bench/repos` lowering-gap Raw now reports **82,886** gaps (0.180% of IL nodes), down from
-  **134,722** after the prior tranche.
-- Closed the highest-impact non-parser gap found by `nose gap-impact`: nested Rust constructor
-  patterns such as `(Kind::Selection, Some(provider))` now lower to exact-closed Rust pattern
-  nodes instead of `Raw("tuple_struct_pattern")`. Full `bench/repos` lowering-gap Raw drops again
-  to **77,207** gaps, and Rust's gap count drops from **10,236** to **4,557**.
-- Closed a measured 10-loop lowering tranche across Go, Ruby, Swift, and intentional Raw
-  classification. Go type-switch case types no longer leak into case bodies, and `iota` lowers to
-  concrete const ordinals even inside conversions/calls. Ruby method-level rescue/ensure clauses,
-  expression rescue, arrow lambdas, interpolated strings/symbols, class variables, character
-  literals, subshells, keyword `and`/`or`, and loop modifiers now lower without parser-wrapper Raw
-  while preserving post-test `begin ... end while/until` semantics. Swift `if case`, nil-branch
-  ternaries, `@unknown default`, and empty `catch` blocks now lower structurally. Rust
-  `macro_rule_body` and Swift `availability_condition` are now reported as intentional
-  fail-closed boundaries instead of actionable lowering gaps. Full `bench/repos` lowering-gap Raw
-  now reports **68,312** gaps (0.148% of IL nodes), down from **77,207**.
-- Closed the next measured high-impact lowering tranche from `nose gap-impact`. Ruby regex,
-  case-equality, spaceship, expression-position `case`, and block-level rescue/else/ensure
-  clauses now lower without parser Raw while keeping Ruby operators as opaque method calls rather
-  than value equality. Rust macro token roots (`crate`/`super`), struct literal shorthand values,
-  and mutable shorthand field-pattern projections now preserve source identity without Raw
-  wrappers. Swift selector literals lower to an exact-closed selector surface, and local
-  `typealias` declarations are ignored as type-only syntax. Full `bench/repos` lowering-gap Raw
-  now reports **65,429** gaps (0.142% of IL nodes), down from **68,312**.
-- Closed the Rust/TypeScript/Swift/Go tranche selected from `nose gap-impact`. Rust `let` chains
-  now preserve all conjuncts; TypeScript decorators and class static blocks lower to structured
-  surfaces while decorated definitions are excluded from strict-exact binding proofs; Swift
-  operator references, prefix operators, and labeled control flow are exact-closed or fail-closed;
-  and Go type-switch cases, `goto`/labels, and `fallthrough` are classified as source-preserving
-  boundaries. Full `bench/repos` lowering-gap Raw now reports **61,092** gaps (0.133% of IL
-  nodes), down from **65,429**.
+- Closed measured high-impact language-lowering gaps across Python, Go, Java, Swift, Rust, Ruby,
+  and TypeScript. The pass covers Python comments/continuations/dict unpack, Go type switches,
+  generic/index ambiguity, `iota`, labels, and `fallthrough`, Java declaration/module and unsigned
+  shift surfaces, Swift macros/directives/accessors/operators/literals/ranges/selectors/control
+  flow, Rust nested constructor patterns, macro token roots, shorthand projections, and `let`
+  chains, Ruby regex/case/rescue/lambda/interpolation/operator/modifier forms, and TypeScript
+  decorators/static blocks. Ambiguous, type-only, and macro-only syntax is now exact-closed or
+  fail-closed instead of leaking actionable Raw wrappers.
 - Made checked-out benchmark corpus setup reproducible after pruning: pinned repos are reset
   before pruning, `.DS_Store` is excluded from prune/digest accounting, and the prune manifest was
   refreshed for the fresh-corpus result. Manual corpus-verify runs also have a longer timeout and
   upload logs on cancellation.
+- Fixed repository CI by splitting overlong frontend test modules below the file-length ratchet
+  limit and cleaning up clippy ratchet failures without changing covered behavior.
 
 ### Performance
-- Re-ran the lowering performance gate for the Python/Go tranche. This pass only changed frontend
-  lowering and did not claim a speedup; post-run wall times were `stats bench/repos --top 40`
-  **19.90s**, `gap-impact bench/repos --top 40` **21.97s**, `query sympy` **3.80s**, `query
-  raylib` **3.25s**, and `query alacritty` **0.19s** on the same workspace.
-- Re-ran the lowering-loop performance gate after the Go/Ruby/Swift/Rust tranche. No abnormal
-  slowdown was observed versus the pre-loop release baseline: `stats bench/repos --top 40`
-  **40.73s -> 16.28s**, `gap-impact bench/repos --top 40` **32.83s -> 16.38s**, `query sympy`
-  **5.74s -> 2.86s**, `query raylib` **4.62s -> 2.43s**, and `query alacritty`
-  **0.29s -> 0.17s** wall time on the same workspace.
-- Re-ran the lowering performance gate for the Ruby/Rust/Swift tranche. Absolute post-run wall
-  times were higher than the initial baseline because host load shifted during the run, so the
-  slowdown check was controlled against a freshly built `origin/main` in the same machine state:
-  current vs origin was `stats` **23.23s vs 24.39s**, `gap-impact` **24.69s vs 24.48s**, `query
-  sympy` **4.04s vs 4.69s**, repeated `query raylib` **3.34s vs 3.37s**, and `query alacritty`
-  **0.14s vs 0.14s**. No systematic code regression was observed.
-- Re-ran the lowering performance gate for the Rust/TypeScript/Swift/Go tranche. The same release
-  commands showed no slowdown versus the pre-tranche baseline: `stats bench/repos --top 40`
-  **27.44s -> 18.14s**, `gap-impact bench/repos --top 40` **28.38s -> 19.41s**, `query sympy`
-  **5.32s -> 3.18s**, `query raylib` **3.87s -> 2.61s**, and `query alacritty`
-  **0.30s -> 0.13s** wall time on the same workspace.
+- Re-ran representative release-build performance gates throughout the lowering work; no
+  systematic slowdown was observed. Final post-change wall times on the same workspace were
+  `stats bench/repos --top 40` **19.90s**, `gap-impact bench/repos --top 40` **21.97s**,
+  `query sympy` **3.80s**, `query raylib` **3.25s**, and `query alacritty` **0.19s**.
 
 ## [0.13.3] - 2026-06-19
 

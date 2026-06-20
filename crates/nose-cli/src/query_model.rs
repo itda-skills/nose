@@ -230,6 +230,24 @@ pub(super) fn query_family_json(
     query_family_json_with_counts(f, ov, opp, full, baseline_cmp, since, shared, params)
 }
 
+fn query_family_metrics_json(f: &nose_detect::RefactorFamily) -> serde_json::Value {
+    serde_json::json!({
+        "mean_sem": f.mean_sem,
+        "members": f.members,
+        "modules": f.modules,
+        "files": f.files,
+        "languages": f.languages,
+        "mean_score": f.mean_score,
+        "mean_lines": f.mean_lines,
+        "shared_weight": f.shared_weight,
+        "params": f.params,
+        "scope": f.scope,
+        "value": f.value,
+        "dup_lines": f.dup_lines,
+        "shared_lines": f.shared_lines,
+    })
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn query_family_json_with_counts(
     f: &nose_detect::RefactorFamily,
@@ -279,6 +297,7 @@ pub(super) fn query_family_json_with_counts(
         "dirs": f.modules,
         "languages": f.languages,
         "source_comparable": f.languages == 1,
+        "metrics": query_family_metrics_json(f),
         "shared": shared,
         "rep_lines": representative_lines(f),
         "params": params,
