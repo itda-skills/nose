@@ -61,20 +61,23 @@ still being migrated toward it.
 
 - `nose-il` defines a compact shared IL, `Lang`, `Builtin`, `HoFKind`, operators,
   literals, source spans, units, and pack-facing internal `EvidenceRecord` facts.
-- `nose-semantics` defines the first-party semantic profile facade: language,
+- `nose-semantics` defines the builtin semantic profile facade: language,
   source-fact, sequence-surface, guard/import/symbol, operator, demand/effect,
   fragment, module, stdlib, builtin, method-call, property, async,
   iterator-adapter, builder-append, and factory contracts. The public crate
   surface remains a flat facade, while those proof helpers and contract rows are
-  split into focused modules under `src/` and `src/library_api/`.
+  split into focused modules under `src/` and `src/library_api/`. Compiled
+  builtin packs now have a small `BuiltinPackDescriptor` registry that feeds
+  the existing `SemanticPackSummary` compatibility output without changing
+  analysis behavior.
 - The external pack API is documented as a v0 manifest/schema with examples.
-  `nose-semantics` can load local manifest files/directories for metadata and
-  provenance reporting, `nose scan --format json` reports active packs, and
-  `nose semantic-pack check` validates local manifests plus declared fixture
-  assets. External packs are still `metadata-only`; first-party producers remain
-  compiled Rust and are expected to map onto the same vocabulary. The first
-  compiled pilot is `nose.python.stdlib.type_domain`, a default first-party
-  stdlib pack-shaped surface for Python `typing`, `collections.abc`, and
+  `nose-semantics` can validate local manifest files/directories as metadata,
+  and `nose semantic-pack check` validates local manifests plus declared fixture
+  assets. `nose query --format json` does not yet report the active pack set.
+  External packs are still `metadata-only`; builtin producers remain compiled
+  Rust and are expected to map onto the same vocabulary. The first compiled
+  pilot is `nose.python.stdlib.type_domain`, a default builtin stdlib
+  pack-shaped surface for Python `typing`, `collections.abc`, and
   `asyncio` type-domain alias evidence.
 - `nose-frontend` owns tree-sitter parsing, per-language lowering (including the
   declarative CSS/HTML frontends), `<script>`/`<style>`/markup region extraction for
@@ -115,9 +118,9 @@ The current facade is compiled Rust, not an external manifest schema. It is
 intended to make the future pack extension boundary explicit while behavior is
 migrated.
 
-- The first-party profile exposes pack id and trust policy separately from
+- The builtin profile exposes pack id and trust policy separately from
   channel eligibility. `ChannelEligibility` describes where a fact may be used;
-  first-party/default status is pack provenance, not an analysis channel.
+  builtin/default status is pack provenance, not an analysis channel.
 - `Il::evidence` is now the shared internal substrate for source, domain, import,
   symbol-identity, type-alias, guard, place/effect, selected library API
   occurrence, and sequence-surface proof facts. Records carry ids, stable source anchors, kind,
@@ -746,7 +749,7 @@ language.
 
 - Language semantics are not first-class. Many rules ask "which language is this?"
   instead of "which semantic capability has been proven?"
-- Library semantics are still compiled into engine/first-party facade code.
+- Library semantics are still compiled into engine/builtin facade code.
   Internal `LibraryApiContract` rows exist, and v0 manifests can describe
   contract metadata, but local external packs cannot yet execute producers or
   open exact consumers.
@@ -759,12 +762,13 @@ language.
   demand/effect abstraction.
 - External producer execution does not exist. New languages and libraries that
   affect analysis must still be added inside the main crates.
-- Report output now exposes pack-level provenance, but not contract-id, law-id,
-  or proof-status provenance per finding.
-- First-party and external responsibility boundaries are documented, represented
-  in the internal facade as provenance/trust policy, and visible in scan JSON.
-  Loaded external manifests remain metadata-only until a producer runtime and
-  executable fixture/oracle workflow exist.
+- Query JSON does not yet expose active pack-level provenance. Selected findings
+  can expose internal law provenance, but active builtin/local pack reporting is
+  still a #473 follow-up.
+- Builtin and external responsibility boundaries are documented and represented
+  in the internal facade as provenance/trust policy. Loaded external manifests
+  remain metadata-only until a producer runtime and executable fixture/oracle
+  workflow exist.
 
 ## Current fail-closed choices
 

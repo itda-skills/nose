@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::HashSet;
 use std::fs;
 
 fn unique_dir(tag: &str) -> PathBuf {
@@ -73,6 +74,78 @@ fn manifest(id: &str) -> String {
   }}
 }}"#
     )
+}
+
+#[test]
+fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
+    let descriptors = builtin_pack_descriptors();
+    assert_eq!(descriptors.len(), 3);
+    let ids = descriptors
+        .iter()
+        .map(|descriptor| descriptor.id)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        ids,
+        vec![
+            FIRST_PARTY_PACK_ID,
+            PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
+            FIRST_PARTY_VALUE_LAW_PACK_ID
+        ]
+    );
+    assert_eq!(ids.iter().copied().collect::<HashSet<_>>().len(), ids.len());
+    assert!(descriptors
+        .iter()
+        .all(|descriptor| descriptor.trust == PackTrust::DefaultFirstParty));
+    assert!(descriptors
+        .iter()
+        .all(|descriptor| descriptor.enabled_by_default));
+}
+
+#[test]
+fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
+    let python = builtin_pack_descriptor(PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID)
+        .expect("Python stdlib descriptor");
+    assert_eq!(python.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(python.supported_languages, &["python"]);
+    assert_eq!(
+        python.supported_packages,
+        &["typing", "collections.abc", "asyncio"]
+    );
+    assert_eq!(
+        python.evidence_producer_ids,
+        &[PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID]
+    );
+    assert_eq!(
+        python.contract_ids,
+        &["python.stdlib.type-domain-alias.contract"]
+    );
+    assert_eq!(python.counts().evidence_producers, 1);
+    assert_eq!(python.counts().contracts, 1);
+    assert_eq!(
+        python.counts().positive_fixtures,
+        PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS.len()
+    );
+    assert!(python
+        .conformance_refs()
+        .contains(&"python-typing-dict-domain-positive"));
+    assert!(python
+        .conformance_refs()
+        .contains(&"python-typing-domain-wrong-module-hard-negative"));
+
+    let laws =
+        builtin_pack_descriptor(FIRST_PARTY_VALUE_LAW_PACK_ID).expect("value law descriptor");
+    assert_eq!(laws.kind, SemanticPackKind::LawPack);
+    assert_eq!(laws.counts().value_laws, pack_facing_value_laws().len());
+    assert_eq!(
+        laws.value_law_ids(),
+        pack_facing_value_laws()
+            .iter()
+            .map(|law| law.law_id)
+            .collect::<Vec<_>>()
+    );
+    assert!(laws
+        .conformance_refs()
+        .contains(&"clamp-float-hard-negative"));
 }
 
 #[test]
