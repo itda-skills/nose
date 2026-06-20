@@ -10,6 +10,8 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         },
         "self_expression" => lo.var("self", span),
         "super_expression" => lo.var("super", span),
+        "custom_operator" => lower_operator_ref(lo, node),
+        k if is_swift_operator_token_kind(k) => lower_operator_ref(lo, node),
         "integer_literal" | "hex_literal" | "oct_literal" | "bin_literal" => {
             lo.int_lit(lo.text(node), span)
         }
@@ -79,6 +81,7 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         }
         "control_transfer_statement" => lower_control_transfer(lo, node)
             .unwrap_or_else(|| lo.raw("control_transfer_statement", span, &[])),
+        "statement_label" => lower_statement_label(lo, node),
         k if is_type_level(k) => lo.empty_block(span),
         _ => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
@@ -360,26 +363,71 @@ pub(super) fn lower_range_op(
 }
 pub(super) fn lower_prefix(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
-    let op_text = node
-        .child_by_field_name("operation")
-        .map(|op| lo.text(op))
-        .unwrap_or_else(|| lo.text(node).trim_start());
-    let operand = node
+    let target_node = node
         .child_by_field_name("target")
-        .or_else(|| first_expr_child(node))
+        .or_else(|| first_expr_child(node));
+    let op_text = swift_prefix_operator_text(lo, node, target_node);
+    let operand = target_node
         .map(|child| lower_expr(lo, child))
         .unwrap_or_else(|| lo.empty_block(span));
-    if op_text.starts_with('!') {
+    if op_text == "!" {
         lo.add(NodeKind::UnOp, Payload::Op(Op::Not), span, &[operand])
-    } else if op_text.starts_with('-') {
+    } else if op_text == "-" {
         lo.add(NodeKind::UnOp, Payload::Op(Op::Neg), span, &[operand])
-    } else if op_text.starts_with('+') || op_text == "&" {
+    } else if op_text == "+" || op_text == "&" {
         operand
-    } else if op_text.starts_with('.') {
+    } else if op_text == "." {
         lower_implicit_member(lo, span, operand)
     } else {
-        lo.raw("prefix_expression", span, &[operand])
+        lower_prefix_operator_surface(lo, span, &op_text, operand)
     }
+}
+pub(super) fn swift_prefix_operator_text(
+    lo: &Lowering,
+    node: TsNode,
+    target: Option<TsNode>,
+) -> String {
+    if let Some(op) = node.child_by_field_name("operation") {
+        return lo.text(op).trim().to_string();
+    }
+    if let Some(target) = target {
+        let start = node.start_byte();
+        let end = target.start_byte();
+        if start <= end && end <= lo.src.len() {
+            return std::str::from_utf8(&lo.src[start..end])
+                .unwrap_or("")
+                .trim()
+                .to_string();
+        }
+    }
+    lo.text(node).trim_start().to_string()
+}
+pub(super) fn lower_prefix_operator_surface(
+    lo: &mut Lowering,
+    span: Span,
+    op_text: &str,
+    operand: NodeId,
+) -> NodeId {
+    let op = lo.str_lit(op_text, span);
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("swift_prefix_operator")),
+        span,
+        &[op, operand],
+    )
+}
+pub(super) fn lower_operator_ref(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let op = lo.str_lit(lo.text(node), span);
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("swift_operator_ref")),
+        span,
+        &[op],
+    )
+}
+pub(super) fn is_swift_operator_token_kind(kind: &str) -> bool {
+    !kind.is_empty() && kind.chars().all(|ch| "+-*/%=!<>&|^~.?".contains(ch))
 }
 pub(super) fn lower_implicit_member(lo: &mut Lowering, span: Span, member: NodeId) -> NodeId {
     if lo.b.kind(member) == NodeKind::Var {

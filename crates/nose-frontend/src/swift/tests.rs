@@ -40,6 +40,29 @@ fn seq_names(il: &Il, interner: &Interner) -> Vec<String> {
         .collect()
 }
 
+fn seq_first_string_hashes(il: &Il, interner: &Interner, expected: &str) -> Vec<u64> {
+    il.nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, node)| {
+            if node.kind != NodeKind::Seq {
+                return None;
+            }
+            let Payload::Name(name) = node.payload else {
+                return None;
+            };
+            if interner.resolve(name) != expected {
+                return None;
+            }
+            let first = *il.children(NodeId(idx as u32)).first()?;
+            let Payload::LitStr(hash) = il.node(first).payload else {
+                return None;
+            };
+            Some(hash)
+        })
+        .collect()
+}
+
 fn has_assign_rhs_seq(il: &Il, interner: &Interner, expected: &str) -> bool {
     il.nodes.iter().enumerate().any(|(idx, node)| {
         if node.kind != NodeKind::Assign {
@@ -74,6 +97,11 @@ fn op_count(src: &str, op: Op) -> usize {
         .iter()
         .filter(|node| node.kind == NodeKind::BinOp && node.payload == Payload::Op(op))
         .count()
+}
+
+fn raw_names_for_src(src: &str) -> Vec<String> {
+    let (il, interner) = il_with_interner(src);
+    raw_names(&il, &interner)
 }
 
 #[test]
@@ -610,6 +638,134 @@ return (x, y, z, w, id, notId, slice, forced, info)
     assert!(
         has_assign_rhs_seq(&il, &interner, "swift_overflow_add"),
         "&+= should lower as mutation with a Swift overflow-add RHS"
+    );
+}
+
+#[test]
+fn swift_operator_references_are_exact_closed_not_binary_ops() {
+    let src = r#"
+func equal(_ expected: Int, by cmp: (Int, Int) -> Bool) -> Bool { cmp(expected, expected) }
+func refs(_ values: [Int]) -> Any {
+let total = values.reduce(0, +)
+let same = equal(1, by: ==)
+return (total, same)
+}
+"#;
+    let (il, interner) = il_with_interner(src);
+    let raw = raw_names(&il, &interner);
+    for unexpected in ["+", "=="] {
+        assert!(
+            !raw.iter().any(|name| name == unexpected),
+            "operator reference {unexpected} should not remain Raw: {raw:?}"
+        );
+    }
+    let seq = seq_names(&il, &interner);
+    assert!(
+        seq.iter()
+            .filter(|name| name.as_str() == "swift_operator_ref")
+            .count()
+            >= 2,
+        "operator references should use Swift exact-closed surfaces: {seq:?}"
+    );
+    assert_eq!(
+        op_count(src, Op::Add),
+        0,
+        "passing `+` as a function value must not become BinOp::Add"
+    );
+    assert_eq!(
+        op_count(src, Op::Eq),
+        0,
+        "passing `==` as a function value must not become BinOp::Eq"
+    );
+}
+
+#[test]
+fn swift_prefix_operator_surfaces_do_not_impersonate_common_ops() {
+    let src = r#"
+enum Action { case view(Int) }
+func route(_ value: Any) {}
+func refs(_ x: Int) {
+route(/Action.view)
+route(/Other.view)
+route(~x)
+}
+"#;
+    let (il, interner) = il_with_interner(src);
+    let raw = raw_names(&il, &interner);
+    for unexpected in ["/", "prefix_expression"] {
+        assert!(
+            !raw.iter().any(|name| name == unexpected),
+            "{unexpected} should lower as a Swift prefix/operator surface: {raw:?}"
+        );
+    }
+    let seq = seq_names(&il, &interner);
+    assert!(
+        seq.iter()
+            .filter(|name| name.as_str() == "swift_prefix_operator")
+            .count()
+            >= 1,
+        "custom prefix operators should use exact-closed Swift surfaces: {seq:?}"
+    );
+    assert!(
+        seq.iter().any(|name| name == "swift_case_path"),
+        "case-path operator references should stay Swift-specific: {seq:?}"
+    );
+    let case_path_hashes = seq_first_string_hashes(&il, &interner, "swift_case_path");
+    assert_eq!(
+        case_path_hashes.len(),
+        2,
+        "both case paths should be preserved as exact-closed source surfaces"
+    );
+    assert_ne!(
+        case_path_hashes[0], case_path_hashes[1],
+        "`/Action.view` and `/Other.view` must not collapse to the same field access"
+    );
+    assert_eq!(
+        op_count(src, Op::Div),
+        0,
+        "`/Action.view` is a case-path prefix operator, not division"
+    );
+}
+
+#[test]
+fn swift_labeled_control_flow_preserves_target_as_boundary() {
+    let src = r#"
+func f(_ xs: [Int]) {
+outer: for x in xs {
+    if x > 0 { break outer }
+}
+}
+"#;
+    let raw = raw_names_for_src(src);
+    assert!(
+        !raw.iter().any(|name| name == "statement_label"),
+        "statement labels should preserve their target spelling, got {raw:?}"
+    );
+    assert!(
+        raw.iter().any(|name| name == "swift_labeled_break outer"),
+        "labeled break must stay fail-closed with its target label: {raw:?}"
+    );
+    assert!(crate::is_intentional_raw_boundary_tag(
+        "swift_labeled_break outer"
+    ));
+}
+
+#[test]
+fn swift_trailing_closure_labels_do_not_count_as_statement_label_gaps() {
+    let src = r#"
+func withHandlers() {
+withUnsafeTemporaryAllocation(capacity: 1) { buffer in
+    _ = buffer
+}
+errorHandler: { error in
+    _ = error
+}
+}
+"#;
+    let raw = raw_names_for_src(src);
+    assert!(
+        !raw.iter().any(|name| name == "statement_label"),
+        "trailing closure labels should preserve spelling instead of generic statement_label Raw: {raw:?}"
     );
 }
 

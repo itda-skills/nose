@@ -27,6 +27,8 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         }
         "unit_expression" => lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[]),
         "block" => lower_block(lo, node),
+        "let_condition" => lower_let_condition(lo, node),
+        "let_chain" => lower_let_chain(lo, node),
         "binary_expression" => lower_binary(lo, node),
         "unary_expression" => lower_unary(lo, node),
         "assignment_expression" => {

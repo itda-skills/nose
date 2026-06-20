@@ -121,7 +121,8 @@ pub(super) fn is_expr_kind(kind: &str) -> bool {
             | "identifier"
             | "type_identifier"
             | "nil"
-    )
+    ) || kind == "custom_operator"
+        || is_swift_operator_token_kind(kind)
 }
 pub(super) fn is_type_level(kind: &str) -> bool {
     matches!(

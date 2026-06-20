@@ -3391,6 +3391,119 @@ cargo test -q -p nose-cli --test css_html_quality
 awiki lint --root docs
 ```
 
+## DF. Rust/TypeScript/Swift/Go gap-impact tranche — close 1-4 together (2026-06-20)
+
+After §DE, `nose gap-impact` still showed a thin but measurable set of safe language rows below
+the parser-error block. The request for this pass was to do the next four rows together rather
+than spinning a separate Go-only loop, but still keep the same discipline: quantify first, use
+independent review for the language semantics, add focused tests before trusting the corpus
+number, and finish with docs plus a release performance gate.
+
+**Baseline.**
+
+```text
+files: 67407   IL nodes: 46107930   Raw nodes: 182575 (0.396%)
+= 65429 lowering-gap + 117146 intentional-boundary
+```
+
+Baseline release timings were `stats_all` **27.44s**, `gap_impact_all` **28.38s**,
+`query_sympy` **5.32s**, `query_raylib` **3.87s**, and `query_alacritty` **0.30s** wall time.
+The chosen rows were Rust `let_condition`, TypeScript decorators/class static blocks, Swift
+operator and statement-label tails, and Go type-switch/goto/fallthrough surfaces. They were
+selected because they were broad enough to matter, but local enough to lower or classify without
+inventing runtime type or whole-CFG analysis.
+
+**Fixes shipped.**
+
+- Rust: `let_condition` now lowers in expression position, and `let_chain` folds every named
+  conjunct with boolean `And` instead of keeping only the final value. This preserves leading
+  `if let ... && guard` conditions instead of silently dropping them.
+- TypeScript/JavaScript: decorators lower to exact-closed `js_decorator` / `js_decorated_definition`
+  surfaces, class static blocks lower to `js_class_static_block`, and decorated runtime
+  definitions emit a source binding fact. Strict exact now treats that fact as a binding boundary,
+  so a decorator that replaces a function/class cannot be proven as a direct exact call target.
+  Decorators on erased type-only members are kept from attaching to the following runtime member.
+- Swift: operator references and custom operators lower to exact-closed Swift operator surfaces
+  instead of common `BinOp` nodes; prefix operators only map to shared unary semantics on exact
+  operator spelling; statement labels and labeled `break`/`continue` are preserved as fail-closed
+  label boundaries.
+- Go: type-switch case type rows are reported as intentional `type_case ...` boundaries,
+  `fallthrough` stays a fail-closed boundary, and `goto` / labels preserve the target spelling as
+  source-backed boundaries instead of leaking `label_name` Raw inside executable bodies.
+
+**Measured result.**
+
+```text
+files: 67407   IL nodes: 46110621   Raw nodes: 181552 (0.394%)
+= 61092 lowering-gap + 120460 intentional-boundary
+```
+
+Overall lowering-gap Raw drops **65,429 -> 61,092** (-4,337). Total Raw drops more modestly,
+**182,575 -> 181,552** (-1,023), because this pass intentionally moved several control-flow and
+type-case surfaces from actionable gaps into source-preserving fail-closed boundaries. The main
+target rows changed as follows in the lowering-gap accounting:
+
+| language | surface | gap Raw before | gap Raw after |
+|---|---|---:|---:|
+| Rust | `let_condition` | 118 | 0 |
+| TypeScript | `decorator` | 308 | 0 |
+| TypeScript | `class_static_block` | 48 | 0 |
+| Swift | `+` / `==` / `/` operator refs | 344 | 0 |
+| Swift | `prefix_expression` | 38 | 0 |
+| Swift | `statement_label` | 68 | 0 |
+| Swift | `custom_operator` | 14 | 0 |
+| Go | `type_case string` / `int64` / `map[string]any` | 193 | 0 |
+| Go | `fallthrough_statement` | 86 | 0 |
+| Go | `goto_statement` / `label_name` | 379 | 0 |
+
+Language gap deltas from `nose stats` were Go **7,601 -> 4,496** (-3,105), Swift
+**6,580 -> 6,015** (-565), TypeScript **5,233 -> 4,771** (-462), Rust **2,697 -> 2,573** (-124),
+and JavaScript **10,881 -> 10,800** (-81) from the shared JS/TS lowering path.
+
+**Performance gate.** The same release binary and workspace showed no slowdown:
+
+| command | before | after |
+|---|---:|---:|
+| `nose stats bench/repos --top 40` | 27.44s | 18.14s |
+| `nose gap-impact bench/repos --top 40` | 28.38s | 19.41s |
+| `nose query bench/repos/sympy --format json` | 5.32s | 3.18s |
+| `nose query bench/repos/raylib --format json` | 3.87s | 2.61s |
+| `nose query bench/repos/alacritty --format json` | 0.30s | 0.13s |
+
+As with the earlier lowering loops, treat the lower wall times as a regression check rather than a
+claimed speedup; the code change was about coverage and sound boundaries, not performance.
+
+**Review catches.** The Rust/TypeScript review identified the real Rust `let_chain` bug: only the
+last conjunct was being lowered. It also required decorated TypeScript roots to fail closed in
+strict exact. The Swift/Go review required exact-closed Swift operator references and preserving
+Go/Swift label targets as boundaries. A final self-review caught a decorator edge case where a
+decorator before an erased TypeScript member could otherwise drift onto the next runtime member;
+that was fixed with a focused test. The final blocking review also caught decorated class-expression
+unit roots and Swift `/Action.view` case paths losing source identity; both now have targeted
+frontend/detect regression coverage.
+
+**Regression coverage.**
+
+```text
+cargo fmt --all -- --check
+cargo check --workspace
+cargo test -p nose-frontend --lib
+cargo test -p nose-detect --lib
+cargo test -p nose-cli --test equivalence -- --nocapture
+cargo build --release -p nose-cli
+target/release/nose stats bench/repos --top 120
+target/release/nose gap-impact bench/repos --top 120
+target/release/nose gap-impact bench/repos --top 120 --format json
+awiki lint --root docs
+```
+
+**Next safe tranche.** Parser `ERROR` rows still dominate the absolute ranking, but the next
+actionable non-parser candidates are Python `comment` / `dictionary_splat`, Go `pointer_type` /
+`type_identifier` / generic type-instantiation tails, JavaScript `formal_parameters`, Ruby
+`body_statement` / `retry`, and Swift `pattern`. The Go type-surface rows look like the most
+direct continuation if the goal is to keep shrinking gap-impact without first tackling parser
+recovery.
+
 ## DE. Ruby/Rust/Swift gap-impact tranche — close the next safe rows (2026-06-20)
 
 After §DD, the remaining worklist was dominated by parser `ERROR` rows and a smaller set of

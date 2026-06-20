@@ -58,6 +58,13 @@ break.
   wrappers. Swift selector literals lower to an exact-closed selector surface, and local
   `typealias` declarations are ignored as type-only syntax. Full `bench/repos` lowering-gap Raw
   now reports **65,429** gaps (0.142% of IL nodes), down from **68,312**.
+- Closed the Rust/TypeScript/Swift/Go tranche selected from `nose gap-impact`. Rust `let` chains
+  now preserve all conjuncts; TypeScript decorators and class static blocks lower to structured
+  surfaces while decorated definitions are excluded from strict-exact binding proofs; Swift
+  operator references, prefix operators, and labeled control flow are exact-closed or fail-closed;
+  and Go type-switch cases, `goto`/labels, and `fallthrough` are classified as source-preserving
+  boundaries. Full `bench/repos` lowering-gap Raw now reports **61,092** gaps (0.133% of IL
+  nodes), down from **65,429**.
 - Made checked-out benchmark corpus setup reproducible after pruning: pinned repos are reset
   before pruning, `.DS_Store` is excluded from prune/digest accounting, and the prune manifest was
   refreshed for the fresh-corpus result. Manual corpus-verify runs also have a longer timeout and
@@ -75,6 +82,11 @@ break.
   current vs origin was `stats` **23.23s vs 24.39s**, `gap-impact` **24.69s vs 24.48s**, `query
   sympy` **4.04s vs 4.69s**, repeated `query raylib` **3.34s vs 3.37s**, and `query alacritty`
   **0.14s vs 0.14s**. No systematic code regression was observed.
+- Re-ran the lowering performance gate for the Rust/TypeScript/Swift/Go tranche. The same release
+  commands showed no slowdown versus the pre-tranche baseline: `stats bench/repos --top 40`
+  **27.44s -> 18.14s**, `gap-impact bench/repos --top 40` **28.38s -> 19.41s**, `query sympy`
+  **5.32s -> 3.18s**, `query raylib` **3.87s -> 2.61s**, and `query alacritty`
+  **0.30s -> 0.13s** wall time on the same workspace.
 
 ## [0.13.3] - 2026-06-19
 

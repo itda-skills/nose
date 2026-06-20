@@ -3,8 +3,9 @@ use super::syntax::static_string_key;
 use super::{lower_block, lower_stmt};
 use crate::lower::Lowering;
 use nose_il::{
-    LitClass, NodeId, NodeKind, Payload, RegionKind, SourceGranularity, Span, UnitBodyKind,
-    UnitDomain, UnitDomains, UnitEvidenceFlag, UnitKind, UnitOrigin, UnitSubkind,
+    LitClass, NodeId, NodeKind, Payload, RegionKind, SourceBindingKind, SourceFactKind,
+    SourceGranularity, Span, UnitBodyKind, UnitDomain, UnitDomains, UnitEvidenceFlag, UnitKind,
+    UnitOrigin, UnitSubkind,
 };
 use tree_sitter::Node as TsNode;
 
@@ -30,19 +31,12 @@ pub(super) fn lower_class(lo: &mut Lowering, node: TsNode) -> NodeId {
     let name = node.child_by_field_name("name").map(|n| lo.sym(lo.text(n)));
     let body = node.child_by_field_name("body");
     let block = match body {
-        Some(b) => {
-            let mut stmts = Vec::new();
-            for child in Lowering::named_children(b) {
-                if let Some(id) = lower_stmt(lo, child, true) {
-                    stmts.push(id);
-                }
-            }
-            lo.add(NodeKind::Block, Payload::None, lo.span(b), &stmts)
-        }
+        Some(b) => super::lower_stmt_list(lo, b, NodeKind::Block, true),
         None => lo.empty_block(span),
     };
+    let unit_root = lower_own_decorated_definition(lo, node, block);
     lo.push_unit_with_origin(
-        block,
+        unit_root,
         UnitKind::Class,
         name,
         UnitOrigin::new(
@@ -54,7 +48,89 @@ pub(super) fn lower_class(lo: &mut Lowering, node: TsNode) -> NodeId {
         )
         .with_evidence(UnitEvidenceFlag::HasReusableBody),
     );
-    block
+    unit_root
+}
+
+pub(super) fn lower_decorator(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .map(|child| lower_expr(lo, child))
+        .collect();
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("js_decorator")),
+        span,
+        &kids,
+    )
+}
+
+pub(super) fn lower_class_static_block(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .filter_map(|child| lower_stmt(lo, child, false))
+        .collect();
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("js_class_static_block")),
+        span,
+        &kids,
+    )
+}
+
+pub(super) fn lower_decorated_definition(
+    lo: &mut Lowering,
+    decorators: Vec<NodeId>,
+    definition_span: Span,
+    decorated_span: Span,
+    lowered: NodeId,
+) -> NodeId {
+    lo.record_source_fact(
+        definition_span,
+        SourceFactKind::Binding(SourceBindingKind::DecoratedDefinition),
+    );
+    if decorated_span != definition_span {
+        lo.record_source_fact(
+            decorated_span,
+            SourceFactKind::Binding(SourceBindingKind::DecoratedDefinition),
+        );
+    }
+    let mut kids = decorators;
+    kids.push(lowered);
+    let wrapper = lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("js_decorated_definition")),
+        decorated_span,
+        &kids,
+    );
+    retarget_last_unit_root(lo, lowered, wrapper);
+    wrapper
+}
+
+pub(super) fn lower_own_decorated_definition(
+    lo: &mut Lowering,
+    node: TsNode,
+    lowered: NodeId,
+) -> NodeId {
+    let decorators: Vec<TsNode> = Lowering::named_children(node)
+        .into_iter()
+        .filter(|child| child.kind() == "decorator")
+        .collect();
+    if decorators.is_empty() {
+        return lowered;
+    }
+    let kids: Vec<NodeId> = decorators
+        .into_iter()
+        .map(|decorator| lower_decorator(lo, decorator))
+        .collect();
+    lower_decorated_definition(lo, kids, lo.span(node), lo.span(node), lowered)
+}
+
+fn retarget_last_unit_root(lo: &mut Lowering, from: NodeId, to: NodeId) {
+    if let Some(unit) = lo.units.last_mut().filter(|unit| unit.root == from) {
+        unit.root = to;
+    }
 }
 
 pub(super) fn lower_field(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {

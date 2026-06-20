@@ -117,6 +117,9 @@ pub(super) fn lower_value_argument(lo: &mut Lowering, node: TsNode) -> NodeId {
 }
 pub(super) fn lower_navigation(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
+    if lo.text(node).trim_start().starts_with('/') {
+        return lower_case_path(lo, node);
+    }
     let Some(target) = node.child_by_field_name("target") else {
         return lo.raw(node.kind(), span, &[]);
     };
@@ -149,6 +152,16 @@ pub(super) fn lower_navigation(lo: &mut Lowering, node: TsNode) -> NodeId {
         }
     }
     base
+}
+fn lower_case_path(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let source = lo.str_lit(lo.text(node), span);
+    lo.add(
+        NodeKind::Seq,
+        Payload::Name(lo.sym("swift_case_path")),
+        span,
+        &[source],
+    )
 }
 pub(super) fn lower_selector_expression(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);

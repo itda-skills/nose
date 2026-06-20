@@ -52,6 +52,8 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
         }
         "break_statement" => Some(lo.add(NodeKind::Break, Payload::None, span, &[])),
         "continue_statement" => Some(lo.add(NodeKind::Continue, Payload::None, span, &[])),
+        "fallthrough_statement" => Some(lo.raw("fallthrough_statement", span, &[])),
+        "goto_statement" => Some(lower_goto_statement(lo, node)),
         "receive_statement" => Some(lower_receive_statement(lo, node)),
         "send_statement" => Some(lower_send_statement(lo, node)),
         "go_statement" => node.named_child(0).map(|c| {
@@ -66,11 +68,30 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
         }),
         "select_statement" => Some(lower_select_statement(lo, node)),
         "labeled_statement" => {
-            // lower the inner statement, ignore the label
-            Lowering::named_children(node)
-                .into_iter()
+            let children = Lowering::named_children(node);
+            let label = children.iter().find(|child| child.kind() == "label_name");
+            let inner = children
+                .iter()
                 .rev()
-                .find_map(|c| lower_stmt(lo, c))
+                .find(|child| child.kind() != "label_name")
+                .and_then(|child| lower_stmt(lo, *child));
+            match (label, inner) {
+                (Some(label), Some(stmt)) => {
+                    let marker = lo.raw(
+                        &format!("go_label {}", lo.text(*label)),
+                        lo.span(*label),
+                        &[],
+                    );
+                    Some(lo.add(NodeKind::Block, Payload::None, span, &[marker, stmt]))
+                }
+                (Some(label), None) => Some(lo.raw(
+                    &format!("go_label {}", lo.text(*label)),
+                    lo.span(*label),
+                    &[],
+                )),
+                (None, Some(stmt)) => Some(stmt),
+                (None, None) => None,
+            }
         }
         "expression_statement" => {
             let c = node.named_child(0)?;
@@ -95,6 +116,19 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
                 Some(lo.raw(node.kind(), span, &kids))
             }
         }
+    }
+}
+pub(super) fn lower_goto_statement(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let label = Lowering::named_children(node)
+        .into_iter()
+        .find(|child| child.kind() == "label_name")
+        .map(|child| lo.text(child).to_string())
+        .unwrap_or_default();
+    if label.is_empty() {
+        lo.raw("goto_statement", span, &[])
+    } else {
+        lo.raw(&format!("go_goto {label}"), span, &[])
     }
 }
 pub(super) fn lower_send_statement(lo: &mut Lowering, node: TsNode) -> NodeId {

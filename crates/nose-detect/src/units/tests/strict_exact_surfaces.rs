@@ -6,8 +6,8 @@ use crate::strict_exact::{
 use crate::units::fragments::call_may_mutate_blocked_cid;
 use nose_il::{
     stable_symbol_hash, Builtin, EvidenceAnchor, EvidenceId, EvidenceKind, EvidenceStatus, FileId,
-    FileMeta, IlBuilder, Interner, Lang, NodeKind, Payload, SequenceSurfaceKind, SourceFactKind,
-    SourceOperatorKind,
+    FileMeta, IlBuilder, Interner, Lang, NodeKind, Payload, SequenceSurfaceKind, SourceBindingKind,
+    SourceFactKind, SourceOperatorKind, UnitKind,
 };
 use nose_semantics::{
     library_free_function_builtin_contract, library_js_like_set_constructor_contract,
@@ -109,6 +109,77 @@ fn function_binding_safe_raw_builtin_payload_requires_admission() {
     ));
     let facts = StrictFacts::collect(&il, &interner);
     assert!(function_binding_safe(&il, &interner, &facts, call, call));
+}
+
+#[test]
+fn strict_exact_rejects_decorated_definition_source_fact() {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let value = b.add(NodeKind::Lit, Payload::LitInt(1), sp(90), &[]);
+    let ret = b.add(NodeKind::Return, Payload::None, sp(90), &[value]);
+    let body = b.add(NodeKind::Block, Payload::None, sp(90), &[ret]);
+    let func = b.add(NodeKind::Func, Payload::None, sp(90), &[body]);
+    let mut il = b.finish(
+        func,
+        FileMeta {
+            path: "t.ts".into(),
+            lang: Lang::TypeScript,
+        },
+        Vec::new(),
+        Vec::new(),
+    );
+    let facts = StrictFacts::collect(&il, &interner);
+    assert!(strict_exact_safe_tree(&il, &interner, &facts, func));
+
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::source_span(sp(90)),
+        EvidenceKind::Source(SourceFactKind::Binding(
+            SourceBindingKind::DecoratedDefinition,
+        )),
+        Vec::new(),
+    ));
+    let facts = StrictFacts::collect(&il, &interner);
+
+    assert!(
+        !strict_exact_safe_tree(&il, &interner, &facts, func),
+        "decorated definitions can replace the runtime binding and must not be exact-safe"
+    );
+    assert!(
+        !function_binding_safe(&il, &interner, &facts, func, func),
+        "decorated function bindings must not be treated as direct exact targets"
+    );
+}
+
+#[test]
+fn strict_exact_rejects_frontend_decorated_ts_class_unit() {
+    let interner = Interner::new();
+    let il = nose_frontend::lower_source(
+        FileId(0),
+        "t.ts",
+        br#"
+function dec(value: unknown, ctx: unknown) { return value }
+
+@dec
+class Box {
+  value() { return 1 }
+}
+"#,
+        Lang::TypeScript,
+        &interner,
+    )
+    .expect("lower ts");
+    let facts = StrictFacts::collect(&il, &interner);
+    let class = il
+        .units
+        .iter()
+        .find(|unit| unit.kind == UnitKind::Class)
+        .expect("class unit");
+
+    assert!(
+        !strict_exact_safe_tree(&il, &interner, &facts, class.root),
+        "frontend decorated class units must be rooted at a decorated-definition boundary"
+    );
 }
 
 #[test]

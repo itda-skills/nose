@@ -7,6 +7,9 @@ pub(crate) fn function_binding_safe(
     root: NodeId,
     node: NodeId,
 ) -> bool {
+    if facts.decorated_definition_span(il.node(node).span) {
+        return false;
+    }
     match il.kind(node) {
         NodeKind::Raw
         | NodeKind::HoF
@@ -39,6 +42,9 @@ pub(crate) fn strict_exact_safe_tree(
     facts: &StrictFacts,
     node: NodeId,
 ) -> bool {
+    if facts.decorated_definition_span(il.node(node).span) {
+        return false;
+    }
     match il.kind(node) {
         NodeKind::Raw => false,
         // Declarative (CSS) units are constant, deterministic, effect-free data. A rule

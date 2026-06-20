@@ -22,10 +22,13 @@ use control::{
     lower_aug_assignment, lower_for_c, lower_for_in, lower_if, lower_switch, lower_try,
     lower_update, lower_while,
 };
-use declarations::{lower_class, lower_field, lower_func, lower_var_decl};
+use declarations::{
+    lower_class, lower_class_static_block, lower_decorated_definition, lower_decorator,
+    lower_field, lower_func, lower_own_decorated_definition, lower_var_decl,
+};
 use expressions::lower_expr;
 use imports::{is_exportable_decl, lower_static_import};
-use nose_il::{FileId, Il, Interner, Lang, NodeId, NodeKind, Payload};
+use nose_il::{FileId, Il, Interner, Lang, NodeId, NodeKind, Payload, Span};
 use tree_sitter::Node as TsNode;
 use types::lower_type_decl;
 
@@ -63,11 +66,53 @@ pub(crate) fn lower(
 }
 
 fn lower_program(lo: &mut Lowering, node: TsNode) -> NodeId {
-    crate::lower::collect_into(lo, node, NodeKind::Module, |lo, c| lower_stmt(lo, c, false))
+    lower_stmt_list(lo, node, NodeKind::Module, false)
 }
 
 pub(super) fn lower_block(lo: &mut Lowering, node: TsNode) -> NodeId {
-    crate::lower::collect_into(lo, node, NodeKind::Block, |lo, c| lower_stmt(lo, c, false))
+    lower_stmt_list(lo, node, NodeKind::Block, false)
+}
+
+pub(super) fn lower_stmt_list(
+    lo: &mut Lowering,
+    node: TsNode,
+    kind: NodeKind,
+    in_class: bool,
+) -> NodeId {
+    let span = lo.span(node);
+    let mut stmts = Vec::new();
+    let mut pending_decorators = Vec::new();
+    let mut decorator_span: Option<Span> = None;
+    for child in Lowering::named_children(node) {
+        if child.kind() == "decorator" {
+            decorator_span = Some(match decorator_span {
+                Some(existing) => existing.merge(lo.span(child)),
+                None => lo.span(child),
+            });
+            pending_decorators.push(lower_decorator(lo, child));
+            continue;
+        }
+        if let Some(stmt) = lower_stmt(lo, child, in_class) {
+            if pending_decorators.is_empty() {
+                stmts.push(stmt);
+            } else {
+                let kids = std::mem::take(&mut pending_decorators);
+                let decorated_span = decorator_span.take().unwrap_or(span).merge(lo.span(child));
+                stmts.push(lower_decorated_definition(
+                    lo,
+                    kids,
+                    lo.span(child),
+                    decorated_span,
+                    stmt,
+                ));
+            }
+        } else if !pending_decorators.is_empty() {
+            stmts.extend(std::mem::take(&mut pending_decorators));
+            decorator_span = None;
+        }
+    }
+    stmts.extend(pending_decorators);
+    lo.add(kind, Payload::None, span, &stmts)
 }
 
 pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode, in_class: bool) -> Option<NodeId> {
@@ -76,10 +121,16 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode, in_class: bool) -> Opt
         "function_declaration"
         | "generator_function_declaration"
         | "function_expression"
-        | "generator_function" => Some(lower_func(lo, node, in_class)),
+        | "generator_function" => {
+            let out = lower_func(lo, node, in_class);
+            Some(lower_own_decorated_definition(lo, node, out))
+        }
         // ambient declarations without bodies - no behavior to model
         "function_signature" => None,
-        "method_definition" => Some(lower_func(lo, node, true)),
+        "method_definition" => {
+            let out = lower_func(lo, node, true);
+            Some(lower_own_decorated_definition(lo, node, out))
+        }
         "class_declaration" | "class" | "abstract_class_declaration" => Some(lower_class(lo, node)),
         "lexical_declaration" | "variable_declaration" => Some(lower_var_decl(lo, node)),
         "if_statement" => Some(lower_if(lo, node)),
@@ -105,6 +156,8 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode, in_class: bool) -> Opt
         "break_statement" => Some(lo.add(NodeKind::Break, Payload::None, span, &[])),
         "continue_statement" => Some(lo.add(NodeKind::Continue, Payload::None, span, &[])),
         "statement_block" => Some(lower_block(lo, node)),
+        "class_static_block" => Some(lower_class_static_block(lo, node)),
+        "decorator" => Some(lower_decorator(lo, node)),
         // `label: stmt` (loop/block label) - lower the inner statement, drop the label.
         "labeled_statement" => Lowering::named_children(node)
             .into_iter()
@@ -152,7 +205,10 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode, in_class: bool) -> Opt
         // legacy `<!-- -->` HTML comments are valid JS tokens (common in <script> blocks)
         | "html_comment" => None,
         // class fields when walking a class body
-        "field_definition" | "public_field_definition" => lower_field(lo, node),
+        "field_definition" | "public_field_definition" => {
+            let out = lower_field(lo, node);
+            out.map(|id| lower_own_decorated_definition(lo, node, id))
+        }
         // Anything else in statement position: treat as an expression statement
         // (lower_expr has its own Raw fallback for genuinely unknown nodes).
         _ => {

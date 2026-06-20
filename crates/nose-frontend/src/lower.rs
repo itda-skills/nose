@@ -27,8 +27,11 @@ pub(crate) const PROTOCOL_BOUNDARY_TAGS: &[&str] = &[
 /// Raw surfaces that are intentionally retained as non-runtime syntax/preprocessor
 /// boundaries. They are not source protocol/effect boundaries, but they also are
 /// not actionable lowering gaps.
-pub(crate) const INTENTIONAL_RAW_BOUNDARY_TAGS: &[&str] =
-    &["availability_condition", "macro_rule_body"];
+pub(crate) const INTENTIONAL_RAW_BOUNDARY_TAGS: &[&str] = &[
+    "availability_condition",
+    "fallthrough_statement",
+    "macro_rule_body",
+];
 
 /// Whether a `Raw` node's surface tag is a deliberate protocol boundary (vs a lowering gap).
 #[must_use]
@@ -40,7 +43,14 @@ pub(crate) fn is_protocol_boundary_tag(tag: &str) -> bool {
 /// lowering gap.
 #[must_use]
 pub(crate) fn is_intentional_raw_boundary_tag(tag: &str) -> bool {
-    is_protocol_boundary_tag(tag) || INTENTIONAL_RAW_BOUNDARY_TAGS.contains(&tag)
+    is_protocol_boundary_tag(tag)
+        || INTENTIONAL_RAW_BOUNDARY_TAGS.contains(&tag)
+        || tag.starts_with("go_goto ")
+        || tag.starts_with("go_label ")
+        || tag.starts_with("swift_labeled_break ")
+        || tag.starts_with("swift_labeled_continue ")
+        || tag.starts_with("swift_statement_label ")
+        || tag.starts_with("type_case ")
 }
 
 use crate::type_domain_aliases::{

@@ -110,13 +110,25 @@ pub(super) fn lower_if(lo: &mut Lowering, node: TsNode) -> NodeId {
 pub(super) fn lower_cond(lo: &mut Lowering, node: TsNode) -> NodeId {
     match node.kind() {
         "let_condition" => lower_let_condition(lo, node),
-        "let_chain" => node
-            .child_by_field_name("value")
-            .or_else(|| node.named_child(node.named_child_count().saturating_sub(1)))
-            .map(|v| lower_expr(lo, v))
-            .unwrap_or_else(|| lower_expr(lo, node)),
+        "let_chain" => lower_let_chain(lo, node),
         _ => lower_expr(lo, node),
     }
+}
+pub(super) fn lower_let_chain(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let mut tests: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .filter(|child| !is_type_level(child.kind()))
+        .map(|child| lower_cond(lo, child))
+        .collect();
+    if tests.is_empty() {
+        return lo.empty_block(span);
+    }
+    let mut acc = tests.remove(0);
+    for test in tests {
+        acc = lo.add(NodeKind::BinOp, Payload::Op(Op::And), span, &[acc, test]);
+    }
+    acc
 }
 pub(super) fn lower_let_condition(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);

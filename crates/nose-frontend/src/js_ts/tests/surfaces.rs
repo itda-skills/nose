@@ -1,4 +1,7 @@
-use super::support::{lower_ts_with_interner, raw_names};
+use super::support::{
+    lower_ts_with_interner, raw_names, seq_names, source_binding_count, unit_root_seq_names,
+};
+use nose_il::{SourceBindingKind, UnitKind};
 
 #[test]
 fn ts_object_opaque_surfaces_do_not_cascade_raw_wrappers() {
@@ -34,4 +37,112 @@ function build(rest: object, key: string, target: Record<string, number>) {
             "{unexpected} should lower to exact-closed structured IL, got {raw:?}"
         );
     }
+}
+
+#[test]
+fn ts_decorators_lower_to_structured_surfaces_and_binding_facts() {
+    let (il, interner) = lower_ts_with_interner(
+        r#"
+function dec(value: unknown, ctx: unknown) { return value }
+
+@dec
+class Box {
+  static { Box.ready = true }
+  @dec value = 1
+  @dec method() { return this.value }
+}
+"#,
+    );
+    let raw = raw_names(&il, &interner);
+    for unexpected in [
+        "decorator",
+        "class_static_block",
+        "statement_block",
+        "expression_statement",
+    ] {
+        assert!(
+            !raw.iter().any(|name| name == unexpected),
+            "{unexpected} should not remain Raw after TS decorator lowering: {raw:?}"
+        );
+    }
+
+    let seq = seq_names(&il, &interner);
+    assert!(
+        seq.iter()
+            .filter(|name| name.as_str() == "js_decorator")
+            .count()
+            >= 3,
+        "decorator expressions should be preserved as exact-closed JS/TS surfaces: {seq:?}"
+    );
+    assert!(
+        seq.iter().any(|name| name == "js_class_static_block"),
+        "class static block should be an exact-closed surface: {seq:?}"
+    );
+    assert!(
+        source_binding_count(&il, SourceBindingKind::DecoratedDefinition) >= 3,
+        "decorated definitions should record binding source facts"
+    );
+    assert!(
+        unit_root_seq_names(&il, &interner, UnitKind::Class)
+            .iter()
+            .any(|name| name == "js_decorated_definition"),
+        "decorated class units must be rooted at the decorator wrapper"
+    );
+}
+
+#[test]
+fn ts_skipped_decorated_type_member_does_not_decorate_next_member() {
+    let (il, interner) = lower_ts_with_interner(
+        r#"
+function dec(value: unknown, ctx: unknown) { return value }
+
+abstract class Base {
+  @dec abstract missing(): number
+  run() { return 1 }
+}
+"#,
+    );
+
+    let seq = seq_names(&il, &interner);
+    assert!(
+        !seq.iter().any(|name| name == "js_decorated_definition"),
+        "decorators on erased type-only members must not attach to the next runtime member: {seq:?}"
+    );
+    assert_eq!(
+        source_binding_count(&il, SourceBindingKind::DecoratedDefinition),
+        0,
+        "erased type-only members should not emit decorated runtime binding facts"
+    );
+}
+
+#[test]
+fn ts_decorated_class_expression_preserves_decorator_and_unit_boundary() {
+    let (il, interner) = lower_ts_with_interner(
+        r#"
+function dec(value: unknown, ctx: unknown) { return value }
+const Box = @dec class Box {
+  value() { return 1 }
+}
+"#,
+    );
+    let raw = raw_names(&il, &interner);
+    assert!(
+        !raw.iter().any(|name| name == "decorator"),
+        "class-expression decorators should not remain Raw: {raw:?}"
+    );
+    let seq = seq_names(&il, &interner);
+    assert!(
+        seq.iter().any(|name| name == "js_decorated_definition"),
+        "decorated class expressions should preserve their decorator surface: {seq:?}"
+    );
+    assert!(
+        unit_root_seq_names(&il, &interner, UnitKind::Class)
+            .iter()
+            .any(|name| name == "js_decorated_definition"),
+        "decorated class-expression units must be rooted at the decorator wrapper"
+    );
+    assert!(
+        source_binding_count(&il, SourceBindingKind::DecoratedDefinition) >= 1,
+        "decorated class expressions should record binding source facts"
+    );
 }

@@ -5,8 +5,9 @@
 //! orchestration in `units.rs`; proof policy lives here.
 
 use nose_il::{
-    stable_symbol_hash, Builtin, CallTargetEvidenceKind, HoFKind, Il, Interner, Lang, LitClass,
-    NodeId, NodeKind, Op, Payload, SourceComprehensionKind, Symbol,
+    stable_symbol_hash, Builtin, CallTargetEvidenceKind, EvidenceAnchor, EvidenceKind, HoFKind, Il,
+    Interner, Lang, LitClass, NodeId, NodeKind, Op, Payload, SourceBindingKind,
+    SourceComprehensionKind, SourceFactKind, Span, Symbol,
 };
 use nose_normalize::module_facts::collect_module_mutations;
 use nose_semantics::{

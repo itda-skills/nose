@@ -99,6 +99,7 @@ fn type_switch_case_types_do_not_leak_into_case_bodies() {
             && raw.iter().any(|name| name == "type_case Other"),
         "type switch tests should remain explicit fail-closed conditions: {raw:?}"
     );
+    assert!(crate::is_intentional_raw_boundary_tag("type_case *Thing"));
     assert!(
         !raw.iter().any(|name| matches!(
             name.as_str(),
@@ -106,6 +107,35 @@ fn type_switch_case_types_do_not_leak_into_case_bodies() {
         )),
         "type switch case body should not include type-only Raw nodes: {raw:?}"
     );
+}
+
+#[test]
+fn fallthrough_and_goto_preserve_fail_closed_control_flow_boundaries() {
+    let raw = raw_names(
+        "package main\nfunc f(x int) int { switch x { case 3: fallthrough; case 2: return 2 }; goto done; done: return 1 }\n",
+    );
+    assert!(
+        raw.iter().any(|name| name == "fallthrough_statement"),
+        "fallthrough should remain an explicit CFG boundary: {raw:?}"
+    );
+    assert!(
+        raw.iter().any(|name| name == "go_goto done"),
+        "goto should preserve its target label spelling: {raw:?}"
+    );
+    assert!(
+        raw.iter().any(|name| name == "go_label done"),
+        "label definitions should preserve their spelling: {raw:?}"
+    );
+    assert!(
+        !raw.iter()
+            .any(|name| name == "label_name" || name == "goto_statement"),
+        "goto lowering should not leak parser-only label nodes: {raw:?}"
+    );
+    assert!(crate::is_intentional_raw_boundary_tag(
+        "fallthrough_statement"
+    ));
+    assert!(crate::is_intentional_raw_boundary_tag("go_goto done"));
+    assert!(crate::is_intentional_raw_boundary_tag("go_label done"));
 }
 
 #[test]

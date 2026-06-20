@@ -3,6 +3,7 @@ use super::*;
 pub(crate) struct StrictFacts<'a> {
     immutable_names: FxHashSet<Symbol>,
     function_roots: FxHashSet<NodeId>,
+    decorated_definition_spans: FxHashSet<Span>,
     receiver_domains: ReceiverDomainEvidenceIndex<'a>,
 }
 
@@ -11,8 +12,10 @@ impl<'a> StrictFacts<'a> {
         let mut facts = StrictFacts {
             immutable_names: FxHashSet::default(),
             function_roots: FxHashSet::default(),
+            decorated_definition_spans: FxHashSet::default(),
             receiver_domains: ReceiverDomainEvidenceIndex::new(il, interner),
         };
+        facts.collect_decorated_definition_spans(il);
         facts.collect_immutable_bindings(il, interner);
         facts.collect_function_bindings(il, interner);
         facts
@@ -46,6 +49,26 @@ impl<'a> StrictFacts<'a> {
     ) -> bool {
         self.receiver_domains
             .receiver_satisfies_domain(receiver, requirement)
+    }
+
+    pub(super) fn decorated_definition_span(&self, span: Span) -> bool {
+        self.decorated_definition_spans.contains(&span)
+    }
+
+    fn collect_decorated_definition_spans(&mut self, il: &Il) {
+        for record in &il.evidence {
+            if !matches!(
+                record.kind,
+                EvidenceKind::Source(SourceFactKind::Binding(
+                    SourceBindingKind::DecoratedDefinition
+                ))
+            ) {
+                continue;
+            }
+            if let EvidenceAnchor::SourceSpan(span) = record.anchor {
+                self.decorated_definition_spans.insert(span);
+            }
+        }
     }
 
     fn collect_immutable_bindings(&mut self, il: &Il, interner: &Interner) {

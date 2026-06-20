@@ -305,9 +305,11 @@ pub(super) fn swift_is_nested_type_decl(kind: &str) -> bool {
 pub(super) fn swift_decl_name(lo: &mut Lowering, node: TsNode) -> Option<Symbol> {
     node.child_by_field_name("name")
         .or_else(|| {
-            Lowering::named_children(node)
-                .into_iter()
-                .find(|child| matches!(child.kind(), "simple_identifier" | "identifier"))
+            Lowering::named_children(node).into_iter().find(|child| {
+                matches!(child.kind(), "simple_identifier" | "identifier")
+                    || child.kind() == "custom_operator"
+                    || is_swift_operator_token_kind(child.kind())
+            })
         })
         .map(|name| lo.sym(lo.text(name)))
 }

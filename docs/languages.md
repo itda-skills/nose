@@ -183,10 +183,10 @@ is better. `nose stats` distinguishes genuine **lowering-gap** Raw from by-desig
 channel operations, select, yield), plus syntax/preprocessor boundaries that must
 stay fail-closed (for example Rust `macro_rule_body` and Swift availability checks).
 It reports `boundary_raw` and tags each unhandled construct `boundary` or `gap`. On
-the current pinned `bench/repos` corpus, after the 2026-06-20 Ruby/Rust/Swift
-high-impact lowering pass, `nose stats` reports 46,107,930 IL nodes and
-182,575 Raw nodes (0.396%): 65,429 lowering gaps plus 117,146 intentional
-boundaries. That puts fixable lowering-gap Raw at about 0.142% corpus-wide; re-run
+the current pinned `bench/repos` corpus, after the 2026-06-20 Rust/TypeScript/Swift/Go
+high-impact lowering pass, `nose stats` reports 46,110,621 IL nodes and
+181,552 Raw nodes (0.394%): 61,092 lowering gaps plus 120,460 intentional
+boundaries. That puts fixable lowering-gap Raw at about 0.133% corpus-wide; re-run
 `nose stats` for the current figure, with language-specific gaps visible per
 construct. Check it per language with:
 
@@ -200,11 +200,12 @@ gaps is how a language becomes a first-class citizen — for example, the Go
 composite-literal/`slice_expression`/`type_assertion` work that took Go from
 0.40% to 0.03%, lowering Rust and Python `match` arms to if-chains so
 pattern-matched code converges with its conditional equivalent, or the Swift
-pattern/key-path/directive/`if case`/ternary/catch/selector/typealias work, Ruby
-rescue/string/lambda/operator/`case` work, Go type-switch/`iota` work, Python
-line-continuation, Java declaration/module, Rust nested constructor-pattern and
-macro/path/shorthand-pattern surfaces, JS/TS object-surface, C type/preprocessor recovery, and
-CSS extension-surface tranches recorded in [experiments](experiments.md). The log records the
+pattern/key-path/directive/`if case`/ternary/catch/selector/typealias/operator-label work, Ruby
+rescue/string/lambda/operator/`case` work, Go type-switch/`iota`/label/goto/fallthrough work,
+TypeScript decorator/static-block work, Python line-continuation, Java declaration/module, Rust
+nested constructor-pattern and macro/path/shorthand-pattern/`let`-chain surfaces, JS/TS
+object-surface, C type/preprocessor recovery, and CSS extension-surface tranches recorded in
+[experiments](experiments.md). The log records the
 full sequence of gap closures (Java records, Rust `async` blocks, Go/JS/TS/C/Java/Ruby/Swift
 `switch`/`case` shapes, and more); the
 convergence-test discipline that keeps each one honest is in

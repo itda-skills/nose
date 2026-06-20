@@ -41,6 +41,7 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
         "repeat_while_statement" => Some(lower_repeat_while(lo, node)),
         "do_statement" => Some(lower_do(lo, node)),
         "directive" => Some(lower_directive(lo, node)),
+        "statement_label" => Some(lower_statement_label(lo, node)),
         "discard_statement" | "typealias_declaration" | "associatedtype_declaration" => None,
         "line_comment" | "multiline_comment" => None,
         k if is_expr_kind(k) => {
@@ -106,12 +107,39 @@ pub(super) fn lower_control_transfer(lo: &mut Lowering, node: TsNode) -> Option<
         return Some(lo.add(NodeKind::Throw, Payload::None, span, &kids));
     }
     if text.starts_with("break") {
+        if let Some(label) = swift_control_transfer_label(text, "break") {
+            return Some(lo.raw(&format!("swift_labeled_break {label}"), span, &[]));
+        }
         return Some(lo.add(NodeKind::Break, Payload::None, span, &[]));
     }
     if text.starts_with("continue") {
+        if let Some(label) = swift_control_transfer_label(text, "continue") {
+            return Some(lo.raw(&format!("swift_labeled_continue {label}"), span, &[]));
+        }
         return Some(lo.add(NodeKind::Continue, Payload::None, span, &[]));
     }
     None
+}
+pub(super) fn lower_statement_label(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let label = lo.text(node).trim().trim_end_matches(':').trim();
+    if label.is_empty() {
+        lo.raw("statement_label", span, &[])
+    } else {
+        lo.raw(&format!("swift_statement_label {label}"), span, &[])
+    }
+}
+pub(super) fn swift_control_transfer_label<'a>(text: &'a str, keyword: &str) -> Option<&'a str> {
+    let rest = text.trim_start().strip_prefix(keyword)?.trim_start();
+    if rest.is_empty() {
+        return None;
+    }
+    let label = rest
+        .split(|ch: char| ch.is_whitespace() || ch == ';')
+        .next()
+        .unwrap_or("")
+        .trim_end_matches(':');
+    (!label.is_empty()).then_some(label)
 }
 pub(super) fn lower_assignment(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);

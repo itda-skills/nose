@@ -1,7 +1,7 @@
 use nose_il::{
     stable_symbol_hash, EvidenceAnchor, EvidenceKind, FileId, GuardEvidenceKind, Il, Interner,
-    Lang, LibraryApiEvidenceKind, NodeId, NodeKind, Op, Payload, SourceFactKind,
-    SourceOperatorKind, Span, SymbolEvidenceKind,
+    Lang, LibraryApiEvidenceKind, NodeId, NodeKind, Op, Payload, SourceBindingKind, SourceFactKind,
+    SourceOperatorKind, Span, SymbolEvidenceKind, UnitKind,
 };
 
 pub(super) fn lower_js(src: &str) -> Il {
@@ -41,6 +41,49 @@ pub(super) fn raw_names(il: &Il, interner: &Interner) -> Vec<String> {
         out.push(interner.resolve(name).to_string());
     }
     out
+}
+
+pub(super) fn seq_names(il: &Il, interner: &Interner) -> Vec<String> {
+    let mut out = Vec::new();
+    for node in &il.nodes {
+        if node.kind != NodeKind::Seq {
+            continue;
+        }
+        let Payload::Name(name) = node.payload else {
+            continue;
+        };
+        out.push(interner.resolve(name).to_string());
+    }
+    out
+}
+
+pub(super) fn unit_root_seq_names(il: &Il, interner: &Interner, kind: UnitKind) -> Vec<String> {
+    il.units
+        .iter()
+        .filter(|unit| unit.kind == kind)
+        .filter_map(|unit| {
+            let node = il.node(unit.root);
+            if node.kind != NodeKind::Seq {
+                return None;
+            }
+            let Payload::Name(name) = node.payload else {
+                return None;
+            };
+            Some(interner.resolve(name).to_string())
+        })
+        .collect()
+}
+
+pub(super) fn source_binding_count(il: &Il, binding: SourceBindingKind) -> usize {
+    il.evidence
+        .iter()
+        .filter(|record| {
+            matches!(
+                record.kind,
+                EvidenceKind::Source(SourceFactKind::Binding(actual)) if actual == binding
+            )
+        })
+        .count()
 }
 
 pub(super) fn unshadowed_global_evidence_count(il: &Il, name: &str) -> usize {

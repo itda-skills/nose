@@ -187,6 +187,44 @@ fn guarded_match_combines_pattern_and_guard() {
 }
 
 #[test]
+fn let_chain_preserves_all_conjuncts_without_raw_let_condition() {
+    let src = "fn f(value: Option<i32>, ready: bool) { if ready && let Some(x) = value && x > 0 { work(x); } }";
+    let (interner, il) = lower_rust(src);
+
+    let raw = raw_names(&il, &interner);
+    assert!(
+        !raw.iter().any(|name| name == "let_condition"),
+        "let-condition inside a chain should lower structurally: {raw:?}"
+    );
+    let ops = binop_ops(&il);
+    assert!(
+        ops.iter().filter(|&&op| op == Op::And).count() >= 2,
+        "let-chain should keep every boolean conjunct, got {ops:?}"
+    );
+    assert!(
+        ops.iter().any(|&op| op == Op::Eq),
+        "let-chain should preserve the pattern test as equality-style matching, got {ops:?}"
+    );
+}
+
+#[test]
+fn leading_if_let_chain_condition_is_not_dropped() {
+    let src = "fn f(value: Option<i32>) { if let Some(x) = value && x > 0 { work(x); } }";
+    let (interner, il) = lower_rust(src);
+
+    let raw = raw_names(&il, &interner);
+    assert!(
+        !raw.iter().any(|name| name == "let_condition"),
+        "leading let-condition should not fall back to Raw: {raw:?}"
+    );
+    let ops = binop_ops(&il);
+    assert!(
+        ops.iter().any(|&op| op == Op::And) && ops.iter().any(|&op| op == Op::Eq),
+        "leading if-let chain should keep both the pattern test and trailing guard, got {ops:?}"
+    );
+}
+
+#[test]
 fn panic_macro_lowers_to_throw() {
     let src = "fn f(x: i32) -> i32 { if x < 0 { panic!(); } x }";
     let (_, il) = lower_rust(src);
