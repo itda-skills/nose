@@ -28,6 +28,9 @@ pub(super) fn lower_params(lo: &mut Lowering, params: TsNode, out: &mut Vec<Node
 pub(super) fn lower_var_decl(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let mut assigns = Vec::new();
+    let is_const = node.kind() == "const_declaration";
+    let mut const_ordinal = 0usize;
+    let mut previous_const_value: Option<TsNode> = None;
     for spec in Lowering::named_children(node) {
         if !matches!(spec.kind(), "var_spec" | "const_spec" | "var_spec_list") {
             continue;
@@ -35,17 +38,33 @@ pub(super) fn lower_var_decl(lo: &mut Lowering, node: TsNode) -> NodeId {
         let sspan = lo.span(spec);
         let mut cur = spec.walk();
         let names: Vec<TsNode> = spec.children_by_field_name("name", &mut cur).collect();
-        let value = spec.child_by_field_name("value");
-        let rhs = match value {
-            Some(v) => v.named_child(0).map(|x| lower_expr(lo, x)),
-            None => None,
+        let value_node = spec
+            .child_by_field_name("value")
+            .and_then(|v| v.named_child(0));
+        let rhs_node = if is_const {
+            value_node.or(previous_const_value)
+        } else {
+            value_node
         };
         for n in names {
             let nspan = lo.span(n);
             let lhs = lo.var(lo.text(n), nspan);
-            let r = rhs
+            let r = rhs_node
+                .map(|value| {
+                    if is_const {
+                        lower_expr_with_iota(lo, value, Some(const_ordinal))
+                    } else {
+                        lower_expr(lo, value)
+                    }
+                })
                 .unwrap_or_else(|| lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), nspan, &[]));
             assigns.push(lo.add(NodeKind::Assign, Payload::None, sspan, &[lhs, r]));
+        }
+        if is_const {
+            if value_node.is_some() {
+                previous_const_value = value_node;
+            }
+            const_ordinal += 1;
         }
     }
     if assigns.len() == 1 {

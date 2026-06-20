@@ -45,6 +45,77 @@ fn binary_ops(src: &str) -> Vec<Op> {
         .collect()
 }
 
+fn raw_name_set(src: &str) -> Vec<String> {
+    let mut raw = raw_names(src);
+    raw.sort();
+    raw.dedup();
+    raw
+}
+
+fn raw_names(src: &str) -> Vec<String> {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.rb", src.as_bytes(), &interner).expect("lower");
+    il.nodes
+        .iter()
+        .filter(|node| node.kind == NodeKind::Raw)
+        .filter_map(|node| match node.payload {
+            Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn node_kinds(src: &str) -> Vec<NodeKind> {
+    nodes(src).into_iter().map(|node| node.kind).collect()
+}
+
+fn has_post_test_loop_block(src: &str) -> bool {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.rb", src.as_bytes(), &interner).expect("lower");
+    il.nodes.iter().enumerate().any(|(idx, node)| {
+        if node.kind != NodeKind::Block {
+            return false;
+        }
+        let children = il.children(NodeId(idx as u32));
+        children.len() >= 2
+            && children
+                .last()
+                .is_some_and(|last| il.node(*last).kind == NodeKind::Loop)
+    })
+}
+
+fn func_body_kinds(src: &str) -> Vec<NodeKind> {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.rb", src.as_bytes(), &interner).expect("lower");
+    il.nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, node)| node.kind == NodeKind::Func)
+        .filter_map(|(idx, _)| il.children(NodeId(idx as u32)).last().copied())
+        .map(|body| il.node(body).kind)
+        .collect()
+}
+
+fn var_names(src: &str) -> Vec<String> {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.rb", src.as_bytes(), &interner).expect("lower");
+    il.nodes
+        .iter()
+        .filter(|node| node.kind == NodeKind::Var)
+        .filter_map(|node| match node.payload {
+            Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn raw_names_without_errors(src: &str) -> Vec<String> {
+    raw_names(src)
+        .into_iter()
+        .filter(|name| name != "ERROR")
+        .collect()
+}
+
 fn expr_stmt_ints(src: &str) -> Vec<i64> {
     let interner = Interner::new();
     let il = lower(FileId(0), "t.rb", src.as_bytes(), &interner).expect("lower");
@@ -63,6 +134,120 @@ fn expr_stmt_ints(src: &str) -> Vec<i64> {
             }
         })
         .collect()
+}
+
+#[test]
+fn method_body_rescue_and_ensure_lower_as_try_without_clause_raw() {
+    let src = "def f\n  work\nrescue Error => e then recover(e)\nensure\n  cleanup\nend\n";
+    let raw = raw_names(src);
+    assert!(
+        !raw.iter().any(|name| matches!(
+            name.as_str(),
+            "rescue" | "ensure" | "then" | "exceptions" | "exception_variable"
+        )),
+        "method-level exception clauses should lower without clause Raw nodes: {raw:?}"
+    );
+    assert!(
+        node_kinds(src).contains(&NodeKind::Try),
+        "method-level exception clauses should lower to Try"
+    );
+    assert_eq!(
+        func_body_kinds(src),
+        vec![NodeKind::Block],
+        "method body should keep the Func(..., Block) shape"
+    );
+    let vars = var_names(src);
+    assert!(
+        vars.iter().any(|name| name == "recover") && vars.iter().any(|name| name == "cleanup"),
+        "rescue/ensure handler bodies should be preserved: {vars:?}"
+    );
+}
+
+#[test]
+fn ruby_value_surfaces_do_not_fall_to_raw() {
+    let raw = raw_names_without_errors(
+        "def f\n  @@count = ?x\n  path = %x(echo hi).chop rescue ''\n  tick while ready?\n  spin until done?\nend\n",
+    );
+    assert!(
+        raw.is_empty(),
+        "class variables, character literals, subshells, rescue modifiers, and loop modifiers should lower without Raw: {raw:?}"
+    );
+    let kinds = node_kinds(
+        "def f\n  @@count = ?x\n  path = %x(echo hi).chop rescue ''\n  tick while ready?\n  spin until done?\nend\n",
+    );
+    assert!(
+        kinds.contains(&NodeKind::Try),
+        "rescue modifier should lower to Try"
+    );
+    assert!(
+        kinds.contains(&NodeKind::Loop),
+        "while/until modifiers should lower to Loop"
+    );
+}
+
+#[test]
+fn begin_end_loop_modifiers_keep_post_test_shape() {
+    assert!(
+        has_post_test_loop_block("def f\n  begin\n    tick\n  end while ready?\nend\n"),
+        "begin/end while modifier should execute the body before the loop test"
+    );
+    assert!(
+        has_post_test_loop_block("def f\n  begin\n    tick\n  end until done?\nend\n"),
+        "begin/end until modifier should execute the body before the loop test"
+    );
+}
+
+#[test]
+fn interpolated_strings_keep_static_chunks_without_raw_wrappers() {
+    let raw = raw_name_set("value = :\"authenticate_#{scope}!\"\nother = \"current_#{scope}\"\n");
+    assert!(
+        !raw.iter().any(|name| matches!(
+            name.as_str(),
+            "delimited_symbol" | "string_content" | "interpolation"
+        )),
+        "interpolated strings and symbols should not leak parser wrappers: {raw:?}"
+    );
+
+    let str_count = nodes("value = :\"authenticate_#{scope}!\"\n")
+        .iter()
+        .filter(|node| matches!(node.payload, Payload::LitStr(_)))
+        .count();
+    assert!(
+        str_count >= 2,
+        "static interpolation chunks should be retained as string literals"
+    );
+}
+
+#[test]
+fn arrow_lambda_lowers_without_lambda_raw() {
+    let raw = raw_name_set("handler = ->(env) { env }\n");
+    assert!(
+        !raw.iter()
+            .any(|name| matches!(name.as_str(), "lambda" | "lambda_parameters")),
+        "arrow lambda should lower to Lambda/Param/Block without Raw: {raw:?}"
+    );
+    let kinds = node_kinds("handler = ->(env) { env }\n");
+    assert!(kinds.contains(&NodeKind::Lambda));
+    assert!(kinds.contains(&NodeKind::Param));
+}
+
+#[test]
+fn ruby_binary_keywords_lower_and_unmapped_ops_keep_operator_identity() {
+    let ops = binary_ops("x = a and b\ny = a or b\n");
+    assert!(
+        ops.contains(&Op::And),
+        "keyword and should lower to And: {ops:?}"
+    );
+    assert!(
+        ops.contains(&Op::Or),
+        "keyword or should lower to Or: {ops:?}"
+    );
+
+    let raw = raw_name_set("x = a <=> b\ny = c === d\n");
+    assert!(
+        raw.contains(&"binary <=>".to_string()) && raw.contains(&"binary ===".to_string()),
+        "unmapped Ruby operators should stay distinct in Raw names: {raw:?}"
+    );
 }
 
 #[test]

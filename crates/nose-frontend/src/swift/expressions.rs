@@ -481,6 +481,35 @@ pub(super) fn lower_ternary(lo: &mut Lowering, node: TsNode) -> NodeId {
             let els = lo.add(NodeKind::Block, Payload::None, span, &[*no]);
             lo.add(NodeKind::If, Payload::None, span, &[*cond, then, els])
         }
+        [cond, branch] => lower_ternary_with_implicit_nil(lo, node, span, *cond, *branch)
+            .unwrap_or_else(|| lo.raw("ternary_expression", span, &kids)),
         _ => lo.raw("ternary_expression", span, &kids),
     }
+}
+pub(super) fn lower_ternary_with_implicit_nil(
+    lo: &mut Lowering,
+    node: TsNode,
+    span: Span,
+    cond: NodeId,
+    branch: NodeId,
+) -> Option<NodeId> {
+    let text = lo.text(node);
+    let question = text.find('?')?;
+    let colon = text.rfind(':')?;
+    if question >= colon {
+        return None;
+    }
+    let yes_text = text[question + 1..colon].trim();
+    let no_text = text[colon + 1..].trim();
+    let null = lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[]);
+    let (yes, no) = if yes_text == "nil" {
+        (null, branch)
+    } else if no_text == "nil" {
+        (branch, null)
+    } else {
+        return None;
+    };
+    let then = lo.add(NodeKind::Block, Payload::None, span, &[yes]);
+    let els = lo.add(NodeKind::Block, Payload::None, span, &[no]);
+    Some(lo.add(NodeKind::If, Payload::None, span, &[cond, then, els]))
 }

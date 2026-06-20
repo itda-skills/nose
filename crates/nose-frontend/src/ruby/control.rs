@@ -133,9 +133,8 @@ pub(super) fn lower_begin(lo: &mut Lowering, node: TsNode) -> NodeId {
             "else" => {
                 for s in Lowering::named_children(c) {
                     if matches!(s.kind(), "exceptions" | "exception_variable" | "then") {
-                        continue;
-                    }
-                    if let Some(id) = lower_stmt(lo, s) {
+                        extend_clause_statements(lo, s, &mut body);
+                    } else if let Some(id) = lower_stmt(lo, s) {
                         body.push(id);
                     }
                 }
@@ -153,19 +152,30 @@ pub(super) fn lower_begin(lo: &mut Lowering, node: TsNode) -> NodeId {
     lo.add(NodeKind::Try, Payload::None, span, &kids)
 }
 /// A `rescue`/`ensure`/`else` clause → a `Block` of its statements (its exception-type
-/// list and `then` keyword carry no behavior and are skipped).
+/// list and exception variable carry no behavior; a `then` wrapper is erased while
+/// preserving its body.
 pub(super) fn lower_clause_body(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let mut stmts = Vec::new();
     for c in Lowering::named_children(node) {
-        if matches!(c.kind(), "exceptions" | "exception_variable" | "then") {
-            continue;
-        }
-        if let Some(s) = lower_stmt(lo, c) {
-            stmts.push(s);
-        }
+        extend_clause_statements(lo, c, &mut stmts);
     }
     lo.add(NodeKind::Block, Payload::None, span, &stmts)
+}
+pub(super) fn extend_clause_statements(lo: &mut Lowering, node: TsNode, out: &mut Vec<NodeId>) {
+    match node.kind() {
+        "exceptions" | "exception_variable" => {}
+        "then" => {
+            for child in Lowering::named_children(node) {
+                extend_clause_statements(lo, child, out);
+            }
+        }
+        _ => {
+            if let Some(stmt) = lower_stmt(lo, node) {
+                out.push(stmt);
+            }
+        }
+    }
 }
 /// `body if cond` / `body unless cond` → `If(cond, Block[body])`, matching the block
 /// `if`/`unless` form. Used from both statement and expression (tail) position.
@@ -184,6 +194,33 @@ pub(super) fn lower_modifier(lo: &mut Lowering, node: TsNode) -> NodeId {
         cond = lo.add(NodeKind::UnOp, Payload::Op(Op::Not), span, &[cond]);
     }
     lo.add(NodeKind::If, Payload::None, span, &[cond, then])
+}
+/// `body while cond` / `body until cond` → `Loop(While, cond, Block[body])`.
+pub(super) fn lower_loop_modifier(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let body_node = node.child_by_field_name("body");
+    let body = body_node
+        .and_then(|b| lower_stmt(lo, b))
+        .unwrap_or_else(|| lo.empty_block(span));
+    let block = lo.add(NodeKind::Block, Payload::None, span, &[body]);
+    let mut cond = node
+        .child_by_field_name("condition")
+        .map(|c| lower_expr(lo, c))
+        .unwrap_or_else(|| lo.empty_block(span));
+    if node.kind() == "until_modifier" {
+        cond = lo.add(NodeKind::UnOp, Payload::Op(Op::Not), span, &[cond]);
+    }
+    let loop_node = lo.add(
+        NodeKind::Loop,
+        Payload::Loop(LoopKind::While),
+        span,
+        &[cond, block],
+    );
+    if body_node.is_some_and(|body| matches!(body.kind(), "begin" | "do")) {
+        lo.add(NodeKind::Block, Payload::None, span, &[body, loop_node])
+    } else {
+        loop_node
+    }
 }
 pub(super) fn raw_kids(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);

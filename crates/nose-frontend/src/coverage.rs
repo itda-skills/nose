@@ -3,7 +3,7 @@
 //! *unhandled site*). The `Raw` ratio and a histogram of which surface kinds hit
 //! `Raw` per language tell us exactly where the IL is weak — and what to fix next.
 
-use crate::lower::is_protocol_boundary_tag;
+use crate::lower::is_intentional_raw_boundary_tag;
 use nose_il::{Corpus, NodeKind, Payload};
 use rustc_hash::FxHashMap;
 use serde::Serialize;
@@ -15,7 +15,7 @@ pub struct LangCoverage {
     pub nodes: usize,
     pub raw_nodes: usize,
     pub raw_ratio: f64,
-    /// `Raw` nodes that are deliberate protocol boundaries (async/channels/defer/try/yield) —
+    /// `Raw` nodes that are deliberate fail-closed boundaries (protocol/preprocessor) —
     /// by design, not a lowering gap. `raw_nodes - boundary_raw` is the genuine fixable surface.
     pub boundary_raw: usize,
 }
@@ -25,7 +25,7 @@ pub struct UnhandledKind {
     pub lang: String,
     pub surface_kind: String,
     pub count: usize,
-    /// This surface kind is a deliberate protocol boundary, not a fixable lowering gap.
+    /// This surface kind is a deliberate fail-closed boundary, not a fixable lowering gap.
     pub boundary: bool,
 }
 
@@ -35,7 +35,7 @@ pub struct CoverageReport {
     pub total_nodes: usize,
     pub raw_nodes: usize,
     pub raw_ratio: f64,
-    /// Of `raw_nodes`, how many are deliberate protocol boundaries (by design). The genuine
+    /// Of `raw_nodes`, how many are deliberate fail-closed boundaries (by design). The genuine
     /// fixable lowering gap is `raw_nodes - boundary_raw`.
     pub boundary_raw: usize,
     pub per_lang: Vec<LangCoverage>,
@@ -69,7 +69,7 @@ pub fn coverage(corpus: &Corpus, top: usize) -> CoverageReport {
                     Payload::Name(s) => corpus.interner.resolve(s).to_string(),
                     _ => "<unknown>".to_string(),
                 };
-                if is_protocol_boundary_tag(&surface) {
+                if is_intentional_raw_boundary_tag(&surface) {
                     boundary_raw += 1;
                     *lang_boundary.entry(lang).or_default() += 1;
                 }
@@ -99,7 +99,7 @@ pub fn coverage(corpus: &Corpus, top: usize) -> CoverageReport {
         .into_iter()
         .map(|((lang, surface_kind), count)| UnhandledKind {
             lang: lang.to_string(),
-            boundary: is_protocol_boundary_tag(&surface_kind),
+            boundary: is_intentional_raw_boundary_tag(&surface_kind),
             surface_kind,
             count,
         })

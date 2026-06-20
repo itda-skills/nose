@@ -1,8 +1,18 @@
 use super::*;
 
 pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
+    lower_expr_with_iota(lo, node, None)
+}
+pub(super) fn lower_expr_with_iota(
+    lo: &mut Lowering,
+    node: TsNode,
+    iota_value: Option<usize>,
+) -> NodeId {
     let span = lo.span(node);
     match node.kind() {
+        "iota" => iota_value
+            .map(|value| lo.int_lit(&value.to_string(), span))
+            .unwrap_or_else(|| lo.raw("iota", span, &[])),
         "identifier" | "field_identifier" | "package_identifier" | "type_identifier" => {
             match lo.text(node) {
                 "true" => lo.add(NodeKind::Lit, Payload::LitBool(true), span, &[]),
@@ -23,18 +33,21 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         "true" => lo.add(NodeKind::Lit, Payload::LitBool(true), span, &[]),
         "false" => lo.add(NodeKind::Lit, Payload::LitBool(false), span, &[]),
         "nil" => lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[]),
+        "call_expression" if iota_value.is_some() => lower_call_with_iota(lo, node, iota_value),
         "call_expression" => lower_call(lo, node),
+        "binary_expression" if iota_value.is_some() => lower_binary_with_iota(lo, node, iota_value),
         "binary_expression" => lower_binary(lo, node),
+        "unary_expression" if iota_value.is_some() => lower_unary_with_iota(lo, node, iota_value),
         "unary_expression" => lower_unary(lo, node),
         "selector_expression" => lower_selector(lo, node),
         "index_expression" => {
             let base = node
                 .child_by_field_name("operand")
-                .map(|o| lower_expr(lo, o))
+                .map(|o| lower_expr_with_iota(lo, o, iota_value))
                 .unwrap_or_else(|| lo.empty_block(span));
             let idx = node
                 .child_by_field_name("index")
-                .map(|i| lower_expr(lo, i))
+                .map(|i| lower_expr_with_iota(lo, i, iota_value))
                 .unwrap_or_else(|| lo.empty_block(span));
             lo.add(NodeKind::Index, Payload::None, span, &[base, idx])
         }
@@ -43,7 +56,7 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         "literal_element" | "keyed_element" => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
                 .into_iter()
-                .map(|c| lower_expr(lo, c))
+                .map(|c| lower_expr_with_iota(lo, c, iota_value))
                 .collect();
             if kids.len() == 1 {
                 kids[0]
@@ -54,18 +67,18 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         }
         "parenthesized_expression" => node
             .named_child(0)
-            .map(|c| lower_expr(lo, c))
+            .map(|c| lower_expr_with_iota(lo, c, iota_value))
             .unwrap_or_else(|| lo.empty_block(span)),
         "type_conversion_expression" => node
             .child_by_field_name("operand")
-            .map(|o| lower_expr(lo, o))
+            .map(|o| lower_expr_with_iota(lo, o, iota_value))
             .unwrap_or_else(|| lo.empty_block(span)),
         // A bare `{ … }` initializer (a nested composite, or a body reached
         // directly) → a `Seq` of its elements.
         "literal_value" => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
                 .into_iter()
-                .map(|c| lower_expr(lo, c))
+                .map(|c| lower_expr_with_iota(lo, c, iota_value))
                 .collect();
             lo.add(NodeKind::Seq, Payload::None, span, &kids)
         }
@@ -75,12 +88,12 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         "type_assertion_expression" => node
             .child_by_field_name("operand")
             .or_else(|| node.named_child(0))
-            .map(|o| lower_expr(lo, o))
+            .map(|o| lower_expr_with_iota(lo, o, iota_value))
             .unwrap_or_else(|| lo.empty_block(span)),
         // `args...` → the spread operand.
         "variadic_argument" => node
             .named_child(0)
-            .map(|c| lower_expr(lo, c))
+            .map(|c| lower_expr_with_iota(lo, c, iota_value))
             .unwrap_or_else(|| lo.empty_block(span)),
         // Type expressions in value position (`[]int`, `map[K]V`, `pkg.T`, …) carry
         // no behavior — collapse to an abstract literal so they aren't `Raw` noise.
@@ -91,10 +104,60 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         _ => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
                 .into_iter()
-                .map(|c| lower_expr(lo, c))
+                .map(|c| lower_expr_with_iota(lo, c, iota_value))
                 .collect();
             lo.raw(node.kind(), span, &kids)
         }
+    }
+}
+pub(super) fn lower_binary_with_iota(
+    lo: &mut Lowering,
+    node: TsNode,
+    iota_value: Option<usize>,
+) -> NodeId {
+    if node.child_by_field_name("operator").map(|o| lo.text(o)) == Some("&^") {
+        let span = lo.span(node);
+        let l = node
+            .child_by_field_name("left")
+            .map(|x| lower_expr_with_iota(lo, x, iota_value))
+            .unwrap_or_else(|| lo.empty_block(span));
+        let r = node
+            .child_by_field_name("right")
+            .map(|x| lower_expr_with_iota(lo, x, iota_value))
+            .unwrap_or_else(|| lo.empty_block(span));
+        return go_bitclear(lo, span, l, r);
+    }
+    crate::lower::binary(lo, node, go_bin_op, |lo, n| {
+        lower_expr_with_iota(lo, n, iota_value)
+    })
+}
+pub(super) fn lower_unary_with_iota(
+    lo: &mut Lowering,
+    node: TsNode,
+    iota_value: Option<usize>,
+) -> NodeId {
+    let span = lo.span(node);
+    let op_text = node
+        .child_by_field_name("operator")
+        .map(|o| lo.text(o))
+        .unwrap_or("-");
+    let operand = node.child_by_field_name("operand");
+    match op_text {
+        "-" | "+" | "!" | "^" => {
+            let op = match op_text {
+                "-" => Op::Neg,
+                "+" => Op::Pos,
+                "!" => Op::Not,
+                _ => Op::BitNot,
+            };
+            let arg = operand
+                .map(|a| lower_expr_with_iota(lo, a, iota_value))
+                .unwrap_or_else(|| lo.empty_block(span));
+            lo.add(NodeKind::UnOp, Payload::Op(op), span, &[arg])
+        }
+        _ => operand
+            .map(|a| lower_expr_with_iota(lo, a, iota_value))
+            .unwrap_or_else(|| lo.empty_block(span)),
     }
 }
 pub(super) fn lower_selector(lo: &mut Lowering, node: TsNode) -> NodeId {
@@ -182,6 +245,27 @@ pub(super) fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
     if let Some(args) = node.child_by_field_name("arguments") {
         for a in Lowering::named_children(args) {
             kids.push(lower_expr(lo, a));
+        }
+    }
+    lo.add(NodeKind::Call, Payload::None, span, &kids)
+}
+pub(super) fn lower_call_with_iota(
+    lo: &mut Lowering,
+    node: TsNode,
+    iota_value: Option<usize>,
+) -> NodeId {
+    let span = lo.span(node);
+    let mut kids = Vec::new();
+    match node.child_by_field_name("function") {
+        Some(f) => kids.push(lower_expr_with_iota(lo, f, iota_value)),
+        None => {
+            let e = lo.empty_block(span);
+            kids.push(e);
+        }
+    }
+    if let Some(args) = node.child_by_field_name("arguments") {
+        for a in Lowering::named_children(args) {
+            kids.push(lower_expr_with_iota(lo, a, iota_value));
         }
     }
     lo.add(NodeKind::Call, Payload::None, span, &kids)

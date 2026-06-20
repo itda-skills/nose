@@ -92,6 +92,13 @@ pub fn is_protocol_boundary_tag(tag: &str) -> bool {
     lower::is_protocol_boundary_tag(tag)
 }
 
+/// Whether a Raw surface tag is an intentional fail-closed boundary rather than a
+/// fixable lowering gap. Includes source protocol/effect boundaries and
+/// syntax/preprocessor boundaries.
+pub fn is_intentional_raw_boundary_tag(tag: &str) -> bool {
+    lower::is_intentional_raw_boundary_tag(tag)
+}
+
 /// Lower every analyzable region of a file into separate [`Il`]s. For most languages
 /// this is one `Il` (delegating to [`lower_source`]); for `<script>`/`<style>`-bearing
 /// containers (Vue/Svelte/HTML) it is one per embedded region (JS/TS for `<script>`, CSS

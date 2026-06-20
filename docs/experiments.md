@@ -3391,6 +3391,90 @@ cargo test -q -p nose-cli --test css_html_quality
 awiki lint --root docs
 ```
 
+## DD. Quantified 10-loop lowering tranche — stop treating every Raw as equal (2026-06-20)
+
+After §DC, the user-facing question was no longer "can we lower more?" but "which remaining
+lowering work has measurable value?" We therefore ran a fixed 10-loop pass from the checked-out
+`bench/repos` corpus: measure performance first, choose high-impact non-parser rows from
+`nose gap-impact`, implement only local semantics-preserving changes, review with independent
+subagents, then re-run full coverage and the same performance commands before merging.
+
+**Baseline.**
+
+```text
+files: 67407   IL nodes: 46051702   Raw nodes: 193349
+= 77207 lowering-gap + 116142 protocol-boundary
+```
+
+The top non-parser candidates were Rust `macro_rule_body`, Ruby `binary`/`then`/`rescue`/
+`string_content`/`lambda`, Swift `case`/`ternary_expression`/`availability_condition`, and Go
+`pointer_type`/`type_identifier`/`iota`/type-switch surfaces. Baseline release timings were:
+`stats_all` **40.73s**, `gap_impact_all` **32.83s**, `query_sympy` **5.74s**, `query_raylib`
+**4.62s**, and `query_alacritty` **0.29s** wall time.
+
+**Fixes shipped.**
+
+- Go: type-switch case type nodes are excluded from case bodies, and const `iota` lowers to
+  concrete spec ordinals, including nested conversion/call operands and omitted const values.
+- Ruby: method-level rescue/ensure now lowers as a `Try` returned from the normal `Func -> Block`
+  body shape; expression rescue, class variables, character literals, subshells, arrow lambdas,
+  interpolated strings/symbols, keyword `and`/`or`, and loop modifiers no longer leak parser Raw.
+  `begin ... end while/until` keeps post-test semantics by emitting a body prelude plus a loop.
+- Swift: `if case` lowers to equality-style pattern tests, including compound trailing
+  conditions; nil-branch ternaries lower to `If`; `@unknown default` and empty `catch` blocks no
+  longer leak switch/catch wrappers.
+- Boundary classification: Rust `macro_rule_body` and Swift `availability_condition` remain
+  fail-closed Raw, but are classified as intentional syntax/preprocessor boundaries rather than
+  actionable lowering gaps. `gap-impact` JSON now reports `intentional_boundary_raw`.
+
+**Measured result.**
+
+```text
+files: 67407   IL nodes: 46087790   Raw nodes: 185458 (0.402%)
+= 68312 lowering-gap + 117146 intentional-boundary
+```
+
+Overall lowering-gap Raw drops **77,207 -> 68,312** (-8,895). The language gaps most affected:
+Go **10,724 -> 7,601** (-3,123), Ruby **8,427 -> 4,514** (-3,913), Swift **7,871 -> 6,870**
+(-1,001), and Rust actionable gaps **4,557 -> 3,699** after moving macro arms to intentional
+boundary accounting. The remaining top actionable non-parser rows are now Ruby regex/case-equality
+operators, Rust `crate`, Ruby `then`, Rust `let_condition`, Go type-case/goto surfaces, and Swift
+operator/selector tails; parser `ERROR` rows still dominate the absolute top of the worklist.
+
+**Performance gate.** Re-running the same release commands after the tranche showed no abnormal
+slowdown, so no profiling remediation was needed:
+
+| command | before | after | delta |
+|---|---:|---:|---:|
+| `nose stats bench/repos --top 40` | 40.73s | 16.28s | -60.0% |
+| `nose gap-impact bench/repos --top 40` | 32.83s | 16.38s | -50.1% |
+| `nose query bench/repos/sympy --format json` | 5.74s | 2.86s | -50.2% |
+| `nose query bench/repos/raylib --format json` | 4.62s | 2.43s | -47.4% |
+| `nose query bench/repos/alacritty --format json` | 0.29s | 0.17s | -41.4% |
+
+The large wall-time improvement is not claimed as a code-speed optimization; it reflects the
+same warmed workspace and release binary gate showing no regression. Treat it as a slowdown check,
+not a benchmark claim.
+
+**Review catches.** The independent review found three real regressions before closeout: compound
+Swift `if case .known = kind, ready` initially compared the wrong subject, Go `iota` was not
+threaded into conversions/calls, and Ruby `begin ... end while` was initially modeled as a
+pre-test loop. All three were fixed with targeted tests before the final full run.
+
+**Regression coverage.**
+
+```text
+cargo test -p nose-frontend
+cargo test -p nose-cli --test equivalence syntax_surfaces
+cargo test -p nose-cli diagnostic_commands
+cargo build --release -p nose-cli
+target/release/nose stats bench/repos --top 40
+target/release/nose gap-impact bench/repos --top 40
+target/release/nose query bench/repos/sympy --format json
+target/release/nose query bench/repos/raylib --format json
+target/release/nose query bench/repos/alacritty --format json
+```
+
 ## DC. Gap-impact ranking and Rust nested constructor patterns (2026-06-20)
 
 After §DB, raw counts alone were no longer a good worklist: parser `ERROR` and protocol boundaries

@@ -178,14 +178,15 @@ not whole-component, which is correct.
 
 Lowering quality is measured by the **Raw-node ratio** — the fraction of CST
 nodes that fall through to an opaque `Raw` IL node instead of a real one. Lower
-is better. `nose stats` distinguishes two kinds of Raw: by-design
-**protocol-boundary** Raw (await, try/`?`, defer, go, channel operations, select,
-yield — fail-closed boundaries, not coverage gaps) from genuine **lowering-gap**
-Raw. It reports `boundary_raw` and tags each unhandled construct `boundary` or
-`gap`. On the current pinned `bench/repos` corpus, after the 2026-06-20
-language-lowering impact pass, `nose stats` reports 46,051,702 IL nodes and
-193,349 Raw nodes (0.420%): 77,207 lowering gaps plus 116,142 protocol
-boundaries. That puts fixable lowering-gap Raw at about 0.168% corpus-wide; re-run
+is better. `nose stats` distinguishes genuine **lowering-gap** Raw from by-design
+**intentional-boundary** Raw: async/protocol surfaces (`await`, try/`?`, defer, go,
+channel operations, select, yield), plus syntax/preprocessor boundaries that must
+stay fail-closed (for example Rust `macro_rule_body` and Swift availability checks).
+It reports `boundary_raw` and tags each unhandled construct `boundary` or `gap`. On
+the current pinned `bench/repos` corpus, after the 2026-06-20 10-loop
+language-lowering impact pass, `nose stats` reports 46,087,790 IL nodes and
+185,458 Raw nodes (0.402%): 68,312 lowering gaps plus 117,146 intentional
+boundaries. That puts fixable lowering-gap Raw at about 0.148% corpus-wide; re-run
 `nose stats` for the current figure, with language-specific gaps visible per
 construct. Check it per language with:
 
@@ -199,8 +200,9 @@ gaps is how a language becomes a first-class citizen — for example, the Go
 composite-literal/`slice_expression`/`type_assertion` work that took Go from
 0.40% to 0.03%, lowering Rust and Python `match` arms to if-chains so
 pattern-matched code converges with its conditional equivalent, or the Swift
-pattern/key-path/directive, Python line-continuation, Java declaration/module, Rust nested
-constructor-pattern, JS/TS object-surface, C type/preprocessor recovery, and CSS
+pattern/key-path/directive/`if case`/ternary/catch work, Ruby rescue/string/lambda
+work, Go type-switch/`iota` work, Python line-continuation, Java declaration/module,
+Rust nested constructor-pattern, JS/TS object-surface, C type/preprocessor recovery, and CSS
 extension-surface tranches recorded in [experiments](experiments.md). The log records the full
 sequence of gap closures (Java records, Rust `async` blocks, Go/JS/TS/C/Java/Ruby/Swift
 `switch`/`case` shapes, and more); the

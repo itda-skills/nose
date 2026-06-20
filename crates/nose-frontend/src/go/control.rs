@@ -248,12 +248,13 @@ pub(super) fn lower_switch_case_test(
 }
 pub(super) fn lower_case_body(lo: &mut Lowering, case: TsNode) -> NodeId {
     let span = lo.span(case);
-    // The `value` field holds the case test expression(s); everything else is the
-    // body. Skip the test so it doesn't land in the body block.
+    // The `value`/`type` field holds the case test expression(s); everything else
+    // is the body. Skip the test so it doesn't land in the body block.
     let value_id = case.child_by_field_name("value").map(|v| v.id());
+    let type_id = case.child_by_field_name("type").map(|v| v.id());
     let mut stmts = Vec::new();
     for c in stmt_children(case) {
-        if Some(c.id()) == value_id {
+        if Some(c.id()) == value_id || Some(c.id()) == type_id {
             continue;
         }
         if let Some(id) = lower_stmt(lo, c) {

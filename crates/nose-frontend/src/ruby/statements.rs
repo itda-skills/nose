@@ -25,6 +25,21 @@ pub(super) fn block_body(lo: &mut Lowering, block: TsNode) -> NodeId {
 pub(super) fn body_with_return(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let children = Lowering::named_children(node);
+    if body_has_exception_clauses(&children) {
+        return exceptional_body_with_return(lo, span, children);
+    }
+    body_children_with_return(lo, span, children)
+}
+pub(super) fn body_has_exception_clauses(children: &[TsNode]) -> bool {
+    children
+        .iter()
+        .any(|child| matches!(child.kind(), "rescue" | "ensure" | "else"))
+}
+pub(super) fn body_children_with_return(
+    lo: &mut Lowering,
+    span: Span,
+    children: Vec<TsNode>,
+) -> NodeId {
     let n = children.len();
     let mut stmts = Vec::new();
     for (idx, c) in children.into_iter().enumerate() {
@@ -37,10 +52,55 @@ pub(super) fn body_with_return(lo: &mut Lowering, node: TsNode) -> NodeId {
     }
     lo.add(NodeKind::Block, Payload::None, span, &stmts)
 }
+pub(super) fn exceptional_body_with_return(
+    lo: &mut Lowering,
+    span: Span,
+    children: Vec<TsNode>,
+) -> NodeId {
+    let first_clause = children
+        .iter()
+        .position(|child| matches!(child.kind(), "rescue" | "ensure" | "else"))
+        .unwrap_or(children.len());
+    let mut body_children = children[..first_clause].to_vec();
+    let mut handlers = Vec::new();
+    for child in children[first_clause..].iter().copied() {
+        match child.kind() {
+            "rescue" | "ensure" => handlers.push(lower_clause_body(lo, child)),
+            "else" => body_children.extend(Lowering::named_children(child)),
+            _ => body_children.push(child),
+        }
+    }
+    let body = block_children_as_statements(lo, span, body_children);
+    let mut kids = vec![body];
+    kids.extend(handlers);
+    let try_node = lo.add(NodeKind::Try, Payload::None, span, &kids);
+    let ret = lo.add(NodeKind::Return, Payload::None, span, &[try_node]);
+    lo.add(NodeKind::Block, Payload::None, span, &[ret])
+}
+pub(super) fn block_children_as_statements(
+    lo: &mut Lowering,
+    span: Span,
+    children: Vec<TsNode>,
+) -> NodeId {
+    let stmts: Vec<NodeId> = children
+        .into_iter()
+        .filter_map(|child| lower_stmt(lo, child))
+        .collect();
+    lo.add(NodeKind::Block, Payload::None, span, &stmts)
+}
 pub(super) fn is_tail_expr(k: &str) -> bool {
     !matches!(
         k,
-        "comment" | "return" | "if" | "unless" | "while" | "until" | "case" | "for"
+        "comment"
+            | "return"
+            | "if"
+            | "unless"
+            | "while"
+            | "until"
+            | "while_modifier"
+            | "until_modifier"
+            | "case"
+            | "for"
     )
 }
 pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
@@ -69,6 +129,7 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
         // Guard-clause modifiers: `stmt if cond` / `stmt unless cond` → `If` so they
         // converge with the block forms and other languages' guards.
         "if_modifier" | "unless_modifier" => Some(lower_modifier(lo, node)),
+        "while_modifier" | "until_modifier" => Some(lower_loop_modifier(lo, node)),
         "assignment" | "operator_assignment" => Some(lower_assign(lo, node)),
         "call" | "method_call" => {
             let e = lower_call(lo, node);

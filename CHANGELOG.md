@@ -40,10 +40,27 @@ break.
   patterns such as `(Kind::Selection, Some(provider))` now lower to exact-closed Rust pattern
   nodes instead of `Raw("tuple_struct_pattern")`. Full `bench/repos` lowering-gap Raw drops again
   to **77,207** gaps, and Rust's gap count drops from **10,236** to **4,557**.
+- Closed a measured 10-loop lowering tranche across Go, Ruby, Swift, and intentional Raw
+  classification. Go type-switch case types no longer leak into case bodies, and `iota` lowers to
+  concrete const ordinals even inside conversions/calls. Ruby method-level rescue/ensure clauses,
+  expression rescue, arrow lambdas, interpolated strings/symbols, class variables, character
+  literals, subshells, keyword `and`/`or`, and loop modifiers now lower without parser-wrapper Raw
+  while preserving post-test `begin ... end while/until` semantics. Swift `if case`, nil-branch
+  ternaries, `@unknown default`, and empty `catch` blocks now lower structurally. Rust
+  `macro_rule_body` and Swift `availability_condition` are now reported as intentional
+  fail-closed boundaries instead of actionable lowering gaps. Full `bench/repos` lowering-gap Raw
+  now reports **68,312** gaps (0.148% of IL nodes), down from **77,207**.
 - Made checked-out benchmark corpus setup reproducible after pruning: pinned repos are reset
   before pruning, `.DS_Store` is excluded from prune/digest accounting, and the prune manifest was
   refreshed for the fresh-corpus result. Manual corpus-verify runs also have a longer timeout and
   upload logs on cancellation.
+
+### Performance
+- Re-ran the lowering-loop performance gate after the Go/Ruby/Swift/Rust tranche. No abnormal
+  slowdown was observed versus the pre-loop release baseline: `stats bench/repos --top 40`
+  **40.73s -> 16.28s**, `gap-impact bench/repos --top 40` **32.83s -> 16.38s**, `query sympy`
+  **5.74s -> 2.86s**, `query raylib` **4.62s -> 2.43s**, and `query alacritty`
+  **0.29s -> 0.17s** wall time on the same workspace.
 
 ## [0.13.3] - 2026-06-19
 

@@ -24,10 +24,23 @@ pub(crate) const PROTOCOL_BOUNDARY_TAGS: &[&str] = &[
     "yield",
 ];
 
+/// Raw surfaces that are intentionally retained as non-runtime syntax/preprocessor
+/// boundaries. They are not source protocol/effect boundaries, but they also are
+/// not actionable lowering gaps.
+pub(crate) const INTENTIONAL_RAW_BOUNDARY_TAGS: &[&str] =
+    &["availability_condition", "macro_rule_body"];
+
 /// Whether a `Raw` node's surface tag is a deliberate protocol boundary (vs a lowering gap).
 #[must_use]
 pub(crate) fn is_protocol_boundary_tag(tag: &str) -> bool {
     PROTOCOL_BOUNDARY_TAGS.contains(&tag)
+}
+
+/// Whether a `Raw` surface is deliberately retained fail-closed, not a fixable
+/// lowering gap.
+#[must_use]
+pub(crate) fn is_intentional_raw_boundary_tag(tag: &str) -> bool {
+    is_protocol_boundary_tag(tag) || INTENTIONAL_RAW_BOUNDARY_TAGS.contains(&tag)
 }
 
 use crate::type_domain_aliases::{

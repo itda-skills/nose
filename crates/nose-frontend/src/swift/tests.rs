@@ -60,6 +60,22 @@ fn has_assign_rhs_seq(il: &Il, interner: &Interner, expected: &str) -> bool {
     })
 }
 
+fn raw_name_set(src: &str) -> Vec<String> {
+    let (il, interner) = il_with_interner(src);
+    let mut raw = raw_names(&il, &interner);
+    raw.sort();
+    raw.dedup();
+    raw
+}
+
+fn op_count(src: &str, op: Op) -> usize {
+    il(src)
+        .nodes
+        .iter()
+        .filter(|node| node.kind == NodeKind::BinOp && node.payload == Payload::Op(op))
+        .count()
+}
+
 #[test]
 fn function_lowers_to_unit() {
     let il = il(r#"
@@ -69,6 +85,121 @@ return x + y
 "#);
     assert_eq!(il.units.len(), 1);
     assert_eq!(il.meta.lang, Lang::Swift);
+}
+
+#[test]
+fn if_case_conditions_lower_to_pattern_tests_without_raw_case() {
+    let src = r#"
+func f(kind: Kind, update: Update) {
+  if case (.positional, .nullary) = (kind, update) {
+    fail()
+  }
+  if case .default = kind {
+    ok()
+  }
+  if case .known = kind, ready {
+    both()
+  }
+}
+"#;
+    let raw = raw_name_set(src);
+    assert!(
+        !raw.iter().any(|name| name == "case"),
+        "if-case conditions should not lower to Raw(\"case\"): {raw:?}"
+    );
+    assert!(
+        op_count(src, Op::Eq) >= 2,
+        "if-case conditions should lower to equality-style pattern tests"
+    );
+    assert!(
+        op_count(src, Op::And) >= 1,
+        "compound if-case conditions should keep trailing boolean conditions"
+    );
+}
+
+#[test]
+fn unknown_default_switch_entry_is_default_not_raw_case() {
+    let src = r#"
+func f(value: Value) {
+  switch value {
+  case .known:
+    ok()
+  @unknown default:
+    fallback()
+  }
+}
+"#;
+    let raw = raw_name_set(src);
+    assert!(
+        !raw.iter().any(|name| name == "switch_case"),
+        "@unknown default should lower as a default arm, got {raw:?}"
+    );
+}
+
+#[test]
+fn nil_branch_ternary_lowers_to_if_without_raw() {
+    let src = r#"
+func f(flag: Bool, value: String) {
+  let a = flag ? nil : value
+  let b = flag ? value : nil
+}
+"#;
+    let raw = raw_name_set(src);
+    assert!(
+        !raw.iter().any(|name| name == "ternary_expression"),
+        "nil-branch ternary expressions should lower to If, got {raw:?}"
+    );
+    assert!(
+        il(src).nodes.iter().any(|node| node.kind == NodeKind::If),
+        "ternary expression should produce an If node"
+    );
+}
+
+#[test]
+fn availability_conditions_are_intentional_boundaries() {
+    let raw = raw_name_set(
+        r#"
+func f() {
+  if #available(macOS 13, *) {
+    run()
+  }
+}
+"#,
+    );
+    assert!(
+        raw.iter().any(|name| name == "availability_condition"),
+        "availability condition should remain fail-closed: {raw:?}"
+    );
+    assert!(crate::is_intentional_raw_boundary_tag(
+        "availability_condition"
+    ));
+    assert!(!crate::is_protocol_boundary_tag("availability_condition"));
+}
+
+#[test]
+fn catch_blocks_do_not_leave_keyword_raw() {
+    let src = r#"
+func f() {
+  do {
+    try run()
+  } catch {
+  }
+  do {
+    try other()
+  } catch {
+    recover()
+  }
+}
+"#;
+    let raw = raw_name_set(src);
+    assert!(
+        !raw.iter().any(|name| name == "catch_keyword"),
+        "catch keyword should not leak as Raw: {raw:?}"
+    );
+    assert!(
+        il(src).nodes.iter().any(|node| node.kind == NodeKind::Try),
+        "do/catch should lower to Try"
+    );
 }
 
 #[test]

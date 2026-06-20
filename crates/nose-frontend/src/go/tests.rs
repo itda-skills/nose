@@ -34,11 +34,78 @@ fn switch_case_rhs_ints(src: &str) -> Vec<i64> {
         .collect()
 }
 
+fn raw_names(src: &str) -> Vec<String> {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.go", src.as_bytes(), &interner).expect("lower");
+    il.nodes
+        .iter()
+        .filter(|node| node.kind == NodeKind::Raw)
+        .filter_map(|node| match node.payload {
+            Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn lit_ints(src: &str) -> Vec<i64> {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.go", src.as_bytes(), &interner).expect("lower");
+    il.nodes
+        .iter()
+        .filter_map(|node| match node.payload {
+            Payload::LitInt(value) => Some(value),
+            _ => None,
+        })
+        .collect()
+}
+
 #[test]
 fn switch_cases_compare_scrutinee_to_all_case_labels() {
     let src =
         "package main\nfunc f(x int) int { switch x { case 1, 2: return 3; default: return 4 } }\n";
     assert_eq!(switch_case_rhs_ints(src), vec![1, 2]);
+}
+
+#[test]
+fn const_iota_lowers_to_concrete_spec_ordinals() {
+    let src = "package main\nconst (\n  A = iota\n  B\n  C = 1 << iota\n  D = MyInt(iota)\n  E = wrap(iota)\n)\n";
+    let raw = raw_names(src);
+    assert!(
+        !raw.iter().any(|name| name == "iota"),
+        "const iota should lower to concrete integers, got {raw:?}"
+    );
+    let ints = lit_ints(src);
+    assert!(
+        ints.contains(&0)
+            && ints.contains(&1)
+            && ints.contains(&2)
+            && ints.contains(&3)
+            && ints.contains(&4),
+        "iota ordinals should appear in lowered const values, got {ints:?}"
+    );
+    assert!(
+        ops(src).contains(&Op::Shl),
+        "iota inside const expressions should preserve surrounding operators"
+    );
+}
+
+#[test]
+fn type_switch_case_types_do_not_leak_into_case_bodies() {
+    let raw = raw_names(
+        "package main\nfunc f(v any) int { switch v.(type) { case *Thing: return 1; case Other: return 2; default: return 3 } }\n",
+    );
+    assert!(
+        raw.iter().any(|name| name == "type_case *Thing")
+            && raw.iter().any(|name| name == "type_case Other"),
+        "type switch tests should remain explicit fail-closed conditions: {raw:?}"
+    );
+    assert!(
+        !raw.iter().any(|name| matches!(
+            name.as_str(),
+            "pointer_type" | "type_identifier" | "qualified_type" | "slice_type" | "map_type"
+        )),
+        "type switch case body should not include type-only Raw nodes: {raw:?}"
+    );
 }
 
 #[test]

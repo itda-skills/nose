@@ -214,7 +214,7 @@ pub(super) fn cmd_stats(paths: Vec<PathBuf>, top: usize, json: bool) -> Result<(
 
     let gap_raw = report.raw_nodes.saturating_sub(report.boundary_raw);
     println!(
-        "files: {}   IL nodes: {}   Raw nodes: {} ({:.3}%)   = {} lowering-gap + {} protocol-boundary",
+        "files: {}   IL nodes: {}   Raw nodes: {} ({:.3}%)   = {} lowering-gap + {} intentional-boundary",
         report.files,
         report.total_nodes,
         report.raw_nodes,
@@ -259,7 +259,7 @@ struct GapImpactReport {
     total_nodes: usize,
     raw_nodes: usize,
     lowering_gap_raw: usize,
-    protocol_boundary_raw: usize,
+    intentional_boundary_raw: usize,
     rows: Vec<GapImpactRow>,
 }
 
@@ -328,7 +328,7 @@ pub(super) fn cmd_gap_impact(paths: Vec<PathBuf>, top: usize, json: bool) -> Res
                 Payload::Name(sym) => corpus.interner.resolve(sym).to_string(),
                 _ => "<unknown>".to_string(),
             };
-            if nose_frontend::is_protocol_boundary_tag(&surface) {
+            if nose_frontend::is_intentional_raw_boundary_tag(&surface) {
                 continue;
             }
 
@@ -410,7 +410,7 @@ pub(super) fn cmd_gap_impact(paths: Vec<PathBuf>, top: usize, json: bool) -> Res
         total_nodes: coverage.total_nodes,
         raw_nodes: coverage.raw_nodes,
         lowering_gap_raw: coverage.raw_nodes.saturating_sub(coverage.boundary_raw),
-        protocol_boundary_raw: coverage.boundary_raw,
+        intentional_boundary_raw: coverage.boundary_raw,
         rows,
     };
 
@@ -420,12 +420,12 @@ pub(super) fn cmd_gap_impact(paths: Vec<PathBuf>, top: usize, json: bool) -> Res
     }
 
     println!(
-        "files: {}   IL nodes: {}   Raw nodes: {}   = {} lowering-gap + {} protocol-boundary",
+        "files: {}   IL nodes: {}   Raw nodes: {}   = {} lowering-gap + {} intentional-boundary",
         report.files,
         report.total_nodes,
         report.raw_nodes,
         report.lowering_gap_raw,
-        report.protocol_boundary_raw,
+        report.intentional_boundary_raw,
     );
     println!("\ntop lowering-gap impact candidates:");
     println!(

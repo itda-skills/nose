@@ -152,7 +152,15 @@ pub(super) fn lower_if(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let cond = node
         .child_by_field_name("condition")
-        .map(|condition| lower_condition(lo, condition))
+        .map(|condition| {
+            if is_case_condition_node(condition) {
+                lower_case_condition(lo, condition, span)
+                    .or_else(|| lower_case_condition(lo, node, span))
+                    .unwrap_or_else(|| lower_condition(lo, condition))
+            } else {
+                lower_condition(lo, condition)
+            }
+        })
         .unwrap_or_else(|| lo.empty_block(span));
     let then = first_statements_child(node)
         .map(|body| lower_block(lo, body))
@@ -175,6 +183,82 @@ pub(super) fn lower_if(lo: &mut Lowering, node: TsNode) -> NodeId {
         }
     }
     lo.add(NodeKind::If, Payload::None, span, &kids)
+}
+pub(super) fn is_case_condition_node(node: TsNode) -> bool {
+    node.kind() == "case"
+        || Lowering::named_children(node)
+            .into_iter()
+            .any(|child| child.kind() == "case")
+}
+pub(super) fn lower_case_condition(lo: &mut Lowering, node: TsNode, span: Span) -> Option<NodeId> {
+    let patterns = field_children(node, "pattern");
+    let values = field_children(node, "value");
+    let field_pattern = patterns.first().copied();
+    let field_value = values.last().copied();
+    if let (Some(pattern), Some(value)) = (field_pattern, field_value) {
+        let test = lower_case_pattern_test(lo, span, pattern, value);
+        return Some(test);
+    }
+
+    let eq_byte = node.start_byte() + lo.text(node).find('=')?;
+    let mut pattern_parts = Vec::new();
+    let mut value_and_conditions = Vec::new();
+    for child in Lowering::named_children(node) {
+        match child.kind() {
+            "statements" | "function_body" | "else" => break,
+            "case" => {}
+            _ if is_type_level(child.kind()) => {}
+            _ if child.end_byte() <= eq_byte => pattern_parts.push(child),
+            _ if child.start_byte() > eq_byte => value_and_conditions.push(child),
+            _ => {}
+        }
+    }
+    if pattern_parts.is_empty() {
+        return None;
+    }
+    let value = value_and_conditions.first().copied()?;
+    let pattern = lower_case_pattern_parts(lo, span, pattern_parts);
+    let value = lower_expr(lo, value);
+    let test = lo.add(
+        NodeKind::BinOp,
+        Payload::Op(Op::Eq),
+        span,
+        &[value, pattern],
+    );
+    let mut tests = vec![test];
+    for condition in value_and_conditions.into_iter().skip(1) {
+        tests.push(lower_condition(lo, condition));
+    }
+    Some(fold_and(lo, span, tests))
+}
+pub(super) fn lower_case_pattern_test(
+    lo: &mut Lowering,
+    span: Span,
+    pattern: TsNode,
+    value: TsNode,
+) -> NodeId {
+    let lhs = lower_expr(lo, value);
+    let rhs = lower_pattern_value(lo, pattern);
+    lo.add(NodeKind::BinOp, Payload::Op(Op::Eq), span, &[lhs, rhs])
+}
+pub(super) fn lower_case_pattern_parts(
+    lo: &mut Lowering,
+    span: Span,
+    parts: Vec<TsNode>,
+) -> NodeId {
+    let kids: Vec<NodeId> = parts
+        .into_iter()
+        .map(|part| lower_pattern_value(lo, part))
+        .collect();
+    match kids.as_slice() {
+        [only] => *only,
+        _ => lo.add(
+            NodeKind::Seq,
+            Payload::Name(lo.sym("swift_pattern")),
+            span,
+            &kids,
+        ),
+    }
 }
 pub(super) fn lower_condition(lo: &mut Lowering, node: TsNode) -> NodeId {
     match node.kind() {
@@ -261,9 +345,21 @@ pub(super) fn lower_do(lo: &mut Lowering, node: TsNode) -> NodeId {
         .into_iter()
         .filter(|child| child.kind() == "catch_block")
     {
-        kids.push(lower_block(lo, catch));
+        kids.push(lower_catch_block(lo, catch));
     }
     lo.add(NodeKind::Try, Payload::None, span, &kids)
+}
+pub(super) fn lower_catch_block(lo: &mut Lowering, node: TsNode) -> NodeId {
+    if let Some(body) = first_statements_child(node) {
+        return lower_block(lo, body);
+    }
+    let span = lo.span(node);
+    let stmts: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .filter(|child| child.kind() != "catch_keyword")
+        .filter_map(|child| lower_stmt(lo, child))
+        .collect();
+    lo.add(NodeKind::Block, Payload::None, span, &stmts)
 }
 pub(super) fn lower_switch(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
@@ -300,12 +396,12 @@ pub(super) fn lower_switch_entry(
     switch_span: Span,
 ) -> (Option<NodeId>, NodeId) {
     let span = lo.span(entry);
-    let text = lo.text(entry).trim_start();
+    let default_entry = is_default_switch_entry(lo, entry);
     let mut labels = Vec::new();
     let mut stmts = Vec::new();
     for child in Lowering::named_children(entry) {
         match child.kind() {
-            "switch_pattern" | "pattern" if !text.starts_with("default") => {
+            "switch_pattern" | "pattern" if !default_entry => {
                 labels.push(lower_switch_label(lo, child, scrutinee, span));
             }
             "statements" => {
@@ -315,14 +411,14 @@ pub(super) fn lower_switch_entry(
                     }
                 }
             }
-            _ if is_expr_kind(child.kind()) && !text.starts_with("default") => {
+            _ if is_expr_kind(child.kind()) && !default_entry => {
                 labels.push(lower_switch_label(lo, child, scrutinee, span));
             }
             _ => {}
         }
     }
     let body = lo.add(NodeKind::Block, Payload::None, span, &stmts);
-    if text.starts_with("default") {
+    if default_entry {
         return (None, body);
     }
     let test = if labels.is_empty() {
@@ -331,6 +427,14 @@ pub(super) fn lower_switch_entry(
         fold_or(lo, span, labels)
     };
     (test, body)
+}
+pub(super) fn is_default_switch_entry(lo: &Lowering, entry: TsNode) -> bool {
+    let text = lo.text(entry).trim_start();
+    text.starts_with("default")
+        || text.starts_with("@unknown default")
+        || Lowering::named_children(entry)
+            .into_iter()
+            .any(|child| child.kind() == "default_keyword")
 }
 pub(super) fn lower_switch_label(
     lo: &mut Lowering,

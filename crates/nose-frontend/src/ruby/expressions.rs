@@ -34,43 +34,53 @@ pub(super) fn lower_assign(lo: &mut Lowering, node: TsNode) -> NodeId {
 /// then `Add` of each `#{…}` expression — converging with a JS template / f-string.
 pub(super) fn lower_string(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
-    let interps: Vec<TsNode> = Lowering::named_children(node)
-        .into_iter()
-        .filter(|c| c.kind() == "interpolation")
-        .collect();
-    if interps.is_empty() {
+    let children = Lowering::named_children(node);
+    let has_string_parts = children
+        .iter()
+        .any(|c| matches!(c.kind(), "string_content" | "interpolation"));
+    if !has_string_parts {
         let text = lo.text(node);
-        if matches!(node.kind(), "symbol" | "simple_symbol" | "hash_key_symbol") {
+        if matches!(
+            node.kind(),
+            "symbol" | "simple_symbol" | "hash_key_symbol" | "delimited_symbol"
+        ) {
             return lo.str_lit(text.trim_start_matches(':').trim_end_matches(':'), span);
         }
         return lo.str_lit(text, span);
     }
-    let mut acc = lo.add(NodeKind::Lit, Payload::Lit(LitClass::Str), span, &[]);
-    for interp in interps {
-        if let Some(e) = interp.named_child(0) {
-            let sub = lower_expr(lo, e);
-            acc = lo.add(NodeKind::BinOp, Payload::Op(Op::Add), span, &[acc, sub]);
+    let mut parts = Vec::new();
+    for child in children {
+        match child.kind() {
+            "string_content" => parts.push(lo.str_lit(lo.text(child), lo.span(child))),
+            "interpolation" => {
+                if let Some(expr) = child.named_child(0) {
+                    parts.push(lower_expr(lo, expr));
+                }
+            }
+            _ => {}
         }
     }
-    acc
+    parts
+        .into_iter()
+        .reduce(|acc, part| lo.add(NodeKind::BinOp, Payload::Op(Op::Add), span, &[acc, part]))
+        .unwrap_or_else(|| lo.str_lit("", span))
 }
 pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     match node.kind() {
-        "identifier" | "constant" | "instance_variable" | "global_variable" | "self" => {
-            lo.var(lo.text(node), span)
-        }
+        "identifier" | "constant" | "instance_variable" | "class_variable" | "global_variable"
+        | "self" => lo.var(lo.text(node), span),
         "integer" => lo.int_lit(lo.text(node), span),
         "float" => lo.float_lit(lo.text(node), span),
+        "character" => lo.str_lit(lo.text(node), span),
         // Ruby symbols are atoms (`:foo`, and the `foo:` key in `{foo: 1}`); lower as
         // string literals so their value participates in matching like any constant.
         // Heredocs (`<<~SQL … SQL`) are multi-line strings: tree-sitter splits them
         // into a `heredoc_beginning` (in value position) and a dangling `heredoc_body`
         // (content + `#{…}` interpolations) — both lower like any interpolated string.
         "string" | "bare_string" | "symbol" | "simple_symbol" | "hash_key_symbol"
-        | "string_array" | "symbol_array" | "heredoc_beginning" | "heredoc_body" => {
-            lower_string(lo, node)
-        }
+        | "delimited_symbol" | "string_content" | "interpolation" | "string_array"
+        | "symbol_array" | "heredoc_beginning" | "heredoc_body" => lower_string(lo, node),
         "true" => lo.add(NodeKind::Lit, Payload::LitBool(true), span, &[]),
         "false" => lo.add(NodeKind::Lit, Payload::LitBool(false), span, &[]),
         "nil" => lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), span, &[]),
@@ -96,6 +106,7 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         "hash" => lower_hash(lo, node),
         "pair" => lower_hash_pair(lo, node),
         "block" | "do_block" => lower_block_lambda(lo, node),
+        "lambda" => lower_arrow_lambda(lo, node),
         "parenthesized_statements" => node
             .named_child(0)
             .map(|c| lower_expr(lo, c))
@@ -126,6 +137,11 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         "regex" => lo.str_lit(lo.text(node), span),
         // `begin … rescue … end` as an expression (e.g. RHS of an assignment).
         "begin" | "do" => lower_begin(lo, node),
+        // `expr rescue fallback` is expression-level exception handling.
+        "rescue_modifier" => lower_rescue_modifier(lo, node),
+        // Backtick / `%x(...)` shell execution: preserve it as an opaque call keyed
+        // by the source command rather than leaking parser-only string_content Raw.
+        "subshell" => lower_subshell(lo, node),
         // Argument/assignment-target lists and ranges → a sequence of their elements.
         "argument_list" | "left_assignment_list" | "right_assignment_list" | "range" => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
@@ -146,26 +162,78 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
         _ => raw_kids(lo, node),
     }
 }
-pub(super) fn lower_binary(lo: &mut Lowering, node: TsNode) -> NodeId {
+pub(super) fn lower_rescue_modifier(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
-    let l = node.child_by_field_name("left").map(|x| lower_expr(lo, x));
-    let r = node.child_by_field_name("right").map(|x| lower_expr(lo, x));
-    let op = node
-        .child_by_field_name("operator")
-        .map(|o| lo.text(o))
-        .and_then(|t| match t {
-            // Ruby `%` is FLOORED (remainder takes the divisor's sign), unlike the
-            // C-family truncated `%` in `common_bin_op` (#283-D).
-            "%" => Some(Op::FloorMod),
-            // Ruby integer `/` is FLOORED (`-7 / 2 == -4`), like Python `//` — distinct
-            // from C-family truncated `Op::Div` and Python/JS true-float `Op::TrueDiv`
-            // (#283-D).
-            "/" => Some(Op::FloorDiv),
-            other => common_bin_op(other),
-        });
-    match (l, r, op) {
-        (Some(l), Some(r), Some(op)) => lo.add(NodeKind::BinOp, Payload::Op(op), span, &[l, r]),
-        _ => raw_kids(lo, node),
+    let kids = Lowering::named_children(node);
+    let body_expr = kids
+        .first()
+        .map(|child| lower_expr(lo, *child))
+        .unwrap_or_else(|| lo.empty_block(span));
+    let fallback_expr = kids
+        .get(1)
+        .map(|child| lower_expr(lo, *child))
+        .unwrap_or_else(|| lo.empty_block(span));
+    let body_stmt = lo.add(NodeKind::ExprStmt, Payload::None, span, &[body_expr]);
+    let fallback_stmt = lo.add(NodeKind::ExprStmt, Payload::None, span, &[fallback_expr]);
+    let body = lo.add(NodeKind::Block, Payload::None, span, &[body_stmt]);
+    let fallback = lo.add(NodeKind::Block, Payload::None, span, &[fallback_stmt]);
+    lo.add(NodeKind::Try, Payload::None, span, &[body, fallback])
+}
+pub(super) fn lower_arrow_lambda(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let children = Lowering::named_children(node);
+    let mut kids = Vec::new();
+    if let Some(params) = children
+        .iter()
+        .find(|child| child.kind() == "lambda_parameters")
+    {
+        for param in Lowering::named_children(*params) {
+            let pspan = lo.span(param);
+            let sym = param_name(lo, param);
+            kids.push(lo.add(
+                NodeKind::Param,
+                sym.map(Payload::Name).unwrap_or(Payload::None),
+                pspan,
+                &[],
+            ));
+        }
+    }
+    let body = children
+        .into_iter()
+        .find(|child| child.kind() != "lambda_parameters")
+        .map(|child| {
+            if matches!(child.kind(), "block" | "do_block") {
+                block_body(lo, child)
+            } else {
+                let stmt = lower_stmt(lo, child).unwrap_or_else(|| lower_expr(lo, child));
+                lo.add(NodeKind::Block, Payload::None, lo.span(child), &[stmt])
+            }
+        })
+        .unwrap_or_else(|| lo.empty_block(span));
+    kids.push(body);
+    lo.add(NodeKind::Lambda, Payload::None, span, &kids)
+}
+pub(super) fn lower_subshell(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let callee = lo.var("__ruby_subshell__", span);
+    let command = lo.str_lit(lo.text(node), span);
+    lo.add(NodeKind::Call, Payload::None, span, &[callee, command])
+}
+pub(super) fn lower_binary(lo: &mut Lowering, node: TsNode) -> NodeId {
+    crate::lower::binary(lo, node, ruby_bin_op, lower_expr)
+}
+pub(super) fn ruby_bin_op(text: &str) -> Option<Op> {
+    match text {
+        // Ruby `%` is FLOORED (remainder takes the divisor's sign), unlike the
+        // C-family truncated `%` in `common_bin_op` (#283-D).
+        "%" => Some(Op::FloorMod),
+        // Ruby integer `/` is FLOORED (`-7 / 2 == -4`), like Python `//` — distinct
+        // from C-family truncated `Op::Div` and Python/JS true-float `Op::TrueDiv`
+        // (#283-D).
+        "/" => Some(Op::FloorDiv),
+        "and" => Some(Op::And),
+        "or" => Some(Op::Or),
+        other => common_bin_op(other),
     }
 }
 pub(super) fn lower_unary(lo: &mut Lowering, node: TsNode) -> NodeId {

@@ -186,6 +186,12 @@ macro_rules! sample {
     let (interner, il) = lower_rust(src);
     let raw = raw_names(&il, &interner);
     assert!(
+        raw.iter().any(|name| name == "macro_rule_body"),
+        "macro arm body should remain a fail-closed preprocessor Raw boundary: {raw:?}"
+    );
+    assert!(crate::is_intentional_raw_boundary_tag("macro_rule_body"));
+    assert!(!crate::is_protocol_boundary_tag("macro_rule_body"));
+    assert!(
         !raw.iter().any(|name| name == "token_tree"),
         "macro_rules! arm extraction should not emit Raw token_tree nodes: {raw:?}"
     );
