@@ -374,6 +374,26 @@ fn map_get_protocol_record_with_arity(
     )
 }
 
+fn map_key_view_protocol_record(
+    id: u32,
+    span: Span,
+    contract: LibraryMapKeyViewContract,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance_and_arity(
+        id,
+        span,
+        contract.id,
+        contract.callee,
+        0,
+        status,
+        dependencies,
+        MAP_KEY_VIEW_PROTOCOL_PACK_ID,
+        MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
+    )
+}
+
 fn iterator_identity_adapter_record(
     id: u32,
     span: Span,

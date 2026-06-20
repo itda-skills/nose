@@ -508,7 +508,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   APIs with `nose.java.stdlib.math` provenance when unshadowed `Math` and
   integer-domain proof are present, Java/Rust/JS-family `map.get(key)` lookups
   with `nose.protocols.map_get` provenance when exact-map receiver proof is
-  present, Rust
+  present, Python/Ruby `keys`, Java `keySet`, and JS-family `Map.keys()` views
+  with `nose.protocols.map_key_views` provenance when exact-map receiver proof
+  is present, Rust
   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
   `.stream()` iterator identity adapters with
   `nose.protocols.iterator_identity_adapters` provenance when protocol receiver
@@ -661,7 +663,7 @@ callers:
   argument, entry-shape, mutation, `Source`, `Domain`, and `SequenceSurface`
   obligations, but API occurrence admission itself is shared where covered;
 - strict exact consumers share the same admitted occurrence resolver layer for
-  selected method, pack-proven map-get, map-key-view, regex, JS static/global,
+  selected method, pack-proven map-get, pack-proven map-key-view, regex, JS static/global,
   static-index, iterator-adapter, Rust Option sentinel, Rust `Vec::new`, and first-party
   collection/map factory and constructor paths instead of locally recombining
   selector strings with evidence checks. Opaque same-callee exact identity
@@ -669,7 +671,7 @@ callers:
   assign cross-language or library semantics;
 - normalize idiom canonicalization shares the admitted occurrence resolver layer
   for supported free-function builtins, generic receiver-method contracts,
-  pack-proven map `get`, map-key views, iterator identity adapters with
+  pack-proven map `get`, pack-proven map-key views, iterator identity adapters with
   `nose.protocols.iterator_identity_adapters` provenance, Java `Arrays.stream`,
   Java map entries, Rust `Some(...)`, Rust map factory receiver proof, and HOF
   receiver proof instead of locally recombining selector strings with `LibraryApi`
@@ -690,7 +692,7 @@ callers:
   spans now also go through span-query resolvers for free-name/imported
   collection factories, Java/Ruby/Rust collection factories, Java collection
   constructors, free-name/Java map factories, Java map entries, pack-proven map
-  `get`, and map-key view/wrapper calls. The
+  `get`, and pack-proven map-key view/wrapper calls. The
   value graph no longer locally recombines those contract rows with `LibraryApi`
   span evidence;
 - value-graph consumers that query by source span re-check the original source

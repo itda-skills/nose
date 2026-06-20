@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        27
+        28
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -416,6 +416,43 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(map_get["counts"]["value_laws"], 0);
     assert_eq!(map_get["counts"]["positive_fixtures"], 3);
     assert_eq!(map_get["counts"]["hard_negatives"], 2);
+
+    let map_key_view = semantic_pack_by_id(&json, "nose.protocols.map_key_views");
+    assert_eq!(map_key_view["hash"], "fc74f28c4e454838");
+    assert_eq!(map_key_view["kind"], "ProtocolPack");
+    assert_eq!(
+        map_key_view["display_name"],
+        "nose map-key-view protocol pack"
+    );
+    assert_eq!(map_key_view["source"], "compiled-first-party");
+    assert_eq!(map_key_view["influence"], "evidence-and-contracts");
+    assert_eq!(map_key_view["trust"], "default-first-party");
+    assert_eq!(map_key_view["enabled_by_default"], true);
+    assert_eq!(map_key_view["path"], serde_json::Value::Null);
+    assert_eq!(map_key_view["provider"], "Corca, Inc.");
+    assert_eq!(
+        map_key_view["repository"],
+        "https://github.com/corca-ai/nose"
+    );
+    assert_eq!(map_key_view["license"], "MIT");
+    assert_eq!(
+        json_array_strings(map_key_view, "supported_languages"),
+        vec![
+            "python",
+            "ruby",
+            "java",
+            "javascript",
+            "typescript",
+            "vue",
+            "svelte",
+            "html"
+        ]
+    );
+    assert_eq!(map_key_view["counts"]["evidence_producers"], 1);
+    assert_eq!(map_key_view["counts"]["contracts"], 2);
+    assert_eq!(map_key_view["counts"]["value_laws"], 0);
+    assert_eq!(map_key_view["counts"]["positive_fixtures"], 4);
+    assert_eq!(map_key_view["counts"]["hard_negatives"], 2);
 
     let java_entries = semantic_pack_by_id(&json, "nose.java.stdlib.map_entries");
     assert_eq!(java_entries["hash"], "70b8bbc16bb60219");

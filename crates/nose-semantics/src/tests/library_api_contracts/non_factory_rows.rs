@@ -5,6 +5,7 @@ fn library_non_factory_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_map_key_view_contract(Lang::TypeScript, "keys", 0),
         Some(LibraryMapKeyViewContract {
+            pack_id: MAP_KEY_VIEW_PROTOCOL_PACK_ID,
             id: LibraryApiContractId::MapKeyView(MapKeyViewKind::Iterator),
             callee: LibraryApiCalleeContract::Method {
                 method: "keys",

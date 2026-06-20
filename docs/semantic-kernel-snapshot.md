@@ -147,6 +147,9 @@ still being migrated toward it.
   `nose.protocols.map_get` descriptor owns Java/Rust/JS-family `map.get(key)`
   contract and occurrence producer ids, while non-map receivers and unsupported
   arities remain hard negatives. The
+  `nose.protocols.map_key_views` descriptor owns Python/Ruby `keys`, Java
+  `keySet`, and JS-family `Map.keys()` contract and occurrence producer ids,
+  while non-map receivers and unsupported arities remain hard negatives. The
   `nose.protocols.iterator_identity_adapters` descriptor owns Rust
   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
   `.stream()` iterator identity adapter contract and occurrence producer ids,
@@ -209,6 +212,9 @@ still being migrated toward it.
   and
   `nose.protocols.map_get`, a default builtin protocol pack for Java/Rust/
   JS-family `map.get(key)` API provenance, and
+  `nose.protocols.map_key_views`, a default builtin protocol pack for
+  Python/Ruby `keys`, Java `keySet`, and JS-family `Map.keys()` API provenance,
+  and
   `nose.protocols.iterator_identity_adapters`, a default builtin protocol pack
   for Rust iterator identity adapters and Java `.stream()` API provenance, and
   `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped surface
@@ -675,15 +681,16 @@ migrated.
   recombining raw selector parsing with evidence admission locally. Normalize
   idiom canonicalization uses the same resolver layer for
   supported free-function builtins, generic method contracts, HOF receiver
-  proof, pack-proven map `get`, map-key views, iterator/static collection
-  adapters, Rust `Some(...)`, Rust map factory receiver proof, Promise
+  proof, pack-proven map `get`, pack-proven map-key views, iterator/static
+  collection adapters, Rust `Some(...)`, Rust map factory receiver proof, Promise
   `resolve`, and Promise `.then` contract lookup. Promise continuation
   reduction remains fail-closed
   unless a supported settled value can be recovered and the final value remains
   behind a Promise boundary. Value-level CSE paths that query
   by call span now use span-query resolvers for free-name/imported collection
   factories, Java/Ruby/Rust collection factories, free-name/Java map factories,
-  Java map entries, pack-proven map `get`, and map-key view/wrapper calls.
+  Java map entries, pack-proven map `get`, and pack-proven map-key view/wrapper
+  calls.
 - Opaque exact callee identity remains separate from library/API admission. A
   parameter callee or proof-backed immutable/imported callee may keep an exact
   same-callee call comparable as an opaque value operation. Same-spelled
@@ -724,10 +731,12 @@ migrated.
   receiver is a typed/proven map.
 - Map key-view library contracts distinguish collection views from iterator views:
   Python/Ruby `keys` and Java `keySet` are collection views, while JS-like
-  `Map.keys()` is an iterator view and needs the `Array.from(...)` wrapper
-  contract plus `QualifiedGlobal("Array.from")` symbol evidence before it can
-  feed exact membership. That qualified-global record must depend on same-span
-  source proof that the `Array` root is unshadowed.
+  `Map.keys()` is an iterator view. Those key-view occurrences report
+  `nose.protocols.map_key_views` provenance and need exact-map receiver proof.
+  JS-like iterator views still need the `Array.from(...)` wrapper contract plus
+  `QualifiedGlobal("Array.from")` symbol evidence before they can feed exact
+  membership. That qualified-global record must depend on same-span source proof
+  that the `Array` root is unshadowed.
 - Map lookup surfaces that return a value/option are now explicit library API
   contracts for Java/Rust/JS-like `get(key)` plus an exact-map receiver
   requirement. Those `MapGet` occurrences report `nose.protocols.map_get`

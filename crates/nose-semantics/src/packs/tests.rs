@@ -79,7 +79,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 27);
+    assert_eq!(descriptors.len(), 28);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -105,6 +105,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
             JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID,
             MAP_GET_PROTOCOL_PACK_ID,
+            MAP_KEY_VIEW_PROTOCOL_PACK_ID,
             ITERATOR_IDENTITY_ADAPTER_PACK_ID,
             JS_LIKE_BUILTIN_PROMISE_PACK_ID,
             JS_LIKE_BUILTIN_ARRAY_PACK_ID,
@@ -566,6 +567,46 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         .conformance_refs()
         .contains(&"map-get-non-map-receiver-hard-negative"));
 
+    let map_key_view = builtin_pack_descriptor(MAP_KEY_VIEW_PROTOCOL_PACK_ID)
+        .expect("map-key-view protocol descriptor");
+    assert_eq!(map_key_view.kind, SemanticPackKind::ProtocolPack);
+    assert_eq!(
+        map_key_view.supported_languages,
+        &[
+            "python",
+            "ruby",
+            "java",
+            "javascript",
+            "typescript",
+            "vue",
+            "svelte",
+            "html"
+        ]
+    );
+    assert_eq!(
+        map_key_view.supported_packages,
+        &["dict", "Hash", "Map", "java.util"]
+    );
+    assert_eq!(
+        map_key_view.evidence_producer_ids,
+        &[MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID]
+    );
+    assert!(map_key_view.source_fact_producer_ids.is_empty());
+    assert_eq!(
+        map_key_view.contract_ids,
+        &[
+            MAP_KEY_VIEW_COLLECTION_CONTRACT_ID,
+            MAP_KEY_VIEW_ITERATOR_CONTRACT_ID
+        ]
+    );
+    assert_eq!(map_key_view.counts().evidence_producers, 1);
+    assert_eq!(map_key_view.counts().contracts, 2);
+    assert_eq!(map_key_view.counts().positive_fixtures, 4);
+    assert_eq!(map_key_view.counts().hard_negatives, 2);
+    assert!(map_key_view
+        .conformance_refs()
+        .contains(&"map-key-view-non-map-receiver-hard-negative"));
+
     let iterator_identity_adapters = builtin_pack_descriptor(ITERATOR_IDENTITY_ADAPTER_PACK_ID)
         .expect("iterator identity adapter protocol descriptor");
     assert_eq!(
@@ -1017,6 +1058,24 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(map_get.counts.contracts, 1);
     assert_eq!(map_get.counts.positive_fixtures, 3);
     assert_eq!(map_get.counts.hard_negatives, 2);
+    let map_key_view = set
+        .packs()
+        .iter()
+        .find(|pack| pack.id == MAP_KEY_VIEW_PROTOCOL_PACK_ID)
+        .expect("map-key-view protocol summary");
+    assert_eq!(
+        map_key_view.hash,
+        stable_symbol_hash(MAP_KEY_VIEW_PROTOCOL_PACK_ID)
+    );
+    assert_eq!(map_key_view.kind, SemanticPackKind::ProtocolPack);
+    assert_eq!(
+        map_key_view.influence,
+        SemanticPackInfluence::EvidenceAndContracts
+    );
+    assert_eq!(map_key_view.counts.evidence_producers, 1);
+    assert_eq!(map_key_view.counts.contracts, 2);
+    assert_eq!(map_key_view.counts.positive_fixtures, 4);
+    assert_eq!(map_key_view.counts.hard_negatives, 2);
     let java_stdlib_maps = set
         .packs()
         .iter()
@@ -1289,7 +1348,7 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 28);
+    assert_eq!(set.packs().len(), 29);
     assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[3].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
@@ -1313,22 +1372,23 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
         JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID
     );
     assert_eq!(set.packs()[17].id, MAP_GET_PROTOCOL_PACK_ID);
-    assert_eq!(set.packs()[18].id, ITERATOR_IDENTITY_ADAPTER_PACK_ID);
-    assert_eq!(set.packs()[19].id, JS_LIKE_BUILTIN_PROMISE_PACK_ID);
-    assert_eq!(set.packs()[20].id, JS_LIKE_BUILTIN_ARRAY_PACK_ID);
-    assert_eq!(set.packs()[21].id, JS_LIKE_BUILTIN_BOOLEAN_PACK_ID);
-    assert_eq!(set.packs()[22].id, JS_LIKE_BUILTIN_REGEX_PACK_ID);
+    assert_eq!(set.packs()[18].id, MAP_KEY_VIEW_PROTOCOL_PACK_ID);
+    assert_eq!(set.packs()[19].id, ITERATOR_IDENTITY_ADAPTER_PACK_ID);
+    assert_eq!(set.packs()[20].id, JS_LIKE_BUILTIN_PROMISE_PACK_ID);
+    assert_eq!(set.packs()[21].id, JS_LIKE_BUILTIN_ARRAY_PACK_ID);
+    assert_eq!(set.packs()[22].id, JS_LIKE_BUILTIN_BOOLEAN_PACK_ID);
+    assert_eq!(set.packs()[23].id, JS_LIKE_BUILTIN_REGEX_PACK_ID);
     assert_eq!(
-        set.packs()[23].id,
+        set.packs()[24].id,
         JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID
     );
     assert_eq!(
-        set.packs()[24].id,
+        set.packs()[25].id,
         JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
     );
-    assert_eq!(set.packs()[25].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[26].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[27];
+    assert_eq!(set.packs()[26].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[27].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[28];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);

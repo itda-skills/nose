@@ -11,7 +11,8 @@ pub(super) use nose_semantics::{
     library_iterator_identity_adapter_contract, library_map_get_contract,
     library_map_key_view_contract, library_method_call_contract, LibraryApiContractId,
     ITERATOR_IDENTITY_ADAPTER_PACK_ID, ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID,
-    MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID,
+    MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID, MAP_KEY_VIEW_PROTOCOL_PACK_ID,
+    MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
 };
 
 pub(super) fn sp() -> Span {
@@ -137,6 +138,9 @@ pub(super) fn push_receiver_method_library_api_evidence(
     } else if contract.0 == LibraryApiContractId::MapGet {
         record.provenance.pack_hash = Some(stable_symbol_hash(MAP_GET_PROTOCOL_PACK_ID));
         record.provenance.rule_hash = Some(stable_symbol_hash(MAP_GET_PROTOCOL_PRODUCER_ID));
+    } else if matches!(contract.0, LibraryApiContractId::MapKeyView(_)) {
+        record.provenance.pack_hash = Some(stable_symbol_hash(MAP_KEY_VIEW_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash = Some(stable_symbol_hash(MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID));
     }
     il.evidence.push(record);
     Some(EvidenceId(id))

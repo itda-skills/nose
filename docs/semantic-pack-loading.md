@@ -104,6 +104,9 @@ Trust is separate from channel eligibility.
   `java.util.Arrays.stream` static collection adapter API occurrence provenance;
   `nose.protocols.map_get` owns Java/Rust/JS-family `map.get(key)` API
   occurrence provenance under exact-map receiver proof;
+  `nose.protocols.map_key_views` owns Python/Ruby `keys`, Java `keySet`, and
+  JS-family `Map.keys()` API occurrence provenance under exact-map receiver
+  proof;
   `nose.protocols.iterator_identity_adapters` owns Rust
   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
   `.stream()` iterator identity adapter API occurrence provenance;

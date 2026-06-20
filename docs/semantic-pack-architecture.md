@@ -51,6 +51,7 @@ ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.java.stdlib.collection_constructors`,
 `nose.java.stdlib.static_collection_adapters`,
 `nose.protocols.map_get`,
+`nose.protocols.map_key_views`,
 `nose.protocols.iterator_identity_adapters`,
 `nose.python.stdlib.type_domain`, and
 `nose.value_graph.laws`.
@@ -248,6 +249,9 @@ previous semantic-kernel tranches.
    The current map-get protocol slice is `nose.protocols.map_get`, which owns
    Java/Rust/JS-family `map.get(key)` API occurrence provenance under the shared
    exact-map receiver contract.
+   The current map-key-view protocol slice is `nose.protocols.map_key_views`,
+   which owns Python/Ruby `keys`, Java `keySet`, and JS-family `Map.keys()` API
+   occurrence provenance under the shared exact-map receiver contract.
    The current iterator identity adapter protocol slice is
    `nose.protocols.iterator_identity_adapters`, which owns Rust
    `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java

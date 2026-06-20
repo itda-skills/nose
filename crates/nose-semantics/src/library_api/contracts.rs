@@ -61,6 +61,10 @@ pub const JS_LIKE_BUILTIN_MAP_CONSTRUCTOR_CONTRACT_ID: &str = "js_like.map.const
 pub const MAP_GET_PROTOCOL_PACK_ID: &str = "nose.protocols.map_get";
 pub const MAP_GET_PROTOCOL_PRODUCER_ID: &str = "protocols.map-get-api";
 pub const MAP_GET_CONTRACT_ID: &str = "map.get";
+pub const MAP_KEY_VIEW_PROTOCOL_PACK_ID: &str = "nose.protocols.map_key_views";
+pub const MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID: &str = "protocols.map-key-view-api";
+pub const MAP_KEY_VIEW_COLLECTION_CONTRACT_ID: &str = "map_key_view.collection";
+pub const MAP_KEY_VIEW_ITERATOR_CONTRACT_ID: &str = "map_key_view.iterator";
 pub const SCALAR_INTEGER_METHOD_ABS_CONTRACT_ID: &str = "scalar_integer_method.abs";
 pub const SCALAR_INTEGER_METHOD_MIN_CONTRACT_ID: &str = "scalar_integer_method.min";
 pub const SCALAR_INTEGER_METHOD_MAX_CONTRACT_ID: &str = "scalar_integer_method.max";
@@ -299,6 +303,7 @@ pub struct LibraryMapEntryFactoryContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryMapKeyViewContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: MapKeyViewContract,
