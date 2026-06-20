@@ -115,7 +115,9 @@ pub(in crate::library_api) fn library_api_dependencies_match_named_callee_at_spa
         }
         LibraryApiCalleeContract::ImportedBinding { module, exported } => {
             if let Some(span) = receiver_span {
-                dependency_has_imported_namespace_anchor(
+                callee_span.is_some_and(|callee_span| {
+                    field_method_receiver_matches_span(il, interner, callee_span, exported, span)
+                }) && dependency_has_imported_namespace_anchor(
                     il,
                     interner,
                     record,
@@ -132,14 +134,30 @@ pub(in crate::library_api) fn library_api_dependencies_match_named_callee_at_spa
                     NodeKind::Var,
                     module,
                     exported,
-                ) || dependency_has_imported_namespace_dependency(il, interner, record, module)
+                )
             } else {
                 dependency_has_imported_binding_dependency(il, interner, record, module, exported)
-                    || dependency_has_imported_namespace_dependency(il, interner, record, module)
             }
         }
         _ => false,
     }
+}
+
+fn field_method_receiver_matches_span(
+    il: &Il,
+    interner: &Interner,
+    callee_span: Span,
+    method: &str,
+    receiver_span: Span,
+) -> bool {
+    let Some(callee) = node_at_span_with_kind(il, callee_span, NodeKind::Field) else {
+        return false;
+    };
+    field_method_at_span(il, interner, callee_span, method)
+        && il
+            .children(callee)
+            .first()
+            .is_some_and(|&receiver| il.node(receiver).span == receiver_span)
 }
 
 pub(in crate::library_api) fn library_api_dependencies_match_static_import_callee_at_span(

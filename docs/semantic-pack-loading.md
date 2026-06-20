@@ -58,6 +58,9 @@ Trust is separate from channel eligibility.
   `nose.python.builtins.collection_factories` is the first narrow Python
   builtins pack for `list`, `set`, `frozenset`, and `tuple` collection factory
   API occurrence provenance;
+  `nose.python.stdlib.collection_factories` owns Python `collections.deque`
+  imported binding, alias, and namespace collection factory API occurrence
+  provenance;
   `nose.python.stdlib.type_domain` is the first narrow stdlib pilot pack for
   Python `typing`, `collections.abc`, and `asyncio` type-domain aliases;
   `nose.value_graph.laws` is the first LawPack pilot for selected proof-backed

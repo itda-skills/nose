@@ -74,18 +74,33 @@ fn python_list_factory_call_il() -> (Il, Interner, NodeId, NodeId) {
     (finish_il(b, root, Lang::Python), interner, call, callee)
 }
 
-fn python_len_builtin_call_il() -> (Il, Interner, NodeId, NodeId) {
+fn python_deque_factory_call_il() -> (Il, Interner, NodeId, NodeId) {
     let interner = Interner::new();
     let mut b = IlBuilder::new(FileId(0));
     let callee = b.add(
         NodeKind::Var,
-        Payload::Name(interner.intern("len")),
+        Payload::Name(interner.intern("Values")),
         sp(62),
         &[],
     );
     let value = b.add(NodeKind::Var, Payload::Cid(0), sp(63), &[]);
     let call = b.add(NodeKind::Call, Payload::None, sp(64), &[callee, value]);
     let root = b.add(NodeKind::Func, Payload::None, sp(65), &[call]);
+    (finish_il(b, root, Lang::Python), interner, call, callee)
+}
+
+fn python_len_builtin_call_il() -> (Il, Interner, NodeId, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let callee = b.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern("len")),
+        sp(66),
+        &[],
+    );
+    let value = b.add(NodeKind::Var, Payload::Cid(0), sp(67), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(68), &[callee, value]);
+    let root = b.add(NodeKind::Func, Payload::None, sp(69), &[call]);
     (finish_il(b, root, Lang::Python), interner, call, callee)
 }
 
@@ -421,6 +436,133 @@ fn admitted_collection_factory_resolver_requires_api_occurrence_evidence() {
     assert_eq!(
         occurrence.contract.id,
         LibraryApiContractId::PythonBuiltinCollectionFactory
+    );
+    assert_eq!(occurrence.callee, callee);
+    assert_eq!(occurrence.receiver, None);
+    assert_eq!(occurrence.arg_count, 1);
+}
+
+#[test]
+fn admitted_imported_collection_factory_resolver_requires_pack_provenance() {
+    let (il, interner, call, _callee) = python_deque_factory_call_il();
+    assert!(
+        admitted_imported_collection_factory_at_call(&il, &interner, call).is_none(),
+        "raw imported deque(...) call shape alone must not admit collection factory semantics"
+    );
+
+    let contract =
+        library_imported_collection_factory_contract(Lang::Python, "collections", "deque")
+            .expect("Python collections.deque factory contract");
+    let imported_binding = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
+        module_hash: stable_symbol_hash("collections"),
+        exported_hash: stable_symbol_hash("deque"),
+    });
+
+    let (mut missing_dependency, interner, call, _callee) = python_deque_factory_call_il();
+    missing_dependency
+        .evidence
+        .push(python_stdlib_collection_factory_record(
+            0,
+            missing_dependency.node(call).span,
+            contract,
+            EvidenceStatus::Asserted,
+            &[],
+        ));
+    assert!(
+        admitted_imported_collection_factory_at_call(&missing_dependency, &interner, call)
+            .is_none(),
+        "same-span collections.deque evidence without import dependency is rejected"
+    );
+
+    let (mut wrong_pack, interner, call, callee) = python_deque_factory_call_il();
+    wrong_pack.evidence.push(evidence(
+        0,
+        EvidenceAnchor::binding(sp(61), stable_symbol_hash("Values")),
+        imported_binding,
+        EvidenceStatus::Asserted,
+    ));
+    wrong_pack.evidence.push(evidence_with_dependencies(
+        1,
+        EvidenceAnchor::node(wrong_pack.node(callee).span, NodeKind::Var),
+        imported_binding,
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(0)],
+    ));
+    wrong_pack.evidence.push(library_api_record_with_provenance(
+        2,
+        wrong_pack.node(call).span,
+        contract.id,
+        contract.callee,
+        EvidenceStatus::Asserted,
+        &[1],
+        FIRST_PARTY_PACK_ID,
+        PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+    ));
+    assert!(
+        admitted_imported_collection_factory_at_call(&wrong_pack, &interner, call).is_none(),
+        "Python stdlib collection factory evidence under the compatibility pack is rejected"
+    );
+
+    let (mut wrong_producer, interner, call, callee) = python_deque_factory_call_il();
+    wrong_producer.evidence.push(evidence(
+        0,
+        EvidenceAnchor::binding(sp(61), stable_symbol_hash("Values")),
+        imported_binding,
+        EvidenceStatus::Asserted,
+    ));
+    wrong_producer.evidence.push(evidence_with_dependencies(
+        1,
+        EvidenceAnchor::node(wrong_producer.node(callee).span, NodeKind::Var),
+        imported_binding,
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(0)],
+    ));
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance(
+            2,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[1],
+            PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
+            "wrong.python.stdlib.collection-factory-api",
+        ));
+    assert!(
+        admitted_imported_collection_factory_at_call(&wrong_producer, &interner, call).is_none(),
+        "Python stdlib collection factory evidence with the wrong producer is rejected"
+    );
+
+    let (mut admitted, interner, call, callee) = python_deque_factory_call_il();
+    admitted.evidence.push(evidence(
+        0,
+        EvidenceAnchor::binding(sp(61), stable_symbol_hash("Values")),
+        imported_binding,
+        EvidenceStatus::Asserted,
+    ));
+    admitted.evidence.push(evidence_with_dependencies(
+        1,
+        EvidenceAnchor::node(admitted.node(callee).span, NodeKind::Var),
+        imported_binding,
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(0)],
+    ));
+    admitted
+        .evidence
+        .push(python_stdlib_collection_factory_record(
+            2,
+            admitted.node(call).span,
+            contract,
+            EvidenceStatus::Asserted,
+            &[1],
+        ));
+
+    let occurrence =
+        admitted_imported_collection_factory_at_call(&admitted, &interner, call).unwrap();
+    assert_eq!(
+        occurrence.contract.id,
+        LibraryApiContractId::PythonImportedCollectionFactory
     );
     assert_eq!(occurrence.callee, callee);
     assert_eq!(occurrence.receiver, None);

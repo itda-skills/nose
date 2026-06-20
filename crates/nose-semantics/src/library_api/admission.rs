@@ -174,6 +174,15 @@ fn library_api_record_provenance_matches_contract(
                         PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
                     ))
         }
+        LibraryApiContractId::PythonImportedCollectionFactory => {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash
+                    == Some(stable_symbol_hash(PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(
+                        PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+                    ))
+        }
         _ => true,
     }
 }

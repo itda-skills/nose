@@ -367,7 +367,9 @@ narrow first-party language-core lowering: Go map lookup-ok `Contains`, Go
 `Keys`, C `UnsignedCast32` with `nose.lang.c` provenance-backed
 `Source(Cast(CUnsigned32))`, or Python builtin collection factories with
 `nose.python.builtins.collection_factories` provenance-backed `LibraryApi`
-occurrence evidence. Canonical
+occurrence evidence, or Python imported `collections.deque` collection
+factories with `nose.python.stdlib.collection_factories` provenance-backed
+`LibraryApi` occurrence evidence. Canonical
 `Append` still needs `Effect(BuilderAppendCall)`, and the first-party normalize
 producer emits that effect only when the same call also has the same-span
 `LibraryApi` proof for the append API; the effect record depends on that API

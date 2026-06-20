@@ -11,6 +11,9 @@ fn library_collection_factory_pack_id(id: LibraryApiContractId) -> &'static str 
         LibraryApiContractId::PythonBuiltinCollectionFactory => {
             PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID
         }
+        LibraryApiContractId::PythonImportedCollectionFactory => {
+            PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID
+        }
         _ => FIRST_PARTY_PACK_ID,
     }
 }

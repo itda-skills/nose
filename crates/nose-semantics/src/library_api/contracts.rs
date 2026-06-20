@@ -22,6 +22,11 @@ pub const PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID: &str =
 pub const PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID: &str =
     "python.builtins.collection-factory-api";
 pub const PYTHON_BUILTIN_COLLECTION_FACTORY_CONTRACT_ID: &str = "python.builtin.collection_factory";
+pub const PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID: &str =
+    "nose.python.stdlib.collection_factories";
+pub const PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID: &str =
+    "python.stdlib.collection-factory-api";
+pub const PYTHON_STDLIB_COLLECTION_FACTORY_CONTRACT_ID: &str = "python.imported.collection_factory";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LibraryApiContractId {

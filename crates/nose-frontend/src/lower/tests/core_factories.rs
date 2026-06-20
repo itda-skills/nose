@@ -51,6 +51,17 @@ fn core_lowering_emits_import_backed_library_api_occurrences() {
         ),
         1
     );
+    let records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(
+        records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID))
+    );
+    assert_eq!(
+        records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID
+        ))
+    );
 
     let mut lo = Lowering::new(FileId(0), b"", Lang::Python, &interner);
     import_binding(&mut lo, sp_at(10), "Values", "collections", "deque");
@@ -69,6 +80,46 @@ fn core_lowering_emits_import_backed_library_api_occurrences() {
             library_api_callee_contract_hash(contract.callee),
         ),
         1
+    );
+    let records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(
+        records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID))
+    );
+    assert_eq!(
+        records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID
+        ))
+    );
+
+    let mut lo = Lowering::new(FileId(0), b"", Lang::Python, &interner);
+    import_namespace(&mut lo, sp_at(30), "collections", "collections");
+    let collections = lo.var("collections", sp_at(31));
+    let callee = lo.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("deque")),
+        sp_at(32),
+        &[collections],
+    );
+    let seq = lo.add(
+        NodeKind::Seq,
+        Payload::Name(interner.intern("array")),
+        sp_at(33),
+        &[],
+    );
+    lo.add(NodeKind::Call, Payload::None, sp_at(34), &[callee, seq]);
+    let records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(records.len(), 1);
+    assert_eq!(
+        records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID))
+    );
+    assert_eq!(
+        records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID
+        ))
     );
 
     let mut lo = Lowering::new(FileId(0), b"", Lang::Python, &interner);

@@ -77,7 +77,10 @@ The next code slices are intentionally incremental:
 6. Phase 5: move narrow stdlib/library/law rows behind pack-owned descriptors and shared
    admitted-contract resolvers, starting with
    `nose.python.builtins.collection_factories` for Python builtin collection
-   factory `LibraryApi` occurrence provenance;
+   factory `LibraryApi` occurrence provenance, then
+   `nose.python.stdlib.collection_factories` for Python `collections.deque`
+   imported binding, alias, and namespace collection-factory occurrence
+   provenance;
 7. Phase 6: allow external pack influence only after the builtin path is proven;
 8. Phase 7: define adoption and release gates.
 
@@ -106,6 +109,23 @@ wall time was 56.01 ms -> 55.61 ms; `lower` was 24.70 ms -> 23.90 ms;
 measured `swift-metrics` 28.94 ms -> 28.16 ms, so the trigger was treated as
 timing noise. Binary size
 changed 20,105,968 -> 20,124,592 bytes for the cumulative issue branch.
+
+Phase 5 Python stdlib collection-factory measurement note, local run on
+2026-06-20: product query-regression r15 compared `main@d8e0796` with the
+`nose.python.stdlib.collection_factories` branch over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, and surface
+counts were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by 3092 bytes from the new top-level `semantic_packs` entry. The final
+sequential r15 compare produced only JSON-byte metadata triggers. The same
+main/current binaries were also remeasured with repo-local alternating r15 runs
+saved during the local run at
+`/tmp/nose-473-phase5-stdlib-collections-alternating-final3-r15.json`. The
+alternating aggregate wall time was 1278.26 ms -> 1239.00 ms (-3.1%);
+`lower` was 396.60 ms -> 386.30 ms (-2.6%); `normalize+extract` was
+679.70 ms -> 637.70 ms (-6.2%); `candidates` was 22.50 ms -> 21.30 ms.
+No alternating repo/phase exceeded both the 5% and 5 ms investigation trigger.
+Binary size changed 20,105,968 -> 20,124,864 bytes for the cumulative issue
+branch.
 
 ## History
 
@@ -156,6 +176,11 @@ changed 20,105,968 -> 20,124,592 bytes for the cumulative issue branch.
   factory `LibraryApi` occurrence evidence now reports
   `nose.python.builtins.collection_factories` pack and producer provenance while
   preserving shadowed-name and wildcard-import hard negatives.
+- Python imported `collections.deque` collection factories started moving out
+  of the broad compatibility facade. Imported binding, alias, and namespace
+  factory `LibraryApi` occurrence evidence now reports
+  `nose.python.stdlib.collection_factories` pack and producer provenance while
+  preserving missing-import and wrong-module hard negatives.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a
   language-, signature-, and integer-domain-constrained first-party contract
   instead of a bare method-name recognizer. Float/NaN-sensitive methods remain a

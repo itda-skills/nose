@@ -66,7 +66,7 @@ fn library_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_imported_collection_factory_contract(Lang::Python, "collections", "deque"),
         Some(LibraryCollectionFactoryContract {
-            pack_id: FIRST_PARTY_PACK_ID,
+            pack_id: PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
             id: LibraryApiContractId::PythonImportedCollectionFactory,
             callee: LibraryApiCalleeContract::ImportedBinding {
                 module: "collections",

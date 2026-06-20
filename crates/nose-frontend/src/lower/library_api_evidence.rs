@@ -4,6 +4,7 @@ struct LibraryApiEvidencePlan {
     id: LibraryApiContractId,
     callee: LibraryApiCalleeContract,
     dependencies: Vec<EvidenceId>,
+    pack_id: &'static str,
     rule: &'static str,
     result_domain: Option<DomainEvidence>,
 }
@@ -15,13 +16,14 @@ impl<'a> Lowering<'a> {
         };
         let arg_count = args.len();
         if let Some(plan) = self.library_api_contract_for_call(span, callee, arg_count) {
-            let api = self.record_evidence_with_dependencies(
+            let api = self.record_evidence_with_pack_dependencies(
                 EvidenceAnchor::node(span, NodeKind::Call),
                 EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
                     contract_hash: library_api_contract_id_hash(plan.id),
                     callee_hash: library_api_callee_contract_hash(plan.callee),
                     arity: arg_count as u16,
                 }),
+                plan.pack_id,
                 plan.rule,
                 plan.dependencies,
             );
@@ -135,6 +137,7 @@ impl<'a> Lowering<'a> {
             id: contract.0,
             callee: contract.1,
             dependencies,
+            pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
             rule: contract.5,
             result_domain: contract.6,
         })
@@ -196,6 +199,7 @@ impl<'a> Lowering<'a> {
             id: contract.id,
             callee: contract.callee,
             dependencies,
+            pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
             rule: "library_api_js_boolean_coercion",
             result_domain: None,
         })
@@ -225,7 +229,8 @@ impl<'a> Lowering<'a> {
                         id: contract.id,
                         callee: contract.callee,
                         dependencies: vec![dependency],
-                        rule: "library_api_imported_collection_factory",
+                        pack_id: PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
+                        rule: PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
                         result_domain: library_collection_factory_result_domain_for_arity(
                             contract, arg_count,
                         ),
@@ -253,7 +258,8 @@ impl<'a> Lowering<'a> {
                         id: contract.id,
                         callee: contract.callee,
                         dependencies: vec![dependency],
-                        rule: "library_api_imported_collection_factory",
+                        pack_id: PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
+                        rule: PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
                         result_domain: library_collection_factory_result_domain_for_arity(
                             contract, arg_count,
                         ),
@@ -281,6 +287,7 @@ impl<'a> Lowering<'a> {
             id: contract.id,
             callee: contract.callee,
             dependencies: vec![dependency],
+            pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
             rule: "library_api_imported_namespace_function",
             result_domain: None,
         })
@@ -371,6 +378,7 @@ impl<'a> Lowering<'a> {
             id,
             callee: callee_contract,
             dependencies: vec![dependency],
+            pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
             rule,
             result_domain,
         })
@@ -394,6 +402,7 @@ impl<'a> Lowering<'a> {
             id: contract.id,
             callee: contract.callee,
             dependencies: vec![dependency],
+            pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
             rule: "library_api_static_index_membership",
             result_domain: None,
         })
@@ -473,6 +482,7 @@ impl<'a> Lowering<'a> {
             id: contract.id,
             callee: contract.callee,
             dependencies: vec![dependency],
+            pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
             rule: "library_api_regex_literal_method",
             result_domain: None,
         })
@@ -530,6 +540,7 @@ impl<'a> Lowering<'a> {
             id: contract.0,
             callee: contract.1,
             dependencies,
+            pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
             rule: contract.3,
             result_domain: contract.4,
         })

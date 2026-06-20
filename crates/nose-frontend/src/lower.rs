@@ -86,7 +86,8 @@ use nose_semantics::{
     sequence_surface_kind_for_tag, type_domain_from_source_text, ImportFactKind,
     LibraryApiCalleeContract, LibraryApiContractId, LibraryApiDependencyCache,
     MethodReceiverContract, StaticIndexMembershipReceiverContract,
-    PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
+    PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
+    PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
 };
 use tree_sitter::Node as TsNode;
 

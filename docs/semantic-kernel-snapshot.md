@@ -77,6 +77,9 @@ still being migrated toward it.
   `list`, `set`, `frozenset`, and `tuple` collection-factory contract id and
   `LibraryApi` occurrence producer id, while shadowed names and wildcard imports
   remain hard negatives. The
+  `nose.python.stdlib.collection_factories` descriptor owns Python
+  `collections.deque` collection-factory contract and occurrence producer ids,
+  while missing imports and wrong modules remain hard negatives. The
   `nose.python.stdlib.type_domain` descriptor directly exposes its alias
   contract rows so producer id, contract id, conformance refs, and declaration
   counts come from one pack-owned table.
@@ -90,6 +93,8 @@ still being migrated toward it.
   language pack-shaped surface for C unsigned-cast source provenance,
   `nose.python.builtins.collection_factories`, a default builtin stdlib pack for
   Python builtin collection-factory API provenance, and
+  `nose.python.stdlib.collection_factories`, a default builtin stdlib pack for
+  Python `collections.deque` collection-factory API provenance, and
   `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped surface
   for Python `typing`, `collections.abc`, and `asyncio` type-domain alias
   evidence.
@@ -233,6 +238,10 @@ migrated.
   `list`, `set`, `frozenset`, and `tuple` now carries
   `nose.python.builtins.collection_factories` pack provenance while the existing
   shadow and wildcard-import hard negatives stay closed.
+  Python imported `collections.deque` collection-factory `LibraryApi`
+  occurrence evidence now carries
+  `nose.python.stdlib.collection_factories` pack provenance while missing-import
+  and wrong-module hard negatives stay closed.
   `nose-semantics` resolves receiver-domain evidence through a shared
   `DomainRequirement` contract. Consumers check exact receiver node evidence
   first, then immutable binding evidence for local or module variables, then

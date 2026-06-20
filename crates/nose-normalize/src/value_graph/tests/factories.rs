@@ -28,11 +28,10 @@ fn imported_collection_factory_value_graph_uses_library_api_evidence() {
         eval_proven_collection_op(&il, &interner, call).is_none(),
         "import symbol proof alone must not prove the migrated stdlib factory"
     );
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(python_stdlib_collection_factory_evidence(
         3,
         sp(64),
-        contract.id,
-        contract.callee,
+        contract,
         1,
         vec![EvidenceId(1)],
     ));
@@ -542,11 +541,10 @@ fn namespace_collection_factory_value_graph_uses_library_api_evidence_after_seed
         builder.proven_collection_value(raw).is_none(),
         "namespace import proof alone must not prove the migrated stdlib factory"
     );
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(python_stdlib_collection_factory_evidence(
         4,
         sp(85),
-        contract.id,
-        contract.callee,
+        contract,
         1,
         vec![EvidenceId(2)],
     ));

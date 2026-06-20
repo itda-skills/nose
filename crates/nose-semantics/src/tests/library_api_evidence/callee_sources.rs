@@ -38,11 +38,10 @@ fn library_api_evidence_resolution_accepts_import_backed_callees() {
         EvidenceStatus::Asserted,
         vec![EvidenceId(0)],
     ));
-    il.evidence.push(library_api_record(
+    il.evidence.push(python_stdlib_collection_factory_record(
         2,
         sp(13),
-        contract.id,
-        contract.callee,
+        contract,
         EvidenceStatus::Asserted,
         &[1],
     ));
