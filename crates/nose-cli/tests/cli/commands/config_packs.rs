@@ -90,6 +90,111 @@ fn semantic_pack_manifest(id: &str) -> String {
     )
 }
 
+fn semantic_pack_by_id<'a>(json: &'a serde_json::Value, id: &str) -> &'a serde_json::Value {
+    json["semantic_packs"]
+        .as_array()
+        .expect("query JSON should report semantic_packs")
+        .iter()
+        .find(|pack| pack["id"] == id)
+        .unwrap_or_else(|| panic!("semantic_packs should include {id}: {json}"))
+}
+
+fn assert_example_external_pack(pack: &serde_json::Value, expected_id: &str) {
+    assert_eq!(pack["id"], expected_id);
+    assert_eq!(pack["kind"], "LibraryPack");
+    assert_eq!(pack["version"], "0.1.0");
+    assert_eq!(pack["display_name"], "Example semantic pack");
+    assert_eq!(pack["trust"], "external-opt-in");
+    assert_eq!(pack["enabled_by_default"], false);
+    assert_eq!(pack["source"], "local-manifest");
+    assert_eq!(pack["influence"], "metadata-only");
+    assert_eq!(pack["provider"], "Example Packs");
+    assert_eq!(pack["repository"], "https://example.invalid/semantic-pack");
+    assert_eq!(pack["license"], "MIT");
+    assert_eq!(
+        json_array_strings(pack, "supported_languages"),
+        vec!["python"]
+    );
+    assert_eq!(pack["counts"]["evidence_producers"], 1);
+    assert_eq!(pack["counts"]["contracts"], 1);
+    assert_eq!(pack["counts"]["value_laws"], 0);
+    assert_eq!(pack["counts"]["positive_fixtures"], 1);
+    assert_eq!(pack["counts"]["hard_negatives"], 1);
+}
+
+#[test]
+fn query_json_reports_builtin_semantic_packs() {
+    let dir = make_project("semantic_pack_builtin_report");
+    let json = query_json(&run(&[
+        "query",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--format",
+        "json",
+    ]));
+
+    let first_party = semantic_pack_by_id(&json, "nose.first_party");
+    assert_eq!(first_party["source"], "compiled-first-party");
+    assert_eq!(first_party["influence"], "evidence-and-contracts");
+    assert_eq!(first_party["trust"], "default-first-party");
+    assert_eq!(first_party["enabled_by_default"], true);
+    assert!(first_party["path"].is_null());
+
+    let stdlib = semantic_pack_by_id(&json, "nose.python.stdlib.type_domain");
+    assert_eq!(stdlib["kind"], "StdlibPack");
+    assert_eq!(
+        json_array_strings(stdlib, "supported_languages"),
+        vec!["python"]
+    );
+    assert_eq!(stdlib["counts"]["evidence_producers"], 1);
+    assert_eq!(stdlib["counts"]["contracts"], 1);
+
+    let laws = semantic_pack_by_id(&json, "nose.value_graph.laws");
+    assert_eq!(laws["kind"], "LawPack");
+    assert_eq!(laws["source"], "compiled-first-party");
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn query_json_reports_cli_semantic_pack_metadata_without_changing_families() {
+    let dir = make_project("semantic_pack_cli_report");
+    let pack = dir.join("pack.json");
+    fs::write(&pack, semantic_pack_manifest("com.example.cli-pack")).unwrap();
+
+    let without_pack = query_json(&run(&[
+        "query",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--format",
+        "json",
+    ]));
+    let with_pack = query_json(&run(&[
+        "query",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--semantic-pack",
+        pack.to_str().unwrap(),
+        "--format",
+        "json",
+    ]));
+
+    assert_eq!(
+        query_families(&with_pack),
+        query_families(&without_pack),
+        "metadata-only external packs must not change reported families"
+    );
+    let reported = semantic_pack_by_id(&with_pack, "com.example.cli-pack");
+    assert_example_external_pack(reported, "com.example.cli-pack");
+    assert_eq!(
+        reported["path"].as_str(),
+        Some(pack.canonicalize().unwrap().to_str().unwrap())
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn semantic_pack_check_json_reports_conformance_success() {
     let dir = make_project("semantic_pack_check_ok");
@@ -242,6 +347,20 @@ fn config_semantic_packs_are_explicit_opt_ins() {
         "query should load config semantic pack: stderr={}",
         String::from_utf8_lossy(&out.stderr)
     );
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    let json = query_json(&stdout);
+    let reported = semantic_pack_by_id(&json, "com.example.config-pack");
+    assert_example_external_pack(reported, "com.example.config-pack");
+    assert_eq!(
+        reported["path"].as_str(),
+        Some(
+            dir.join("pack.json")
+                .canonicalize()
+                .unwrap()
+                .to_str()
+                .unwrap()
+        )
+    );
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -276,6 +395,20 @@ fn explicit_config_semantic_pack_paths_resolve_from_config_directory() {
         out.status.success(),
         "query should load config-relative semantic pack: stderr={}",
         String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    let json = query_json(&stdout);
+    let reported = semantic_pack_by_id(&json, "com.example.explicit-config-pack");
+    assert_example_external_pack(reported, "com.example.explicit-config-pack");
+    assert_eq!(
+        reported["path"].as_str(),
+        Some(
+            dir.join("pack.json")
+                .canonicalize()
+                .unwrap()
+                .to_str()
+                .unwrap()
+        )
     );
     let _ = fs::remove_dir_all(&dir);
 }

@@ -4,7 +4,7 @@ Status: nose can validate local semantic-pack v0 manifests on `nose query`, and
 it can run a separate local conformance check for manifests and declared fixture
 assets. External packs are explicit opt-ins and are currently `metadata-only`:
 they do not emit evidence, open exact contracts, mint fingerprints, approve clone
-pairs, or appear in `nose query --format json` yet.
+pairs, or change exact/near query results.
 
 ## Local entry points
 
@@ -64,9 +64,10 @@ Trust is separate from channel eligibility.
 - Duplicate pack ids fail the run instead of letting provenance become
   ambiguous.
 
-`nose query` currently validates configured and CLI-provided semantic-pack paths
-before analysis. Threading the active pack set into `query --format json`
-reporting is tracked by the #473 query-reporting phase.
+`nose query --format json` validates configured and CLI-provided semantic-pack
+paths before analysis and reports the active builtin/local pack set in the
+top-level `semantic_packs` array. Local external packs remain metadata-only
+while builtin compiled packs report `evidence-and-contracts` influence.
 
 ## Current limits
 
@@ -74,7 +75,6 @@ The loader validates manifest shape and pack provenance only. It does not yet:
 
 - execute external evidence producers;
 - register external contract rows with exact consumers;
-- report the active pack set in `nose query --format json`;
 - execute fixture contents or run a behavioral oracle;
 - compare semantic version ranges against the installed nose version beyond
   requiring a parseable declared compatibility field;

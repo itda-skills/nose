@@ -93,6 +93,7 @@ fn query_base_flags_divergent_edits() {
     let jout = nose_query_in(&dir, &["base=main", "--min-size", "8", "--format", "json"]);
     let j: serde_json::Value = serde_json::from_slice(&jout.stdout).unwrap();
     assert_eq!(j["view"], "base", "query schema envelope, base view: {j}");
+    assert_query_json_reports_semantic_packs(&j);
     assert_eq!(j["base"], "main");
     assert!(
         j["summary"]["divergences"].as_u64().unwrap() >= 1,

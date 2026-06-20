@@ -44,7 +44,7 @@ fn capabilities_command_lists_stable_commands_and_schemas() {
     );
     assert!(json_array_strings(&json["commands"], "deprecated").is_empty());
     assert_eq!(json["schemas"]["capabilities"][0], 2);
-    assert_eq!(json["schemas"]["query_json"][0], 4);
+    assert_eq!(json["schemas"]["query_json"][0], 5);
     assert_eq!(
         json["schemas"]["semantic_packs"][0],
         "nose.semantic-pack.v0"
@@ -219,6 +219,6 @@ fn recursive_hof_callback_fragment_does_not_overflow() {
         "top=0",
     ]);
     let json = query_json(&out);
-    assert_eq!(json["schema_version"], 4);
+    assert_eq!(json["schema_version"], 5);
     let _ = fs::remove_dir_all(&dir);
 }

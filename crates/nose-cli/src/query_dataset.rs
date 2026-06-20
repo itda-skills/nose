@@ -21,6 +21,7 @@ pub(super) struct QueryDataset {
     pub(super) families: Vec<nose_detect::RefactorFamily>,
     pub(super) scope: QueryScope,
     pub(super) settings: QuerySettings,
+    pub(super) semantic_packs: nose_semantics::SemanticPackSet,
     pub(super) reinvented: Vec<nose_detect::ReinventedHelper>,
     pub(super) opts: nose_detect::DetectOptions,
 }
@@ -29,7 +30,7 @@ pub(super) fn build_query_dataset(
     args: &QueryArgs,
     refs: &[&std::path::Path],
 ) -> Result<QueryDataset> {
-    let settings = resolve_query_settings(args)?;
+    let (settings, semantic_packs) = resolve_query_settings(args)?;
     let opts = detection_options(settings.channels, settings.min_tokens, settings.min_lines);
     let detector = detection_engine(settings.channels, &opts);
     let (mut report, scope) =
@@ -74,6 +75,7 @@ pub(super) fn build_query_dataset(
         families,
         scope,
         settings,
+        semantic_packs,
         reinvented,
         opts,
     })
@@ -92,7 +94,26 @@ pub(super) struct QuerySettings {
     pub(super) ignore_set: Option<ignores::IgnoreSet>,
 }
 
-fn resolve_query_settings(args: &QueryArgs) -> Result<QuerySettings> {
+pub(super) fn resolve_query_semantic_packs(
+    args: &QueryArgs,
+) -> Result<nose_semantics::SemanticPackSet> {
+    let cfg = config::load_query(args.config.as_deref())?;
+    semantic_pack_set_from_paths(cfg.semantic_packs, &args.semantic_pack)
+}
+
+fn semantic_pack_set_from_paths(
+    mut semantic_pack_paths: Vec<std::path::PathBuf>,
+    cli_semantic_pack_paths: &[std::path::PathBuf],
+) -> Result<nose_semantics::SemanticPackSet> {
+    semantic_pack_paths.extend(cli_semantic_pack_paths.iter().cloned());
+    Ok(nose_semantics::SemanticPackSet::new_local(
+        &semantic_pack_paths,
+    )?)
+}
+
+fn resolve_query_settings(
+    args: &QueryArgs,
+) -> Result<(QuerySettings, nose_semantics::SemanticPackSet)> {
     let cfg = config::load_query(args.config.as_deref())?;
     let min_members = args.min_members.or(cfg.min_members).unwrap_or(2);
     let min_value = validate_min_value(args.min_value.or(cfg.min_value).unwrap_or(0.0))?;
@@ -101,9 +122,7 @@ fn resolve_query_settings(args: &QueryArgs) -> Result<QuerySettings> {
     let min_lines = args.min_lines.or(cfg.min_lines).unwrap_or(5);
     let min_tokens = args.min_size.or(cfg.min_size).unwrap_or(24);
     let ignore_file = args.ignore_file.clone().or(cfg.ignore_file);
-    let mut semantic_pack_paths = cfg.semantic_packs;
-    semantic_pack_paths.extend(args.semantic_pack.iter().cloned());
-    let _semantic_packs = nose_semantics::SemanticPackSet::new_local(&semantic_pack_paths)?;
+    let semantic_packs = semantic_pack_set_from_paths(cfg.semantic_packs, &args.semantic_pack)?;
     // Excludes are additive: config patterns plus any given on the command line.
     let mut exclude = cfg.exclude;
     exclude.extend(args.exclude.iter().cloned());
@@ -112,16 +131,19 @@ fn resolve_query_settings(args: &QueryArgs) -> Result<QuerySettings> {
     if let Some(ignore_set) = &ignore_set {
         ignore_set.warn_expired();
     }
-    Ok(QuerySettings {
-        min_members,
-        min_value,
-        sort,
-        channels,
-        min_lines,
-        min_tokens,
-        exclude,
-        ignore_set,
-    })
+    Ok((
+        QuerySettings {
+            min_members,
+            min_value,
+            sort,
+            channels,
+            min_lines,
+            min_tokens,
+            exclude,
+            ignore_set,
+        },
+        semantic_packs,
+    ))
 }
 
 /// With --cache-dir, build units per file through the on-disk cache (skips

@@ -125,11 +125,10 @@ Users who opt into external packs own the enablement decision. They should inspe
 - the pack's own test or proof evidence outside nose.
 
 `nose query --semantic-pack` and `[query].semantic-packs` validate local
-external pack manifests today, but query JSON does not yet report the active
-pack set. The #473 query-reporting phase will add top-level `semantic_packs`
-through a query JSON schema/capabilities update. Future producer execution must
-keep the same provenance and fail-closed behavior before external packs can
-affect `near` or exact results.
+external pack manifests and query JSON schema v5 reports the active pack set in
+top-level `semantic_packs`. Future producer execution must keep the same
+provenance and fail-closed behavior before external packs can affect `near` or
+exact results.
 
 ## See also
 

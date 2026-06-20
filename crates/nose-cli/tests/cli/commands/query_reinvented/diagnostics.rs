@@ -120,6 +120,7 @@ fn query_reinvented_view_lists_call_the_helper_findings() {
     ]))
     .unwrap();
     assert_eq!(j["view"], "reinvented");
+    assert_query_json_reports_semantic_packs(&j);
     assert_eq!(
         j["items"][0]["helper"]["name"], "big",
         "json names the helper: {j}"

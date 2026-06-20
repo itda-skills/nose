@@ -72,11 +72,12 @@ still being migrated toward it.
   analysis behavior.
 - The external pack API is documented as a v0 manifest/schema with examples.
   `nose-semantics` can validate local manifest files/directories as metadata,
-  and `nose semantic-pack check` validates local manifests plus declared fixture
-  assets. `nose query --format json` does not yet report the active pack set.
-  External packs are still `metadata-only`; builtin producers remain compiled
-  Rust and are expected to map onto the same vocabulary. The first compiled
-  pilot is `nose.python.stdlib.type_domain`, a default builtin stdlib
+  `nose semantic-pack check` validates local manifests plus declared fixture
+  assets, and `nose query --format json` reports active builtin/local packs in
+  top-level `semantic_packs`. External packs are still `metadata-only`; builtin
+  producers remain compiled Rust and are expected to map onto the same
+  vocabulary. The first compiled pilot is `nose.python.stdlib.type_domain`, a
+  default builtin stdlib
   pack-shaped surface for Python `typing`, `collections.abc`, and
   `asyncio` type-domain alias evidence.
 - `nose-frontend` owns tree-sitter parsing, per-language lowering (including the

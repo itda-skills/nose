@@ -1,7 +1,7 @@
 # Scan JSON schema
 
 > **Deprecated (0.10.0).** scan-JSON v1 is the legacy machine contract.
-> [query-JSON v3](query-json.md) (`nose query --format json`) is the forward,
+> [query-JSON](query-json.md) (`nose query --format json`) is the forward,
 > view-shaped contract over the same family dataset — it mirrors the exploration
 > surface so a caller drives the same dashboard → slice → open-family loop. scan-JSON
 > v1 stays documented and emitted for back-compat; it will be removed in a later
@@ -15,7 +15,7 @@ scan JSON schema versions with [capabilities](capabilities.md). An LLM agent
 consuming this schema should follow the validated triage protocol in
 [agent-recipe](agent-recipe.md). This is the deprecated one-shot batch contract; the
 forward, view-shaped machine contract over the same dataset is
-[query-JSON v3](query-json.md) (`nose query --format json`).
+[query-JSON](query-json.md) (`nose query --format json`).
 
 ## Version 1
 
@@ -138,8 +138,9 @@ A checked-in example lives at
 [crates/nose-cli/tests/fixtures/scan-json-v1.json](../crates/nose-cli/tests/fixtures/scan-json-v1.json)
 and is read by the CLI test suite. `tool_version` is shown above as the `<version>`
 placeholder: it always reports the installed binary's own version, so the example does not
-pin a release. The `semantic_packs` array always lists the compiled first-party packs shown
-above; the `ignore` object appears **only** when an ignore file is read (via `--ignore-file`
+pin a release. The `semantic_packs` array always lists the compiled builtin packs shown
+above, using the current v0 compatibility source label; the `ignore` object appears
+**only** when an ignore file is read (via `--ignore-file`
 or an auto-detected `nose.ignore.json`), so a plain run omits it.
 
 > **`--top` truncates machine output too.** `families` contains only the top `--top`
@@ -174,7 +175,7 @@ same breakdown for families with at least one exact fragment location. That make
 | `tool_version` | string | The `nose` package version that emitted the report. |
 | `scope.files` | integer | Number of supported source files scanned after ignores and excludes. |
 | `scope.languages` | array | Per-language file counts, largest first. |
-| `semantic_packs` | array, optional in v1 | Active semantic packs for this scan. Binaries that advertise `scan.capabilities.semantic_pack_loading` in [capabilities](capabilities.md) emit it and include compiled first-party packs such as `nose.first_party`, `nose.python.stdlib.type_domain`, and `nose.value_graph.laws`; local `--semantic-pack`/config packs are listed with `metadata-only` influence. Older v1 binaries omit this field. |
+| `semantic_packs` | array, optional in v1 | Active semantic packs for this scan. Binaries that advertise `scan.capabilities.semantic_pack_loading` in [capabilities](capabilities.md) emit it and include compiled builtin packs such as `nose.first_party`, `nose.python.stdlib.type_domain`, and `nose.value_graph.laws`; local `--semantic-pack`/config packs are listed with `metadata-only` influence. Older v1 binaries omit this field. |
 | `ranking.sort` | string | Sort key used for `families`: `extractability` (default), `value`, `sites`, or `hazard`. |
 | `ranking.total_families` | integer | Active families remaining after rank-time pruning, filters, baseline suppression, and structured ignores, before `--top`. |
 | `ranking.shown_families` | integer | Families present in `families`. |
@@ -201,12 +202,12 @@ When `semantic_packs` is present, each entry has:
 | field | type | meaning |
 |---|---|---|
 | `id` | string | Stable manifest pack id. |
-| `hash` | string | Stable 16-hex-digit hash derived from the pack id; first-party evidence provenance uses the same id-hash policy. |
+| `hash` | string | Stable 16-hex-digit hash derived from the pack id; builtin evidence provenance uses the same id-hash policy. |
 | `kind` | string | `LanguagePack`, `StdlibPack`, `LibraryPack`, `ProtocolPack`, or `LawPack`. |
-| `version` | string | Pack version from the manifest or the nose package version for compiled first-party packs. |
+| `version` | string | Pack version from the manifest or the nose package version for compiled builtin packs. |
 | `display_name` | string | Human-readable pack name. |
-| `trust` | string | `default-first-party`, `first-party-optional`, or `external-opt-in`. Local manifests are rejected unless they use `external-opt-in`; first-party trust comes only from compiled packs. |
-| `enabled_by_default` | boolean | Whether the pack is default-enabled. Local manifests are rejected unless this is `false`; compiled first-party packs report `true`. |
+| `trust` | string | Current v0 trust label: `default-first-party`, `first-party-optional`, or `external-opt-in`. Local manifests are rejected unless they use `external-opt-in`; builtin trust comes only from compiled packs. |
+| `enabled_by_default` | boolean | Whether the pack is default-enabled. Local manifests are rejected unless this is `false`; compiled builtin packs report `true`. |
 | `source` | string | `compiled-first-party` or `local-manifest`. |
 | `influence` | string | `evidence-and-contracts` for compiled first-party semantics, `metadata-only` for loaded local external packs today. |
 | `path` | string, optional | Local manifest path for loaded manifests. |

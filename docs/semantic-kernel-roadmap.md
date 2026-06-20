@@ -68,8 +68,8 @@ The next code slices are intentionally incremental:
 
 1. Phase 0: align boundary, terminology, compatibility, and measurement gates;
 2. Phase 1: add a minimal builtin pack descriptor/registry for compiled packs;
-3. Phase 2: carry active pack metadata into the next `nose query --format json`
-   schema version and update capabilities;
+3. Phase 2: carry active pack metadata into `nose query --format json` schema
+   v5 and update capabilities;
 4. Phase 3: make `nose.python.stdlib.type_domain` the first end-to-end reference builtin
    stdlib pack;
 5. Phase 4: add one `nose.lang.<language>` builtin language descriptor before migrating

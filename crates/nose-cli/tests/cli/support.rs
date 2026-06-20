@@ -429,3 +429,19 @@ pub(crate) fn json_array_strings<'a>(value: &'a serde_json::Value, key: &str) ->
         })
         .collect()
 }
+
+pub(crate) fn assert_query_json_reports_semantic_packs(json: &serde_json::Value) {
+    let packs = json["semantic_packs"]
+        .as_array()
+        .unwrap_or_else(|| panic!("query JSON should report semantic_packs: {json}"));
+    for id in [
+        "nose.first_party",
+        "nose.python.stdlib.type_domain",
+        "nose.value_graph.laws",
+    ] {
+        assert!(
+            packs.iter().any(|pack| pack["id"] == id),
+            "query JSON should report builtin semantic pack {id}: {json}"
+        );
+    }
+}

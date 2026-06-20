@@ -31,6 +31,7 @@ mod query_open;
 mod query_opportunities;
 mod query_options;
 mod query_sarif;
+mod query_semantic_packs;
 mod query_terms;
 mod query_views;
 mod query_witness;

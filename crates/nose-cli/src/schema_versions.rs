@@ -1,1 +1,1 @@
-pub(crate) const QUERY_JSON_SCHEMA_VERSION: u32 = 4;
+pub(crate) const QUERY_JSON_SCHEMA_VERSION: u32 = 5;
