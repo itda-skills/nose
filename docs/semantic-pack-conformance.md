@@ -124,10 +124,12 @@ Users who opt into external packs own the enablement decision. They should inspe
 - whether exact-capable contracts are appropriate for their codebase;
 - the pack's own test or proof evidence outside nose.
 
-`nose query --semantic-pack` and `[query].semantic-packs` report loaded external packs under `semantic_packs` with
-`metadata-only` influence today. Future producer
-execution must keep the same provenance and fail-closed behavior before external
-packs can affect `near` or exact results.
+`nose query --semantic-pack` and `[query].semantic-packs` validate local
+external pack manifests today, but query JSON does not yet report the active
+pack set. The #473 query-reporting phase will add top-level `semantic_packs`
+through a query JSON schema/capabilities update. Future producer execution must
+keep the same provenance and fail-closed behavior before external packs can
+affect `near` or exact results.
 
 ## See also
 

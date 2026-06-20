@@ -24,6 +24,10 @@ Every response is an object with:
 plus the view-specific body below. Like the human surface, a result is a pure function of
 (repo state, command); an unknown field or enum value is a hard error.
 
+Semantic-pack provenance is not part of schema v4. Adding a top-level
+`semantic_packs` field for issue #473 requires a new query JSON schema version
+and matching `nose capabilities` update.
+
 ## Views
 
 **`dashboard`** (no terms) — `summary` (`scanned_files`, `families`, `by_confidence`

@@ -6,15 +6,16 @@ and pack ecosystem.
 ## Decisions
 
 1. **All language and library semantics should eventually enter through packs.**
-   First-party languages are not special at the API boundary; they may be compiled
+   Builtin languages are not special at the API boundary; they may be compiled
    into nose, but they should use the same pack contracts as external languages.
 
-2. **nose certifies only first-party packs.** External pack providers own their
+2. **nose certifies only builtin packs.** External pack providers own their
    semantic claims. Users own the decision to enable them. nose owns the
    extension contract, schema and structural validation, fail-closed execution,
    and provenance reporting. Semantic correctness, conformance evidence, and
    enablement risk for external packs stay with the provider and user, except
-   for first-party/default packs that nose ships and tests.
+   for builtin packs that nose ships and tests. `builtin-default` adds default
+   enablement; `builtin-optional` is still nose-owned and gated.
 
 3. **Packs emit evidence, not verdicts.** A pack can emit facts, contracts, and
    protocol operations. It cannot mint fingerprints, bypass laws, or approve exact
@@ -43,6 +44,40 @@ and pack ecosystem.
    surface, and equality/operator family. They can feed exact contracts only
    through kernel-defined fact kinds and contract preconditions; they do not mint
    fingerprints or approve equivalence directly.
+
+9. **New official semantics should be pack-owned.** New builtin language,
+   stdlib, library, or law support should enter through a builtin pack descriptor
+   and shared evidence/contract vocabulary. A temporary raw kernel/frontend shim
+   must link a tracking issue and state the removal condition.
+
+10. **Pack-boundary migrations must preserve product behavior and performance.**
+    Descriptor, registry, naming, and reporting changes should not change family
+    output except intentional metadata. Implementation PRs should run product
+    query-regression output/runtime comparison and follow the gates in
+    [semantic-pack-architecture](semantic-pack-architecture.md).
+
+## Active migration tranche
+
+Issue [#473](https://github.com/corca-ai/nose/issues/473) moves builtin and
+external language/library support onto one semantic-pack architecture. The target
+shape, terminology, trust-lane compatibility, contributor rule, product behavior
+gate, performance gate, and phase order live in
+[semantic-pack-architecture](semantic-pack-architecture.md).
+
+The next code slices are intentionally incremental:
+
+1. Phase 0: align boundary, terminology, compatibility, and measurement gates;
+2. Phase 1: add a minimal builtin pack descriptor/registry for compiled packs;
+3. Phase 2: carry active pack metadata into the next `nose query --format json`
+   schema version and update capabilities;
+4. Phase 3: make `nose.python.stdlib.type_domain` the first end-to-end reference builtin
+   stdlib pack;
+5. Phase 4: add one `nose.lang.<language>` builtin language descriptor before migrating
+   the remaining language/region packs;
+6. Phase 5: move narrow stdlib/library/law rows behind pack-owned descriptors and shared
+   admitted-contract resolvers;
+7. Phase 6: allow external pack influence only after the builtin path is proven;
+8. Phase 7: define adoption and release gates.
 
 ## History
 
@@ -867,7 +902,7 @@ Remaining after the #109 closeout:
   field-name-only.
 - Add provenance fields internally before exposing them in scan JSON.
 
-## Phase 3: first-party packs
+## Phase 3: builtin packs
 
 **Entry gate (2026-06-12, #270 disposition):** further LawPack/pack expansion is
 gated on a *priced consumer case* — a measured situation where pack-fed
@@ -879,9 +914,9 @@ today is `near`-channel influence plus proof discipline. Breadth alone no longer
 justifies a tranche ([design §2c](design.md)).
 
 - Convert Python, JavaScript/TypeScript, Go, Rust, Java, C, Ruby, Swift, and
-  embedded JS/TS containers into first-party compiled packs.
+  embedded JS/TS containers into builtin compiled packs.
 - Split stdlib knowledge, including dependency-backed type-domain alias rows,
-  into first-party `StdlibPack`s.
+  into builtin `StdlibPack`s.
 - Define conformance manifests for each pack: positive convergence cases, hard
   negatives, Raw coverage expectations, oracle coverage, and proof obligations.
 - Ensure existing docs and capabilities are generated from or checked against pack
@@ -903,7 +938,7 @@ justifies a tranche ([design §2c](design.md)).
   channels, evidence status, conformance commands, and semantic provenance ids.
 - Keep the pack conformance checklist explicit: structural harness results,
   semantic correctness evidence, and enablement risk are provider/user
-  responsibility unless the pack is first-party.
+  responsibility unless the pack is builtin.
 - User configuration and `--semantic-pack` can enable local manifests explicitly.
 - Scan JSON reports active pack provenance and whether each pack influenced
   evidence/contracts or metadata only. Per-finding contract/law provenance and
@@ -940,10 +975,10 @@ different APIs.
 
 ## Phase 6: ecosystem packs
 
-- Add high-value first-party packs only when their contracts are narrow and
+- Add high-value builtin packs only when their contracts are narrow and
   testable.
 - Keep community packs external and opt-in unless nose explicitly adopts them as
-  first-party/default packs with project-owned gates.
+  builtin-default packs with project-owned gates.
 - Candidate areas: Lodash, RxJS, NumPy, pandas, Java Streams/Guava, Rust Iterator
   ecosystem helpers, Tokio futures, Rails ActiveSupport collection helpers.
 - Keep exact eligibility narrow. Many APIs should stay `near-only` because
@@ -959,7 +994,7 @@ different APIs.
   noisy?
 - How should users pin pack versions in CI?
 - How should conflicting packs or overlapping API contracts be resolved?
-- What conformance score is enough for a first-party pack to enter the default
+- What conformance score is enough for a builtin pack to enter the default
   exact channel?
 - Should a pack be able to express language-specific proof-producing lowering
   extensions before the general construct/import/type fact model is complete?
@@ -975,7 +1010,7 @@ considered successful because it:
 - recorded intentional old-behavior changes where missing evidence blocks exact
   convergence;
 - kept tests and docs checks green after the proof-gated scan follow-up;
-- documented the first-party/external responsibility boundary;
+- documented the builtin/external responsibility boundary;
 - made accepted exact matches easier to explain through explicit contracts and
   hard-negative tests.
 

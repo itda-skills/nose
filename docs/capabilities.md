@@ -147,7 +147,7 @@ release so it can't drift.
 | `query.config_keys` | array | Supported `[query]` keys in `nose.toml` / `.nose.toml`. |
 | `query.capabilities` | object | Stable boolean capability flags for query workflows. |
 | `semantic_packs.api_versions` | array | Supported semantic-pack manifest API versions. |
-| `semantic_packs.loading` | array | Supported loading sources: compiled first-party and local manifest files/directories. |
+| `semantic_packs.loading` | array | Supported loading sources. Schema version 2 still reports the legacy `compiled-first-party` spelling for compiled builtin packs, plus local manifest files/directories. |
 | `semantic_packs.conformance` | array | Supported conformance input sources: local manifest files/directories. |
 | `semantic_packs.conformance_output_formats` | array | Supported `nose semantic-pack check --format` values. |
 | `semantic_packs.trust` | array | Supported trust policy labels. |
@@ -180,5 +180,5 @@ Version 2 defines these `query.capabilities` keys:
 | `inline_suppression` | Source-level `nose-ignore` markers are supported. |
 | `multi_root` | `nose query --root <path>` / `-r <path>` repeatable root analysis is supported. |
 | `reinvented_view` | The `reinvented` query view is supported. |
-| `semantic_pack_loading` | local semantic-pack v0 manifest files/directories can be loaded for provenance reporting. |
+| `semantic_pack_loading` | local semantic-pack v0 manifest files/directories can be loaded for metadata validation. |
 | `structured_ignores` | `nose.ignore.json` / `--ignore-file` audited suppressions are supported. |

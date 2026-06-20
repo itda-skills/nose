@@ -1,15 +1,15 @@
 # Semantic pack loading
 
-Status: nose can load local semantic-pack v0 manifests for provenance and trust
-reporting, and it can run a separate local conformance check for manifests and
-declared fixture assets. External packs are explicit opt-ins and are currently
-`metadata-only`: they do not emit evidence, open exact contracts, mint
-fingerprints, or approve clone pairs.
+Status: nose can validate local semantic-pack v0 manifests on `nose query`, and
+it can run a separate local conformance check for manifests and declared fixture
+assets. External packs are explicit opt-ins and are currently `metadata-only`:
+they do not emit evidence, open exact contracts, mint fingerprints, approve clone
+pairs, or appear in `nose query --format json` yet.
 
 ## Local entry points
 
-Use `--semantic-pack <file-or-dir>` on `nose query` to opt into local pack metadata
-for one run:
+Use `--semantic-pack <file-or-dir>` on `nose query` to opt into local pack
+metadata validation for one run:
 
 ```sh
 nose query src --format json --semantic-pack semantic-packs/python-math-prod.json
@@ -48,23 +48,25 @@ external producers or certify semantic correctness. See
 
 Trust is separate from channel eligibility.
 
-- Compiled first-party packs are enabled by default and are the only packs that
-  currently influence evidence and contracts. `nose.first_party` is the core
-  kernel facade; `nose.python.stdlib.type_domain` is the first narrow stdlib
-  pilot pack for Python `typing`, `collections.abc`, and `asyncio`
-  type-domain aliases; `nose.value_graph.laws` is the first LawPack pilot for
-  selected proof-backed value-graph law provenance.
+- Compiled builtin packs are enabled by default and are the only packs that
+  currently influence evidence and contracts. Current v0 machine output still
+  uses compatibility labels such as `compiled-first-party` and
+  `default-first-party`; docs and new implementation work should use
+  `builtin`. `nose.first_party` is the temporary broad compatibility facade;
+  `nose.python.stdlib.type_domain` is the first narrow stdlib pilot pack for
+  Python `typing`, `collections.abc`, and `asyncio` type-domain aliases;
+  `nose.value_graph.laws` is the first LawPack pilot for selected proof-backed
+  value-graph law provenance.
 - Local external packs require explicit user opt-in through CLI or config.
 - Local manifests must declare `trust = "external-opt-in"` and
-  `enabled_by_default = false`; manifests that claim first-party trust or default
+  `enabled_by_default = false`; manifests that claim builtin trust or default
   enablement are rejected.
 - Duplicate pack ids fail the run instead of letting provenance become
   ambiguous.
 
-`query --format json` reports every active pack under `semantic_packs`, including
-its stable hash, trust, source, influence, provider, repository, supported
-languages, and declaration counts. Human and Markdown reports print a short
-semantic-pack line when local opt-in packs are loaded.
+`nose query` currently validates configured and CLI-provided semantic-pack paths
+before analysis. Threading the active pack set into `query --format json`
+reporting is tracked by the #473 query-reporting phase.
 
 ## Current limits
 
@@ -72,6 +74,7 @@ The loader validates manifest shape and pack provenance only. It does not yet:
 
 - execute external evidence producers;
 - register external contract rows with exact consumers;
+- report the active pack set in `nose query --format json`;
 - execute fixture contents or run a behavioral oracle;
 - compare semantic version ranges against the installed nose version beyond
   requiring a parseable declared compatibility field;
