@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        31
+        32
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -548,6 +548,46 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(map_key_view["counts"]["value_laws"], 0);
     assert_eq!(map_key_view["counts"]["positive_fixtures"], 4);
     assert_eq!(map_key_view["counts"]["hard_negatives"], 2);
+
+    let builtin_method_call = semantic_pack_by_id(&json, "nose.protocols.builtin_method_calls");
+    assert_eq!(builtin_method_call["hash"], "2b97688a4e1cf076");
+    assert_eq!(builtin_method_call["kind"], "ProtocolPack");
+    assert_eq!(
+        builtin_method_call["display_name"],
+        "nose builtin method-call protocol pack"
+    );
+    assert_eq!(builtin_method_call["source"], "compiled-first-party");
+    assert_eq!(builtin_method_call["influence"], "evidence-and-contracts");
+    assert_eq!(builtin_method_call["trust"], "default-first-party");
+    assert_eq!(builtin_method_call["enabled_by_default"], true);
+    assert_eq!(builtin_method_call["path"], serde_json::Value::Null);
+    assert_eq!(builtin_method_call["provider"], "Corca, Inc.");
+    assert_eq!(
+        builtin_method_call["repository"],
+        "https://github.com/corca-ai/nose"
+    );
+    assert_eq!(builtin_method_call["license"], "MIT");
+    assert_eq!(
+        json_array_strings(builtin_method_call, "supported_languages"),
+        vec![
+            "python",
+            "javascript",
+            "typescript",
+            "vue",
+            "svelte",
+            "html",
+            "go",
+            "rust",
+            "java",
+            "ruby",
+            "swift"
+        ]
+    );
+    assert_eq!(builtin_method_call["counts"]["evidence_producers"], 1);
+    assert_eq!(builtin_method_call["counts"]["contracts"], 1);
+    assert_eq!(builtin_method_call["counts"]["value_laws"], 0);
+    assert_eq!(builtin_method_call["counts"]["positive_fixtures"], 9);
+    assert_eq!(builtin_method_call["counts"]["hard_negatives"], 3);
 
     let java_entries = semantic_pack_by_id(&json, "nose.java.stdlib.map_entries");
     assert_eq!(java_entries["hash"], "70b8bbc16bb60219");

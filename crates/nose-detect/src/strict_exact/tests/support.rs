@@ -8,8 +8,9 @@ use nose_normalize::{normalize, NormalizeOptions};
 use nose_semantics::{
     library_api_callee_contract_hash, library_api_contract_id_hash, library_map_get_contract,
     library_method_call_contract, LibraryApiCalleeContract, LibraryApiContractId,
-    MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract, FIRST_PARTY_PACK_ID,
-    MAP_GET_DEFAULT_PROTOCOL_PACK_ID, MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
+    MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract,
+    BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+    FIRST_PARTY_PACK_ID, MAP_GET_DEFAULT_PROTOCOL_PACK_ID, MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
     MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
     RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
 };
@@ -117,6 +118,11 @@ pub(super) fn method_call_library_api_evidence(
             Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID));
         record.provenance.rule_hash =
             Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID));
+    } else {
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID));
     }
     record
 }

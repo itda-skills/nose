@@ -519,10 +519,10 @@ pub fn library_receiver_method_api_contract(
         .or_else(|| {
             library_method_call_contract(lang, method, arg_count).map(|contract| {
                 LibraryReceiverMethodApiContract {
-                    pack_id: FIRST_PARTY_PACK_ID,
+                    pack_id: BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
                     id: contract.id,
                     callee: contract.callee,
-                    rule: "library_api_method_call",
+                    rule: BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
                     result_domain: None,
                 }
             })

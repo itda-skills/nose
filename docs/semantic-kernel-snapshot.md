@@ -164,6 +164,11 @@ still being migrated toward it.
   `nose.protocols.map_key_views` descriptor owns Python/Ruby `keys`, Java
   `keySet`, and JS-family `Map.keys()` contract and occurrence producer ids,
   while non-map receivers and unsupported arities remain hard negatives. The
+  `nose.protocols.builtin_method_calls` descriptor owns generic method-call
+  and namespace-call builtin semantics that have not moved to a narrower
+  protocol pack, including selected `fmt`, `strings`, and `slices` namespace
+  calls, while receiver/symbol/import proof and unsupported arities remain hard
+  negatives. The
   `nose.protocols.iterator_identity_adapters` descriptor owns Rust
   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
   `.stream()` iterator identity adapter contract and occurrence producer ids,
@@ -235,6 +240,9 @@ still being migrated toward it.
   `nose.protocols.map_key_views`, a default builtin protocol pack for
   Python/Ruby `keys`, Java `keySet`, and JS-family `Map.keys()` API provenance,
   and
+  `nose.protocols.builtin_method_calls`, a default builtin protocol pack for
+  generic method-call and namespace-call builtin semantics that have not moved
+  to a narrower protocol pack, and
   `nose.protocols.iterator_identity_adapters`, a default builtin protocol pack
   for Rust iterator identity adapters and Java `.stream()` API provenance, and
   `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped surface
@@ -602,8 +610,8 @@ migrated.
 - Receiver-method calls that remain as raw `Field`/`Call` nodes now emit
   `LibraryApi` occurrence evidence for the first-party method families currently
   backed by `LibraryApiContract`: pack-proven map `get`, pack-proven map
-  get-default, map-key views, iterator identity adapters, and generic
-  language-scoped method-call contracts such as collection/map membership, count methods,
+  get-default, map-key views, iterator identity adapters, and pack-proven
+  builtin method-call contracts such as collection/map membership, count methods,
   string/collection predicates, Rust scalar integer methods with
   `nose.rust.stdlib.integer_methods` provenance, Java Math scalar integer
   methods with `nose.java.stdlib.math` provenance, Rust `Option::and_then`,
@@ -711,7 +719,7 @@ migrated.
   `nose.java.stdlib.math`, and builder append API admission instead of
   recombining raw selector parsing with evidence admission locally. Normalize
   idiom canonicalization uses the same resolver layer for
-  supported free-function builtins, generic method contracts, HOF receiver
+  supported free-function builtins, pack-proven builtin method contracts, HOF receiver
   proof, pack-proven map `get`, pack-proven map get-default, pack-proven
   map-key views, iterator/static collection adapters, Rust `Some(...)`, Rust
   map factory receiver proof, Promise `resolve`, and Promise `.then` contract lookup. Promise continuation

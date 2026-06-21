@@ -294,11 +294,11 @@ fn rust_map_get_unwrap_or_canonical_builtin_uses_map_get_dependency() {
         EvidenceStatus::Asserted,
         &[9],
     ));
-    il.evidence.push(library_api_record(
+    il.evidence.push(builtin_method_call_protocol_record(
         11,
         il.node(call).span,
-        unwrap_or.id,
-        unwrap_or.callee,
+        unwrap_or,
+        1,
         EvidenceStatus::Asserted,
         &[10],
     ));
@@ -346,11 +346,11 @@ fn rust_map_get_unwrap_or_canonical_builtin_rejects_nested_map_get_arity_drift()
         EvidenceStatus::Asserted,
         &[9],
     ));
-    il.evidence.push(library_api_record(
+    il.evidence.push(builtin_method_call_protocol_record(
         11,
         il.node(call).span,
-        unwrap_or.id,
-        unwrap_or.callee,
+        unwrap_or,
+        1,
         EvidenceStatus::Asserted,
         &[10],
     ));
@@ -392,11 +392,11 @@ fn rust_map_get_unwrap_or_canonical_builtin_rejects_unrelated_map_dependency() {
         EvidenceStatus::Asserted,
         &[9],
     ));
-    il.evidence.push(library_api_record(
+    il.evidence.push(builtin_method_call_protocol_record(
         11,
         il.node(call).span,
-        unwrap_or.id,
-        unwrap_or.callee,
+        unwrap_or,
+        1,
         EvidenceStatus::Asserted,
         &[10],
     ));
@@ -553,6 +553,131 @@ fn canonical_builtin_admission_fails_closed_on_bad_library_api_evidence() {
         conflicting_call,
         Builtin::Len
     ));
+}
+
+#[test]
+fn canonical_method_builtin_admission_requires_builtin_method_pack_contract_and_receiver_proof() {
+    let mut b = IlBuilder::new(FileId(0));
+    let collection = b.add(NodeKind::Var, Payload::Cid(0), sp(71), &[]);
+    let (mut admitted, call) =
+        canonical_builtin_call_il(Lang::Rust, Builtin::Len, &[collection], b, collection);
+    let contract = library_method_call_contract(Lang::Rust, "len", 0).expect("Rust len contract");
+    admitted.evidence.push(evidence(
+        9,
+        EvidenceAnchor::node(admitted.node(collection).span, admitted.kind(collection)),
+        EvidenceKind::Domain(DomainEvidence::Collection),
+        EvidenceStatus::Asserted,
+    ));
+    admitted.evidence.push(builtin_method_call_protocol_record(
+        10,
+        admitted.node(call).span,
+        contract,
+        0,
+        EvidenceStatus::Asserted,
+        &[9],
+    ));
+    assert!(admitted_builtin_semantics_at_call(
+        &admitted,
+        call,
+        Builtin::Len
+    ));
+
+    let mut missing_dependency = admitted.clone();
+    missing_dependency.evidence.truncate(1);
+    missing_dependency
+        .evidence
+        .push(builtin_method_call_protocol_record(
+            10,
+            missing_dependency.node(call).span,
+            contract,
+            0,
+            EvidenceStatus::Asserted,
+            &[],
+        ));
+    assert!(
+        !admitted_builtin_semantics_at_call(&missing_dependency, call, Builtin::Len),
+        "generic method builtins must not admit without receiver-domain proof"
+    );
+
+    let mut wrong_receiver = admitted.clone();
+    wrong_receiver.evidence.clear();
+    wrong_receiver.evidence.push(evidence(
+        9,
+        EvidenceAnchor::node(wrong_receiver.node(call).span, wrong_receiver.kind(call)),
+        EvidenceKind::Domain(DomainEvidence::Collection),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_receiver
+        .evidence
+        .push(builtin_method_call_protocol_record(
+            10,
+            wrong_receiver.node(call).span,
+            contract,
+            0,
+            EvidenceStatus::Asserted,
+            &[9],
+        ));
+    assert!(
+        !admitted_builtin_semantics_at_call(&wrong_receiver, call, Builtin::Len),
+        "receiver-domain proof must belong to the canonical receiver"
+    );
+
+    let mut wrong_pack = admitted.clone();
+    wrong_pack.evidence.truncate(1);
+    wrong_pack
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            10,
+            wrong_pack.node(call).span,
+            contract.id,
+            contract.callee,
+            0,
+            EvidenceStatus::Asserted,
+            &[9],
+            FIRST_PARTY_PACK_ID,
+            BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+        ));
+    assert!(
+        !admitted_builtin_semantics_at_call(&wrong_pack, call, Builtin::Len),
+        "generic method builtins must require builtin-method pack provenance"
+    );
+
+    let mut wrong_producer = admitted.clone();
+    wrong_producer.evidence.truncate(1);
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            10,
+            wrong_producer.node(call).span,
+            contract.id,
+            contract.callee,
+            0,
+            EvidenceStatus::Asserted,
+            &[9],
+            BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+            "wrong.builtin-method-call-api",
+        ));
+    assert!(
+        !admitted_builtin_semantics_at_call(&wrong_producer, call, Builtin::Len),
+        "generic method builtins must require builtin-method producer provenance"
+    );
+
+    let mut wrong_arity = admitted.clone();
+    wrong_arity.evidence.truncate(1);
+    wrong_arity
+        .evidence
+        .push(builtin_method_call_protocol_record(
+            10,
+            wrong_arity.node(call).span,
+            contract,
+            1,
+            EvidenceStatus::Asserted,
+            &[9],
+        ));
+    assert!(
+        !admitted_builtin_semantics_at_call(&wrong_arity, call, Builtin::Len),
+        "generic method builtins must reject unsupported arity drift"
+    );
 }
 
 #[test]

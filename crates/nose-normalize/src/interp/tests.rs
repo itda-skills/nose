@@ -14,9 +14,12 @@ use nose_il::{
 };
 use nose_semantics::{
     library_api_callee_contract_hash, library_api_contract_id_hash,
-    library_free_function_builtin_contract, LibraryApiCalleeContract, LibraryApiContractId,
-    LibraryApiShadowPolicy, MethodSemanticContract, FIRST_PARTY_PACK_ID,
-    FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+    library_free_function_builtin_contract, library_method_call_contract, DomainEvidence,
+    LibraryApiCalleeContract, LibraryApiContractId, LibraryApiShadowPolicy,
+    LibraryMethodCallContract, MethodReceiverContract, MethodSemanticContract,
+    BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+    FIRST_PARTY_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
 };
 
 fn run_admitted_unit(mut il: Il, root: NodeId, args: &[Value]) -> Option<Behavior> {
@@ -106,6 +109,15 @@ fn admit_test_builtin_calls(il: &mut Il) {
                     source_arg_count as u16,
                     vec![symbol_id],
                 )
+            } else if let Some((contract, arity)) =
+                test_method_builtin_contract(il.meta.lang, builtin, arg_count)
+            {
+                let Some(dependencies) =
+                    test_method_builtin_dependencies(il, node, contract, &mut next_id)
+                else {
+                    continue;
+                };
+                (contract.id, contract.callee, arity, dependencies)
             } else {
                 (contract_id, test_callee_contract(), 0, Vec::new())
             };
@@ -196,6 +208,54 @@ fn test_library_contract_id_for_builtin(builtin: Builtin) -> Option<LibraryApiCo
     }
 }
 
+fn test_method_builtin_contract(
+    lang: Lang,
+    builtin: Builtin,
+    canonical_arg_count: usize,
+) -> Option<(LibraryMethodCallContract, u16)> {
+    let (method, source_arg_count) = match (lang, builtin, canonical_arg_count) {
+        (Lang::Rust, Builtin::ValueOrDefault, 2) => ("unwrap_or", 1),
+        (Lang::Python, Builtin::Reduce, 3) => ("reduce", 3),
+        _ => return None,
+    };
+    let contract = library_method_call_contract(lang, method, source_arg_count)?;
+    (contract.result.semantic == MethodSemanticContract::Builtin(builtin))
+        .then_some((contract, source_arg_count as u16))
+}
+
+fn test_method_builtin_dependencies(
+    il: &mut Il,
+    node: NodeId,
+    contract: LibraryMethodCallContract,
+    next_id: &mut u32,
+) -> Option<Vec<EvidenceId>> {
+    let LibraryApiCalleeContract::Method { receiver, .. } = contract.callee else {
+        return None;
+    };
+    let id = EvidenceId(*next_id);
+    match receiver {
+        MethodReceiverContract::ExactOption | MethodReceiverContract::RustMapGetOrExactOption => {
+            let receiver_node = il.children(node).first().copied()?;
+            il.evidence.push(test_domain_record(
+                *next_id,
+                il,
+                receiver_node,
+                DomainEvidence::Option,
+            ));
+        }
+        MethodReceiverContract::ImportedNamespace(module) => {
+            il.evidence.push(test_imported_namespace_record(
+                *next_id,
+                il.node(node).span,
+                module,
+            ));
+        }
+        _ => return None,
+    }
+    *next_id += 1;
+    Some(vec![id])
+}
+
 fn test_callee_contract() -> LibraryApiCalleeContract {
     LibraryApiCalleeContract::FreeName {
         name: "__test_builtin__",
@@ -217,6 +277,11 @@ fn test_library_api_record(
             FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
             FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
         )
+    } else if matches!(contract_id, LibraryApiContractId::MethodCall(_)) {
+        (
+            BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+            BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+        )
     } else {
         (FIRST_PARTY_PACK_ID, "interp-test")
     };
@@ -234,6 +299,38 @@ fn test_library_api_record(
             rule_hash: Some(stable_symbol_hash(rule_id)),
         },
         dependencies,
+        status: EvidenceStatus::Asserted,
+    }
+}
+
+fn test_domain_record(id: u32, il: &Il, node: NodeId, domain: DomainEvidence) -> EvidenceRecord {
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor: EvidenceAnchor::node(il.node(node).span, il.kind(node)),
+        kind: EvidenceKind::Domain(domain),
+        provenance: EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+            rule_hash: Some(stable_symbol_hash("interp-test")),
+        },
+        dependencies: Vec::new(),
+        status: EvidenceStatus::Asserted,
+    }
+}
+
+fn test_imported_namespace_record(id: u32, span: Span, module: &str) -> EvidenceRecord {
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor: EvidenceAnchor::node(span, NodeKind::Var),
+        kind: EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+            module_hash: stable_symbol_hash(module),
+        }),
+        provenance: EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+            rule_hash: Some(stable_symbol_hash("interp-test")),
+        },
+        dependencies: Vec::new(),
         status: EvidenceStatus::Asserted,
     }
 }

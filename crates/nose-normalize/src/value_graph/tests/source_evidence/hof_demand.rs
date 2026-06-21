@@ -86,14 +86,20 @@ fn div_zero_map_len_il() -> (Il, NodeId) {
 }
 
 fn push_map_contract_evidence(il: &mut Il, lang: Lang, hof: NodeId, expect_msg: &str) {
+    let receiver = il.children(hof)[0];
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::sequence(il.node(receiver).span),
+        EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
+    ));
     let contract = library_method_call_contract(lang, "map", 1).expect(expect_msg);
     il.evidence.push(library_api_contract_evidence(
-        0,
+        1,
         il.node(hof).span,
         contract.id,
         contract.callee,
         1,
-        Vec::new(),
+        vec![EvidenceId(0)],
     ));
 }
 
@@ -143,7 +149,7 @@ fn eager_js_map_demand_exposes_static_callback_error_unless_broken() {
     );
 
     let mut broken_js_il = js_il.clone();
-    broken_js_il.evidence[0].status = EvidenceStatus::Ambiguous;
+    broken_js_il.evidence[1].status = EvidenceStatus::Ambiguous;
     assert_eq!(
         admitted_hof_demand_effect_profile_at_node(&broken_js_il, hof, HoFKind::Map),
         None,
@@ -253,15 +259,7 @@ fn len_of_library_hof_requires_materialized_demand_profile() {
         &[hof],
     );
     let mut il = finish_test_il(b, count, Lang::Rust);
-    let contract = library_method_call_contract(Lang::Rust, "map", 1).expect("Rust map contract");
-    il.evidence.push(library_api_contract_evidence(
-        0,
-        il.node(hof).span,
-        contract.id,
-        contract.callee,
-        1,
-        Vec::new(),
-    ));
+    push_map_contract_evidence(&mut il, Lang::Rust, hof, "Rust map contract");
     let mut builder = Builder::new(&il, &interner);
     assert!(
         builder.terminal_reduction_arg_admitted(hof),
@@ -279,12 +277,12 @@ fn len_of_library_hof_requires_materialized_demand_profile() {
     let contract =
         library_method_call_contract(Lang::Rust, "count", 0).expect("Rust count contract");
     il.evidence.push(library_api_contract_evidence(
-        1,
+        2,
         il.node(count).span,
         contract.id,
         contract.callee,
         0,
-        Vec::new(),
+        vec![EvidenceId(1)],
     ));
     assert!(admitted_terminal_count_reduction_at_call(&il, count));
     let mut builder = Builder::new(&il, &interner);
@@ -297,16 +295,7 @@ fn len_of_library_hof_requires_materialized_demand_profile() {
     let mut js_il = il.clone();
     js_il.meta.lang = Lang::JavaScript;
     js_il.evidence.clear();
-    let contract =
-        library_method_call_contract(Lang::JavaScript, "map", 1).expect("JS map contract");
-    js_il.evidence.push(library_api_contract_evidence(
-        0,
-        js_il.node(hof).span,
-        contract.id,
-        contract.callee,
-        1,
-        Vec::new(),
-    ));
+    push_map_contract_evidence(&mut js_il, Lang::JavaScript, hof, "JS map contract");
     let mut builder = Builder::new(&js_il, &interner);
     assert!(
         builder.len_arg_admitted(hof),

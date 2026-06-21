@@ -55,6 +55,7 @@ ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.protocols.free_function_builtins`,
 `nose.protocols.receiver_membership`,
 `nose.protocols.map_key_views`,
+`nose.protocols.builtin_method_calls`,
 `nose.protocols.iterator_identity_adapters`,
 `nose.python.stdlib.type_domain`, and
 `nose.value_graph.laws`.
@@ -267,6 +268,12 @@ previous semantic-kernel tranches.
    The current map-key-view protocol slice is `nose.protocols.map_key_views`,
    which owns Python/Ruby `keys`, Java `keySet`, and JS-family `Map.keys()` API
    occurrence provenance under the shared exact-map receiver contract.
+   The current builtin method-call protocol slice is
+   `nose.protocols.builtin_method_calls`, which owns generic method-call and
+   namespace-call builtin semantics that have not moved to a narrower protocol
+   pack, such as append, cardinality, string-affix, option-default, print,
+   `strings`/`slices` namespace calls, reduction, and HOF-style receiver method
+   rows.
    The current iterator identity adapter protocol slice is
    `nose.protocols.iterator_identity_adapters`, which owns Rust
    `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java

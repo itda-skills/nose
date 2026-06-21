@@ -130,6 +130,9 @@ The next code slices are intentionally incremental:
    Ruby `member?`, then
    `nose.protocols.map_key_views` for Python/Ruby `keys`, Java `keySet`, and
    JS-family `Map.keys()` occurrence provenance, then
+   `nose.protocols.builtin_method_calls` for generic method-call and
+   namespace-call builtin semantics not yet owned by a narrower protocol pack,
+   then
    `nose.protocols.iterator_identity_adapters` for Rust
    `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
    `.stream()` iterator identity adapter occurrence provenance;
@@ -955,6 +958,11 @@ repeated registry walks on hot paths. Binary size changed 20,181,712 ->
   `nose.protocols.receiver_membership` pack and producer provenance while
   preserving receiver-proof, unsupported-arity, and Go `slices.Contains`
   out-of-scope hard negatives.
+- Builtin method-call protocol occurrences started moving out of the broad
+  compatibility facade. Generic method-call and namespace-call builtin
+  `LibraryApi` occurrence evidence now reports
+  `nose.protocols.builtin_method_calls` pack and producer provenance when the
+  row has not moved to a narrower protocol pack.
 - Iterator identity adapters started moving out of the broad compatibility
   facade. Rust `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned`
   and Java `.stream()` `LibraryApi` occurrence evidence now reports
@@ -1503,7 +1511,8 @@ repeated registry walks on hot paths. Binary size changed 20,181,712 ->
 - The idiom/value-graph resolver cleanup moved supported normalize idiom
   canonicalization and direct value-graph API consumers behind shared
   `nose-semantics` admitted occurrence resolvers. This covers pack-proven
-  free-function builtins, generic receiver-method contracts, pack-proven map `get`,
+  free-function builtins, pack-proven generic method-call contracts,
+  pack-proven map `get`,
   pack-proven map get-default, pack-proven map-key views, iterator identity
   adapters, Java static collection adapters, Rust `Some(...)`, Rust map factory receiver proof, static
   index-membership, and Rust scalar integer methods where the source `Call`

@@ -115,6 +115,9 @@ Trust is separate from channel eligibility.
   `nose.protocols.map_key_views` owns Python/Ruby `keys`, Java `keySet`, and
   JS-family `Map.keys()` API occurrence provenance under exact-map receiver
   proof;
+  `nose.protocols.builtin_method_calls` owns generic method-call and
+  namespace-call builtin semantics that have not moved to a narrower protocol
+  pack;
   `nose.protocols.iterator_identity_adapters` owns Rust
   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
   `.stream()` iterator identity adapter API occurrence provenance;

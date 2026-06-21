@@ -38,6 +38,19 @@ const MAP_KEY_VIEW_PROTOCOL_LANGUAGES: &[&str] = &[
     "svelte",
     "html",
 ];
+const BUILTIN_METHOD_CALL_PROTOCOL_LANGUAGES: &[&str] = &[
+    "python",
+    "javascript",
+    "typescript",
+    "vue",
+    "svelte",
+    "html",
+    "go",
+    "rust",
+    "java",
+    "ruby",
+    "swift",
+];
 const MAP_GET_PROTOCOL_LANGUAGES: &[&str] = &[
     "java",
     "rust",
@@ -74,6 +87,16 @@ const RECEIVER_MEMBERSHIP_PROTOCOL_PACKAGES: &[&str] = &[
     "std::collections",
 ];
 const MAP_KEY_VIEW_PROTOCOL_PACKAGES: &[&str] = &["dict", "Hash", "Map", "java.util"];
+const BUILTIN_METHOD_CALL_PROTOCOL_PACKAGES: &[&str] = &[
+    "Collection",
+    "Option",
+    "String",
+    "console",
+    "fmt",
+    "functools",
+    "slices",
+    "strings",
+];
 const JS_LIKE_BUILTIN_ARRAY_PACKAGES: &[&str] = &["Array"];
 const JS_LIKE_BUILTIN_BOOLEAN_PACKAGES: &[&str] = &["Boolean"];
 const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACKAGES: &[&str] = &["Map", "Set"];
@@ -319,6 +342,23 @@ const MAP_KEY_VIEW_PROTOCOL_CONFORMANCE_REFS: &[&str] = &[
     "map-key-view-js-keys-positive",
     "map-key-view-non-map-receiver-hard-negative",
     "map-key-view-unsupported-arity-hard-negative",
+];
+const BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_IDS: &[&str] =
+    &[BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID];
+const BUILTIN_METHOD_CALL_PROTOCOL_CONTRACT_IDS: &[&str] = &[BUILTIN_METHOD_CALL_CONTRACT_ID];
+const BUILTIN_METHOD_CALL_PROTOCOL_CONFORMANCE_REFS: &[&str] = &[
+    "builtin-method-call-python-append-positive",
+    "builtin-method-call-js-push-positive",
+    "builtin-method-call-rust-len-positive",
+    "builtin-method-call-java-size-positive",
+    "builtin-method-call-python-startswith-positive",
+    "builtin-method-call-python-join-positive",
+    "builtin-method-call-rust-unwrap-or-positive",
+    "builtin-method-call-go-fmt-print-positive",
+    "builtin-method-call-python-reduce-positive",
+    "builtin-method-call-missing-receiver-proof-hard-negative",
+    "builtin-method-call-wrong-pack-hard-negative",
+    "builtin-method-call-unsupported-arity-hard-negative",
 ];
 const JAVA_STDLIB_MAP_FACTORY_PRODUCER_IDS: &[&str] = &[JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID];
 const JAVA_STDLIB_MAP_FACTORY_CONTRACT_IDS: &[&str] = &[
@@ -830,6 +870,22 @@ fn map_key_view_protocol_counts() -> SemanticPackCounts {
             .filter(|id| !id.contains("hard-negative"))
             .count(),
         hard_negatives: MAP_KEY_VIEW_PROTOCOL_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
+fn builtin_method_call_protocol_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_IDS.len(),
+        contracts: BUILTIN_METHOD_CALL_PROTOCOL_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: BUILTIN_METHOD_CALL_PROTOCOL_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: BUILTIN_METHOD_CALL_PROTOCOL_CONFORMANCE_REFS
             .iter()
             .filter(|id| id.contains("hard-negative"))
             .count(),
@@ -1421,6 +1477,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: MAP_KEY_VIEW_PROTOCOL_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: map_key_view_protocol_counts,
+    },
+    BuiltinPackDescriptor {
+        id: BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+        kind: SemanticPackKind::ProtocolPack,
+        display_name: "nose builtin method-call protocol pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: BUILTIN_METHOD_CALL_PROTOCOL_LANGUAGES,
+        supported_packages: BUILTIN_METHOD_CALL_PROTOCOL_PACKAGES,
+        language: None,
+        evidence_producer_ids: BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: BUILTIN_METHOD_CALL_PROTOCOL_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: BUILTIN_METHOD_CALL_PROTOCOL_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: builtin_method_call_protocol_counts,
     },
     BuiltinPackDescriptor {
         id: ITERATOR_IDENTITY_ADAPTER_PACK_ID,

@@ -79,7 +79,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 31);
+    assert_eq!(descriptors.len(), 32);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -109,6 +109,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
             RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
             MAP_KEY_VIEW_PROTOCOL_PACK_ID,
+            BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
             ITERATOR_IDENTITY_ADAPTER_PACK_ID,
             JS_LIKE_BUILTIN_PROMISE_PACK_ID,
             JS_LIKE_BUILTIN_ARRAY_PACK_ID,
@@ -622,6 +623,55 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
     assert!(free_function_builtin
         .conformance_refs()
         .contains(&"free-function-builtin-compatibility-pack-hard-negative"));
+
+    let builtin_method_call = builtin_pack_descriptor(BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID)
+        .expect("builtin method-call protocol descriptor");
+    assert_eq!(builtin_method_call.kind, SemanticPackKind::ProtocolPack);
+    assert_eq!(
+        builtin_method_call.supported_languages,
+        &[
+            "python",
+            "javascript",
+            "typescript",
+            "vue",
+            "svelte",
+            "html",
+            "go",
+            "rust",
+            "java",
+            "ruby",
+            "swift"
+        ]
+    );
+    assert_eq!(
+        builtin_method_call.supported_packages,
+        &[
+            "Collection",
+            "Option",
+            "String",
+            "console",
+            "fmt",
+            "functools",
+            "slices",
+            "strings"
+        ]
+    );
+    assert_eq!(
+        builtin_method_call.evidence_producer_ids,
+        &[BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID]
+    );
+    assert!(builtin_method_call.source_fact_producer_ids.is_empty());
+    assert_eq!(
+        builtin_method_call.contract_ids,
+        &[BUILTIN_METHOD_CALL_CONTRACT_ID]
+    );
+    assert_eq!(builtin_method_call.counts().evidence_producers, 1);
+    assert_eq!(builtin_method_call.counts().contracts, 1);
+    assert_eq!(builtin_method_call.counts().positive_fixtures, 9);
+    assert_eq!(builtin_method_call.counts().hard_negatives, 3);
+    assert!(builtin_method_call
+        .conformance_refs()
+        .contains(&"builtin-method-call-wrong-pack-hard-negative"));
 
     let receiver_membership = builtin_pack_descriptor(RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID)
         .expect("receiver-membership protocol descriptor");
@@ -1507,7 +1557,7 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 32);
+    assert_eq!(set.packs().len(), 33);
     assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
     assert_eq!(set.packs()[3].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
@@ -1535,22 +1585,23 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     assert_eq!(set.packs()[19].id, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID);
     assert_eq!(set.packs()[20].id, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID);
     assert_eq!(set.packs()[21].id, MAP_KEY_VIEW_PROTOCOL_PACK_ID);
-    assert_eq!(set.packs()[22].id, ITERATOR_IDENTITY_ADAPTER_PACK_ID);
-    assert_eq!(set.packs()[23].id, JS_LIKE_BUILTIN_PROMISE_PACK_ID);
-    assert_eq!(set.packs()[24].id, JS_LIKE_BUILTIN_ARRAY_PACK_ID);
-    assert_eq!(set.packs()[25].id, JS_LIKE_BUILTIN_BOOLEAN_PACK_ID);
-    assert_eq!(set.packs()[26].id, JS_LIKE_BUILTIN_REGEX_PACK_ID);
+    assert_eq!(set.packs()[22].id, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID);
+    assert_eq!(set.packs()[23].id, ITERATOR_IDENTITY_ADAPTER_PACK_ID);
+    assert_eq!(set.packs()[24].id, JS_LIKE_BUILTIN_PROMISE_PACK_ID);
+    assert_eq!(set.packs()[25].id, JS_LIKE_BUILTIN_ARRAY_PACK_ID);
+    assert_eq!(set.packs()[26].id, JS_LIKE_BUILTIN_BOOLEAN_PACK_ID);
+    assert_eq!(set.packs()[27].id, JS_LIKE_BUILTIN_REGEX_PACK_ID);
     assert_eq!(
-        set.packs()[27].id,
+        set.packs()[28].id,
         JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID
     );
     assert_eq!(
-        set.packs()[28].id,
+        set.packs()[29].id,
         JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
     );
-    assert_eq!(set.packs()[29].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[30].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[31];
+    assert_eq!(set.packs()[30].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[31].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[32];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);

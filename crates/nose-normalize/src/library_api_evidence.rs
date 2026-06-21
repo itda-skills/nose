@@ -11,6 +11,7 @@ use nose_semantics::{
     library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
     LibraryApiCalleeContract, LibraryApiDependencyCache, MethodBuiltinArgs,
     MethodEffectReceiverContract, MethodReceiverContract, MethodSemanticContract,
+    BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
     FIRST_PARTY_PACK_ID, RUST_STDLIB_OPTION_PRODUCER_ID,
 };
 
@@ -128,7 +129,7 @@ fn record_builder_append_method_library_api(
     else {
         return false;
     };
-    upsert_first_party_evidence(
+    upsert_first_party_evidence_with_pack_id(
         il,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -136,7 +137,8 @@ fn record_builder_append_method_library_api(
             callee_hash: library_api_callee_contract_hash(contract.callee),
             arity: arg_count as u16,
         }),
-        "library_api_builder_append_method",
+        BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+        BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
         dependencies,
     );
     true

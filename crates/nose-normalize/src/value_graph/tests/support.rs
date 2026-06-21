@@ -20,8 +20,9 @@ pub(super) use nose_semantics::{
     library_scalar_integer_method_contract, library_static_index_membership_contract,
     DomainEvidence, LibraryApiCalleeContract, LibraryApiContractId,
     LibraryCollectionFactoryContract, LibraryMapFactoryContract, LibraryMethodCallContract,
-    MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract, C_LANGUAGE_PACK_ID,
-    C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID, FIRST_PARTY_PACK_ID,
+    MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract,
+    BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+    C_LANGUAGE_PACK_ID, C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID, FIRST_PARTY_PACK_ID,
     FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID, JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
@@ -270,6 +271,11 @@ pub(super) fn library_api_contract_evidence(
         record.provenance.rule_hash = Some(stable_symbol_hash(
             FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
         ));
+    } else if matches!(contract_id, LibraryApiContractId::MethodCall(_)) {
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID));
     }
     record
 }
@@ -519,6 +525,11 @@ pub(super) fn push_method_call_library_api_evidence(
             Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID));
         record.provenance.rule_hash =
             Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID));
+    } else {
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID));
     }
     il.evidence.push(record);
 }
@@ -614,6 +625,20 @@ pub(super) fn push_library_api_evidence_for_callee(
             arity,
             dependencies,
         )
+    } else if matches!(contract_id, LibraryApiContractId::MethodCall(_)) {
+        let mut record = library_api_contract_evidence(
+            id,
+            il.node(call).span,
+            contract_id,
+            callee,
+            arity,
+            dependencies,
+        );
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID));
+        record
     } else {
         library_api_contract_evidence(
             id,

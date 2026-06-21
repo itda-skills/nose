@@ -421,6 +421,13 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(RUBY_STDLIB_SET_PRODUCER_ID))
         }
+        LibraryApiContractId::MethodCall(_) => {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash
+                    == Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID))
+        }
         _ => true,
     }
 }

@@ -7,10 +7,11 @@ use nose_il::{
 use nose_semantics::{
     library_api_callee_contract_hash, library_api_contract_id_hash, library_method_call_contract,
     LibraryApiCalleeContract, LibraryApiContractId, LibraryCollectionFactoryContract,
-    MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract, FIRST_PARTY_PACK_ID,
-    FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
-    JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID, JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
-    JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
+    MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract,
+    BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+    FIRST_PARTY_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID, JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
+    JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
     JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID, MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
     MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
     PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
@@ -65,6 +66,11 @@ pub(super) fn library_api_contract_evidence(
         record.provenance.rule_hash = Some(stable_symbol_hash(
             FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
         ));
+    } else if matches!(contract_id, LibraryApiContractId::MethodCall(_)) {
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID));
     }
     record
 }
@@ -160,6 +166,11 @@ pub(super) fn method_call_library_api_evidence(
             Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID));
         record.provenance.rule_hash =
             Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID));
+    } else {
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID));
     }
     record
 }
