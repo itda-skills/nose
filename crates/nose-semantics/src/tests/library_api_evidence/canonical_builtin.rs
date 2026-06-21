@@ -19,6 +19,17 @@ fn python_len_canonical_call_il() -> (Il, NodeId) {
     canonical_builtin_call_il(Lang::Python, Builtin::Len, &[arg], b, arg)
 }
 
+fn push_canonical_unshadowed_symbol_dependency(il: &mut Il, id: u32, call: NodeId, name: &str) {
+    il.evidence.push(evidence(
+        id,
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash(name),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+}
+
 fn rust_integer_canonical_builtin_call_il(builtin: Builtin, arg_count: usize) -> (Il, NodeId) {
     let mut b = IlBuilder::new(FileId(0));
     let args = (0..arg_count)
@@ -84,13 +95,14 @@ fn canonical_builtin_admission_requires_language_core_or_library_api_evidence() 
 
     let contract = library_free_function_builtin_contract(Lang::Python, "len", 1)
         .expect("Python len contract");
-    il.evidence.push(library_api_record(
+    push_canonical_unshadowed_symbol_dependency(&mut il, 9, call, "len");
+    il.evidence.push(free_function_builtin_protocol_record(
         10,
         il.node(call).span,
-        contract.id,
-        contract.callee,
+        contract,
+        1,
         EvidenceStatus::Asserted,
-        &[],
+        &[9],
     ));
     assert!(admitted_builtin_semantics_at_call(&il, call, Builtin::Len));
     assert!(!admitted_builtin_semantics_at_call(&il, call, Builtin::Abs));
@@ -432,11 +444,11 @@ fn canonical_builtin_admission_fails_closed_on_bad_library_api_evidence() {
         .expect("Python len contract");
 
     let (mut broken, broken_call) = python_len_canonical_call_il();
-    broken.evidence.push(library_api_record(
+    broken.evidence.push(free_function_builtin_protocol_record(
         10,
         broken.node(broken_call).span,
-        contract.id,
-        contract.callee,
+        contract,
+        1,
         EvidenceStatus::Asserted,
         &[99],
     ));
@@ -446,15 +458,65 @@ fn canonical_builtin_admission_fails_closed_on_bad_library_api_evidence() {
         Builtin::Len
     ));
 
-    let (mut ambiguous, ambiguous_call) = python_len_canonical_call_il();
-    ambiguous.evidence.push(library_api_record(
-        10,
-        ambiguous.node(ambiguous_call).span,
-        contract.id,
-        contract.callee,
-        EvidenceStatus::Ambiguous,
-        &[],
+    let (mut wrong_arity, wrong_arity_call) = python_len_canonical_call_il();
+    push_canonical_unshadowed_symbol_dependency(&mut wrong_arity, 9, wrong_arity_call, "len");
+    wrong_arity
+        .evidence
+        .push(free_function_builtin_protocol_record(
+            10,
+            wrong_arity.node(wrong_arity_call).span,
+            contract,
+            2,
+            EvidenceStatus::Asserted,
+            &[9],
+        ));
+    assert!(!admitted_builtin_semantics_at_call(
+        &wrong_arity,
+        wrong_arity_call,
+        Builtin::Len
     ));
+
+    let (mut wrong_symbol_span, wrong_symbol_span_call) = python_len_canonical_call_il();
+    let arg = wrong_symbol_span.children(wrong_symbol_span_call)[0];
+    wrong_symbol_span.evidence.push(evidence(
+        9,
+        EvidenceAnchor::node(
+            wrong_symbol_span.node(arg).span,
+            wrong_symbol_span.kind(arg),
+        ),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("len"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_symbol_span
+        .evidence
+        .push(free_function_builtin_protocol_record(
+            10,
+            wrong_symbol_span.node(wrong_symbol_span_call).span,
+            contract,
+            1,
+            EvidenceStatus::Asserted,
+            &[9],
+        ));
+    assert!(!admitted_builtin_semantics_at_call(
+        &wrong_symbol_span,
+        wrong_symbol_span_call,
+        Builtin::Len
+    ));
+
+    let (mut ambiguous, ambiguous_call) = python_len_canonical_call_il();
+    push_canonical_unshadowed_symbol_dependency(&mut ambiguous, 9, ambiguous_call, "len");
+    ambiguous
+        .evidence
+        .push(free_function_builtin_protocol_record(
+            10,
+            ambiguous.node(ambiguous_call).span,
+            contract,
+            1,
+            EvidenceStatus::Ambiguous,
+            &[9],
+        ));
     assert!(!admitted_builtin_semantics_at_call(
         &ambiguous,
         ambiguous_call,
@@ -464,22 +526,28 @@ fn canonical_builtin_admission_fails_closed_on_bad_library_api_evidence() {
     let (mut conflicting, conflicting_call) = python_len_canonical_call_il();
     let abs = library_free_function_builtin_contract(Lang::Python, "abs", 1)
         .expect("Python abs contract");
-    conflicting.evidence.push(library_api_record(
-        10,
-        conflicting.node(conflicting_call).span,
-        contract.id,
-        contract.callee,
-        EvidenceStatus::Asserted,
-        &[],
-    ));
-    conflicting.evidence.push(library_api_record(
-        11,
-        conflicting.node(conflicting_call).span,
-        abs.id,
-        abs.callee,
-        EvidenceStatus::Asserted,
-        &[],
-    ));
+    push_canonical_unshadowed_symbol_dependency(&mut conflicting, 8, conflicting_call, "len");
+    push_canonical_unshadowed_symbol_dependency(&mut conflicting, 9, conflicting_call, "abs");
+    conflicting
+        .evidence
+        .push(free_function_builtin_protocol_record(
+            10,
+            conflicting.node(conflicting_call).span,
+            contract,
+            1,
+            EvidenceStatus::Asserted,
+            &[8],
+        ));
+    conflicting
+        .evidence
+        .push(free_function_builtin_protocol_record(
+            11,
+            conflicting.node(conflicting_call).span,
+            abs,
+            1,
+            EvidenceStatus::Asserted,
+            &[9],
+        ));
     assert!(!admitted_builtin_semantics_at_call(
         &conflicting,
         conflicting_call,
@@ -680,13 +748,14 @@ fn value_domain_inference_requires_admitted_builtin_result_domains() {
 
     let contract = library_free_function_builtin_contract(Lang::Python, "len", 1)
         .expect("Python len contract");
-    il.evidence.push(library_api_record(
+    push_canonical_unshadowed_symbol_dependency(&mut il, 9, len, "len");
+    il.evidence.push(free_function_builtin_protocol_record(
         10,
         il.node(len).span,
-        contract.id,
-        contract.callee,
+        contract,
+        1,
         EvidenceStatus::Asserted,
-        &[],
+        &[9],
     ));
     assert_eq!(
         semantics(Lang::Python)

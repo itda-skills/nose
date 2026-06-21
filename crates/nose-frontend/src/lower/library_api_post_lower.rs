@@ -177,8 +177,8 @@ fn post_lower_free_name_library_api_contract(
                 PostLowerLibraryApiContract {
                     id: contract.id,
                     callee: contract.callee,
-                    pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
-                    rule: "library_api_free_function_builtin",
+                    pack_id: FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+                    rule: FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
                     result_domain: None,
                 }
             })

@@ -22,6 +22,7 @@ pub(super) use nose_semantics::{
     LibraryCollectionFactoryContract, LibraryMapFactoryContract, LibraryMethodCallContract,
     MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract, C_LANGUAGE_PACK_ID,
     C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID, FIRST_PARTY_PACK_ID,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID, JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
     JAVA_STDLIB_MAP_FACTORY_PACK_ID, JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID, JAVA_STDLIB_MATH_PACK_ID,
@@ -253,7 +254,7 @@ pub(super) fn library_api_contract_evidence(
     arity: u16,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceRecord {
-    evidence_with_dependencies(
+    let mut record = evidence_with_dependencies(
         id,
         EvidenceAnchor::node(call_span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -262,7 +263,15 @@ pub(super) fn library_api_contract_evidence(
             arity,
         }),
         dependencies,
-    )
+    );
+    if matches!(contract_id, LibraryApiContractId::FreeFunctionBuiltin(_)) {
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash = Some(stable_symbol_hash(
+            FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+        ));
+    }
+    record
 }
 
 pub(super) fn js_like_builtin_collection_constructor_evidence(

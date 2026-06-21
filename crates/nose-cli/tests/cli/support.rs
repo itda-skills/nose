@@ -454,6 +454,7 @@ pub(crate) fn assert_query_json_reports_semantic_packs(json: &serde_json::Value)
         "nose.java.stdlib.static_collection_adapters",
         "nose.protocols.map_get",
         "nose.protocols.map_get_default",
+        "nose.protocols.free_function_builtins",
         "nose.protocols.receiver_membership",
         "nose.protocols.map_key_views",
         "nose.protocols.iterator_identity_adapters",

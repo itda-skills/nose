@@ -7,7 +7,7 @@ use crate::units::fragments::call_may_mutate_blocked_cid;
 use nose_il::{
     stable_symbol_hash, Builtin, EvidenceAnchor, EvidenceId, EvidenceKind, EvidenceStatus, FileId,
     FileMeta, IlBuilder, Interner, Lang, NodeKind, Payload, SequenceSurfaceKind, SourceBindingKind,
-    SourceFactKind, SourceOperatorKind, UnitKind,
+    SourceFactKind, SourceOperatorKind, SymbolEvidenceKind, UnitKind,
 };
 use nose_semantics::{
     library_free_function_builtin_contract, library_js_like_set_constructor_contract,
@@ -74,13 +74,21 @@ fn strict_exact_raw_builtin_payload_requires_admission() {
 
     let contract = library_free_function_builtin_contract(Lang::Python, "abs", 1)
         .expect("Python abs contract");
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(evidence(
         0,
+        EvidenceAnchor::node(sp(72), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("abs"),
+        }),
+        Vec::new(),
+    ));
+    il.evidence.push(library_api_contract_evidence(
+        1,
         sp(72),
         contract.id,
         contract.callee,
         1,
-        Vec::new(),
+        vec![EvidenceId(0)],
     ));
     let facts = StrictFacts::collect(&il, &interner);
     assert!(strict_exact_safe_tree(&il, &interner, &facts, call));
@@ -99,13 +107,21 @@ fn function_binding_safe_raw_builtin_payload_requires_admission() {
 
     let contract = library_free_function_builtin_contract(Lang::Python, "abs", 1)
         .expect("Python abs contract");
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(evidence(
         0,
+        EvidenceAnchor::node(sp(72), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("abs"),
+        }),
+        Vec::new(),
+    ));
+    il.evidence.push(library_api_contract_evidence(
+        1,
         sp(72),
         contract.id,
         contract.callee,
         1,
-        Vec::new(),
+        vec![EvidenceId(0)],
     ));
     let facts = StrictFacts::collect(&il, &interner);
     assert!(function_binding_safe(&il, &interner, &facts, call, call));

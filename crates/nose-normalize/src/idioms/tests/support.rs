@@ -10,7 +10,8 @@ pub(super) use nose_semantics::{
     library_free_function_builtin_contract, library_free_name_map_factory_contract,
     library_iterator_identity_adapter_contract, library_map_get_contract,
     library_map_get_default_contract, library_map_key_view_contract, library_method_call_contract,
-    library_receiver_membership_contract, ITERATOR_IDENTITY_ADAPTER_PACK_ID,
+    library_receiver_membership_contract, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID, ITERATOR_IDENTITY_ADAPTER_PACK_ID,
     ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID, MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
     MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID, MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID,
     MAP_KEY_VIEW_PROTOCOL_PACK_ID, MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
@@ -224,6 +225,11 @@ pub(super) fn push_free_function_builtin_library_api_evidence(
         }),
         EvidenceStatus::Asserted,
         vec![EvidenceId(symbol_id)],
+    ));
+    let record = il.evidence.last_mut().expect("just pushed API evidence");
+    record.provenance.pack_hash = Some(stable_symbol_hash(FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID));
+    record.provenance.rule_hash = Some(stable_symbol_hash(
+        FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
     ));
     Some(EvidenceId(id))
 }

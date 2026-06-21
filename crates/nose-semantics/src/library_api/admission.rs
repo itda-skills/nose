@@ -184,6 +184,15 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                         PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
                     ))
         }
+        LibraryApiContractId::FreeFunctionBuiltin(_) => {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash
+                    == Some(stable_symbol_hash(FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(
+                        FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+                    ))
+        }
         LibraryApiContractId::ImportedNamespaceFunction(
             ImportedNamespaceFunctionSemantic::ProductReduction {
                 op: Op::Mul,

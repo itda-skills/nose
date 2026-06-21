@@ -184,11 +184,11 @@ fn library_api_evidence_resolution_accepts_free_function_builtin_callees() {
         }),
         EvidenceStatus::Asserted,
     ));
-    il.evidence.push(library_api_record(
+    il.evidence.push(free_function_builtin_protocol_record(
         1,
         sp(47),
-        contract.id,
-        contract.callee,
+        contract,
+        1,
         EvidenceStatus::Asserted,
         &[0],
     ));

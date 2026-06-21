@@ -249,6 +249,10 @@ fn canonical_record_provenance_and_dependencies_match(
                     .iter()
                     .all(|&arg| canonical_integer_arg_dependency_present(il, record, arg))
         }
+        (
+            LibraryApiContractId::FreeFunctionBuiltin(_),
+            LibraryApiCalleeContract::FreeName { name, .. },
+        ) => canonical_record_has_unshadowed_symbol_dependency(il, call, record, name),
         _ => true,
     }
 }
@@ -258,9 +262,18 @@ fn canonical_record_has_unshadowed_math_dependency(
     call: NodeId,
     record: &EvidenceRecord,
 ) -> bool {
+    canonical_record_has_unshadowed_symbol_dependency(il, call, record, "Math")
+}
+
+fn canonical_record_has_unshadowed_symbol_dependency(
+    il: &Il,
+    call: NodeId,
+    record: &EvidenceRecord,
+    name: &str,
+) -> bool {
     let call_span = il.node(call).span;
     let expected = SymbolEvidenceKind::UnshadowedGlobal {
-        name_hash: stable_symbol_hash("Math"),
+        name_hash: stable_symbol_hash(name),
     };
     record.dependencies.iter().any(|&id| {
         let Some(dependency) = il.evidence_record_by_id(id) else {
@@ -276,7 +289,7 @@ fn canonical_record_has_unshadowed_math_dependency(
         dependency.status == EvidenceStatus::Asserted
             && dependency.kind == EvidenceKind::Symbol(expected)
             && span.file == call_span.file
-            && span.start_byte >= call_span.start_byte
+            && span.start_byte == call_span.start_byte
             && span.end_byte <= call_span.end_byte
     })
 }
@@ -319,10 +332,38 @@ pub(in crate::library_api) fn library_api_record_models_canonical_builtin(
     id: LibraryApiContractId,
     builtin: Builtin,
 ) -> bool {
+    if let LibraryApiContractId::FreeFunctionBuiltin(expected_builtin) = id {
+        return expected_builtin == builtin
+            && library_api_record_models_free_function_builtin(il, record, expected_builtin);
+    }
     if library_api_contract_id_builtin_result(id) == Some(builtin) {
         return true;
     }
     library_api_record_models_rust_map_get_default(il, call, record, id, builtin)
+}
+
+fn library_api_record_models_free_function_builtin(
+    il: &Il,
+    record: &EvidenceRecord,
+    builtin: Builtin,
+) -> bool {
+    let EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
+        callee_hash, arity, ..
+    }) = record.kind
+    else {
+        return false;
+    };
+    let Some(LibraryApiCalleeContract::FreeName { name, .. }) =
+        library_api_callee_contract_for_hash(
+            il.meta.lang,
+            LibraryApiContractId::FreeFunctionBuiltin(builtin),
+            callee_hash,
+        )
+    else {
+        return false;
+    };
+    library_free_function_builtin_contract(il.meta.lang, name, arity as usize)
+        .is_some_and(|contract| contract.result.builtin == builtin)
 }
 
 pub(in crate::library_api) fn library_api_record_models_rust_map_get_default(

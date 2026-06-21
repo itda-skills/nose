@@ -220,10 +220,11 @@ fn upsert(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nose_il::{FileId, FileMeta, IlBuilder, LibraryApiEvidenceKind, Span};
+    use nose_il::{FileId, FileMeta, IlBuilder, LibraryApiEvidenceKind, Span, SymbolEvidenceKind};
     use nose_semantics::{
         library_api_callee_contract_hash, library_api_contract_id_hash,
-        library_free_function_builtin_contract,
+        library_free_function_builtin_contract, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+        FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
     };
 
     fn append_il() -> (Il, NodeId) {
@@ -278,6 +279,15 @@ mod tests {
         let (mut il, append) = append_il();
         let contract =
             library_free_function_builtin_contract(Lang::Go, "append", 2).expect("Go append");
+        let symbol = il.find_or_push_first_party_evidence(
+            EvidenceAnchor::node(il.node(append).span, NodeKind::Var),
+            EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+                name_hash: stable_symbol_hash("append"),
+            }),
+            FIRST_PARTY_PACK_ID,
+            "test_go_append_symbol",
+            Vec::new(),
+        );
         let api = il.find_or_push_first_party_evidence(
             EvidenceAnchor::node(il.node(append).span, NodeKind::Call),
             EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -285,9 +295,9 @@ mod tests {
                 callee_hash: library_api_callee_contract_hash(contract.callee),
                 arity: 2,
             }),
-            FIRST_PARTY_PACK_ID,
-            "test_go_append",
-            Vec::new(),
+            FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+            FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+            vec![symbol],
         );
 
         run(&mut il, &interner);

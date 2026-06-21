@@ -151,6 +151,11 @@ still being migrated toward it.
   default)`, Ruby `Hash#fetch(key, default)` or zero-arg block fallback, and
   Java `Map.getOrDefault(key, default)` contract and occurrence producer ids,
   while non-map receivers and unsupported arities remain hard negatives. The
+  `nose.protocols.free_function_builtins` descriptor owns unshadowed
+  Python/Go/Swift free-name builtin API occurrence contracts such as Python
+  `len`/`range`/reductions, Go `len`/`append`, and Swift
+  `abs`/`min`/`max`, while missing symbol proof, compatibility-pack evidence,
+  wrong producers, and unsupported arities remain hard negatives. The
   `nose.protocols.receiver_membership` descriptor owns receiver-method
   membership contracts for Java/Rust/Ruby map-key membership, Python
   `__contains__`, JS-like `has`/`includes`, Java/Swift `contains`, and Ruby
@@ -334,11 +339,12 @@ migrated.
   Python returned generator/set comprehensions and unsupported cardinality
   surfaces stay exact-closed; supported list/generator terminal reductions can
   still reopen only through consumer-specific demand checks.
-- Free-function builtin contracts are language- and arity-constrained. Supported
-  Python/Go free builtins such as `len`, `sum`, `min`, `max`, `any`, `all`, and
-  Go `append` require admitted `LibraryApi(FreeFunctionBuiltin)` occurrence
-  evidence whose dependencies prove the unshadowed builtin/global callee before
-  exact lowering.
+- Free-function builtin contracts are language- and arity-constrained.
+  Supported Python/Go/Swift free builtins such as Python `len`, `sum`, `min`,
+  `max`, `any`, `all`, Go `append`, and Swift `abs` require admitted
+  `nose.protocols.free_function_builtins` `LibraryApi(FreeFunctionBuiltin)`
+  occurrence evidence whose dependencies prove the unshadowed builtin/global
+  callee before exact lowering.
 - Canonical `Payload::Builtin` calls now have an explicit admission gate. A
   builtin payload is only a normalized operation shape; it is not itself proof
   that a language/library API has that meaning. Value-graph builtin folding,
@@ -961,11 +967,11 @@ Semantic knowledge still appears in several forms outside the facade:
 - remaining library/API proof gates that do not yet have occurrence records.
   `LibraryApi` occurrence evidence now covers selected JS-like static/global
   APIs and static-index membership, JS/TS/Java property builtins, Python
-  builtin/import-backed factories/functions, Rust free-name/path factories,
+  builtin/import-backed factories/functions, pack-proven Python/Go/Swift
+  free-function builtins, Rust free-name/path factories,
   Rust Option/scalar APIs, Ruby `require "set"; Set.new(...)`, Java `java.util`
   static factories/adapters and selected empty constructors, JS regex literals,
-  generic Python/Go free-function builtins, and selected receiver-method
-  families. Broader thenable assimilation, async/sync protocol convergence,
+  selected receiver-method families. Broader thenable assimilation, async/sync protocol convergence,
   ecosystem APIs, and broader protocol/API evidence paths still rely on contract
   rows plus local proof or remain exact-closed. Raw Python async-looking field names such
   as `aread` no longer rewrite to sync names without an explicit protocol/API

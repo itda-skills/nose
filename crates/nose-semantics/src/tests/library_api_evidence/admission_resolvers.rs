@@ -1028,14 +1028,16 @@ fn admitted_free_function_builtin_resolver_requires_api_occurrence_evidence() {
     let contract = library_free_function_builtin_contract(Lang::Python, "len", 1)
         .expect("Python len contract");
     let (mut missing_dependency, interner, call, _callee) = python_len_builtin_call_il();
-    missing_dependency.evidence.push(library_api_record(
-        0,
-        missing_dependency.node(call).span,
-        contract.id,
-        contract.callee,
-        EvidenceStatus::Asserted,
-        &[],
-    ));
+    missing_dependency
+        .evidence
+        .push(free_function_builtin_protocol_record(
+            0,
+            missing_dependency.node(call).span,
+            contract,
+            1,
+            EvidenceStatus::Asserted,
+            &[],
+        ));
     assert!(
         admitted_free_function_builtin_at_call(&missing_dependency, &interner, call).is_none(),
         "same-span builtin API occurrence without callee dependency is rejected"
@@ -1050,14 +1052,68 @@ fn admitted_free_function_builtin_resolver_requires_api_occurrence_evidence() {
         }),
         EvidenceStatus::Asserted,
     ));
-    admitted.evidence.push(library_api_record(
+    let (mut wrong_pack, wrong_interner, wrong_call, wrong_callee) = python_len_builtin_call_il();
+    wrong_pack.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_pack.node(wrong_callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("len"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_pack.evidence.push(library_api_record_with_provenance(
         1,
-        admitted.node(call).span,
+        wrong_pack.node(call).span,
         contract.id,
         contract.callee,
         EvidenceStatus::Asserted,
         &[0],
+        FIRST_PARTY_PACK_ID,
+        FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
     ));
+    assert!(
+        admitted_free_function_builtin_at_call(&wrong_pack, &wrong_interner, wrong_call).is_none(),
+        "free-function builtin API occurrence rejects compatibility-pack evidence"
+    );
+
+    let (mut wrong_producer, wrong_interner, wrong_call, wrong_callee) =
+        python_len_builtin_call_il();
+    wrong_producer.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_producer.node(wrong_callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("len"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_producer
+        .evidence
+        .push(library_api_record_with_provenance(
+            1,
+            wrong_producer.node(wrong_call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[0],
+            FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+            "wrong-free-function-producer",
+        ));
+    assert!(
+        admitted_free_function_builtin_at_call(&wrong_producer, &wrong_interner, wrong_call)
+            .is_none(),
+        "free-function builtin API occurrence rejects wrong producer evidence"
+    );
+
+    admitted
+        .evidence
+        .push(free_function_builtin_protocol_record(
+            1,
+            admitted.node(call).span,
+            contract,
+            1,
+            EvidenceStatus::Asserted,
+            &[0],
+        ));
 
     let occurrence = admitted_free_function_builtin_at_call(&admitted, &interner, call).unwrap();
     assert_eq!(occurrence.contract.id, contract.id);

@@ -179,13 +179,20 @@ fn raw_library_builtin_payloads_do_not_fold_without_admission() {
 
     let contract = library_free_function_builtin_contract(Lang::Python, "abs", 1)
         .expect("Python abs contract");
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(evidence(
         0,
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("abs"),
+        }),
+    ));
+    il.evidence.push(library_api_contract_evidence(
+        1,
         il.node(call).span,
         contract.id,
         contract.callee,
         1,
-        Vec::new(),
+        vec![EvidenceId(0)],
     ));
     let mut builder = Builder::new(&il, &interner);
     let admitted = builder.eval(call, &FxHashMap::default());
@@ -257,13 +264,20 @@ fn rust_full_range_seq_requires_source_range_evidence() {
     let mut il = finish_test_il(b, root, Lang::Python);
     let len_contract =
         library_free_function_builtin_contract(Lang::Python, "len", 1).expect("len contract");
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(evidence(
         0,
+        EvidenceAnchor::node(il.node(len).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("len"),
+        }),
+    ));
+    il.evidence.push(library_api_contract_evidence(
+        1,
         il.node(len).span,
         len_contract.id,
         len_contract.callee,
         1,
-        Vec::new(),
+        vec![EvidenceId(0)],
     ));
 
     let builder = Builder::new(&il, &interner);
@@ -276,7 +290,7 @@ fn rust_full_range_seq_requires_source_range_evidence() {
     let mut inclusive_il = il.clone();
     push_source_range(
         &mut inclusive_il,
-        1,
+        2,
         sp(180),
         SourceRangeKind::RustInclusiveRangeExpression,
     );
@@ -289,7 +303,7 @@ fn rust_full_range_seq_requires_source_range_evidence() {
 
     push_source_range(
         &mut il,
-        1,
+        2,
         sp(180),
         SourceRangeKind::RustHalfOpenRangeExpression,
     );

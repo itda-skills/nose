@@ -15,6 +15,7 @@ const JS_LIKE_LANGUAGE: &[&str] = &["javascript", "typescript"];
 const JAVA_LANGUAGE: &[&str] = &["java"];
 const JAVA_RUST_LANGUAGE: &[&str] = &["java", "rust"];
 const MAP_GET_DEFAULT_PROTOCOL_LANGUAGES: &[&str] = &["python", "ruby", "java"];
+const FREE_FUNCTION_BUILTIN_PROTOCOL_LANGUAGES: &[&str] = &["python", "go", "swift"];
 const RECEIVER_MEMBERSHIP_PROTOCOL_LANGUAGES: &[&str] = &[
     "python",
     "ruby",
@@ -60,6 +61,7 @@ const JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACKAGES: &[&str] = &["java.util"];
 const ITERATOR_IDENTITY_ADAPTER_PACKAGES: &[&str] = &["core::iter", "java.util.stream"];
 const MAP_GET_PROTOCOL_PACKAGES: &[&str] = &["Map", "java.util", "std::collections"];
 const MAP_GET_DEFAULT_PROTOCOL_PACKAGES: &[&str] = &["dict", "Hash", "java.util"];
+const FREE_FUNCTION_BUILTIN_PROTOCOL_PACKAGES: &[&str] = &["builtins", "go.predeclared", "Swift"];
 const RECEIVER_MEMBERSHIP_PROTOCOL_PACKAGES: &[&str] = &[
     "Array",
     "Collection",
@@ -271,6 +273,21 @@ const MAP_GET_DEFAULT_PROTOCOL_CONFORMANCE_REFS: &[&str] = &[
     "map-get-default-java-get-or-default-positive",
     "map-get-default-non-map-receiver-hard-negative",
     "map-get-default-unsupported-arity-hard-negative",
+];
+const FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_IDS: &[&str] =
+    &[FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID];
+const FREE_FUNCTION_BUILTIN_PROTOCOL_CONTRACT_IDS: &[&str] = &[FREE_FUNCTION_BUILTIN_CONTRACT_ID];
+const FREE_FUNCTION_BUILTIN_PROTOCOL_CONFORMANCE_REFS: &[&str] = &[
+    "free-function-builtin-python-len-positive",
+    "free-function-builtin-python-range-positive",
+    "free-function-builtin-python-reduction-positive",
+    "free-function-builtin-go-len-positive",
+    "free-function-builtin-go-append-positive",
+    "free-function-builtin-swift-abs-positive",
+    "free-function-builtin-missing-symbol-hard-negative",
+    "free-function-builtin-compatibility-pack-hard-negative",
+    "free-function-builtin-wrong-producer-hard-negative",
+    "free-function-builtin-unsupported-arity-hard-negative",
 ];
 const RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_IDS: &[&str] =
     &[RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID];
@@ -765,6 +782,22 @@ fn map_get_default_protocol_counts() -> SemanticPackCounts {
             .filter(|id| !id.contains("hard-negative"))
             .count(),
         hard_negatives: MAP_GET_DEFAULT_PROTOCOL_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
+fn free_function_builtin_protocol_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_IDS.len(),
+        contracts: FREE_FUNCTION_BUILTIN_PROTOCOL_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: FREE_FUNCTION_BUILTIN_PROTOCOL_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: FREE_FUNCTION_BUILTIN_PROTOCOL_CONFORMANCE_REFS
             .iter()
             .filter(|id| id.contains("hard-negative"))
             .count(),
@@ -1331,6 +1364,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: MAP_GET_DEFAULT_PROTOCOL_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: map_get_default_protocol_counts,
+    },
+    BuiltinPackDescriptor {
+        id: FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+        kind: SemanticPackKind::ProtocolPack,
+        display_name: "nose free-function builtin protocol pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: FREE_FUNCTION_BUILTIN_PROTOCOL_LANGUAGES,
+        supported_packages: FREE_FUNCTION_BUILTIN_PROTOCOL_PACKAGES,
+        language: None,
+        evidence_producer_ids: FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: FREE_FUNCTION_BUILTIN_PROTOCOL_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: FREE_FUNCTION_BUILTIN_PROTOCOL_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: free_function_builtin_protocol_counts,
     },
     BuiltinPackDescriptor {
         id: RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,

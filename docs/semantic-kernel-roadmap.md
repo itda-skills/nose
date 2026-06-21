@@ -121,6 +121,9 @@ The next code slices are intentionally incremental:
    `nose.protocols.map_get_default` for Python `dict.get(key, default)`, Ruby
    `Hash#fetch(key, default)` or zero-arg block fallback, and Java
    `Map.getOrDefault(key, default)` occurrence provenance, then
+   `nose.protocols.free_function_builtins` for unshadowed Python/Go/Swift
+   free-name builtin calls such as Python `len`/`range`/reductions, Go
+   `len`/`append`, and Swift `abs`/`min`/`max`, then
    `nose.protocols.receiver_membership` for receiver-method `Contains`
    contracts with receiver proof, including Java/Rust/Ruby map-key membership,
    Python `__contains__`, JS-like `has`/`includes`, Java/Swift `contains`, and
@@ -769,6 +772,27 @@ checks for existing receiver-method `Contains` rows with receiver proof. Go
 add per-node descriptor scans or repeated registry walks on hot paths. Binary
 size changed 20,181,648 -> 20,181,712 bytes for this slice.
 
+Phase 5 free-function builtin protocol pack measurement note, local run on
+2026-06-21: product query-regression r15 compared the previous
+`nose.protocols.receiver_membership` slice with the
+`nose.protocols.free_function_builtins` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, surface
+counts, and family shapes were unchanged after ignoring `result_json_bytes`.
+Each repo's JSON grew by exactly 548 bytes from the new top-level
+`semantic_packs` entry, for a total subset byte delta of 693,428 -> 698,360
+bytes (+4,932, +0.7%). The saved primary artifacts are
+`/tmp/nose-473-phase5-free-function-prev-r15.json`,
+`/tmp/nose-473-phase5-free-function-current-r15.json`, and
+`/tmp/nose-473-phase5-free-function-vs-prev-r15.md`. The primary sequential
+r15 compare showed one runtime investigation trigger on `chi`; a focused
+`chi` r30 rerun cleared it at
+`/tmp/nose-473-phase5-free-function-chi-r30.md`. Root-cause note: this slice
+adds static protocol-pack metadata, free-function builtin producer provenance,
+and fail-closed canonical admission checks for existing Python/Go/Swift
+unshadowed free-name builtin rows. It does not add per-node descriptor scans or
+repeated registry walks on hot paths. Binary size changed 20,181,712 ->
+20,181,936 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -919,6 +943,11 @@ size changed 20,181,648 -> 20,181,712 bytes for this slice.
   `Map.getOrDefault(key, default)` `LibraryApi` occurrence evidence now reports
   `nose.protocols.map_get_default` pack and producer provenance while
   preserving exact-map receiver and unsupported-arity hard negatives.
+- Free-function builtin protocol occurrences started moving out of the broad
+  compatibility facade. Python/Go/Swift unshadowed free-name builtin
+  `LibraryApi` occurrence evidence now reports
+  `nose.protocols.free_function_builtins` pack and producer provenance while
+  preserving symbol-proof and unsupported-arity hard negatives.
 - Receiver-membership protocol occurrences started moving out of the broad
   compatibility facade. Java/Rust/Ruby map-key membership, Python
   `__contains__`, JS-like `has`/`includes`, Java/Swift `contains`, and Ruby
@@ -1023,8 +1052,9 @@ size changed 20,181,648 -> 20,181,712 bytes for this slice.
   Java floating `Math.abs`/`Math.min`/`Math.max` stay closed for the same reason.
   JS record-shape guards using `Boolean(...)` consume the pack-owned
   static-global function contract with an unshadowed `Boolean` requirement.
-- Generic Python/Go free-function builtins now have `LibraryApi` occurrence
-  rows. Early idiom canonicalization and value-graph two-argument
+- Generic Python/Go/Swift free-function builtins now have
+  `nose.protocols.free_function_builtins` `LibraryApi` occurrence rows. Early
+  idiom canonicalization and value-graph two-argument
   `min(...)`/`max(...)` require admitted occurrence evidence plus integer-domain
   proof instead of raw callee spelling. Python free `abs(...)` and sign-test
   absolute-value ternaries use the same integer-domain proof gate, closing
@@ -1188,8 +1218,9 @@ size changed 20,181,648 -> 20,181,712 bytes for this slice.
   integer APIs (`Math.abs`/`Math.min`/`Math.max`) with
   `nose.java.stdlib.math` provenance, Java/Rust/JS-family map-get occurrences
   with `nose.protocols.map_get` provenance, map-get-default occurrences with
-  `nose.protocols.map_get_default` provenance, map-key-view occurrences with
-  `nose.protocols.map_key_views` provenance, and
+  `nose.protocols.map_get_default` provenance, free-function builtin
+  occurrences with `nose.protocols.free_function_builtins` provenance,
+  map-key-view occurrences with `nose.protocols.map_key_views` provenance, and
   JS-like regex-literal `.test`. Producers emit call-site `Symbol` dependencies for imported
   binding/namespace occurrences or `Source` dependencies for regex literals;
   value-graph, idiom, and strict exact consumers consult these records first and
@@ -1471,8 +1502,8 @@ size changed 20,181,648 -> 20,181,712 bytes for this slice.
   contracts, and guard/effect rows.
 - The idiom/value-graph resolver cleanup moved supported normalize idiom
   canonicalization and direct value-graph API consumers behind shared
-  `nose-semantics` admitted occurrence resolvers. This covers free-function
-  builtins, generic receiver-method contracts, pack-proven map `get`,
+  `nose-semantics` admitted occurrence resolvers. This covers pack-proven
+  free-function builtins, generic receiver-method contracts, pack-proven map `get`,
   pack-proven map get-default, pack-proven map-key views, iterator identity
   adapters, Java static collection adapters, Rust `Some(...)`, Rust map factory receiver proof, static
   index-membership, and Rust scalar integer methods where the source `Call`
@@ -1669,8 +1700,8 @@ Remaining after the #109 closeout:
   `LibraryApiContract` identity/result rows, and selected JS-like,
   Python builtin/import-backed, Rust free-name/path, Ruby require-backed, Java
   `java.util`, and regex calls now additionally share `LibraryApi` occurrence
-  evidence, as do generic Python/Go free-function builtins and selected
-  receiver-method families. Selected normalize idiom, value-graph, and strict
+  evidence, as do pack-proven Python/Go/Swift free-function builtins and
+  selected receiver-method families. Selected normalize idiom, value-graph, and strict
   exact consumers now call shared `nose-semantics` admitted occurrence resolvers
   for method, free-function builtin, map-get, map-get-default, map-key-view, regex, JS
   static/global, static-index, iterator/static collection adapter, Rust

@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        30
+        31
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -444,6 +444,34 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(map_get_default["counts"]["value_laws"], 0);
     assert_eq!(map_get_default["counts"]["positive_fixtures"], 3);
     assert_eq!(map_get_default["counts"]["hard_negatives"], 2);
+
+    let free_function_builtin = semantic_pack_by_id(&json, "nose.protocols.free_function_builtins");
+    assert_eq!(free_function_builtin["hash"], "b57ad1f1019fcdfd");
+    assert_eq!(free_function_builtin["kind"], "ProtocolPack");
+    assert_eq!(
+        free_function_builtin["display_name"],
+        "nose free-function builtin protocol pack"
+    );
+    assert_eq!(free_function_builtin["source"], "compiled-first-party");
+    assert_eq!(free_function_builtin["influence"], "evidence-and-contracts");
+    assert_eq!(free_function_builtin["trust"], "default-first-party");
+    assert_eq!(free_function_builtin["enabled_by_default"], true);
+    assert_eq!(free_function_builtin["path"], serde_json::Value::Null);
+    assert_eq!(free_function_builtin["provider"], "Corca, Inc.");
+    assert_eq!(
+        free_function_builtin["repository"],
+        "https://github.com/corca-ai/nose"
+    );
+    assert_eq!(free_function_builtin["license"], "MIT");
+    assert_eq!(
+        json_array_strings(free_function_builtin, "supported_languages"),
+        vec!["python", "go", "swift"]
+    );
+    assert_eq!(free_function_builtin["counts"]["evidence_producers"], 1);
+    assert_eq!(free_function_builtin["counts"]["contracts"], 1);
+    assert_eq!(free_function_builtin["counts"]["value_laws"], 0);
+    assert_eq!(free_function_builtin["counts"]["positive_fixtures"], 6);
+    assert_eq!(free_function_builtin["counts"]["hard_negatives"], 4);
 
     let receiver_membership = semantic_pack_by_id(&json, "nose.protocols.receiver_membership");
     assert_eq!(receiver_membership["hash"], "b01cdfb3d7ec79c9");

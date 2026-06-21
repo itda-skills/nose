@@ -86,6 +86,7 @@ use nose_semantics::{
     sequence_surface_kind_for_tag, type_domain_from_source_text, ImportFactKind,
     LibraryApiCalleeContract, LibraryApiContractId, LibraryApiDependencyCache,
     MethodReceiverContract, StaticIndexMembershipReceiverContract,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID,
     JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID, JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PRODUCER_ID,

@@ -116,6 +116,27 @@ fn python_stdlib_math_record(
     )
 }
 
+fn free_function_builtin_protocol_record(
+    id: u32,
+    span: Span,
+    contract: LibraryFreeFunctionBuiltinContract,
+    arity: u16,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance_and_arity(
+        id,
+        span,
+        contract.id,
+        contract.callee,
+        arity,
+        status,
+        dependencies,
+        FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+        FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+    )
+}
+
 fn js_like_builtin_promise_record(
     id: u32,
     span: Span,

@@ -52,6 +52,7 @@ ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.java.stdlib.static_collection_adapters`,
 `nose.protocols.map_get`,
 `nose.protocols.map_get_default`,
+`nose.protocols.free_function_builtins`,
 `nose.protocols.receiver_membership`,
 `nose.protocols.map_key_views`,
 `nose.protocols.iterator_identity_adapters`,
@@ -255,6 +256,9 @@ previous semantic-kernel tranches.
    which owns Python `dict.get(key, default)`, Ruby `Hash#fetch(key, default)`
    or zero-arg block fallback, and Java `Map.getOrDefault(key, default)` API
    occurrence provenance under the shared exact-map receiver contract.
+   The current free-function builtin protocol slice is
+   `nose.protocols.free_function_builtins`, which owns unshadowed
+   Python/Go/Swift free-name builtin API occurrence provenance.
    The current receiver-membership protocol slice is
    `nose.protocols.receiver_membership`, which owns receiver-method membership
    API occurrence provenance for map, collection, and set-or-map receiver
