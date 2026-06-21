@@ -72,11 +72,11 @@ still being migrated toward it.
   analysis behavior. Builtin language descriptors now report official
   parser/lowering ownership metadata for Python, JavaScript/TypeScript, Go,
   Rust, Java, C, Ruby, Swift, CSS, and HTML/Vue/Svelte embedded-region support.
-  Generic source facts emitted by frontend lowering now carry those
-  `nose.lang.*` pack producers. `nose.lang.c` also owns the C file-extension
-  identity, `tree-sitter-c` parser binding, `nose_frontend::c::lower` lowering
-  entrypoint metadata, and the `c.source.cast.unsigned32` source-fact producer
-  id. The
+  Generic language-core evidence and source facts emitted by frontend lowering
+  now carry those `nose.lang.*` pack producers. `nose.lang.c` also owns the C
+  file-extension identity, `tree-sitter-c` parser binding,
+  `nose_frontend::c::lower` lowering entrypoint metadata, and the
+  `c.source.cast.unsigned32` source-fact producer id. The
   `nose.python.builtins.collection_factories` descriptor owns the Python builtin
   `list`, `set`, `frozenset`, and `tuple` collection-factory contract id and
   `LibraryApi` occurrence producer id, while shadowed names and wildcard imports

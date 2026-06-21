@@ -319,13 +319,9 @@ pub(super) fn post_lower_find_or_push_evidence(
     rule: &str,
     dependencies: Vec<EvidenceId>,
 ) -> Option<EvidenceId> {
-    Some(il.find_or_push_first_party_evidence(
-        anchor,
-        kind,
-        nose_semantics::FIRST_PARTY_PACK_ID,
-        rule,
-        dependencies,
-    ))
+    let _ = rule;
+    let (pack_id, producer_id) = nose_semantics::language_core_evidence_provenance(il.meta.lang);
+    Some(il.find_or_push_first_party_evidence(anchor, kind, pack_id, producer_id, dependencies))
 }
 
 pub(super) fn post_lower_top_level_statements(il: &Il) -> Vec<NodeId> {

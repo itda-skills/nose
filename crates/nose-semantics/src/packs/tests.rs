@@ -16,6 +16,7 @@ fn assert_source_fact_language_descriptor(
     file_extensions: &[&str],
     parser: &str,
     lowering_entrypoint: &str,
+    core_producer_id: &str,
     source_fact_producer_id: &str,
 ) {
     let descriptor = builtin_pack_descriptor(pack_id).expect("language descriptor");
@@ -29,13 +30,16 @@ fn assert_source_fact_language_descriptor(
     assert_eq!(language.file_extensions, file_extensions);
     assert_eq!(language.parser, parser);
     assert_eq!(language.lowering_entrypoint, lowering_entrypoint);
-    assert_eq!(descriptor.evidence_producer_ids, &[source_fact_producer_id]);
+    assert_eq!(
+        descriptor.evidence_producer_ids,
+        &[core_producer_id, source_fact_producer_id]
+    );
     assert_eq!(
         descriptor.source_fact_producer_ids,
         &[source_fact_producer_id]
     );
     assert!(descriptor.contract_ids.is_empty());
-    assert_eq!(descriptor.counts().evidence_producers, 1);
+    assert_eq!(descriptor.counts().evidence_producers, 2);
     assert_eq!(descriptor.counts().contracts, 0);
     assert_eq!(descriptor.counts().positive_fixtures, 0);
     assert_eq!(descriptor.counts().hard_negatives, 0);
@@ -180,6 +184,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         &["py", "pyi"],
         "tree-sitter-python",
         "nose_frontend::python::lower",
+        PYTHON_LANGUAGE_CORE_PRODUCER_ID,
         PYTHON_SOURCE_FACT_PRODUCER_ID,
     );
     assert_source_fact_language_descriptor(
@@ -189,6 +194,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         &["js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts"],
         "tree-sitter-javascript/tree-sitter-typescript",
         "nose_frontend::js_ts::lower",
+        JS_TS_LANGUAGE_CORE_PRODUCER_ID,
         JS_TS_SOURCE_FACT_PRODUCER_ID,
     );
     assert_source_fact_language_descriptor(
@@ -198,6 +204,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         &["go"],
         "tree-sitter-go",
         "nose_frontend::go::lower",
+        GO_LANGUAGE_CORE_PRODUCER_ID,
         GO_SOURCE_FACT_PRODUCER_ID,
     );
     assert_source_fact_language_descriptor(
@@ -207,6 +214,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         &["rs"],
         "tree-sitter-rust",
         "nose_frontend::rust::lower",
+        RUST_LANGUAGE_CORE_PRODUCER_ID,
         RUST_SOURCE_FACT_PRODUCER_ID,
     );
     assert_source_fact_language_descriptor(
@@ -216,6 +224,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         &["java"],
         "tree-sitter-java",
         "nose_frontend::java::lower",
+        JAVA_LANGUAGE_CORE_PRODUCER_ID,
         JAVA_SOURCE_FACT_PRODUCER_ID,
     );
     let c = builtin_pack_descriptor(C_LANGUAGE_PACK_ID).expect("C language descriptor");
@@ -232,6 +241,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
     assert_eq!(
         c.evidence_producer_ids,
         &[
+            C_LANGUAGE_CORE_PRODUCER_ID,
             C_SOURCE_FACT_PRODUCER_ID,
             C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID
         ]
@@ -243,7 +253,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
             C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID
         ]
     );
-    assert_eq!(c.counts().evidence_producers, 2);
+    assert_eq!(c.counts().evidence_producers, 3);
     assert_eq!(c.counts().contracts, 0);
     assert_eq!(c.counts().positive_fixtures, 2);
     assert_eq!(c.counts().hard_negatives, 2);
@@ -257,6 +267,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         &["rb"],
         "tree-sitter-ruby",
         "nose_frontend::ruby::lower",
+        RUBY_LANGUAGE_CORE_PRODUCER_ID,
         RUBY_SOURCE_FACT_PRODUCER_ID,
     );
     assert_source_fact_language_descriptor(
@@ -266,6 +277,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         &["swift"],
         "tree-sitter-swift",
         "nose_frontend::swift::lower",
+        SWIFT_LANGUAGE_CORE_PRODUCER_ID,
         SWIFT_SOURCE_FACT_PRODUCER_ID,
     );
     assert_source_fact_language_descriptor(
@@ -275,6 +287,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         &["css"],
         "tree-sitter-css",
         "nose_frontend::css::lower",
+        CSS_LANGUAGE_CORE_PRODUCER_ID,
         CSS_SOURCE_FACT_PRODUCER_ID,
     );
     assert_source_fact_language_descriptor(
@@ -288,6 +301,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         &["html", "htm", "vue", "svelte"],
         "tree-sitter-html + embedded JS/TS/CSS extraction",
         "nose_frontend::embedded::lower_regions",
+        HTML_EMBEDDED_LANGUAGE_CORE_PRODUCER_ID,
         HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID,
     );
 
@@ -1169,7 +1183,7 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(c.id, C_LANGUAGE_PACK_ID);
     assert_eq!(c.hash, stable_symbol_hash(C_LANGUAGE_PACK_ID));
     assert_eq!(c.kind, SemanticPackKind::LanguagePack);
-    assert_eq!(c.counts.evidence_producers, 2);
+    assert_eq!(c.counts.evidence_producers, 3);
     let python_builtins = set
         .packs()
         .iter()

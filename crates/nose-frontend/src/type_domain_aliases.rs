@@ -1,9 +1,8 @@
-use nose_il::{DomainEvidence, EvidenceId};
+use nose_il::{DomainEvidence, EvidenceId, EvidenceProvenance};
 
 #[derive(Clone, Copy)]
 pub(crate) struct TypeDomainEvidenceProvenance {
-    pub pack_id: &'static str,
-    pub rule: &'static str,
+    pub evidence_provenance: EvidenceProvenance,
 }
 
 #[derive(Clone)]

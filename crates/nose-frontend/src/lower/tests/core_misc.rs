@@ -135,6 +135,28 @@ fn generic_source_facts_use_builtin_language_pack_provenance() {
 }
 
 #[test]
+fn generic_lowering_evidence_uses_builtin_language_core_provenance() {
+    let interner = Interner::new();
+    let mut lo = Lowering::new(FileId(0), b"", Lang::Java, &interner);
+    lo.record_evidence(
+        EvidenceAnchor::node(sp_at(1), NodeKind::Var),
+        EvidenceKind::Place(PlaceEvidenceKind::SelfReceiver),
+        "place_self_receiver",
+    );
+    let record = lo.evidence.last().expect("generic evidence");
+    assert_eq!(
+        record.provenance.pack_hash,
+        Some(stable_symbol_hash(nose_semantics::JAVA_LANGUAGE_PACK_ID))
+    );
+    assert_eq!(
+        record.provenance.rule_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JAVA_LANGUAGE_CORE_PRODUCER_ID
+        ))
+    );
+}
+
+#[test]
 fn core_lowering_emits_effect_and_place_evidence() {
     let interner = Interner::new();
     let mut lo = Lowering::new(FileId(0), b"", Lang::Java, &interner);

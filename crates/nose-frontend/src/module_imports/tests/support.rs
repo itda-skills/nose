@@ -174,6 +174,15 @@ pub(super) fn test_provenance(rule: &str) -> EvidenceProvenance {
     }
 }
 
+fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
+    let (pack_id, producer_id) = nose_semantics::language_core_evidence_provenance(lang);
+    EvidenceProvenance {
+        emitter: EvidenceEmitter::FirstParty,
+        pack_hash: Some(stable_symbol_hash(pack_id)),
+        rule_hash: Some(stable_symbol_hash(producer_id)),
+    }
+}
+
 pub(super) fn add_import_binding_evidence(
     il: &mut Il,
     span: Span,
@@ -187,7 +196,7 @@ pub(super) fn add_import_binding_evidence(
             module_hash: stable_symbol_hash("java.util"),
             exported_hash: stable_symbol_hash("Map"),
         }),
-        provenance: test_provenance("import_binding"),
+        provenance: language_core_provenance(il.meta.lang),
         dependencies: Vec::new(),
         status,
     });
@@ -346,7 +355,7 @@ pub(super) fn lookup_import_consumer(lookup: Symbol) -> (Il, NodeId) {
             module_hash: stable_symbol_hash("tables"),
             exported_hash: stable_symbol_hash("LOOKUP"),
         }),
-        provenance: test_provenance("import"),
+        provenance: language_core_provenance(importer.meta.lang),
         dependencies: Vec::new(),
         status: EvidenceStatus::Asserted,
     });

@@ -1,5 +1,62 @@
 use super::*;
 
+fn import_fact_evidence(
+    id: u32,
+    lang: Lang,
+    span: Span,
+    kind: EvidenceKind,
+    status: EvidenceStatus,
+) -> EvidenceRecord {
+    import_fact_evidence_with_provenance(
+        id,
+        span,
+        kind,
+        language_core_provenance(lang),
+        status,
+        Vec::new(),
+    )
+}
+
+fn import_fact_evidence_with_provenance(
+    id: u32,
+    span: Span,
+    kind: EvidenceKind,
+    provenance: EvidenceProvenance,
+    status: EvidenceStatus,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor: EvidenceAnchor::sequence(span),
+        kind,
+        provenance,
+        dependencies,
+        status,
+    }
+}
+
+fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    EvidenceProvenance {
+        emitter: EvidenceEmitter::FirstParty,
+        pack_hash: Some(stable_symbol_hash(pack_id)),
+        rule_hash: Some(stable_symbol_hash(producer_id)),
+    }
+}
+
+fn binding_import_fact(module: &str, exported: &str) -> EvidenceKind {
+    EvidenceKind::Import(ImportEvidenceKind::Binding {
+        module_hash: stable_symbol_hash(module),
+        exported_hash: stable_symbol_hash(exported),
+    })
+}
+
+fn namespace_import_fact(module: &str) -> EvidenceKind {
+    EvidenceKind::Import(ImportEvidenceKind::Namespace {
+        module_hash: stable_symbol_hash(module),
+    })
+}
+
 #[test]
 fn import_fact_contracts_resolve_evidence_only_binding_and_namespace_proofs() {
     let mut b = IlBuilder::new(FileId(0));
@@ -39,21 +96,18 @@ fn import_fact_contracts_resolve_evidence_only_binding_and_namespace_proofs() {
     assert_eq!(import_fact_evidence_rhs(&il, binding), None);
     assert_eq!(import_fact_evidence_rhs(&il, namespace), None);
 
-    il.evidence.push(evidence(
+    il.evidence.push(import_fact_evidence(
         0,
-        EvidenceAnchor::sequence(sp(1)),
-        EvidenceKind::Import(ImportEvidenceKind::Binding {
-            module_hash: stable_symbol_hash("collections"),
-            exported_hash: stable_symbol_hash("deque"),
-        }),
+        Lang::Python,
+        sp(1),
+        binding_import_fact("collections", "deque"),
         EvidenceStatus::Asserted,
     ));
-    il.evidence.push(evidence(
+    il.evidence.push(import_fact_evidence(
         1,
-        EvidenceAnchor::sequence(sp(2)),
-        EvidenceKind::Import(ImportEvidenceKind::Namespace {
-            module_hash: stable_symbol_hash("math"),
-        }),
+        Lang::Python,
+        sp(2),
+        namespace_import_fact("math"),
         EvidenceStatus::Asserted,
     ));
 
@@ -77,6 +131,100 @@ fn import_fact_contracts_resolve_evidence_only_binding_and_namespace_proofs() {
 }
 
 #[test]
+fn import_fact_admission_requires_matching_language_core_provenance() {
+    let mut b = IlBuilder::new(FileId(0));
+    let module = b.add(
+        NodeKind::Lit,
+        Payload::LitStr(stable_symbol_hash("collections")),
+        sp(10),
+        &[],
+    );
+    let exported = b.add(
+        NodeKind::Lit,
+        Payload::LitStr(stable_symbol_hash("deque")),
+        sp(10),
+        &[],
+    );
+    let external = b.add(NodeKind::Seq, Payload::None, sp(10), &[module, exported]);
+    let broad_builtin = b.add(NodeKind::Seq, Payload::None, sp(11), &[module, exported]);
+    let wrong_language = b.add(NodeKind::Seq, Payload::None, sp(12), &[module, exported]);
+    let no_pack = b.add(NodeKind::Seq, Payload::None, sp(13), &[module, exported]);
+    let broken_dependency = b.add(NodeKind::Seq, Payload::None, sp(14), &[module, exported]);
+    let root = b.add(
+        NodeKind::Module,
+        Payload::None,
+        sp(10),
+        &[
+            external,
+            broad_builtin,
+            wrong_language,
+            no_pack,
+            broken_dependency,
+        ],
+    );
+    let mut il = finish_il(b, root, Lang::Python);
+    let kind = binding_import_fact("collections", "deque");
+
+    il.evidence.push(import_fact_evidence_with_provenance(
+        0,
+        sp(10),
+        kind,
+        EvidenceProvenance {
+            emitter: EvidenceEmitter::External,
+            pack_hash: Some(stable_symbol_hash("com.example.pack")),
+            rule_hash: Some(stable_symbol_hash("python.language.core")),
+        },
+        EvidenceStatus::Asserted,
+        Vec::new(),
+    ));
+    il.evidence.push(import_fact_evidence_with_provenance(
+        1,
+        sp(11),
+        kind,
+        EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+            rule_hash: Some(stable_symbol_hash("import_fact")),
+        },
+        EvidenceStatus::Asserted,
+        Vec::new(),
+    ));
+    il.evidence.push(import_fact_evidence(
+        2,
+        Lang::Java,
+        sp(12),
+        kind,
+        EvidenceStatus::Asserted,
+    ));
+    il.evidence.push(import_fact_evidence_with_provenance(
+        3,
+        sp(13),
+        kind,
+        EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: None,
+            rule_hash: Some(stable_symbol_hash("python.language.core")),
+        },
+        EvidenceStatus::Asserted,
+        Vec::new(),
+    ));
+    il.evidence.push(import_fact_evidence_with_provenance(
+        4,
+        sp(14),
+        kind,
+        language_core_provenance(Lang::Python),
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(99)],
+    ));
+
+    assert_eq!(import_fact_evidence_rhs(&il, external), None);
+    assert_eq!(import_fact_evidence_rhs(&il, broad_builtin), None);
+    assert_eq!(import_fact_evidence_rhs(&il, wrong_language), None);
+    assert_eq!(import_fact_evidence_rhs(&il, no_pack), None);
+    assert_eq!(import_fact_evidence_rhs(&il, broken_dependency), None);
+}
+
+#[test]
 fn ambiguous_import_evidence_stays_closed_without_raw_seq_fallback() {
     let mut b = IlBuilder::new(FileId(0));
     let module = b.add(
@@ -94,12 +242,11 @@ fn ambiguous_import_evidence_stays_closed_without_raw_seq_fallback() {
     let binding = b.add(NodeKind::Seq, Payload::None, sp(10), &[module, exported]);
     let root = b.add(NodeKind::Module, Payload::None, sp(10), &[binding]);
     let mut il = finish_il(b, root, Lang::Python);
-    il.evidence.push(evidence(
+    il.evidence.push(import_fact_evidence(
         0,
-        EvidenceAnchor::sequence(sp(10)),
-        EvidenceKind::Import(ImportEvidenceKind::Namespace {
-            module_hash: stable_symbol_hash("math"),
-        }),
+        Lang::Python,
+        sp(10),
+        namespace_import_fact("math"),
         EvidenceStatus::Asserted,
     ));
 
@@ -112,13 +259,11 @@ fn ambiguous_import_evidence_stays_closed_without_raw_seq_fallback() {
         })
     );
 
-    il.evidence.push(evidence(
+    il.evidence.push(import_fact_evidence(
         1,
-        EvidenceAnchor::sequence(sp(10)),
-        EvidenceKind::Import(ImportEvidenceKind::Binding {
-            module_hash: stable_symbol_hash("collections"),
-            exported_hash: stable_symbol_hash("deque"),
-        }),
+        Lang::Python,
+        sp(10),
+        binding_import_fact("collections", "deque"),
         EvidenceStatus::Asserted,
     ));
     assert_eq!(import_fact_evidence_rhs(&il, binding), None);

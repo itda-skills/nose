@@ -345,8 +345,31 @@ impl Il {
         rule: &str,
         dependencies: Vec<EvidenceId>,
     ) -> EvidenceId {
-        let pack_hash = stable_symbol_hash(pack_id);
-        let rule_hash = stable_symbol_hash(rule);
+        let provenance = EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(rule)),
+        };
+        self.find_or_push_first_party_evidence_with_provenance(
+            anchor,
+            kind,
+            provenance,
+            dependencies,
+        )
+    }
+
+    pub fn find_or_push_first_party_evidence_with_provenance(
+        &mut self,
+        anchor: EvidenceAnchor,
+        kind: EvidenceKind,
+        provenance: EvidenceProvenance,
+        dependencies: Vec<EvidenceId>,
+    ) -> EvidenceId {
+        let provenance = EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: provenance.pack_hash,
+            rule_hash: provenance.rule_hash,
+        };
         // Index-backed dedup: only records anchored at this exact span can match,
         // so the previous whole-`evidence` pass (quadratic over an emit-heavy
         // pass) narrows to one bucket.
@@ -354,9 +377,7 @@ impl Il {
             (record.anchor == anchor
                 && record.kind == kind
                 && record.status == EvidenceStatus::Asserted
-                && record.provenance.emitter == EvidenceEmitter::FirstParty
-                && record.provenance.pack_hash == Some(pack_hash)
-                && record.provenance.rule_hash == Some(rule_hash)
+                && record.provenance == provenance
                 && record.dependencies == dependencies)
                 .then_some(record.id)
         }) {
@@ -367,11 +388,7 @@ impl Il {
             id,
             anchor,
             kind,
-            provenance: EvidenceProvenance {
-                emitter: EvidenceEmitter::FirstParty,
-                pack_hash: Some(pack_hash),
-                rule_hash: Some(rule_hash),
-            },
+            provenance,
             dependencies,
             status: EvidenceStatus::Asserted,
         });

@@ -91,9 +91,12 @@ source-fact helpers in `nose-semantics`. Source-origin proof is evidence-only:
 frontends emit `EvidenceKind::Source` records directly, and consumers do not
 fall back to a side-table mirror when source evidence is missing.
 
-- Generic source facts emitted by frontend lowering carry the current builtin
-  language pack producer provenance, such as `nose.lang.python`,
-  `nose.lang.javascript-typescript`, `nose.lang.rust`, or `nose.lang.html`.
+- Generic language-core evidence and source facts emitted by frontend lowering
+  carry the current builtin language pack producer provenance, such as
+  `nose.lang.python`, `nose.lang.javascript-typescript`, `nose.lang.rust`, or
+  `nose.lang.html`. Specialized consumers can require source-fact producer ids
+  for narrow syntax proof, while broad type, place, symbol, and domain evidence
+  uses the language-core producer for the same builtin language pack.
 - JS/TS lowering emits source facts for construct syntax, async `await`
   boundaries, generator `yield` boundaries, regex literals, strict equality,
   strict inequality, loose equality, loose inequality, unary `typeof`, and

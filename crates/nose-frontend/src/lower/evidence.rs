@@ -15,7 +15,7 @@ impl<'a> Lowering<'a> {
             span,
             domain,
             dependencies,
-            first_party_param_domain_provenance(),
+            self.language_core_param_domain_provenance(),
         );
     }
 
@@ -39,22 +39,19 @@ impl<'a> Lowering<'a> {
         dependencies: Vec<EvidenceId>,
         provenance: TypeDomainEvidenceProvenance,
     ) {
-        self.record_evidence_with_pack_dependencies(
+        self.record_evidence_with_provenance_dependencies(
             EvidenceAnchor::param(span),
             EvidenceKind::Domain(domain),
-            provenance.pack_id,
-            provenance.rule,
+            provenance.evidence_provenance,
             dependencies,
         );
     }
 
     pub(crate) fn record_source_fact(&mut self, span: Span, kind: SourceFactKind) {
-        let (pack_id, producer_id) = nose_semantics::language_source_fact_provenance(self.lang);
-        self.record_evidence_with_pack_dependencies(
+        self.record_evidence_with_provenance_dependencies(
             EvidenceAnchor::source_span(span),
             EvidenceKind::Source(kind),
-            pack_id,
-            producer_id,
+            self.language_source_fact_provenance,
             Vec::new(),
         );
     }
@@ -75,11 +72,11 @@ impl<'a> Lowering<'a> {
         rule: &str,
         dependencies: Vec<EvidenceId>,
     ) -> EvidenceId {
-        self.record_evidence_with_pack_dependencies(
+        let _ = rule;
+        self.record_evidence_with_provenance_dependencies(
             anchor,
             kind,
-            nose_semantics::FIRST_PARTY_PACK_ID,
-            rule,
+            self.language_core_provenance,
             dependencies,
         )
     }
@@ -92,16 +89,27 @@ impl<'a> Lowering<'a> {
         rule: &str,
         dependencies: Vec<EvidenceId>,
     ) -> EvidenceId {
+        self.record_evidence_with_provenance_dependencies(
+            anchor,
+            kind,
+            first_party_evidence_provenance(pack_id, rule),
+            dependencies,
+        )
+    }
+
+    pub(crate) fn record_evidence_with_provenance_dependencies(
+        &mut self,
+        anchor: EvidenceAnchor,
+        kind: EvidenceKind,
+        provenance: EvidenceProvenance,
+        dependencies: Vec<EvidenceId>,
+    ) -> EvidenceId {
         let id = EvidenceId(self.evidence.len() as u32);
         self.evidence.push(EvidenceRecord {
             id,
             anchor,
             kind,
-            provenance: EvidenceProvenance {
-                emitter: EvidenceEmitter::FirstParty,
-                pack_hash: Some(stable_symbol_hash(pack_id)),
-                rule_hash: Some(stable_symbol_hash(rule)),
-            },
+            provenance,
             dependencies,
             status: EvidenceStatus::Asserted,
         });
@@ -129,7 +137,7 @@ impl<'a> Lowering<'a> {
             local,
             domain,
             evidence,
-            first_party_param_domain_provenance(),
+            self.language_core_param_domain_provenance(),
         );
     }
 
@@ -168,15 +176,14 @@ impl<'a> Lowering<'a> {
             type_domain_from_source_text(self.lang, text).map(|domain| ResolvedTypeDomain {
                 domain,
                 dependencies: Vec::new(),
-                provenance: first_party_param_domain_provenance(),
+                provenance: self.language_core_param_domain_provenance(),
             })
         })
     }
-}
 
-fn first_party_param_domain_provenance() -> TypeDomainEvidenceProvenance {
-    TypeDomainEvidenceProvenance {
-        pack_id: nose_semantics::FIRST_PARTY_PACK_ID,
-        rule: "param_domain",
+    fn language_core_param_domain_provenance(&self) -> TypeDomainEvidenceProvenance {
+        TypeDomainEvidenceProvenance {
+            evidence_provenance: self.language_core_provenance,
+        }
     }
 }

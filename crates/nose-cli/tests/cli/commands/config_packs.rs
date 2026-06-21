@@ -155,7 +155,7 @@ fn query_json_reports_builtin_semantic_packs() {
         json_array_strings(python_lang, "supported_languages"),
         vec!["python"]
     );
-    assert_eq!(python_lang["counts"]["evidence_producers"], 1);
+    assert_eq!(python_lang["counts"]["evidence_producers"], 2);
     assert_eq!(python_lang["counts"]["contracts"], 0);
 
     let js_ts_lang = semantic_pack_by_id(&json, "nose.lang.javascript-typescript");
@@ -164,7 +164,7 @@ fn query_json_reports_builtin_semantic_packs() {
         json_array_strings(js_ts_lang, "supported_languages"),
         vec!["javascript", "typescript"]
     );
-    assert_eq!(js_ts_lang["counts"]["evidence_producers"], 1);
+    assert_eq!(js_ts_lang["counts"]["evidence_producers"], 2);
     assert_eq!(js_ts_lang["counts"]["contracts"], 0);
 
     let html_lang = semantic_pack_by_id(&json, "nose.lang.html");
@@ -173,14 +173,14 @@ fn query_json_reports_builtin_semantic_packs() {
         json_array_strings(html_lang, "supported_languages"),
         vec!["html", "vue", "svelte"]
     );
-    assert_eq!(html_lang["counts"]["evidence_producers"], 1);
+    assert_eq!(html_lang["counts"]["evidence_producers"], 2);
     assert_eq!(html_lang["counts"]["contracts"], 0);
 
     let c = semantic_pack_by_id(&json, "nose.lang.c");
     assert_eq!(c["kind"], "LanguagePack");
     assert_eq!(c["source"], "compiled-builtin");
     assert_eq!(json_array_strings(c, "supported_languages"), vec!["c"]);
-    assert_eq!(c["counts"]["evidence_producers"], 2);
+    assert_eq!(c["counts"]["evidence_producers"], 3);
     assert_eq!(c["counts"]["contracts"], 0);
     assert_eq!(c["counts"]["positive_fixtures"], 2);
     assert_eq!(c["counts"]["hard_negatives"], 2);

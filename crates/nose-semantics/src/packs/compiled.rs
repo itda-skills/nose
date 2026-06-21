@@ -13,18 +13,49 @@ const RUBY_BINDING_LANGS: &[Lang] = &[Lang::Ruby];
 const SWIFT_BINDING_LANGS: &[Lang] = &[Lang::Swift];
 const CSS_BINDING_LANGS: &[Lang] = &[Lang::Css];
 const HTML_EMBEDDED_BINDING_LANGS: &[Lang] = &[Lang::Html, Lang::Vue, Lang::Svelte];
+const PYTHON_LANGUAGE_PRODUCER_IDS: &[&str] = &[
+    PYTHON_LANGUAGE_CORE_PRODUCER_ID,
+    PYTHON_SOURCE_FACT_PRODUCER_ID,
+];
 const PYTHON_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[PYTHON_SOURCE_FACT_PRODUCER_ID];
+const JS_TS_LANGUAGE_PRODUCER_IDS: &[&str] = &[
+    JS_TS_LANGUAGE_CORE_PRODUCER_ID,
+    JS_TS_SOURCE_FACT_PRODUCER_ID,
+];
 const JS_TS_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[JS_TS_SOURCE_FACT_PRODUCER_ID];
+const GO_LANGUAGE_PRODUCER_IDS: &[&str] =
+    &[GO_LANGUAGE_CORE_PRODUCER_ID, GO_SOURCE_FACT_PRODUCER_ID];
 const GO_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[GO_SOURCE_FACT_PRODUCER_ID];
+const RUST_LANGUAGE_PRODUCER_IDS: &[&str] =
+    &[RUST_LANGUAGE_CORE_PRODUCER_ID, RUST_SOURCE_FACT_PRODUCER_ID];
 const RUST_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[RUST_SOURCE_FACT_PRODUCER_ID];
+const JAVA_LANGUAGE_PRODUCER_IDS: &[&str] =
+    &[JAVA_LANGUAGE_CORE_PRODUCER_ID, JAVA_SOURCE_FACT_PRODUCER_ID];
 const JAVA_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[JAVA_SOURCE_FACT_PRODUCER_ID];
+const C_LANGUAGE_PRODUCER_IDS: &[&str] = &[
+    C_LANGUAGE_CORE_PRODUCER_ID,
+    C_SOURCE_FACT_PRODUCER_ID,
+    C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID,
+];
 const C_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[
     C_SOURCE_FACT_PRODUCER_ID,
     C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID,
 ];
+const RUBY_LANGUAGE_PRODUCER_IDS: &[&str] =
+    &[RUBY_LANGUAGE_CORE_PRODUCER_ID, RUBY_SOURCE_FACT_PRODUCER_ID];
 const RUBY_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[RUBY_SOURCE_FACT_PRODUCER_ID];
+const SWIFT_LANGUAGE_PRODUCER_IDS: &[&str] = &[
+    SWIFT_LANGUAGE_CORE_PRODUCER_ID,
+    SWIFT_SOURCE_FACT_PRODUCER_ID,
+];
 const SWIFT_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[SWIFT_SOURCE_FACT_PRODUCER_ID];
+const CSS_LANGUAGE_PRODUCER_IDS: &[&str] =
+    &[CSS_LANGUAGE_CORE_PRODUCER_ID, CSS_SOURCE_FACT_PRODUCER_ID];
 const CSS_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[CSS_SOURCE_FACT_PRODUCER_ID];
+const HTML_EMBEDDED_LANGUAGE_PRODUCER_IDS: &[&str] = &[
+    HTML_EMBEDDED_LANGUAGE_CORE_PRODUCER_ID,
+    HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID,
+];
 const HTML_EMBEDDED_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] =
     &[HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID];
 const C_LANGUAGE_CONFORMANCE_REFS: &[&str] = &[
@@ -562,7 +593,7 @@ fn empty_counts() -> SemanticPackCounts {
 
 fn c_language_counts() -> SemanticPackCounts {
     SemanticPackCounts {
-        evidence_producers: C_LANGUAGE_SOURCE_FACT_PRODUCER_IDS.len(),
+        evidence_producers: C_LANGUAGE_PRODUCER_IDS.len(),
         contracts: 0,
         value_laws: 0,
         positive_fixtures: C_LANGUAGE_CONFORMANCE_REFS
@@ -576,9 +607,9 @@ fn c_language_counts() -> SemanticPackCounts {
     }
 }
 
-fn single_source_fact_language_counts() -> SemanticPackCounts {
+fn language_core_and_source_fact_counts() -> SemanticPackCounts {
     SemanticPackCounts {
-        evidence_producers: 1,
+        evidence_producers: 2,
         contracts: 0,
         value_laws: 0,
         positive_fixtures: 0,
@@ -1134,7 +1165,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
             parser: "tree-sitter-python",
             lowering_entrypoint: "nose_frontend::python::lower",
         }),
-        evidence_producer_ids: PYTHON_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
+        evidence_producer_ids: PYTHON_LANGUAGE_PRODUCER_IDS,
         source_fact_producer_ids: PYTHON_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
         contract_ids: NO_IDS,
         static_value_law_ids: NO_IDS,
@@ -1142,7 +1173,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         dynamic_value_law_ids: None,
         static_conformance_refs: NO_IDS,
         dynamic_conformance_refs: None,
-        counts: single_source_fact_language_counts,
+        counts: language_core_and_source_fact_counts,
     },
     BuiltinPackDescriptor {
         id: JS_TS_LANGUAGE_PACK_ID,
@@ -1158,7 +1189,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
             parser: "tree-sitter-javascript/tree-sitter-typescript",
             lowering_entrypoint: "nose_frontend::js_ts::lower",
         }),
-        evidence_producer_ids: JS_TS_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
+        evidence_producer_ids: JS_TS_LANGUAGE_PRODUCER_IDS,
         source_fact_producer_ids: JS_TS_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
         contract_ids: NO_IDS,
         static_value_law_ids: NO_IDS,
@@ -1166,7 +1197,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         dynamic_value_law_ids: None,
         static_conformance_refs: NO_IDS,
         dynamic_conformance_refs: None,
-        counts: single_source_fact_language_counts,
+        counts: language_core_and_source_fact_counts,
     },
     BuiltinPackDescriptor {
         id: GO_LANGUAGE_PACK_ID,
@@ -1182,7 +1213,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
             parser: "tree-sitter-go",
             lowering_entrypoint: "nose_frontend::go::lower",
         }),
-        evidence_producer_ids: GO_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
+        evidence_producer_ids: GO_LANGUAGE_PRODUCER_IDS,
         source_fact_producer_ids: GO_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
         contract_ids: NO_IDS,
         static_value_law_ids: NO_IDS,
@@ -1190,7 +1221,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         dynamic_value_law_ids: None,
         static_conformance_refs: NO_IDS,
         dynamic_conformance_refs: None,
-        counts: single_source_fact_language_counts,
+        counts: language_core_and_source_fact_counts,
     },
     BuiltinPackDescriptor {
         id: RUST_LANGUAGE_PACK_ID,
@@ -1206,7 +1237,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
             parser: "tree-sitter-rust",
             lowering_entrypoint: "nose_frontend::rust::lower",
         }),
-        evidence_producer_ids: RUST_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
+        evidence_producer_ids: RUST_LANGUAGE_PRODUCER_IDS,
         source_fact_producer_ids: RUST_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
         contract_ids: NO_IDS,
         static_value_law_ids: NO_IDS,
@@ -1214,7 +1245,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         dynamic_value_law_ids: None,
         static_conformance_refs: NO_IDS,
         dynamic_conformance_refs: None,
-        counts: single_source_fact_language_counts,
+        counts: language_core_and_source_fact_counts,
     },
     BuiltinPackDescriptor {
         id: JAVA_LANGUAGE_PACK_ID,
@@ -1230,7 +1261,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
             parser: "tree-sitter-java",
             lowering_entrypoint: "nose_frontend::java::lower",
         }),
-        evidence_producer_ids: JAVA_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
+        evidence_producer_ids: JAVA_LANGUAGE_PRODUCER_IDS,
         source_fact_producer_ids: JAVA_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
         contract_ids: NO_IDS,
         static_value_law_ids: NO_IDS,
@@ -1238,7 +1269,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         dynamic_value_law_ids: None,
         static_conformance_refs: NO_IDS,
         dynamic_conformance_refs: None,
-        counts: single_source_fact_language_counts,
+        counts: language_core_and_source_fact_counts,
     },
     BuiltinPackDescriptor {
         id: C_LANGUAGE_PACK_ID,
@@ -1254,7 +1285,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
             parser: "tree-sitter-c",
             lowering_entrypoint: "nose_frontend::c::lower",
         }),
-        evidence_producer_ids: C_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
+        evidence_producer_ids: C_LANGUAGE_PRODUCER_IDS,
         source_fact_producer_ids: C_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
         contract_ids: NO_IDS,
         type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
@@ -1278,7 +1309,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
             parser: "tree-sitter-ruby",
             lowering_entrypoint: "nose_frontend::ruby::lower",
         }),
-        evidence_producer_ids: RUBY_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
+        evidence_producer_ids: RUBY_LANGUAGE_PRODUCER_IDS,
         source_fact_producer_ids: RUBY_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
         contract_ids: NO_IDS,
         static_value_law_ids: NO_IDS,
@@ -1286,7 +1317,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         dynamic_value_law_ids: None,
         static_conformance_refs: NO_IDS,
         dynamic_conformance_refs: None,
-        counts: single_source_fact_language_counts,
+        counts: language_core_and_source_fact_counts,
     },
     BuiltinPackDescriptor {
         id: SWIFT_LANGUAGE_PACK_ID,
@@ -1302,7 +1333,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
             parser: "tree-sitter-swift",
             lowering_entrypoint: "nose_frontend::swift::lower",
         }),
-        evidence_producer_ids: SWIFT_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
+        evidence_producer_ids: SWIFT_LANGUAGE_PRODUCER_IDS,
         source_fact_producer_ids: SWIFT_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
         contract_ids: NO_IDS,
         static_value_law_ids: NO_IDS,
@@ -1310,7 +1341,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         dynamic_value_law_ids: None,
         static_conformance_refs: NO_IDS,
         dynamic_conformance_refs: None,
-        counts: single_source_fact_language_counts,
+        counts: language_core_and_source_fact_counts,
     },
     BuiltinPackDescriptor {
         id: CSS_LANGUAGE_PACK_ID,
@@ -1326,7 +1357,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
             parser: "tree-sitter-css",
             lowering_entrypoint: "nose_frontend::css::lower",
         }),
-        evidence_producer_ids: CSS_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
+        evidence_producer_ids: CSS_LANGUAGE_PRODUCER_IDS,
         source_fact_producer_ids: CSS_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
         contract_ids: NO_IDS,
         static_value_law_ids: NO_IDS,
@@ -1334,7 +1365,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         dynamic_value_law_ids: None,
         static_conformance_refs: NO_IDS,
         dynamic_conformance_refs: None,
-        counts: single_source_fact_language_counts,
+        counts: language_core_and_source_fact_counts,
     },
     BuiltinPackDescriptor {
         id: HTML_EMBEDDED_LANGUAGE_PACK_ID,
@@ -1350,7 +1381,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
             parser: "tree-sitter-html + embedded JS/TS/CSS extraction",
             lowering_entrypoint: "nose_frontend::embedded::lower_regions",
         }),
-        evidence_producer_ids: HTML_EMBEDDED_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
+        evidence_producer_ids: HTML_EMBEDDED_LANGUAGE_PRODUCER_IDS,
         source_fact_producer_ids: HTML_EMBEDDED_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
         contract_ids: NO_IDS,
         static_value_law_ids: NO_IDS,
@@ -1358,7 +1389,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         dynamic_value_law_ids: None,
         static_conformance_refs: NO_IDS,
         dynamic_conformance_refs: None,
-        counts: single_source_fact_language_counts,
+        counts: language_core_and_source_fact_counts,
     },
     BuiltinPackDescriptor {
         id: PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,

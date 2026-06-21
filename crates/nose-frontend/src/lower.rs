@@ -133,6 +133,8 @@ pub(crate) struct Lowering<'a> {
     pub src: &'a [u8],
     pub lang: Lang,
     pub interner: &'a Interner,
+    pub language_core_provenance: EvidenceProvenance,
+    pub language_source_fact_provenance: EvidenceProvenance,
     pub units: Vec<Unit>,
     pub evidence: Vec<EvidenceRecord>,
     pub type_domain_aliases: TypeDomainAliases,
@@ -146,11 +148,23 @@ pub(crate) struct Lowering<'a> {
 
 impl<'a> Lowering<'a> {
     pub(crate) fn new(file: FileId, src: &'a [u8], lang: Lang, interner: &'a Interner) -> Self {
+        let (core_pack_id, core_producer_id) =
+            nose_semantics::language_core_evidence_provenance(lang);
+        let (source_pack_id, source_producer_id) =
+            nose_semantics::language_source_fact_provenance(lang);
         Lowering {
             b: IlBuilder::new(file),
             src,
             lang,
             interner,
+            language_core_provenance: first_party_evidence_provenance(
+                core_pack_id,
+                core_producer_id,
+            ),
+            language_source_fact_provenance: first_party_evidence_provenance(
+                source_pack_id,
+                source_producer_id,
+            ),
             units: Vec::new(),
             evidence: Vec::new(),
             type_domain_aliases: TypeDomainAliases::default(),
@@ -212,6 +226,14 @@ impl<'a> Lowering<'a> {
             }
         }
         id
+    }
+}
+
+pub(crate) fn first_party_evidence_provenance(pack_id: &str, rule: &str) -> EvidenceProvenance {
+    EvidenceProvenance {
+        emitter: EvidenceEmitter::FirstParty,
+        pack_hash: Some(stable_symbol_hash(pack_id)),
+        rule_hash: Some(stable_symbol_hash(rule)),
     }
 }
 

@@ -34,15 +34,23 @@ pub struct ImportFact {
     pub exported_hash: Option<u64>,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct ImportFactProof {
+    pub fact: ImportFact,
+    pub evidence: EvidenceId,
+}
+
 pub(super) fn import_fact_evidence_at_sequence_span(
     il: &Il,
     span: Span,
-) -> EvidenceResolution<ImportFact> {
-    unique_evidence_at(
-        il,
-        span,
-        |anchor| matches!(anchor, EvidenceAnchor::Sequence { span: anchor_span } if anchor_span == span),
-        |evidence| match evidence {
+) -> EvidenceResolution<ImportFactProof> {
+    let mut found = None;
+    for record in il.evidence_anchored_at(span) {
+        if !matches!(record.anchor, EvidenceAnchor::Sequence { span: anchor_span } if anchor_span == span)
+        {
+            continue;
+        }
+        let Some(value) = (match record.kind {
             EvidenceKind::Import(ImportEvidenceKind::Binding {
                 module_hash,
                 exported_hash,
@@ -59,19 +67,42 @@ pub(super) fn import_fact_evidence_at_sequence_span(
                 })
             }
             _ => None,
-        },
-    )
+        }) else {
+            continue;
+        };
+        if record.status != EvidenceStatus::Asserted
+            || !language_core_record_for_il(il, record)
+            || !il.evidence_dependencies_asserted(record)
+        {
+            return EvidenceResolution::Ambiguous;
+        }
+        match found {
+            None => {
+                found = Some(ImportFactProof {
+                    fact: value,
+                    evidence: record.id,
+                })
+            }
+            Some(existing) if existing.fact == value => {}
+            Some(_) => return EvidenceResolution::Ambiguous,
+        }
+    }
+    found.map_or(EvidenceResolution::Missing, EvidenceResolution::Found)
 }
 
 /// Evidence-only import fact resolution for semantic consumers. Import proof is
 /// intentionally not encoded in the lowered `Seq` payload; callers rely on a
 /// provider-owned evidence record, not on tag spelling.
 pub fn import_fact_evidence_rhs(il: &Il, rhs: NodeId) -> Option<ImportFact> {
+    import_fact_proof_rhs(il, rhs).map(|proof| proof.fact)
+}
+
+pub fn import_fact_proof_rhs(il: &Il, rhs: NodeId) -> Option<ImportFactProof> {
     if il.kind(rhs) != NodeKind::Seq {
         return None;
     }
     match import_fact_evidence_at_sequence_span(il, il.node(rhs).span) {
-        EvidenceResolution::Found(fact) => Some(fact),
+        EvidenceResolution::Found(proof) => Some(proof),
         EvidenceResolution::Ambiguous | EvidenceResolution::Missing => None,
     }
 }
@@ -122,6 +153,20 @@ pub fn imported_literal_producer_evidence_for_node(il: &Il, node: NodeId) -> boo
 }
 
 pub(super) fn first_party_record(record: &EvidenceRecord) -> bool {
-    record.provenance.emitter == EvidenceEmitter::FirstParty
-        && record.provenance.pack_hash == Some(stable_symbol_hash(FIRST_PARTY_PACK_ID))
+    if record.provenance.emitter != EvidenceEmitter::FirstParty {
+        return false;
+    }
+    let Some(pack_hash) = record.provenance.pack_hash else {
+        return false;
+    };
+    pack_hash == stable_symbol_hash(FIRST_PARTY_PACK_ID) || is_builtin_language_pack_hash(pack_hash)
+}
+
+fn language_core_record_for_il(il: &Il, record: &EvidenceRecord) -> bool {
+    if record.provenance.emitter != EvidenceEmitter::FirstParty {
+        return false;
+    }
+    let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+    record.provenance.pack_hash == Some(stable_symbol_hash(pack_id))
+        && record.provenance.rule_hash == Some(stable_symbol_hash(producer_id))
 }
