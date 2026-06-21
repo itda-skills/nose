@@ -102,7 +102,7 @@ fn admitted_map_key_view_requires_protocol_pack_provenance() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
     ));
     assert!(

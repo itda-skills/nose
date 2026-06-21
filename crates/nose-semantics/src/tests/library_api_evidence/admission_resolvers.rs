@@ -666,7 +666,7 @@ fn admitted_library_api_call_resolvers_require_evidence() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         RUST_STDLIB_OPTION_PRODUCER_ID,
     ));
     assert!(
@@ -935,7 +935,7 @@ fn admitted_rust_option_none_sentinel_resolver_requires_pack_provenance() {
             contract.callee,
             0,
             &[0],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             RUST_STDLIB_OPTION_PRODUCER_ID,
         ));
     assert!(
@@ -1057,7 +1057,7 @@ fn admitted_rust_option_and_then_resolver_requires_pack_provenance() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         RUST_STDLIB_OPTION_PRODUCER_ID,
     ));
     assert!(
@@ -1192,7 +1192,7 @@ fn admitted_free_function_builtin_resolver_requires_api_occurrence_evidence() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
     ));
     assert!(
@@ -1314,7 +1314,7 @@ fn admitted_imported_namespace_function_resolver_requires_pack_provenance() {
             1,
             EvidenceStatus::Asserted,
             &[1],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             PYTHON_STDLIB_MATH_PRODUCER_ID,
         ));
     assert!(
@@ -1474,7 +1474,7 @@ fn admitted_collection_factory_resolver_requires_api_occurrence_evidence() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
     ));
     assert!(
@@ -1590,7 +1590,7 @@ fn admitted_rust_std_collection_factory_resolver_requires_pack_provenance() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
     ));
     assert!(
@@ -1703,7 +1703,7 @@ fn admitted_rust_std_map_factory_resolver_requires_pack_provenance() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         RUST_STDLIB_MAP_FACTORY_PRODUCER_ID,
     ));
     assert!(
@@ -1812,7 +1812,7 @@ fn admitted_java_collection_factory_resolver_requires_pack_provenance() {
             1,
             EvidenceStatus::Asserted,
             &[1],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
         ));
     assert!(
@@ -1893,7 +1893,7 @@ fn admitted_java_map_factory_resolver_requires_pack_provenance() {
             2,
             EvidenceStatus::Asserted,
             &[1],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID,
         ));
     assert!(
@@ -1981,7 +1981,7 @@ fn admitted_java_map_entry_resolver_requires_pack_provenance() {
             2,
             EvidenceStatus::Asserted,
             &[1],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID,
         ));
     assert!(
@@ -2082,7 +2082,7 @@ fn admitted_js_set_constructor_resolver_requires_pack_provenance() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0, 1],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
     ));
     assert!(
@@ -2184,7 +2184,7 @@ fn admitted_js_map_constructor_resolver_requires_pack_provenance() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0, 1],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
     ));
     assert!(
@@ -2290,7 +2290,7 @@ fn admitted_java_collection_constructor_resolver_requires_pack_provenance() {
             0,
             EvidenceStatus::Asserted,
             &[0, 2],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
         ));
     assert!(
@@ -2388,7 +2388,7 @@ fn admitted_rust_vec_new_factory_resolver_requires_pack_provenance() {
             0,
             EvidenceStatus::Asserted,
             &[0],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             RUST_STDLIB_VEC_PRODUCER_ID,
         ));
     assert!(
@@ -2504,7 +2504,7 @@ fn admitted_rust_vec_macro_factory_resolver_requires_pack_provenance() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0, 1],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         RUST_STDLIB_VEC_PRODUCER_ID,
     ));
     assert!(
@@ -2635,7 +2635,7 @@ fn admitted_imported_collection_factory_resolver_requires_pack_provenance() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[1],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
     ));
     assert!(
@@ -2742,7 +2742,7 @@ fn admitted_ruby_set_factory_resolver_requires_pack_provenance() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0, 2],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         RUBY_STDLIB_SET_PRODUCER_ID,
     ));
     assert!(
@@ -2841,7 +2841,7 @@ fn admitted_static_collection_adapter_resolver_requires_import_backed_api_occurr
             1,
             EvidenceStatus::Asserted,
             &[1],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PRODUCER_ID,
         ));
     assert!(

@@ -119,7 +119,7 @@ fn admitted_promise_then_resolver_requires_future_receiver_proof() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
     ));
     assert!(
@@ -223,7 +223,7 @@ fn admitted_promise_resolve_resolver_requires_qualified_global_proof() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[1, 2],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
     ));
     assert!(

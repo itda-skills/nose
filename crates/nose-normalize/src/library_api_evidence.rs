@@ -12,8 +12,8 @@ use nose_semantics::{
     library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
     sequence_surface_kind_for_tag, LibraryApiCalleeContract, LibraryApiDependencyCache,
     MethodBuiltinArgs, MethodEffectReceiverContract, MethodReceiverContract,
-    MethodSemanticContract, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
-    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, FIRST_PARTY_PACK_ID, RUST_STDLIB_OPTION_PRODUCER_ID,
+    MethodSemanticContract, BUILTIN_COMPAT_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, RUST_STDLIB_OPTION_PRODUCER_ID,
 };
 
 pub(crate) fn run(il: &mut Il, interner: &Interner) {
@@ -238,7 +238,7 @@ fn close_legacy_duplicates_for_language_core_dependency(il: &mut Il, dependency:
     };
     let anchor = record.anchor;
     let kind = record.kind;
-    let legacy_pack_hash = stable_symbol_hash(FIRST_PARTY_PACK_ID);
+    let legacy_pack_hash = stable_symbol_hash(BUILTIN_COMPAT_PACK_ID);
     for idx in il.evidence_indices_anchored_at(anchor.span()) {
         let duplicate = &mut il.evidence[idx as usize];
         if duplicate.id != dependency
@@ -263,7 +263,7 @@ fn legacy_first_party_append_receiver_domain_dependency(il: &Il, dependency: Evi
     domain.is_array_collection_or_set()
         && record.status == EvidenceStatus::Asserted
         && record.provenance.emitter == EvidenceEmitter::FirstParty
-        && record.provenance.pack_hash == Some(stable_symbol_hash(FIRST_PARTY_PACK_ID))
+        && record.provenance.pack_hash == Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID))
 }
 
 fn method_callee_receiver_node(
@@ -646,7 +646,7 @@ fn upsert_language_core_evidence(
 ) -> EvidenceId {
     let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
     let pack_hash = stable_symbol_hash(pack_id);
-    let legacy_pack_hash = stable_symbol_hash(FIRST_PARTY_PACK_ID);
+    let legacy_pack_hash = stable_symbol_hash(BUILTIN_COMPAT_PACK_ID);
     let rule_hash = stable_symbol_hash(producer_id);
     let mut current_idx = None;
     let mut legacy_idx = None;

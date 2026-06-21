@@ -78,7 +78,7 @@ fn admitted_regex_test_resolver_requires_regex_builtin_pack_provenance() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         JS_LIKE_BUILTIN_REGEX_PRODUCER_ID,
     ));
     assert!(

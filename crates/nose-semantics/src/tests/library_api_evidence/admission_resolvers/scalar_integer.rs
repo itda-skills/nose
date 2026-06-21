@@ -149,7 +149,7 @@ fn admitted_rust_scalar_integer_method_requires_integer_method_builtin_pack_prov
             2,
             EvidenceStatus::Asserted,
             &[0],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID,
         ));
     assert!(
@@ -290,7 +290,7 @@ fn admitted_java_scalar_integer_method_requires_math_builtin_pack_provenance() {
         contract.callee,
         EvidenceStatus::Asserted,
         &dependencies,
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         JAVA_STDLIB_MATH_PRODUCER_ID,
     ));
     assert!(

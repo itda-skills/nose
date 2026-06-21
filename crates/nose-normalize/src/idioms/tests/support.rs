@@ -50,7 +50,7 @@ pub(super) fn evidence_with_dependencies(
         kind,
         provenance: EvidenceProvenance {
             emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(nose_semantics::FIRST_PARTY_PACK_ID)),
+            pack_hash: Some(stable_symbol_hash(nose_semantics::BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("test")),
         },
         dependencies,

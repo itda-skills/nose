@@ -1174,7 +1174,7 @@ fn value_graph_law_counts() -> SemanticPackCounts {
 
 static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
     BuiltinPackDescriptor {
-        id: FIRST_PARTY_PACK_ID,
+        id: BUILTIN_COMPAT_PACK_ID,
         kind: SemanticPackKind::LanguagePack,
         display_name: "nose builtin semantic compatibility facade",
         trust: PackTrust::BuiltinDefault,
@@ -2003,7 +2003,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         counts: python_stdlib_type_domain_counts,
     },
     BuiltinPackDescriptor {
-        id: FIRST_PARTY_VALUE_LAW_PACK_ID,
+        id: VALUE_GRAPH_LAW_PACK_ID,
         kind: SemanticPackKind::LawPack,
         display_name: "nose value-graph law pack",
         trust: PackTrust::BuiltinDefault,
@@ -2033,10 +2033,14 @@ pub fn builtin_pack_descriptor(pack_id: &str) -> Option<&'static BuiltinPackDesc
         .find(|descriptor| descriptor.id == pack_id)
 }
 
-pub fn first_party_semantic_pack() -> SemanticPackSummary {
-    builtin_pack_descriptor(FIRST_PARTY_PACK_ID)
+pub fn builtin_compat_semantic_pack() -> SemanticPackSummary {
+    builtin_pack_descriptor(BUILTIN_COMPAT_PACK_ID)
         .expect("builtin compatibility pack descriptor exists")
         .summary()
+}
+
+pub fn first_party_semantic_pack() -> SemanticPackSummary {
+    builtin_compat_semantic_pack()
 }
 
 pub fn python_stdlib_type_domain_pack() -> SemanticPackSummary {
@@ -2045,10 +2049,14 @@ pub fn python_stdlib_type_domain_pack() -> SemanticPackSummary {
         .summary()
 }
 
-pub fn first_party_value_law_pack() -> SemanticPackSummary {
-    builtin_pack_descriptor(FIRST_PARTY_VALUE_LAW_PACK_ID)
+pub fn value_graph_law_pack() -> SemanticPackSummary {
+    builtin_pack_descriptor(VALUE_GRAPH_LAW_PACK_ID)
         .expect("value-graph law descriptor exists")
         .summary()
+}
+
+pub fn first_party_value_law_pack() -> SemanticPackSummary {
+    value_graph_law_pack()
 }
 
 pub(super) fn compiled_builtin_packs() -> Vec<SemanticPackSummary> {

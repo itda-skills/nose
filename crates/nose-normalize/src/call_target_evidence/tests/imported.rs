@@ -202,7 +202,7 @@ fn updates_legacy_first_party_imported_function_records() {
     let legacy_occurrence = il.find_or_push_first_party_evidence(
         EvidenceAnchor::node(il.node(callee).span, NodeKind::Var),
         symbol,
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         "legacy_imported_symbol_occurrence",
         vec![EvidenceId(0)],
     );
@@ -214,7 +214,7 @@ fn updates_legacy_first_party_imported_function_records() {
     il.find_or_push_first_party_evidence(
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         target,
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         "legacy_imported_function_call_target",
         vec![legacy_occurrence],
     );

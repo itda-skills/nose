@@ -52,8 +52,10 @@ Trust is separate from channel eligibility.
   currently influence evidence and contracts. Machine output reports them with
   `compiled-builtin` source and `builtin-default` trust. Older v0 manifest
   examples may still use legacy first-party trust aliases, but local manifests
-  that claim builtin trust are rejected after parsing. `nose.first_party` is the
-  temporary broad compatibility facade;
+  that claim builtin trust are rejected after parsing. `nose.first_party` remains
+  the legacy wire id for the temporary broad builtin compatibility facade; new
+  in-tree code should refer to that role as builtin compatibility rather than
+  first-party ownership.
   `nose.lang.python`, `nose.lang.javascript-typescript`, `nose.lang.go`,
   `nose.lang.rust`, `nose.lang.java`, `nose.lang.c`, `nose.lang.ruby`,
   `nose.lang.swift`, `nose.lang.css`, and `nose.lang.html` report official

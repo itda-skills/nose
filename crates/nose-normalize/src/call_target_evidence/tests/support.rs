@@ -39,7 +39,7 @@ fn evidence_with_dependencies(
         kind,
         provenance: EvidenceProvenance {
             emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+            pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("test")),
         },
         dependencies,

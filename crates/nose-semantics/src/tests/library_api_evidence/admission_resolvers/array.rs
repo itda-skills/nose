@@ -79,7 +79,7 @@ fn admitted_array_from_resolver_requires_array_builtin_pack_provenance() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[1, 2],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID,
     ));
     assert!(

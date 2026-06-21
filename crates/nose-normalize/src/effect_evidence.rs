@@ -5,7 +5,7 @@ use nose_il::{
 };
 use nose_semantics::{
     language_core_evidence_provenance, library_api_dependency_id_for_canonical_builtin_call,
-    module_binding_mutating_method_contract, FIRST_PARTY_PACK_ID,
+    module_binding_mutating_method_contract, BUILTIN_COMPAT_PACK_ID,
 };
 
 #[derive(Clone, Copy)]
@@ -270,7 +270,7 @@ fn effect_evidence_provenance(il: &Il) -> EffectEvidenceProvenance {
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         },
-        legacy_pack_hash: stable_symbol_hash(FIRST_PARTY_PACK_ID),
+        legacy_pack_hash: stable_symbol_hash(BUILTIN_COMPAT_PACK_ID),
     }
 }
 
@@ -404,7 +404,7 @@ mod tests {
         il.find_or_push_first_party_evidence(
             EvidenceAnchor::node(il.node(append).span, NodeKind::Call),
             EvidenceKind::Effect(EffectEvidenceKind::BuilderAppendCall),
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             "legacy_builder_append_effect",
             Vec::new(),
         );

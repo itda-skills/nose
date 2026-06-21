@@ -174,7 +174,7 @@ fn admitted_span_factory_resolver_requires_import_backed_api_occurrence() {
             1,
             EvidenceStatus::Asserted,
             &[1],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
         ));
     assert!(
@@ -279,7 +279,7 @@ fn admitted_span_rust_std_map_factory_requires_pack_provenance() {
         contract.callee,
         EvidenceStatus::Asserted,
         &[0],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         RUST_STDLIB_MAP_FACTORY_PRODUCER_ID,
     ));
     assert!(
@@ -391,7 +391,7 @@ fn admitted_span_java_map_factory_requires_pack_provenance() {
             2,
             EvidenceStatus::Asserted,
             &[1],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID,
         ));
     assert!(

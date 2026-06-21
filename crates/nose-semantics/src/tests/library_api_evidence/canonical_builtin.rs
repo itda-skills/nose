@@ -351,7 +351,7 @@ fn rust_integer_canonical_builtin_requires_integer_method_pack_provenance() {
                 source_arity as u16,
                 EvidenceStatus::Asserted,
                 &[0],
-                FIRST_PARTY_PACK_ID,
+                BUILTIN_COMPAT_PACK_ID,
                 RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID,
             ));
         assert!(
@@ -423,7 +423,7 @@ fn java_math_canonical_builtin_requires_math_pack_provenance() {
                 source_arity as u16,
                 EvidenceStatus::Asserted,
                 &dependencies,
-                FIRST_PARTY_PACK_ID,
+                BUILTIN_COMPAT_PACK_ID,
                 JAVA_STDLIB_MATH_PRODUCER_ID,
             ));
         assert!(
@@ -848,7 +848,7 @@ fn canonical_method_builtin_admission_requires_builtin_method_pack_contract_and_
             0,
             EvidenceStatus::Asserted,
             &[9],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
         ));
     assert!(

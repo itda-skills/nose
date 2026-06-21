@@ -87,7 +87,7 @@ fn admitted_iterator_identity_adapter_requires_protocol_pack_provenance() {
             0,
             EvidenceStatus::Asserted,
             &[0],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID,
         ));
     assert!(

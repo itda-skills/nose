@@ -153,7 +153,7 @@ fn builder_append_receiver_domain_updates_legacy_first_party_row_in_place() {
     let legacy = il.find_or_push_first_party_evidence(
         anchor,
         EvidenceKind::Domain(DomainEvidence::Collection),
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         "legacy_builder_append_receiver_domain",
         Vec::new(),
     );
@@ -193,7 +193,7 @@ fn builder_append_receiver_domain_closes_duplicate_legacy_row_when_current_exist
     let legacy = il.find_or_push_first_party_evidence(
         anchor,
         EvidenceKind::Domain(DomainEvidence::Collection),
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         "legacy_builder_append_receiver_domain",
         Vec::new(),
     );
@@ -291,7 +291,7 @@ fn unshadowed_global_helper_symbol_updates_legacy_row_to_language_core() {
     let legacy = il.find_or_push_first_party_evidence(
         EvidenceAnchor::node(il.node(console).span, il.kind(console)),
         EvidenceKind::Symbol(symbol),
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         "legacy_unshadowed_global",
         Vec::new(),
     );
@@ -360,14 +360,14 @@ fn imported_namespace_helper_symbol_updates_legacy_occurrence_to_language_core()
     let binding = il.find_or_push_first_party_evidence(
         EvidenceAnchor::binding(binding_span, stable_symbol_hash("slices")),
         EvidenceKind::Symbol(symbol),
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         "test_imported_namespace_binding",
         Vec::new(),
     );
     let legacy = il.find_or_push_first_party_evidence(
         EvidenceAnchor::node(il.node(namespace).span, il.kind(namespace)),
         EvidenceKind::Symbol(symbol),
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         "legacy_imported_namespace_occurrence",
         vec![binding],
     );

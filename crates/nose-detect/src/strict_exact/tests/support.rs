@@ -9,11 +9,10 @@ use nose_semantics::{
     language_core_evidence_provenance, library_api_callee_contract_hash,
     library_api_contract_id_hash, library_map_get_contract, library_method_call_contract,
     LibraryApiCalleeContract, LibraryApiContractId, MethodBuiltinArgs, MethodReceiverContract,
-    MethodSemanticContract, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
-    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, FIRST_PARTY_PACK_ID,
-    MAP_GET_DEFAULT_PROTOCOL_PACK_ID, MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
-    MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
-    RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
+    MethodSemanticContract, BUILTIN_COMPAT_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
+    MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID, MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID,
+    RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID, RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
 };
 
 pub(super) fn sp(line: u32) -> Span {
@@ -61,7 +60,7 @@ pub(super) fn evidence(
         kind,
         provenance: EvidenceProvenance {
             emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+            pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("strict-exact-test")),
         },
         dependencies,

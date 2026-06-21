@@ -137,7 +137,7 @@ fn mutation_case_il(interner: &Interner, case: MutationCase) -> Il {
     il.find_or_push_first_party_evidence(
         EvidenceAnchor::node(append_span, NodeKind::Call),
         EvidenceKind::Effect(EffectEvidenceKind::BuilderAppendCall),
-        nose_semantics::FIRST_PARTY_PACK_ID,
+        nose_semantics::BUILTIN_COMPAT_PACK_ID,
         "test_builder_append_effect",
         Vec::new(),
     );

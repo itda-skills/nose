@@ -123,7 +123,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     assert_eq!(
         ids,
         vec![
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             PYTHON_LANGUAGE_PACK_ID,
             JS_TS_LANGUAGE_PACK_ID,
             GO_LANGUAGE_PACK_ID,
@@ -164,7 +164,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID,
             JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
             PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
-            FIRST_PARTY_VALUE_LAW_PACK_ID
+            VALUE_GRAPH_LAW_PACK_ID
         ]
     );
     assert_eq!(ids.iter().copied().collect::<HashSet<_>>().len(), ids.len());
@@ -1192,8 +1192,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         .conformance_refs()
         .contains(&"python-typing-domain-wrong-module-hard-negative"));
 
-    let laws =
-        builtin_pack_descriptor(FIRST_PARTY_VALUE_LAW_PACK_ID).expect("value law descriptor");
+    let laws = builtin_pack_descriptor(VALUE_GRAPH_LAW_PACK_ID).expect("value law descriptor");
     assert_eq!(laws.kind, SemanticPackKind::LawPack);
     assert_eq!(laws.counts().value_laws, pack_facing_value_laws().len());
     assert_eq!(
@@ -1209,10 +1208,10 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
 }
 
 #[test]
-fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
-    let pack = first_party_semantic_pack();
-    assert_eq!(pack.id, FIRST_PARTY_PACK_ID);
-    assert_eq!(pack.hash, stable_symbol_hash(FIRST_PARTY_PACK_ID));
+fn builtin_compat_pack_hash_matches_evidence_provenance_hash_policy() {
+    let pack = builtin_compat_semantic_pack();
+    assert_eq!(pack.id, BUILTIN_COMPAT_PACK_ID);
+    assert_eq!(pack.hash, stable_symbol_hash(BUILTIN_COMPAT_PACK_ID));
     assert_eq!(pack.influence, SemanticPackInfluence::EvidenceAndContracts);
     let set = SemanticPackSet::builtin_only();
     let c = set
@@ -1746,13 +1745,31 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
         python.counts.positive_fixtures,
         PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS.len()
     );
-    let laws = first_party_value_law_pack();
-    assert_eq!(laws.id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    assert_eq!(laws.hash, stable_symbol_hash(FIRST_PARTY_VALUE_LAW_PACK_ID));
+    let laws = value_graph_law_pack();
+    assert_eq!(laws.id, VALUE_GRAPH_LAW_PACK_ID);
+    assert_eq!(laws.hash, stable_symbol_hash(VALUE_GRAPH_LAW_PACK_ID));
     assert_eq!(laws.kind, SemanticPackKind::LawPack);
     assert_eq!(laws.counts.value_laws, pack_facing_value_laws().len());
     assert_eq!(laws.counts.positive_fixtures, 2);
     assert_eq!(laws.counts.hard_negatives, 4);
+}
+
+#[test]
+fn legacy_first_party_pack_aliases_match_builtin_names() {
+    assert_eq!(FIRST_PARTY_PACK_ID, BUILTIN_COMPAT_PACK_ID);
+    assert_eq!(FIRST_PARTY_VALUE_LAW_PACK_ID, VALUE_GRAPH_LAW_PACK_ID);
+
+    let legacy_compat = first_party_semantic_pack();
+    let builtin_compat = builtin_compat_semantic_pack();
+    assert_eq!(legacy_compat.id, builtin_compat.id);
+    assert_eq!(legacy_compat.hash, builtin_compat.hash);
+    assert_eq!(legacy_compat.kind, builtin_compat.kind);
+
+    let legacy_laws = first_party_value_law_pack();
+    let value_laws = value_graph_law_pack();
+    assert_eq!(legacy_laws.id, value_laws.id);
+    assert_eq!(legacy_laws.hash, value_laws.hash);
+    assert_eq!(legacy_laws.kind, value_laws.kind);
 }
 
 #[test]
@@ -1817,7 +1834,7 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
         JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
     );
     assert_eq!(set.packs()[40].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[41].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    assert_eq!(set.packs()[41].id, VALUE_GRAPH_LAW_PACK_ID);
     let external = &set.packs()[42];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));

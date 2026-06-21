@@ -31,7 +31,7 @@ fn updates_legacy_first_party_direct_function_call_target() {
     il.find_or_push_first_party_evidence(
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         target,
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         "legacy_direct_function_call_target",
         Vec::new(),
     );
@@ -70,7 +70,7 @@ fn does_not_promote_current_and_legacy_direct_function_duplicates() {
     il.find_or_push_first_party_evidence(
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         target,
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         "legacy_direct_function_call_target",
         Vec::new(),
     );
@@ -89,7 +89,7 @@ fn does_not_promote_current_and_legacy_direct_function_duplicates() {
         .iter()
         .filter(|record| {
             record.kind == target
-                && record.provenance.pack_hash == Some(stable_symbol_hash(FIRST_PARTY_PACK_ID))
+                && record.provenance.pack_hash == Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID))
         })
         .count();
     assert_eq!(current_records, 1);

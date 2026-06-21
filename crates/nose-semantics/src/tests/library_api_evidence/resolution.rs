@@ -195,7 +195,7 @@ fn library_api_evidence_resolution_requires_boolean_builtin_pack_provenance() {
         .find(|record| record.id == EvidenceId(1))
         .expect("LibraryApi occurrence")
         .provenance
-        .pack_hash = Some(stable_symbol_hash(FIRST_PARTY_PACK_ID));
+        .pack_hash = Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID));
     assert_eq!(
         contract_status_for_call(&wrong_pack, &interner, call, contract.id, contract.callee),
         LibraryApiEvidenceStatus::Rejected
@@ -289,7 +289,7 @@ fn library_api_evidence_resolution_requires_array_builtin_pack_provenance() {
         .find(|record| record.id == EvidenceId(3))
         .expect("LibraryApi occurrence")
         .provenance
-        .pack_hash = Some(stable_symbol_hash(FIRST_PARTY_PACK_ID));
+        .pack_hash = Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID));
     assert_eq!(
         contract_status_for_call(&wrong_pack, &interner, call, contract.id, contract.callee),
         LibraryApiEvidenceStatus::Rejected

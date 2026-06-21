@@ -95,7 +95,7 @@ fn admitted_static_index_membership_resolver_requires_static_index_builtin_pack_
         contract.callee,
         EvidenceStatus::Asserted,
         &[0],
-        FIRST_PARTY_PACK_ID,
+        BUILTIN_COMPAT_PACK_ID,
         JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PRODUCER_ID,
     ));
     assert!(

@@ -11,7 +11,7 @@ use nose_il::{
 };
 use nose_semantics::{
     imported_occurrence_symbol_dependencies_valid_with_cache, language_core_evidence_provenance,
-    ImportedOccurrenceValidationCache, FIRST_PARTY_PACK_ID,
+    ImportedOccurrenceValidationCache, BUILTIN_COMPAT_PACK_ID,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -153,7 +153,7 @@ fn call_target_evidence_provenance(il: &Il) -> CallTargetEvidenceProvenance {
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         },
-        legacy_pack_hash: stable_symbol_hash(FIRST_PARTY_PACK_ID),
+        legacy_pack_hash: stable_symbol_hash(BUILTIN_COMPAT_PACK_ID),
     }
 }
 

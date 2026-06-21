@@ -373,7 +373,7 @@ pub(super) fn push_first_party_evidence_with_dependencies(
         kind,
         EvidenceProvenance {
             emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(nose_semantics::FIRST_PARTY_PACK_ID)),
+            pack_hash: Some(stable_symbol_hash(nose_semantics::BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash(rule)),
         },
         dependencies,

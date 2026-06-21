@@ -17,9 +17,9 @@ use nose_semantics::{
     library_api_contract_id_hash, library_free_function_builtin_contract,
     library_method_call_contract, DomainEvidence, LibraryApiCalleeContract, LibraryApiContractId,
     LibraryApiShadowPolicy, LibraryMethodCallContract, MethodReceiverContract,
-    MethodSemanticContract, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
-    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, FIRST_PARTY_PACK_ID,
-    FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+    MethodSemanticContract, BUILTIN_COMPAT_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
 };
 
 fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
@@ -319,7 +319,7 @@ fn test_library_api_record(
             BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
         )
     } else {
-        (FIRST_PARTY_PACK_ID, "interp-test")
+        (BUILTIN_COMPAT_PACK_ID, "interp-test")
     };
     EvidenceRecord {
         id: EvidenceId(id),
@@ -346,7 +346,7 @@ fn test_domain_record(id: u32, il: &Il, node: NodeId, domain: DomainEvidence) ->
         kind: EvidenceKind::Domain(domain),
         provenance: EvidenceProvenance {
             emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+            pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("interp-test")),
         },
         dependencies: Vec::new(),
@@ -411,7 +411,7 @@ fn test_effect_record(id: u32, span: Span, effect: EffectEvidenceKind) -> Eviden
         kind: EvidenceKind::Effect(effect),
         provenance: EvidenceProvenance {
             emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+            pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("interp-test")),
         },
         dependencies: Vec::new(),
@@ -454,7 +454,7 @@ fn test_node_effect_record(
         kind: EvidenceKind::Effect(effect),
         provenance: EvidenceProvenance {
             emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+            pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("interp-test")),
         },
         dependencies,
@@ -522,7 +522,7 @@ fn test_source_record(id: u32, span: Span, fact: SourceFactKind) -> EvidenceReco
         kind: EvidenceKind::Source(fact),
         provenance: EvidenceProvenance {
             emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+            pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("interp-test")),
         },
         dependencies: Vec::new(),

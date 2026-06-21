@@ -110,7 +110,7 @@ fn admitted_map_get_default_requires_protocol_pack_provenance() {
             2,
             EvidenceStatus::Asserted,
             &[0],
-            FIRST_PARTY_PACK_ID,
+            BUILTIN_COMPAT_PACK_ID,
             MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
         ));
     assert!(

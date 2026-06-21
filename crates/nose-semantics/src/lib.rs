@@ -122,9 +122,20 @@ pub use type_domain::{
     PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID, PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID,
 };
 
-/// Stable pack id for the first-party language/stdlib contracts compiled into nose.
-pub const FIRST_PARTY_PACK_ID: &str = "nose.first_party";
-pub const FIRST_PARTY_VALUE_LAW_PACK_ID: &str = "nose.value_graph.laws";
+/// Stable pack id for the legacy builtin compatibility facade.
+///
+/// The wire id remains `nose.first_party` while narrower builtin packs take
+/// ownership of individual language, stdlib, protocol, and law surfaces.
+pub const BUILTIN_COMPAT_PACK_ID: &str = "nose.first_party";
+
+/// Compatibility alias for older callers and fixtures.
+pub const FIRST_PARTY_PACK_ID: &str = BUILTIN_COMPAT_PACK_ID;
+
+/// Stable pack id for builtin value-graph law provenance.
+pub const VALUE_GRAPH_LAW_PACK_ID: &str = "nose.value_graph.laws";
+
+/// Compatibility alias for older callers and fixtures.
+pub const FIRST_PARTY_VALUE_LAW_PACK_ID: &str = VALUE_GRAPH_LAW_PACK_ID;
 
 /// Channel a semantic fact or contract is safe to influence.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
