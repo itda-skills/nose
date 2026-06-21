@@ -211,50 +211,52 @@ pub(super) fn post_lower_require_call_callee_if_matches(
     .then_some(kids[0])
 }
 
-pub(super) fn post_lower_library_api_evidence_id(
+#[allow(clippy::too_many_arguments)]
+pub(super) fn post_lower_library_api_evidence_with_pack_id(
     il: &mut Il,
     call: NodeId,
     id: LibraryApiContractId,
     callee: LibraryApiCalleeContract,
     arg_count: usize,
+    pack_id: &str,
     rule: &str,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceId {
-    post_lower_find_or_push_evidence(
-        il,
+    il.find_or_push_builtin_evidence(
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
             contract_hash: library_api_contract_id_hash(id),
             callee_hash: library_api_callee_contract_hash(callee),
             arity: arg_count as u16,
         }),
+        pack_id,
         rule,
         dependencies,
     )
-    .expect("post-lower LibraryApi evidence insertion should always produce an id")
 }
 
-pub(super) fn post_lower_library_api_node_evidence_id(
+#[allow(clippy::too_many_arguments)]
+pub(super) fn post_lower_library_api_node_evidence_with_pack_id(
     il: &mut Il,
     node: NodeId,
     id: LibraryApiContractId,
     callee: LibraryApiCalleeContract,
     arg_count: usize,
+    pack_id: &str,
     rule: &str,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceId {
-    post_lower_find_or_push_evidence(
-        il,
+    il.find_or_push_builtin_evidence(
         EvidenceAnchor::node(il.node(node).span, il.kind(node)),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
             contract_hash: library_api_contract_id_hash(id),
             callee_hash: library_api_callee_contract_hash(callee),
             arity: arg_count as u16,
         }),
+        pack_id,
         rule,
         dependencies,
     )
-    .expect("post-lower node LibraryApi evidence insertion should always produce an id")
 }
 
 pub(super) fn post_lower_record_library_api_result_domain(
@@ -296,13 +298,9 @@ pub(super) fn post_lower_find_or_push_evidence(
     rule: &str,
     dependencies: Vec<EvidenceId>,
 ) -> Option<EvidenceId> {
-    Some(il.find_or_push_first_party_evidence(
-        anchor,
-        kind,
-        nose_semantics::FIRST_PARTY_PACK_ID,
-        rule,
-        dependencies,
-    ))
+    let _ = rule;
+    let (pack_id, producer_id) = nose_semantics::language_core_evidence_provenance(il.meta.lang);
+    Some(il.find_or_push_builtin_evidence(anchor, kind, pack_id, producer_id, dependencies))
 }
 
 pub(super) fn post_lower_top_level_statements(il: &Il) -> Vec<NodeId> {

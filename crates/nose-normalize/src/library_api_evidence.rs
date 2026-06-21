@@ -1,17 +1,22 @@
+mod recording;
+use recording::*;
+
 use nose_il::{
     stable_symbol_hash, Builtin, DomainEvidence, EvidenceAnchor, EvidenceEmitter, EvidenceId,
-    EvidenceKind, EvidenceStatus, Il, Interner, LibraryApiEvidenceKind, NodeId, NodeKind, Payload,
-    SequenceSurfaceKind, Symbol, SymbolEvidenceKind,
+    EvidenceKind, EvidenceRecord, EvidenceStatus, Il, Interner, LibraryApiEvidenceKind, NodeId,
+    NodeKind, Payload, SequenceSurfaceKind, Symbol, SymbolEvidenceKind,
 };
 use nose_semantics::{
-    builder_append_method_contract, library_api_callee_contract_hash, library_api_contract_id_hash,
+    builder_append_method_contract, language_core_evidence_provenance,
+    library_api_callee_contract_hash, library_api_contract_id_hash,
     library_api_free_name_shadow_safe, library_api_property_dependencies_for_field_with_cache,
     library_api_receiver_dependencies_for_call_with_cache, library_method_call_contract,
     library_property_builtin_contract, library_receiver_method_api_contract,
     library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
-    LibraryApiCalleeContract, LibraryApiDependencyCache, MethodBuiltinArgs,
-    MethodEffectReceiverContract, MethodReceiverContract, MethodSemanticContract,
-    FIRST_PARTY_PACK_ID,
+    sequence_surface_kind_for_tag, LibraryApiCalleeContract, LibraryApiDependencyCache,
+    MethodBuiltinArgs, MethodEffectReceiverContract, MethodReceiverContract,
+    MethodSemanticContract, BUILTIN_COMPAT_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, RUST_STDLIB_OPTION_PRODUCER_ID,
 };
 
 pub(crate) fn run(il: &mut Il, interner: &Interner) {
@@ -76,7 +81,7 @@ fn record_rust_option_some_library_api(il: &mut Il, interner: &Interner, call: N
     let Some(symbol_dependency) = unshadowed_symbol_evidence_id(il, callee, name) else {
         return false;
     };
-    let api = upsert_first_party_evidence(
+    let api = upsert_builtin_evidence_with_pack_id(
         il,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -84,7 +89,8 @@ fn record_rust_option_some_library_api(il: &mut Il, interner: &Interner, call: N
             callee_hash: library_api_callee_contract_hash(contract.callee),
             arity: arg_count as u16,
         }),
-        "library_api_rust_option_some_constructor",
+        contract.pack_id,
+        RUST_STDLIB_OPTION_PRODUCER_ID,
         vec![symbol_dependency],
     );
     record_library_api_result_domain(il, call, contract.result_domain, api);
@@ -127,7 +133,7 @@ fn record_builder_append_method_library_api(
     else {
         return false;
     };
-    upsert_first_party_evidence(
+    upsert_builtin_evidence_with_pack_id(
         il,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -135,7 +141,8 @@ fn record_builder_append_method_library_api(
             callee_hash: library_api_callee_contract_hash(contract.callee),
             arity: arg_count as u16,
         }),
-        "library_api_builder_append_method",
+        BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+        BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
         dependencies,
     );
     true
@@ -155,23 +162,111 @@ fn builder_append_method_dependencies(
         callee,
         &mut dependency_cache,
     ) {
+        if let Some(current_dependency) = dependencies
+            .iter()
+            .copied()
+            .find(|&dependency| language_core_append_receiver_domain_dependency(il, dependency))
+        {
+            close_legacy_duplicates_for_language_core_dependency(il, current_dependency);
+            return Some(dependencies);
+        }
+        if dependencies
+            .iter()
+            .copied()
+            .any(|dependency| legacy_first_party_append_receiver_domain_dependency(il, dependency))
+        {
+            if let Some((receiver, seed_dependency)) =
+                builder_append_local_receiver_seed(il, interner, call, callee)
+            {
+                let receiver_domain =
+                    upsert_local_collection_receiver_domain(il, receiver, seed_dependency);
+                return Some(vec![receiver_domain]);
+            }
+        }
         return Some(dependencies);
     }
 
+    let (receiver, seed_dependency) =
+        builder_append_local_receiver_seed(il, interner, call, callee)?;
+    let receiver_domain = upsert_local_collection_receiver_domain(il, receiver, seed_dependency);
+    Some(vec![receiver_domain])
+}
+
+fn builder_append_local_receiver_seed(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+    callee: LibraryApiCalleeContract,
+) -> Option<(NodeId, EvidenceId)> {
     let LibraryApiCalleeContract::Method { method, .. } = callee else {
         return None;
     };
     let callee_node = *il.children(call).first()?;
     let receiver = method_callee_receiver_node(il, interner, callee_node, method)?;
-    let seed_dependency = local_collection_seed_dependency_id(il, call, receiver)?;
-    let receiver_domain = upsert_first_party_evidence(
+    let seed_dependency = local_collection_seed_dependency_id(il, interner, call, receiver)?;
+    Some((receiver, seed_dependency))
+}
+
+fn upsert_local_collection_receiver_domain(
+    il: &mut Il,
+    receiver: NodeId,
+    seed_dependency: EvidenceId,
+) -> EvidenceId {
+    upsert_language_core_evidence(
         il,
         EvidenceAnchor::node(il.node(receiver).span, il.kind(receiver)),
         EvidenceKind::Domain(DomainEvidence::Collection),
-        "library_api_builder_append_receiver_domain",
         vec![seed_dependency],
-    );
-    Some(vec![receiver_domain])
+    )
+}
+
+fn language_core_append_receiver_domain_dependency(il: &Il, dependency: EvidenceId) -> bool {
+    let Some(record) = il.evidence_record_by_id(dependency) else {
+        return false;
+    };
+    let EvidenceKind::Domain(domain) = record.kind else {
+        return false;
+    };
+    let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+    domain.is_array_collection_or_set()
+        && record.status == EvidenceStatus::Asserted
+        && record.provenance.emitter == EvidenceEmitter::Builtin
+        && record.provenance.pack_hash == Some(stable_symbol_hash(pack_id))
+        && record.provenance.rule_hash == Some(stable_symbol_hash(producer_id))
+}
+
+fn close_legacy_duplicates_for_language_core_dependency(il: &mut Il, dependency: EvidenceId) {
+    let Some(record) = il.evidence_record_by_id(dependency) else {
+        return;
+    };
+    let anchor = record.anchor;
+    let kind = record.kind;
+    let legacy_pack_hash = stable_symbol_hash(BUILTIN_COMPAT_PACK_ID);
+    for idx in il.evidence_indices_anchored_at(anchor.span()) {
+        let duplicate = &mut il.evidence[idx as usize];
+        if duplicate.id != dependency
+            && duplicate.anchor == anchor
+            && duplicate.kind == kind
+            && duplicate.status == EvidenceStatus::Asserted
+            && duplicate.provenance.emitter == EvidenceEmitter::Builtin
+            && duplicate.provenance.pack_hash == Some(legacy_pack_hash)
+        {
+            duplicate.status = EvidenceStatus::Ambiguous;
+        }
+    }
+}
+
+fn legacy_first_party_append_receiver_domain_dependency(il: &Il, dependency: EvidenceId) -> bool {
+    let Some(record) = il.evidence_record_by_id(dependency) else {
+        return false;
+    };
+    let EvidenceKind::Domain(domain) = record.kind else {
+        return false;
+    };
+    domain.is_array_collection_or_set()
+        && record.status == EvidenceStatus::Asserted
+        && record.provenance.emitter == EvidenceEmitter::Builtin
+        && record.provenance.pack_hash == Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID))
 }
 
 fn method_callee_receiver_node(
@@ -194,6 +289,7 @@ fn method_callee_receiver_node(
 
 fn local_collection_seed_dependency_id(
     il: &Il,
+    interner: &Interner,
     call: NodeId,
     receiver: NodeId,
 ) -> Option<EvidenceId> {
@@ -216,7 +312,7 @@ fn local_collection_seed_dependency_id(
         if binding_node_name(il, *target) != Some(receiver_name) {
             continue;
         }
-        let dependency = collection_seed_dependency_id(il, *rhs)?;
+        let dependency = collection_seed_dependency_id(il, interner, *rhs)?;
         match found {
             None => found = Some(dependency),
             Some(_) => return None,
@@ -229,9 +325,9 @@ fn nearest_scope(il: &Il, node: NodeId) -> Option<NodeId> {
     il.nearest_scope(node)
 }
 
-fn collection_seed_dependency_id(il: &Il, node: NodeId) -> Option<EvidenceId> {
+fn collection_seed_dependency_id(il: &Il, interner: &Interner, node: NodeId) -> Option<EvidenceId> {
     domain_evidence_id_for_node(il, node, DomainEvidence::Collection).or_else(|| {
-        sequence_surface_evidence_id_for_node(il, node, SequenceSurfaceKind::Collection)
+        sequence_surface_evidence_id_for_node(il, interner, node, SequenceSurfaceKind::Collection)
     })
 }
 
@@ -252,298 +348,52 @@ fn domain_evidence_id_for_node(
 
 fn sequence_surface_evidence_id_for_node(
     il: &Il,
+    interner: &Interner,
     node: NodeId,
     expected: SequenceSurfaceKind,
 ) -> Option<EvidenceId> {
     if il.kind(node) != NodeKind::Seq {
         return None;
     }
-    let anchor = EvidenceAnchor::sequence(il.node(node).span);
-    il.evidence_anchored_at(anchor.span()).find_map(|record| {
-        (record.anchor == anchor
-            && record.kind == EvidenceKind::SequenceSurface(expected)
-            && record.status == EvidenceStatus::Asserted
-            && il.evidence_dependencies_asserted(record))
-        .then_some(record.id)
-    })
-}
-
-fn record_property_library_api(
-    il: &mut Il,
-    interner: &Interner,
-    field: NodeId,
-    dependency_cache: &mut LibraryApiDependencyCache,
-) -> bool {
-    if il.kind(field) != NodeKind::Field {
-        return false;
-    }
-    let Payload::Name(property) = il.node(field).payload else {
-        return false;
+    let raw_tag = match il.node(node).payload {
+        Payload::None => None,
+        Payload::Name(name) => Some(interner.resolve(name)),
+        _ => return None,
     };
-    let Some(contract) =
-        library_property_builtin_contract(il.meta.lang, interner.resolve(property))
-    else {
-        return false;
-    };
-    let Some(dependencies) = library_api_property_dependencies_for_field_with_cache(
-        il,
-        interner,
-        field,
-        contract.callee,
-        dependency_cache,
-    ) else {
-        return false;
-    };
-    upsert_first_party_evidence(
-        il,
-        EvidenceAnchor::node(il.node(field).span, NodeKind::Field),
-        EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
-            contract_hash: library_api_contract_id_hash(contract.id),
-            callee_hash: library_api_callee_contract_hash(contract.callee),
-            arity: 0,
-        }),
-        "library_api_property_builtin",
-        dependencies,
-    );
-    true
-}
-
-fn record_rust_option_none_library_api(il: &mut Il, interner: &Interner, var: NodeId) -> bool {
-    let Some(name) = node_name(il, interner, var) else {
-        return false;
-    };
-    let Some(contract) = library_rust_option_none_sentinel_contract(il.meta.lang, name) else {
-        return false;
-    };
-    let LibraryApiCalleeContract::FreeName { name, shadow } = contract.callee else {
-        return false;
-    };
-    if !library_api_free_name_shadow_safe(il.meta.lang, name, shadow, |candidate| {
-        file_defines_name_visible_at(il, interner, candidate, il.node(var).span)
-    }) {
-        return false;
-    }
-    let Some(symbol_dependency) = unshadowed_symbol_evidence_id(il, var, name) else {
-        return false;
-    };
-    let api = upsert_first_party_evidence(
-        il,
-        EvidenceAnchor::node(il.node(var).span, NodeKind::Var),
-        EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
-            contract_hash: library_api_contract_id_hash(contract.id),
-            callee_hash: library_api_callee_contract_hash(contract.callee),
-            arity: 0,
-        }),
-        "library_api_rust_option_none_sentinel",
-        vec![symbol_dependency],
-    );
-    record_library_api_node_result_domain(il, var, contract.result_domain, api);
-    true
-}
-
-fn record_receiver_method_library_api(
-    il: &mut Il,
-    interner: &Interner,
-    call: NodeId,
-    dependency_cache: &mut LibraryApiDependencyCache,
-) -> bool {
-    let kids = il.children(call);
-    let Some((&callee, args)) = kids.split_first() else {
-        return false;
-    };
-    if il.kind(callee) != NodeKind::Field {
-        return false;
-    }
-    let Payload::Name(method) = il.node(callee).payload else {
-        return false;
-    };
-    let method = interner.resolve(method);
-    let arg_count = args.len();
-    let Some(contract) = library_receiver_method_api_contract(il.meta.lang, method, arg_count)
-    else {
-        return false;
-    };
-    seed_receiver_method_dependencies(il, interner, callee, contract.callee);
-    let Some(dependencies) = library_api_receiver_dependencies_for_call_with_cache(
-        il,
-        interner,
-        call,
-        contract.callee,
-        dependency_cache,
-    ) else {
-        return false;
-    };
-    upsert_first_party_evidence(
-        il,
-        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
-        EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
-            contract_hash: library_api_contract_id_hash(contract.id),
-            callee_hash: library_api_callee_contract_hash(contract.callee),
-            arity: arg_count as u16,
-        }),
-        contract.rule,
-        dependencies,
-    );
-    true
-}
-
-fn record_library_api_result_domain(
-    il: &mut Il,
-    call: NodeId,
-    domain: DomainEvidence,
-    api: EvidenceId,
-) {
-    upsert_first_party_evidence(
-        il,
-        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
-        EvidenceKind::Domain(domain),
-        "library_api_result_domain",
-        vec![api],
-    );
-}
-
-fn record_library_api_node_result_domain(
-    il: &mut Il,
-    node: NodeId,
-    domain: DomainEvidence,
-    api: EvidenceId,
-) {
-    upsert_first_party_evidence(
-        il,
-        EvidenceAnchor::node(il.node(node).span, il.kind(node)),
-        EvidenceKind::Domain(domain),
-        "library_api_result_domain",
-        vec![api],
-    );
-}
-
-fn seed_receiver_method_dependencies(
-    il: &mut Il,
-    interner: &Interner,
-    callee: NodeId,
-    callee_contract: LibraryApiCalleeContract,
-) {
-    let LibraryApiCalleeContract::Method { receiver, .. } = callee_contract else {
-        return;
-    };
-    let Some(&receiver_node) = il.children(callee).first() else {
-        return;
-    };
-    match receiver {
-        MethodReceiverContract::UnshadowedGlobal(name) => {
-            if node_name(il, interner, receiver_node) == Some(name)
-                && !file_defines_name_visible_at(il, interner, name, il.node(receiver_node).span)
-            {
-                let _ = unshadowed_symbol_evidence_id(il, receiver_node, name);
-            }
-        }
-        MethodReceiverContract::ImportedNamespace(module) => {
-            let _ = imported_namespace_symbol_evidence_id(il, interner, receiver_node, module);
-        }
-        _ => {}
-    }
-}
-
-fn unshadowed_symbol_evidence_id(il: &mut Il, node: NodeId, expected: &str) -> Option<EvidenceId> {
-    (il.kind(node) == NodeKind::Var).then_some(())?;
-    Some(upsert_first_party_evidence(
-        il,
-        EvidenceAnchor::node(il.node(node).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
-            name_hash: stable_symbol_hash(expected),
-        }),
-        "symbol_unshadowed_global_normalize",
-        Vec::new(),
-    ))
-}
-
-fn imported_namespace_symbol_evidence_id(
-    il: &mut Il,
-    interner: &Interner,
-    node: NodeId,
-    module: &str,
-) -> Option<EvidenceId> {
-    let expected = SymbolEvidenceKind::ImportedNamespace {
-        module_hash: stable_symbol_hash(module),
-    };
-    let dependency = binding_symbol_evidence_id(il, interner, node, expected)?;
-    Some(upsert_first_party_evidence(
-        il,
-        EvidenceAnchor::node(il.node(node).span, NodeKind::Var),
-        EvidenceKind::Symbol(expected),
-        "symbol_imported_namespace_occurrence_normalize",
-        vec![dependency],
-    ))
-}
-
-fn binding_symbol_evidence_id(
-    il: &Il,
-    interner: &Interner,
-    node: NodeId,
-    expected: SymbolEvidenceKind,
-) -> Option<EvidenceId> {
-    if il.kind(node) != NodeKind::Var {
+    if sequence_surface_kind_for_tag(il.meta.lang, raw_tag) != Some(expected) {
         return None;
     }
-    let local_hash = node_name_hash(il, interner, node)?;
-    il.evidence_binding_anchored(local_hash).find_map(|record| {
-        (record.kind == EvidenceKind::Symbol(expected) && record.status == EvidenceStatus::Asserted)
-            .then_some(record.id)
-    })
-}
-
-fn node_name<'a>(il: &Il, interner: &'a Interner, node: NodeId) -> Option<&'a str> {
-    il.var_binding_name(node)
-        .map(|symbol| interner.resolve(symbol))
-}
-
-fn node_name_hash(il: &Il, interner: &Interner, node: NodeId) -> Option<u64> {
-    node_name(il, interner, node).map(stable_symbol_hash)
-}
-
-fn binding_node_name(il: &Il, node: NodeId) -> Option<Symbol> {
-    il.var_binding_name(node)
-}
-
-fn file_defines_name_visible_at(
-    il: &Il,
-    interner: &Interner,
-    name: &str,
-    occurrence_span: nose_il::Span,
-) -> bool {
-    nose_semantics::file_defines_name_visible_at(il, interner, name, occurrence_span)
-}
-
-fn upsert_first_party_evidence(
-    il: &mut Il,
-    anchor: EvidenceAnchor,
-    kind: EvidenceKind,
-    rule: &str,
-    dependencies: Vec<EvidenceId>,
-) -> EvidenceId {
-    let pack_hash = stable_symbol_hash(FIRST_PARTY_PACK_ID);
-    let rule_hash = stable_symbol_hash(rule);
+    let anchor = EvidenceAnchor::sequence(il.node(node).span);
     let mut found = None;
-    // Index-backed (see `effect_evidence::upsert`): only same-span records can
-    // match, and the fields updated in place are read live by the index.
-    for idx in il.evidence_indices_anchored_at(anchor.span()) {
-        let record = &mut il.evidence[idx as usize];
-        if record.anchor == anchor
-            && record.kind == kind
-            && record.status == EvidenceStatus::Asserted
-            && record.provenance.emitter == EvidenceEmitter::FirstParty
-            && record.provenance.pack_hash == Some(pack_hash)
-        {
-            if found.is_none() {
-                found = Some(record.id);
-            }
-            record.provenance.rule_hash = Some(rule_hash);
-            record.dependencies = dependencies.clone();
+    for record in il.evidence_anchored_at(anchor.span()) {
+        if record.anchor != anchor {
+            continue;
+        }
+        let EvidenceKind::SequenceSurface(kind) = record.kind else {
+            continue;
+        };
+        if !sequence_surface_record_has_language_core_provenance(il, record) {
+            continue;
+        }
+        if record.status != EvidenceStatus::Asserted || !il.evidence_dependencies_asserted(record) {
+            return None;
+        }
+        match found {
+            None => found = Some((kind, record.id)),
+            Some((existing, _)) if existing == kind => {}
+            Some(_) => return None,
         }
     }
-    found.unwrap_or_else(|| {
-        il.find_or_push_first_party_evidence(anchor, kind, FIRST_PARTY_PACK_ID, rule, dependencies)
-    })
+    found.and_then(|(kind, id)| (kind == expected).then_some(id))
+}
+
+fn sequence_surface_record_has_language_core_provenance(il: &Il, record: &EvidenceRecord) -> bool {
+    if record.provenance.emitter != EvidenceEmitter::Builtin {
+        return false;
+    }
+    let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+    record.provenance.pack_hash == Some(stable_symbol_hash(pack_id))
+        && record.provenance.rule_hash == Some(stable_symbol_hash(producer_id))
 }
 
 #[cfg(test)]

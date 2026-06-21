@@ -1,6 +1,6 @@
 # Semantic evidence records
 
-Evidence records are the internal substrate that lets current first-party
+Evidence records are the internal substrate that lets current builtin
 frontends, and future language/library packs, emit proof facts without giving
 those producers authority to approve exact clones. They are facts, not verdicts.
 Contracts in `nose-semantics` decide whether a fact can satisfy an exact-channel
@@ -14,11 +14,16 @@ precondition.
 - Make facts carry stable ids, anchors, provenance, dependencies, and status.
 - Keep exact matching fail-closed when evidence is missing, ambiguous, or
   conflicting.
-- Preserve existing behavior while first-party frontends emit source,
+- Preserve existing behavior while builtin frontends emit source,
   parameter-domain, import, symbol, guard, place/effect, library API, and
   sequence-surface facts directly into the record shape.
 - Make the future external pack schema a narrowing of an implemented internal
   boundary, not a speculative document-only API.
+
+Internal Rust evidence provenance uses `EvidenceEmitter::Builtin` for shipped
+nose producers and `EvidenceEmitter::External` for provider/user opt-in data.
+The current serialized IL wire name for builtin evidence remains `FirstParty`
+for compatibility.
 
 ## Non-goals
 
@@ -63,7 +68,7 @@ The current implemented kinds are:
 | `Guard` | multi-obligation guard proof facts such as JS/TS record-shape and own-property guard contracts |
 | `Place` | fixed receiver/place facts currently covering `SelfReceiver` and `SelfField` |
 | `Effect` | observable effect and mutation-risk facts currently covering canonical builder append calls, non-overloadable index writes, fixed self-field writes, binding writes, receiver-mutating calls, and opaque argument escapes |
-| `LibraryApi` | proof that a specific API occurrence matches a language/API contract coordinate, currently for selected call, property, and sentinel occurrences across JS-like static/global/static-index APIs, selected Python/Rust/Ruby/Java/regex APIs, generic Python/Go free-function builtins, and selected receiver-method families |
+| `LibraryApi` | proof that a specific API occurrence matches a language/API contract coordinate, currently for selected call, property, and sentinel occurrences across JS-like static/global/static-index APIs, selected Python/Rust/Ruby/Java/regex APIs, pack-proven Python/Go/Swift free-function builtins, pack-proven generic builtin method calls, and selected receiver-method families |
 | `CallTarget` | proof that a specific call occurrence resolves to an explicit function, method, imported function/member, or dispatch-family target identity |
 | `SequenceSurface` | lowered aggregate surface such as collection, tuple, map, pair, import proof, guard surfaces, Go composite map literals, or Go map entries |
 
@@ -84,6 +89,9 @@ verdicts.
 spelling such as `f(...)`, `obj.f(...)`, or `ns.f(...)` is only a selector that a
 producer may inspect; consumers must require an asserted, dependency-closed,
 unambiguous `CallTarget` record anchored to the exact `Call` node. The current
+resolver admits only the lowered file language's builtin language-core
+provenance; legacy broad-provenance, wrong-language, external, dependency-broken,
+or selector-mismatched call-target rows cannot open exact call identity. The current
 vocabulary separates concrete exact identity from broader dispatch facts:
 
 - `DirectFunction` names a unique in-file function target by function span and
@@ -100,7 +108,8 @@ vocabulary separates concrete exact identity from broader dispatch facts:
 - `DynamicDispatch` names a protocol/dispatch family and method selector, but it
   does not by itself prove one concrete implementation target.
 
-The first-party call-target producer currently emits:
+The builtin language-core call-target producer emits these records with the
+matching `nose.lang.*` pack provenance for the lowered file language:
 
 - `DirectFunction` for unique top-level in-file `Function` units when neither
   the current lexical scope nor any enclosing lexical scope has a parameter,
@@ -120,8 +129,12 @@ The first-party call-target producer currently emits:
   receivers use the module/export/member coordinate. Receiver rebinding,
   ambiguous/conflicting symbol evidence, dependency-broken import proof, and
   selector mismatches stay closed.
+  Node-anchored `UnshadowedGlobal` and `ImportedNamespace` identity helpers
+  admit only matching builtin language-core provenance; broad, wrong-language,
+  external, ambiguous, or dependency-broken occurrence rows do not prove public
+  global/imported-namespace identity.
 
-There is not yet a first-party producer for `DirectMethod` or `DynamicDispatch`.
+There is not yet a builtin producer for `DirectMethod` or `DynamicDispatch`.
 Duplicate function names, lexical shadowing, nested/non-top-level functions,
 methods without explicit target proof, computed callees, selector mismatches,
 dependency-broken records, and conflicting evidence stay closed.
@@ -174,6 +187,15 @@ Current first-party `LibraryApi` callee coordinates are intentionally specific:
   or nested admitted `LibraryApi` evidence for factory/result calls. They do not
   infer semantics from a selector spelling alone. The current `AsyncMethod`
   row is JS-like Promise `.then`; it requires PromiseLike receiver proof.
+
+When a `LibraryApi` occurrence depends on node-anchored
+`Symbol(UnshadowedGlobal)` or `Symbol(ImportedNamespace)` proof, admission uses
+the same builtin language-core provenance gate as the public symbol identity
+helpers. Broad `nose.first_party`, wrong-language, external, ambiguous, or
+dependency-broken symbol occurrence rows do not license free-name, namespace, or
+receiver-method API evidence. `ImportedBinding` dependencies remain on the
+import-backed binding path and are not reinterpreted as language-core namespace
+proof.
 
 ## Consumption Rules
 
@@ -249,7 +271,7 @@ itself is admitted only through a `ValueLaw` contract in `nose-semantics`. This
 keeps string and sequence concatenation ordered when evidence proves those
 domains, while numeric and boolean laws still require positive domain proof.
 The first pack-facing law pilot now reports per-family provenance for selected
-compiled first-party value laws through `nose.value_graph.laws`: numeric
+compiled builtin value laws through `nose.value_graph.laws`: numeric
 common-factor distribution and integer ordered min/max clamp. That provenance
 records the pack id, stable law id, exact channel, proof status, and formal
 obligation id only when the value graph actually applied the law. It is not a
@@ -261,21 +283,30 @@ Selected `LibraryApi` result-domain evidence follows the same model. A
 first-party factory call result may carry `Domain(Collection)`, `Domain(Set)`,
 `Domain(Map)`, or `Domain(Array)` only after the call occurrence has admitted
 `LibraryApi` evidence. The `Domain` record depends on that `LibraryApi` record,
-so broken import, source, shadowing, or symbol proof closes the receiver-domain
+so broken import, source, shadowing, or symbol proof closes the result-domain
 claim as well. The result-domain record proves only the container/protocol shape
 of the call result; exact consumers still prove argument safety, entry shape,
 mutation, receiver requirements, and demand/effect obligations separately.
+Normalize-owned result-domain refreshes, helper receiver-domain facts, and
+helper call-site `Symbol` occurrence facts use the lowered file language's
+builtin language-core provenance, while the licensing `LibraryApi` occurrence
+keeps the specific builtin pack provenance. When these refreshes encounter
+older broad `nose.first_party` rows for the same asserted fact, they update the
+row in place instead of minting a duplicate; if an equivalent current row
+already exists, stale broad duplicates are closed as ambiguous.
 
 Sequence-surface evidence is also authoritative for exact/value-graph aggregate
 semantics. A lowered `Seq("array")`, `Seq("object")`, `Seq("tuple")`, or
 language-specific tag does not by itself prove exact-tree safety, collection
 membership, map-entry-list shape, imported-literal eligibility, or a canonical
 value-graph tag. Consumers resolve the tag only when a matching
-`SequenceSurface` record exists at the same sequence anchor and its dependencies
-remain asserted. Missing, conflicting, ambiguous, or wrong-kind surface evidence
-keeps the exact/value-graph path closed. In the value graph, a missing surface
-record produces the untagged sequence value rather than a raw spelling-derived
-hash, so a payload name cannot become a semantic proof channel by coincidence.
+`SequenceSurface` record exists at the same sequence anchor with matching
+builtin language-core provenance and its dependencies remain asserted. Missing,
+conflicting, ambiguous, broad/wrong-language, external, or wrong-kind surface
+evidence keeps the exact/value-graph path closed. In the value graph, a missing
+surface record produces the untagged sequence value rather than a raw
+spelling-derived hash, so a payload name cannot become a semantic proof channel
+by coincidence.
 
 Qualified global identity is also evidence, not a selector guess. The current
 first-party JS/TS producer emits `QualifiedGlobal` only for selected static paths
@@ -310,16 +341,17 @@ an append effect; exact consumers need
 canonical `Builtin::Append`. Likewise, non-overloadable index writes and fixed
 self-field writes are admitted only through exact `Effect` records, with
 `Place(SelfReceiver)` and `Place(SelfField)` proving the receiver/place side.
-First-party `Place(SelfField)` depends on the matching `Place(SelfReceiver)`,
-and `Effect(SelfFieldWrite)` depends on the matching `Place(SelfField)`.
+Builtin language-core `Place(SelfField)` depends on the matching
+`Place(SelfReceiver)`, and `Effect(SelfFieldWrite)` depends on the matching
+`Place(SelfField)`.
 Missing, conflicting, ambiguous, or dependency-broken place/effect evidence
 closes exact fragments, value-graph field readback/final field sinks, and oracle
 field state instead of reopening a legacy language/shape fallback.
 
 Mutation-risk effects are intentionally separate from exact effect proofs.
 `Effect(BindingWrite)` says an assignment node writes its syntactic target;
-`Effect(ReceiverMutation)` says a call is covered by a first-party
-language-scoped receiver-mutating method-effect contract row; and
+`Effect(ReceiverMutation)` says a call is covered by a builtin language-scoped
+receiver-mutating method-effect contract row; and
 `Effect(OpaqueArgumentEscape)` says an ordinary call argument may escape to
 unknown code. These records can invalidate immutable binding, module export,
 imported literal, value-graph, or exact-fragment context assumptions, but they
@@ -364,18 +396,39 @@ Admission currently comes from either a same-span admitted
 `LibraryApi` occurrence record whose contract id maps to that builtin, or a
 narrow first-party language-core lowering: Go map lookup-ok `Contains`, Go
 `range` `Enumerate`, Python dict-comprehension `DictEntry`, JS-like `for-in`
-`Keys`, or C `UnsignedCast32` with `Source(Cast(CUnsigned32))`. Canonical
-`Append` still needs `Effect(BuilderAppendCall)`, and the first-party normalize
-producer emits that effect only when the same call also has the same-span
-`LibraryApi` proof for the append API; the effect record depends on that API
-record. Raw or unadmitted builtin payloads stay opaque in the value graph and
-closed in exact/oracle consumers.
+`Keys`, C `UnsignedCast32` with `nose.lang.c` provenance-backed
+`Source(Cast(CUnsigned32))`, or Python builtin collection factories with
+`nose.python.builtins.collection_factories` provenance-backed `LibraryApi`
+occurrence evidence, or Python imported `collections.deque` collection
+factories with `nose.python.stdlib.collection_factories` provenance-backed
+`LibraryApi` occurrence evidence, or Ruby `require "set"; Set.new(...)`
+factories with `nose.ruby.stdlib.set` provenance-backed `LibraryApi` occurrence
+evidence, or Rust `Vec::new`/`vec!` factories with `nose.rust.stdlib.vec`
+provenance-backed `LibraryApi` occurrence evidence, or selected Rust
+`std::collections::{HashSet,BTreeSet,VecDeque}::from` factories with
+`nose.rust.stdlib.collection_factories` provenance-backed `LibraryApi`
+occurrence evidence, or selected Rust
+`std::collections::{HashMap,BTreeMap}::from` factories with
+`nose.rust.stdlib.map_factories` provenance-backed `LibraryApi` occurrence
+evidence, or Java `java.util.Map.of`/`Map.ofEntries` factories with
+`nose.java.stdlib.map_factories` provenance-backed `LibraryApi` occurrence
+evidence, or Java `java.util.List.of`/`Set.of`/`Arrays.asList` factories with
+`nose.java.stdlib.collection_factories` provenance-backed `LibraryApi` occurrence
+evidence, or Java empty `new ArrayList<>()`/`new LinkedList<>()` constructors
+with `nose.java.stdlib.collection_constructors` provenance-backed `LibraryApi`
+occurrence evidence. Canonical
+`Append` still needs `Effect(BuilderAppendCall)`, and the builtin language-core
+normalize producer emits that effect only when the same call also has the
+same-span `LibraryApi` proof for the append API; the effect record depends on
+that API record. Raw or unadmitted builtin payloads stay opaque in the value
+graph and closed in exact/oracle consumers.
 When a receiver obligation makes an API result more specific than the selector
 alone, the dependency chain must prove that specialization. For example, Rust
 `unwrap_or` is an option defaulting API in isolation, but the canonical
 `GetOrDefault(map, key, default)` builtin is admitted only when the same
 `unwrap_or` occurrence has the Rust `RustMapGetOrExactOption` receiver contract
-and depends on an admitted `MapGet` occurrence for the exact receiver.
+and depends on an admitted pack-proven `MapGet` occurrence for the exact
+receiver.
 
 Imported API occurrence evidence is not a broad name guess. A call-site
 `Symbol(ImportedBinding)` or `Symbol(ImportedNamespace)` dependency must itself
@@ -437,16 +490,15 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   null/truthiness clause kind, whether JS loose equality was admitted, and
   asserted dependencies for the required `Array.isArray` API proof plus optional
   `Boolean` proof;
-- first-party lowering and normalize refreshes emit `Place(SelfReceiver)` for
-  Java `this`, `Place(SelfField)` for Java `this.field`,
-  `Effect(SelfFieldWrite)` for Java `this.field = ...`, and
+- frontend lowering and normalize refreshes emit builtin language-core
+  `Place(SelfReceiver)` for Java `this`, `Place(SelfField)` for Java
+  `this.field`, `Effect(SelfFieldWrite)` for Java `this.field = ...`, and
   `Effect(NonOverloadableIndexWrite)` for C/Go/Java index writes. Normalize also
-  emits `Effect(BuilderAppendCall)` for canonical `Builtin::Append` only when a
-  same-span append `LibraryApi` record licenses that canonical form, and records
-  the API evidence as a dependency. They also emit mutation-risk effects:
-  `Effect(BindingWrite)` for assignment nodes,
-  `Effect(ReceiverMutation)` for calls admitted by the first-party
-  language-scoped mutating-method policy, and
+  emits language-core `Effect(BuilderAppendCall)` for canonical `Builtin::Append`
+  only when a same-span append `LibraryApi` record licenses that canonical form,
+  and records the API evidence as a dependency. They also emit mutation-risk
+  effects: `Effect(BindingWrite)` for assignment nodes, `Effect(ReceiverMutation)`
+  for calls admitted by the builtin language-scoped mutating-method policy, and
   `Effect(OpaqueArgumentEscape)` for ordinary calls with arguments. The shared
   semantic helper treats opaque escape as active mutation risk only when the
   same call does not also have admitted `LibraryApi` evidence. Self-field
@@ -463,25 +515,66 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   remain dependency-free;
 - first-party lowering emits `LibraryApi` evidence for selected API occurrences
   that remain as raw nodes: JS-like `Array.from(...)`, `Array.isArray(...)`,
-  `Boolean(...)`, `new Map(...)`, `new Set(...)`, and static
+  with `nose.javascript.builtins.array` provenance; `new Map(...)` and
+  `new Set(...)` with `nose.javascript.builtins.collection_constructors`
+  provenance; `Boolean(...)` with `nose.javascript.builtins.boolean`
+  provenance; regex literal `.test(...)` with
+  `nose.javascript.builtins.regex` provenance; and static
   `indexOf`/`findIndex` membership calls whose receiver has collection
-  sequence-surface proof; Python builtin collection factories such as
+  sequence-surface proof with
+  `nose.javascript.builtins.static_index_membership` provenance; Python builtin
+  collection factories such as
   `list(...)` when the callee has an unshadowed free-name proof; Python
   `collections.deque(...)` through imported binding/namespace proof; Python
-  `math.prod(...)` through imported namespace proof; Rust
-  `vec!(...)` when macro-invocation source syntax and macro-name shadow policy
-  are proven, `Vec::new()`, `Some(...)`, selected `Some(_)` pattern selectors,
-  bare `None`, and selected `std::collections::*::from(...)` factory paths when
-  their root-shadow policy is proven. The selector occurrence does not by itself
+  `math.prod(...)` with `nose.python.stdlib.math` provenance through imported
+  namespace proof; Rust
+  `vec!(...)` with `nose.rust.stdlib.vec` provenance when macro-invocation
+  source syntax and macro-name shadow policy are proven, `Vec::new()` with the
+  same pack provenance when the root-shadow policy is proven, `Some(...)`,
+  selected `Some(_)` pattern selectors, bare `None`, and `and_then(...)` with
+  `nose.rust.stdlib.option` provenance when Option receiver or selector proof is
+  satisfied, primitive integer `abs`/`min`/`max`/`clamp` receiver methods with
+  `nose.rust.stdlib.integer_methods` provenance when exact integer receiver
+  proof is present, Java `Math.abs`, `Math.min`, and `Math.max` scalar integer
+  APIs with `nose.java.stdlib.math` provenance when unshadowed `Math` and
+  integer-domain proof are present, Java/Rust/JS-family `map.get(key)` lookups
+  with `nose.protocols.map_get` provenance when exact-map receiver proof is
+  present, Python `dict.get(key, default)`, Ruby `Hash#fetch(key, default)` or
+  zero-arg block fallback, and Java `Map.getOrDefault(key, default)` lookups with
+  `nose.protocols.map_get_default` provenance when exact-map receiver proof is
+  present, receiver-method membership calls with
+  `nose.protocols.receiver_membership` provenance when their map, collection, or
+  set-or-map receiver proof is present, Python/Ruby `keys`, Java `keySet`, and
+  JS-family `Map.keys()` views
+  with `nose.protocols.map_key_views` provenance when exact-map receiver proof
+  is present, JS/TS/HTML-family and Java `.length`, plus Swift `count` and
+  `isEmpty`, with `nose.protocols.property_builtins` provenance when
+  receiver-domain proof is present, Rust
+  `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
+  `.stream()` iterator identity adapters with
+  `nose.protocols.iterator_identity_adapters` provenance when protocol receiver
+  proof is present, generic method-call and namespace-call builtin semantics
+  with `nose.protocols.builtin_method_calls` provenance when no narrower pack
+  owns the row, and selected
+  `std::collections::{HashSet,BTreeSet,VecDeque}::from(...)` factory paths with
+  `nose.rust.stdlib.collection_factories` provenance when their root-shadow
+  policy is proven, and selected
+  `std::collections::{HashMap,BTreeMap}::from(...)` factory paths with
+  `nose.rust.stdlib.map_factories` provenance when their root-shadow policy is
+  proven. The selector occurrence does not by itself
   prove the pattern semantics: `Some(_)` value-graph presence predicates also
   require the Rust tuple-struct wildcard `Source::Pattern` fact. JS/TS/Java
   `length` property reads whose
   receiver proof is satisfied; Ruby
   earlier top-level `require "set"; Set.new(...)` through `Import::Require`
   plus unshadowed `require` and `Set` proof; Java `java.util` static
-  factories/adapters including `List.of`, `Set.of`, `Arrays.asList`, `Map.of`,
-  `Map.ofEntries`, `Map.entry`, and `Arrays.stream`, plus selected empty
-  `new ArrayList<>()`/`new LinkedList<>()` constructors through exact or
+  factories/adapters including `List.of`, `Set.of`, and `Arrays.asList` with
+  `nose.java.stdlib.collection_factories` provenance, `Map.of`/`Map.ofEntries`
+  with `nose.java.stdlib.map_factories` provenance, `Map.entry` with
+  `nose.java.stdlib.map_entries` provenance, `Arrays.stream` with
+  `nose.java.stdlib.static_collection_adapters` provenance, plus selected empty
+  `new ArrayList<>()`/`new LinkedList<>()` constructors with
+  `nose.java.stdlib.collection_constructors` provenance through exact or
   wildcard import proof; and JS-like regex-literal `.test(...)`. These records
   depend on the relevant `QualifiedGlobal`, `UnshadowedGlobal`,
   import-backed call-site `Symbol`, `Import::Require`, construct-syntax
@@ -495,10 +588,10 @@ First-party frontends now emit these facts as `EvidenceRecord`:
 - first-party lowering plus post-binding and final-normalization refresh passes
   emit `LibraryApi`
   occurrence evidence for selected receiver methods that remain as raw call
-  nodes: map `get`, map-key views, iterator identity adapters, and the
-  language-scoped method-call contracts currently used for collection/map
-  membership, map defaulting, count, predicates, Rust scalar integer methods,
-  Rust `Option::and_then`, Rust `zip`, HOF, and reduction methods. Property
+  nodes: map `get`, map get-default, map-key views, iterator identity adapters,
+  and the language-scoped method-call contracts currently used for
+  collection/map membership, count, predicates, pack-owned Rust scalar integer
+  methods, Rust `Option::and_then`, Rust `zip`, HOF, and reduction methods. Property
   cardinality such as JS/TS `length` is modeled as `Property`, not as a method
   call. The post-binding refresh exists because immutable
   binding-domain evidence is inferred after lowering; the final refresh exists
@@ -509,21 +602,29 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   matching;
 - selected `LibraryApi` producer-covered result calls emit dependent
   receiver-expression `Domain` evidence: Python `list`/`tuple` and
-  `collections.deque`, Rust `Vec::new`, `vec!`, and
-  `std::collections::VecDeque::from`, Java `List.of` and zero- or multi-argument
-  `Arrays.asList`, and selected empty `new ArrayList<>()`/`new LinkedList<>()`
-  as `Collection`; Python `set`/`frozenset`, Rust
-  `std::collections::{HashSet,BTreeSet}::from`, Java `Set.of`, Ruby `Set.new`,
-  and JS-like `new Set` as `Set`; Rust
-  `std::collections::{HashMap,BTreeMap}::from`, Java `Map.of`/`Map.ofEntries`,
-  and JS-like `new Map` as `Map`; JS-like one-argument `Array.from` as
+  `collections.deque`, Rust `Vec::new`, `vec!`, and pack-owned Rust
+  `std::collections::VecDeque::from`, pack-owned Java `List.of` and zero- or
+  multi-argument `Arrays.asList`, and pack-owned Java empty
+  `new ArrayList<>()`/`new LinkedList<>()` as `Collection`; Python
+  `set`/`frozenset`, pack-owned
+  Rust `std::collections::{HashSet,BTreeSet}::from`, pack-owned Java `Set.of`,
+  Ruby `Set.new`,
+  and JS-like `new Set` with
+  `nose.javascript.builtins.collection_constructors` provenance as `Set`; Rust
+  `std::collections::{HashMap,BTreeMap}::from`, pack-owned Java
+  `Map.of`/`Map.ofEntries`, and JS-like `new Map` with
+  `nose.javascript.builtins.collection_constructors` provenance as `Map`;
+  JS-like
+  one-argument `Array.from` with `nose.javascript.builtins.array` provenance as
   `Array`; and JS-like `Promise.resolve` plus admitted Promise `.then` results
-  as `PromiseLike`. `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`,
+  with `nose.javascript.builtins.promise` provenance as `PromiseLike`.
+  `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`,
   `math.prod`, `Arrays.stream`, map `get`, iterator adapters, and generic
   method contracts do not emit `Domain` records because their results are not
   simple receiver domains under the current vocabulary;
-- lowered `Seq` surfaces emit `SequenceSurface` evidence, including Go map
-  literal and Go map-entry surfaces where those tags carry first-party meaning.
+- lowered `Seq` surfaces emit `SequenceSurface` evidence under the matching
+  builtin language-core pack, including Go map literal and Go map-entry surfaces
+  where those tags carry first-party meaning.
 
 Source-origin and parameter-domain proof no longer has side-table mirror storage:
 frontends emit `Source` and `Domain` records directly, and semantic lookups are
@@ -548,8 +649,9 @@ callers:
   strict exact receiver gates. Consumers ask `nose-semantics` whether a receiver
   satisfies a `DomainRequirement`, using the shared
   `ReceiverDomainEvidenceIndex` cache when they inspect many receivers. That
-  keeps node-anchored receiver evidence, immutable local/module binding
-  evidence, scoped parameter evidence, selected API result-domain evidence,
+  keeps node-anchored receiver evidence, builtin language-core immutable
+  local/module binding evidence, scoped parameter evidence, selected API
+  result-domain evidence,
   ambiguity handling, and compatibility fallback under one kernel-owned policy
   instead of reimplementing those rules per consumer. Desugaring and early idiom
   canonicalization still run before normalize emits additional immutable
@@ -577,20 +679,24 @@ callers:
 - value-graph internal import identity now uses dedicated
   `ImportNamespace`/`ImportBinding` value ops derived from `Import` evidence, so
   raw import `Seq` payloads cannot hash-cons with proof-bearing import values;
-- unshadowed-global symbol proof for JS/TS `Math.*` method contracts,
-  `new Map(...)`/`new Set(...)` constructor contracts, static `Array.isArray`
-  exact gates, and `undefined` nullish-default handling. Value-graph nullish
+- unshadowed-global symbol proof for Java `Math.*` scalar integer contracts,
+  JS/TS `Math.*` method boundaries,
+  pack-owned `new Map(...)`/`new Set(...)` constructor contracts, regex literal
+  `.test(...)` contracts, static `Array.from` and `Array.isArray` exact/API
+  gates, and `undefined` nullish-default handling.
+  Value-graph nullish
   value semantics are evidence-only for `undefined`; raw spelling plus a
   scope scan no longer reopens that exact path;
 - qualified-global symbol proof for selected JS/TS API paths: own-property
   guard evidence depends on `Object.hasOwn` or
   `Object.prototype.hasOwnProperty.call`, and map-key view wrappers require
-  evidence for `Array.from`. Those `QualifiedGlobal` records themselves depend
-  on the appropriate unshadowed root proof, so path-shaped text or a detached API
+  evidence for `Array.from`; static Array gates require evidence for
+  `Array.isArray`. Those `QualifiedGlobal` records themselves depend on the
+  appropriate unshadowed root proof, so path-shaped text or a detached API
   record does not prove identity;
 - selected `LibraryApiContract` consumers now consult `LibraryApi` occurrence
   evidence first for the migrated JS-like, Python builtin/imported, Rust
-  free-name/path/Option/scalar, Ruby require-backed, Java static/property,
+  free-name/path/Option/scalar, Ruby require-backed, Java Math/static/property,
   regex-literal, property, and receiver-method surfaces;
   conflicting or dependency-broken API evidence keeps
   the value-graph, idiom, and strict exact paths closed. Missing API evidence is
@@ -600,32 +706,40 @@ callers:
   argument, entry-shape, mutation, `Source`, `Domain`, and `SequenceSurface`
   obligations, but API occurrence admission itself is shared where covered;
 - strict exact consumers share the same admitted occurrence resolver layer for
-  selected method, map-get, map-key-view, regex, JS static/global, static-index,
-  iterator-adapter, Rust Option sentinel, Rust `Vec::new`, and first-party
+  selected method, pack-proven map-get, pack-proven map-get-default,
+  pack-proven map-key-view, regex, JS static/global,
+  static-index, iterator-adapter, Rust Option sentinel, Rust `Vec::new`, and first-party
   collection/map factory and constructor paths instead of locally recombining
   selector strings with evidence checks. Opaque same-callee exact identity
   remains separate: it can keep identical calls comparable, but it does not
   assign cross-language or library semantics;
 - normalize idiom canonicalization shares the admitted occurrence resolver layer
-  for supported free-function builtins, generic receiver-method contracts, map
-  `get`, map-key views, iterator identity adapters, Java `Arrays.stream`, Rust
-  `Some(...)`, Rust map factory receiver proof, and HOF receiver proof instead
-  of locally recombining selector strings with `LibraryApi` evidence checks.
+  for pack-proven supported free-function builtins, pack-proven generic builtin method contracts,
+  pack-proven map `get`, pack-proven map get-default, pack-proven map-key
+  views, iterator identity adapters with
+  `nose.protocols.iterator_identity_adapters` provenance, Java `Arrays.stream`,
+  Java map entries, Rust `Some(...)`, Rust map factory receiver proof, and HOF
+  receiver proof instead of locally recombining selector strings with `LibraryApi`
+  evidence checks.
   Test fixtures may still use row constructors to mint synthetic evidence
   records;
 - value-graph direct API eval paths, node-level API consumers, and provider
   literal export safety share the same admitted occurrence resolver layer where
   they still have the source `Call` or `Field` node. This includes direct
-  factory/constructor eval, property builtins such as JS/TS/Java `.length`, Rust
-  `Some` callee-node checks, static index-membership, Rust scalar integer method
-  calls, builder append API admission, Promise `resolve`, and Promise `.then`
-  contract lookup. Promise continuation reduction additionally requires a
+  factory/constructor eval, property builtins such as JS/TS/Java `.length` with
+  `nose.protocols.property_builtins` provenance, Rust `Some` callee-node checks,
+  static index-membership, Rust scalar integer method calls under
+  `nose.rust.stdlib.integer_methods`, Java Math scalar integer calls under
+  `nose.java.stdlib.math`, builder append API admission, pack-owned
+  Promise `resolve`, and
+  Promise `.then` contract lookup. Promise continuation reduction additionally requires a
   recoverable supported settled value and preserves a Promise boundary in the
   value graph. Value-level CSE paths that only retain source
   spans now also go through span-query resolvers for free-name/imported
-  collection factories, Java/Ruby/Rust collection factories, free-name/Java map
-  factories, Java map entries, map `get`, and map-key view/wrapper calls. The
-  value graph no longer locally recombines those contract rows with `LibraryApi`
+  collection factories, Java/Ruby/Rust collection factories, Java collection
+  constructors, free-name/Java map factories, Java map entries, pack-proven map
+  `get`, pack-proven map get-default, and pack-proven map-key view/wrapper
+  calls. The value graph no longer locally recombines those contract rows with `LibraryApi`
   span evidence;
 - value-graph consumers that query by source span re-check the original source
   `Call` node shape and its evidence dependencies when that call can be
@@ -650,10 +764,11 @@ callers:
   spelling, or `QualifiedGlobal` evidence without the required root proof, is not
   proof by itself;
 - sequence-surface admission for normalize/value-graph/detect exact paths where
-  the surface contract is independently exact-safe; guard surfaces use their
-  dedicated guard helper instead. Go zero-map literal lookup also requires
-  `SequenceSurface(GoCompositeMapLiteral)` and `SequenceSurface(GoMapEntry)`,
-  so `composite_literal`/`keyed_element` tag spelling alone no longer admits the
+  the surface contract is independently exact-safe, now requiring matching
+  builtin language-core provenance. Guard surfaces use their dedicated guard
+  helper instead. Go zero-map literal lookup also requires
+  `SequenceSurface(GoCompositeMapLiteral)` and `SequenceSurface(GoMapEntry)`, so
+  `composite_literal`/`keyed_element` tag spelling alone no longer admits the
   exact map-default path;
 - C byte-pack value-graph laws consume the first-party C byte-pack contract,
   `Domain(ByteArray)` base evidence, and source-cast evidence for the unsigned

@@ -6,8 +6,13 @@ pub(super) use nose_il::{
 };
 use nose_normalize::{normalize, NormalizeOptions};
 use nose_semantics::{
-    library_api_callee_contract_hash, library_api_contract_id_hash, library_map_get_contract,
-    library_method_call_contract, FIRST_PARTY_PACK_ID,
+    language_core_evidence_provenance, library_api_callee_contract_hash,
+    library_api_contract_id_hash, library_map_get_contract, library_method_call_contract,
+    LibraryApiCalleeContract, LibraryApiContractId, MethodBuiltinArgs, MethodReceiverContract,
+    MethodSemanticContract, BUILTIN_COMPAT_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
+    MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID, MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID,
+    RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID, RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
 };
 
 pub(super) fn sp(line: u32) -> Span {
@@ -54,8 +59,8 @@ pub(super) fn evidence(
         anchor,
         kind,
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+            emitter: EvidenceEmitter::Builtin,
+            pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("strict-exact-test")),
         },
         dependencies,
@@ -72,7 +77,7 @@ pub(super) fn method_call_library_api_evidence(
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceRecord {
     let contract = library_method_call_contract(lang, method, arity).expect("method call contract");
-    evidence(
+    let mut record = evidence(
         id,
         EvidenceAnchor::node(call_span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -81,7 +86,45 @@ pub(super) fn method_call_library_api_evidence(
             arity: arity as u16,
         }),
         dependencies,
-    )
+    );
+    if contract.id
+        == LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::GetOrDefault))
+        && matches!(
+            contract.callee,
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactMap,
+                ..
+            }
+        )
+    {
+        record.provenance.pack_hash = Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID));
+    } else if contract.id
+        == LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::Contains))
+        && matches!(
+            contract.callee,
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactMap
+                    | MethodReceiverContract::ExactCollectionOrMap
+                    | MethodReceiverContract::ExactCollectionOrJavaKeySet
+                    | MethodReceiverContract::ExactSetOrMap,
+                ..
+            }
+        )
+        && contract.result.args == MethodBuiltinArgs::FirstThenReceiver
+    {
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID));
+    } else {
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID));
+    }
+    record
 }
 
 pub(super) fn map_get_library_api_evidence(
@@ -92,7 +135,7 @@ pub(super) fn map_get_library_api_evidence(
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceRecord {
     let contract = library_map_get_contract(lang, method, 1).expect("map get contract");
-    evidence(
+    let mut record = evidence(
         id,
         EvidenceAnchor::node(call_span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -101,19 +144,27 @@ pub(super) fn map_get_library_api_evidence(
             arity: 1,
         }),
         dependencies,
-    )
+    );
+    record.provenance.pack_hash = Some(stable_symbol_hash(MAP_GET_PROTOCOL_PACK_ID));
+    record.provenance.rule_hash = Some(stable_symbol_hash(MAP_GET_PROTOCOL_PRODUCER_ID));
+    record
 }
 
 pub(super) fn call_target_evidence(
     id: u32,
+    lang: Lang,
     call_span: Span,
     target: CallTargetEvidenceKind,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceRecord {
-    evidence(
+    let mut record = evidence(
         id,
         EvidenceAnchor::node(call_span, NodeKind::Call),
         EvidenceKind::CallTarget(target),
         dependencies,
-    )
+    );
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    record.provenance.pack_hash = Some(stable_symbol_hash(pack_id));
+    record.provenance.rule_hash = Some(stable_symbol_hash(producer_id));
+    record
 }

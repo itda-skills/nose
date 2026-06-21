@@ -5,6 +5,7 @@ fn library_non_factory_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_map_key_view_contract(Lang::TypeScript, "keys", 0),
         Some(LibraryMapKeyViewContract {
+            pack_id: MAP_KEY_VIEW_PROTOCOL_PACK_ID,
             id: LibraryApiContractId::MapKeyView(MapKeyViewKind::Iterator),
             callee: LibraryApiCalleeContract::Method {
                 method: "keys",
@@ -19,6 +20,7 @@ fn library_non_factory_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_map_key_view_wrapper_contract(Lang::JavaScript, "Array", "from", 1),
         Some(LibraryMapKeyViewWrapperContract {
+            pack_id: JS_LIKE_BUILTIN_ARRAY_PACK_ID,
             id: LibraryApiContractId::MapKeyViewWrapper,
             callee: LibraryApiCalleeContract::StaticGlobalMethod {
                 receiver: "Array",
@@ -36,6 +38,7 @@ fn library_non_factory_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_map_get_contract(Lang::Rust, "get", 1),
         Some(LibraryMapGetContract {
+            pack_id: MAP_GET_PROTOCOL_PACK_ID,
             id: LibraryApiContractId::MapGet,
             callee: LibraryApiCalleeContract::Method {
                 method: "get",
@@ -50,6 +53,7 @@ fn library_non_factory_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_js_array_is_array_contract(Lang::JavaScript, "Array", "isArray", 1),
         Some(LibraryStaticGlobalMethodContract {
+            pack_id: JS_LIKE_BUILTIN_ARRAY_PACK_ID,
             id: LibraryApiContractId::JsArrayIsArray,
             callee: LibraryApiCalleeContract::StaticGlobalMethod {
                 receiver: "Array",
@@ -72,6 +76,7 @@ fn library_coercion_regex_namespace_and_promise_contracts_carry_obligations() {
     assert_eq!(
         library_js_boolean_coercion_contract(Lang::TypeScript, "Boolean", 1),
         Some(LibraryStaticGlobalFunctionContract {
+            pack_id: JS_LIKE_BUILTIN_BOOLEAN_PACK_ID,
             id: LibraryApiContractId::JsBooleanCoercion,
             callee: LibraryApiCalleeContract::StaticGlobalFunction {
                 function: "Boolean",
@@ -86,6 +91,7 @@ fn library_coercion_regex_namespace_and_promise_contracts_carry_obligations() {
     assert_eq!(
         library_regex_test_contract(Lang::JavaScript, "test", 1),
         Some(LibraryRegexTestContract {
+            pack_id: JS_LIKE_BUILTIN_REGEX_PACK_ID,
             id: LibraryApiContractId::RegexTest,
             callee: LibraryApiCalleeContract::RegexLiteralMethod {
                 method: "test",
@@ -100,6 +106,7 @@ fn library_coercion_regex_namespace_and_promise_contracts_carry_obligations() {
     assert_eq!(
         library_imported_namespace_function_contract(Lang::Python, "prod", 2),
         Some(LibraryImportedNamespaceFunctionContract {
+            pack_id: PYTHON_STDLIB_MATH_PACK_ID,
             id: LibraryApiContractId::ImportedNamespaceFunction(
                 ImportedNamespaceFunctionSemantic::ProductReduction {
                     op: Op::Mul,
@@ -124,6 +131,7 @@ fn library_coercion_regex_namespace_and_promise_contracts_carry_obligations() {
     assert_eq!(
         library_promise_then_contract(Lang::Vue, "then", 1),
         Some(LibraryPromiseThenContract {
+            pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
             id: LibraryApiContractId::PromiseThen,
             callee: LibraryApiCalleeContract::AsyncMethod {
                 method: "then",
@@ -138,6 +146,7 @@ fn library_coercion_regex_namespace_and_promise_contracts_carry_obligations() {
     assert_eq!(
         library_promise_resolve_contract(Lang::TypeScript, "Promise", "resolve", 1),
         Some(LibraryPromiseFactoryContract {
+            pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
             id: LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve),
             callee: LibraryApiCalleeContract::StaticGlobalMethod {
                 receiver: "Promise",
@@ -161,6 +170,7 @@ fn library_iterator_adapter_and_method_call_contracts_carry_obligations() {
     assert_eq!(
         library_iterator_identity_adapter_contract(Lang::Rust, "collect", 0),
         Some(LibraryIteratorIdentityAdapterContract {
+            pack_id: ITERATOR_IDENTITY_ADAPTER_PACK_ID,
             id: LibraryApiContractId::IteratorIdentityAdapter,
             callee: LibraryApiCalleeContract::IteratorAdapterMethod {
                 method: "collect",
@@ -174,6 +184,7 @@ fn library_iterator_adapter_and_method_call_contracts_carry_obligations() {
     assert_eq!(
         library_static_collection_adapter_contract(Lang::Java, "Arrays", "stream", 1),
         Some(LibraryStaticCollectionAdapterContract {
+            pack_id: JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID,
             id: LibraryApiContractId::StaticCollectionAdapter,
             callee: LibraryApiCalleeContract::JavaUtilStaticMember {
                 receiver: "Arrays",
@@ -182,6 +193,57 @@ fn library_iterator_adapter_and_method_call_contracts_carry_obligations() {
             result: StaticCollectionAdapterContract {
                 module: "java.util",
                 exported: "Arrays",
+            },
+        })
+    );
+    assert_eq!(
+        library_receiver_membership_contract(Lang::Rust, "contains_key", 1),
+        Some(LibraryMethodCallContract {
+            id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
+                Builtin::Contains,
+            )),
+            callee: LibraryApiCalleeContract::Method {
+                method: "contains_key",
+                receiver: MethodReceiverContract::ExactMap,
+            },
+            result: MethodCallContract {
+                semantic: MethodSemanticContract::Builtin(Builtin::Contains),
+                receiver: MethodReceiverContract::ExactMap,
+                args: MethodBuiltinArgs::FirstThenReceiver,
+            },
+        })
+    );
+    assert_eq!(
+        library_receiver_membership_contract(Lang::TypeScript, "has", 1),
+        Some(LibraryMethodCallContract {
+            id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
+                Builtin::Contains,
+            )),
+            callee: LibraryApiCalleeContract::Method {
+                method: "has",
+                receiver: MethodReceiverContract::ExactSetOrMap,
+            },
+            result: MethodCallContract {
+                semantic: MethodSemanticContract::Builtin(Builtin::Contains),
+                receiver: MethodReceiverContract::ExactSetOrMap,
+                args: MethodBuiltinArgs::FirstThenReceiver,
+            },
+        })
+    );
+    assert_eq!(
+        library_receiver_membership_contract(Lang::Python, "__contains__", 1),
+        Some(LibraryMethodCallContract {
+            id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
+                Builtin::Contains,
+            )),
+            callee: LibraryApiCalleeContract::Method {
+                method: "__contains__",
+                receiver: MethodReceiverContract::ExactCollectionOrMap,
+            },
+            result: MethodCallContract {
+                semantic: MethodSemanticContract::Builtin(Builtin::Contains),
+                receiver: MethodReceiverContract::ExactCollectionOrMap,
+                args: MethodBuiltinArgs::FirstThenReceiver,
             },
         })
     );
@@ -269,6 +331,14 @@ fn library_promise_adapter_and_method_contracts_reject_raw_name_only_matches() {
     );
     assert_eq!(
         library_static_collection_adapter_contract(Lang::Java, "Arrays", "stream", 0),
+        None
+    );
+    assert_eq!(
+        library_receiver_membership_contract(Lang::Go, "Contains", 2),
+        None
+    );
+    assert_eq!(
+        library_receiver_membership_contract(Lang::JavaScript, "contains", 1),
         None
     );
     assert_eq!(library_method_call_contract(Lang::Python, "min", 2), None);

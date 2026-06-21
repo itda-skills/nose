@@ -46,7 +46,7 @@ fn child_range_past_edges_is_caught() {
 }
 
 #[test]
-fn first_party_evidence_dedupe_preserves_provenance_boundary() {
+fn builtin_evidence_dedupe_preserves_provenance_boundary() {
     let mut il = leaf_il();
     let anchor = EvidenceAnchor::node(il.node(il.root).span, NodeKind::Module);
     let kind = EvidenceKind::Domain(DomainEvidence::Collection);
@@ -63,31 +63,52 @@ fn first_party_evidence_dedupe_preserves_provenance_boundary() {
         status: EvidenceStatus::Asserted,
     });
 
-    let first = il.find_or_push_first_party_evidence(
-        anchor,
-        kind,
-        "nose.first_party",
-        "rule.a",
-        Vec::new(),
-    );
-    let duplicate = il.find_or_push_first_party_evidence(
-        anchor,
-        kind,
-        "nose.first_party",
-        "rule.a",
-        Vec::new(),
-    );
-    let different_rule = il.find_or_push_first_party_evidence(
-        anchor,
-        kind,
-        "nose.first_party",
-        "rule.b",
-        Vec::new(),
-    );
+    let first =
+        il.find_or_push_builtin_evidence(anchor, kind, "nose.first_party", "rule.a", Vec::new());
+    let duplicate =
+        il.find_or_push_builtin_evidence(anchor, kind, "nose.first_party", "rule.a", Vec::new());
+    let different_rule =
+        il.find_or_push_builtin_evidence(anchor, kind, "nose.first_party", "rule.b", Vec::new());
 
     assert_eq!(first, EvidenceId(1));
     assert_eq!(duplicate, first);
     assert_eq!(different_rule, EvidenceId(2));
+}
+
+#[test]
+fn legacy_first_party_evidence_helper_alias_matches_builtin_helper() {
+    let mut il = leaf_il();
+    let anchor = EvidenceAnchor::node(il.node(il.root).span, NodeKind::Module);
+    let kind = EvidenceKind::Domain(DomainEvidence::Collection);
+
+    let builtin =
+        il.find_or_push_builtin_evidence(anchor, kind, "nose.first_party", "rule.a", Vec::new());
+    let legacy = il.find_or_push_first_party_evidence(
+        anchor,
+        kind,
+        "nose.first_party",
+        "rule.a",
+        Vec::new(),
+    );
+
+    assert_eq!(legacy, builtin);
+}
+
+#[test]
+fn builtin_evidence_emitter_keeps_legacy_wire_name() {
+    assert_eq!(EvidenceEmitter::FirstParty, EvidenceEmitter::Builtin);
+    assert_eq!(
+        serde_json::to_string(&EvidenceEmitter::Builtin).unwrap(),
+        "\"FirstParty\""
+    );
+    assert_eq!(
+        serde_json::from_str::<EvidenceEmitter>("\"FirstParty\"").unwrap(),
+        EvidenceEmitter::Builtin
+    );
+    assert_eq!(
+        serde_json::from_str::<EvidenceEmitter>("\"Builtin\"").unwrap(),
+        EvidenceEmitter::Builtin
+    );
 }
 
 /// `clear()` + re-push rewrites the indexed prefix without shrinking below
@@ -102,7 +123,7 @@ fn evidence_index_survives_clear_and_repush() {
         anchor,
         kind: EvidenceKind::Domain(DomainEvidence::Collection),
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: None,
             rule_hash: None,
         },

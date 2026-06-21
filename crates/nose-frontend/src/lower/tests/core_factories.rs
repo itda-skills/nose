@@ -51,6 +51,17 @@ fn core_lowering_emits_import_backed_library_api_occurrences() {
         ),
         1
     );
+    let records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(
+        records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID))
+    );
+    assert_eq!(
+        records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID
+        ))
+    );
 
     let mut lo = Lowering::new(FileId(0), b"", Lang::Python, &interner);
     import_binding(&mut lo, sp_at(10), "Values", "collections", "deque");
@@ -69,6 +80,46 @@ fn core_lowering_emits_import_backed_library_api_occurrences() {
             library_api_callee_contract_hash(contract.callee),
         ),
         1
+    );
+    let records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(
+        records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID))
+    );
+    assert_eq!(
+        records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID
+        ))
+    );
+
+    let mut lo = Lowering::new(FileId(0), b"", Lang::Python, &interner);
+    import_namespace(&mut lo, sp_at(30), "collections", "collections");
+    let collections = lo.var("collections", sp_at(31));
+    let callee = lo.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("deque")),
+        sp_at(32),
+        &[collections],
+    );
+    let seq = lo.add(
+        NodeKind::Seq,
+        Payload::Name(interner.intern("array")),
+        sp_at(33),
+        &[],
+    );
+    lo.add(NodeKind::Call, Payload::None, sp_at(34), &[callee, seq]);
+    let records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(records.len(), 1);
+    assert_eq!(
+        records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID))
+    );
+    assert_eq!(
+        records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID
+        ))
     );
 
     let mut lo = Lowering::new(FileId(0), b"", Lang::Python, &interner);
@@ -96,6 +147,17 @@ fn core_lowering_emits_import_backed_library_api_occurrences() {
             library_api_callee_contract_hash(contract.callee),
         ),
         1
+    );
+    let records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(
+        records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::PYTHON_STDLIB_MATH_PACK_ID
+        ))
+    );
+    assert_eq!(
+        records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(PYTHON_STDLIB_MATH_PRODUCER_ID))
     );
 }
 
@@ -131,6 +193,21 @@ fn assert_python_deque_factory_result_domain(interner: &Interner) {
     );
 }
 
+fn assert_java_collection_factory_record_provenance(record: &EvidenceRecord) {
+    assert_eq!(
+        record.provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID
+        ))
+    );
+    assert_eq!(
+        record.provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID
+        ))
+    );
+}
+
 fn assert_java_factory_result_domains(interner: &Interner) {
     let mut lo = Lowering::new(FileId(0), b"", Lang::Java, interner);
     import_binding(&mut lo, sp_at(10), "List", "java.util", "List");
@@ -152,6 +229,9 @@ fn assert_java_of_factory_result_domains(lo: &mut Lowering, interner: &Interner)
         &[list_callee, item],
     );
     let contract = library_java_collection_factory_contract(Lang::Java, "List", "of").unwrap();
+    let list_records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(list_records.len(), 1);
+    assert_java_collection_factory_record_provenance(list_records[0]);
     let list_api = contract_api_ids(&lo.evidence, contract.id, contract.callee);
     assert!(result_domain_depends_on_api(
         &lo.evidence,
@@ -170,6 +250,9 @@ fn assert_java_of_factory_result_domains(lo: &mut Lowering, interner: &Interner)
         &[set_callee, item],
     );
     let contract = library_java_collection_factory_contract(Lang::Java, "Set", "of").unwrap();
+    let set_records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(set_records.len(), 1);
+    assert_java_collection_factory_record_provenance(set_records[0]);
     let set_api = contract_api_ids(&lo.evidence, contract.id, contract.callee);
     assert!(result_domain_depends_on_api(
         &lo.evidence,
@@ -189,6 +272,18 @@ fn assert_java_of_factory_result_domains(lo: &mut Lowering, interner: &Interner)
         &[map_callee, key, value],
     );
     let contract = library_java_map_factory_contract(Lang::Java, "Map", "of").unwrap();
+    let map_records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(map_records.len(), 1);
+    assert_eq!(
+        map_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JAVA_STDLIB_MAP_FACTORY_PACK_ID
+        ))
+    );
+    assert_eq!(
+        map_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID))
+    );
     let map_api = contract_api_ids(&lo.evidence, contract.id, contract.callee);
     assert!(result_domain_depends_on_api(
         &lo.evidence,
@@ -208,6 +303,12 @@ fn assert_java_arrays_and_map_entry_result_domains(lo: &mut Lowering, interner: 
         sp_at(49),
         &[as_list_callee, maybe_array],
     );
+    let as_list_contract =
+        library_java_collection_factory_contract(Lang::Java, "Arrays", "asList").unwrap();
+    let as_list_records =
+        contract_api_records(&lo.evidence, as_list_contract.id, as_list_contract.callee);
+    assert_eq!(as_list_records.len(), 1);
+    assert_java_collection_factory_record_provenance(as_list_records[0]);
     assert_eq!(
         result_domain_any_count_at(&lo.evidence, sp_at(49)),
         0,
@@ -224,8 +325,10 @@ fn assert_java_arrays_and_map_entry_result_domains(lo: &mut Lowering, interner: 
         sp_at(59),
         &[as_list_callee, red, blue],
     );
-    let as_list_contract =
-        library_java_collection_factory_contract(Lang::Java, "Arrays", "asList").unwrap();
+    let as_list_records =
+        contract_api_records(&lo.evidence, as_list_contract.id, as_list_contract.callee);
+    assert_eq!(as_list_records.len(), 2);
+    assert_java_collection_factory_record_provenance(as_list_records[1]);
     let as_list_api = library_api_evidence_ids_at(
         &lo.evidence,
         sp_at(59),
@@ -251,9 +354,18 @@ fn assert_java_arrays_and_map_entry_result_domains(lo: &mut Lowering, interner: 
         &[entry_callee, key, value],
     );
     let entry_contract = library_java_map_entry_contract(Lang::Java, "Map", "entry").unwrap();
+    let entry_records =
+        contract_api_records(&lo.evidence, entry_contract.id, entry_contract.callee);
+    assert_eq!(entry_records.len(), 1);
     assert_eq!(
-        contract_api_count(&lo.evidence, entry_contract.id, entry_contract.callee),
-        1
+        entry_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JAVA_STDLIB_MAP_ENTRY_PACK_ID
+        ))
+    );
+    assert_eq!(
+        entry_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID))
     );
     assert_eq!(
         result_domain_any_count_at(&lo.evidence, sp_at(54)),
@@ -270,6 +382,23 @@ fn assert_java_arrays_and_map_entry_result_domains(lo: &mut Lowering, interner: 
         sp_at(63),
         &[stream_callee, values],
     );
+    let stream_contract =
+        library_static_collection_adapter_contract(Lang::Java, "Arrays", "stream", 1).unwrap();
+    let stream_records =
+        contract_api_records(&lo.evidence, stream_contract.id, stream_contract.callee);
+    assert_eq!(stream_records.len(), 1);
+    assert_eq!(
+        stream_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID
+        ))
+    );
+    assert_eq!(
+        stream_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PRODUCER_ID
+        ))
+    );
     assert_eq!(
         result_domain_any_count_at(&lo.evidence, sp_at(63)),
         0,
@@ -285,6 +414,19 @@ fn assert_js_constructor_result_domains(interner: &Interner) {
     lo.add(NodeKind::Call, Payload::None, sp_at(72), &[set, seq]);
     let set_contract =
         library_js_like_set_constructor_contract(Lang::JavaScript, "Set").expect("Set constructor");
+    let set_records = contract_api_records(&lo.evidence, set_contract.id, set_contract.callee);
+    assert_eq!(
+        set_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
+        ))
+    );
+    assert_eq!(
+        set_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID
+        ))
+    );
     let set_api = contract_api_ids(&lo.evidence, set_contract.id, set_contract.callee);
     assert!(result_domain_depends_on_api(
         &lo.evidence,
@@ -299,6 +441,19 @@ fn assert_js_constructor_result_domains(interner: &Interner) {
     lo.add(NodeKind::Call, Payload::None, sp_at(82), &[map, seq]);
     let map_contract =
         library_js_like_map_constructor_contract(Lang::JavaScript, "Map").expect("Map constructor");
+    let map_records = contract_api_records(&lo.evidence, map_contract.id, map_contract.callee);
+    assert_eq!(
+        map_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
+        ))
+    );
+    assert_eq!(
+        map_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID
+        ))
+    );
     let map_api = contract_api_ids(&lo.evidence, map_contract.id, map_contract.callee);
     assert!(result_domain_depends_on_api(
         &lo.evidence,
@@ -319,6 +474,17 @@ fn assert_js_constructor_result_domains(interner: &Interner) {
     );
     let from_contract =
         library_map_key_view_wrapper_contract(Lang::JavaScript, "Array", "from", 1).unwrap();
+    let from_records = contract_api_records(&lo.evidence, from_contract.id, from_contract.callee);
+    assert_eq!(
+        from_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_ARRAY_PACK_ID
+        ))
+    );
+    assert_eq!(
+        from_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID))
+    );
     let from_api = contract_api_ids(&lo.evidence, from_contract.id, from_contract.callee);
     assert!(result_domain_depends_on_api(
         &lo.evidence,
@@ -327,61 +493,85 @@ fn assert_js_constructor_result_domains(interner: &Interner) {
         &from_api,
     ));
 
-    let promise = lo.unshadowed_global_var("Promise", sp_at(95));
-    let resolve_callee = field_callee(&mut lo, interner, promise, "resolve", sp_at(96));
-    lo.record_qualified_global_symbol(sp_at(96), NodeKind::Field, "Promise.resolve");
-    let value = lo.int_lit("1", sp_at(97));
+    let array = lo.unshadowed_global_var("Array", sp_at(94));
+    let is_array_callee = field_callee(&mut lo, interner, array, "isArray", sp_at(95));
+    lo.record_qualified_global_symbol(sp_at(95), NodeKind::Field, "Array.isArray");
+    let value = lo.var("value", sp_at(96));
     lo.add(
         NodeKind::Call,
         Payload::None,
-        sp_at(98),
+        sp_at(97),
+        &[is_array_callee, value],
+    );
+    let is_array_contract =
+        library_js_array_is_array_contract(Lang::JavaScript, "Array", "isArray", 1).unwrap();
+    let is_array_records =
+        contract_api_records(&lo.evidence, is_array_contract.id, is_array_contract.callee);
+    assert_eq!(
+        is_array_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_ARRAY_PACK_ID
+        ))
+    );
+    assert_eq!(
+        is_array_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID))
+    );
+
+    let promise = lo.unshadowed_global_var("Promise", sp_at(98));
+    let resolve_callee = field_callee(&mut lo, interner, promise, "resolve", sp_at(99));
+    lo.record_qualified_global_symbol(sp_at(99), NodeKind::Field, "Promise.resolve");
+    let value = lo.int_lit("1", sp_at(100));
+    lo.add(
+        NodeKind::Call,
+        Payload::None,
+        sp_at(101),
         &[resolve_callee, value],
     );
     let resolve_contract =
         library_promise_resolve_contract(Lang::JavaScript, "Promise", "resolve", 1).unwrap();
+    let resolve_records =
+        contract_api_records(&lo.evidence, resolve_contract.id, resolve_contract.callee);
+    assert_eq!(
+        resolve_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_PROMISE_PACK_ID
+        ))
+    );
+    assert_eq!(
+        resolve_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID))
+    );
     let resolve_api = contract_api_ids(&lo.evidence, resolve_contract.id, resolve_contract.callee);
     assert!(result_domain_depends_on_api(
         &lo.evidence,
-        sp_at(98),
+        sp_at(101),
         DomainEvidence::PromiseLike,
         &resolve_api,
     ));
 
-    let boolean = lo.unshadowed_global_var("Boolean", sp_at(100));
-    let value = lo.var("value", sp_at(101));
-    lo.add(NodeKind::Call, Payload::None, sp_at(102), &[boolean, value]);
+    let boolean = lo.unshadowed_global_var("Boolean", sp_at(102));
+    let value = lo.var("value", sp_at(103));
+    lo.add(NodeKind::Call, Payload::None, sp_at(104), &[boolean, value]);
+    let boolean_contract =
+        library_js_boolean_coercion_contract(Lang::JavaScript, "Boolean", 1).unwrap();
+    let boolean_records =
+        contract_api_records(&lo.evidence, boolean_contract.id, boolean_contract.callee);
     assert_eq!(
-        result_domain_any_count_at(&lo.evidence, sp_at(102)),
+        boolean_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_BOOLEAN_PACK_ID
+        ))
+    );
+    assert_eq!(
+        boolean_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(JS_LIKE_BUILTIN_BOOLEAN_PRODUCER_ID))
+    );
+    assert_eq!(
+        result_domain_any_count_at(&lo.evidence, sp_at(104)),
         0,
         "Boolean(...) has LibraryApi identity but no container result-domain"
     );
 }
 
-#[test]
-fn python_lowering_emits_library_api_for_aliased_imported_collection_factory() {
-    let interner = Interner::new();
-    let il = crate::lower_source(
-        FileId(0),
-        "alias.py",
-        b"from collections import deque as Values\n\n\
-def f(value, other):\n    return Values([\"red\", \"blue\"]).__contains__(value)\n",
-        Lang::Python,
-        &interner,
-    )
-    .expect("python lowering should succeed");
-    let contract = nose_semantics::library_imported_collection_factory_contract(
-        Lang::Python,
-        "collections",
-        "deque",
-    )
-    .expect("deque contract");
-
-    assert_eq!(
-        library_api_evidence_count_in_records(
-            &il.evidence,
-            library_api_contract_id_hash(contract.id),
-            library_api_callee_contract_hash(contract.callee),
-        ),
-        1
-    );
-}
+mod aliased_imports;

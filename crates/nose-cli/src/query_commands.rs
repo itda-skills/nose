@@ -4,7 +4,10 @@ use super::query_open::render_query_family;
 use super::query_views::*;
 use crate::divergence;
 use crate::legacy_prelude::*;
-use crate::query_dataset::{build_query_dataset, QueryDataset, QuerySettings};
+use crate::query_dataset::{
+    build_query_dataset, resolve_query_semantic_packs, QueryDataset, QuerySettings,
+};
+use crate::query_semantic_packs::semantic_packs_json;
 
 /// The flat family set a report format (`--format markdown`/`sarif`) emits for a query: the
 /// single addressed family for `at=`/`id=`, otherwise the same default-surface (or `all`/
@@ -56,6 +59,11 @@ fn run_query_base(args: &QueryArgs, base_ref: &str, q: &Query, path_arg: &str) -
             "`base=` gates on a diff, not a baseline — use `--fail-on any` (fires on a proven divergence)"
         );
     }
+    let semantic_packs_json = if matches!(args.format, ReportFormat::Json) {
+        semantic_packs_json(&resolve_query_semantic_packs(args)?)
+    } else {
+        Vec::new()
+    };
     let divergence_args = divergence::DivergenceArgs {
         paths: args.paths.clone(),
         base: base_ref.to_string(),
@@ -69,14 +77,28 @@ fn run_query_base(args: &QueryArgs, base_ref: &str, q: &Query, path_arg: &str) -
     let (flagged, changed_files) =
         divergence::detect_divergences(&divergence_args)?.unwrap_or_default();
     match args.format {
-        ReportFormat::Json => {
-            render_query_base(&flagged, changed_files, base_ref, path_arg, q.top, true)
-        }
+        ReportFormat::Json => render_query_base(
+            &flagged,
+            changed_files,
+            base_ref,
+            path_arg,
+            q.top,
+            true,
+            &semantic_packs_json,
+        ),
         ReportFormat::Sarif => println!(
             "{}",
             divergence::divergence_sarif(&flagged, q.top, "top=0")?
         ),
-        _ => render_query_base(&flagged, changed_files, base_ref, path_arg, q.top, false),
+        _ => render_query_base(
+            &flagged,
+            changed_files,
+            base_ref,
+            path_arg,
+            q.top,
+            false,
+            &semantic_packs_json,
+        ),
     }
     // The gate fires on the §BV conservative policy: a proven shared-logic divergence.
     if matches!(args.fail_on, Some(FailOn::Any)) && divergence::divergences_fire(&flagged) {
@@ -137,6 +159,7 @@ struct QueryOutput<'a> {
     reinvented: &'a [nose_detect::ReinventedHelper],
     scope: &'a QueryScope,
     settings: &'a QuerySettings,
+    semantic_packs: &'a [serde_json::Value],
     overrides: &'a SurfaceOverrides,
     opp: &'a OpportunityGroups,
     baseline_comparison: Option<&'a BaselineComparison>,
@@ -265,7 +288,13 @@ fn render_query_exploration(ctx: &QueryOutput<'_>) -> Result<bool> {
         print_query_prelude();
     }
     if ctx.q.reinvented {
-        render_query_reinvented(ctx.reinvented, ctx.path_arg, ctx.q.top, json);
+        render_query_reinvented(
+            ctx.reinvented,
+            ctx.path_arg,
+            ctx.q.top,
+            json,
+            ctx.semantic_packs,
+        );
         return Ok(false);
     }
     if ctx.terms.is_empty() {
@@ -287,6 +316,7 @@ fn render_query_exploration(ctx: &QueryOutput<'_>) -> Result<bool> {
             ctx.baseline_comparison,
             ctx.since,
             &md,
+            ctx.semantic_packs,
         );
         return Ok(markdown_found);
     }
@@ -312,6 +342,7 @@ fn render_query_family_view(ctx: &QueryOutput<'_>, idv: &str, json: bool) {
         json,
         ctx.baseline_comparison,
         ctx.since,
+        ctx.semantic_packs,
     );
 }
 
@@ -334,6 +365,7 @@ fn render_query_list_or_group(ctx: &QueryOutput<'_>, json: bool) -> Result<()> {
             json,
             ctx.baseline_comparison,
             ctx.since,
+            ctx.semantic_packs,
         ),
         None => render_query_list(
             &sel,
@@ -346,6 +378,7 @@ fn render_query_list_or_group(ctx: &QueryOutput<'_>, json: bool) -> Result<()> {
             json,
             ctx.baseline_comparison,
             ctx.since,
+            ctx.semantic_packs,
         ),
     }
     Ok(())
@@ -512,6 +545,11 @@ pub(super) fn run_query_cmd(cmd: Cmd) -> Result<()> {
     let opp = time_stage("query_opp", || {
         query_opportunities(&dataset.families, &overrides)
     });
+    let semantic_packs_json = if matches!(args.format, ReportFormat::Json) {
+        semantic_packs_json(&dataset.semantic_packs)
+    } else {
+        Vec::new()
+    };
     let output = QueryOutput {
         args: &args,
         terms: &terms,
@@ -521,6 +559,7 @@ pub(super) fn run_query_cmd(cmd: Cmd) -> Result<()> {
         reinvented: &dataset.reinvented,
         scope: &dataset.scope,
         settings: &dataset.settings,
+        semantic_packs: &semantic_packs_json,
         overrides: &overrides,
         opp: &opp,
         baseline_comparison: baseline_comparison.as_ref(),

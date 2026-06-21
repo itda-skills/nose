@@ -23,14 +23,16 @@ fn js_new_set_il(interner: &Interner) -> (Il, NodeId) {
         EvidenceAnchor::source_span(sp(73)),
         EvidenceKind::Source(SourceFactKind::Call(SourceCallKind::Construct)),
     ));
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         1,
+        Lang::JavaScript,
         EvidenceAnchor::node(sp(70), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Set"),
-        }),
+        },
     ));
-    il.evidence.push(collection_sequence_evidence(2, sp(72)));
+    il.evidence
+        .push(collection_sequence_evidence(2, Lang::JavaScript, sp(72)));
     (il, call)
 }
 
@@ -64,14 +66,15 @@ fn js_constructor_value_graph_requires_library_api_evidence() {
 
     let (mut il, call) = js_new_set_il(&interner);
     let set = library_js_like_set_constructor_contract(Lang::JavaScript, "Set").unwrap();
-    il.evidence.push(library_api_contract_evidence(
-        3,
-        sp(73),
-        set.id,
-        set.callee,
-        1,
-        vec![EvidenceId(0), EvidenceId(1)],
-    ));
+    il.evidence
+        .push(js_like_builtin_collection_constructor_evidence(
+            3,
+            sp(73),
+            set.id,
+            set.callee,
+            1,
+            vec![EvidenceId(0), EvidenceId(1)],
+        ));
     let mut builder = Builder::new(&il, &interner);
     let admitted = builder.eval(call, &FxHashMap::default());
     assert!(matches!(

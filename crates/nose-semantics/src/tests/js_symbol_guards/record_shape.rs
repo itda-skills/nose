@@ -88,14 +88,19 @@ fn record_guard_record(
     )
 }
 
-fn js_record_guard_il_with_surface(interner: &Interner, subject: &str) -> (Il, NodeId) {
-    let (mut il, guard) = js_record_guard_il(interner, subject);
-    il.evidence.push(evidence(
-        0,
-        EvidenceAnchor::sequence(sp(12)),
+fn record_guard_surface_evidence(id: u32, span: Span) -> EvidenceRecord {
+    language_core_evidence(
+        id,
+        EvidenceAnchor::sequence(span),
         EvidenceKind::SequenceSurface(SequenceSurfaceKind::RecordGuard),
         EvidenceStatus::Asserted,
-    ));
+        Lang::JavaScript,
+    )
+}
+
+fn js_record_guard_il_with_surface(interner: &Interner, subject: &str) -> (Il, NodeId) {
+    let (mut il, guard) = js_record_guard_il(interner, subject);
+    il.evidence.push(record_guard_surface_evidence(0, sp(12)));
     (il, guard)
 }
 
@@ -106,12 +111,7 @@ fn record_shape_guard_requires_dedicated_guard_evidence() {
 
     assert!(!record_shape_guard_for_node(&il, &interner, guard));
 
-    il.evidence.push(evidence(
-        0,
-        EvidenceAnchor::sequence(sp(12)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::RecordGuard),
-        EvidenceStatus::Asserted,
-    ));
+    il.evidence.push(record_guard_surface_evidence(0, sp(12)));
     assert!(!record_shape_guard_for_node(&il, &interner, guard));
 
     il.evidence.push(array_is_array_dependency(
@@ -266,12 +266,7 @@ fn record_shape_guard_boolean_truthy_null_check_requires_full_proofs() {
 fn record_shape_guard_rejects_mismatched_or_ambiguous_evidence() {
     let interner = Interner::new();
     let (mut il, guard) = js_record_guard_il(&interner, "value");
-    il.evidence.push(evidence(
-        0,
-        EvidenceAnchor::sequence(sp(12)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::RecordGuard),
-        EvidenceStatus::Asserted,
-    ));
+    il.evidence.push(record_guard_surface_evidence(0, sp(12)));
     il.evidence.push(array_is_array_dependency(
         1,
         sp(12),
@@ -294,12 +289,7 @@ fn record_shape_guard_rejects_mismatched_or_ambiguous_evidence() {
     assert!(!record_shape_guard_for_node(&il, &interner, guard));
 
     let (mut il, guard) = js_record_guard_il(&interner, "value");
-    il.evidence.push(evidence(
-        0,
-        EvidenceAnchor::sequence(sp(12)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::RecordGuard),
-        EvidenceStatus::Asserted,
-    ));
+    il.evidence.push(record_guard_surface_evidence(0, sp(12)));
     il.evidence.push(array_is_array_dependency(
         1,
         sp(12),
@@ -322,12 +312,7 @@ fn record_shape_guard_rejects_mismatched_or_ambiguous_evidence() {
     assert!(!record_shape_guard_for_node(&il, &interner, guard));
 
     let (mut il, guard) = js_record_guard_il(&interner, "value");
-    il.evidence.push(evidence(
-        0,
-        EvidenceAnchor::sequence(sp(12)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::RecordGuard),
-        EvidenceStatus::Asserted,
-    ));
+    il.evidence.push(record_guard_surface_evidence(0, sp(12)));
     il.evidence.push(array_is_array_dependency(
         1,
         sp(12),
@@ -389,12 +374,7 @@ fn record_shape_guard_keeps_source_subject_proof_after_alpha_rename() {
     );
     let root = b.add(NodeKind::Block, Payload::None, sp(13), &[guard]);
     let mut il = finish_il(b, root, Lang::JavaScript);
-    il.evidence.push(evidence(
-        0,
-        EvidenceAnchor::sequence(sp(13)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::RecordGuard),
-        EvidenceStatus::Asserted,
-    ));
+    il.evidence.push(record_guard_surface_evidence(0, sp(13)));
     il.evidence.push(array_is_array_dependency(
         1,
         sp(13),

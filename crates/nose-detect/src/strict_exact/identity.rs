@@ -28,7 +28,7 @@ pub(super) fn strict_exact_callee_identity(
             }) => true,
             CallTargetEvidenceStatus::Admitted(CallTargetEvidenceKind::DirectFunction {
                 ..
-            }) => facts.direct_function_target_at_call(il, call),
+            }) => facts.direct_function_target_at_call(il, interner, call),
             CallTargetEvidenceStatus::Admitted(
                 CallTargetEvidenceKind::DirectMethod { .. }
                 | CallTargetEvidenceKind::ImportedMember { .. }
@@ -36,7 +36,7 @@ pub(super) fn strict_exact_callee_identity(
             ) => false,
             CallTargetEvidenceStatus::Missing => {
                 strict_exact_safe_var(il, facts, callee)
-                    || facts.direct_function_target_at_call(il, call)
+                    || facts.direct_function_target_at_call(il, interner, call)
             }
         },
         NodeKind::Field => {

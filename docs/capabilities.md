@@ -26,7 +26,7 @@ nose capabilities
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "tool": {
     "name": "nose",
     "version": "<version>"
@@ -46,8 +46,8 @@ nose capabilities
     "deprecated": []
   },
   "schemas": {
-    "capabilities": [2],
-    "query_json": [4],
+    "capabilities": [3],
+    "query_json": [6],
     "semantic_packs": ["nose.semantic-pack.v0"],
     "semantic_pack_conformance": [1]
   },
@@ -85,7 +85,7 @@ nose capabilities
   "semantic_packs": {
     "api_versions": ["nose.semantic-pack.v0"],
     "loading": [
-      "compiled-first-party",
+      "compiled-builtin",
       "local-manifest-file",
       "local-manifest-directory"
     ],
@@ -95,12 +95,20 @@ nose capabilities
     ],
     "conformance_output_formats": ["human", "json"],
     "trust": [
-      "default-first-party",
-      "first-party-optional",
+      "builtin-default",
+      "builtin-optional",
       "external-opt-in"
     ],
     "external_packs_enabled_by_default": false,
-    "external_pack_influence": "metadata-only"
+    "external_pack_influence": "metadata-only",
+    "external_influence_blockers": [
+      "data-only-registration",
+      "dependency-backed-evidence-unavailable",
+      "explicit-influence-trust-gate-missing",
+      "executable-conformance-unavailable",
+      "row-conflict"
+    ],
+    "external_pack_execution": "none"
   },
   "il": {
     "output_formats": ["sexpr", "json"],
@@ -121,11 +129,11 @@ should treat absence from `query.modes` as "not stable for automation."
 installed binary's own version (`nose --version`); the example deliberately does not pin a
 release so it can't drift.
 
-## Version 2 fields
+## Version 3 Fields
 
 | field | type | meaning |
 |---|---|---|
-| `schema_version` | integer | Capabilities contract version. Version 2 is documented here. |
+| `schema_version` | integer | Capabilities contract version. Version 3 is documented here. |
 | `tool.name` | string | Always `nose`. |
 | `tool.version` | string | Package version of the installed binary. |
 | `platform.os` | string | Rust target OS name, such as `linux`, `macos`, or `windows`. |
@@ -135,11 +143,11 @@ release so it can't drift.
 | `interfaces.version_json` | boolean | Whether `nose --version --json` is supported. Version 1 reports `false`. |
 | `interfaces.doctor_json` | boolean | Whether `nose doctor --json` is supported. Version 1 reports `false`. |
 | `commands.stable` | array | Stable user-facing commands that integrations may invoke (incl. `query`, the interactive exploration surface — see [usage › nose query](usage.md#nose-query), with its versioned [query-JSON](query-json.md) contract). Hidden research commands are intentionally omitted. |
-| `commands.deprecated` | array | Commands that still work but are being retired. Version 2 reports an empty array. |
+| `commands.deprecated` | array | Commands that still work but are being retired. Version 3 reports an empty array. |
 | `schemas.capabilities` | array | Supported capabilities schema versions. |
 | `schemas.query_json` | array | Supported `nose query --format json` schema versions ([query-json](query-json.md)). |
 | `schemas.semantic_packs` | array | Supported semantic-pack manifest API versions, currently `nose.semantic-pack.v0`. |
-| `schemas.semantic_pack_conformance` | array | Supported `nose semantic-pack check --format json` schema versions. |
+| `schemas.semantic_pack_conformance` | array | Supported `nose semantic-pack check --format json` schema versions. Version 1 reports structural conformance plus row-level external influence preflight blockers. |
 | `query.modes` | array | Supported `--mode` values. |
 | `query.default_modes` | array | Modes used by `nose query` when `--mode` is omitted. |
 | `query.output_formats` | array | Supported `nose query --format` values. |
@@ -147,12 +155,14 @@ release so it can't drift.
 | `query.config_keys` | array | Supported `[query]` keys in `nose.toml` / `.nose.toml`. |
 | `query.capabilities` | object | Stable boolean capability flags for query workflows. |
 | `semantic_packs.api_versions` | array | Supported semantic-pack manifest API versions. |
-| `semantic_packs.loading` | array | Supported loading sources: compiled first-party and local manifest files/directories. |
+| `semantic_packs.loading` | array | Supported loading sources. Schema version 3 reports `compiled-builtin` for compiled builtin packs, plus local manifest files/directories. |
 | `semantic_packs.conformance` | array | Supported conformance input sources: local manifest files/directories. |
 | `semantic_packs.conformance_output_formats` | array | Supported `nose semantic-pack check --format` values. |
 | `semantic_packs.trust` | array | Supported trust policy labels. |
 | `semantic_packs.external_packs_enabled_by_default` | boolean | Always `false`; external packs require explicit CLI/config opt-in. |
 | `semantic_packs.external_pack_influence` | string | Current influence of loaded external packs, `metadata-only`. |
+| `semantic_packs.external_influence_blockers` | array | Stable blocker labels that currently prevent external rows from influencing analysis. |
+| `semantic_packs.external_pack_execution` | string | Current external pack execution support. Version 3 reports `none`; local external packs do not run recognizers, parser/lowering plugins, producer code, sandboxed code, or fixture contents. |
 | `il.output_formats` | array | Supported `nose il --format` values. |
 | `il.normalized` | boolean | Whether `nose il --normalized` is supported. |
 | `il.cfg_norm_toggle` | boolean | Whether `nose il --no-cfg-norm` is supported. |
@@ -166,7 +176,7 @@ capabilities schema version.
 
 ## Query Capability Flags
 
-Version 2 defines these `query.capabilities` keys:
+Version 3 defines these `query.capabilities` keys:
 
 | key | meaning |
 |---|---|
@@ -180,5 +190,5 @@ Version 2 defines these `query.capabilities` keys:
 | `inline_suppression` | Source-level `nose-ignore` markers are supported. |
 | `multi_root` | `nose query --root <path>` / `-r <path>` repeatable root analysis is supported. |
 | `reinvented_view` | The `reinvented` query view is supported. |
-| `semantic_pack_loading` | local semantic-pack v0 manifest files/directories can be loaded for provenance reporting. |
+| `semantic_pack_loading` | local semantic-pack v0 manifest files/directories can be loaded for metadata validation. |
 | `structured_ignores` | `nose.ignore.json` / `--ignore-file` audited suppressions are supported. |

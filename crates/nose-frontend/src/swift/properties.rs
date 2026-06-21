@@ -44,11 +44,10 @@ pub(super) fn record_property_binding_domain(
     let Some(domain) = lo.type_domain_from_text_with_dependencies(lo.text(type_node)) else {
         return;
     };
-    lo.record_evidence_with_pack_dependencies(
+    lo.record_evidence_with_provenance_dependencies(
         EvidenceAnchor::binding(lo.span(name_node), stable_symbol_hash(&name)),
         EvidenceKind::Domain(domain.domain),
-        domain.provenance.pack_id,
-        domain.provenance.rule,
+        domain.provenance.evidence_provenance,
         domain.dependencies,
     );
 }
@@ -83,11 +82,10 @@ pub(super) fn record_property_binding_domain_from_decl_text(
     let Some(domain) = lo.type_domain_from_text_with_dependencies(&annotated) else {
         return;
     };
-    lo.record_evidence_with_pack_dependencies(
+    lo.record_evidence_with_provenance_dependencies(
         EvidenceAnchor::binding(lo.span(name_node), stable_symbol_hash(&name)),
         EvidenceKind::Domain(domain.domain),
-        domain.provenance.pack_id,
-        domain.provenance.rule,
+        domain.provenance.evidence_provenance,
         domain.dependencies,
     );
 }

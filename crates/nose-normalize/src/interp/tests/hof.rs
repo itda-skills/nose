@@ -327,8 +327,8 @@ fn hof_filter_map_effectful_lambda() -> Behavior {
     let il = b.finish(
         func,
         FileMeta {
-            path: "t".into(),
-            lang: Lang::Rust,
+            path: "t.py".into(),
+            lang: Lang::Python,
         },
         Vec::new(),
         Vec::new(),
@@ -424,7 +424,7 @@ fn java_stream_map_returning_stream_stays_nested() {
     );
 }
 
-fn java_stream_flat_map_effectful_lambda_behavior() -> Behavior {
+fn flat_map_effectful_lambda_behavior() -> Behavior {
     let sp = Span::synthetic(FileId(0));
     let mut b = IlBuilder::new(FileId(0));
     let xs_param = b.add(NodeKind::Param, Payload::Cid(0), sp, &[]);
@@ -460,8 +460,8 @@ fn java_stream_flat_map_effectful_lambda_behavior() -> Behavior {
     let il = b.finish(
         func,
         FileMeta {
-            path: "T.java".into(),
-            lang: Lang::Java,
+            path: "t.py".into(),
+            lang: Lang::Python,
         },
         Vec::new(),
         Vec::new(),
@@ -471,8 +471,8 @@ fn java_stream_flat_map_effectful_lambda_behavior() -> Behavior {
 }
 
 #[test]
-fn java_stream_flat_map_effectful_lambda_records_effects() {
-    let behavior = java_stream_flat_map_effectful_lambda_behavior();
+fn flat_map_effectful_lambda_records_effects() {
+    let behavior = flat_map_effectful_lambda_behavior();
     assert_eq!(
         behavior.ret,
         Value::List(vec![Value::Int(1), Value::Int(2)])

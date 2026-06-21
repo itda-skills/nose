@@ -249,14 +249,15 @@ fn query_dashboard_filter_and_family() {
         "query --fail-on new requires --baseline"
     );
 
-    // The JSON form is the structured, versioned query-v4 contract (every view).
+    // The JSON form is the structured, versioned query-v6 contract (every view).
     let dash: serde_json::Value =
         serde_json::from_str(&run_raw(&["query", p, "--format", "json"])).unwrap();
     assert_eq!(
-        dash["schema_version"], 4,
-        "dashboard json is schema v4: {dash}"
+        dash["schema_version"], 6,
+        "dashboard json is schema v6: {dash}"
     );
     assert_eq!(dash["view"], "dashboard");
+    assert_query_json_reports_semantic_packs(&dash);
     assert!(dash["summary"]["families"].is_number());
     assert!(
         dash["families"].is_array() && dash["top_candidates"].is_array(),
@@ -276,6 +277,11 @@ fn query_dashboard_filter_and_family() {
     let list: serde_json::Value =
         serde_json::from_str(&run(&["query", p, "members>1", "--format", "json"])).unwrap();
     assert_eq!(list["view"], "list");
+    assert_query_json_reports_semantic_packs(&list);
+    let grouped: serde_json::Value =
+        serde_json::from_str(&run(&["query", p, "group=dir", "--format", "json"])).unwrap();
+    assert_eq!(grouped["view"], "group");
+    assert_query_json_reports_semantic_packs(&grouped);
     let fam = &list["families"][0];
     for k in [
         "id",
@@ -303,6 +309,7 @@ fn query_dashboard_filter_and_family() {
     ]))
     .unwrap();
     assert_eq!(opened["view"], "family");
+    assert_query_json_reports_semantic_packs(&opened);
     assert!(
         opened["family"]["skeleton"].is_array(),
         "id=…full json carries skeleton: {opened}"

@@ -1,7 +1,7 @@
 # Scan JSON schema
 
 > **Deprecated (0.10.0).** scan-JSON v1 is the legacy machine contract.
-> [query-JSON v3](query-json.md) (`nose query --format json`) is the forward,
+> [query-JSON](query-json.md) (`nose query --format json`) is the forward,
 > view-shaped contract over the same family dataset — it mirrors the exploration
 > surface so a caller drives the same dashboard → slice → open-family loop. scan-JSON
 > v1 stays documented and emitted for back-compat; it will be removed in a later
@@ -15,7 +15,7 @@ scan JSON schema versions with [capabilities](capabilities.md). An LLM agent
 consuming this schema should follow the validated triage protocol in
 [agent-recipe](agent-recipe.md). This is the deprecated one-shot batch contract; the
 forward, view-shaped machine contract over the same dataset is
-[query-JSON v3](query-json.md) (`nose query --format json`).
+[query-JSON](query-json.md) (`nose query --format json`).
 
 ## Version 1
 
@@ -31,76 +31,6 @@ The top-level value is always an object:
       { "language": "python", "files": 4 }
     ]
   },
-  "semantic_packs": [
-    {
-      "id": "nose.first_party",
-      "hash": "87b19e582546aed9",
-      "kind": "LanguagePack",
-      "version": "<version>",
-      "display_name": "nose first-party semantic kernel",
-      "trust": "default-first-party",
-      "enabled_by_default": true,
-      "source": "compiled-first-party",
-      "influence": "evidence-and-contracts",
-      "provider": "Corca, Inc.",
-      "repository": "https://github.com/corca-ai/nose",
-      "license": "MIT",
-      "supported_languages": [],
-      "counts": {
-        "evidence_producers": 0,
-        "contracts": 0,
-        "value_laws": 0,
-        "positive_fixtures": 0,
-        "hard_negatives": 0
-      }
-    },
-    {
-      "id": "nose.python.stdlib.type_domain",
-      "hash": "783a582a461f58f3",
-      "kind": "StdlibPack",
-      "version": "<version>",
-      "display_name": "nose Python stdlib type-domain pack",
-      "trust": "default-first-party",
-      "enabled_by_default": true,
-      "source": "compiled-first-party",
-      "influence": "evidence-and-contracts",
-      "provider": "Corca, Inc.",
-      "repository": "https://github.com/corca-ai/nose",
-      "license": "MIT",
-      "supported_languages": [
-        "python"
-      ],
-      "counts": {
-        "evidence_producers": 1,
-        "contracts": 1,
-        "value_laws": 0,
-        "positive_fixtures": 36,
-        "hard_negatives": 2
-      }
-    },
-    {
-      "id": "nose.value_graph.laws",
-      "hash": "f65998031968ccc9",
-      "kind": "LawPack",
-      "version": "<version>",
-      "display_name": "nose value-graph law pack",
-      "trust": "default-first-party",
-      "enabled_by_default": true,
-      "source": "compiled-first-party",
-      "influence": "evidence-and-contracts",
-      "provider": "Corca, Inc.",
-      "repository": "https://github.com/corca-ai/nose",
-      "license": "MIT",
-      "supported_languages": [],
-      "counts": {
-        "evidence_producers": 0,
-        "contracts": 0,
-        "value_laws": 2,
-        "positive_fixtures": 2,
-        "hard_negatives": 4
-      }
-    }
-  ],
   "ranking": {
     "sort": "extractability",
     "total_families": 12,
@@ -138,8 +68,9 @@ A checked-in example lives at
 [crates/nose-cli/tests/fixtures/scan-json-v1.json](../crates/nose-cli/tests/fixtures/scan-json-v1.json)
 and is read by the CLI test suite. `tool_version` is shown above as the `<version>`
 placeholder: it always reports the installed binary's own version, so the example does not
-pin a release. The `semantic_packs` array always lists the compiled first-party packs shown
-above; the `ignore` object appears **only** when an ignore file is read (via `--ignore-file`
+pin a release. Semantic-pack metadata is query-only in
+[query-JSON schema v6](query-json.md#semantic-packs); legacy scan JSON v1 does not
+emit `semantic_packs`. The `ignore` object appears **only** when an ignore file is read (via `--ignore-file`
 or an auto-detected `nose.ignore.json`), so a plain run omits it.
 
 > **`--top` truncates machine output too.** `families` contains only the top `--top`
@@ -174,7 +105,6 @@ same breakdown for families with at least one exact fragment location. That make
 | `tool_version` | string | The `nose` package version that emitted the report. |
 | `scope.files` | integer | Number of supported source files scanned after ignores and excludes. |
 | `scope.languages` | array | Per-language file counts, largest first. |
-| `semantic_packs` | array, optional in v1 | Active semantic packs for this scan. Binaries that advertise `scan.capabilities.semantic_pack_loading` in [capabilities](capabilities.md) emit it and include compiled first-party packs such as `nose.first_party`, `nose.python.stdlib.type_domain`, and `nose.value_graph.laws`; local `--semantic-pack`/config packs are listed with `metadata-only` influence. Older v1 binaries omit this field. |
 | `ranking.sort` | string | Sort key used for `families`: `extractability` (default), `value`, `sites`, or `hazard`. |
 | `ranking.total_families` | integer | Active families remaining after rank-time pruning, filters, baseline suppression, and structured ignores, before `--top`. |
 | `ranking.shown_families` | integer | Families present in `families`. |
@@ -193,26 +123,6 @@ new families and changed families. Exact baseline matches are counted in
 When structured ignores are active, `families` contains only active findings.
 Ignored current families are omitted from `ranking.total_families` and appear in
 `ignored_families` instead.
-
-## Semantic pack fields
-
-When `semantic_packs` is present, each entry has:
-
-| field | type | meaning |
-|---|---|---|
-| `id` | string | Stable manifest pack id. |
-| `hash` | string | Stable 16-hex-digit hash derived from the pack id; first-party evidence provenance uses the same id-hash policy. |
-| `kind` | string | `LanguagePack`, `StdlibPack`, `LibraryPack`, `ProtocolPack`, or `LawPack`. |
-| `version` | string | Pack version from the manifest or the nose package version for compiled first-party packs. |
-| `display_name` | string | Human-readable pack name. |
-| `trust` | string | `default-first-party`, `first-party-optional`, or `external-opt-in`. Local manifests are rejected unless they use `external-opt-in`; first-party trust comes only from compiled packs. |
-| `enabled_by_default` | boolean | Whether the pack is default-enabled. Local manifests are rejected unless this is `false`; compiled first-party packs report `true`. |
-| `source` | string | `compiled-first-party` or `local-manifest`. |
-| `influence` | string | `evidence-and-contracts` for compiled first-party semantics, `metadata-only` for loaded local external packs today. |
-| `path` | string, optional | Local manifest path for loaded manifests. |
-| `provider`, `repository`, `license` | string | Manifest provenance fields. |
-| `supported_languages` | array | Manifest language ids. |
-| `counts` | object | Counts of declared evidence producers, contracts, value laws, positive fixtures, and hard negatives. |
 
 ## Baseline fields
 
@@ -287,7 +197,7 @@ schema version 1:
 | `witness` | object, optional | The agent-facing equivalence witness: WHY the members merged. `kind` is `exact-value-graph` (every member strict-exact-safe with one identical value multiset; `value_nodes` carries its size — for proof substance see `semantic_laws` and fragment `reason_code`), `shared-sub-dag` (a common heavy anchor; see each location's `shared_subdag` span), `copy-paste-run` (token-identical contiguous run), or `structural-similarity` (the fuzzy near channel; `mean_value_jaccard` vs `mean_shape_jaccard` distinguish behaviorally-driven convergence from surface likeness). For `structural-similarity` families the optional `graded` object grades that score into "equal except *k* holes" — see [graded-witness](graded-witness.md) and the row below. |
 | `witness.graded` | object, optional | The anti-unification grade of a `structural-similarity` family's two representative copies: how nearly equal they really are, beyond the score. `holes` is *k* (the spots where the two value DAGs differ); `spots[]` itemizes them (each with a value `class` — `literal`/`input`/`field`/`call`/`lambda`/`operator`/`expr` are clean parameters, `arity`/`shape`/`unmodeled`/`extra-sink`/`decorator` are structural divergence — an `effect` flag, per-side `a_lines`/`b_lines`, and trimmed `a_text`/`b_text`). `equal_modulo_holes` is true when every hole is a small value leaf, the behavior sinks aligned, no name mismatched, and the copies' decorators match — the strongest near-channel grade. `patterns[]` names recognized divergence shapes (`effects-reordered`, `sink-superset-a`/`-b`, `fragment-containment`, `low-substance`, `referent-mismatch`, `decorator-differs`). `referent_mismatches[]` lists names both copies consume that resolve to *different* definitions (which **demotes** the claim — fail-closed); `caveat_names[]` lists names unresolved on one side (the claim is scoped past them). `modeled_caveat` is true when either copy passed lossy lowering, so "equal" means equal in the modeled fraction. Scope: the unit *body* the value graph models plus a source-level decorator/attribute comparison (a `@deco(x)` vs `@deco(y)` difference fires `decorator-differs` and demotes the claim); the parameter *signature* is still not modeled (a differing unused parameter is invisible). Same-language near families only; absent for cross-language, fragments, and pathological files. Near-channel evidence, not an exact-channel proof. See [graded-witness](graded-witness.md). |
 | `varying_spots` | array, optional | WHAT differs between the two representative copies — one entry per varying spot the extracted helper would parameterize (same representative pair as `params`, so the counts agree). Each spot carries `param` (1-based), `a_lines`/`b_lines` (absolute inclusive `[start, end]` per side; one side absent for pure insertions), and trimmed, length-capped `a_text`/`b_text`. Combined with the witness's shape-vs-value Jaccard, an all-literal spot list identifies a data-table family without reading source. Absent for cross-language families and until the presentation layer reads source. |
-| `semantic_laws` | array, optional | Deduped pack-facing law provenance for value-graph laws that actually rewrote or bridged this family. Current first-party rows include `pack_id`, `pack_hash`, `law_id`, `channel`, `proof_status`, and `proof_obligation_id`. External local LawPack manifests are `metadata-only` today and do not appear here unless future producer execution admits them through the kernel. |
+| `semantic_laws` | array, optional | Deduped pack-facing law provenance for value-graph laws that actually rewrote or bridged this family. Current builtin rows include `pack_id`, `pack_hash`, `law_id`, `channel`, `proof_status`, and `proof_obligation_id`. External local LawPack manifests are metadata-only for product analysis; their data-only value-law rows do not appear here unless future producer execution admits them through the kernel. |
 
 Each `locations[]` item has:
 

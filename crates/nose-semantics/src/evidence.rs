@@ -4,11 +4,14 @@
 //! lightweight value/domain contracts consumed by operators, normalize, and detect.
 
 use super::*;
+use nose_il::EvidenceProvenance;
 use rustc_hash::FxHashMap;
 
+mod call_target;
 mod domain;
 mod value_laws;
 
+pub use call_target::*;
 pub use domain::*;
 pub use value_laws::*;
 pub struct SourceFactContract {
@@ -244,12 +247,37 @@ pub fn source_operator_at_node(il: &Il, node: NodeId) -> Option<SourceOperatorKi
 
 pub fn source_cast_at_node(il: &Il, node: NodeId) -> Option<SourceCastKind> {
     let span = il.node(node).span;
-    match evidence_at_span(il, span, |evidence| match evidence {
-        EvidenceKind::Source(SourceFactKind::Cast(cast)) => Some(cast),
-        _ => None,
-    }) {
-        EvidenceResolution::Found(cast) => Some(cast),
-        EvidenceResolution::Ambiguous | EvidenceResolution::Missing => None,
+    let mut found = None;
+    for record in il.evidence_anchored_at(span) {
+        if !record.anchor.matches_span(span) {
+            continue;
+        }
+        let EvidenceKind::Source(SourceFactKind::Cast(cast)) = record.kind else {
+            continue;
+        };
+        if record.status != EvidenceStatus::Asserted
+            || !il.evidence_dependencies_asserted(record)
+            || !source_cast_provenance_admitted(record, cast)
+        {
+            return None;
+        }
+        match found {
+            None => found = Some(cast),
+            Some(existing) if existing == cast => {}
+            Some(_) => return None,
+        }
+    }
+    found
+}
+
+fn source_cast_provenance_admitted(record: &EvidenceRecord, cast: SourceCastKind) -> bool {
+    match cast {
+        SourceCastKind::CUnsigned32 => {
+            record.provenance.emitter == EvidenceEmitter::Builtin
+                && record.provenance.pack_hash == Some(stable_symbol_hash(C_LANGUAGE_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID))
+        }
     }
 }
 
@@ -319,179 +347,6 @@ pub fn source_pattern_at_node(il: &Il, node: NodeId) -> Option<SourcePatternKind
     }
 }
 
-pub fn direct_function_call_target_at_call(il: &Il, call: NodeId, target_root: NodeId) -> bool {
-    if il.kind(target_root) != NodeKind::Func {
-        return false;
-    }
-    direct_function_call_target_span_at_call(il, call)
-        .is_some_and(|proven_span| proven_span == il.node(target_root).span)
-}
-
-/// The proven `DirectFunction` target span at `call`, when the call carries
-/// exactly one asserted `CallTarget` record and it is `DirectFunction`. The
-/// span-returning form lets a consumer with many possible targets resolve the
-/// evidence once and look the target up, instead of re-resolving per target.
-pub fn direct_function_call_target_span_at_call(il: &Il, call: NodeId) -> Option<Span> {
-    if il.kind(call) != NodeKind::Call {
-        return None;
-    }
-    let call_span = il.node(call).span;
-    match unique_asserted_evidence_at(
-        il,
-        call_span,
-        |anchor| matches!(anchor, EvidenceAnchor::Node { span, kind } if span == call_span && kind == NodeKind::Call),
-        |evidence| match evidence {
-            EvidenceKind::CallTarget(target) => Some(target),
-            _ => None,
-        },
-    ) {
-        EvidenceResolution::Found(CallTargetEvidenceKind::DirectFunction {
-            target_span: proven_span,
-            ..
-        }) => Some(proven_span),
-        EvidenceResolution::Found(
-            CallTargetEvidenceKind::DirectMethod { .. }
-            | CallTargetEvidenceKind::ImportedFunction { .. }
-            | CallTargetEvidenceKind::ImportedMember { .. }
-            | CallTargetEvidenceKind::DynamicDispatch { .. },
-        ) => None,
-        EvidenceResolution::Ambiguous | EvidenceResolution::Missing => None,
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum CallTargetEvidenceStatus {
-    Missing,
-    Admitted(CallTargetEvidenceKind),
-    Rejected,
-}
-
-pub fn call_target_evidence_at_call(
-    il: &Il,
-    interner: &Interner,
-    call: NodeId,
-) -> Option<CallTargetEvidenceKind> {
-    match call_target_evidence_status_at_call(il, interner, call) {
-        CallTargetEvidenceStatus::Admitted(target) => Some(target),
-        CallTargetEvidenceStatus::Missing | CallTargetEvidenceStatus::Rejected => None,
-    }
-}
-
-pub fn call_target_evidence_status_at_call(
-    il: &Il,
-    interner: &Interner,
-    call: NodeId,
-) -> CallTargetEvidenceStatus {
-    if il.kind(call) != NodeKind::Call {
-        return CallTargetEvidenceStatus::Missing;
-    }
-    let call_span = il.node(call).span;
-    let target = match unique_asserted_evidence_at(
-        il,
-        call_span,
-        |anchor| matches!(anchor, EvidenceAnchor::Node { span, kind } if span == call_span && kind == NodeKind::Call),
-        |evidence| match evidence {
-            EvidenceKind::CallTarget(target) => Some(target),
-            _ => None,
-        },
-    ) {
-        EvidenceResolution::Found(target) => target,
-        EvidenceResolution::Ambiguous => return CallTargetEvidenceStatus::Rejected,
-        EvidenceResolution::Missing => return CallTargetEvidenceStatus::Missing,
-    };
-    if call_target_matches_call_shape(il, interner, call, target) {
-        CallTargetEvidenceStatus::Admitted(target)
-    } else {
-        CallTargetEvidenceStatus::Rejected
-    }
-}
-
-pub fn imported_function_call_target_at_call(il: &Il, interner: &Interner, call: NodeId) -> bool {
-    matches!(
-        call_target_evidence_at_call(il, interner, call),
-        Some(CallTargetEvidenceKind::ImportedFunction { .. })
-    )
-}
-
-pub fn imported_member_call_target_at_call(il: &Il, interner: &Interner, call: NodeId) -> bool {
-    matches!(
-        call_target_evidence_at_call(il, interner, call),
-        Some(CallTargetEvidenceKind::ImportedMember { .. })
-    )
-}
-
-pub fn direct_method_call_target_at_call(
-    il: &Il,
-    interner: &Interner,
-    call: NodeId,
-    target_root: NodeId,
-) -> bool {
-    if il.kind(call) != NodeKind::Call || il.kind(target_root) != NodeKind::Func {
-        return false;
-    }
-    matches!(
-        call_target_evidence_at_call(il, interner, call),
-        Some(CallTargetEvidenceKind::DirectMethod { target_span, .. })
-            if target_span == il.node(target_root).span
-    )
-}
-
-fn call_target_matches_call_shape(
-    il: &Il,
-    interner: &Interner,
-    call: NodeId,
-    target: CallTargetEvidenceKind,
-) -> bool {
-    let Some(&callee) = il.children(call).first() else {
-        return false;
-    };
-    match target {
-        CallTargetEvidenceKind::DirectFunction { name_hash, .. }
-        | CallTargetEvidenceKind::ImportedFunction {
-            local_hash: name_hash,
-            ..
-        } => var_selector_matches_if_available(il, interner, callee, name_hash),
-        CallTargetEvidenceKind::DirectMethod { method_hash, .. }
-        | CallTargetEvidenceKind::DynamicDispatch { method_hash, .. } => {
-            field_selector_matches(il, interner, callee, method_hash)
-        }
-        CallTargetEvidenceKind::ImportedMember { member_hash, .. } => {
-            field_selector_matches(il, interner, callee, member_hash)
-        }
-    }
-}
-
-fn var_selector_matches_if_available(
-    il: &Il,
-    interner: &Interner,
-    callee: NodeId,
-    expected_hash: u64,
-) -> bool {
-    if il.kind(callee) != NodeKind::Var {
-        return false;
-    }
-    match il.node(callee).payload {
-        Payload::Name(name) => interner.symbol_hash(name) == expected_hash,
-        Payload::Cid(_) => true,
-        _ => false,
-    }
-}
-
-fn field_selector_matches(
-    il: &Il,
-    interner: &Interner,
-    callee: NodeId,
-    expected_hash: u64,
-) -> bool {
-    if il.kind(callee) != NodeKind::Field {
-        return false;
-    }
-    match il.node(callee).payload {
-        Payload::Name(name) => interner.symbol_hash(name) == expected_hash,
-        _ => false,
-    }
-}
-
 pub fn admitted_hof_api_at_node(il: &Il, node: NodeId, kind: HoFKind) -> bool {
     if il.kind(node) != NodeKind::HoF || il.node(node).payload != Payload::HoF(kind) {
         return false;
@@ -538,6 +393,19 @@ pub fn admitted_builtin_semantics_at_call(il: &Il, node: NodeId, builtin: Builti
     }
     language_core_builtin_at_call(il, node, builtin)
         || library_api_dependency_id_for_canonical_builtin_call(il, node, builtin).is_some()
+}
+
+pub fn admitted_builtin_semantics_at_call_with_interner(
+    il: &Il,
+    interner: &Interner,
+    node: NodeId,
+    builtin: Builtin,
+) -> bool {
+    admitted_builtin_semantics_at_call(il, node, builtin)
+        || library_api_dependency_id_for_canonical_builtin_call_with_interner(
+            il, interner, node, builtin,
+        )
+        .is_some()
 }
 
 pub fn construct_syntax_proof(il: &Il, node: NodeId) -> bool {

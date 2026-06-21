@@ -13,12 +13,24 @@ fn import_backed_param_domain_pack_hash(
     exported: &str,
     domain: DomainEvidence,
 ) -> Option<u64> {
+    import_backed_param_domain_provenance(evidence, exported, domain)
+        .map(|(pack_hash, _)| pack_hash)
+}
+
+fn import_backed_param_domain_provenance(
+    evidence: &[EvidenceRecord],
+    exported: &str,
+    domain: DomainEvidence,
+) -> Option<(u64, u64)> {
     let import_ids = imported_binding_symbol_ids(evidence, "typing", exported);
     assert_eq!(import_ids.len(), 1);
     let py_domains = param_domain_records(evidence, domain);
     assert_eq!(py_domains.len(), 1);
     assert_eq!(py_domains[0].dependencies, import_ids);
-    py_domains[0].provenance.pack_hash
+    py_domains[0]
+        .provenance
+        .pack_hash
+        .zip(py_domains[0].provenance.rule_hash)
 }
 
 fn assert_python_typing_alias_param_domains(interner: &Interner) {
@@ -29,15 +41,16 @@ fn assert_python_typing_alias_param_domains(interner: &Interner) {
         interner,
     );
     assert_eq!(
-        import_backed_param_domain_pack_hash(
+        import_backed_param_domain_provenance(
             &py_alias.evidence,
             "List",
             DomainEvidence::Collection
         ),
-        Some(stable_symbol_hash(
-            nose_semantics::PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID
+        Some((
+            stable_symbol_hash(nose_semantics::PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID),
+            stable_symbol_hash(nose_semantics::PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID)
         )),
-        "imported Python stdlib type aliases should carry the pilot pack provenance"
+        "imported Python stdlib type aliases should carry pack and producer provenance"
     );
 
     let py_direct_import_alias = lower_fixture(

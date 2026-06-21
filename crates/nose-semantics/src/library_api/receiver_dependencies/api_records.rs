@@ -1,5 +1,18 @@
 use super::*;
 
+mod canonical;
+mod receiver_proofs;
+
+pub(crate) use canonical::language_core_builtin_at_call;
+use canonical::library_api_method_call_record_contract;
+pub use canonical::{
+    library_api_dependency_id_for_canonical_builtin_call,
+    library_api_dependency_id_for_canonical_builtin_call_with_interner,
+    library_api_dependency_id_for_canonical_builtin_method_call,
+    library_api_dependency_id_for_canonical_builtin_method_call_with_interner,
+};
+use receiver_proofs::normalized_hof_method_call_dependencies_match;
+
 pub(crate) fn library_api_dependency_id_for_normalized_hof(
     il: &Il,
     receiver: NodeId,
@@ -21,7 +34,7 @@ pub(crate) fn library_api_dependency_id_for_normalized_hof(
         let EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
             contract_hash,
             callee_hash,
-            ..
+            arity,
         }) = record.kind
         else {
             continue;
@@ -29,7 +42,19 @@ pub(crate) fn library_api_dependency_id_for_normalized_hof(
         if contract_hash != expected_contract_hash {
             continue;
         }
-        if library_api_callee_contract_for_hash(il.meta.lang, expected_id, callee_hash).is_none() {
+        let Some(callee) =
+            library_api_callee_contract_for_hash(il.meta.lang, expected_id, callee_hash)
+        else {
+            continue;
+        };
+        let Some(contract) =
+            library_api_method_call_record_contract(il, expected_id, callee, arity)
+        else {
+            continue;
+        };
+        if !library_api_record_provenance_matches_contract(expected_id, callee, record)
+            || !normalized_hof_method_call_dependencies_match(il, receiver, record, contract)
+        {
             continue;
         }
         match found {
@@ -101,180 +126,6 @@ pub(in crate::library_api) fn library_api_dependency_id_for_call(
     id: LibraryApiContractId,
 ) -> Option<EvidenceId> {
     library_api_dependency_id_for_call_predicate(il, interner, call, |actual| actual == id)
-}
-
-pub(crate) fn language_core_builtin_at_call(il: &Il, call: NodeId, builtin: Builtin) -> bool {
-    let arity = il.children(call).len();
-    match (il.meta.lang, builtin, arity) {
-        (Lang::Go, Builtin::Contains, 2) => true,
-        (Lang::Go, Builtin::Enumerate, 1) => true,
-        (Lang::Python, Builtin::DictEntry, 2) => true,
-        (
-            Lang::JavaScript | Lang::TypeScript | Lang::Vue | Lang::Svelte | Lang::Html,
-            Builtin::Keys,
-            1,
-        ) => true,
-        (Lang::C, Builtin::UnsignedCast32, 1) => {
-            source_cast_at_node(il, call) == Some(SourceCastKind::CUnsigned32)
-        }
-        (_, Builtin::Append, 2) => {
-            asserted_effect_at_node(il, call, EffectEvidenceKind::BuilderAppendCall)
-        }
-        _ => false,
-    }
-}
-
-/// The asserted same-span `LibraryApi` evidence record that licenses a canonical builtin call.
-///
-/// Normalization may rewrite a source/library call to `Payload::Builtin`, but the payload is only
-/// an operation shape. Producers of downstream evidence can use this helper to preserve the
-/// original source/API proof as a dependency instead of treating the canonical payload as proof.
-pub fn library_api_dependency_id_for_canonical_builtin_call(
-    il: &Il,
-    call: NodeId,
-    builtin: Builtin,
-) -> Option<EvidenceId> {
-    library_api_dependency_id_for_canonical_builtin_call_contract(il, call, |record, id, _, _| {
-        library_api_record_models_canonical_builtin(il, record, id, builtin)
-    })
-}
-
-pub fn library_api_dependency_id_for_canonical_builtin_method_call(
-    il: &Il,
-    call: NodeId,
-    builtin: Builtin,
-    expected_callee: LibraryApiCalleeContract,
-    expected_arity: u16,
-) -> Option<EvidenceId> {
-    library_api_dependency_id_for_canonical_builtin_call_contract(
-        il,
-        call,
-        |record, id, callee, arity| {
-            library_api_record_models_canonical_builtin(il, record, id, builtin)
-                && callee == Some(expected_callee)
-                && arity == expected_arity
-        },
-    )
-}
-
-pub(in crate::library_api) fn library_api_dependency_id_for_canonical_builtin_call_contract(
-    il: &Il,
-    call: NodeId,
-    accepts: impl Fn(
-        &EvidenceRecord,
-        LibraryApiContractId,
-        Option<LibraryApiCalleeContract>,
-        u16,
-    ) -> bool,
-) -> Option<EvidenceId> {
-    if il.kind(call) != NodeKind::Call {
-        return None;
-    }
-    let span = il.node(call).span;
-    let mut found = None;
-    for record in il.evidence_anchored_at(span) {
-        if !matches!(
-            record.anchor,
-            EvidenceAnchor::Node {
-                span: record_span,
-                kind: NodeKind::Call | NodeKind::Field,
-            } if record_span == span
-        ) {
-            continue;
-        }
-        let EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
-            contract_hash,
-            callee_hash,
-            arity,
-        }) = record.kind
-        else {
-            continue;
-        };
-        let Some(id) = library_api_contract_id_from_hash(contract_hash) else {
-            continue;
-        };
-        let callee = library_api_callee_contract_for_hash(il.meta.lang, id, callee_hash);
-        if !accepts(record, id, callee, arity) {
-            return None;
-        }
-        if record.status != EvidenceStatus::Asserted || !il.evidence_dependencies_asserted(record) {
-            return None;
-        }
-        match found {
-            None => found = Some(record.id),
-            Some(existing) if existing == record.id => {}
-            Some(_) => return None,
-        }
-    }
-    found
-}
-
-pub(in crate::library_api) fn library_api_record_models_canonical_builtin(
-    il: &Il,
-    record: &EvidenceRecord,
-    id: LibraryApiContractId,
-    builtin: Builtin,
-) -> bool {
-    if library_api_contract_id_builtin_result(id) == Some(builtin) {
-        return true;
-    }
-    library_api_record_models_rust_map_get_default(il, record, id, builtin)
-}
-
-pub(in crate::library_api) fn library_api_record_models_rust_map_get_default(
-    il: &Il,
-    record: &EvidenceRecord,
-    id: LibraryApiContractId,
-    builtin: Builtin,
-) -> bool {
-    if il.meta.lang != Lang::Rust || builtin != Builtin::GetOrDefault {
-        return false;
-    }
-    let EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
-        callee_hash, arity, ..
-    }) = record.kind
-    else {
-        return false;
-    };
-    if id
-        != LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
-            Builtin::ValueOrDefault,
-        ))
-        || arity != 1
-    {
-        return false;
-    }
-    let Some(LibraryApiCalleeContract::Method {
-        receiver: MethodReceiverContract::RustMapGetOrExactOption,
-        ..
-    }) = library_api_callee_contract_for_hash(il.meta.lang, id, callee_hash)
-    else {
-        return false;
-    };
-    evidence_depends_on_library_api_contract(il, record, LibraryApiContractId::MapGet)
-}
-
-pub(in crate::library_api) fn evidence_depends_on_library_api_contract(
-    il: &Il,
-    record: &EvidenceRecord,
-    expected_id: LibraryApiContractId,
-) -> bool {
-    record.dependencies.iter().any(|&id| {
-        let Some(dependency) = il.evidence_record_by_id(id) else {
-            return false;
-        };
-        if dependency.status != EvidenceStatus::Asserted
-            || !il.evidence_dependencies_asserted(dependency)
-        {
-            return false;
-        }
-        let EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract { contract_hash, .. }) =
-            dependency.kind
-        else {
-            return false;
-        };
-        library_api_contract_id_from_hash(contract_hash) == Some(expected_id)
-    })
 }
 
 pub(in crate::library_api) fn library_api_contract_id_builtin_result(

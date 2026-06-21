@@ -100,10 +100,23 @@ fn js_record_shape_guard_evidence_respects_array_shadowing() {
          function g(scope, value) {
             const { Array } = scope;
             return typeof value === \"object\" && value !== null && !Array.isArray(value);
+         }
+         function h(Boolean, value) {
+            return Boolean(value) && typeof value === \"object\" && !Array.isArray(value);
+         }
+         function i(scope, value) {
+            const { Boolean } = scope;
+            return Boolean(value) && typeof value === \"object\" && !Array.isArray(value);
          }",
     );
 
     assert!(js_record_shape_guard_evidence(&il).is_empty());
+    assert!(
+        il.evidence
+            .iter()
+            .all(|record| !matches!(record.kind, EvidenceKind::LibraryApi(_))),
+        "shadowed Array/Boolean roots must not emit API contract evidence"
+    );
 }
 
 #[test]

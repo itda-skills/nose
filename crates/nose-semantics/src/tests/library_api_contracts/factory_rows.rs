@@ -38,6 +38,7 @@ fn library_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_free_name_collection_factory_contract(Lang::Python, "list"),
         Some(LibraryCollectionFactoryContract {
+            pack_id: PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
             id: LibraryApiContractId::PythonBuiltinCollectionFactory,
             callee: LibraryApiCalleeContract::FreeName {
                 name: "list",
@@ -65,6 +66,7 @@ fn library_api_contracts_carry_identity_and_result_obligations() {
     assert_eq!(
         library_imported_collection_factory_contract(Lang::Python, "collections", "deque"),
         Some(LibraryCollectionFactoryContract {
+            pack_id: PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
             id: LibraryApiContractId::PythonImportedCollectionFactory,
             callee: LibraryApiCalleeContract::ImportedBinding {
                 module: "collections",
@@ -74,8 +76,24 @@ fn library_api_contracts_carry_identity_and_result_obligations() {
         })
     );
     assert_eq!(
+        library_free_name_collection_factory_contract(
+            Lang::Rust,
+            "std::collections::HashSet::from",
+        ),
+        Some(LibraryCollectionFactoryContract {
+            pack_id: RUST_STDLIB_COLLECTION_FACTORY_PACK_ID,
+            id: LibraryApiContractId::RustStdCollectionFactory,
+            callee: LibraryApiCalleeContract::FreeName {
+                name: "std::collections::HashSet::from",
+                shadow: LibraryApiShadowPolicy::RustStdRootForStdPath,
+            },
+            result: LibraryCollectionFactoryResult::SequenceArgument,
+        })
+    );
+    assert_eq!(
         library_free_name_map_factory_contract(Lang::Rust, "std::collections::HashMap::from"),
         Some(LibraryMapFactoryContract {
+            pack_id: RUST_STDLIB_MAP_FACTORY_PACK_ID,
             id: LibraryApiContractId::RustStdMapFactory,
             callee: LibraryApiCalleeContract::FreeName {
                 name: "std::collections::HashMap::from",
@@ -98,13 +116,68 @@ fn library_api_contracts_carry_identity_and_result_obligations() {
         LibraryApiShadowPolicy::RustStdRootForStdPath,
         |_| false
     ));
+    assert_eq!(
+        library_rust_vec_macro_factory_contract(Lang::Rust, "vec"),
+        Some(LibraryCollectionFactoryContract {
+            pack_id: RUST_STDLIB_VEC_PACK_ID,
+            id: LibraryApiContractId::RustVecMacroFactory,
+            callee: LibraryApiCalleeContract::RustMacro {
+                name: "vec",
+                shadow: LibraryApiShadowPolicy::SameName,
+            },
+            result: LibraryCollectionFactoryResult::VariadicElements {
+                single_arg_spreads_array: false,
+            },
+        })
+    );
+    assert_eq!(
+        library_rust_vec_new_factory_contract(Lang::Rust, "Vec::new"),
+        Some(LibraryCollectionFactoryContract {
+            pack_id: RUST_STDLIB_VEC_PACK_ID,
+            id: LibraryApiContractId::RustVecNewFactory,
+            callee: LibraryApiCalleeContract::FreeName {
+                name: "Vec::new",
+                shadow: LibraryApiShadowPolicy::ExplicitRoot("Vec"),
+            },
+            result: LibraryCollectionFactoryResult::EmptySequence,
+        })
+    );
 }
 
 #[test]
 fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
     assert_eq!(
+        library_java_collection_factory_contract(Lang::Java, "List", "of"),
+        Some(LibraryCollectionFactoryContract {
+            pack_id: JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
+            id: LibraryApiContractId::JavaCollectionFactory(JavaCollectionFactoryKind::ListOf),
+            callee: LibraryApiCalleeContract::JavaUtilStaticMember {
+                receiver: "List",
+                method: "of",
+            },
+            result: LibraryCollectionFactoryResult::VariadicElements {
+                single_arg_spreads_array: false,
+            },
+        })
+    );
+    assert_eq!(
+        library_java_collection_factory_contract(Lang::Java, "Set", "of"),
+        Some(LibraryCollectionFactoryContract {
+            pack_id: JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
+            id: LibraryApiContractId::JavaCollectionFactory(JavaCollectionFactoryKind::SetOf),
+            callee: LibraryApiCalleeContract::JavaUtilStaticMember {
+                receiver: "Set",
+                method: "of",
+            },
+            result: LibraryCollectionFactoryResult::VariadicElements {
+                single_arg_spreads_array: false,
+            },
+        })
+    );
+    assert_eq!(
         library_java_collection_factory_contract(Lang::Java, "Arrays", "asList"),
         Some(LibraryCollectionFactoryContract {
+            pack_id: JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
             id: LibraryApiContractId::JavaCollectionFactory(
                 JavaCollectionFactoryKind::ArraysAsList,
             ),
@@ -120,6 +193,7 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
     assert_eq!(
         library_java_collection_constructor_contract(Lang::Java, "ArrayList", 0),
         Some(LibraryCollectionFactoryContract {
+            pack_id: JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
             id: LibraryApiContractId::JavaCollectionConstructor(
                 JavaCollectionConstructorKind::EmptyList,
             ),
@@ -134,8 +208,14 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
         })
     );
     assert_eq!(
+        library_java_collection_constructor_contract(Lang::Java, "java.util.LinkedList", 0)
+            .map(|contract| contract.pack_id),
+        Some(JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID)
+    );
+    assert_eq!(
         library_ruby_set_factory_contract(Lang::Ruby, "Set", "new", 1),
         Some(LibraryCollectionFactoryContract {
+            pack_id: RUBY_STDLIB_SET_PACK_ID,
             id: LibraryApiContractId::RubySetFactory,
             callee: LibraryApiCalleeContract::RubyRequireStaticMember {
                 receiver: "Set",
@@ -149,6 +229,7 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
     assert_eq!(
         library_js_like_map_constructor_contract(Lang::TypeScript, "Map"),
         Some(LibraryMapFactoryContract {
+            pack_id: JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
             id: LibraryApiContractId::JsLikeMapConstructor,
             callee: LibraryApiCalleeContract::JsGlobalConstructor {
                 receiver: "Map",
@@ -156,6 +237,50 @@ fn library_api_factory_contracts_cover_java_ruby_and_js_like_surfaces() {
             },
             result: LibraryMapFactoryResult::EntrySequence {
                 entry_seq_tag: SEQ_VALUE_COLLECTION,
+            },
+        })
+    );
+    assert_eq!(
+        library_js_like_set_constructor_contract(Lang::JavaScript, "Set")
+            .map(|contract| contract.pack_id),
+        Some(JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID)
+    );
+    assert_eq!(
+        library_java_map_factory_contract(Lang::Java, "Map", "of"),
+        Some(LibraryMapFactoryContract {
+            pack_id: JAVA_STDLIB_MAP_FACTORY_PACK_ID,
+            id: LibraryApiContractId::JavaMapFactory(JavaMapFactoryKind::Of),
+            callee: LibraryApiCalleeContract::JavaUtilStaticMember {
+                receiver: "Map",
+                method: "of",
+            },
+            result: LibraryMapFactoryResult::JavaFactory {
+                kind: JavaMapFactoryKind::Of,
+            },
+        })
+    );
+    assert_eq!(
+        library_java_map_factory_contract(Lang::Java, "Map", "ofEntries"),
+        Some(LibraryMapFactoryContract {
+            pack_id: JAVA_STDLIB_MAP_FACTORY_PACK_ID,
+            id: LibraryApiContractId::JavaMapFactory(JavaMapFactoryKind::OfEntries),
+            callee: LibraryApiCalleeContract::JavaUtilStaticMember {
+                receiver: "Map",
+                method: "ofEntries",
+            },
+            result: LibraryMapFactoryResult::JavaFactory {
+                kind: JavaMapFactoryKind::OfEntries,
+            },
+        })
+    );
+    assert_eq!(
+        library_java_map_entry_contract(Lang::Java, "Map", "entry"),
+        Some(LibraryMapEntryFactoryContract {
+            pack_id: JAVA_STDLIB_MAP_ENTRY_PACK_ID,
+            id: LibraryApiContractId::JavaMapEntryFactory,
+            callee: LibraryApiCalleeContract::JavaUtilStaticMember {
+                receiver: "Map",
+                method: "entry",
             },
         })
     );

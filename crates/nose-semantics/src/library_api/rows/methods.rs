@@ -26,6 +26,7 @@ pub fn library_map_key_view_contract(
         _ => return None,
     };
     Some(LibraryMapKeyViewContract {
+        pack_id: MAP_KEY_VIEW_PROTOCOL_PACK_ID,
         id: LibraryApiContractId::MapKeyView(result.kind),
         callee: LibraryApiCalleeContract::Method {
             method: result.method,
@@ -62,6 +63,7 @@ pub fn library_map_key_view_wrapper_contract(
         qualified_path: "Array.from",
     };
     Some(LibraryMapKeyViewWrapperContract {
+        pack_id: JS_LIKE_BUILTIN_ARRAY_PACK_ID,
         id: LibraryApiContractId::MapKeyViewWrapper,
         callee: LibraryApiCalleeContract::StaticGlobalMethod {
             receiver: result.receiver,
@@ -108,6 +110,7 @@ pub fn library_map_get_contract(
         receiver: MethodReceiverContract::ExactMap,
     };
     Some(LibraryMapGetContract {
+        pack_id: MAP_GET_PROTOCOL_PACK_ID,
         id: LibraryApiContractId::MapGet,
         callee: LibraryApiCalleeContract::Method {
             method: result.method,
@@ -143,6 +146,7 @@ pub fn library_js_array_is_array_contract(
         requires_unshadowed_receiver: true,
     };
     Some(LibraryStaticGlobalMethodContract {
+        pack_id: JS_LIKE_BUILTIN_ARRAY_PACK_ID,
         id: LibraryApiContractId::JsArrayIsArray,
         callee: LibraryApiCalleeContract::StaticGlobalMethod {
             receiver: result.receiver,
@@ -167,6 +171,7 @@ pub fn library_js_boolean_coercion_contract(
         requires_unshadowed_function: true,
     };
     Some(LibraryStaticGlobalFunctionContract {
+        pack_id: JS_LIKE_BUILTIN_BOOLEAN_PACK_ID,
         id: LibraryApiContractId::JsBooleanCoercion,
         callee: LibraryApiCalleeContract::StaticGlobalFunction {
             function: result.function,
@@ -189,6 +194,7 @@ pub fn library_regex_test_contract(
         required_receiver_fact: SourceFactKind::Literal(SourceLiteralKind::Regex),
     };
     Some(LibraryRegexTestContract {
+        pack_id: JS_LIKE_BUILTIN_REGEX_PACK_ID,
         id: LibraryApiContractId::RegexTest,
         callee: LibraryApiCalleeContract::RegexLiteralMethod {
             method: result.method,
@@ -205,6 +211,7 @@ pub fn library_static_index_membership_contract(
 ) -> Option<LibraryStaticIndexMembershipContract> {
     let result = static_index_membership_contract(lang, method, arg_count)?;
     Some(LibraryStaticIndexMembershipContract {
+        pack_id: JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID,
         id: LibraryApiContractId::JsLikeStaticIndexMembership(result.kind),
         callee: LibraryApiCalleeContract::StaticIndexMembershipMethod {
             method: result.method,
@@ -232,6 +239,7 @@ pub fn library_imported_namespace_function_contract(
         _ => return None,
     };
     Some(LibraryImportedNamespaceFunctionContract {
+        pack_id: PYTHON_STDLIB_MATH_PACK_ID,
         id: LibraryApiContractId::ImportedNamespaceFunction(result.semantic),
         callee: LibraryApiCalleeContract::ImportedNamespaceFunction {
             module: result.module,
@@ -254,6 +262,7 @@ pub fn library_promise_then_contract(
         demand: promise_then_demand_effect_profile(),
     };
     Some(LibraryPromiseThenContract {
+        pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
         id: LibraryApiContractId::PromiseThen,
         callee: LibraryApiCalleeContract::AsyncMethod {
             method: "then",
@@ -280,6 +289,7 @@ pub fn library_promise_resolve_contract(
         result_domain: DomainEvidence::PromiseLike,
     };
     Some(LibraryPromiseFactoryContract {
+        pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
         id: LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve),
         callee: LibraryApiCalleeContract::StaticGlobalMethod {
             receiver: result.receiver,
@@ -316,6 +326,7 @@ pub fn library_iterator_identity_adapter_contract(
         receiver: IteratorAdapterReceiverContract::ExactIterableValue,
     };
     Some(LibraryIteratorIdentityAdapterContract {
+        pack_id: ITERATOR_IDENTITY_ADAPTER_PACK_ID,
         id: LibraryApiContractId::IteratorIdentityAdapter,
         callee: LibraryApiCalleeContract::IteratorAdapterMethod {
             method,
@@ -339,6 +350,7 @@ pub fn library_static_collection_adapter_contract(
         exported: "Arrays",
     };
     Some(LibraryStaticCollectionAdapterContract {
+        pack_id: JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID,
         id: LibraryApiContractId::StaticCollectionAdapter,
         callee: LibraryApiCalleeContract::JavaUtilStaticMember {
             receiver: result.exported,
@@ -365,159 +377,51 @@ pub fn library_method_call_contract(
     })
 }
 
-pub fn library_receiver_method_api_contract(
+pub fn library_map_get_default_contract(
     lang: Lang,
     method: &str,
     arg_count: usize,
-) -> Option<LibraryReceiverMethodApiContract> {
-    library_map_get_contract(lang, method, arg_count)
-        .map(|contract| LibraryReceiverMethodApiContract {
-            id: contract.id,
-            callee: contract.callee,
-            rule: "library_api_map_get",
-            result_domain: None,
-        })
-        .or_else(|| {
-            library_map_key_view_contract(lang, method, arg_count).map(|contract| {
-                LibraryReceiverMethodApiContract {
-                    id: contract.id,
-                    callee: contract.callee,
-                    rule: "library_api_map_key_view",
-                    result_domain: None,
-                }
-            })
-        })
-        .or_else(|| {
-            library_iterator_identity_adapter_contract(lang, method, arg_count).map(|contract| {
-                LibraryReceiverMethodApiContract {
-                    id: contract.id,
-                    callee: contract.callee,
-                    rule: "library_api_iterator_identity_adapter",
-                    result_domain: None,
-                }
-            })
-        })
-        .or_else(|| {
-            library_scalar_integer_method_contract(lang, method, arg_count).map(|contract| {
-                LibraryReceiverMethodApiContract {
-                    id: contract.id,
-                    callee: contract.callee,
-                    rule: "library_api_scalar_integer_method",
-                    result_domain: None,
-                }
-            })
-        })
-        .or_else(|| {
-            library_rust_option_and_then_contract(lang, method, arg_count).map(|contract| {
-                LibraryReceiverMethodApiContract {
-                    id: contract.id,
-                    callee: contract.callee,
-                    rule: "library_api_rust_option_and_then",
-                    result_domain: None,
-                }
-            })
-        })
-        .or_else(|| {
-            library_promise_then_contract(lang, method, arg_count).map(|contract| {
-                LibraryReceiverMethodApiContract {
-                    id: contract.id,
-                    callee: contract.callee,
-                    rule: "library_api_promise_then",
-                    result_domain: Some(DomainEvidence::PromiseLike),
-                }
-            })
-        })
-        .or_else(|| {
-            library_method_call_contract(lang, method, arg_count).map(|contract| {
-                LibraryReceiverMethodApiContract {
-                    id: contract.id,
-                    callee: contract.callee,
-                    rule: "library_api_method_call",
-                    result_domain: None,
-                }
-            })
-        })
+) -> Option<LibraryMethodCallContract> {
+    let contract = library_method_call_contract(lang, method, arg_count)?;
+    let exact_map_get_default = contract.id
+        == LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::GetOrDefault))
+        && matches!(
+            contract.callee,
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactMap,
+                ..
+            }
+        )
+        && matches!(
+            contract.result.args,
+            MethodBuiltinArgs::MapGetDefault | MethodBuiltinArgs::MapGetDefaultOrZeroArgLambda
+        );
+    exact_map_get_default.then_some(contract)
 }
 
-pub(crate) fn library_method_selector_name(name: &str) -> Option<&'static str> {
-    Some(match name {
-        "__contains__" => "__contains__",
-        "Abs" => "Abs",
-        "Contains" => "Contains",
-        "HasPrefix" => "HasPrefix",
-        "HasSuffix" => "HasSuffix",
-        "Max" => "Max",
-        "Min" => "Min",
-        "Print" => "Print",
-        "Printf" => "Printf",
-        "Println" => "Println",
-        "abs" => "abs",
-        "add" => "add",
-        "all" => "all",
-        "all?" => "all?",
-        "allMatch" => "allMatch",
-        "any" => "any",
-        "any?" => "any?",
-        "anyMatch" => "anyMatch",
-        "and_then" => "and_then",
-        "append" => "append",
-        "clamp" => "clamp",
-        "collect" => "collect",
-        "contains" => "contains",
-        "containsKey" => "containsKey",
-        "contains_key" => "contains_key",
-        "count" => "count",
-        "debug" => "debug",
-        "empty?" => "empty?",
-        "end_with?" => "end_with?",
-        "endsWith" => "endsWith",
-        "ends_with" => "ends_with",
-        "endswith" => "endswith",
-        "every" => "every",
-        "fetch" => "fetch",
-        "filter" => "filter",
-        "filter_map" => "filter_map",
-        "flatMap" => "flatMap",
-        "flat_map" => "flat_map",
-        "fold" => "fold",
-        "get" => "get",
-        "getOrDefault" => "getOrDefault",
-        "has" => "has",
-        "hasPrefix" => "hasPrefix",
-        "hasSuffix" => "hasSuffix",
-        "has_key?" => "has_key?",
-        "include?" => "include?",
-        "includes" => "includes",
-        "info" => "info",
-        "inject" => "inject",
-        "isEmpty" => "isEmpty",
-        "is_empty" => "is_empty",
-        "is_none" => "is_none",
-        "is_some" => "is_some",
-        "join" => "join",
-        "key?" => "key?",
-        "len" => "len",
-        "length" => "length",
-        "log" => "log",
-        "map" => "map",
-        "map_or" => "map_or",
-        "max" => "max",
-        "member?" => "member?",
-        "min" => "min",
-        "nil?" => "nil?",
-        "push" => "push",
-        "reduce" => "reduce",
-        "select" => "select",
-        "size" => "size",
-        "some" => "some",
-        "start_with?" => "start_with?",
-        "startsWith" => "startsWith",
-        "starts_with" => "starts_with",
-        "startswith" => "startswith",
-        "sum" => "sum",
-        "unwrap_or" => "unwrap_or",
-        "unwrap_or_else" => "unwrap_or_else",
-        "zip" => "zip",
-        _ => return None,
-    })
+pub fn library_receiver_membership_contract(
+    lang: Lang,
+    method: &str,
+    arg_count: usize,
+) -> Option<LibraryMethodCallContract> {
+    let contract = library_method_call_contract(lang, method, arg_count)?;
+    let receiver_membership = contract.id
+        == LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::Contains))
+        && matches!(
+            contract.callee,
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactMap
+                    | MethodReceiverContract::ExactCollectionOrMap
+                    | MethodReceiverContract::ExactCollectionOrJavaKeySet
+                    | MethodReceiverContract::ExactSetOrMap,
+                ..
+            }
+        )
+        && contract.result.args == MethodBuiltinArgs::FirstThenReceiver;
+    receiver_membership.then_some(contract)
 }
+
+mod receiver;
+mod selectors;
+pub use receiver::library_receiver_method_api_contract;
+pub(crate) use selectors::library_method_selector_name;

@@ -3,7 +3,7 @@ use nose_il::{
     EvidenceProvenance, EvidenceRecord, EvidenceStatus, Il, ImportEvidenceKind, Node, NodeId,
     NodeKind, Payload, Span,
 };
-use nose_semantics::FIRST_PARTY_PACK_ID;
+use nose_semantics::language_core_evidence_provenance;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 #[derive(Clone)]
@@ -155,7 +155,7 @@ pub(super) fn record_immutable_literal_export_evidence(
             dependencies.push(id);
         }
     }
-    push_first_party_evidence_with_dependencies(
+    push_language_core_evidence_with_dependencies(
         il,
         EvidenceAnchor::node(il.node(rhs).span, il.kind(rhs)),
         EvidenceKind::Import(ImportEvidenceKind::ImmutableLiteralExport {
@@ -163,7 +163,6 @@ pub(super) fn record_immutable_literal_export_evidence(
             exported_hash,
             root_kind: il.kind(rhs),
         }),
-        "module_immutable_literal_export",
         dependencies,
     )
 }
@@ -328,7 +327,7 @@ pub(super) fn record_imported_literal_snapshot_evidence(
             dependencies.push(evidence);
         }
     }
-    push_first_party_evidence_with_dependencies(
+    push_language_core_evidence_with_dependencies(
         il,
         EvidenceAnchor::node(il.node(rhs).span, il.kind(rhs)),
         EvidenceKind::Import(ImportEvidenceKind::ImportedLiteralSnapshot {
@@ -336,16 +335,56 @@ pub(super) fn record_imported_literal_snapshot_evidence(
             exported_hash,
             root_kind: il.kind(rhs),
         }),
-        "module_imported_literal_snapshot",
         dependencies,
     );
 }
 
-pub(super) fn push_first_party_evidence_with_dependencies(
+fn push_language_core_evidence_with_dependencies(
+    il: &mut Il,
+    anchor: EvidenceAnchor,
+    kind: EvidenceKind,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceId {
+    let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+    push_evidence_with_provenance(
+        il,
+        anchor,
+        kind,
+        EvidenceProvenance {
+            emitter: EvidenceEmitter::Builtin,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
+        },
+        dependencies,
+    )
+}
+
+#[cfg(test)]
+pub(super) fn push_builtin_evidence_with_dependencies(
     il: &mut Il,
     anchor: EvidenceAnchor,
     kind: EvidenceKind,
     rule: &str,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceId {
+    push_evidence_with_provenance(
+        il,
+        anchor,
+        kind,
+        EvidenceProvenance {
+            emitter: EvidenceEmitter::Builtin,
+            pack_hash: Some(stable_symbol_hash(nose_semantics::BUILTIN_COMPAT_PACK_ID)),
+            rule_hash: Some(stable_symbol_hash(rule)),
+        },
+        dependencies,
+    )
+}
+
+fn push_evidence_with_provenance(
+    il: &mut Il,
+    anchor: EvidenceAnchor,
+    kind: EvidenceKind,
+    provenance: EvidenceProvenance,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceId {
     let id = EvidenceId(il.evidence.len() as u32);
@@ -353,11 +392,7 @@ pub(super) fn push_first_party_evidence_with_dependencies(
         id,
         anchor,
         kind,
-        provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
-            rule_hash: Some(stable_symbol_hash(rule)),
-        },
+        provenance,
         dependencies,
         status: EvidenceStatus::Asserted,
     });

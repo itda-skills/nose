@@ -4,14 +4,19 @@ use super::*;
 fn receiver_mutation_contracts_are_language_scoped_rows() {
     let js_push = module_binding_mutating_method_contract(Lang::JavaScript, "push", 1)
         .expect("js push receiver mutation contract");
-    assert_eq!(js_push.pack_id, FIRST_PARTY_PACK_ID);
+    assert_eq!(js_push.pack_id, JS_TS_LANGUAGE_PACK_ID);
     assert_eq!(js_push.lang, Lang::JavaScript);
     assert_eq!(js_push.effect, EffectEvidenceKind::ReceiverMutation);
     assert_eq!(
         js_push.receiver,
         MethodEffectReceiverContract::PotentiallyMutableReceiver
     );
-    assert!(module_binding_mutating_method_contract(Lang::TypeScript, "push", 1).is_some());
+    assert_eq!(
+        module_binding_mutating_method_contract(Lang::TypeScript, "push", 1)
+            .expect("typescript push receiver mutation contract")
+            .pack_id,
+        JS_TS_LANGUAGE_PACK_ID
+    );
     assert!(module_binding_mutating_method_contract(Lang::JavaScript, "addAll", 1).is_none());
     assert!(module_binding_mutating_method_contract(Lang::Java, "addAll", 1).is_some());
     assert!(module_binding_mutating_method_contract(Lang::Python, "append", 1).is_some());

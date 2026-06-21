@@ -4,8 +4,8 @@ nose parses each language with tree-sitter and lowers it into one shared IL, so
 clones are found *across* languages, not just within one. The lowering machinery is
 described in [architecture](architecture.md).
 
-The current language frontends are first-party code. The direction is for both
-first-party and external languages to enter through the same pack extension
+The current language frontends are builtin code. The direction is for both
+builtin and external languages to enter through the same pack extension
 boundary described in [semantic-kernel](semantic-kernel.md), while keeping exact
 semantic matching fail-closed unless the required facts and contracts are present.
 

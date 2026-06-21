@@ -6,7 +6,7 @@
     "kind": "StdlibPack",
     "version": "0.1.0",
     "display_name": "Example Python stdlib type-domain pack",
-    "description": "Illustrative v0 metadata mirroring nose's compiled first-party Python typing, collections.abc, and asyncio type-domain pilot. Loading this example is metadata-only.",
+    "description": "Illustrative v0 metadata mirroring nose's compiled builtin Python typing, collections.abc, and asyncio type-domain pilot. Loading this example is metadata-only.",
     "trust": "external-opt-in",
     "enabled_by_default": false,
     "status": "draft-example"
@@ -23,7 +23,7 @@
   "compatibility": {
     "nose": ">=0.5.0 <0.6.0",
     "schema": "v0",
-    "notes": "Example only. nose's built-in pilot uses compiled first-party code and reports as nose.python.stdlib.type_domain."
+    "notes": "Example only. nose's built-in pilot uses compiled builtin code and reports as nose.python.stdlib.type_domain."
   },
   "supported_languages": [
     {
@@ -179,7 +179,7 @@
     ],
     "known_unsupported": [
       "The example manifest is metadata-only when loaded locally.",
-      "The compiled first-party pilot currently covers selected typing, collections.abc, and asyncio alias rows."
+      "The compiled builtin pilot currently covers selected typing, collections.abc, and asyncio alias rows."
     ],
     "command": "nose semantic-pack check python-typing-domain-pack.json --format json"
   }

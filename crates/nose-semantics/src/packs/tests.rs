@@ -1,4 +1,11 @@
+#![allow(
+    clippy::cognitive_complexity,
+    clippy::too_many_arguments,
+    clippy::too_many_lines
+)]
+
 use super::*;
+use std::collections::HashSet;
 use std::fs;
 
 fn unique_dir(tag: &str) -> PathBuf {
@@ -6,6 +13,42 @@ fn unique_dir(tag: &str) -> PathBuf {
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     dir
+}
+
+fn assert_source_fact_language_descriptor(
+    pack_id: &str,
+    supported_languages: &[&str],
+    langs: &[nose_il::Lang],
+    file_extensions: &[&str],
+    parser: &str,
+    lowering_entrypoint: &str,
+    core_producer_id: &str,
+    source_fact_producer_id: &str,
+) {
+    let descriptor = builtin_pack_descriptor(pack_id).expect("language descriptor");
+    assert_eq!(descriptor.kind, SemanticPackKind::LanguagePack);
+    assert_eq!(descriptor.supported_languages, supported_languages);
+    assert!(descriptor.supported_packages.is_empty());
+    let language = descriptor
+        .language
+        .expect("language descriptor should expose binding metadata");
+    assert_eq!(language.langs, langs);
+    assert_eq!(language.file_extensions, file_extensions);
+    assert_eq!(language.parser, parser);
+    assert_eq!(language.lowering_entrypoint, lowering_entrypoint);
+    assert_eq!(
+        descriptor.evidence_producer_ids,
+        &[core_producer_id, source_fact_producer_id]
+    );
+    assert_eq!(
+        descriptor.source_fact_producer_ids,
+        &[source_fact_producer_id]
+    );
+    assert!(descriptor.contract_ids.is_empty());
+    assert_eq!(descriptor.counts().evidence_producers, 2);
+    assert_eq!(descriptor.counts().contracts, 0);
+    assert_eq!(descriptor.counts().positive_fixtures, 0);
+    assert_eq!(descriptor.counts().hard_negatives, 0);
 }
 
 // nose-ignore: inline semantic-pack manifest fixture; keeping the JSON shape visible matters here.
@@ -75,410 +118,95 @@ fn manifest(id: &str) -> String {
     )
 }
 
-#[test]
-fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
-    let pack = first_party_semantic_pack();
-    assert_eq!(pack.id, FIRST_PARTY_PACK_ID);
-    assert_eq!(pack.hash, stable_symbol_hash(FIRST_PARTY_PACK_ID));
-    assert_eq!(pack.influence, SemanticPackInfluence::EvidenceAndContracts);
-    let python = python_stdlib_type_domain_pack();
-    assert_eq!(python.id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(
-        python.hash,
-        stable_symbol_hash(PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID)
-    );
-    assert_eq!(python.kind, SemanticPackKind::StdlibPack);
-    assert_eq!(
-        python.influence,
-        SemanticPackInfluence::EvidenceAndContracts
-    );
-    assert_eq!(python.counts.evidence_producers, 1);
-    assert_eq!(python.counts.contracts, 1);
-    assert_eq!(
-        python.counts.positive_fixtures,
-        PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS.len()
-    );
-    let laws = first_party_value_law_pack();
-    assert_eq!(laws.id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    assert_eq!(laws.hash, stable_symbol_hash(FIRST_PARTY_VALUE_LAW_PACK_ID));
-    assert_eq!(laws.kind, SemanticPackKind::LawPack);
-    assert_eq!(laws.counts.value_laws, pack_facing_value_laws().len());
-    assert_eq!(laws.counts.positive_fixtures, 2);
-    assert_eq!(laws.counts.hard_negatives, 4);
-}
-
-#[test]
-fn local_manifest_loads_as_metadata_only_opt_in() {
-    let dir = unique_dir("load");
-    let path = dir.join("pack.json");
-    fs::write(&path, manifest("com.example.pack")).unwrap();
-    let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 4);
-    assert_eq!(set.packs()[1].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[2].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[3];
-    assert_eq!(external.id, "com.example.pack");
-    assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
-    assert_eq!(external.trust, PackTrust::ExternalOptIn);
-    assert_eq!(external.source, SemanticPackSource::LocalManifest);
-    assert_eq!(external.influence, SemanticPackInfluence::MetadataOnly);
-    assert_eq!(external.counts.contracts, 1);
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn conformance_check_reports_declared_fixture_files() {
-    let dir = unique_dir("conformance_ok");
-    let fixture_dir = dir.join("fixtures");
-    fs::create_dir_all(&fixture_dir).unwrap();
-    fs::write(
-        fixture_dir.join("positive.py"),
-        "import math\nmath.prod([1, 2])\n",
-    )
-    .unwrap();
-    fs::write(
-        fixture_dir.join("negative.py"),
-        "math = object()\nmath.prod([1, 2])\n",
-    )
-    .unwrap();
-    let path = dir.join("pack.json");
-    fs::write(&path, manifest("com.example.pack")).unwrap();
-
-    let report = check_semantic_pack_conformance(&[path]).expect("conformance loads");
-
-    assert!(report.passed());
-    assert_eq!(report.manifest_count(), 1);
-    assert_eq!(report.positive_fixture_count(), 1);
-    assert_eq!(report.hard_negative_count(), 1);
-    assert_eq!(report.fixture_issue_count(), 0);
-    let fixture_ids = report.manifests[0]
-        .fixtures
-        .iter()
-        .map(|fixture| (fixture.kind.as_str(), fixture.id.as_str(), fixture.passed()))
-        .collect::<Vec<_>>();
-    assert_eq!(
-        fixture_ids,
-        vec![
-            ("positive", "positive", true),
-            ("hard-negative", "negative", true)
-        ]
-    );
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn conformance_check_fails_closed_on_missing_fixture_files() {
-    let dir = unique_dir("conformance_missing");
-    let path = dir.join("pack.json");
-    fs::write(&path, manifest("com.example.pack")).unwrap();
-
-    let report = check_semantic_pack_conformance(&[path]).expect("manifest is structurally valid");
-
-    assert!(!report.passed());
-    assert_eq!(report.fixture_issue_count(), 2);
-    let issues = report.manifests[0]
-        .fixtures
-        .iter()
-        .flat_map(|fixture| fixture.issues.iter().map(|issue| issue.as_str()))
-        .collect::<Vec<_>>();
-    assert_eq!(issues, vec!["missing-file", "missing-file"]);
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn conformance_check_requires_fixture_paths_and_expectations() {
-    let dir = unique_dir("conformance_metadata");
-    let path = dir.join("pack.json");
-    fs::write(
-        &path,
-        manifest("com.example.pack")
-            .replace(
-                r#",
-      "path": "fixtures/positive.py",
-      "expectation": "exact-contract-open""#,
-                "",
-            )
-            .replace(
-                r#",
-      "path": "fixtures/negative.py",
-      "expectation": "exact-contract-closed""#,
-                "",
-            ),
-    )
-    .unwrap();
-
-    let report = check_semantic_pack_conformance(&[path]).expect("manifest is structurally valid");
-
-    assert!(!report.passed());
-    assert_eq!(report.fixture_issue_count(), 4);
-    let issues = report.manifests[0]
-        .fixtures
-        .iter()
-        .flat_map(|fixture| fixture.issues.iter().map(|issue| issue.as_str()))
-        .collect::<Vec<_>>();
-    assert_eq!(
-        issues,
-        vec![
-            "missing-path",
-            "missing-expectation",
-            "missing-path",
-            "missing-expectation"
-        ]
-    );
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn external_pack_enabled_by_default_is_rejected() {
-    let dir = unique_dir("trust");
-    let path = dir.join("pack.json");
-    fs::write(
-        &path,
-        manifest("com.example.pack").replace(
-            r#""trust": "external-opt-in",
-    "enabled_by_default": false"#,
-            r#""trust": "external-opt-in",
-    "enabled_by_default": true"#,
-        ),
-    )
-    .unwrap();
-    let err = load_local_manifest(&path).expect_err("must reject implicit external default");
-    assert!(err
-        .to_string()
-        .contains("must be external-opt-in and disabled by default"));
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn local_manifest_claiming_first_party_trust_is_rejected() {
-    let dir = unique_dir("first_party_trust");
-    let path = dir.join("pack.json");
-    fs::write(
-        &path,
-        manifest("com.example.pack").replace(
-            r#""trust": "external-opt-in""#,
-            r#""trust": "default-first-party""#,
-        ),
-    )
-    .unwrap();
-    let err = load_local_manifest(&path).expect_err("local manifest must not claim first-party");
-    assert!(err
-        .to_string()
-        .contains("must be external-opt-in and disabled by default"));
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn package_entries_must_match_manifest_shape() {
-    let dir = unique_dir("package");
-    let path = dir.join("pack.json");
-    fs::write(
-        &path,
-        manifest("com.example.pack").replace(
-            r#"  "supported_languages": [{ "id": "python" }],
-"#,
-            r#"  "supported_languages": [{ "id": "python" }],
-  "packages": [{ "ecosystem": "pypi", "name": "example" }],
-"#,
-        ),
-    )
-    .unwrap();
-    let err = load_local_manifest(&path).expect_err("package versions are required");
-    assert!(err.to_string().contains("missing field `versions`"));
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn compatibility_nose_must_be_version_requirement_like() {
-    let dir = unique_dir("compatibility");
-    let path = dir.join("pack.json");
-    fs::write(
-        &path,
-        manifest("com.example.pack").replace(
-            r#""compatibility": { "nose": ">=0.5.0 <0.6.0" }"#,
-            r#""compatibility": { "nose": "current stable" }"#,
-        ),
-    )
-    .unwrap();
-    let err = load_local_manifest(&path).expect_err("version range should be comparable");
-    assert!(err
-        .to_string()
-        .contains("unsupported version constraint `current`"));
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn exact_capable_contracts_must_reference_positive_and_hard_negative_fixtures() {
-    let dir = unique_dir("contract_fixture_refs");
-    let path = dir.join("pack.json");
-    fs::write(
-        &path,
-        manifest("com.example.pack").replace(
-            r#""conformance_refs": ["positive", "negative"]"#,
-            r#""conformance_refs": ["positive"]"#,
-        ),
-    )
-    .unwrap();
-    let err = load_local_manifest(&path)
-        .expect_err("exact-capable contracts need both fixture polarities");
-    assert!(
-        err.to_string()
-            .contains("must reference at least one positive and one hard-negative"),
-        "{err}"
-    );
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn value_law_semantics_must_be_an_object_even_when_not_exact_capable() {
-    let dir = unique_dir("value_law_semantics_shape");
-    let path = dir.join("pack.json");
-    fs::write(
-        &path,
-        manifest("com.example.pack").replace(
-            r#""value_laws": []"#,
-            r#""value_laws": [{
-      "id": "python.example.near-law",
-      "requires": [],
-      "semantics": "not an object",
-      "channel": "near-only",
-      "proof_status": "missing",
-      "conformance_refs": []
+fn manifest_with_value_law(id: &str) -> String {
+    manifest(id).replace(
+        r#""value_laws": []"#,
+        r#""value_laws": [{
+      "id": "python.example.numeric-law",
+      "requires": [{
+        "ref": "Domain.Number",
+        "subject": "operands",
+        "required": true,
+        "same_anchor_as": "value"
+      }],
+      "semantics": {
+        "law": "x + 0 == x",
+        "domain": "numeric-only",
+        "demand": { "arguments": "preserve-original-expression-demand" },
+        "effects": ["no-new-effects"]
+      },
+      "channel": "exact-proven",
+      "proof_status": "proven",
+      "conformance_refs": ["positive", "negative"]
     }]"#,
-        ),
     )
-    .unwrap();
-    let err = load_local_manifest(&path).expect_err("value law semantics must match schema");
-    assert!(
-        err.to_string().contains("semantics must be an object"),
-        "{err}"
-    );
-    let _ = fs::remove_dir_all(dir);
 }
 
 #[test]
-fn exact_capable_contracts_must_have_required_evidence_requirements() {
-    let dir = unique_dir("required_evidence_requirement");
-    let path = dir.join("pack.json");
-    fs::write(
-        &path,
-        manifest("com.example.pack").replace(r#""required": true"#, r#""required": false"#),
-    )
-    .unwrap();
-    let err =
-        load_local_manifest(&path).expect_err("optional-only requirements must not open exact");
-    assert!(
-        err.to_string()
-            .contains("must declare at least one required evidence requirement"),
-        "{err}"
-    );
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn evidence_kind_must_match_schema_shape() {
-    let dir = unique_dir("evidence_kind_shape");
-    let path = dir.join("pack.json");
-    fs::write(
-        &path,
-        manifest("com.example.pack").replace(
-            r#""kind": "LibraryApi.Contract""#,
-            r#""kind": "LibraryApi.""#,
-        ),
-    )
-    .unwrap();
-    let err = load_local_manifest(&path).expect_err("empty evidence-kind suffix is invalid");
-    assert!(
-        err.to_string().contains("unknown kind `LibraryApi.`"),
-        "{err}"
-    );
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn conformance_fixtures_must_use_manifest_relative_paths() {
-    let dir = unique_dir("absolute_fixture_path");
-    let outside = unique_dir("absolute_fixture_path_outside");
-    let absolute_fixture = outside.join("positive.py");
-    fs::write(&absolute_fixture, "print('external fixture')\n").unwrap();
-    let path = dir.join("pack.json");
-    fs::write(
-        &path,
-        manifest("com.example.pack")
-            .replace("fixtures/positive.py", absolute_fixture.to_str().unwrap()),
-    )
-    .unwrap();
-
-    let report = check_semantic_pack_conformance(&[path]).expect("manifest is structurally valid");
-
-    assert!(!report.passed());
-    let issues = report.manifests[0]
-        .fixtures
+fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
+    let descriptors = builtin_pack_descriptors();
+    assert_eq!(descriptors.len(), 42);
+    let ids = descriptors
         .iter()
-        .flat_map(|fixture| fixture.issues.iter().map(|issue| issue.as_str()))
+        .map(|descriptor| descriptor.id)
         .collect::<Vec<_>>();
-    assert_eq!(issues, vec!["absolute-path", "missing-file"]);
-    let _ = fs::remove_dir_all(dir);
-    let _ = fs::remove_dir_all(outside);
-}
-
-#[test]
-fn evidence_producer_anchors_must_be_known_anchor_names() {
-    let dir = unique_dir("anchor");
-    let path = dir.join("pack.json");
-    fs::write(
-        &path,
-        manifest("com.example.pack")
-            .replace(r#""anchors": ["node"]"#, r#""anchors": ["raw-selector"]"#),
-    )
-    .unwrap();
-    let err = load_local_manifest(&path).expect_err("unknown anchors must not load");
-    assert!(err.to_string().contains("unknown variant"));
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn duplicate_pack_ids_fail_closed() {
-    let dir = unique_dir("dupe");
-    let one = dir.join("one.json");
-    let two = dir.join("two.json");
-    fs::write(&one, manifest("com.example.pack")).unwrap();
-    fs::write(&two, manifest("com.example.pack")).unwrap();
-    let err = SemanticPackSet::new_local(&[one, two]).expect_err("duplicate id");
-    assert!(err.to_string().contains("duplicate semantic pack id"));
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn local_manifest_cannot_claim_compiled_first_party_pack_id() {
-    let dir = unique_dir("compiled_first_party_id");
-    let path = dir.join("pack.json");
-    fs::write(&path, manifest(PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID)).unwrap();
-    let err = SemanticPackSet::new_local(&[path]).expect_err("compiled id is reserved");
-    assert!(err.to_string().contains("duplicate semantic pack id"));
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn conformance_check_cannot_claim_compiled_first_party_pack_id() {
-    let dir = unique_dir("compiled_first_party_conformance");
-    let path = dir.join("pack.json");
-    fs::write(&path, manifest(PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID)).unwrap();
-    let err = check_semantic_pack_conformance(&[path]).expect_err("compiled id is reserved");
-    assert!(err.to_string().contains("duplicate semantic pack id"));
-    let _ = fs::remove_dir_all(dir);
-}
-
-#[test]
-fn directory_discovery_sorts_json_manifests() {
-    let dir = unique_dir("dir");
-    fs::write(dir.join("b.json"), manifest("com.example.b")).unwrap();
-    fs::write(dir.join("a.json"), manifest("com.example.a")).unwrap();
-    let paths = discover_manifest_paths(std::slice::from_ref(&dir)).expect("discover");
-    let names = paths
+    assert_eq!(
+        ids,
+        vec![
+            BUILTIN_COMPAT_PACK_ID,
+            PYTHON_LANGUAGE_PACK_ID,
+            JS_TS_LANGUAGE_PACK_ID,
+            GO_LANGUAGE_PACK_ID,
+            RUST_LANGUAGE_PACK_ID,
+            JAVA_LANGUAGE_PACK_ID,
+            C_LANGUAGE_PACK_ID,
+            RUBY_LANGUAGE_PACK_ID,
+            SWIFT_LANGUAGE_PACK_ID,
+            CSS_LANGUAGE_PACK_ID,
+            HTML_EMBEDDED_LANGUAGE_PACK_ID,
+            PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
+            PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
+            PYTHON_STDLIB_MATH_PACK_ID,
+            RUBY_STDLIB_SET_PACK_ID,
+            RUST_STDLIB_VEC_PACK_ID,
+            RUST_STDLIB_OPTION_PACK_ID,
+            RUST_STDLIB_INTEGER_METHOD_PACK_ID,
+            RUST_STDLIB_COLLECTION_FACTORY_PACK_ID,
+            RUST_STDLIB_MAP_FACTORY_PACK_ID,
+            JAVA_STDLIB_MATH_PACK_ID,
+            JAVA_STDLIB_MAP_FACTORY_PACK_ID,
+            JAVA_STDLIB_MAP_ENTRY_PACK_ID,
+            JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
+            JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
+            JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID,
+            MAP_GET_PROTOCOL_PACK_ID,
+            MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
+            FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+            RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
+            MAP_KEY_VIEW_PROTOCOL_PACK_ID,
+            PROPERTY_BUILTIN_PROTOCOL_PACK_ID,
+            BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+            ITERATOR_IDENTITY_ADAPTER_PACK_ID,
+            JS_LIKE_BUILTIN_PROMISE_PACK_ID,
+            JS_LIKE_BUILTIN_ARRAY_PACK_ID,
+            JS_LIKE_BUILTIN_BOOLEAN_PACK_ID,
+            JS_LIKE_BUILTIN_REGEX_PACK_ID,
+            JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID,
+            JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
+            PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
+            VALUE_GRAPH_LAW_PACK_ID
+        ]
+    );
+    assert_eq!(ids.iter().copied().collect::<HashSet<_>>().len(), ids.len());
+    assert!(descriptors
         .iter()
-        .map(|path| path.file_name().unwrap().to_str().unwrap())
-        .collect::<Vec<_>>();
-    assert_eq!(names, vec!["a.json", "b.json"]);
-    let _ = fs::remove_dir_all(dir);
+        .all(|descriptor| descriptor.trust == PackTrust::BuiltinDefault));
+    assert!(descriptors
+        .iter()
+        .all(|descriptor| descriptor.enabled_by_default));
 }
+
+mod descriptor_enumeration;
+mod manifest_cases_0;
+mod manifest_cases_1;
+mod manifest_cases_2;

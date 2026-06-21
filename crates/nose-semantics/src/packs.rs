@@ -5,26 +5,112 @@
 //! require occurrence evidence and kernel-owned admission checks.
 
 use crate::{
-    pack_facing_value_laws, PackTrust, FIRST_PARTY_PACK_ID, FIRST_PARTY_VALUE_LAW_PACK_ID,
+    pack_facing_value_laws, BuiltinTypeDomainAliasContract, PackTrust, BUILTIN_COMPAT_PACK_ID,
+    BUILTIN_METHOD_CALL_CONTRACT_ID, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, CSS_LANGUAGE_CORE_PRODUCER_ID, CSS_LANGUAGE_PACK_ID,
+    CSS_SOURCE_FACT_PRODUCER_ID, C_LANGUAGE_CORE_PRODUCER_ID, C_LANGUAGE_PACK_ID,
+    C_SOURCE_FACT_PRODUCER_ID, C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID,
+    FREE_FUNCTION_BUILTIN_CONTRACT_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID, GO_LANGUAGE_CORE_PRODUCER_ID, GO_LANGUAGE_PACK_ID,
+    GO_SOURCE_FACT_PRODUCER_ID, HTML_EMBEDDED_LANGUAGE_CORE_PRODUCER_ID,
+    HTML_EMBEDDED_LANGUAGE_PACK_ID, HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID,
+    ITERATOR_IDENTITY_ADAPTER_CONTRACT_ID, ITERATOR_IDENTITY_ADAPTER_PACK_ID,
+    ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID, JAVA_LANGUAGE_CORE_PRODUCER_ID, JAVA_LANGUAGE_PACK_ID,
+    JAVA_SOURCE_FACT_PRODUCER_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_EMPTY_LIST_CONTRACT_ID,
+    JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
+    JAVA_STDLIB_COLLECTION_FACTORY_ARRAYS_AS_LIST_CONTRACT_ID,
+    JAVA_STDLIB_COLLECTION_FACTORY_LIST_OF_CONTRACT_ID, JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
+    JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, JAVA_STDLIB_COLLECTION_FACTORY_SET_OF_CONTRACT_ID,
+    JAVA_STDLIB_MAP_ENTRY_CONTRACT_ID, JAVA_STDLIB_MAP_ENTRY_PACK_ID,
+    JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID, JAVA_STDLIB_MAP_FACTORY_OF_CONTRACT_ID,
+    JAVA_STDLIB_MAP_FACTORY_OF_ENTRIES_CONTRACT_ID, JAVA_STDLIB_MAP_FACTORY_PACK_ID,
+    JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID, JAVA_STDLIB_MATH_PACK_ID, JAVA_STDLIB_MATH_PRODUCER_ID,
+    JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_CONTRACT_ID,
+    JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID,
+    JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PRODUCER_ID, JS_LIKE_BUILTIN_ARRAY_FROM_CONTRACT_ID,
+    JS_LIKE_BUILTIN_ARRAY_IS_ARRAY_CONTRACT_ID, JS_LIKE_BUILTIN_ARRAY_PACK_ID,
+    JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID, JS_LIKE_BUILTIN_BOOLEAN_CONTRACT_ID,
+    JS_LIKE_BUILTIN_BOOLEAN_PACK_ID, JS_LIKE_BUILTIN_BOOLEAN_PRODUCER_ID,
+    JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
+    JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
+    JS_LIKE_BUILTIN_MAP_CONSTRUCTOR_CONTRACT_ID, JS_LIKE_BUILTIN_PROMISE_PACK_ID,
+    JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID, JS_LIKE_BUILTIN_PROMISE_RESOLVE_CONTRACT_ID,
+    JS_LIKE_BUILTIN_PROMISE_THEN_CONTRACT_ID, JS_LIKE_BUILTIN_REGEX_PACK_ID,
+    JS_LIKE_BUILTIN_REGEX_PRODUCER_ID, JS_LIKE_BUILTIN_REGEX_TEST_CONTRACT_ID,
+    JS_LIKE_BUILTIN_SET_CONSTRUCTOR_CONTRACT_ID,
+    JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_FIND_INDEX_CONTRACT_ID,
+    JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_INDEX_OF_CONTRACT_ID,
+    JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID,
+    JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PRODUCER_ID, JS_TS_LANGUAGE_CORE_PRODUCER_ID,
+    JS_TS_LANGUAGE_PACK_ID, JS_TS_SOURCE_FACT_PRODUCER_ID, MAP_GET_CONTRACT_ID,
+    MAP_GET_DEFAULT_CONTRACT_ID, MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
+    MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID, MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID,
+    MAP_KEY_VIEW_COLLECTION_CONTRACT_ID, MAP_KEY_VIEW_ITERATOR_CONTRACT_ID,
+    MAP_KEY_VIEW_PROTOCOL_PACK_ID, MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
+    PROPERTY_BUILTIN_IS_EMPTY_CONTRACT_ID, PROPERTY_BUILTIN_LEN_CONTRACT_ID,
+    PROPERTY_BUILTIN_PROTOCOL_PACK_ID, PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID,
+    PYTHON_BUILTIN_COLLECTION_FACTORY_CONTRACT_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
+    PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID, PYTHON_LANGUAGE_CORE_PRODUCER_ID,
+    PYTHON_LANGUAGE_PACK_ID, PYTHON_SOURCE_FACT_PRODUCER_ID,
+    PYTHON_STDLIB_COLLECTION_FACTORY_CONTRACT_ID, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
+    PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, PYTHON_STDLIB_MATH_PACK_ID,
+    PYTHON_STDLIB_MATH_PRODUCER_ID, PYTHON_STDLIB_MATH_PROD_CONTRACT_ID,
     PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
+    PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID, RECEIVER_MEMBERSHIP_CONTRACT_ID,
+    RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID, RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
+    RUBY_LANGUAGE_CORE_PRODUCER_ID, RUBY_LANGUAGE_PACK_ID, RUBY_SOURCE_FACT_PRODUCER_ID,
+    RUBY_STDLIB_SET_CONTRACT_ID, RUBY_STDLIB_SET_PACK_ID, RUBY_STDLIB_SET_PRODUCER_ID,
+    RUST_LANGUAGE_CORE_PRODUCER_ID, RUST_LANGUAGE_PACK_ID, RUST_SOURCE_FACT_PRODUCER_ID,
+    RUST_STDLIB_COLLECTION_FACTORY_CONTRACT_ID, RUST_STDLIB_COLLECTION_FACTORY_PACK_ID,
+    RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, RUST_STDLIB_INTEGER_METHOD_PACK_ID,
+    RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID, RUST_STDLIB_MAP_FACTORY_CONTRACT_ID,
+    RUST_STDLIB_MAP_FACTORY_PACK_ID, RUST_STDLIB_MAP_FACTORY_PRODUCER_ID,
+    RUST_STDLIB_OPTION_AND_THEN_CONTRACT_ID, RUST_STDLIB_OPTION_NONE_CONTRACT_ID,
+    RUST_STDLIB_OPTION_PACK_ID, RUST_STDLIB_OPTION_PRODUCER_ID,
+    RUST_STDLIB_OPTION_SOME_CONTRACT_ID, RUST_STDLIB_VEC_MACRO_CONTRACT_ID,
+    RUST_STDLIB_VEC_NEW_CONTRACT_ID, RUST_STDLIB_VEC_PACK_ID, RUST_STDLIB_VEC_PRODUCER_ID,
+    SCALAR_INTEGER_METHOD_ABS_CONTRACT_ID, SCALAR_INTEGER_METHOD_CLAMP_CONTRACT_ID,
+    SCALAR_INTEGER_METHOD_MAX_CONTRACT_ID, SCALAR_INTEGER_METHOD_MIN_CONTRACT_ID,
+    SWIFT_LANGUAGE_CORE_PRODUCER_ID, SWIFT_LANGUAGE_PACK_ID, SWIFT_SOURCE_FACT_PRODUCER_ID,
+    VALUE_GRAPH_LAW_PACK_ID,
 };
+#[cfg(test)]
+use crate::{FIRST_PARTY_PACK_ID, FIRST_PARTY_VALUE_LAW_PACK_ID};
 use nose_il::stable_symbol_hash;
 use serde::Deserialize;
 use std::path::PathBuf;
 
 mod compiled;
+mod conformance;
+mod external;
 mod loading;
+mod manifest;
 mod validation;
 
 pub use compiled::{
+    builtin_compat_semantic_pack, builtin_pack_descriptor, builtin_pack_descriptors,
     first_party_semantic_pack, first_party_value_law_pack, python_stdlib_type_domain_pack,
+    value_graph_law_pack, BuiltinLanguageBinding, BuiltinPackDescriptor,
+};
+pub use conformance::{
+    SemanticPackConformanceManifest, SemanticPackConformanceReport, SemanticPackFixtureCheck,
+    SemanticPackFixtureIssue, SemanticPackFixtureKind,
+};
+use external::ExternalRowCoordinate;
+pub use external::{
+    ExternalContractRow, ExternalEvidenceProducerRow, ExternalInfluenceBlocker,
+    ExternalInfluencePreflightReport, ExternalRowConflict, ExternalRowConflictReport,
+    ExternalRowInfluencePreflight, ExternalRowKind, ExternalValueLawRow,
+    SemanticPackRequirementSummary,
 };
 pub use loading::{
     check_semantic_pack_conformance, discover_manifest_paths, load_local_manifest,
     SemanticPackLoadError,
 };
+use manifest::*;
 
-use compiled::compiled_first_party_packs;
+use compiled::compiled_builtin_packs;
+use std::collections::{HashMap, HashSet};
 use validation::validate_manifest;
 pub const SEMANTIC_PACK_API_VERSION: &str = "nose.semantic-pack.v0";
 
@@ -45,14 +131,18 @@ const ALLOWED_REQUIREMENT_PREFIXES: &[&str] = &[
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum SemanticPackSource {
-    CompiledFirstParty,
+    CompiledBuiltin,
     LocalManifest,
 }
 
 impl SemanticPackSource {
+    #[allow(non_upper_case_globals)]
+    #[deprecated(note = "use SemanticPackSource::CompiledBuiltin")]
+    pub const CompiledFirstParty: Self = Self::CompiledBuiltin;
+
     pub const fn as_str(self) -> &'static str {
         match self {
-            SemanticPackSource::CompiledFirstParty => "compiled-first-party",
+            SemanticPackSource::CompiledBuiltin => "compiled-builtin",
             SemanticPackSource::LocalManifest => "local-manifest",
         }
     }
@@ -96,7 +186,7 @@ impl SemanticPackKind {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-enum SemanticPackAnchor {
+pub enum SemanticPackAnchor {
     SourceSpan,
     Node,
     Param,
@@ -104,6 +194,20 @@ enum SemanticPackAnchor {
     Sequence,
     Module,
     Package,
+}
+
+impl SemanticPackAnchor {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            SemanticPackAnchor::SourceSpan => "source-span",
+            SemanticPackAnchor::Node => "node",
+            SemanticPackAnchor::Param => "param",
+            SemanticPackAnchor::Binding => "binding",
+            SemanticPackAnchor::Sequence => "sequence",
+            SemanticPackAnchor::Module => "module",
+            SemanticPackAnchor::Package => "package",
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
@@ -161,10 +265,18 @@ enum SemanticPackSchemaVersion {
 }
 
 impl PackTrust {
+    #[allow(non_upper_case_globals)]
+    #[deprecated(note = "use PackTrust::BuiltinDefault")]
+    pub const DefaultFirstParty: Self = Self::BuiltinDefault;
+
+    #[allow(non_upper_case_globals)]
+    #[deprecated(note = "use PackTrust::BuiltinOptional")]
+    pub const FirstPartyOptional: Self = Self::BuiltinOptional;
+
     pub const fn as_manifest_str(self) -> &'static str {
         match self {
-            PackTrust::DefaultFirstParty => "default-first-party",
-            PackTrust::FirstPartyOptional => "first-party-optional",
+            PackTrust::BuiltinDefault => "builtin-default",
+            PackTrust::BuiltinOptional => "builtin-optional",
             PackTrust::ExternalOptIn => "external-opt-in",
         }
     }
@@ -176,8 +288,10 @@ impl<'de> Deserialize<'de> for PackTrust {
         D: serde::Deserializer<'de>,
     {
         match String::deserialize(deserializer)?.as_str() {
-            "default-first-party" => Ok(PackTrust::DefaultFirstParty),
-            "first-party-optional" => Ok(PackTrust::FirstPartyOptional),
+            "builtin-default" => Ok(PackTrust::BuiltinDefault),
+            "default-first-party" => Ok(PackTrust::BuiltinDefault),
+            "builtin-optional" => Ok(PackTrust::BuiltinOptional),
+            "first-party-optional" => Ok(PackTrust::BuiltinOptional),
             "external-opt-in" => Ok(PackTrust::ExternalOptIn),
             other => Err(serde::de::Error::custom(format!(
                 "unknown pack trust `{other}`"
@@ -261,331 +375,207 @@ pub fn semantic_pack_hash(pack_id: &str) -> u64 {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct SemanticPackSet {
     packs: Vec<SemanticPackSummary>,
+    external_evidence_producer_rows: Vec<ExternalEvidenceProducerRow>,
+    external_contract_rows: Vec<ExternalContractRow>,
+    external_value_law_rows: Vec<ExternalValueLawRow>,
 }
 
 impl SemanticPackSet {
     pub fn new_local(paths: &[PathBuf]) -> Result<Self, SemanticPackLoadError> {
         let manifest_paths = discover_manifest_paths(paths)?;
-        let mut packs = compiled_first_party_packs();
+        let mut packs = compiled_builtin_packs();
+        let mut external_evidence_producer_rows = Vec::new();
+        let mut external_contract_rows = Vec::new();
+        let mut external_value_law_rows = Vec::new();
         for path in manifest_paths {
-            let pack = load_local_manifest(&path)?;
-            if let Some(existing) = packs.iter().find(|existing| existing.id == pack.id) {
+            let loaded = loading::load_local_manifest_with_rows(&path)?;
+            if let Some(existing) = packs
+                .iter()
+                .find(|existing| existing.id == loaded.summary.id)
+            {
                 return Err(SemanticPackLoadError::DuplicatePackId {
-                    id: pack.id,
+                    id: loaded.summary.id,
                     first_path: existing.manifest_path.clone(),
                     second_path: Some(path),
                 });
             }
-            packs.push(pack);
+            external_evidence_producer_rows.extend(loaded.external_evidence_producer_rows);
+            external_contract_rows.extend(loaded.external_contract_rows);
+            external_value_law_rows.extend(loaded.external_value_law_rows);
+            packs.push(loaded.summary);
         }
-        Ok(Self { packs })
+        Ok(Self {
+            packs,
+            external_evidence_producer_rows,
+            external_contract_rows,
+            external_value_law_rows,
+        })
+    }
+
+    pub fn builtin_only() -> Self {
+        Self {
+            packs: compiled_builtin_packs(),
+            external_evidence_producer_rows: Vec::new(),
+            external_contract_rows: Vec::new(),
+            external_value_law_rows: Vec::new(),
+        }
     }
 
     pub fn first_party_only() -> Self {
-        Self {
-            packs: compiled_first_party_packs(),
-        }
+        Self::builtin_only()
     }
 
     pub fn packs(&self) -> &[SemanticPackSummary] {
         &self.packs
     }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum SemanticPackFixtureKind {
-    Positive,
-    HardNegative,
-}
+    pub fn external_evidence_producer_rows(&self) -> &[ExternalEvidenceProducerRow] {
+        &self.external_evidence_producer_rows
+    }
 
-impl SemanticPackFixtureKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SemanticPackFixtureKind::Positive => "positive",
-            SemanticPackFixtureKind::HardNegative => "hard-negative",
+    pub fn external_contract_rows(&self) -> &[ExternalContractRow] {
+        &self.external_contract_rows
+    }
+
+    pub fn external_value_law_rows(&self) -> &[ExternalValueLawRow] {
+        &self.external_value_law_rows
+    }
+
+    pub fn external_row_conflicts(&self) -> ExternalRowConflictReport {
+        let mut conflicts = Vec::new();
+        let coordinates = self.external_row_coordinates();
+        for coordinate in &coordinates {
+            for builtin in builtin_pack_descriptors() {
+                if builtin_descriptor_contains_row_id(*builtin, coordinate.kind, &coordinate.row_id)
+                {
+                    conflicts.push(ExternalRowConflict {
+                        kind: coordinate.kind,
+                        row_id: coordinate.row_id.clone(),
+                        row_hash: coordinate.row_hash,
+                        external_pack_id: coordinate.pack_id.clone(),
+                        external_pack_hash: coordinate.pack_hash,
+                        external_manifest_path: coordinate.manifest_path.clone(),
+                        conflicting_pack_id: builtin.id.to_string(),
+                        conflicting_pack_hash: semantic_pack_hash(builtin.id),
+                        conflicting_source: SemanticPackSource::CompiledBuiltin,
+                        conflicting_manifest_path: None,
+                    });
+                }
+            }
         }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum SemanticPackFixtureIssue {
-    MissingPath,
-    MissingFile,
-    MissingExpectation,
-    AbsolutePath,
-}
-
-impl SemanticPackFixtureIssue {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SemanticPackFixtureIssue::MissingPath => "missing-path",
-            SemanticPackFixtureIssue::MissingFile => "missing-file",
-            SemanticPackFixtureIssue::MissingExpectation => "missing-expectation",
-            SemanticPackFixtureIssue::AbsolutePath => "absolute-path",
+        let mut seen: HashMap<(ExternalRowKind, String), ExternalRowCoordinate> = HashMap::new();
+        for coordinate in coordinates {
+            let key = (coordinate.kind, coordinate.row_id.clone());
+            if let Some(first) = seen.get(&key) {
+                conflicts.push(ExternalRowConflict {
+                    kind: coordinate.kind,
+                    row_id: coordinate.row_id.clone(),
+                    row_hash: coordinate.row_hash,
+                    external_pack_id: coordinate.pack_id.clone(),
+                    external_pack_hash: coordinate.pack_hash,
+                    external_manifest_path: coordinate.manifest_path.clone(),
+                    conflicting_pack_id: first.pack_id.clone(),
+                    conflicting_pack_hash: first.pack_hash,
+                    conflicting_source: SemanticPackSource::LocalManifest,
+                    conflicting_manifest_path: Some(first.manifest_path.clone()),
+                });
+            } else {
+                seen.insert(key, coordinate);
+            }
         }
+        ExternalRowConflictReport { conflicts }
+    }
+
+    pub fn external_influence_preflight(&self) -> ExternalInfluencePreflightReport {
+        let coordinates = self.external_row_coordinates();
+        let mut conflicting_rows = HashSet::new();
+        for conflict in self.external_row_conflicts().conflicts {
+            conflicting_rows.insert((
+                conflict.kind,
+                conflict.row_hash,
+                conflict.external_pack_hash,
+            ));
+            if conflict.conflicting_source == SemanticPackSource::LocalManifest {
+                conflicting_rows.insert((
+                    conflict.kind,
+                    conflict.row_hash,
+                    conflict.conflicting_pack_hash,
+                ));
+            }
+        }
+        let rows = coordinates
+            .into_iter()
+            .map(|coordinate| {
+                let mut blockers = vec![
+                    ExternalInfluenceBlocker::DataOnlyRegistration,
+                    ExternalInfluenceBlocker::DependencyBackedEvidenceUnavailable,
+                    ExternalInfluenceBlocker::ExplicitInfluenceTrustGateMissing,
+                ];
+                if coordinate.channel.exact_capable() {
+                    blockers.push(ExternalInfluenceBlocker::ExecutableConformanceUnavailable);
+                }
+                if conflicting_rows.contains(&(
+                    coordinate.kind,
+                    coordinate.row_hash,
+                    coordinate.pack_hash,
+                )) {
+                    blockers.push(ExternalInfluenceBlocker::RowConflict);
+                }
+                ExternalRowInfluencePreflight {
+                    kind: coordinate.kind,
+                    row_id: coordinate.row_id,
+                    row_hash: coordinate.row_hash,
+                    pack_id: coordinate.pack_id,
+                    pack_hash: coordinate.pack_hash,
+                    manifest_path: coordinate.manifest_path,
+                    channel: coordinate.channel,
+                    blockers,
+                }
+            })
+            .collect();
+        ExternalInfluencePreflightReport { rows }
+    }
+
+    fn external_row_coordinates(&self) -> Vec<ExternalRowCoordinate> {
+        let mut rows = Vec::with_capacity(
+            self.external_evidence_producer_rows.len()
+                + self.external_contract_rows.len()
+                + self.external_value_law_rows.len(),
+        );
+        rows.extend(
+            self.external_evidence_producer_rows
+                .iter()
+                .map(ExternalRowCoordinate::from_producer),
+        );
+        rows.extend(
+            self.external_contract_rows
+                .iter()
+                .map(ExternalRowCoordinate::from_contract),
+        );
+        rows.extend(
+            self.external_value_law_rows
+                .iter()
+                .map(ExternalRowCoordinate::from_law),
+        );
+        rows
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct SemanticPackFixtureCheck {
-    pub kind: SemanticPackFixtureKind,
-    pub id: String,
-    pub description: String,
-    pub declared_path: Option<String>,
-    pub resolved_path: Option<PathBuf>,
-    pub expectation: Option<String>,
-    pub issues: Vec<SemanticPackFixtureIssue>,
-}
-
-impl SemanticPackFixtureCheck {
-    pub fn passed(&self) -> bool {
-        self.issues.is_empty()
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct SemanticPackConformanceManifest {
-    pub pack: SemanticPackSummary,
-    pub manifest_path: PathBuf,
-    pub conformance_command: Option<String>,
-    pub proof_links: Vec<String>,
-    pub fixtures: Vec<SemanticPackFixtureCheck>,
-}
-
-impl SemanticPackConformanceManifest {
-    pub fn passed(&self) -> bool {
-        self.fixture_issue_count() == 0
-    }
-
-    pub fn fixture_issue_count(&self) -> usize {
-        self.fixtures
+fn builtin_descriptor_contains_row_id(
+    descriptor: BuiltinPackDescriptor,
+    kind: ExternalRowKind,
+    row_id: &str,
+) -> bool {
+    match kind {
+        ExternalRowKind::EvidenceProducer => descriptor
+            .evidence_producer_ids
             .iter()
-            .map(|fixture| fixture.issues.len())
-            .sum()
+            .chain(descriptor.source_fact_producer_ids.iter())
+            .any(|id| *id == row_id),
+        ExternalRowKind::Contract => descriptor.contract_ids.contains(&row_id),
+        ExternalRowKind::ValueLaw => descriptor.value_law_ids().contains(&row_id),
     }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct SemanticPackConformanceReport {
-    pub manifests: Vec<SemanticPackConformanceManifest>,
-}
-
-impl SemanticPackConformanceReport {
-    pub fn passed(&self) -> bool {
-        self.manifests
-            .iter()
-            .all(SemanticPackConformanceManifest::passed)
-    }
-
-    pub fn manifest_count(&self) -> usize {
-        self.manifests.len()
-    }
-
-    pub fn positive_fixture_count(&self) -> usize {
-        self.manifests
-            .iter()
-            .map(|manifest| manifest.pack.counts.positive_fixtures)
-            .sum()
-    }
-
-    pub fn hard_negative_count(&self) -> usize {
-        self.manifests
-            .iter()
-            .map(|manifest| manifest.pack.counts.hard_negatives)
-            .sum()
-    }
-
-    pub fn fixture_issue_count(&self) -> usize {
-        self.manifests
-            .iter()
-            .map(SemanticPackConformanceManifest::fixture_issue_count)
-            .sum()
-    }
-}
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct SemanticPackManifest {
-    #[serde(rename = "$schema")]
-    _schema: Option<String>,
-    api_version: String,
-    pack: ManifestPack,
-    provenance: ManifestProvenance,
-    compatibility: ManifestCompatibility,
-    supported_languages: Vec<ManifestLanguage>,
-    #[serde(default)]
-    packages: Vec<ManifestPackage>,
-    #[serde(default)]
-    dependencies: Vec<ManifestDependency>,
-    declares: ManifestDeclares,
-    conformance: ManifestConformance,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestPack {
-    id: String,
-    kind: SemanticPackKind,
-    version: String,
-    display_name: String,
-    #[serde(default)]
-    description: Option<String>,
-    trust: PackTrust,
-    enabled_by_default: bool,
-    // Documented v0 schema field the engine does not consume; listed (typed) so
-    // `deny_unknown_fields` still accepts and validates conforming manifests.
-    #[serde(default, rename = "status")]
-    _status: Option<SemanticPackStatus>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestProvenance {
-    provider: ManifestProvider,
-    license: String,
-    repository: String,
-    #[serde(default)]
-    source_revision: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestProvider {
-    name: String,
-    #[serde(default)]
-    contact: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestCompatibility {
-    nose: String,
-    #[serde(default, rename = "schema")]
-    _schema: Option<SemanticPackSchemaVersion>,
-    #[serde(default)]
-    notes: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestLanguage {
-    id: String,
-    #[serde(default)]
-    language_version: Option<String>,
-    #[serde(default)]
-    runtime: Option<String>,
-    #[serde(default)]
-    runtime_versions: Vec<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestDependency {
-    id: String,
-    version: String,
-    required: bool,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestPackage {
-    ecosystem: String,
-    name: String,
-    versions: String,
-    #[serde(default, rename = "stdlib")]
-    _stdlib: Option<bool>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestDeclares {
-    evidence_producers: Vec<ManifestEvidenceProducer>,
-    contracts: Vec<ManifestContract>,
-    #[serde(default)]
-    value_laws: Vec<ManifestValueLaw>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestEvidenceProducer {
-    id: String,
-    kind: String,
-    anchors: Vec<SemanticPackAnchor>,
-    channel: SemanticPackChannel,
-    #[serde(default)]
-    emits: Vec<String>,
-    #[serde(default)]
-    requires: Vec<ManifestRequirement>,
-    stable_hash_inputs: Vec<String>,
-    conflict_policy: String,
-    #[serde(default)]
-    notes: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestContract {
-    id: String,
-    surface: serde_json::Value,
-    requires: Vec<ManifestRequirement>,
-    semantics: serde_json::Value,
-    channel: SemanticPackChannel,
-    proof_status: SemanticPackProofStatus,
-    conformance_refs: Vec<String>,
-    #[serde(default)]
-    known_unsupported: Vec<String>,
-    #[serde(default)]
-    notes: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestValueLaw {
-    id: String,
-    requires: Vec<ManifestRequirement>,
-    semantics: serde_json::Value,
-    channel: SemanticPackChannel,
-    proof_status: SemanticPackProofStatus,
-    conformance_refs: Vec<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestRequirement {
-    #[serde(rename = "ref")]
-    ref_id: String,
-    subject: String,
-    required: bool,
-    #[serde(default)]
-    same_anchor_as: Option<String>,
-    #[serde(default)]
-    within_scope: Option<String>,
-    #[serde(default)]
-    before: Option<String>,
-    #[serde(default)]
-    after: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestConformance {
-    positive_fixtures: Vec<ManifestFixture>,
-    hard_negatives: Vec<ManifestFixture>,
-    known_unsupported: Vec<String>,
-    #[serde(default)]
-    command: Option<String>,
-    #[serde(default)]
-    proofs: Vec<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ManifestFixture {
-    id: String,
-    description: String,
-    #[serde(default)]
-    path: Option<String>,
-    #[serde(default)]
-    expectation: Option<String>,
 }
 
 #[cfg(test)]

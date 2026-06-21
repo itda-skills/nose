@@ -59,6 +59,7 @@ pub(in crate::library_api) fn library_api_dependencies_match_callee_at_span(
             library_api_dependencies_match_method_callee_at_span(
                 il,
                 interner,
+                call_span,
                 callee_span,
                 receiver_span,
                 callee,
@@ -115,7 +116,9 @@ pub(in crate::library_api) fn library_api_dependencies_match_named_callee_at_spa
         }
         LibraryApiCalleeContract::ImportedBinding { module, exported } => {
             if let Some(span) = receiver_span {
-                dependency_has_imported_namespace_anchor(
+                callee_span.is_some_and(|callee_span| {
+                    field_method_receiver_matches_span(il, interner, callee_span, exported, span)
+                }) && dependency_has_imported_namespace_anchor(
                     il,
                     interner,
                     record,
@@ -132,14 +135,30 @@ pub(in crate::library_api) fn library_api_dependencies_match_named_callee_at_spa
                     NodeKind::Var,
                     module,
                     exported,
-                ) || dependency_has_imported_namespace_dependency(il, interner, record, module)
+                )
             } else {
                 dependency_has_imported_binding_dependency(il, interner, record, module, exported)
-                    || dependency_has_imported_namespace_dependency(il, interner, record, module)
             }
         }
         _ => false,
     }
+}
+
+fn field_method_receiver_matches_span(
+    il: &Il,
+    interner: &Interner,
+    callee_span: Span,
+    method: &str,
+    receiver_span: Span,
+) -> bool {
+    let Some(callee) = node_at_span_with_kind(il, callee_span, NodeKind::Field) else {
+        return false;
+    };
+    field_method_at_span(il, interner, callee_span, method)
+        && il
+            .children(callee)
+            .first()
+            .is_some_and(|&receiver| il.node(receiver).span == receiver_span)
 }
 
 pub(in crate::library_api) fn library_api_dependencies_match_static_import_callee_at_span(
@@ -309,6 +328,7 @@ pub(in crate::library_api) fn library_api_dependencies_match_static_member_calle
 pub(in crate::library_api) fn library_api_dependencies_match_method_callee_at_span(
     il: &Il,
     interner: &Interner,
+    call_span: Span,
     callee_span: Option<Span>,
     receiver_span: Option<Span>,
     callee: LibraryApiCalleeContract,
@@ -316,12 +336,26 @@ pub(in crate::library_api) fn library_api_dependencies_match_method_callee_at_sp
 ) -> bool {
     match callee {
         LibraryApiCalleeContract::Method { method, receiver } => {
-            callee_span.is_some_and(|span| field_method_at_span(il, interner, span, method))
-                && receiver_span.is_some_and(|span| {
-                    method_receiver_dependencies_at_span(il, interner, span, receiver).is_some_and(
-                        |dependencies| dependency_ids_are_present(record, &dependencies),
-                    )
-                })
+            if !callee_span.is_some_and(|span| field_method_at_span(il, interner, span, method)) {
+                return false;
+            }
+            if receiver == MethodReceiverContract::UnshadowedGlobal("Math") {
+                let Some(source_call) = node_at_span_with_kind(il, call_span, NodeKind::Call)
+                else {
+                    return false;
+                };
+                return library_api_receiver_dependencies_for_call(
+                    il,
+                    interner,
+                    source_call,
+                    callee,
+                )
+                .is_some_and(|dependencies| dependency_ids_are_present(record, &dependencies));
+            }
+            receiver_span.is_some_and(|span| {
+                method_receiver_dependencies_at_span(il, interner, span, receiver)
+                    .is_some_and(|dependencies| dependency_ids_are_present(record, &dependencies))
+            })
         }
         LibraryApiCalleeContract::IteratorAdapterMethod { method, receiver } => {
             callee_span.is_some_and(|span| field_method_at_span(il, interner, span, method))

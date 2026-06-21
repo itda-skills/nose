@@ -223,6 +223,7 @@ fn nullish_global_contracts_are_js_like_and_unshadowed() {
 fn builder_append_contracts_are_language_and_arity_constrained() {
     let rust_push = builder_append_method_contract(Lang::Rust, "push", 1)
         .expect("rust push builder append contract");
+    assert_eq!(rust_push.pack_id, RUST_LANGUAGE_PACK_ID);
     assert_eq!(rust_push.effect, EffectEvidenceKind::BuilderAppendCall);
     assert_eq!(
         rust_push.receiver,
@@ -230,9 +231,30 @@ fn builder_append_contracts_are_language_and_arity_constrained() {
     );
     assert!(builder_append_method_contract(Lang::Rust, "push", 2).is_none());
     assert!(builder_append_method_contract(Lang::Java, "add", 1).is_some());
-    assert!(builder_append_method_contract(Lang::JavaScript, "push", 1).is_some());
-    assert!(builder_append_method_contract(Lang::TypeScript, "push", 1).is_some());
-    assert!(builder_append_method_contract(Lang::Python, "append", 1).is_some());
+    assert_eq!(
+        builder_append_method_contract(Lang::Java, "add", 1)
+            .expect("java add builder append contract")
+            .pack_id,
+        JAVA_LANGUAGE_PACK_ID
+    );
+    assert_eq!(
+        builder_append_method_contract(Lang::JavaScript, "push", 1)
+            .expect("javascript push builder append contract")
+            .pack_id,
+        JS_TS_LANGUAGE_PACK_ID
+    );
+    assert_eq!(
+        builder_append_method_contract(Lang::TypeScript, "push", 1)
+            .expect("typescript push builder append contract")
+            .pack_id,
+        JS_TS_LANGUAGE_PACK_ID
+    );
+    assert_eq!(
+        builder_append_method_contract(Lang::Python, "append", 1)
+            .expect("python append builder append contract")
+            .pack_id,
+        PYTHON_LANGUAGE_PACK_ID
+    );
     assert!(builder_append_method_contract(Lang::Ruby, "push", 1).is_none());
 }
 
@@ -240,7 +262,7 @@ fn builder_append_contracts_are_language_and_arity_constrained() {
 fn unproven_membership_like_guard_is_negative_api_policy() {
     let guard = unproven_membership_like_method_contract(Lang::TypeScript, "includes", 1)
         .expect("includes guard");
-    assert_eq!(guard.pack_id, FIRST_PARTY_PACK_ID);
+    assert_eq!(guard.pack_id, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID);
     assert_eq!(guard.id, ApiGuardContractId::UnprovenMembershipLikeCall);
     assert_eq!(guard.lang, Lang::TypeScript);
     assert_eq!(guard.method, "includes");
@@ -254,7 +276,7 @@ fn unproven_membership_like_guard_is_negative_api_policy() {
 fn map_builder_index_write_contracts_are_language_scoped() {
     let contract =
         map_builder_index_write_contract(Lang::Python).expect("python map builder contract");
-    assert_eq!(contract.pack_id, FIRST_PARTY_PACK_ID);
+    assert_eq!(contract.pack_id, PYTHON_LANGUAGE_PACK_ID);
     assert_eq!(contract.id, IndexWriteContractId::MapBuilderEntryWrite);
     assert_eq!(
         contract.receiver,

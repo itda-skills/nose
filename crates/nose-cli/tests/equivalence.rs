@@ -68,8 +68,6 @@ mod literal_value_boundaries;
 mod loops_and_reductions;
 #[path = "equivalence/map_default_boundaries.rs"]
 mod map_default_boundaries;
-#[path = "equivalence/map_key_membership.rs"]
-mod map_key_membership;
 #[path = "equivalence/markup_surfaces.rs"]
 mod markup_surfaces;
 #[path = "equivalence/numeric_law_boundaries.rs"]
@@ -82,6 +80,8 @@ mod operator_boundaries;
 mod option_boundaries;
 #[path = "equivalence/protocol_boundaries.rs"]
 mod protocol_boundaries;
+#[path = "equivalence/receiver_membership.rs"]
+mod receiver_membership;
 #[path = "equivalence/recursion_iteration.rs"]
 mod recursion_iteration;
 #[path = "equivalence/reinvented_helper_boundaries.rs"]

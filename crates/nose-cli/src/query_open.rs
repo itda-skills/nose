@@ -1,6 +1,7 @@
 use super::query_model::*;
 use crate::legacy_prelude::*;
 use crate::query_family_text::{print_member_diff, print_member_proposal};
+use crate::query_semantic_packs::with_semantic_packs;
 
 /// Render the origin-derived "why this hint" reasons (#453) under a family's hint, if any.
 fn print_hint_reasons(f: &nose_detect::RefactorFamily) {
@@ -53,6 +54,7 @@ pub(super) fn render_query_family(
     json: bool,
     baseline_cmp: Option<&BaselineComparison>,
     since: Option<&BaselineComparison>,
+    semantic_packs: &[serde_json::Value],
 ) {
     let Some(f) = families
         .iter()
@@ -88,15 +90,18 @@ pub(super) fn render_query_family(
     if json {
         println!(
             "{}",
-            serde_json::json!({
-                "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
-                "tool": "nose",
-                "view": "family",
-                "path": path,
-                "hint": family_hint(f),
-                "hint_reasons": hint_reasons(f),
-                "family": query_family_json(f, ov, opp, full, baseline_cmp, since),
-            })
+            with_semantic_packs(
+                serde_json::json!({
+                    "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
+                    "tool": "nose",
+                    "view": "family",
+                    "path": path,
+                    "hint": family_hint(f),
+                    "hint_reasons": hint_reasons(f),
+                    "family": query_family_json(f, ov, opp, full, baseline_cmp, since),
+                }),
+                semantic_packs
+            )
         );
         return;
     }

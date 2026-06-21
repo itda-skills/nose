@@ -6,15 +6,16 @@ and pack ecosystem.
 ## Decisions
 
 1. **All language and library semantics should eventually enter through packs.**
-   First-party languages are not special at the API boundary; they may be compiled
+   Builtin languages are not special at the API boundary; they may be compiled
    into nose, but they should use the same pack contracts as external languages.
 
-2. **nose certifies only first-party packs.** External pack providers own their
+2. **nose certifies only builtin packs.** External pack providers own their
    semantic claims. Users own the decision to enable them. nose owns the
    extension contract, schema and structural validation, fail-closed execution,
    and provenance reporting. Semantic correctness, conformance evidence, and
    enablement risk for external packs stay with the provider and user, except
-   for first-party/default packs that nose ships and tests.
+   for builtin packs that nose ships and tests. `builtin-default` adds default
+   enablement; `builtin-optional` is still nose-owned and gated.
 
 3. **Packs emit evidence, not verdicts.** A pack can emit facts, contracts, and
    protocol operations. It cannot mint fingerprints, bypass laws, or approve exact
@@ -43,6 +44,760 @@ and pack ecosystem.
    surface, and equality/operator family. They can feed exact contracts only
    through kernel-defined fact kinds and contract preconditions; they do not mint
    fingerprints or approve equivalence directly.
+
+9. **New official semantics should be pack-owned.** New builtin language,
+   stdlib, library, or law support should enter through a builtin pack descriptor
+   and shared evidence/contract vocabulary. A temporary raw kernel/frontend shim
+   must link a tracking issue and state the removal condition.
+
+10. **Pack-boundary migrations must preserve product behavior and performance.**
+    Descriptor, registry, naming, and reporting changes should not change family
+    output except intentional metadata. Implementation PRs should run product
+    query-regression output/runtime comparison and follow the gates in
+    [semantic-pack-architecture](semantic-pack-architecture.md).
+
+## Active migration tranche
+
+Issue [#473](https://github.com/corca-ai/nose/issues/473) moves builtin and
+external language/library support onto one semantic-pack architecture. The target
+shape, terminology, trust-lane compatibility, contributor rule, product behavior
+gate, performance gate, and phase order live in
+[semantic-pack-architecture](semantic-pack-architecture.md).
+
+The next code slices are intentionally incremental:
+
+1. Phase 0: align boundary, terminology, compatibility, and measurement gates;
+2. Phase 1: add a minimal builtin pack descriptor/registry for compiled packs;
+3. Phase 2: carry active pack metadata into `nose query --format json` schema
+   v5 and update capabilities;
+4. Phase 3: make `nose.python.stdlib.type_domain` the first end-to-end reference builtin
+   stdlib pack;
+5. Phase 4: report all official language/region parser-lowering ownership
+   through `nose.lang.*` builtin descriptors, with `nose.lang.c` as the first
+   specialized source-fact slice for unsigned-cast proof;
+6. Phase 5: move narrow stdlib/library/law rows behind pack-owned descriptors and shared
+   admitted-contract resolvers, starting with
+   `nose.python.builtins.collection_factories` for Python builtin collection
+   factory `LibraryApi` occurrence provenance, then
+   `nose.python.stdlib.collection_factories` for Python `collections.deque`
+   imported binding, alias, and namespace collection-factory occurrence
+   provenance, then `nose.ruby.stdlib.set` for Ruby `Set.new(...)`
+   collection-factory occurrence provenance backed by `require "set"`, then
+   `nose.rust.stdlib.vec` for Rust `Vec::new` and `vec!` collection-factory
+   occurrence provenance, then `nose.rust.stdlib.option` for Rust `Some`,
+   `None`, and `and_then` Option API occurrence provenance, then
+   `nose.rust.stdlib.integer_methods` for Rust primitive integer
+   `abs`/`min`/`max`/`clamp` method API occurrence provenance, then
+   `nose.java.stdlib.math` for Java `Math.abs`, `Math.min`, and `Math.max`
+   scalar integer API occurrence provenance, then
+   `nose.javascript.builtins.promise` for JS/TS `Promise.resolve` and `.then`
+   Promise API occurrence provenance, then
+   `nose.javascript.builtins.array` for JS/TS `Array.from` and
+   `Array.isArray` API occurrence provenance, then
+   `nose.javascript.builtins.boolean` for JS/TS `Boolean(...)` API occurrence
+   provenance, then
+   `nose.javascript.builtins.regex` for JS/TS regex literal `.test(...)` API
+   occurrence provenance, then
+   `nose.javascript.builtins.static_index_membership` for JS/TS static
+   `indexOf`/`findIndex` membership API occurrence provenance, then
+   `nose.javascript.builtins.collection_constructors` for JS/TS `new Set(...)`
+   and `new Map(...)` API occurrence provenance, then
+   `nose.rust.stdlib.collection_factories` for selected Rust
+   `std::collections::{HashSet,BTreeSet,VecDeque}::from`
+   collection-factory occurrence provenance, then
+   `nose.rust.stdlib.map_factories` for selected Rust
+   `std::collections::{HashMap,BTreeMap}::from` map-factory occurrence
+   provenance, then `nose.java.stdlib.map_factories` for Java `Map.of` and
+   `Map.ofEntries` map-factory occurrence provenance, then
+   `nose.java.stdlib.collection_factories` for Java `List.of`, `Set.of`, and
+   `Arrays.asList` collection-factory occurrence provenance, then
+   `nose.java.stdlib.collection_constructors` for Java empty `new
+   ArrayList<>()` and `new LinkedList<>()` collection-constructor occurrence
+   provenance, then `nose.java.stdlib.map_entries` for Java `Map.entry`
+   map-entry occurrence provenance, then
+   `nose.java.stdlib.static_collection_adapters` for Java `Arrays.stream`
+   static collection adapter occurrence provenance, then
+   `nose.protocols.map_get` for Java/Rust/JS-family `map.get(key)` occurrence
+   provenance, then
+   `nose.protocols.map_get_default` for Python `dict.get(key, default)`, Ruby
+   `Hash#fetch(key, default)` or zero-arg block fallback, and Java
+   `Map.getOrDefault(key, default)` occurrence provenance, then
+   `nose.protocols.free_function_builtins` for unshadowed Python/Go/Swift
+   free-name builtin calls such as Python `len`/`range`/reductions, Go
+   `len`/`append`, and Swift `abs`/`min`/`max`, then
+   `nose.protocols.receiver_membership` for receiver-method `Contains`
+   contracts with receiver proof, including Java/Rust/Ruby map-key membership,
+   Python `__contains__`, JS-like `has`/`includes`, Java/Swift `contains`, and
+   Ruby `member?`, then
+   `nose.protocols.map_key_views` for Python/Ruby `keys`, Java `keySet`, and
+   JS-family `Map.keys()` occurrence provenance, then
+   `nose.protocols.property_builtins` for JS/TS/HTML-family and Java `.length`
+   plus Swift `count`/`isEmpty` occurrence provenance, then
+   `nose.protocols.builtin_method_calls` for generic method-call and
+   namespace-call builtin semantics not yet owned by a narrower protocol pack,
+   then
+   `nose.protocols.iterator_identity_adapters` for Rust
+   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
+   `.stream()` iterator identity adapter occurrence provenance;
+7. Phase 6: allow external pack influence only after the builtin path is proven;
+8. Phase 7: define adoption and release gates.
+
+Phase 4 C-slice measurement note, local run on 2026-06-20: product
+query-regression r15 compared `main@d8e0796` with the `nose.lang.c` branch over
+the 9-repo subset. Family summaries, locations, fragment buckets, reason-code
+counts, and surface counts were unchanged after ignoring `result_json_bytes`.
+The expected JSON byte drift came from top-level `semantic_packs` metadata.
+Aggregate median wall time was 55.68 ms -> 55.15 ms; `lower` was
+23.50 ms -> 23.50 ms; `normalize+extract` was 16.70 ms -> 18.10 ms, a
+1.40 ms move under the 5 ms floor; `candidates` was 1.20 ms -> 1.10 ms. A noisy
+`chi` r15 wall increase was rechecked with 30 alternating runs and measured
+35.00 ms -> 34.29 ms. Binary size changed 20,105,968 -> 20,124,384 bytes for
+the cumulative issue branch.
+
+Phase 5 Python builtins collection-factory measurement note, local run on
+2026-06-20: product query-regression r15 compared `main@d8e0796` with the
+`nose.python.builtins.collection_factories` branch over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, and surface
+counts were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by 2555 bytes from the new top-level `semantic_packs` entry. Aggregate median
+wall time was 56.01 ms -> 55.61 ms; `lower` was 24.70 ms -> 23.90 ms;
+`normalize+extract` was 17.10 ms -> 17.50 ms; `candidates` stayed
+1.10 ms -> 1.10 ms. A noisy compare-run `swift-metrics` wall trigger measured
+28.9 ms -> 39.1 ms; the same final artifact's saved current-baseline run
+measured `swift-metrics` 28.94 ms -> 28.16 ms, so the trigger was treated as
+timing noise. Binary size
+changed 20,105,968 -> 20,124,592 bytes for the cumulative issue branch.
+
+Phase 5 Python stdlib collection-factory measurement note, local run on
+2026-06-20: product query-regression r15 compared `main@d8e0796` with the
+`nose.python.stdlib.collection_factories` branch over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, and surface
+counts were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by 3092 bytes from the new top-level `semantic_packs` entry. The final
+sequential r15 compare produced only JSON-byte metadata triggers. The same
+main/current binaries were also remeasured with repo-local alternating r15 runs
+saved during the local run at
+`/tmp/nose-473-phase5-stdlib-collections-alternating-final3-r15.json`. The
+alternating aggregate wall time was 1278.26 ms -> 1239.00 ms (-3.1%);
+`lower` was 396.60 ms -> 386.30 ms (-2.6%); `normalize+extract` was
+679.70 ms -> 637.70 ms (-6.2%); `candidates` was 22.50 ms -> 21.30 ms.
+No alternating repo/phase exceeded both the 5% and 5 ms investigation trigger.
+Binary size changed 20,105,968 -> 20,124,864 bytes for the cumulative issue
+branch.
+
+Phase 5 Ruby stdlib Set measurement note, local run on 2026-06-20: product
+query-regression r15 compared the previous
+`nose.python.stdlib.collection_factories` slice with the
+`nose.ruby.stdlib.set` slice over the same 9-repo subset. Family summaries,
+locations, fragment buckets, reason-code counts, and surface counts were
+unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by 499
+bytes from the new top-level `semantic_packs` entry. The previous-slice compare
+produced only JSON-byte metadata triggers and no runtime triggers. The saved
+current artifact is `/tmp/nose-473-phase5-ruby-set-current-r15.json`, and the
+previous-slice compare summary is
+`/tmp/nose-473-phase5-ruby-set-vs-prev-r15.md`. A cumulative compare against
+the original main baseline saved at `/tmp/nose-473-phase5-ruby-set-compare-r15.md`
+showed the same expected metadata drift plus noisy sequential runtime triggers.
+Repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-ruby-set-alternating-r15.json` measured aggregate wall
+time 1279.12 ms -> 1196.62 ms, `lower` 389.60 ms -> 389.70 ms,
+`normalize+extract` 680.40 ms -> 601.40 ms, and `candidates` 22.80 ms ->
+18.60 ms. The remaining alternating triggers were `parse+lower`/`lower` timing
+redistribution on `cmark` and `parse+lower` timing redistribution on `junit5`;
+aggregate wall time and the measured product path did not regress. Binary size
+changed 20,124,864 -> 20,125,104 bytes for this slice.
+
+Phase 5 Rust stdlib Vec measurement note, local run on 2026-06-20: product
+query-regression r15 compared the previous `nose.ruby.stdlib.set` slice with
+the `nose.rust.stdlib.vec` slice over the same 9-repo subset. Family summaries,
+locations, fragment buckets, reason-code counts, and surface counts were
+unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by 499
+bytes from the new top-level `semantic_packs` entry. The saved current artifact
+is `/tmp/nose-473-phase5-rust-vec-current-r15.json`, and the previous-slice
+compare summary is `/tmp/nose-473-phase5-rust-vec-vs-prev-r15.md`; it produced
+only JSON-byte metadata triggers and no runtime triggers. The saved
+previous-slice aggregate wall time was 1205.85 ms -> 1213.33 ms, `lower`
+384.60 ms -> 375.80 ms, `normalize+extract` 609.50 ms -> 628.60 ms, and
+`candidates` 21.20 ms -> 22.20 ms. A cumulative compare against the original
+main baseline saved at `/tmp/nose-473-phase5-rust-vec-compare-r15.md` showed
+the same expected metadata drift plus a noisy sequential `serde_json` runtime
+trigger. Repo-local main/current alternating r15 runs saved at
+`/tmp/nose-473-phase5-rust-vec-alternating-r15.json` measured aggregate wall
+time 1244.34 ms -> 1226.48 ms, `lower` 385.60 ms -> 381.10 ms,
+`normalize+extract` 606.00 ms -> 624.80 ms, and `candidates` 22.20 ms ->
+22.40 ms. The remaining cumulative alternating triggers were `wall` timing on
+`boltons` and `normalize+extract` timing on `cmark`; neither path exercises the
+Rust Vec pack, and aggregate wall time did not regress. Root-cause note: this
+slice changed static pack metadata, Rust frontend shadow/provenance ids, and
+admission provenance checks; it did not touch candidate generation, and product
+output did not drift. Follow-up under issue #473: if the next Phase 5 slice or
+an r30 cumulative rerun repeats the `boltons` or `cmark` triggers above both the
+5% and 5 ms gates, pause pack-row migration and instrument the reported phase
+before committing more stdlib/library rows. Binary size changed 20,125,104 ->
+20,142,096 bytes for this slice.
+
+Phase 5 Rust stdlib collection-factory measurement note, local run on
+2026-06-20: product query-regression r15 compared the previous
+`nose.rust.stdlib.vec` slice with the
+`nose.rust.stdlib.collection_factories` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, and surface
+counts were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by 531 bytes from the new top-level `semantic_packs` entry. The saved current
+artifact is `/tmp/nose-473-phase5-rust-collections-current-r15.json`, and the
+previous-slice compare summary is
+`/tmp/nose-473-phase5-rust-collections-vs-prev-r15.md`. The previous-slice
+sequential compare showed expected metadata drift plus noisy runtime triggers,
+so the same binaries were remeasured with repo-local alternating r15 runs saved
+at `/tmp/nose-473-phase5-rust-collections-alternating-r15.json`: aggregate wall
+time 1941.69 ms -> 1913.39 ms, `lower` 569.00 ms -> 559.00 ms,
+`normalize+extract` 1034.90 ms -> 1039.40 ms, and `candidates` 39.30 ms ->
+37.30 ms. A remaining previous-slice alternating trigger was `gin` wall timing;
+the same final binary compared cumulatively against original main with
+repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-rust-collections-main-alternating-r15.json` had no
+repo/phase triggers and measured aggregate wall time 1311.99 ms -> 1351.51 ms,
+`lower` 427.20 ms -> 430.10 ms, `normalize+extract` 660.10 ms -> 676.90 ms,
+and `candidates` 23.50 ms -> 24.00 ms; the prior cumulative `boltons` and
+`cmark` triggers from the Rust Vec slice did not recur. Root-cause note: this
+slice changed static pack metadata, Rust std-collection producer provenance, and
+an admission provenance check; it did not touch candidate generation, and
+product output did not drift. Follow-up under issue #473: if the next Phase 5
+slice or an r30 rerun repeats the `gin` wall trigger above both the 5% and 5 ms
+gates, pause pack-row migration and instrument the product query path before
+committing more stdlib/library rows. Binary size changed 20,142,096 ->
+20,142,368 bytes for this slice.
+
+Phase 5 Rust stdlib map-factory measurement note, local run on 2026-06-20:
+product query-regression r15 compared the previous
+`nose.rust.stdlib.collection_factories` slice with the
+`nose.rust.stdlib.map_factories` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by 517
+bytes from the new top-level `semantic_packs` entry. The saved current artifact
+is `/tmp/nose-473-phase5-rust-map-current-r15.json`, and the previous-slice
+compare summary is `/tmp/nose-473-phase5-rust-map-vs-prev-r15.md`. The
+sequential compare showed expected metadata drift plus noisy runtime triggers,
+so the same binaries were remeasured with repo-local alternating r15 runs saved
+at `/tmp/nose-473-phase5-rust-map-alternating-r15.json`: aggregate wall time
+1249.69 ms -> 1282.62 ms, `lower` 389.20 ms -> 391.40 ms,
+`normalize+extract` 652.30 ms -> 647.90 ms, and `candidates` 23.10 ms ->
+22.80 ms. The remaining alternating r15 wall-only triggers on `boltons`,
+`serde_json`, and `liquid` were rechecked with focused alternating r30 runs
+saved at `/tmp/nose-473-phase5-rust-map-focused-alternating-r30.json`; no
+repo/phase triggers remained. Root-cause note: this slice changed static pack
+metadata, Rust std-map producer provenance, and an admission provenance check;
+it did not touch candidate generation, and product output did not drift. Binary
+size changed 20,142,368 -> 20,142,768 bytes for this slice.
+
+Phase 5 Java stdlib map-factory measurement note, local run on 2026-06-20:
+product query-regression r15 compared the previous
+`nose.rust.stdlib.map_factories` slice with the
+`nose.java.stdlib.map_factories` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by 517
+bytes from the new top-level `semantic_packs` entry. The saved previous and
+current artifacts are `/tmp/nose-473-phase5-java-map-prev-r15.json` and
+`/tmp/nose-473-phase5-java-map-current-r15.json`; the previous-slice compare
+summary is `/tmp/nose-473-phase5-java-map-vs-prev-r15.md`. The sequential
+compare showed expected metadata drift plus noisy runtime triggers, so the same
+binaries were remeasured with repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-java-map-alternating-r15.json`: aggregate wall time
+1447.61 ms -> 1439.27 ms, `lower` 440.70 ms -> 431.50 ms,
+`normalize+extract` 736.30 ms -> 749.20 ms, and `candidates` 24.90 ms ->
+25.50 ms. The remaining alternating r15 triggers on `serde_json` wall time and
+`junit5` `normalize+extract` were rechecked with focused alternating r30 runs
+saved at `/tmp/nose-473-phase5-java-map-focused-alternating-r30.json`; no
+repo/phase triggers remained. Root-cause note: this slice changed static pack
+metadata, Java std-map producer provenance, and an admission provenance check;
+it did not touch candidate generation, and product output did not drift. Binary
+size changed 20,142,768 -> 20,143,040 bytes for this slice.
+
+Phase 5 Java stdlib collection-factory measurement note, local run on
+2026-06-20: product query-regression r15 compared the previous
+`nose.java.stdlib.map_factories` slice with the
+`nose.java.stdlib.collection_factories` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, and surface
+counts were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by exactly 531 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-java-collections-prev-r15.json` and
+`/tmp/nose-473-phase5-java-collections-current-r15.json`; the previous-slice
+compare summary is
+`/tmp/nose-473-phase5-java-collections-vs-prev-r15.md`. The compare produced
+only expected JSON-byte investigation triggers and no runtime triggers.
+Aggregate median wall time was 1495.85 ms -> 1230.24 ms, `lower` was
+445.70 ms -> 384.00 ms, `normalize+extract` was 814.70 ms -> 633.70 ms, and
+`candidates` was 29.50 ms -> 22.30 ms. Root-cause note: this slice changed
+static pack metadata, Java std-collection producer provenance, and an admission
+provenance check; it did not touch candidate generation, and product output did
+not drift. Binary size changed 20,143,040 -> 20,143,360 bytes for this slice.
+
+Phase 5 Java stdlib collection-constructor measurement note, local run on
+2026-06-21: product query-regression r15 compared the previous
+`nose.java.stdlib.collection_factories` slice with the
+`nose.java.stdlib.collection_constructors` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, and surface
+counts were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by exactly 538 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-java-constructors-prev-r15.json` and
+`/tmp/nose-473-phase5-java-constructors-current-r15.json`; the previous-slice
+compare summaries are
+`/tmp/nose-473-phase5-java-constructors-vs-prev-r15.md` and
+`/tmp/nose-473-phase5-java-constructors-vs-prev-rerun-r15.md`. Sequential
+compare runs produced expected JSON-byte triggers plus noisy runtime triggers,
+so the same binaries were remeasured with repo-local alternating r15 runs saved
+at `/tmp/nose-473-phase5-java-constructors-alternating-r15.json`: aggregate
+wall time was 1238.33 ms -> 1258.08 ms, `lower` was 394.50 ms -> 393.00 ms,
+`normalize+extract` was 635.00 ms -> 649.20 ms, `candidates` was
+22.40 ms -> 21.90 ms, and `parse+lower` was 301.60 ms -> 297.80 ms. The only
+remaining alternating r15 trigger, `boltons` wall time, was rechecked with a
+focused alternating r30 run saved at
+`/tmp/nose-473-phase5-java-constructors-boltons-alternating-r30.json`; no
+repo/phase trigger remained. Root-cause note: this slice changed static pack
+metadata, Java std-collection-constructor producer provenance, and an admission
+provenance check; it did not touch candidate generation, and product output did
+not drift. Binary size changed 20,143,360 -> 20,143,568 bytes for this slice.
+
+Phase 5 Java stdlib map-entry measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous
+`nose.java.stdlib.collection_constructors` slice with the
+`nose.java.stdlib.map_entries` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by
+exactly 513 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-java-map-entry-prev-r15.json` and
+`/tmp/nose-473-phase5-java-map-entry-current-r15.json`; the previous-slice
+compare summary is `/tmp/nose-473-phase5-java-map-entry-vs-prev-r15.md`. The
+compare produced only expected JSON-byte investigation triggers and no runtime
+triggers. Aggregate median wall time was 1437.25 ms -> 1259.62 ms, `lower` was
+440.70 ms -> 396.70 ms, `normalize+extract` was 732.60 ms -> 658.40 ms,
+`candidates` was 31.60 ms -> 22.30 ms, and `parse+lower` was
+343.40 ms -> 302.50 ms. Root-cause note: this slice changed static pack
+metadata, Java std-map-entry producer provenance, and an admission provenance
+check; it did not touch candidate generation, and product output did not drift.
+Binary size changed 20,143,568 -> 20,160,336 bytes for this slice.
+
+Phase 5 Java stdlib static-collection-adapter measurement note, local run on
+2026-06-21: product query-regression r15 compared the previous
+`nose.java.stdlib.map_entries` slice with the
+`nose.java.stdlib.static_collection_adapters` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, and surface
+counts were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by exactly 544 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-java-static-adapter-prev-r15.json` and
+`/tmp/nose-473-phase5-java-static-adapter-current-r15.json`; the previous-slice
+compare summary is
+`/tmp/nose-473-phase5-java-static-adapter-vs-prev-r15.md`. Aggregate saved
+artifact medians were: wall 1319.06 ms -> 1339.31 ms, `lower` 421.30 ms ->
+420.00 ms, `normalize+extract` 679.70 ms -> 697.40 ms, `candidates` 23.70 ms ->
+23.80 ms, and `parse+lower` 324.10 ms -> 314.10 ms. The compare run reported
+no product-output triggers besides expected JSON-byte metadata drift, but noisy
+runtime investigation triggers appeared on `ky` and `serde_json`. A focused
+wall-only alternating r30 recheck cleared those wall triggers: `ky` 44.50 ms ->
+44.45 ms and `serde_json` 65.68 ms -> 62.98 ms. The recheck artifact is
+`/tmp/nose-473-phase5-java-static-adapter-focused-alternating-r30.json`.
+Root-cause note: this slice changed static pack metadata, Java
+`Arrays.stream` producer provenance, and an admission provenance check; it did
+not add per-node descriptor scans or touch candidate generation. Binary size
+changed 20,160,336 -> 20,160,512 bytes for this slice.
+
+Phase 5 Python stdlib math measurement note, local run on 2026-06-21: product
+query-regression r15 compared the previous
+`nose.java.stdlib.static_collection_adapters` slice with the
+`nose.python.stdlib.math` slice over the same 9-repo subset. Family summaries,
+locations, fragment buckets, reason-code counts, and surface counts were
+unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by exactly
+507 bytes from the new top-level `semantic_packs` entry. The saved previous and
+current artifacts are `/tmp/nose-473-phase5-python-math-prev-r15.json` and
+`/tmp/nose-473-phase5-python-math-current-r15.json`; the previous-slice compare
+summary is `/tmp/nose-473-phase5-python-math-vs-prev-r15.md`. The compare
+reported one JSON-byte metadata investigation trigger on `ky` and no runtime
+triggers. Aggregate saved artifact medians were: wall 1218.98 ms -> 1224.87 ms,
+`lower` 388.30 ms -> 381.90 ms, `normalize+extract` 606.30 ms -> 641.60 ms,
+`candidates` 22.20 ms -> 22.70 ms, and `parse+lower` 303.00 ms -> 291.20 ms.
+Root-cause note: this slice changed static pack metadata, Python `math.prod`
+producer provenance, and an admission provenance check; it did not add per-node
+descriptor scans or touch candidate generation. Binary size changed 20,160,512
+-> 20,160,720 bytes for this slice.
+
+Phase 5 Rust stdlib Option measurement note, local run on 2026-06-21: product
+query-regression r15 compared the previous `nose.python.stdlib.math` slice with
+the `nose.rust.stdlib.option` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by
+exactly 505 bytes from the new top-level `semantic_packs` entry. The saved
+sequential previous and current artifacts are
+`/tmp/nose-473-phase5-rust-option-prev-r15-seq.json` and
+`/tmp/nose-473-phase5-rust-option-current-r15-seq.json`; the previous-slice
+compare summary is `/tmp/nose-473-phase5-rust-option-vs-prev-r15-seq.md`.
+The compare reported one JSON-byte metadata investigation trigger on `ky` and no
+runtime triggers. Aggregate sequential saved artifact medians were: wall
+1193.20 ms -> 1196.06 ms, `lower` 381.90 ms -> 374.50 ms,
+`normalize+extract` 617.40 ms -> 609.60 ms, `candidates` 21.80 ms -> 20.70 ms,
+and `parse+lower` 294.80 ms -> 291.20 ms. Root-cause note: this slice changed
+static pack metadata, Rust Option producer provenance, and admission provenance
+checks for `Some`, `None`, and `and_then`; it did not add per-node descriptor
+scans or touch candidate generation. Binary size changed 20,160,720 ->
+20,161,056 bytes for this slice.
+
+Phase 5 JavaScript builtins Promise measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous `nose.rust.stdlib.option`
+slice with the `nose.javascript.builtins.promise` slice over the same 9-repo
+subset. Family summaries, locations, fragment buckets, reason-code counts, and
+surface counts were unchanged after ignoring `result_json_bytes`. Each repo's
+JSON grew by exactly 542 bytes from the new top-level `semantic_packs` entry.
+The saved previous and current artifacts are
+`/tmp/nose-473-phase5-js-promise-prev-r15.json` and
+`/tmp/nose-473-phase5-js-promise-current-r15.json`; the previous-slice compare
+summary is `/tmp/nose-473-phase5-js-promise-vs-prev-r15.md`. The sequential
+compare reported expected JSON-byte metadata triggers plus a noisy
+`serde_json` lower/parse+lower runtime trigger, so the same binaries were
+remeasured with repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-js-promise-alternating-r15.json`. Alternating aggregate
+medians were: wall 1195.82 ms -> 1184.36 ms, `lower` 362.90 ms ->
+369.70 ms, `normalize+extract` 631.10 ms -> 607.40 ms, `candidates`
+22.30 ms -> 20.70 ms, and `parse+lower` 274.80 ms -> 275.40 ms. The
+alternating recheck still showed a `boltons` phase-only trigger for `lower`
+22.70 ms -> 28.30 ms and `parse+lower` 18.10 ms -> 23.40 ms; `boltons` wall
+time stayed neutral at 70.18 ms -> 70.52 ms, so this was treated as timing
+redistribution/noise rather than a product-path regression. Root-cause note:
+this slice changed static pack metadata, JS/TS Promise producer
+provenance, and admission provenance checks for `Promise.resolve` and `.then`;
+it did not add per-node descriptor scans or touch candidate generation.
+Follow-up under issue #473: if the next Phase 5 slice or an r30 rerun repeats a
+phase trigger above both the 5% and 5 ms gates with a wall-clock trigger, pause
+pack-row migration and instrument the reported phase. Binary size changed
+20,161,056 -> 20,161,264 bytes for this slice.
+
+Phase 5 JavaScript builtins Array measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous
+`nose.javascript.builtins.promise` slice with the
+`nose.javascript.builtins.array` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by
+exactly 538 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-js-array-prev-r15.json` and
+`/tmp/nose-473-phase5-js-array-current-r15.json`; the previous-slice compare
+summary is `/tmp/nose-473-phase5-js-array-vs-prev-r15.md`. The sequential
+compare reported one `chi` wall-clock runtime trigger, 32.8 ms -> 41.4 ms, so
+the same binaries were remeasured with repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-js-array-alternating-r15.json`. Alternating aggregate
+medians were: wall 1180.90 ms -> 1199.87 ms, `parse+lower` 286.60 ms ->
+281.60 ms, `lower` 380.80 ms -> 372.80 ms, `normalize+extract` 601.40 ms ->
+614.30 ms, and `candidates` 21.90 ms -> 21.60 ms. The alternating recheck had
+no repo/phase triggers above both the 5% and 5 ms gates. Root-cause note: this
+slice changed static pack metadata, JS/TS Array producer provenance, and
+admission provenance checks for `Array.from` and `Array.isArray`; it did not
+add per-node descriptor scans or touch candidate generation. Binary size
+changed 20,161,264 -> 20,161,504 bytes for this slice.
+
+Phase 5 JavaScript builtins collection-constructor measurement note, local run
+on 2026-06-21: product query-regression r15 compared the previous
+`nose.javascript.builtins.array` slice with the
+`nose.javascript.builtins.collection_constructors` slice over the same 9-repo
+subset. Family summaries, locations, fragment buckets, reason-code counts, and
+surface counts were unchanged after ignoring `result_json_bytes`. Each repo's
+JSON grew by exactly 573 bytes from the new top-level `semantic_packs` entry.
+The saved previous and current artifacts are
+`/tmp/nose-473-phase5-js-collections-prev-r15.json` and
+`/tmp/nose-473-phase5-js-collections-current-r15.json`; the previous-slice
+compare summary is `/tmp/nose-473-phase5-js-collections-vs-prev-r15.md`. The
+sequential compare reported one runtime trigger on `boltons`, `lower` 23.2 ms
+-> 29.6 ms and `parse+lower` 17.8 ms -> 24.4 ms, so the same binaries were
+remeasured with repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-js-collections-alternating-r15.json`. Alternating
+aggregate medians were: wall 1171.87 ms -> 1219.40 ms, `parse+lower` 286.80 ms
+-> 264.50 ms, `lower` 378.70 ms -> 374.50 ms, `normalize+extract` 583.20 ms ->
+634.10 ms, and `candidates` 19.80 ms -> 22.50 ms. The alternating r15 cleared
+the `boltons` trigger but showed `junit5` wall and `normalize+extract`
+triggers. Focused `junit5` alternating r30 runs saved at
+`/tmp/nose-473-phase5-js-collections-junit5-alternating-r30.json` reproduced
+the trigger in previous-first order, while the current-first focused r30 run
+saved at
+`/tmp/nose-473-phase5-js-collections-junit5-current-first-alternating-r30.json`
+inverted the result and produced no current-regression trigger. Root-cause note:
+this slice changed static pack metadata, JS/TS `new Set`/`new Map` producer
+provenance, and admission provenance checks for those constructors; it did not
+touch Java lowering, normalize, or candidate generation. Treat the `junit5`
+timing as order/environment-sensitive noise unless a later r30 rerun repeats it
+with both execution orders. Binary size changed 20,161,504 -> 20,161,808 bytes
+for this slice.
+
+Phase 5 JavaScript builtins Boolean measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous
+`nose.javascript.builtins.collection_constructors` slice with the
+`nose.javascript.builtins.boolean` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by
+exactly 542 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-js-boolean-prev-r15.json` and
+`/tmp/nose-473-phase5-js-boolean-current-r15.json`; the previous-slice compare
+summary is `/tmp/nose-473-phase5-js-boolean-vs-prev-r15.md`. The sequential
+compare reported one `serde_json` runtime trigger, wall 62.5 ms -> 80.0 ms,
+`parse+lower` 18.3 ms -> 23.6 ms, `lower` 22.9 ms -> 30.7 ms, and
+`normalize+extract` 23.5 ms -> 29.5 ms, so the same binaries were remeasured
+with repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-js-boolean-alternating-r15.json`. Alternating aggregate
+medians were: wall 1359.47 ms -> 1348.68 ms, `parse+lower` 327.40 ms ->
+333.60 ms, `lower` 429.60 ms -> 436.60 ms, `normalize+extract` 704.20 ms ->
+696.70 ms, and `candidates` 24.60 ms -> 23.80 ms. The alternating r15 cleared
+the `serde_json` trigger but showed `junit5` phase-only `parse+lower`/`lower`
+triggers; a focused current-first `junit5` alternating r30 run saved at
+`/tmp/nose-473-phase5-js-boolean-junit5-current-first-alternating-r30.json`
+had no current-regression trigger. Root-cause note: this slice changed static
+pack metadata, JS/TS `Boolean(...)` producer provenance, and admission
+provenance checks for the Boolean contract; it did not add per-node descriptor
+scans or touch normalize/candidate generation logic. Binary size changed
+20,161,808 -> 20,161,984 bytes for this slice.
+
+Phase 5 JavaScript builtins regex measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous
+`nose.javascript.builtins.boolean` slice with the
+`nose.javascript.builtins.regex` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by
+exactly 539 bytes from the new top-level `semantic_packs` entry. The saved
+previous and current artifacts are
+`/tmp/nose-473-phase5-js-regex-prev-r15.json` and
+`/tmp/nose-473-phase5-js-regex-current-r15.json`; the final previous-slice
+compare summary is `/tmp/nose-473-phase5-js-regex-vs-prev-r15-seq2.md`.
+The final sequential r15 compare had no repo/phase investigation triggers.
+Repo-local alternating r15 runs saved at
+`/tmp/nose-473-phase5-js-regex-alternating-r15.json` measured aggregate wall
+time 1248.84 ms -> 1238.08 ms, `parse+lower` 274.00 ms -> 293.40 ms, `lower`
+378.00 ms -> 386.20 ms, `normalize+extract` 646.00 ms -> 641.40 ms, and
+`candidates` 23.30 ms -> 19.60 ms. The alternating r15 had a `cmark`
+wall/`normalize+extract` trigger in previous-first order, but a focused
+current-first `cmark` alternating r30 run saved at
+`/tmp/nose-473-phase5-js-regex-cmark-current-first-alternating-r30.json`
+measured wall 366.29 ms -> 376.13 ms (+2.7%) and `normalize+extract`
+325.00 ms -> 332.85 ms (+2.4%), below the 5% gate. Root-cause note: this
+slice changed static pack metadata, JS/TS regex literal `.test(...)` producer
+provenance, and admission provenance checks for the regex test contract; it did
+not add per-node descriptor scans or touch normalize/candidate generation
+logic. Treat the `cmark` previous-first r15 trigger as order/environment noise
+unless a later r30 run repeats it above both the 5% and 5 ms gates. Binary size
+changed 20,161,984 -> 20,162,240 bytes for this slice.
+
+Phase 5 JavaScript builtins static index-membership measurement note, local run
+on 2026-06-21: product query-regression r15 compared the previous
+`nose.javascript.builtins.regex` slice with the
+`nose.javascript.builtins.static_index_membership` slice over the same 9-repo
+subset. Family summaries, locations, fragment buckets, reason-code counts, and
+surface counts were unchanged after ignoring `result_json_bytes`. Each repo's
+JSON grew by exactly 574 bytes from the new top-level `semantic_packs` entry.
+The saved artifacts are `/tmp/nose-473-phase5-js-static-index-prev-r15.json`,
+`/tmp/nose-473-phase5-js-static-index-current-r15.json`, and
+`/tmp/nose-473-phase5-js-static-index-vs-prev-r15.md`. The sequential r15
+compare showed runtime triggers on `gin`, `ky`, and `serde_json`; repo-local
+alternating r15 runs saved at
+`/tmp/nose-473-phase5-js-static-index-alternating-r15.json` cleared all
+5%+5 ms repo/phase investigation triggers. Alternating aggregate medians were
+wall 1249.78 ms -> 1277.32 ms (+2.2%), `parse+lower` 304.40 ms -> 304.50 ms,
+`lower` 400.80 ms -> 397.70 ms, `normalize+extract` 654.80 ms -> 654.70 ms,
+and `candidates` 23.80 ms -> 22.50 ms. Root-cause note: this slice changed
+static pack metadata, JS/TS static `indexOf`/`findIndex` producer provenance,
+and admission provenance checks for the static-index contract; it did not add
+per-node descriptor scans or touch normalize/candidate generation logic. Treat
+the sequential triggers as order/environment-sensitive timing noise unless a
+later alternating run repeats them above both the 5% and 5 ms gates. Binary
+size changed 20,162,240 -> 20,162,432 bytes for this slice.
+
+Phase 5 Rust stdlib integer-method measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous
+`nose.javascript.builtins.static_index_membership` slice with the
+`nose.rust.stdlib.integer_methods` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, and surface counts
+were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew by
+exactly 522 bytes from the new top-level `semantic_packs` entry. The saved
+artifacts are `/tmp/nose-473-phase5-rust-integer-prev-r15.json`,
+`/tmp/nose-473-phase5-rust-integer-current-r15.json`, and
+`/tmp/nose-473-phase5-rust-integer-vs-prev-r15.md`. The final sequential r15
+compare showed runtime triggers on `gin`, `junit5`, `ky`, `liquid`, and
+`serde_json`; the full-subset alternating r15 run saved at
+`/tmp/nose-473-phase5-rust-integer-alternating-r15.json` showed aggregate wall
+1435.17 ms -> 1447.21 ms (+0.8%), `parse+lower` 349.20 ms -> 350.00 ms,
+`lower` 454.10 ms -> 470.40 ms, `normalize+extract` 736.80 ms -> 749.90 ms,
+and `candidates` 24.90 ms -> 25.60 ms, with remaining repo/phase triggers on
+`serde_json` wall and lower. A focused alternating r30 rerun over `serde_json`,
+saved at
+`/tmp/nose-473-phase5-rust-integer-serde-json-focused-alternating-r30.json`,
+cleared all 5%+5 ms triggers; focused aggregate wall was 58.38 ms -> 59.42 ms
+(+1.8%), `parse+lower` 17.90 ms -> 17.05 ms, `lower` 23.20 ms -> 23.40 ms,
+`normalize+extract` 23.90 ms -> 23.00 ms, and `candidates` 1.55 ms -> 1.60 ms.
+Root-cause note: this slice adds static pack metadata, Rust primitive integer
+method producer provenance, and callee-aware admission provenance checks for
+exact-integer receiver methods, including canonical builtin dependency
+admission; it does not add per-node descriptor scans or touch candidate
+generation logic. Treat the sequential and full-subset r15 repo-local triggers
+as order/environment-sensitive timing noise unless a later alternating run
+repeats them above both gates. Binary size changed 20,162,432 -> 20,162,672
+bytes for this slice.
+
+Phase 5 iterator identity adapter protocol-pack measurement note, local run on
+2026-06-21: product query-regression r15 compared the previous
+`nose.rust.stdlib.integer_methods` slice with the
+`nose.protocols.iterator_identity_adapters` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, surface
+counts, and family shapes were unchanged after ignoring `result_json_bytes`.
+Each repo's JSON grew by exactly 548 bytes from the new top-level
+`semantic_packs` entry. The saved artifacts are
+`/tmp/nose-473-phase5-iterator-identity-prev-r15.json`,
+`/tmp/nose-473-phase5-iterator-identity-current-r15.json` for output-byte
+inspection, and `/tmp/nose-473-phase5-iterator-identity-vs-prev-r15.md` for the
+sequential compare. The sequential r15 compare showed zero harness
+investigation triggers. A repo-local alternating r15 run saved at
+`/tmp/nose-473-phase5-iterator-identity-alternating-r15.json` had aggregate wall
+1512.10 ms -> 1525.72 ms (+0.9%), `parse+lower` 368.50 ms -> 359.00 ms, `lower`
+476.40 ms -> 470.60 ms, `normalize+extract` 769.80 ms -> 781.40 ms, and
+`candidates` 27.70 ms -> 26.80 ms. Under the stricter #473 5%+5 ms gate,
+alternating r15 showed wall-only triggers on `boltons` and `gin`. A focused
+alternating r30 rerun saved at
+`/tmp/nose-473-phase5-iterator-identity-boltons-gin-focused-alternating-r30.json`
+cleared `boltons`; `gin` still had a wall-only trigger at 57.05 ms -> 65.88 ms
+(+15.5%), while `parse+lower`, `lower`, `normalize+extract`, and `candidates`
+all stayed below the 5 ms floor. Root-cause note: this slice adds static
+protocol-pack metadata, iterator identity adapter producer provenance, and an
+admission provenance check for an existing shared resolver path; it does not add
+per-node descriptor scans or repeated registry walks on hot paths. The remaining
+`gin` signal is not attributed to a measured product phase and should be
+rechecked if a later slice repeats a wall-only trigger. Binary size changed
+20,162,672 -> 20,162,928 bytes for this slice.
+
+Phase 5 Java stdlib Math pack measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous
+`nose.protocols.iterator_identity_adapters` slice with the
+`nose.java.stdlib.math` slice over the same 9-repo subset. Family summaries,
+locations, fragment buckets, reason-code counts, surface counts, and family
+shapes were unchanged after ignoring `result_json_bytes`. Each repo's JSON grew
+by exactly 501 bytes from the new top-level `semantic_packs` entry. The saved
+artifacts are `/tmp/nose-473-phase5-java-math-prev-r15.json`,
+`/tmp/nose-473-phase5-java-math-current-r15.json`, and
+`/tmp/nose-473-phase5-java-math-vs-prev-r15.md`. The sequential r15 compare
+showed zero harness investigation triggers. The mean of per-repo medians moved
+wall 143.60 ms -> 134.82 ms (-6.1%), `parse+lower` 34.27 ms -> 32.32 ms,
+`lower` 44.78 ms -> 41.90 ms, `normalize+extract` 74.48 ms -> 69.98 ms, and
+`candidates` 2.48 ms -> 2.37 ms. Root-cause note: this slice adds static
+stdlib-pack metadata, Java Math producer provenance, and fail-closed admission
+provenance/dependency checks for existing scalar-integer exact and canonical
+paths; it does not add per-node descriptor scans or repeated registry walks on
+hot paths. The extra dependency checks are gated by the Java Math receiver
+contract or canonical scalar-integer evidence. Binary size changed
+20,162,928 -> 20,180,832 bytes for this slice.
+
+Phase 5 map-get protocol pack measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous `nose.java.stdlib.math`
+slice with the `nose.protocols.map_get` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, surface
+counts, and family shapes were unchanged after ignoring `result_json_bytes`.
+Each repo's JSON grew by exactly 559 bytes from the new top-level
+`semantic_packs` entry. The saved primary artifacts are
+`/tmp/nose-473-phase5-map-get-prev-r15.json`,
+`/tmp/nose-473-phase5-map-get-current-r15.json`, and
+`/tmp/nose-473-phase5-map-get-vs-prev-r15.md`. The first sequential r15 compare
+showed zero harness investigation triggers. A repeated full-subset r15 compare
+under a noisier runtime window showed triggers on `chi`, `gin`, and `junit5`;
+focused r30 reruns for those three repos cleared triggers in both directions:
+`/tmp/nose-473-phase5-map-get-focused-chi-gin-junit5-prev-vs-current-r30.md`
+and
+`/tmp/nose-473-phase5-map-get-focused-chi-gin-junit5-current-vs-prev-r30.md`.
+Root-cause note: this slice adds static protocol-pack metadata, map-get producer
+provenance, and fail-closed admission checks for existing source/span/canonical
+MapGet resolver paths. The extra nested-dependency checks are gated by the Rust
+`get(...).unwrap_or(...)` canonical defaulting path and verify MapGet arity plus
+receiver-anchored map proof; the slice does not add per-node descriptor scans or
+repeated registry walks on hot paths. Binary size changed 20,180,832 ->
+20,181,264 bytes for this slice.
+
+Phase 5 map-key-view protocol pack measurement note, local run on 2026-06-21:
+product query-regression r15 compared the previous `nose.protocols.map_get`
+slice with the `nose.protocols.map_key_views` slice over the same 9-repo
+subset. Family summaries, locations, fragment buckets, reason-code counts,
+surface counts, and family shapes were unchanged after ignoring
+`result_json_bytes`. Each repo's JSON grew by exactly 579 bytes from the new
+top-level `semantic_packs` entry, for a total subset byte delta of 677,921 ->
+683,132 bytes (+5,211). The saved primary artifacts are
+`/tmp/nose-473-phase5-map-key-view-prev-r15.json`,
+`/tmp/nose-473-phase5-map-key-view-current-r15.json`, and
+`/tmp/nose-473-phase5-map-key-view-vs-prev-r15.md`. The first sequential r15
+compare showed one runtime investigation trigger on `chi`; a focused r30 rerun
+cleared it at
+`/tmp/nose-473-phase5-map-key-view-focused-chi-vs-prev-r30.md`. Root-cause
+note: this slice adds static protocol-pack metadata, map-key-view producer
+provenance, and fail-closed admission provenance checks for existing
+source/span MapKeyView resolver paths. `MapKeyViewWrapper` stays in the
+JavaScript Array builtin pack, and the slice does not add per-node descriptor
+scans or repeated registry walks on hot paths. Binary size changed 20,181,264
+-> 20,181,440 bytes for this slice.
+
+Phase 5 map-get-default protocol pack measurement note, local run on
+2026-06-21: product query-regression r15 compared the previous
+`nose.protocols.map_key_views` slice with the `nose.protocols.map_get_default`
+slice over the same 9-repo subset. Family summaries, locations, fragment
+buckets, reason-code counts, surface counts, and family shapes were unchanged
+after ignoring `result_json_bytes`. Each repo's JSON grew by exactly 536 bytes
+from the new top-level `semantic_packs` entry, for a total subset byte delta of
+683,132 -> 687,956 bytes (+4,824). The saved primary artifacts are
+`/tmp/nose-473-phase5-map-get-default-prev-r15.json`,
+`/tmp/nose-473-phase5-map-get-default-current-r15.json`, and
+`/tmp/nose-473-phase5-map-get-default-vs-prev-r15.md`. The sequential r15
+compare showed zero harness investigation triggers. Root-cause note: this slice
+adds static protocol-pack metadata, map-get-default producer provenance, and
+fail-closed admission provenance checks for existing Python/Ruby/Java
+map-specific defaulting method-call paths. Rust Option/defaulting selectors
+remain separate, and the slice does not add per-node descriptor scans or
+repeated registry walks on hot paths. Binary size changed 20,181,440 ->
+20,181,648 bytes for this slice.
+
+Phase 5 receiver-membership protocol pack measurement note, local run on
+2026-06-21: product query-regression r15 compared the previous
+`nose.protocols.map_get_default` slice with the
+`nose.protocols.receiver_membership` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, surface counts, and
+family shapes were unchanged after ignoring `result_json_bytes`. Each repo's
+JSON grew by exactly 608 bytes from the new top-level `semantic_packs` entry,
+for a total subset byte delta of 687,956 -> 693,428 bytes (+5,472, +0.8%).
+The saved primary artifacts are
+`/tmp/nose-473-phase5-receiver-membership-prev-r15.json`,
+`/tmp/nose-473-phase5-receiver-membership-current-r15.json`, and
+`/tmp/nose-473-phase5-receiver-membership-vs-prev-r15.md`. The primary
+sequential r15 compare showed one runtime investigation trigger on `chi`; a
+focused `chi` r30 rerun cleared it at
+`/tmp/nose-473-phase5-receiver-membership-chi-r30.md`, and the saved current
+r15 artifact showed aggregate median wall 1803.07 ms -> 1741.16 ms (-3.4%).
+Root-cause note: this slice adds static protocol-pack metadata,
+receiver-membership producer provenance, and fail-closed admission provenance
+checks for existing receiver-method `Contains` rows with receiver proof. Go
+`slices.Contains` remains outside this pack because it uses the imported
+`slices` namespace and `GoSliceContains` argument semantics. The slice does not
+add per-node descriptor scans or repeated registry walks on hot paths. Binary
+size changed 20,181,648 -> 20,181,712 bytes for this slice.
+
+Phase 5 free-function builtin protocol pack measurement note, local run on
+2026-06-21: product query-regression r15 compared the previous
+`nose.protocols.receiver_membership` slice with the
+`nose.protocols.free_function_builtins` slice over the same 9-repo subset.
+Family summaries, locations, fragment buckets, reason-code counts, surface
+counts, and family shapes were unchanged after ignoring `result_json_bytes`.
+Each repo's JSON grew by exactly 548 bytes from the new top-level
+`semantic_packs` entry, for a total subset byte delta of 693,428 -> 698,360
+bytes (+4,932, +0.7%). The saved primary artifacts are
+`/tmp/nose-473-phase5-free-function-prev-r15.json`,
+`/tmp/nose-473-phase5-free-function-current-r15.json`, and
+`/tmp/nose-473-phase5-free-function-vs-prev-r15.md`. The primary sequential
+r15 compare showed one runtime investigation trigger on `chi`; a focused
+`chi` r30 rerun cleared it at
+`/tmp/nose-473-phase5-free-function-chi-r30.md`. Root-cause note: this slice
+adds static protocol-pack metadata, free-function builtin producer provenance,
+and fail-closed canonical admission checks for existing Python/Go/Swift
+unshadowed free-name builtin rows. It does not add per-node descriptor scans or
+repeated registry walks on hot paths. Binary size changed 20,181,712 ->
+20,181,936 bytes for this slice.
 
 ## History
 
@@ -85,13 +840,146 @@ and pack ecosystem.
 - The first first-party pack pilot moved Python stdlib type-domain aliases from
   a raw helper table into a pack-shaped contract row set. Imported
   `typing`, `collections.abc`, and `asyncio` alias-derived `Domain` evidence now
-  reports `nose.python.stdlib.type_domain` provenance while preserving
+  reports `nose.python.stdlib.type_domain` pack and producer provenance while preserving
   shadow/rebind hard negatives and metadata-only behavior for local external
   manifests.
+- Python builtin collection factories started moving out of the broad
+  compatibility facade. `list`, `set`, `frozenset`, and `tuple` one-argument
+  factory `LibraryApi` occurrence evidence now reports
+  `nose.python.builtins.collection_factories` pack and producer provenance while
+  preserving shadowed-name and wildcard-import hard negatives.
+- Python imported `collections.deque` collection factories started moving out
+  of the broad compatibility facade. Imported binding, alias, and namespace
+  factory `LibraryApi` occurrence evidence now reports
+  `nose.python.stdlib.collection_factories` pack and producer provenance while
+  preserving missing-import and wrong-module hard negatives.
+- Ruby stdlib `Set.new` collection factories started moving out of the broad
+  compatibility facade. `require "set"; Set.new(...)` factory `LibraryApi`
+  occurrence evidence now reports `nose.ruby.stdlib.set` pack and producer
+  provenance while preserving missing-require, shadowed-`Set`, and mutated-set
+  hard negatives.
+- Rust stdlib Vec collection factories started moving out of the broad
+  compatibility facade. `Vec::new` and `vec!` factory `LibraryApi` occurrence
+  evidence now reports `nose.rust.stdlib.vec` pack and producer provenance while
+  preserving shadowed-`Vec` and shadowed-macro hard negatives.
+- Rust stdlib Option APIs started moving out of the broad compatibility facade.
+  `Some`, `None`, and `and_then` `LibraryApi` occurrence evidence now reports
+  `nose.rust.stdlib.option` pack and producer provenance while preserving
+  shadowed selector and non-Option receiver hard negatives.
+- Rust stdlib integer methods started moving out of the broad compatibility
+  facade. Primitive integer `abs`, `min`, `max`, and `clamp` `LibraryApi`
+  occurrence evidence now reports `nose.rust.stdlib.integer_methods` pack and
+  producer provenance while preserving non-integer receiver and
+  unsupported-arity hard negatives.
+- Java stdlib Math scalar integer APIs started moving out of the broad
+  compatibility facade. `Math.abs`, `Math.min`, and `Math.max` `LibraryApi`
+  occurrence evidence now reports `nose.java.stdlib.math` pack and producer
+  provenance while preserving missing unshadowed-`Math` proof, non-integer
+  value-argument, and unsupported-arity hard negatives.
+- JS/TS Promise APIs started moving out of the broad compatibility facade.
+  `Promise.resolve` and `.then` `LibraryApi` occurrence evidence now reports
+  `nose.javascript.builtins.promise` pack and producer provenance while
+  preserving shadowed-`Promise`, missing Promise-like receiver, and unsafe
+  thenable assimilation hard negatives.
+- JS/TS Array APIs started moving out of the broad compatibility facade.
+  `Array.from` and `Array.isArray` `LibraryApi` occurrence evidence now
+  reports `nose.javascript.builtins.array` pack and producer provenance while
+  preserving shadowed-`Array` and unsupported-arity hard negatives.
+- JS/TS Boolean coercion started moving out of the broad compatibility facade.
+  `Boolean(...)` `LibraryApi` occurrence evidence now reports
+  `nose.javascript.builtins.boolean` pack and producer provenance while
+  preserving shadowed-`Boolean` and unsupported-arity hard negatives.
+- JS/TS regex test APIs started moving out of the broad compatibility facade.
+  Regex literal `.test(...)` `LibraryApi` occurrence evidence now reports
+  `nose.javascript.builtins.regex` pack and producer provenance while preserving
+  non-regex receiver and unsupported-arity hard negatives.
+- JS/TS static index-membership APIs started moving out of the broad
+  compatibility facade. Static `indexOf`/`findIndex` `LibraryApi` occurrence
+  evidence now reports `nose.javascript.builtins.static_index_membership` pack
+  and producer provenance while preserving non-literal receiver and
+  float-literal hard negatives.
+- JS/TS collection constructor APIs started moving out of the broad
+  compatibility facade. `new Set(...)` and `new Map(...)` `LibraryApi`
+  occurrence evidence now reports
+  `nose.javascript.builtins.collection_constructors` pack and producer
+  provenance while preserving missing construct-source and shadowed-constructor
+  hard negatives.
+- Selected Rust stdlib collection factories started moving out of the broad
+  compatibility facade. `std::collections::{HashSet,BTreeSet,VecDeque}::from`
+  factory `LibraryApi` occurrence evidence now reports
+  `nose.rust.stdlib.collection_factories` pack and producer provenance while
+  preserving shadowed-`std` hard negatives.
+- Selected Rust stdlib map factories started moving out of the broad
+  compatibility facade. `std::collections::{HashMap,BTreeMap}::from` factory
+  `LibraryApi` occurrence evidence now reports
+  `nose.rust.stdlib.map_factories` pack and producer provenance while preserving
+  shadowed-`std` hard negatives.
+- Java stdlib map factories started moving out of the broad compatibility
+  facade. `java.util.Map.of` and `Map.ofEntries` factory `LibraryApi`
+  occurrence evidence now reports `nose.java.stdlib.map_factories` pack and
+  producer provenance while preserving missing-import and cross-surface
+  `Map.entry` boundary hard negatives.
+- Java stdlib map entries started moving out of the broad compatibility facade.
+  `java.util.Map.entry` `LibraryApi` occurrence evidence now reports
+  `nose.java.stdlib.map_entries` pack and producer provenance while preserving
+  missing-import and shadowed-`Map` hard negatives.
+- Java stdlib collection factories started moving out of the broad
+  compatibility facade. `java.util.List.of`, `Set.of`, and `Arrays.asList`
+  factory `LibraryApi` occurrence evidence now reports
+  `nose.java.stdlib.collection_factories` pack and producer provenance while
+  preserving missing-import and cross-surface constructor boundary hard
+  negatives.
+- Java stdlib static collection adapters started moving out of the broad
+  compatibility facade. `java.util.Arrays.stream` `LibraryApi` occurrence
+  evidence now reports `nose.java.stdlib.static_collection_adapters` pack and
+  producer provenance while preserving missing-import and shadowed-`Arrays` hard
+  negatives.
+- Map-get protocol occurrences started moving out of the broad compatibility
+  facade. Java/Rust/JS-family `map.get(key)` `LibraryApi` occurrence evidence
+  now reports `nose.protocols.map_get` pack and producer provenance while
+  preserving exact-map receiver and unsupported-arity hard negatives.
+- Map-key-view protocol occurrences started moving out of the broad
+  compatibility facade. Python/Ruby `keys`, Java `keySet`, and JS-family
+  `Map.keys()` `LibraryApi` occurrence evidence now reports
+  `nose.protocols.map_key_views` pack and producer provenance while preserving
+  exact-map receiver and unsupported-arity hard negatives.
+- Map-get-default protocol occurrences started moving out of the broad
+  compatibility facade. Python `dict.get(key, default)`, Ruby
+  `Hash#fetch(key, default)` or zero-arg block fallback, and Java
+  `Map.getOrDefault(key, default)` `LibraryApi` occurrence evidence now reports
+  `nose.protocols.map_get_default` pack and producer provenance while
+  preserving exact-map receiver and unsupported-arity hard negatives.
+- Free-function builtin protocol occurrences started moving out of the broad
+  compatibility facade. Python/Go/Swift unshadowed free-name builtin
+  `LibraryApi` occurrence evidence now reports
+  `nose.protocols.free_function_builtins` pack and producer provenance while
+  preserving symbol-proof and unsupported-arity hard negatives.
+- Receiver-membership protocol occurrences started moving out of the broad
+  compatibility facade. Java/Rust/Ruby map-key membership, Python
+  `__contains__`, JS-like `has`/`includes`, Java/Swift `contains`, and Ruby
+  `member?` `LibraryApi` occurrence evidence now reports
+  `nose.protocols.receiver_membership` pack and producer provenance while
+  preserving receiver-proof, unsupported-arity, and Go `slices.Contains`
+  out-of-scope hard negatives.
+- Property-builtin protocol occurrences started moving out of the broad
+  compatibility facade. JS/TS/HTML-family and Java `.length`, plus Swift
+  `count` and `isEmpty`, `LibraryApi` occurrence evidence now reports
+  `nose.protocols.property_builtins` pack and producer provenance while
+  preserving receiver-proof, wrong-pack, and unsupported-property hard negatives.
+- Builtin method-call protocol occurrences started moving out of the broad
+  compatibility facade. Generic method-call and namespace-call builtin
+  `LibraryApi` occurrence evidence now reports
+  `nose.protocols.builtin_method_calls` pack and producer provenance when the
+  row has not moved to a narrower protocol pack.
+- Iterator identity adapters started moving out of the broad compatibility
+  facade. Rust `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned`
+  and Java `.stream()` `LibraryApi` occurrence evidence now reports
+  `nose.protocols.iterator_identity_adapters` pack and producer provenance while
+  preserving non-protocol receiver and unsupported-arity hard negatives.
 - Rust scalar integer methods (`abs`, `min`, `max`, `clamp`) now consume a
-  language-, signature-, and integer-domain-constrained first-party contract
-  instead of a bare method-name recognizer. Float/NaN-sensitive methods remain a
-  separate future contract.
+  language-, signature-, integer-domain-, and pack-provenance-constrained
+  contract instead of a bare method-name recognizer. Float/NaN-sensitive methods
+  remain a separate future contract.
 - Exact fragment IL-surface proofs for Java `this.field`, Java `return this`,
   non-overloadable C/Go/Java index assignment, and single-item builder append
   calls moved into `nose-semantics`, so predicate and contract paths no longer
@@ -115,7 +1003,8 @@ and pack ecosystem.
 - Java empty `ArrayList`/`LinkedList` constructor lowering now consumes a
   `LibraryApiContract` `java.util` constructor row instead of a raw simple-name
   check. Simple names need import proof and no local type shadow before they can
-  seed exact builder-loop equivalence.
+  seed exact builder-loop equivalence, and the occurrence now carries
+  `nose.java.stdlib.collection_constructors` pack provenance.
 - Membership and map-key membership recognition now uses language-scoped method
   contracts before normalization or strict exact matching assigns containment
   semantics. This intentionally closes old name-only paths such as JavaScript
@@ -145,8 +1034,9 @@ and pack ecosystem.
   contracts for the outer literal surface, per-entry surface, and supported
   zero-default payload classes.
 - Map `get(key)` lookup surfaces for Java, Rust, and JS-like typed/proven maps
-  moved behind an explicit map-get contract. Defaulting surfaces continue through
-  the existing `GetOrDefault` method contract.
+  moved behind an explicit map-get contract. Python/Ruby/Java map-specific
+  defaulting surfaces moved behind an explicit map-get-default contract; Rust
+  Option/defaulting selectors remain separate.
 - JS-like static array `indexOf`/`findIndex` membership and their accepted
   threshold comparisons moved behind shared semantic contracts.
 - Channel eligibility and pack trust were split: first-party/default status is
@@ -157,8 +1047,9 @@ and pack ecosystem.
   namespace function contract with missing-import and overwritten-binding hard
   negatives.
 - Java integer `Math.abs`/`Math.min`/`Math.max` moved out of frontend text-only
-  lowering and into scalar-integer method contracts that require an unshadowed
-  `Math` receiver plus integer-domain proof for value arguments.
+  lowering and into scalar-integer method contracts with
+  `nose.java.stdlib.math` provenance, an unshadowed `Math` receiver, and
+  integer-domain proof for value arguments.
 - JS-like `undefined` moved from unconditional frontend null lowering to an
   unshadowed-global nullish contract, preserving shadowed binding hard negatives.
 - Strict exact gates now consume the same nullish-global proof, so temp-bound
@@ -175,10 +1066,11 @@ and pack ecosystem.
 - JS-like `Math.abs`/`Math.min`/`Math.max` stay exact-closed until a signed-zero
   and NaN-aware numeric model exists; Go `math.Abs`/`math.Min`/`math.Max` and
   Java floating `Math.abs`/`Math.min`/`Math.max` stay closed for the same reason.
-  JS record-shape guards using `Boolean(...)` consume a static-global function
-  contract with an unshadowed `Boolean` requirement.
-- Generic Python/Go free-function builtins now have `LibraryApi` occurrence
-  rows. Early idiom canonicalization and value-graph two-argument
+  JS record-shape guards using `Boolean(...)` consume the pack-owned
+  static-global function contract with an unshadowed `Boolean` requirement.
+- Generic Python/Go/Swift free-function builtins now have
+  `nose.protocols.free_function_builtins` `LibraryApi` occurrence rows. Early
+  idiom canonicalization and value-graph two-argument
   `min(...)`/`max(...)` require admitted occurrence evidence plus integer-domain
   proof instead of raw callee spelling. Python free `abs(...)` and sign-test
   absolute-value ternaries use the same integer-domain proof gate, closing
@@ -332,11 +1224,23 @@ and pack ecosystem.
   dependency-broken records.
 - The next `LibraryApi` occurrence evidence slice extended the same
   dependency-backed path to selected import/source-backed APIs: Python
-  `collections.deque`, Python `math.prod`, Java `java.util` static
-  factories/adapters (`List.of`, `Set.of`, `Arrays.asList`, `Map.of`,
-  `Map.ofEntries`, `Map.entry`, `Arrays.stream`), and JS-like regex-literal
-  `.test`. Producers emit call-site `Symbol` dependencies for imported
-  binding/namespace occurrences or `Source` dependencies for regex literals;
+  `collections.deque`, Python `math.prod`, Java `java.util` static collection
+  factories (`List.of`, `Set.of`, `Arrays.asList`) now carrying
+  `nose.java.stdlib.collection_factories` provenance, Java map factories
+  (`Map.of`/`Map.ofEntries`) with `nose.java.stdlib.map_factories` provenance,
+  Java map entries (`Map.entry`) with `nose.java.stdlib.map_entries`
+  provenance, Java static collection adapters (`Arrays.stream`) with
+  `nose.java.stdlib.static_collection_adapters` provenance, Java Math scalar
+  integer APIs (`Math.abs`/`Math.min`/`Math.max`) with
+  `nose.java.stdlib.math` provenance, Java/Rust/JS-family map-get occurrences
+  with `nose.protocols.map_get` provenance, map-get-default occurrences with
+  `nose.protocols.map_get_default` provenance, free-function builtin
+  occurrences with `nose.protocols.free_function_builtins` provenance,
+  map-key-view occurrences with `nose.protocols.map_key_views` provenance,
+  property-builtin occurrences with `nose.protocols.property_builtins`
+  provenance, and JS-like regex-literal `.test`. Producers emit call-site
+  `Symbol` dependencies for imported binding/namespace occurrences or `Source`
+  dependencies for regex literals;
   value-graph, idiom, and strict exact consumers consult these records first and
   close fallback on rejected records. Imported occurrence symbols now require
   binding-anchor dependencies, rebinding/local-shadow validation, span-matched
@@ -388,8 +1292,8 @@ and pack ecosystem.
   deliberately excludes lookalikes, Java single-argument `Arrays.asList(x)`
   without element-provenance proof, and non-container results such as
   `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`, `math.prod`,
-  `Arrays.stream`, map `get`, promise `.then`, iterator adapters, and generic
-  method contracts.
+  `Arrays.stream`, pack-proven map `get`, pack-proven map get-default, promise
+  `.then`, iterator adapters, and generic method contracts.
 - Immutable local/module binding domains now produce binding-anchored `Domain`
   evidence during normalization when the initializer has asserted sequence or
   result-domain evidence, the binding is single-assignment in the current scope,
@@ -405,9 +1309,11 @@ and pack ecosystem.
   binding proofs apply only when visible at the receiver use site.
 - The receiver-method `LibraryApi` occurrence slice moved broad method-family
   consumers behind dependency-backed call occurrence records. First-party
-  lowering now emits occurrence evidence for map `get`, map-key views, iterator
-  identity adapters, and language-scoped method-call contracts only when the
-  exact language/method/arity row and receiver proof are present. Normalize runs
+  lowering now emits occurrence evidence for pack-proven map `get`,
+  pack-proven map get-default, pack-proven map-key views, iterator identity
+  adapters, and language-scoped method-call contracts only when the exact
+  language/method/arity row and receiver proof are present.
+  Normalize runs
   receiver-method refresh passes after immutable binding-domain inference and
   after final CFG/dataflow/algebra rewrites, so binding receivers such as
   `VALUES.contains(x)` can depend on the current binding or sequence-domain
@@ -567,25 +1473,30 @@ and pack ecosystem.
   effect-proven append remain raw-payload eligible.
 - Rust `get(key).unwrap_or(default)` now admits the canonical map
   `GetOrDefault` builtin through the exact `unwrap_or` `LibraryApi` occurrence
-  plus its admitted nested `MapGet` dependency, instead of treating
+  plus its admitted nested pack-proven `MapGet` dependency, instead of treating
   `ValueOrDefault` selector semantics as sufficient for map defaulting.
 - Raw `Seq` spelling no longer feeds value-graph sequence tags. Missing
   `SequenceSurface` or guard evidence now produces the untagged value instead of
   a spelling hash, so internal-looking payload names such as `record_guard` or
   `own_property_guard` cannot become semantic proof channels.
 - Raw user-call spelling no longer proves direct recursion or in-file call
-  execution. `nose-il` now has `CallTarget` evidence, the first-party normalize
-  producer emits `DirectFunction` only for unique top-level in-file function
-  targets with no current or enclosing lexical shadowing, and recursion,
+  execution. `nose-il` now has `CallTarget` evidence, the builtin language-core
+  normalize producer emits `DirectFunction` only for unique top-level in-file
+  function targets with no current or enclosing lexical shadowing, and recursion,
   interpreter, value-graph pure-inline, and strict exact direct-function callee
-  consumers require that occurrence proof. The follow-up call-target producer
-  slice emits `ImportedFunction` and `ImportedMember` only from
-  dependency-backed imported binding or imported namespace symbol proof, added a
-  shared fail-closed resolver, and taught strict exact to admit imported
-  function/member opaque identity only through explicit evidence. The vocabulary
-  also includes `DirectMethod` and `DynamicDispatch`, but no first-party producer
-  emits those records yet; direct methods still require exact receiver identity,
-  and dynamic-dispatch records do not by themselves prove one concrete target.
+  consumers require that occurrence proof. The call-target producer now emits
+  `DirectFunction`, `ImportedFunction`, `ImportedMember`, and dependency-backed
+  call-site imported symbol occurrence records with builtin language-core
+  provenance. Imported function/member records still require dependency-backed
+  imported binding or imported namespace symbol proof, the shared resolver stays
+  fail-closed, and strict exact admits imported function/member opaque identity
+  only through explicit matching-language builtin evidence. Legacy broad
+  provenance, wrong-language rows, external rows, selector mismatches, and
+  dependency-broken records do not enter call-target admission or value-DAG
+  referents. The vocabulary also includes `DirectMethod` and `DynamicDispatch`,
+  but no builtin producer emits those records yet; direct methods still require
+  exact receiver identity, and dynamic-dispatch records do not by themselves
+  prove one concrete target.
 - C byte-pack proof moved onto evidence-backed alias and cast records. Local
   typedefs and direct quote includes emit `Type(CTypeAlias)` evidence, included
   aliases depend on `Import(CQuoteInclude)`, alias-based `Domain(ByteArray)` and
@@ -614,17 +1525,20 @@ and pack ecosystem.
   contracts, and guard/effect rows.
 - The idiom/value-graph resolver cleanup moved supported normalize idiom
   canonicalization and direct value-graph API consumers behind shared
-  `nose-semantics` admitted occurrence resolvers. This covers free-function
-  builtins, generic receiver-method contracts, map `get`, map-key views,
-  iterator identity adapters, Java static collection adapters, Rust `Some(...)`,
-  Rust map factory receiver proof, static index-membership, and Rust scalar
-  integer methods where the source `Call` node is still available.
+  `nose-semantics` admitted occurrence resolvers. This covers pack-proven
+  free-function builtins, pack-proven generic method-call contracts,
+  pack-proven map `get`,
+  pack-proven map get-default, pack-proven map-key views, iterator identity
+  adapters, Java static collection adapters, Rust `Some(...)`, Rust map factory receiver proof, static
+  index-membership, and Rust scalar integer methods where the source `Call`
+  node is still available.
 - The value-graph span-query resolver cleanup moved value-level CSE consumers
   that no longer carry a source `Call` node behind dedicated `nose-semantics`
   admitted span resolvers. Free-name/imported collection factories,
   Java/Ruby/Rust collection factories, free-name/Java map factories, Java map
-  entries, map `get`, and map-key view/wrapper calls now resolve contract
-  identity and `LibraryApi` occurrence evidence in one place.
+  entries, pack-proven map `get`, pack-proven map get-default, pack-proven
+  map-key view calls, and JS Array-pack-proven map-key-view wrapper calls now
+  resolve contract identity and `LibraryApi` occurrence evidence in one place.
 - The node-level/API resolver cleanup moved property builtin field admission,
   Rust `Some` callee-node admission, HOF receiver proof in desugaring, and
   promise `.then` contract lookup behind shared admitted occurrence resolvers.
@@ -769,7 +1683,7 @@ Remaining after the #109 closeout:
   and unmodeled module/export dependencies rather than source/domain side tables.
 - Add scope, dependency, and ambiguity validation for evidence records before
   they become a stable external extension surface.
-- Expand the exact fragment facade from first-party helper functions into
+- Expand the exact fragment facade from builtin helper functions into
   versioned pack-facing effect/place evidence records. The current substrate
   covers canonical append calls, C/Go/Java non-overloadable index writes, Java
   self-receiver/self-field writes, binding writes, receiver-mutation risks, and
@@ -810,10 +1724,10 @@ Remaining after the #109 closeout:
   `LibraryApiContract` identity/result rows, and selected JS-like,
   Python builtin/import-backed, Rust free-name/path, Ruby require-backed, Java
   `java.util`, and regex calls now additionally share `LibraryApi` occurrence
-  evidence, as do generic Python/Go free-function builtins and selected
-  receiver-method families. Selected normalize idiom, value-graph, and strict
+  evidence, as do pack-proven Python/Go/Swift free-function builtins and
+  selected receiver-method families. Selected normalize idiom, value-graph, and strict
   exact consumers now call shared `nose-semantics` admitted occurrence resolvers
-  for method, free-function builtin, map-get, map-key-view, regex, JS
+  for method, free-function builtin, map-get, map-get-default, map-key-view, regex, JS
   static/global, static-index, iterator/static collection adapter, Rust
   Option/scalar/`Vec::new`, and first-party factory/constructor calls instead of
   locally recombining raw selector parsing with evidence admission. Value-graph
@@ -821,14 +1735,14 @@ Remaining after the #109 closeout:
   those resolvers where they still operate on source call nodes; selected
   value-level span-query paths now use dedicated span resolvers for
   free-name/imported collection factories, Java/Ruby/Rust collection factories,
-  free-name/Java map factories, Java map entries, map-get, and map-key
-  view/wrapper calls. Node-level property builtins, Rust `Some` callee checks,
+  free-name/Java map factories, Java map entries, map-get, map-get-default, and
+  map-key view/wrapper calls. Node-level property builtins, Rust `Some` callee checks,
   HOF receiver proof, Promise `resolve`, and Promise `.then` contract lookup
   also go through shared resolvers. Lowered sequence-surface consumers are now
-  evidence-only where covered. Remaining API work is broader thenable
-  assimilation, explicit async/sync protocol convergence contracts, and
-  ecosystem APIs only after demand, receiver, and effect obligations are
-  expressible.
+  evidence-only with matching builtin language-core provenance where covered.
+  Remaining API work is broader thenable assimilation, explicit async/sync
+  protocol convergence contracts, and ecosystem APIs only after demand,
+  receiver, and effect obligations are expressible.
 - Continue import/module proof migration beyond the removed raw import payloads
   and evidence-only import identity path. Value-graph import identity and
   imported-symbol exact proof are now evidence-only, imported literal replacement
@@ -867,7 +1781,7 @@ Remaining after the #109 closeout:
   field-name-only.
 - Add provenance fields internally before exposing them in scan JSON.
 
-## Phase 3: first-party packs
+## Phase 3: builtin packs
 
 **Entry gate (2026-06-12, #270 disposition):** further LawPack/pack expansion is
 gated on a *priced consumer case* — a measured situation where pack-fed
@@ -879,9 +1793,9 @@ today is `near`-channel influence plus proof discipline. Breadth alone no longer
 justifies a tranche ([design §2c](design.md)).
 
 - Convert Python, JavaScript/TypeScript, Go, Rust, Java, C, Ruby, Swift, and
-  embedded JS/TS containers into first-party compiled packs.
+  embedded JS/TS containers into builtin compiled packs.
 - Split stdlib knowledge, including dependency-backed type-domain alias rows,
-  into first-party `StdlibPack`s.
+  into builtin `StdlibPack`s.
 - Define conformance manifests for each pack: positive convergence cases, hard
   negatives, Raw coverage expectations, oracle coverage, and proof obligations.
 - Ensure existing docs and capabilities are generated from or checked against pack
@@ -903,7 +1817,7 @@ justifies a tranche ([design §2c](design.md)).
   channels, evidence status, conformance commands, and semantic provenance ids.
 - Keep the pack conformance checklist explicit: structural harness results,
   semantic correctness evidence, and enablement risk are provider/user
-  responsibility unless the pack is first-party.
+  responsibility unless the pack is builtin.
 - User configuration and `--semantic-pack` can enable local manifests explicitly.
 - Scan JSON reports active pack provenance and whether each pack influenced
   evidence/contracts or metadata only. Per-finding contract/law provenance and
@@ -940,10 +1854,10 @@ different APIs.
 
 ## Phase 6: ecosystem packs
 
-- Add high-value first-party packs only when their contracts are narrow and
+- Add high-value builtin packs only when their contracts are narrow and
   testable.
 - Keep community packs external and opt-in unless nose explicitly adopts them as
-  first-party/default packs with project-owned gates.
+  builtin-default packs with project-owned gates.
 - Candidate areas: Lodash, RxJS, NumPy, pandas, Java Streams/Guava, Rust Iterator
   ecosystem helpers, Tokio futures, Rails ActiveSupport collection helpers.
 - Keep exact eligibility narrow. Many APIs should stay `near-only` because
@@ -959,7 +1873,7 @@ different APIs.
   noisy?
 - How should users pin pack versions in CI?
 - How should conflicting packs or overlapping API contracts be resolved?
-- What conformance score is enough for a first-party pack to enter the default
+- What conformance score is enough for a builtin pack to enter the default
   exact channel?
 - Should a pack be able to express language-specific proof-producing lowering
   extensions before the general construct/import/type fact model is complete?
@@ -975,7 +1889,7 @@ considered successful because it:
 - recorded intentional old-behavior changes where missing evidence blocks exact
   convergence;
 - kept tests and docs checks green after the proof-gated scan follow-up;
-- documented the first-party/external responsibility boundary;
+- documented the builtin/external responsibility boundary;
 - made accepted exact matches easier to explain through explicit contracts and
   hard-negative tests.
 

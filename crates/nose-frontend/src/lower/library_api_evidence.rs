@@ -4,6 +4,7 @@ struct LibraryApiEvidencePlan {
     id: LibraryApiContractId,
     callee: LibraryApiCalleeContract,
     dependencies: Vec<EvidenceId>,
+    pack_id: &'static str,
     rule: &'static str,
     result_domain: Option<DomainEvidence>,
 }
@@ -15,13 +16,14 @@ impl<'a> Lowering<'a> {
         };
         let arg_count = args.len();
         if let Some(plan) = self.library_api_contract_for_call(span, callee, arg_count) {
-            let api = self.record_evidence_with_dependencies(
+            let api = self.record_evidence_with_pack_dependencies(
                 EvidenceAnchor::node(span, NodeKind::Call),
                 EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
                     contract_hash: library_api_contract_id_hash(plan.id),
                     callee_hash: library_api_callee_contract_hash(plan.callee),
                     arity: arg_count as u16,
                 }),
+                plan.pack_id,
                 plan.rule,
                 plan.dependencies,
             );
@@ -92,7 +94,8 @@ impl<'a> Lowering<'a> {
                     contract.result.qualified_path,
                     contract.result.requires_unshadowed_receiver,
                     contract.result.receiver,
-                    "library_api_js_array_is_array",
+                    contract.pack_id,
+                    JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID,
                     None,
                 )
             })
@@ -105,7 +108,8 @@ impl<'a> Lowering<'a> {
                             contract.result.qualified_path,
                             true,
                             contract.result.receiver,
-                            "library_api_map_key_view_wrapper",
+                            contract.pack_id,
+                            JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID,
                             Some(library_map_key_view_wrapper_result_domain(contract)),
                         )
                     },
@@ -120,7 +124,8 @@ impl<'a> Lowering<'a> {
                             contract.result.qualified_path,
                             true,
                             contract.result.receiver,
-                            "library_api_promise_resolve",
+                            contract.pack_id,
+                            JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
                             Some(contract.result.result_domain),
                         )
                     },
@@ -135,8 +140,9 @@ impl<'a> Lowering<'a> {
             id: contract.0,
             callee: contract.1,
             dependencies,
-            rule: contract.5,
-            result_domain: contract.6,
+            pack_id: contract.5,
+            rule: contract.6,
+            result_domain: contract.7,
         })
     }
 
@@ -196,7 +202,8 @@ impl<'a> Lowering<'a> {
             id: contract.id,
             callee: contract.callee,
             dependencies,
-            rule: "library_api_js_boolean_coercion",
+            pack_id: contract.pack_id,
+            rule: JS_LIKE_BUILTIN_BOOLEAN_PRODUCER_ID,
             result_domain: None,
         })
     }
@@ -225,7 +232,8 @@ impl<'a> Lowering<'a> {
                         id: contract.id,
                         callee: contract.callee,
                         dependencies: vec![dependency],
-                        rule: "library_api_imported_collection_factory",
+                        pack_id: PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
+                        rule: PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
                         result_domain: library_collection_factory_result_domain_for_arity(
                             contract, arg_count,
                         ),
@@ -253,7 +261,8 @@ impl<'a> Lowering<'a> {
                         id: contract.id,
                         callee: contract.callee,
                         dependencies: vec![dependency],
-                        rule: "library_api_imported_collection_factory",
+                        pack_id: PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
+                        rule: PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
                         result_domain: library_collection_factory_result_domain_for_arity(
                             contract, arg_count,
                         ),
@@ -281,7 +290,8 @@ impl<'a> Lowering<'a> {
             id: contract.id,
             callee: contract.callee,
             dependencies: vec![dependency],
-            rule: "library_api_imported_namespace_function",
+            pack_id: contract.pack_id,
+            rule: PYTHON_STDLIB_MATH_PRODUCER_ID,
             result_domain: None,
         })
     }
@@ -292,13 +302,14 @@ impl<'a> Lowering<'a> {
         arg_count: usize,
     ) -> Option<LibraryApiEvidencePlan> {
         let (receiver_node, receiver, method) = self.static_member_callee(callee)?;
-        let (id, callee_contract, rule, result_domain) =
+        let (id, callee_contract, pack_id, rule, result_domain) =
             library_java_collection_factory_contract(self.lang, receiver, method)
                 .map(|contract| {
                     (
                         contract.id,
                         contract.callee,
-                        "library_api_java_collection_factory",
+                        contract.pack_id,
+                        JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
                         library_collection_factory_result_domain_for_arity(contract, arg_count),
                     )
                 })
@@ -307,7 +318,8 @@ impl<'a> Lowering<'a> {
                         (
                             contract.id,
                             contract.callee,
-                            "library_api_java_map_factory",
+                            contract.pack_id,
+                            JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID,
                             Some(library_map_factory_result_domain(contract)),
                         )
                     })
@@ -320,7 +332,8 @@ impl<'a> Lowering<'a> {
                             (
                                 contract.id,
                                 contract.callee,
-                                "library_api_java_map_entry_factory",
+                                contract.pack_id,
+                                JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID,
                                 None,
                             )
                         })
@@ -333,7 +346,8 @@ impl<'a> Lowering<'a> {
                         (
                             contract.id,
                             contract.callee,
-                            "library_api_java_static_collection_adapter",
+                            contract.pack_id,
+                            JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PRODUCER_ID,
                             None,
                         )
                     })
@@ -342,6 +356,7 @@ impl<'a> Lowering<'a> {
             receiver_node,
             id,
             callee_contract,
+            pack_id,
             rule,
             result_domain,
         )
@@ -352,6 +367,7 @@ impl<'a> Lowering<'a> {
         receiver_node: NodeId,
         id: LibraryApiContractId,
         callee_contract: LibraryApiCalleeContract,
+        pack_id: &'static str,
         rule: &'static str,
         result_domain: Option<DomainEvidence>,
     ) -> Option<LibraryApiEvidencePlan> {
@@ -371,6 +387,7 @@ impl<'a> Lowering<'a> {
             id,
             callee: callee_contract,
             dependencies: vec![dependency],
+            pack_id,
             rule,
             result_domain,
         })
@@ -394,7 +411,8 @@ impl<'a> Lowering<'a> {
             id: contract.id,
             callee: contract.callee,
             dependencies: vec![dependency],
-            rule: "library_api_static_index_membership",
+            pack_id: contract.pack_id,
+            rule: JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PRODUCER_ID,
             result_domain: None,
         })
     }
@@ -473,7 +491,8 @@ impl<'a> Lowering<'a> {
             id: contract.id,
             callee: contract.callee,
             dependencies: vec![dependency],
-            rule: "library_api_regex_literal_method",
+            pack_id: contract.pack_id,
+            rule: JS_LIKE_BUILTIN_REGEX_PRODUCER_ID,
             result_domain: None,
         })
     }
@@ -498,7 +517,8 @@ impl<'a> Lowering<'a> {
                     contract.id,
                     contract.callee,
                     receiver,
-                    "library_api_js_set_constructor",
+                    contract.pack_id,
+                    JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
                     library_collection_factory_result_domain_for_arity(contract, arg_count),
                 )
             })
@@ -510,7 +530,8 @@ impl<'a> Lowering<'a> {
                             contract.id,
                             contract.callee,
                             receiver,
-                            "library_api_js_map_constructor",
+                            contract.pack_id,
+                            JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
                             Some(library_map_factory_result_domain(contract)),
                         )
                     })
@@ -530,8 +551,9 @@ impl<'a> Lowering<'a> {
             id: contract.0,
             callee: contract.1,
             dependencies,
-            rule: contract.3,
-            result_domain: contract.4,
+            pack_id: contract.3,
+            rule: contract.4,
+            result_domain: contract.5,
         })
     }
 }

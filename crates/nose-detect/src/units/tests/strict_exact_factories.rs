@@ -38,14 +38,15 @@ fn strict_exact_js_constructor_requires_library_api_evidence() {
 
     let (mut il, call) = js_new_set_il(&interner);
     let set = library_js_like_set_constructor_contract(Lang::JavaScript, "Set").unwrap();
-    il.evidence.push(library_api_contract_evidence(
-        3,
-        sp(13),
-        set.id,
-        set.callee,
-        1,
-        vec![EvidenceId(0), EvidenceId(1)],
-    ));
+    il.evidence
+        .push(js_like_builtin_collection_constructor_evidence(
+            3,
+            sp(13),
+            set.id,
+            set.callee,
+            1,
+            vec![EvidenceId(0), EvidenceId(1)],
+        ));
     let facts = StrictFacts::collect(&il, &interner);
     assert!(strict_exact_set_constructor_collection_safe(
         &il, &interner, &facts, call
@@ -80,11 +81,11 @@ fn strict_exact_python_builtin_factory_requires_library_api_evidence() {
         Vec::new(),
         Vec::new(),
     );
-    il.evidence.push(evidence(
+    il.evidence.push(sequence_surface_evidence(
         0,
-        EvidenceAnchor::sequence(sp(42)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
-        Vec::new(),
+        Lang::Python,
+        sp(42),
+        SequenceSurfaceKind::Collection,
     ));
     let facts = StrictFacts::collect(&il, &interner);
     assert!(!strict_exact_python_collection_factory_safe(
@@ -92,19 +93,19 @@ fn strict_exact_python_builtin_factory_requires_library_api_evidence() {
     ));
 
     let contract = library_free_name_collection_factory_contract(Lang::Python, "list").unwrap();
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         1,
+        Lang::Python,
         EvidenceAnchor::node(sp(40), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("list"),
-        }),
+        },
         Vec::new(),
     ));
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(python_builtin_collection_factory_evidence(
         2,
         sp(43),
-        contract.id,
-        contract.callee,
+        contract,
         1,
         vec![EvidenceId(1)],
     ));

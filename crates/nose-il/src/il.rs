@@ -8,6 +8,9 @@ use crate::span::{FileId, FileMeta, Span};
 use crate::unit::Unit;
 use serde::{Deserialize, Serialize};
 
+mod evidence_index;
+use evidence_index::EvidenceIndex;
+
 /// One lowered source file. `nodes` is the arena; child links live out-of-line in
 /// `edges` so each [`Node`] stays small. `file == ` this file's index in the
 /// owning [`crate::Corpus`].
@@ -56,94 +59,6 @@ pub struct Il {
     /// [`Il::invalidate_evidence_index`]. Never serialized.
     #[serde(skip)]
     evidence_index: std::sync::RwLock<Option<EvidenceIndex>>,
-}
-
-/// See [`Il::evidence_anchored_at`]: exact-anchor-span buckets and id→index
-/// resolution, replacing the per-query linear `evidence` scans that were
-/// quadratic on minified-bundle-sized files. Only the IMMUTABLE parts of a
-/// record (anchor, id) are indexed; `status`/`dependencies` are always read
-/// live, so in-place mutation of those fields needs no invalidation.
-#[derive(Debug, Default)]
-struct EvidenceIndex {
-    indexed_len: usize,
-    /// `(id, anchor)` of the last record indexed — a cheap staleness sentinel.
-    /// Appends keep it valid; a `clear()`/`retain()`/splice that replaces the
-    /// prefix almost always changes the record at this position, which
-    /// [`Il::with_evidence_index`] detects and answers with a rebuild. (The
-    /// only undetectable rewrite is one that preserves every indexed record's
-    /// `(id, anchor)` pair — and such a rewrite leaves the index correct,
-    /// because those two fields are all it derives buckets from.)
-    sentinel: Option<(u32, EvidenceAnchor)>,
-    by_anchor_span: std::collections::HashMap<(u32, u32, u32), Vec<u32>>,
-    /// `Binding` anchors are queried by `local_hash` (not span) — see
-    /// [`Il::evidence_binding_anchored`] — so they get their own bucket.
-    by_binding_hash: std::collections::HashMap<u64, Vec<u32>>,
-    by_id: std::collections::HashMap<u32, u32>,
-}
-
-impl EvidenceIndex {
-    /// `false` when the already-indexed prefix no longer ends with the record
-    /// the index last saw — evidence was rewritten, not appended to.
-    fn prefix_intact(&self, evidence: &[EvidenceRecord]) -> bool {
-        match self.sentinel {
-            None => true,
-            Some((id, anchor)) => self
-                .indexed_len
-                .checked_sub(1)
-                .and_then(|last| evidence.get(last))
-                .is_some_and(|record| record.id.0 == id && record.anchor == anchor),
-        }
-    }
-
-    fn extend_from(&mut self, evidence: &[EvidenceRecord]) {
-        for (idx, record) in evidence.iter().enumerate().skip(self.indexed_len) {
-            let span = record.anchor.span();
-            self.by_anchor_span
-                .entry((span.file.0, span.start_byte, span.end_byte))
-                .or_default()
-                .push(idx as u32);
-            if let EvidenceAnchor::Binding { local_hash, .. } = record.anchor {
-                self.by_binding_hash
-                    .entry(local_hash)
-                    .or_default()
-                    .push(idx as u32);
-            }
-            // Mirror `evidence_record_by_id`: the record at position `id` wins;
-            // otherwise the first record with that id.
-            let id = record.id.0;
-            if id as usize == idx {
-                self.by_id.insert(id, idx as u32);
-            } else {
-                self.by_id.entry(id).or_insert(idx as u32);
-            }
-        }
-        self.indexed_len = evidence.len();
-        self.sentinel = evidence.last().map(|record| (record.id.0, record.anchor));
-    }
-
-    /// The same walk as the pre-index `evidence_dependencies_asserted`: every
-    /// transitively-reachable dependency must resolve and be `Asserted`; a cycle
-    /// is benign (revisits are skipped). Statuses and dependency lists are read
-    /// live from `evidence` — only id resolution uses the index.
-    fn deps_walk(&self, evidence: &[EvidenceRecord], dependencies: &[EvidenceId]) -> bool {
-        let mut stack = dependencies.to_vec();
-        let mut seen = Vec::new();
-        while let Some(id) = stack.pop() {
-            if seen.contains(&id) {
-                continue;
-            }
-            seen.push(id);
-            let Some(&dep_idx) = self.by_id.get(&id.0) else {
-                return false;
-            };
-            let dep = &evidence[dep_idx as usize];
-            if dep.status != EvidenceStatus::Asserted {
-                return false;
-            }
-            stack.extend_from_slice(&dep.dependencies);
-        }
-        true
-    }
 }
 
 impl Clone for Il {
@@ -337,7 +252,7 @@ impl Il {
         by_node
     }
 
-    pub fn find_or_push_first_party_evidence(
+    pub fn find_or_push_builtin_evidence(
         &mut self,
         anchor: EvidenceAnchor,
         kind: EvidenceKind,
@@ -345,8 +260,26 @@ impl Il {
         rule: &str,
         dependencies: Vec<EvidenceId>,
     ) -> EvidenceId {
-        let pack_hash = stable_symbol_hash(pack_id);
-        let rule_hash = stable_symbol_hash(rule);
+        let provenance = EvidenceProvenance {
+            emitter: EvidenceEmitter::Builtin,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(rule)),
+        };
+        self.find_or_push_builtin_evidence_with_provenance(anchor, kind, provenance, dependencies)
+    }
+
+    pub fn find_or_push_builtin_evidence_with_provenance(
+        &mut self,
+        anchor: EvidenceAnchor,
+        kind: EvidenceKind,
+        provenance: EvidenceProvenance,
+        dependencies: Vec<EvidenceId>,
+    ) -> EvidenceId {
+        let provenance = EvidenceProvenance {
+            emitter: EvidenceEmitter::Builtin,
+            pack_hash: provenance.pack_hash,
+            rule_hash: provenance.rule_hash,
+        };
         // Index-backed dedup: only records anchored at this exact span can match,
         // so the previous whole-`evidence` pass (quadratic over an emit-heavy
         // pass) narrows to one bucket.
@@ -354,9 +287,7 @@ impl Il {
             (record.anchor == anchor
                 && record.kind == kind
                 && record.status == EvidenceStatus::Asserted
-                && record.provenance.emitter == EvidenceEmitter::FirstParty
-                && record.provenance.pack_hash == Some(pack_hash)
-                && record.provenance.rule_hash == Some(rule_hash)
+                && record.provenance == provenance
                 && record.dependencies == dependencies)
                 .then_some(record.id)
         }) {
@@ -367,15 +298,32 @@ impl Il {
             id,
             anchor,
             kind,
-            provenance: EvidenceProvenance {
-                emitter: EvidenceEmitter::FirstParty,
-                pack_hash: Some(pack_hash),
-                rule_hash: Some(rule_hash),
-            },
+            provenance,
             dependencies,
             status: EvidenceStatus::Asserted,
         });
         id
+    }
+
+    pub fn find_or_push_first_party_evidence(
+        &mut self,
+        anchor: EvidenceAnchor,
+        kind: EvidenceKind,
+        pack_id: &str,
+        rule: &str,
+        dependencies: Vec<EvidenceId>,
+    ) -> EvidenceId {
+        self.find_or_push_builtin_evidence(anchor, kind, pack_id, rule, dependencies)
+    }
+
+    pub fn find_or_push_first_party_evidence_with_provenance(
+        &mut self,
+        anchor: EvidenceAnchor,
+        kind: EvidenceKind,
+        provenance: EvidenceProvenance,
+        dependencies: Vec<EvidenceId>,
+    ) -> EvidenceId {
+        self.find_or_push_builtin_evidence_with_provenance(anchor, kind, provenance, dependencies)
     }
 
     #[inline]

@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn map_key_membership_converges_cross_language() {
+fn receiver_membership_converges_cross_language() {
     let i = Interner::new();
     let py = "def f(lookup, other_lookup, key, other):\n    return key in lookup\n";
     let py_method =
@@ -40,7 +40,7 @@ fn map_key_membership_converges_cross_language() {
 }
 
 #[test]
-fn map_key_membership_keeps_wrong_coordinate_boundaries() {
+fn receiver_membership_keeps_wrong_coordinate_boundaries() {
     let i = Interner::new();
     let py = "def f(lookup, other_lookup, key, other):\n    return key in lookup\n";
     let wrong_key =

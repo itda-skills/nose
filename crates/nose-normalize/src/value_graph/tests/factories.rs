@@ -23,16 +23,16 @@ fn imported_collection_factory_value_graph_uses_library_api_evidence() {
         library_imported_collection_factory_contract(Lang::Python, "collections", "deque")
             .expect("deque contract");
     push_imported_binding_use(&mut il, 0, sp(60), 1, sp(61), "collections", "deque");
-    il.evidence.push(collection_sequence_evidence(2, sp(63)));
+    il.evidence
+        .push(collection_sequence_evidence(2, Lang::Python, sp(63)));
     assert!(
         eval_proven_collection_op(&il, &interner, call).is_none(),
         "import symbol proof alone must not prove the migrated stdlib factory"
     );
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(python_stdlib_collection_factory_evidence(
         3,
         sp(64),
-        contract.id,
-        contract.callee,
+        contract,
         1,
         vec![EvidenceId(1)],
     ));
@@ -87,11 +87,10 @@ fn java_collection_factory_value_graph_uses_library_api_evidence() {
         eval_proven_collection_op(&il, &interner, call).is_none(),
         "java.util import proof alone must not prove the migrated Java factory"
     );
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(java_stdlib_collection_factory_evidence(
         2,
         sp(75),
-        contract.id,
-        contract.callee,
+        contract,
         2,
         vec![EvidenceId(1)],
     ));
@@ -129,14 +128,14 @@ fn java_collection_constructor_value_graph_uses_library_api_evidence() {
 
     let contract =
         library_java_collection_constructor_contract(Lang::Java, "ArrayList", 0).unwrap();
-    il.evidence.push(library_api_contract_evidence(
-        3,
-        sp(81),
-        contract.id,
-        contract.callee,
-        0,
-        vec![EvidenceId(0), EvidenceId(2)],
-    ));
+    il.evidence
+        .push(java_stdlib_collection_constructor_evidence(
+            3,
+            sp(81),
+            contract,
+            0,
+            vec![EvidenceId(0), EvidenceId(2)],
+        ));
     assert!(matches!(
         eval_op(&il, &interner, call),
         ValOp::Seq(SEQ_VALUE_COLLECTION)
@@ -181,7 +180,8 @@ fn static_index_membership_value_graph_uses_library_api_evidence() {
     );
     let root = b.add(NodeKind::Block, Payload::None, sp(89), &[comparison]);
     let mut il = finish_test_il(b, root, Lang::JavaScript);
-    il.evidence.push(collection_sequence_evidence(0, sp(91)));
+    il.evidence
+        .push(collection_sequence_evidence(0, Lang::JavaScript, sp(91)));
     assert!(
         !matches!(eval_op(&il, &interner, comparison), ValOp::Bin(op) if op == Op::In as u32),
         "static array receiver proof alone must not prove indexOf membership"
@@ -189,14 +189,15 @@ fn static_index_membership_value_graph_uses_library_api_evidence() {
 
     let contract =
         library_static_index_membership_contract(Lang::JavaScript, "indexOf", 1).unwrap();
-    il.evidence.push(library_api_contract_evidence(
-        1,
-        sp(94),
-        contract.id,
-        contract.callee,
-        1,
-        vec![EvidenceId(0)],
-    ));
+    il.evidence
+        .push(js_like_builtin_static_index_membership_evidence(
+            1,
+            sp(94),
+            contract.id,
+            contract.callee,
+            1,
+            vec![EvidenceId(0)],
+        ));
     assert!(matches!(
         eval_op(&il, &interner, comparison),
         ValOp::Bin(op) if op == Op::In as u32
@@ -259,8 +260,9 @@ fn push_java_map_lookup_evidence(
 ) {
     let contract =
         library_java_map_factory_contract(Lang::Java, "Map", "of").expect("Map.of contract");
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_evidence(
         0,
+        Lang::Java,
         EvidenceAnchor::sequence(import_span),
         EvidenceKind::Import(ImportEvidenceKind::Binding {
             module_hash: stable_symbol_hash("java.util"),
@@ -268,16 +270,16 @@ fn push_java_map_lookup_evidence(
         }),
     ));
     push_imported_binding_use(il, 1, import_span, 2, receiver_span, "java.util", "Map");
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(java_stdlib_map_factory_evidence(
         3,
         call_span,
-        contract.id,
-        contract.callee,
+        contract,
         4,
         vec![EvidenceId(2)],
     ));
-    il.evidence.push(evidence_with_dependencies(
+    il.evidence.push(language_core_evidence_with_dependencies(
         4,
+        Lang::Java,
         EvidenceAnchor::node(call_span, NodeKind::Call),
         EvidenceKind::Import(ImportEvidenceKind::ImportedLiteralSnapshot {
             module_hash: stable_symbol_hash(snapshot_module),
@@ -480,7 +482,7 @@ fn raw_name_module_assignment_without_evidence_is_not_seeded() {
 
     assert!(
         !builder.global_env.contains_key(&table),
-        "raw Name assignments need first-party import or imported-literal evidence"
+        "raw Name assignments need matching language-core import or imported-literal evidence"
     );
 }
 
@@ -526,15 +528,17 @@ fn namespace_collection_factory_value_graph_uses_library_api_evidence_after_seed
     let contract =
         library_imported_collection_factory_contract(Lang::Python, "collections", "deque")
             .expect("deque contract");
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_evidence(
         0,
+        Lang::Python,
         EvidenceAnchor::sequence(sp(80)),
         EvidenceKind::Import(ImportEvidenceKind::Namespace {
             module_hash: stable_symbol_hash("collections"),
         }),
     ));
     push_imported_namespace_use(&mut il, 1, sp(80), 2, sp(81), "collections");
-    il.evidence.push(collection_sequence_evidence(3, sp(84)));
+    il.evidence
+        .push(collection_sequence_evidence(3, Lang::Python, sp(84)));
     let mut builder = Builder::new(&il, &interner);
     builder.seed_module_value_bindings();
     let raw = builder.eval(call, &FxHashMap::default());
@@ -542,11 +546,10 @@ fn namespace_collection_factory_value_graph_uses_library_api_evidence_after_seed
         builder.proven_collection_value(raw).is_none(),
         "namespace import proof alone must not prove the migrated stdlib factory"
     );
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(python_stdlib_collection_factory_evidence(
         4,
         sp(85),
-        contract.id,
-        contract.callee,
+        contract,
         1,
         vec![EvidenceId(2)],
     ));

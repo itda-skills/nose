@@ -359,10 +359,11 @@ pub(super) fn lower_cast(lo: &mut Lowering, node: TsNode) -> NodeId {
         .unwrap_or("");
     if let Some(dependencies) = c_unsigned_32_cast_type_dependencies(lo, cast_ty) {
         if value.is_some_and(c_cast_operand_may_be_byte_lane) {
-            lo.record_evidence_with_dependencies(
+            lo.record_evidence_with_pack_dependencies(
                 EvidenceAnchor::source_span(span),
                 EvidenceKind::Source(SourceFactKind::Cast(SourceCastKind::CUnsigned32)),
-                "c_unsigned_32_cast",
+                nose_semantics::C_LANGUAGE_PACK_ID,
+                nose_semantics::C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID,
                 dependencies,
             );
             return lo.add(

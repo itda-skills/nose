@@ -7,7 +7,7 @@ use crate::units::fragments::call_may_mutate_blocked_cid;
 use nose_il::{
     stable_symbol_hash, Builtin, EvidenceAnchor, EvidenceId, EvidenceKind, EvidenceStatus, FileId,
     FileMeta, IlBuilder, Interner, Lang, NodeKind, Payload, SequenceSurfaceKind, SourceBindingKind,
-    SourceFactKind, SourceOperatorKind, UnitKind,
+    SourceFactKind, SourceOperatorKind, SymbolEvidenceKind, UnitKind,
 };
 use nose_semantics::{
     library_free_function_builtin_contract, library_js_like_set_constructor_contract,
@@ -25,11 +25,11 @@ fn strict_exact_sequence_surfaces_require_evidence() {
         &il, &interner, &facts, seq
     ));
 
-    il.evidence.push(evidence(
+    il.evidence.push(sequence_surface_evidence(
         0,
-        EvidenceAnchor::sequence(sp(61)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
-        Vec::new(),
+        Lang::JavaScript,
+        sp(61),
+        SequenceSurfaceKind::Collection,
     ));
     let facts = StrictFacts::collect(&il, &interner);
 
@@ -74,13 +74,22 @@ fn strict_exact_raw_builtin_payload_requires_admission() {
 
     let contract = library_free_function_builtin_contract(Lang::Python, "abs", 1)
         .expect("Python abs contract");
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(language_core_symbol_evidence(
         0,
+        Lang::Python,
+        EvidenceAnchor::node(sp(72), NodeKind::Var),
+        SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("abs"),
+        },
+        Vec::new(),
+    ));
+    il.evidence.push(library_api_contract_evidence(
+        1,
         sp(72),
         contract.id,
         contract.callee,
         1,
-        Vec::new(),
+        vec![EvidenceId(0)],
     ));
     let facts = StrictFacts::collect(&il, &interner);
     assert!(strict_exact_safe_tree(&il, &interner, &facts, call));
@@ -99,13 +108,22 @@ fn function_binding_safe_raw_builtin_payload_requires_admission() {
 
     let contract = library_free_function_builtin_contract(Lang::Python, "abs", 1)
         .expect("Python abs contract");
-    il.evidence.push(library_api_contract_evidence(
+    il.evidence.push(language_core_symbol_evidence(
         0,
+        Lang::Python,
+        EvidenceAnchor::node(sp(72), NodeKind::Var),
+        SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("abs"),
+        },
+        Vec::new(),
+    ));
+    il.evidence.push(library_api_contract_evidence(
+        1,
         sp(72),
         contract.id,
         contract.callee,
         1,
-        Vec::new(),
+        vec![EvidenceId(0)],
     ));
     let facts = StrictFacts::collect(&il, &interner);
     assert!(function_binding_safe(&il, &interner, &facts, call, call));
@@ -383,14 +401,15 @@ fn strict_exact_contains_does_not_use_result_domain_as_exact_tree_proof() {
     );
 
     let api = library_js_like_set_constructor_contract(Lang::TypeScript, "Set").unwrap();
-    il.evidence.push(library_api_contract_evidence(
-        0,
-        sp(42),
-        api.id,
-        api.callee,
-        1,
-        Vec::new(),
-    ));
+    il.evidence
+        .push(js_like_builtin_collection_constructor_evidence(
+            0,
+            sp(42),
+            api.id,
+            api.callee,
+            1,
+            Vec::new(),
+        ));
     il.evidence.push(evidence(
         1,
         EvidenceAnchor::node(sp(42), NodeKind::Call),

@@ -1,6 +1,6 @@
 # Semantic kernel snapshot
 
-Snapshot date: 2026-06-09. The current implementation has an internal
+Snapshot date: 2026-06-21. The current implementation has an internal
 semantic-kernel facade, evidence-gated field state, sequence-surface contracts,
 proof-backed append fragment evidence, operator-law contracts, typed import
 facts, source-fact gates for construct/macro/literal/operator provenance,
@@ -61,21 +61,207 @@ still being migrated toward it.
 
 - `nose-il` defines a compact shared IL, `Lang`, `Builtin`, `HoFKind`, operators,
   literals, source spans, units, and pack-facing internal `EvidenceRecord` facts.
-- `nose-semantics` defines the first-party semantic profile facade: language,
+- `nose-semantics` defines the builtin semantic profile facade: language,
   source-fact, sequence-surface, guard/import/symbol, operator, demand/effect,
   fragment, module, stdlib, builtin, method-call, property, async,
   iterator-adapter, builder-append, and factory contracts. The public crate
   surface remains a flat facade, while those proof helpers and contract rows are
-  split into focused modules under `src/` and `src/library_api/`.
+  split into focused modules under `src/` and `src/library_api/`. Compiled
+  builtin packs now have a small `BuiltinPackDescriptor` registry that feeds
+  the existing `SemanticPackSummary` compatibility output without changing
+  analysis behavior. Builtin language descriptors now report official
+  parser/lowering ownership metadata for Python, JavaScript/TypeScript, Go,
+  Rust, Java, C, Ruby, Swift, CSS, and HTML/Vue/Svelte embedded-region support.
+  Generic language-core evidence and source facts emitted by frontend lowering
+  now carry those `nose.lang.*` pack producers. Cross-file module-import
+  immutable literal export/snapshot proof uses the same builtin language-core
+  producer. `nose.lang.c` also owns the C file-extension identity,
+  `tree-sitter-c` parser binding,
+  `nose_frontend::c::lower` lowering entrypoint metadata, and the
+  `c.source.cast.unsigned32` source-fact producer id. The
+  `nose.python.builtins.collection_factories` descriptor owns the Python builtin
+  `list`, `set`, `frozenset`, and `tuple` collection-factory contract id and
+  `LibraryApi` occurrence producer id, while shadowed names and wildcard imports
+  remain hard negatives. The
+  `nose.python.stdlib.collection_factories` descriptor owns Python
+  `collections.deque` collection-factory contract and occurrence producer ids,
+  while missing imports and wrong modules remain hard negatives. The
+  `nose.python.stdlib.math` descriptor owns Python `math.prod` product-reduction
+  contract and occurrence producer ids, while missing imports, wrong modules,
+  and shadowed `math` bindings remain hard negatives. The
+  `nose.ruby.stdlib.set` descriptor owns Ruby `Set.new` collection-factory
+  contract and occurrence producer ids, while missing `require "set"`, shadowed
+  `Set`, and mutated local sets remain hard negatives. The
+  `nose.rust.stdlib.vec` descriptor owns Rust `Vec::new` and `vec!`
+  collection-factory contract and occurrence producer ids, while shadowed `Vec`
+  roots and shadowed `vec` macros remain hard negatives. The
+  `nose.rust.stdlib.option` descriptor owns Rust `Some`, `None`, and
+  `and_then` Option API contract and occurrence producer ids, while shadowed
+  Option selectors and non-Option receivers remain hard negatives. The
+  `nose.rust.stdlib.integer_methods` descriptor owns Rust primitive integer
+  `abs`/`min`/`max`/`clamp` method API contract and occurrence producer ids,
+  while non-integer receivers and unsupported arities remain hard negatives. The
+  `nose.java.stdlib.math` descriptor owns Java `Math.abs`, `Math.min`, and
+  `Math.max` scalar integer API contract and occurrence producer ids, while
+  missing unshadowed `Math` proof, non-integer value arguments, and unsupported
+  arities remain hard negatives. The
+  `nose.javascript.builtins.promise` descriptor owns JS/TS `Promise.resolve`
+  and `.then` Promise API contract and occurrence producer ids, while shadowed
+  `Promise`, missing Promise-like receiver proof, and unsafe thenable
+  assimilation remain hard negatives. The
+  `nose.javascript.builtins.array` descriptor owns JS/TS `Array.from` and
+  `Array.isArray` API contract and occurrence producer ids, while shadowed
+  `Array` roots and unsupported `Array.from` arities remain hard negatives. The
+  `nose.javascript.builtins.boolean` descriptor owns JS/TS `Boolean(...)` API
+  contract and occurrence producer ids, while shadowed `Boolean` roots and
+  unsupported arities remain hard negatives. The
+  `nose.javascript.builtins.regex` descriptor owns JS/TS regex literal
+  `.test(...)` API contract and occurrence producer ids, while non-regex
+  receivers and unsupported arities remain hard negatives. The
+  `nose.javascript.builtins.static_index_membership` descriptor owns JS/TS
+  static `indexOf`/`findIndex` membership API contract and occurrence producer
+  ids, while non-literal receivers and float-literal receivers remain hard
+  negatives. The
+  `nose.javascript.builtins.collection_constructors` descriptor owns JS/TS
+  `new Set(...)` and `new Map(...)` API contract and occurrence producer ids,
+  while missing construct-source proof and shadowed constructor roots remain
+  hard negatives. The
+  `nose.rust.stdlib.collection_factories` descriptor owns selected Rust
+  `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection-factory
+  contract and occurrence producer ids, while shadowed `std` roots remain hard
+  negatives. The `nose.rust.stdlib.map_factories` descriptor owns selected Rust
+  `std::collections::{HashMap,BTreeMap}::from` map-factory contract and
+  occurrence producer ids, while shadowed `std` roots remain hard negatives.
+  The `nose.java.stdlib.map_factories` descriptor owns Java `java.util.Map.of`
+  and `Map.ofEntries` map-factory contract and occurrence producer ids, while
+  missing `java.util.Map` imports and cross-surface `Map.entry` boundary cases
+  remain hard negatives. The `nose.java.stdlib.map_entries` descriptor owns Java
+  `java.util.Map.entry` map-entry contract and occurrence producer ids, while
+  missing `java.util.Map` imports and shadowed `Map` roots remain hard
+  negatives. The `nose.java.stdlib.collection_factories` descriptor owns Java
+  `java.util.List.of`, `Set.of`, and `Arrays.asList` collection-factory
+  contract and occurrence producer ids, while missing imports and
+  cross-surface constructor boundary cases remain hard negatives. The
+  `nose.java.stdlib.collection_constructors` descriptor owns Java empty
+  `new ArrayList<>()` and `new LinkedList<>()` collection-constructor contract
+  and occurrence producer ids, while missing imports, local type shadows, and
+  conflicting explicit imports remain hard negatives. The
+  `nose.java.stdlib.static_collection_adapters` descriptor owns Java
+  `java.util.Arrays.stream` static collection adapter contract and occurrence
+  producer ids, while missing imports and shadowed `Arrays` roots remain hard
+  negatives. The
+  `nose.protocols.map_get` descriptor owns Java/Rust/JS-family `map.get(key)`
+  contract and occurrence producer ids, while non-map receivers and unsupported
+  arities remain hard negatives. The
+  `nose.protocols.map_get_default` descriptor owns Python `dict.get(key,
+  default)`, Ruby `Hash#fetch(key, default)` or zero-arg block fallback, and
+  Java `Map.getOrDefault(key, default)` contract and occurrence producer ids,
+  while non-map receivers and unsupported arities remain hard negatives. The
+  `nose.protocols.free_function_builtins` descriptor owns unshadowed
+  Python/Go/Swift free-name builtin API occurrence contracts such as Python
+  `len`/`range`/reductions, Go `len`/`append`, and Swift
+  `abs`/`min`/`max`, while missing symbol proof, compatibility-pack evidence,
+  wrong producers, and unsupported arities remain hard negatives. The
+  `nose.protocols.receiver_membership` descriptor owns receiver-method
+  membership contracts for Java/Rust/Ruby map-key membership, Python
+  `__contains__`, JS-like `has`/`includes`, Java/Swift `contains`, and Ruby
+  `member?`, while missing receiver proof, unsupported arities, and Go
+  `slices.Contains` remain hard negatives. The
+  `nose.protocols.map_key_views` descriptor owns Python/Ruby `keys`, Java
+  `keySet`, and JS-family `Map.keys()` contract and occurrence producer ids,
+  while non-map receivers and unsupported arities remain hard negatives. The
+  `nose.protocols.property_builtins` descriptor owns JS/TS/HTML-family and Java
+  `.length`, plus Swift `count` and `isEmpty`, property-builtin contract and
+  occurrence producer ids, while missing receiver proof, wrong-pack evidence,
+  and unsupported properties remain hard negatives. The
+  `nose.protocols.builtin_method_calls` descriptor owns generic method-call
+  and namespace-call builtin semantics that have not moved to a narrower
+  protocol pack, including selected `fmt`, `strings`, and `slices` namespace
+  calls, while receiver/symbol/import proof and unsupported arities remain hard
+  negatives. The
+  `nose.protocols.iterator_identity_adapters` descriptor owns Rust
+  `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
+  `.stream()` iterator identity adapter contract and occurrence producer ids,
+  while non-protocol receivers and unsupported arities remain hard negatives. The
+  `nose.python.stdlib.type_domain` descriptor directly exposes its alias
+  contract rows so producer id, contract id, conformance refs, and declaration
+  counts come from one pack-owned table.
 - The external pack API is documented as a v0 manifest/schema with examples.
-  `nose-semantics` can load local manifest files/directories for metadata and
-  provenance reporting, `nose scan --format json` reports active packs, and
+  `nose-semantics` can validate local manifest files/directories as metadata,
   `nose semantic-pack check` validates local manifests plus declared fixture
-  assets. External packs are still `metadata-only`; first-party producers remain
-  compiled Rust and are expected to map onto the same vocabulary. The first
-  compiled pilot is `nose.python.stdlib.type_domain`, a default first-party
-  stdlib pack-shaped surface for Python `typing`, `collections.abc`, and
-  `asyncio` type-domain alias evidence.
+  assets, and `nose query --format json` reports active builtin/local packs in
+  top-level `semantic_packs`. External packs are still `metadata-only`; builtin
+  producers remain compiled Rust and are expected to map onto the same
+  vocabulary. The first compiled pilots are the `nose.lang.*` builtin language
+  descriptor/source-fact producer set, with `nose.lang.c` also carrying C
+  unsigned-cast source provenance,
+  `nose.python.builtins.collection_factories`, a default builtin stdlib pack for
+  Python builtin collection-factory API provenance, and
+  `nose.python.stdlib.collection_factories`, a default builtin stdlib pack for
+  Python `collections.deque` collection-factory API provenance,
+  `nose.python.stdlib.math`, a default builtin stdlib pack for Python
+  `math.prod` product-reduction API provenance,
+  `nose.ruby.stdlib.set`, a default builtin stdlib pack for Ruby `Set.new`
+  collection-factory API provenance,
+  `nose.rust.stdlib.vec`, a default builtin stdlib pack for Rust `Vec::new` and
+  `vec!` collection-factory API provenance,
+  `nose.rust.stdlib.option`, a default builtin stdlib pack for Rust `Some`,
+  `None`, and `and_then` Option API provenance,
+  `nose.rust.stdlib.integer_methods`, a default builtin stdlib pack for Rust
+  primitive integer `abs`/`min`/`max`/`clamp` method API provenance,
+  `nose.java.stdlib.math`, a default builtin stdlib pack for Java `Math.abs`,
+  `Math.min`, and `Math.max` scalar integer API provenance,
+  `nose.javascript.builtins.promise`, a default builtin stdlib pack for JS/TS
+  `Promise.resolve` and `.then` Promise API provenance,
+  `nose.javascript.builtins.array`, a default builtin stdlib pack for JS/TS
+  `Array.from` and `Array.isArray` API provenance,
+  `nose.javascript.builtins.boolean`, a default builtin stdlib pack for JS/TS
+  `Boolean(...)` API provenance,
+  `nose.javascript.builtins.regex`, a default builtin stdlib pack for JS/TS
+  regex literal `.test(...)` API provenance,
+  `nose.javascript.builtins.static_index_membership`, a default builtin stdlib
+  pack for JS/TS static `indexOf`/`findIndex` membership API provenance,
+  `nose.javascript.builtins.collection_constructors`, a default builtin stdlib
+  pack for JS/TS `new Set(...)` and `new Map(...)` API provenance,
+  `nose.rust.stdlib.collection_factories`, a default builtin stdlib pack for
+  selected Rust `std::collections` collection-factory API provenance,
+  `nose.rust.stdlib.map_factories`, a default builtin stdlib pack for selected
+  Rust `std::collections` map-factory API provenance, and
+  `nose.java.stdlib.map_factories`, a default builtin stdlib pack for Java
+  `java.util.Map.of` and `Map.ofEntries` map-factory API provenance, and
+  `nose.java.stdlib.map_entries`, a default builtin stdlib pack for Java
+  `java.util.Map.entry` map-entry API provenance, and
+  `nose.java.stdlib.collection_factories`, a default builtin stdlib pack for
+  Java `java.util.List.of`, `Set.of`, and `Arrays.asList` collection-factory
+  API provenance, and
+  `nose.java.stdlib.collection_constructors`, a default builtin stdlib pack for
+  Java empty `new ArrayList<>()` and `new LinkedList<>()` collection-constructor
+  API provenance, and
+  `nose.java.stdlib.static_collection_adapters`, a default builtin stdlib pack
+  for Java `java.util.Arrays.stream` static collection adapter API provenance,
+  and
+  `nose.protocols.map_get`, a default builtin protocol pack for Java/Rust/
+  JS-family `map.get(key)` API provenance, and
+  `nose.protocols.map_get_default`, a default builtin protocol pack for Python
+  `dict.get(key, default)`, Ruby `Hash#fetch(key, default)` or zero-arg block
+  fallback, and Java `Map.getOrDefault(key, default)` API provenance, and
+  `nose.protocols.receiver_membership`, a default builtin protocol pack for
+  receiver-method membership API provenance across map, collection, and
+  set-or-map receiver contracts, and
+  `nose.protocols.map_key_views`, a default builtin protocol pack for
+  Python/Ruby `keys`, Java `keySet`, and JS-family `Map.keys()` API provenance,
+  and
+  `nose.protocols.property_builtins`, a default builtin protocol pack for
+  JS/TS/HTML-family and Java `.length`, plus Swift `count` and `isEmpty`,
+  property-builtin API provenance, and
+  `nose.protocols.builtin_method_calls`, a default builtin protocol pack for
+  generic method-call and namespace-call builtin semantics that have not moved
+  to a narrower protocol pack, and
+  `nose.protocols.iterator_identity_adapters`, a default builtin protocol pack
+  for Rust iterator identity adapters and Java `.stream()` API provenance, and
+  `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped surface
+  for Python `typing`, `collections.abc`, and `asyncio` type-domain alias
+  evidence.
 - `nose-frontend` owns tree-sitter parsing, per-language lowering (including the
   declarative CSS/HTML frontends), `<script>`/`<style>`/markup region extraction for
   Vue/Svelte/HTML, source/domain/import/symbol/type/guard/place/effect/API/
@@ -115,9 +301,9 @@ The current facade is compiled Rust, not an external manifest schema. It is
 intended to make the future pack extension boundary explicit while behavior is
 migrated.
 
-- The first-party profile exposes pack id and trust policy separately from
+- The builtin profile exposes pack id and trust policy separately from
   channel eligibility. `ChannelEligibility` describes where a fact may be used;
-  first-party/default status is pack provenance, not an analysis channel.
+  builtin/default status is pack provenance, not an analysis channel.
 - `Il::evidence` is now the shared internal substrate for source, domain, import,
   symbol-identity, type-alias, guard, place/effect, selected library API
   occurrence, and sequence-surface proof facts. Records carry ids, stable source anchors, kind,
@@ -175,11 +361,12 @@ migrated.
   Python returned generator/set comprehensions and unsupported cardinality
   surfaces stay exact-closed; supported list/generator terminal reductions can
   still reopen only through consumer-specific demand checks.
-- Free-function builtin contracts are language- and arity-constrained. Supported
-  Python/Go free builtins such as `len`, `sum`, `min`, `max`, `any`, `all`, and
-  Go `append` require admitted `LibraryApi(FreeFunctionBuiltin)` occurrence
-  evidence whose dependencies prove the unshadowed builtin/global callee before
-  exact lowering.
+- Free-function builtin contracts are language- and arity-constrained.
+  Supported Python/Go/Swift free builtins such as Python `len`, `sum`, `min`,
+  `max`, `any`, `all`, Go `append`, and Swift `abs` require admitted
+  `nose.protocols.free_function_builtins` `LibraryApi(FreeFunctionBuiltin)`
+  occurrence evidence whose dependencies prove the unshadowed builtin/global
+  callee before exact lowering.
 - Canonical `Payload::Builtin` calls now have an explicit admission gate. A
   builtin payload is only a normalized operation shape; it is not itself proof
   that a language/library API has that meaning. Value-graph builtin folding,
@@ -190,11 +377,11 @@ migrated.
   admits same-span `LibraryApi` occurrence evidence after desugaring, plus the
   narrow syntax-owned lowerings for Go map lookup-ok `Contains`, Go
   `Enumerate`, Python dict-comprehension `DictEntry`, JS-like `Keys`, C
-  `UnsignedCast32` with source-cast evidence, and append calls with
+  `UnsignedCast32` with source-cast evidence, and append calls with language-core
   `Effect(BuilderAppendCall)`. Receiver-dependent specializations also stay
   proof-chain-gated: Rust `unwrap_or` canonicalizes to map `GetOrDefault` only
-  when its admitted method occurrence depends on an admitted Rust map `get`
-  occurrence. Raw builtin payloads remain opaque or exact-closed.
+  when its admitted method occurrence depends on an admitted pack-proven Rust map
+  `get` occurrence. Raw builtin payloads remain opaque or exact-closed.
 - Method contracts carry receiver obligations such as exact collection, exact
   protocol, exact option, exact string, exact primitive integer, exact map literal,
   imported namespace, or unshadowed global.
@@ -212,6 +399,45 @@ migrated.
   Imported Python stdlib alias-derived `Domain` evidence now carries
   `nose.python.stdlib.type_domain` pack provenance, making this the first
   compiled first-party pack-shaped pilot surface.
+  Python builtin collection-factory `LibraryApi` occurrence evidence for
+  `list`, `set`, `frozenset`, and `tuple` now carries
+  `nose.python.builtins.collection_factories` pack provenance while the existing
+  shadow and wildcard-import hard negatives stay closed.
+  Python imported `collections.deque` collection-factory `LibraryApi`
+  occurrence evidence now carries
+  `nose.python.stdlib.collection_factories` pack provenance while missing-import
+  and wrong-module hard negatives stay closed.
+  Ruby stdlib `Set.new` collection-factory `LibraryApi` occurrence evidence now
+  carries `nose.ruby.stdlib.set` pack provenance while missing-require,
+  shadowed-`Set`, and mutated-set hard negatives stay closed.
+  Rust stdlib `Vec::new` and `vec!` collection-factory `LibraryApi` occurrence
+  evidence now carries `nose.rust.stdlib.vec` pack provenance while shadowed
+  `Vec` roots and shadowed `vec` macros stay closed.
+  Selected Rust stdlib `std::collections::{HashSet,BTreeSet,VecDeque}::from`
+  collection-factory `LibraryApi` occurrence evidence now carries
+  `nose.rust.stdlib.collection_factories` pack provenance while shadowed `std`
+  roots stay closed. Selected Rust stdlib
+  `std::collections::{HashMap,BTreeMap}::from` map-factory `LibraryApi`
+  occurrence evidence now carries `nose.rust.stdlib.map_factories` pack
+  provenance while shadowed `std` roots stay closed. Java stdlib
+  `java.util.Map.of` and `Map.ofEntries` map-factory `LibraryApi` occurrence
+  evidence now carries `nose.java.stdlib.map_factories` pack provenance while
+  missing-import and cross-surface `Map.entry` boundary cases stay closed.
+  Java stdlib `java.util.Map.entry` map-entry `LibraryApi` occurrence evidence
+  now carries `nose.java.stdlib.map_entries` pack provenance while
+  missing-import and shadowed-root cases stay closed.
+  Java stdlib `java.util.List.of`, `Set.of`, and `Arrays.asList`
+  collection-factory `LibraryApi` occurrence evidence now carries
+  `nose.java.stdlib.collection_factories` pack provenance while missing-import
+  and cross-surface constructor boundary cases stay closed. Java empty
+  `new ArrayList<>()` and `new LinkedList<>()` collection-constructor
+  `LibraryApi` occurrence evidence now carries
+  `nose.java.stdlib.collection_constructors` pack provenance while
+  missing-import, local-shadow, and conflicting-import cases stay closed.
+  Java stdlib `java.util.Arrays.stream` static collection adapter `LibraryApi`
+  occurrence evidence now carries
+  `nose.java.stdlib.static_collection_adapters` pack provenance while
+  missing-import and shadowed-root cases stay closed.
   `nose-semantics` resolves receiver-domain evidence through a shared
   `DomainRequirement` contract. Consumers check exact receiver node evidence
   first, then immutable binding evidence for local or module variables, then
@@ -225,12 +451,13 @@ migrated.
   at that point. This preserves the current
   Array/Collection/Set/Map/Option/String/Integer/Number and ByteArray
   distinctions. First-party producers also attach receiver-expression domain
-  facts directly for selected admitted library/API factory results, and
-  normalize emits binding-anchored `Domain` evidence for single-assignment
-  local/module bindings whose initializer has asserted sequence or result-domain
-  evidence and whose binding has no direct binding-write, receiver-mutation, or
-  opaque-argument-escape risk under first-party `Effect` evidence. Binding-domain
-  lookup matches the binding `local_hash` and only applies an assignment to
+  facts directly for selected admitted library/API factory results, and normalize
+  emits binding-anchored `Domain` evidence with matching `nose.lang.*`
+  language-core provenance for single-assignment local/module bindings whose
+  initializer has asserted sequence or result-domain evidence and whose binding
+  has no direct binding-write, receiver-mutation, or opaque-argument-escape risk
+  under first-party `Effect` evidence. Binding-domain lookup matches the binding
+  `local_hash` and only applies an assignment to
   receiver uses that occur after it. Strict exact receiver gates consume this
   resolver directly instead of caching raw collection/map names or CIDs from an
   assignment scan. Domain evidence can satisfy a receiver-domain precondition,
@@ -243,10 +470,11 @@ migrated.
   typedefs and direct quote includes emit `Type(CTypeAlias)` evidence for the
   currently supported exact-spelling `unsigned char` and unsigned 32-bit
   aliases; included aliases depend on `Import(CQuoteInclude)`. Alias-based
-  `Domain(ByteArray)` parameter facts and `Source(Cast(CUnsigned32))` facts
-  depend on those type records. The C u16/u32 byte-pack value-graph laws consume
-  the first-party C byte-pack contract, byte-array domain proof, and source-cast
-  proof where the u32 high lane requires it; raw `UnsignedCast32` payloads stay
+  `Domain(ByteArray)` parameter facts and `nose.lang.c` provenance-backed
+  `Source(Cast(CUnsigned32))` facts depend on those type records. The C u16/u32
+  byte-pack value-graph laws consume the first-party C byte-pack contract,
+  byte-array domain proof, and source-cast proof where the u32 high lane
+  requires it; raw `UnsignedCast32` payloads stay
   opaque without source-cast evidence.
 - Property builtin contracts are language-constrained occurrence contracts, not
   selector guesses. JS/TS/Vue/Svelte/HTML and Java `length` reads are admitted
@@ -260,11 +488,33 @@ migrated.
 - Promise `.then` has a JS-like library API contract. Exact beta-reduction also
   requires Promise-like receiver proof and a supported settled-value producer;
   arbitrary `.then` methods and unsupported thenables remain opaque.
-- Rust iterator identity adapters (`iter`, `into_iter`, `collect`, `to_vec`,
-  `copied`, `cloned`) are language-, arity-, and receiver-proof constrained
-  through `LibraryApiContract` and admitted `LibraryApi` occurrence evidence.
-  Normalize's exact protocol receiver admission consumes this same contract
-  instead of accepting same-named methods from other languages.
+- Rust iterator identity adapters (`iter`, `into_iter`, `iter_mut`, `collect`,
+  `to_vec`, `copied`, `cloned`) are language-, arity-, and receiver-proof
+  constrained through `LibraryApiContract` and admitted `LibraryApi` occurrence
+  evidence with `nose.protocols.iterator_identity_adapters` provenance. Java
+  `.stream()` uses the same protocol pack. Normalize's exact protocol receiver
+  admission consumes this same contract instead of accepting same-named methods
+  from other languages.
+- Java `Math.abs`, `Math.min`, and `Math.max` scalar integer APIs are language-,
+  arity-, receiver-, and integer-domain constrained through admitted
+  `LibraryApi` occurrence evidence with `nose.java.stdlib.math` provenance.
+  JS/TS `Math.*` and Java floating `Math.*` forms remain exact-closed at the
+  signed-zero/NaN boundary.
+- Java/Rust/JS-family `map.get(key)` is language-, arity-, and exact-map
+  receiver constrained through admitted `LibraryApi` occurrence evidence with
+  `nose.protocols.map_get` provenance. Python `dict.get(key, default)`, Ruby
+  `Hash#fetch(key, default)` or zero-arg block fallback, and Java
+  `Map.getOrDefault(key, default)` are constrained through admitted
+  `LibraryApi` occurrence evidence with
+  `nose.protocols.map_get_default` provenance. Rust `unwrap_or` remains a
+  separate Option/defaulting contract; when it models map lookup defaulting, the
+  nested `MapGet` dependency must also be pack-proven.
+- Receiver-method membership APIs are language-, arity-, and receiver-proof
+  constrained through admitted `LibraryApi` occurrence evidence with
+  `nose.protocols.receiver_membership` provenance. This covers Java/Rust/Ruby
+  map-key membership, Python `__contains__`, JS-like `has`/`includes`,
+  Java/Swift `contains`, and Ruby `member?`; Go `slices.Contains` remains a
+  namespace-function contract outside this receiver-method protocol slice.
 - Rust method `zip(...)` is admitted as a protocol-pair operation only through
   the Rust library method-call occurrence contract and exact protocol proof for
   both sides.
@@ -280,7 +530,7 @@ migrated.
   pattern tests instead of lowering them directly to null/not-null builtins, so
   Option absence/presence is admitted only through the contract-backed occurrence
   path plus required source-surface evidence.
-- Collection factory, map factory, and selected constructor identity now have an
+- Collection factory, map factory, map-entry, and selected constructor identity now have an
   internal `LibraryApiContract`
   shape in `nose-semantics`. It separates API identity from result eligibility,
   so callers can distinguish "this is Java `Arrays.asList`" from "this argument
@@ -297,20 +547,25 @@ migrated.
   top-level require, unshadowed-global, macro-invocation source,
   construct-syntax, or regex-literal proof. Selected producer-covered result
   calls emit dependent `Domain` evidence for the result receiver:
-  collection-like factories as `Collection`, set factories/constructors as
-  `Set`, map factories as `Map`, JS-like one-argument `Array.from` as
-  `Array`, and JS-like `Promise.resolve` plus admitted Promise `.then` as
-  `PromiseLike`. Java `Arrays.asList(x)` with exactly one argument is excluded because
+  collection-like factories as `Collection`, set factories/constructors
+  including JS-like `new Set` with
+  `nose.javascript.builtins.collection_constructors` provenance as `Set`, map
+  factories including JS-like `new Map` with the same pack provenance as `Map`,
+  JS-like one-argument `Array.from` with
+  `nose.javascript.builtins.array` provenance as `Array`, and JS-like
+  `Promise.resolve` plus admitted Promise `.then` as `PromiseLike`. Java
+  `Arrays.asList(x)` with exactly one argument is excluded because
   array-spread versus single-element provenance is ambiguous without additional
   proof. `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`, `math.prod`,
-  `Arrays.stream`, map `get`, iterator adapters, and generic method contracts do
-  not emit result-domain evidence under the current vocabulary. Entry-shape,
-  mutation, demand, and exact-safety obligations remain
+  `Arrays.stream`, pack-proven map `get`, pack-proven map get-default, iterator
+  adapters, and generic method contracts do not emit result-domain evidence
+  under the current vocabulary.
+  Entry-shape, mutation, demand, and exact-safety obligations remain
   separate contract checks at the consumer.
 - Selected non-factory library/API surfaces also consume `LibraryApiContract`
   rows before normalize, value-graph, or strict exact paths assign semantics.
-  Current rows cover map-key views and wrappers, Java/Rust/JS-like map `get`,
-  Python/Java/Ruby map defaulting through method contracts, Rust
+  Current rows cover map-key views and wrappers, Java/Rust/JS-like pack-proven
+  map `get`, Python/Java/Ruby pack-proven map get-default, Rust
   `get(...).is_some()`/`unwrap_or(...)`, JS-like `Array.isArray`, `Boolean(...)`,
   regex-literal `.test(...)`, Python `math.prod`, promise `.then`, Rust/Java
   iterator adapters, Java `Arrays.stream`, and the language-scoped method-call
@@ -320,24 +575,37 @@ migrated.
   shape, and mutation safety.
 - Selected API call occurrences now also have `LibraryApi` evidence records when
   they remain as raw call nodes. First-party lowering emits occurrence evidence
-  for JS-like `Array.from(...)`, `Array.isArray(...)`, `Boolean(...)`,
-  `new Map(...)`, `new Set(...)`, and static `indexOf`/`findIndex` membership
-  calls whose receiver is a proven static non-float collection literal; Python
-  builtin collection factories such as `list(...)` when the callee is proven as
-  an unshadowed free name; Python
+  for JS-like `Array.from(...)`, `Array.isArray(...)`, `Boolean(...)` with
+  `nose.javascript.builtins.boolean` provenance, regex literal `.test(...)`
+  with `nose.javascript.builtins.regex` provenance, `new Map(...)`,
+  `new Set(...)`, and static `indexOf`/`findIndex` membership calls whose
+  receiver is a proven static non-float collection literal with
+  `nose.javascript.builtins.static_index_membership` provenance; Python builtin
+  collection factories such as `list(...)` when the callee is proven as an
+  unshadowed free name; Python
   `collections.deque(...)` when the callee is proven through
   `from collections import deque`, an alias such as
   `from collections import deque as Values`, or `import collections;
   collections.deque(...)`; Python `import math; math.prod(...)`; Rust
   `vec!(...)` when source syntax proves a macro invocation, `Vec::new()`, and selected
+  primitive integer `abs`/`min`/`max`/`clamp` receiver methods with
+  `nose.rust.stdlib.integer_methods` provenance when exact integer receiver
+  proof is present, Java `Math.abs`, `Math.min`, and `Math.max` scalar integer
+  APIs with `nose.java.stdlib.math` provenance when unshadowed `Math` and
+  integer-domain proof are present, and selected
   `std::collections::{HashSet,BTreeSet,VecDeque,HashMap,BTreeMap}::from(...)`
   factory paths when their root-shadow policy is proven; Ruby
   `require "set"; Set.new(...)` when an earlier top-level `Import::Require("set")`
   depends on unshadowed `require` proof and unshadowed `Set` receiver proof
   exists; Java `java.util` static factories/adapters such as `List.of`,
-  `Set.of`, `Arrays.asList`, `Map.of`, `Map.ofEntries`, `Map.entry`, and
-  `Arrays.stream`, plus selected empty `new ArrayList<>()`/`new LinkedList<>()`
-  constructors; and JS-like regex-literal `.test(...)`. These records depend on
+  `Set.of`, and `Arrays.asList` with
+  `nose.java.stdlib.collection_factories` provenance, `Map.of`/`Map.ofEntries`
+  with `nose.java.stdlib.map_factories` provenance, `Map.entry` with
+  `nose.java.stdlib.map_entries` provenance, `Arrays.stream` with
+  `nose.java.stdlib.static_collection_adapters` provenance, plus selected empty
+  `new ArrayList<>()`/`new LinkedList<>()` constructors with
+  `nose.java.stdlib.collection_constructors` provenance; and
+  JS-like regex-literal `.test(...)`. These records depend on
   the relevant `QualifiedGlobal`,
   `UnshadowedGlobal`, import-backed call-site `Symbol`, `Import::Require`,
   macro-invocation `Source`, construct-syntax `Source`, `SequenceSurface`, or
@@ -351,22 +619,30 @@ migrated.
   dependencies of the occurrence evidence, but they no longer act as fallback
   API-identity proof for these surfaces. Where a producer emits result-domain
   evidence, that `Domain` record depends on the `LibraryApi` occurrence record,
-  so broken API proof also closes receiver-domain proof. The `LibraryApi` record
+  so broken API proof also closes result-domain proof. Normalize-owned
+  result-domain, helper receiver-domain, and helper call-site `Symbol`
+  occurrence facts use the lowered file language's builtin language-core
+  provenance, while the licensing `LibraryApi` occurrence keeps the specific
+  builtin pack provenance; legacy broad `nose.first_party` rows are updated in
+  place when the same asserted fact is refreshed, and stale broad duplicates are
+  closed when an equivalent current row already exists. The `LibraryApi` record
   itself proves API identity only; source, exact-safe argument, result-shape,
   mutation, and demand/effect obligations remain separate.
 - Receiver-method calls that remain as raw `Field`/`Call` nodes now emit
   `LibraryApi` occurrence evidence for the first-party method families currently
-  backed by `LibraryApiContract`: map `get`, map-key views, iterator identity
-  adapters, and generic language-scoped method-call contracts such as
-  collection/map membership, map defaulting, count methods,
-  string/collection predicates, Rust scalar integer methods, Rust
-  `Option::and_then`, Rust `zip`, and HOF/reduction methods. The
+  backed by `LibraryApiContract`: pack-proven map `get`, pack-proven map
+  get-default, map-key views, iterator identity adapters, and pack-proven
+  builtin method-call contracts such as collection/map membership, count methods,
+  string/collection predicates, Rust scalar integer methods with
+  `nose.rust.stdlib.integer_methods` provenance, Java Math scalar integer
+  methods with `nose.java.stdlib.math` provenance, Rust `Option::and_then`,
+  Rust `zip`, and HOF/reduction methods. The
   occurrence record is admitted only for the exact language/method/arity row and
   depends on receiver proof: node/binding/parameter `Domain`, `SequenceSurface`,
   imported namespace or unshadowed-global `Symbol`, or a nested admitted
   `LibraryApi` result such as a collection/map factory, map-key view, iterator
-  adapter, HOF, or map `get`. First-party lowering seeds these records when the
-  receiver proof already exists; normalize refreshes and upserts first-party
+  adapter, HOF, pack-proven map `get`, or pack-proven map get-default.
+  First-party lowering seeds these records when the receiver proof already exists; normalize refreshes and upserts first-party
   records after immutable binding-domain inference and again after final
   CFG/dataflow/algebra rewrites, so bindings such as
   `VALUES = List.of(...); VALUES.contains(x)` keep the same semantic fingerprint
@@ -394,8 +670,9 @@ migrated.
   with the same simple name. A `java.util.*` wildcard import is not enough when
   another package explicitly imports the same simple type; fully-qualified
   `java.util.*List` names carry the namespace proof in the selector itself.
-  First-party Java lowering preserves these supported constructors as construct
-  `Call` nodes and emits admitted `LibraryApi` occurrence evidence. Value-graph
+  Builtin Java lowering preserves these supported constructors as construct
+  `Call` nodes and emits admitted `LibraryApi` occurrence evidence with
+  `nose.java.stdlib.collection_constructors` pack provenance. Value-graph
   collection canonicalization and result `Domain(Collection)` evidence require
   that occurrence proof, so source/import facts alone do not reopen the exact
   path.
@@ -403,7 +680,8 @@ migrated.
   such as `push`, `append`, or `add` is not proof by itself. First-party
   frontend/normalize paths must prove the receiver or active-builder contract,
   lower the call to canonical `Builtin::Append`, and attach
-  `Effect(BuilderAppendCall)` through explicit same-span language/API evidence
+  language-core `Effect(BuilderAppendCall)` through explicit same-span
+  language/API evidence
   before exact fragments can treat it as an append effect. Value-graph active
   list builders require emitted effect evidence, an admitted same-span
   `LibraryApi(MethodCall(Builtin(Append)))` occurrence, or the first-party
@@ -425,14 +703,14 @@ migrated.
   though they may still participate in the separate opaque-call policy as
   generic `Other` effect context.
 - Value-graph and oracle same-unit field state are evidence-gated. A cached
-  write/readback/final field sink is admitted only for the current self-field
-  substrate: Java `this.field` proven by `Place(SelfReceiver)`,
-  `Place(SelfField)`, and `Effect(SelfFieldWrite)`. Raw dynamic attribute or
-  property spellings, including Python `self.x`, do not prove exact field state;
-  they remain ordered effects or unsupported until a pack supplies explicit
-  place/effect evidence.
-- Exact-fragment place/effect gates now have the first pack-facing evidence
-  substrate. First-party lowering and normalize refreshes emit
+  write/readback/final field sink is admitted only for the current builtin
+  language-core self-field substrate: Java `this.field` proven by
+  `Place(SelfReceiver)`, `Place(SelfField)`, and `Effect(SelfFieldWrite)`. Raw
+  dynamic attribute or property spellings, including Python `self.x`, do not
+  prove exact field state; they remain ordered effects or unsupported until a
+  pack supplies explicit place/effect evidence.
+- Exact-fragment place/effect gates now have builtin language-core evidence
+  provenance. Frontend lowering and normalize refreshes emit
   `Place(SelfReceiver)` and `Place(SelfField)` for Java `this`/`this.field`,
   plus `Effect` evidence for canonical builder append calls, C/Go/Java
   non-overloadable index writes, and Java self-field writes. Fragment
@@ -445,11 +723,12 @@ migrated.
   map-entry-list admission, imported-literal eligibility, and value-graph
   canonical tags. Strict exact gates, value-graph sequence lowering, and
   sibling-module literal export checks consume this contract only through
-  matching `SequenceSurface` evidence rather than raw tag spelling or local
-  string allowlists. Missing surface evidence now lowers to the untagged
-  sequence value in the value graph, not a spelling-derived raw hash. Untagged
-  `Seq` remains an internal grouping surface and does not itself prove exact
-  collection semantics; the older Python empty sequence collection case is
+  matching `SequenceSurface` evidence with builtin language-core provenance
+  rather than raw tag spelling or local string allowlists. Missing surface
+  evidence now lowers to the untagged sequence value in the value graph, not a
+  spelling-derived raw hash. Untagged `Seq` remains an internal grouping surface
+  and does not itself prove exact collection semantics; the older Python empty
+  sequence collection case is
   handled only by the explicit collection profile path.
 - Collection reductions such as Rust `Iterator::count()` and Java
   `Stream.count()` are admitted through library method contracts plus exact
@@ -458,25 +737,41 @@ migrated.
   resolvers in `nose-semantics` for method, imported-namespace function,
   iterator-adapter, Rust Option/`Vec::new`, direct factory/constructor eval,
   node-level property builtins, Rust `Some` callee-node checks, static
-  index-membership, Rust scalar integer method calls, and builder append API
-  admission instead of recombining raw selector parsing with evidence admission
-  locally. Normalize idiom canonicalization uses the same resolver layer for
-  supported free-function builtins, generic method contracts, HOF receiver
-  proof, map `get`, map-key views, iterator/static collection adapters, Rust
-  `Some(...)`, Rust map factory receiver proof, Promise `resolve`, and Promise
-  `.then` contract lookup. Promise continuation reduction remains fail-closed
+  index-membership, Rust scalar integer method calls under
+  `nose.rust.stdlib.integer_methods`, Java Math scalar integer calls under
+  `nose.java.stdlib.math`, and builder append API admission instead of
+  recombining raw selector parsing with evidence admission locally. Normalize
+  idiom canonicalization uses the same resolver layer for
+  supported free-function builtins, pack-proven builtin method contracts, HOF receiver
+  proof, pack-proven map `get`, pack-proven map get-default, pack-proven
+  map-key views, iterator/static collection adapters, Rust `Some(...)`, Rust
+  map factory receiver proof, Promise `resolve`, and Promise `.then` contract lookup. Promise continuation
+  reduction remains fail-closed
   unless a supported settled value can be recovered and the final value remains
   behind a Promise boundary. Value-level CSE paths that query
   by call span now use span-query resolvers for free-name/imported collection
   factories, Java/Ruby/Rust collection factories, free-name/Java map factories,
-  Java map entries, map `get`, and map-key view/wrapper calls.
+  Java map entries, pack-proven map `get`, pack-proven map get-default, and
+  pack-proven map-key view/wrapper calls.
 - Opaque exact callee identity remains separate from library/API admission. A
   parameter callee or proof-backed immutable/imported callee may keep an exact
   same-callee call comparable as an opaque value operation. Same-spelled
   file-local functions still require `CallTarget::DirectFunction` evidence,
   imported function/member calls can enter opaque identity only through explicit
-  `CallTarget::ImportedFunction` or `CallTarget::ImportedMember` records, and
-  library semantics still require admitted API occurrence evidence.
+  `CallTarget::ImportedFunction` or `CallTarget::ImportedMember` records. The
+  normalize call-target producer now emits these records and their call-site
+  imported symbol occurrence dependencies with the file language's builtin
+  language-core pack provenance. Public node-anchored `UnshadowedGlobal` and
+  `ImportedNamespace` identity helpers consume only matching builtin
+  language-core, asserted, dependency-valid occurrence proof. `LibraryApi`
+  occurrence admission now applies the same gate to `UnshadowedGlobal` and
+  `ImportedNamespace` symbol prerequisites, so broad or wrong-provenance symbol
+  rows cannot license free-name, namespace, or receiver-method API evidence;
+  import-binding prerequisites remain on the import-backed binding path. The
+  shared call-target resolver and value-DAG referent extraction consume only
+  matching builtin language-core, asserted, dependency-closed,
+  selector-matching evidence, while library semantics still require admitted API
+  occurrence evidence.
 - Java stream source adapters are split by proof through library API contracts:
   `receiver.stream()` requires an exact iterable receiver, while
   `Arrays.stream(xs)` requires the `java.util.Arrays` import binding and no local
@@ -510,18 +805,22 @@ migrated.
   receiver is a typed/proven map.
 - Map key-view library contracts distinguish collection views from iterator views:
   Python/Ruby `keys` and Java `keySet` are collection views, while JS-like
-  `Map.keys()` is an iterator view and needs the `Array.from(...)` wrapper
-  contract plus `QualifiedGlobal("Array.from")` symbol evidence before it can
-  feed exact membership. That qualified-global record must depend on same-span
-  source proof that the `Array` root is unshadowed.
-- Map lookup surfaces that return a value/option are now explicit library API contracts for
-  Java/Rust/JS-like `get(key)` plus an exact-map receiver requirement. Python
-  `dict.get(key, default)`, Java `getOrDefault`, and Ruby `fetch` still use the
-  `GetOrDefault` method contract. Rust `get(key).unwrap_or(default)` is modeled
-  as `GetOrDefault` only through the nested `MapGet` dependency on the
-  `unwrap_or` occurrence. Ruby `fetch(key) { fallback }` carries a separate
-  zero-arg-lambda fallback argument contract, so block fallback demand is not
-  inferred from the selector name in normalize/detect.
+  `Map.keys()` is an iterator view. Those key-view occurrences report
+  `nose.protocols.map_key_views` provenance and need exact-map receiver proof.
+  JS-like iterator views still need the `Array.from(...)` wrapper contract plus
+  `QualifiedGlobal("Array.from")` symbol evidence before they can feed exact
+  membership. That qualified-global record must depend on same-span source proof
+  that the `Array` root is unshadowed.
+- Map lookup surfaces that return a value/option are now explicit library API
+  contracts for Java/Rust/JS-like `get(key)` plus an exact-map receiver
+  requirement. Those `MapGet` occurrences report `nose.protocols.map_get`
+  provenance. Python `dict.get(key, default)`, Java `getOrDefault`, and Ruby
+  `fetch` still use the `GetOrDefault` method contract. Rust
+  `get(key).unwrap_or(default)` is modeled as `GetOrDefault` only through the
+  nested pack-proven `MapGet` dependency on the `unwrap_or` occurrence. Ruby
+  `fetch(key) { fallback }` carries a separate zero-arg-lambda fallback argument
+  contract, so block fallback demand is not inferred from the selector name in
+  normalize/detect.
 - JS-like static array `indexOf`/`findIndex` membership surfaces are explicit
   `LibraryApi` occurrence contracts, including the static non-float literal
   collection requirement and accepted `-1`/`0` threshold comparisons through
@@ -542,12 +841,12 @@ migrated.
   reduction only when the receiver is proven to be the imported `math` namespace.
   Bare globals named `math` and overwritten module bindings stay exact-closed.
 - Java integer `Math.abs`/`Math.min`/`Math.max` now lower through scalar-integer
-  method contracts with an unshadowed `Math` receiver requirement plus
-  integer-domain proof for value arguments instead of frontend text-only builtin
-  lowering. JS-like `Math.abs`/`Math.min`/`Math.max` stay exact-closed until a
-  signed-zero and NaN-aware numeric model exists; Go `math.Abs`/`math.Min`/
-  `math.Max` and Java floating `Math.abs`/`Math.min`/`Math.max` stay closed for
-  the same reason.
+  method contracts with `nose.java.stdlib.math` provenance, an unshadowed
+  `Math` receiver requirement, and integer-domain proof for value arguments
+  instead of frontend text-only builtin lowering. JS-like
+  `Math.abs`/`Math.min`/`Math.max` stay exact-closed until a signed-zero and
+  NaN-aware numeric model exists; Go `math.Abs`/`math.Min`/`math.Max` and Java
+  floating `Math.abs`/`Math.min`/`Math.max` stay closed for the same reason.
 - Two-argument free `min(...)`/`max(...)` normalization consumes the Python
   free-function builtin `LibraryApi` occurrence contract plus integer-domain
   proof. Same-named functions from other languages, including JS `min(...)`,
@@ -557,21 +856,23 @@ migrated.
   integer-domain proof before they use the modeled Abs node, so untyped and
   element-derived operands keep the signed-zero boundary closed.
 - User-defined and imported opaque call identity now consume `CallTarget`
-  evidence. The first-party producer admits `DirectFunction` records for unique
-  top-level in-file function targets with no current or enclosing lexical
-  shadowing, and imported function/member records only from dependency-backed
-  imported binding or imported namespace symbol proof at the call occurrence.
-  Same raw callee spelling, same field selector spelling, rebinding, ambiguous
-  import proof, conflicting symbol evidence, dependency-broken proof, and
-  locally visible same-name function units stay closed. Recursion normalization,
-  the interpreter oracle, value-graph pure helper inlining, and strict exact
-  direct-function callee gates no longer treat same raw callee spelling as
-  call-target proof. The shared resolver also understands `DirectMethod` and
-  `DynamicDispatch` records, but no first-party producer emits them yet. Strict
-  exact admits imported function/member identity only through explicit evidence,
-  requires exact receiver identity for direct methods, treats dynamic-dispatch
-  records as non-concrete by themselves, and closes on selector mismatch,
-  dependency-broken records, or conflicting target evidence.
+  evidence. The builtin language-core producer admits `DirectFunction` records
+  for unique top-level in-file function targets with no current or enclosing
+  lexical shadowing, and imported function/member records only from
+  dependency-backed imported binding or imported namespace symbol proof at the
+  call occurrence. Same raw callee spelling, same field selector spelling, stale
+  broad-provenance rows, wrong-language provenance, external rows, rebinding,
+  ambiguous import proof, conflicting symbol evidence, dependency-broken proof,
+  and locally visible same-name function units stay closed. Recursion
+  normalization, the interpreter oracle, value-graph pure helper inlining,
+  value-DAG referents, and strict exact direct-function callee gates no longer
+  treat same raw callee spelling as call-target proof. The shared resolver also
+  understands `DirectMethod` and `DynamicDispatch` records, but no builtin
+  producer emits them yet. Strict exact admits imported function/member identity
+  only through explicit evidence, requires exact receiver identity for direct
+  methods, treats dynamic-dispatch records as non-concrete by themselves, and
+  closes on selector mismatch, dependency-broken records, wrong provenance, or
+  conflicting target evidence.
 - JS-like `typeof` exact-safety now consumes a language- and arity-constrained
   operator contract plus `Source::Operator(Typeof)` evidence at the call span.
   A raw `Call(Var("typeof"), arg)` shape, same-named function from another
@@ -580,9 +881,9 @@ migrated.
   contract and requires the `Array` global to be unshadowed through the
   qualified-global record's root dependency.
 - JS-like record-shape guards that use `Boolean(value)` as the non-null/truthy
-  clause consume a static-global function contract and require the `Boolean`
-  global to be unshadowed. `value !== null` and `!!value` remain available when
-  their own clauses prove the same record shape. The collapsed
+  clause consume the pack-owned static-global function contract and require the
+  `Boolean` global to be unshadowed. `value !== null` and `!!value` remain
+  available when their own clauses prove the same record shape. The collapsed
   `Seq("record_guard")` is no longer admitted by tag spelling alone: strict
   exact and value-graph paths require matching `SequenceSurface(RecordGuard)` and
   `Guard::JsRecordShape` evidence, including subject identity, null/truthiness
@@ -607,24 +908,30 @@ migrated.
   outer `composite_literal` and per-entry `keyed_element` sequence surfaces plus
   the supported zero-default payload classes. Normalize and strict exact paths
   require matching `SequenceSurface(GoCompositeMapLiteral)` and
-  `SequenceSurface(GoMapEntry)` evidence, so raw tag spelling alone is not
-  enough. Go `composite_literal` no longer falls back to a generic collection
-  sequence tag; it is consumed only by the Go map contract or left as a distinct
-  surface.
+  `SequenceSurface(GoMapEntry)` evidence with Go language-core provenance, so
+  raw tag spelling alone is not enough. Go `composite_literal` no longer falls
+  back to a generic collection sequence tag; it is consumed only by the Go map
+  contract or left as a distinct surface.
 - Static JS-like `indexOf`/`findIndex` membership requires a call occurrence
-  whose receiver sequence surface has membership-collection admission. Untagged
-  sequence expressions, destructuring surfaces, and other positional groupings
-  do not become static array membership merely because their children are
-  literals.
+  with `nose.javascript.builtins.static_index_membership` provenance whose
+  receiver sequence surface has membership-collection admission. Untagged
+  sequence expressions, destructuring surfaces, float literals, and other
+  positional groupings do not become static array membership merely because
+  their children are literals.
 - JS/TS object literals preserve static property keys in exact map/object
   semantics, but computed property names are exact-closed until a future
   contract can prove key evaluation, coercion, order, and side-effect behavior.
 - JS/TS `new Map(...)` and `new Set(...)` now require construct-syntax source
-  facts distinct from ordinary calls plus `UnshadowedGlobal` symbol proof for
-  the `Map`/`Set` constructor. With exact-safe static collection or entry
-  arguments they can enter exact matching, including supported immutable
-  module-level Set/Map bindings. Plain `Set(...)`/`Map(...)` calls and locally
-  shadowed constructor names remain exact-closed.
+  facts distinct from ordinary calls, `UnshadowedGlobal` symbol proof for the
+  `Map`/`Set` constructor, and `nose.javascript.builtins.collection_constructors`
+  `LibraryApi` provenance. With exact-safe static collection or entry arguments
+  they can enter exact matching, including supported immutable module-level
+  Set/Map bindings. Plain `Set(...)`/`Map(...)` calls and locally shadowed
+  constructor names remain exact-closed.
+- JS/TS regex literal `.test(...)` now requires regex-literal source fact proof
+  plus `nose.javascript.builtins.regex` `LibraryApi` provenance. String
+  receivers or unsupported arities remain exact-closed even when the selector is
+  named `test`.
 - Static import proof facts now have a typed `ImportFactKind`/`ImportFact`
   facade in `nose-semantics`. First-party frontends emit import binding and
   namespace facts through that contract. The lowered RHS keeps only structural
@@ -705,11 +1012,11 @@ Semantic knowledge still appears in several forms outside the facade:
 - remaining library/API proof gates that do not yet have occurrence records.
   `LibraryApi` occurrence evidence now covers selected JS-like static/global
   APIs and static-index membership, JS/TS/Java property builtins, Python
-  builtin/import-backed factories/functions, Rust free-name/path factories,
+  builtin/import-backed factories/functions, pack-proven Python/Go/Swift
+  free-function builtins, Rust free-name/path factories,
   Rust Option/scalar APIs, Ruby `require "set"; Set.new(...)`, Java `java.util`
   static factories/adapters and selected empty constructors, JS regex literals,
-  generic Python/Go free-function builtins, and selected receiver-method
-  families. Broader thenable assimilation, async/sync protocol convergence,
+  selected receiver-method families. Broader thenable assimilation, async/sync protocol convergence,
   ecosystem APIs, and broader protocol/API evidence paths still rely on contract
   rows plus local proof or remain exact-closed. Raw Python async-looking field names such
   as `aread` no longer rewrite to sync names without an explicit protocol/API
@@ -746,7 +1053,7 @@ language.
 
 - Language semantics are not first-class. Many rules ask "which language is this?"
   instead of "which semantic capability has been proven?"
-- Library semantics are still compiled into engine/first-party facade code.
+- Library semantics are still compiled into engine/builtin facade code.
   Internal `LibraryApiContract` rows exist, and v0 manifests can describe
   contract metadata, but local external packs cannot yet execute producers or
   open exact consumers.
@@ -759,12 +1066,13 @@ language.
   demand/effect abstraction.
 - External producer execution does not exist. New languages and libraries that
   affect analysis must still be added inside the main crates.
-- Report output now exposes pack-level provenance, but not contract-id, law-id,
-  or proof-status provenance per finding.
-- First-party and external responsibility boundaries are documented, represented
-  in the internal facade as provenance/trust policy, and visible in scan JSON.
-  Loaded external manifests remain metadata-only until a producer runtime and
-  executable fixture/oracle workflow exist.
+- Query JSON now exposes the active builtin/local pack set at top level, but
+  family/member-level pack provenance is still limited. Selected findings can
+  expose internal law provenance; local external packs remain metadata-only.
+- Builtin and external responsibility boundaries are documented and represented
+  in the internal facade as provenance/trust policy. Loaded external manifests
+  remain metadata-only until a producer runtime and executable fixture/oracle
+  workflow exist.
 
 ## Current fail-closed choices
 

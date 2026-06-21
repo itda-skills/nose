@@ -5,8 +5,18 @@ use nose_il::{
     SourceFactKind, Span, SymbolEvidenceKind,
 };
 use nose_semantics::{
-    library_api_callee_contract_hash, library_api_contract_id_hash, library_method_call_contract,
-    LibraryApiCalleeContract, FIRST_PARTY_PACK_ID,
+    language_core_evidence_provenance, library_api_callee_contract_hash,
+    library_api_contract_id_hash, library_method_call_contract, LibraryApiCalleeContract,
+    LibraryApiContractId, LibraryCollectionFactoryContract, MethodBuiltinArgs,
+    MethodReceiverContract, MethodSemanticContract, BUILTIN_COMPAT_PACK_ID,
+    BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+    JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID, JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+    JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
+    JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID, MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
+    MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
+    PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
+    RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
 };
 
 pub(super) fn sp(line: u32) -> Span {
@@ -24,8 +34,8 @@ pub(super) fn evidence(
         anchor,
         kind,
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+            emitter: EvidenceEmitter::Builtin,
+            pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("test")),
         },
         dependencies,
@@ -33,15 +43,62 @@ pub(super) fn evidence(
     }
 }
 
+pub(super) fn language_core_evidence(
+    id: u32,
+    lang: Lang,
+    anchor: EvidenceAnchor,
+    kind: EvidenceKind,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor,
+        kind,
+        provenance: EvidenceProvenance {
+            emitter: EvidenceEmitter::Builtin,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
+        },
+        dependencies,
+        status: EvidenceStatus::Asserted,
+    }
+}
+
+pub(super) fn language_core_symbol_evidence(
+    id: u32,
+    lang: Lang,
+    anchor: EvidenceAnchor,
+    symbol: SymbolEvidenceKind,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    language_core_evidence(id, lang, anchor, EvidenceKind::Symbol(symbol), dependencies)
+}
+
+pub(super) fn sequence_surface_evidence(
+    id: u32,
+    lang: Lang,
+    span: Span,
+    surface: SequenceSurfaceKind,
+) -> EvidenceRecord {
+    language_core_evidence(
+        id,
+        lang,
+        EvidenceAnchor::sequence(span),
+        EvidenceKind::SequenceSurface(surface),
+        Vec::new(),
+    )
+}
+
 pub(super) fn library_api_contract_evidence(
     id: u32,
     call_span: Span,
-    contract_id: nose_semantics::LibraryApiContractId,
+    contract_id: LibraryApiContractId,
     callee: LibraryApiCalleeContract,
     arity: u16,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceRecord {
-    evidence(
+    let mut record = evidence(
         id,
         EvidenceAnchor::node(call_span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -50,7 +107,63 @@ pub(super) fn library_api_contract_evidence(
             arity,
         }),
         dependencies,
-    )
+    );
+    if matches!(contract_id, LibraryApiContractId::FreeFunctionBuiltin(_)) {
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash = Some(stable_symbol_hash(
+            FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+        ));
+    } else if matches!(contract_id, LibraryApiContractId::MethodCall(_)) {
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID));
+    }
+    record
+}
+
+pub(super) fn js_like_builtin_collection_constructor_evidence(
+    id: u32,
+    call_span: Span,
+    contract_id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+    arity: u16,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    let mut record =
+        library_api_contract_evidence(id, call_span, contract_id, callee, arity, dependencies);
+    record.provenance.pack_hash = Some(stable_symbol_hash(
+        JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
+    ));
+    record.provenance.rule_hash = Some(stable_symbol_hash(
+        JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
+    ));
+    record
+}
+
+pub(super) fn python_builtin_collection_factory_evidence(
+    id: u32,
+    call_span: Span,
+    contract: LibraryCollectionFactoryContract,
+    arity: u16,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    let mut record = library_api_contract_evidence(
+        id,
+        call_span,
+        contract.id,
+        contract.callee,
+        arity,
+        dependencies,
+    );
+    record.provenance.pack_hash = Some(stable_symbol_hash(
+        PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
+    ));
+    record.provenance.rule_hash = Some(stable_symbol_hash(
+        PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
+    ));
+    record
 }
 
 pub(super) fn method_call_library_api_evidence(
@@ -62,31 +175,68 @@ pub(super) fn method_call_library_api_evidence(
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceRecord {
     let contract = library_method_call_contract(lang, method, arity).expect("method call contract");
-    library_api_contract_evidence(
+    let mut record = library_api_contract_evidence(
         id,
         call_span,
         contract.id,
         contract.callee,
         arity as u16,
         dependencies,
-    )
+    );
+    if contract.id
+        == LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::GetOrDefault))
+        && matches!(
+            contract.callee,
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactMap,
+                ..
+            }
+        )
+    {
+        record.provenance.pack_hash = Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID));
+    } else if contract.id
+        == LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::Contains))
+        && matches!(
+            contract.callee,
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactMap
+                    | MethodReceiverContract::ExactCollectionOrMap
+                    | MethodReceiverContract::ExactCollectionOrJavaKeySet
+                    | MethodReceiverContract::ExactSetOrMap,
+                ..
+            }
+        )
+        && contract.result.args == MethodBuiltinArgs::FirstThenReceiver
+    {
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID));
+    } else {
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID));
+    }
+    record
 }
 
 /// Push the `List.of(…)`-shaped factory contract plus the dependent `contains`
 /// method-call evidence used by the Java collection-factory tests.
 pub(super) fn push_java_factory_contract_evidence(
     il: &mut Il,
-    contract_id: nose_semantics::LibraryApiContractId,
+    contract_id: LibraryApiContractId,
     callee: LibraryApiCalleeContract,
 ) {
-    il.evidence.push(library_api_contract_evidence(
-        2,
-        sp(25),
-        contract_id,
-        callee,
-        2,
-        vec![EvidenceId(1)],
+    let mut record =
+        library_api_contract_evidence(2, sp(25), contract_id, callee, 2, vec![EvidenceId(1)]);
+    record.provenance.pack_hash = Some(stable_symbol_hash(JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID));
+    record.provenance.rule_hash = Some(stable_symbol_hash(
+        JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
     ));
+    il.evidence.push(record);
     il.evidence.push(method_call_library_api_evidence(
         3,
         Lang::Java,
@@ -129,19 +279,20 @@ pub(super) fn js_new_set_il(interner: &Interner) -> (Il, NodeId) {
         EvidenceKind::Source(SourceFactKind::Call(SourceCallKind::Construct)),
         Vec::new(),
     ));
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         1,
+        Lang::JavaScript,
         EvidenceAnchor::node(sp(10), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Set"),
-        }),
+        },
         Vec::new(),
     ));
-    il.evidence.push(evidence(
+    il.evidence.push(sequence_surface_evidence(
         2,
-        EvidenceAnchor::sequence(sp(12)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
-        Vec::new(),
+        Lang::JavaScript,
+        sp(12),
+        SequenceSurfaceKind::Collection,
     ));
     (il, call)
 }

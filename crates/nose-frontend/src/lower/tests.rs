@@ -1,3 +1,5 @@
+#![allow(clippy::cognitive_complexity, clippy::too_many_lines)]
+
 use super::*;
 
 mod core_factories;
@@ -119,6 +121,28 @@ fn contract_api_count(
     callee: LibraryApiCalleeContract,
 ) -> usize {
     contract_api_ids(evidence, id, callee).len()
+}
+
+fn contract_api_records(
+    evidence: &[EvidenceRecord],
+    id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+) -> Vec<&EvidenceRecord> {
+    let contract_hash = library_api_contract_id_hash(id);
+    let callee_hash = library_api_callee_contract_hash(callee);
+    evidence
+        .iter()
+        .filter(|record| {
+            matches!(
+                record.kind,
+                EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
+                    contract_hash: actual_contract,
+                    callee_hash: actual_callee,
+                    ..
+                }) if actual_contract == contract_hash && actual_callee == callee_hash
+            )
+        })
+        .collect()
 }
 
 fn contract_api_ids(

@@ -1,6 +1,14 @@
 use super::post_lower_evidence::*;
 use super::*;
 
+struct PostLowerLibraryApiContract {
+    id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+    pack_id: &'static str,
+    rule: &'static str,
+    result_domain: Option<DomainEvidence>,
+}
+
 pub(super) fn record_post_lower_library_api_evidence(il: &mut Il, interner: &Interner) {
     let calls: Vec<NodeId> = il
         .nodes
@@ -54,28 +62,30 @@ fn record_post_lower_free_name_library_api(il: &mut Il, interner: &Interner, cal
         return false;
     };
     let arg_count = args.len();
-    let contract = post_lower_free_name_library_api_contract(il.meta.lang, callee_name, arg_count);
-    let Some((id, callee_contract, rule, result_domain)) = contract else {
+    let Some(contract) =
+        post_lower_free_name_library_api_contract(il.meta.lang, callee_name, arg_count)
+    else {
         return false;
     };
     if il.meta.lang == Lang::Python && post_lower_has_python_wildcard_import_evidence(il) {
         return false;
     }
     let Some(dependencies) =
-        post_lower_free_name_library_api_dependencies(il, interner, call, callee, callee_contract)
+        post_lower_free_name_library_api_dependencies(il, interner, call, callee, contract.callee)
     else {
         return false;
     };
-    let api = post_lower_library_api_evidence_id(
+    let api = post_lower_library_api_evidence_with_pack_id(
         il,
         call,
-        id,
-        callee_contract,
+        contract.id,
+        contract.callee,
         arg_count,
-        rule,
+        contract.pack_id,
+        contract.rule,
         dependencies,
     );
-    post_lower_record_library_api_result_domain(il, call, result_domain, api);
+    post_lower_record_library_api_result_domain(il, call, contract.result_domain, api);
     true
 }
 
@@ -83,79 +93,94 @@ fn post_lower_free_name_library_api_contract(
     lang: Lang,
     callee_name: &str,
     arg_count: usize,
-) -> Option<(
-    LibraryApiContractId,
-    LibraryApiCalleeContract,
-    &'static str,
-    Option<DomainEvidence>,
-)> {
+) -> Option<PostLowerLibraryApiContract> {
     (arg_count == 1)
         .then(|| library_free_name_collection_factory_contract(lang, callee_name))
         .flatten()
         .map(|contract| {
-            (
-                contract.id,
-                contract.callee,
-                "library_api_free_name_collection_factory",
-                library_collection_factory_result_domain_for_arity(contract, arg_count),
-            )
+            let rule = match contract.id {
+                LibraryApiContractId::PythonBuiltinCollectionFactory => {
+                    PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID
+                }
+                LibraryApiContractId::RustStdCollectionFactory => {
+                    RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID
+                }
+                _ => "library_api_free_name_collection_factory",
+            };
+            PostLowerLibraryApiContract {
+                id: contract.id,
+                callee: contract.callee,
+                pack_id: contract.pack_id,
+                rule,
+                result_domain: library_collection_factory_result_domain_for_arity(
+                    contract, arg_count,
+                ),
+            }
         })
         .or_else(|| {
             (arg_count == 1)
                 .then(|| library_free_name_map_factory_contract(lang, callee_name))
                 .flatten()
-                .map(|contract| {
-                    (
-                        contract.id,
-                        contract.callee,
-                        "library_api_free_name_map_factory",
-                        Some(library_map_factory_result_domain(contract)),
-                    )
+                .map(|contract| PostLowerLibraryApiContract {
+                    id: contract.id,
+                    callee: contract.callee,
+                    pack_id: contract.pack_id,
+                    rule: match contract.id {
+                        LibraryApiContractId::RustStdMapFactory => {
+                            RUST_STDLIB_MAP_FACTORY_PRODUCER_ID
+                        }
+                        _ => "library_api_free_name_map_factory",
+                    },
+                    result_domain: Some(library_map_factory_result_domain(contract)),
                 })
         })
         .or_else(|| {
             library_rust_vec_macro_factory_contract(lang, callee_name).map(|contract| {
-                (
-                    contract.id,
-                    contract.callee,
-                    "library_api_rust_vec_macro_factory",
-                    library_collection_factory_result_domain_for_arity(contract, arg_count),
-                )
+                PostLowerLibraryApiContract {
+                    id: contract.id,
+                    callee: contract.callee,
+                    pack_id: contract.pack_id,
+                    rule: RUST_STDLIB_VEC_PRODUCER_ID,
+                    result_domain: library_collection_factory_result_domain_for_arity(
+                        contract, arg_count,
+                    ),
+                }
             })
         })
         .or_else(|| {
             (arg_count == 0)
                 .then(|| library_rust_vec_new_factory_contract(lang, callee_name))
                 .flatten()
-                .map(|contract| {
-                    (
-                        contract.id,
-                        contract.callee,
-                        "library_api_rust_vec_new_factory",
-                        library_collection_factory_result_domain_for_arity(contract, arg_count),
-                    )
+                .map(|contract| PostLowerLibraryApiContract {
+                    id: contract.id,
+                    callee: contract.callee,
+                    pack_id: contract.pack_id,
+                    rule: RUST_STDLIB_VEC_PRODUCER_ID,
+                    result_domain: library_collection_factory_result_domain_for_arity(
+                        contract, arg_count,
+                    ),
                 })
         })
         .or_else(|| {
             library_rust_option_some_constructor_contract(lang, callee_name, arg_count).map(
-                |contract| {
-                    (
-                        contract.id,
-                        contract.callee,
-                        "library_api_rust_option_some_constructor",
-                        Some(contract.result_domain),
-                    )
+                |contract| PostLowerLibraryApiContract {
+                    id: contract.id,
+                    callee: contract.callee,
+                    pack_id: contract.pack_id,
+                    rule: RUST_STDLIB_OPTION_PRODUCER_ID,
+                    result_domain: Some(contract.result_domain),
                 },
             )
         })
         .or_else(|| {
             library_free_function_builtin_contract(lang, callee_name, arg_count).map(|contract| {
-                (
-                    contract.id,
-                    contract.callee,
-                    "library_api_free_function_builtin",
-                    None,
-                )
+                PostLowerLibraryApiContract {
+                    id: contract.id,
+                    callee: contract.callee,
+                    pack_id: FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+                    rule: FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+                    result_domain: None,
+                }
             })
         })
 }
@@ -231,13 +256,14 @@ fn record_post_lower_property_library_api(
     ) else {
         return false;
     };
-    post_lower_library_api_node_evidence_id(
+    post_lower_library_api_node_evidence_with_pack_id(
         il,
         field,
         contract.id,
         contract.callee,
         0,
-        "library_api_property_builtin",
+        contract.pack_id,
+        PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID,
         dependencies,
     );
     true
@@ -265,13 +291,14 @@ fn record_post_lower_rust_option_none_library_api(
     let Some(symbol_dependency) = post_lower_unshadowed_symbol_evidence_id(il, var, name) else {
         return false;
     };
-    let api = post_lower_library_api_node_evidence_id(
+    let api = post_lower_library_api_node_evidence_with_pack_id(
         il,
         var,
         contract.id,
         contract.callee,
         0,
-        "library_api_rust_option_none_sentinel",
+        contract.pack_id,
+        RUST_STDLIB_OPTION_PRODUCER_ID,
         vec![symbol_dependency],
     );
     post_lower_record_library_api_node_result_domain(il, var, contract.result_domain, api);
@@ -301,13 +328,14 @@ fn record_post_lower_rust_option_some_pattern_library_api(
     let Some(symbol_dependency) = post_lower_unshadowed_symbol_evidence_id(il, var, name) else {
         return false;
     };
-    post_lower_library_api_node_evidence_id(
+    post_lower_library_api_node_evidence_with_pack_id(
         il,
         var,
         contract.id,
         contract.callee,
         1,
-        "library_api_rust_option_some_pattern",
+        contract.pack_id,
+        RUST_STDLIB_OPTION_PRODUCER_ID,
         vec![symbol_dependency],
     );
     true
@@ -363,13 +391,14 @@ fn record_post_lower_ruby_static_member_library_api(
     else {
         return false;
     };
-    let api = post_lower_library_api_evidence_id(
+    let api = post_lower_library_api_evidence_with_pack_id(
         il,
         call,
         contract.id,
         contract.callee,
         arg_count,
-        "library_api_ruby_require_static_member",
+        RUBY_STDLIB_SET_PACK_ID,
+        RUBY_STDLIB_SET_PRODUCER_ID,
         vec![receiver_dependency, require_dependency],
     );
     post_lower_record_library_api_result_domain(
@@ -446,13 +475,14 @@ fn record_post_lower_java_collection_constructor_library_api(
     } else if type_name != qualified_type {
         return false;
     }
-    let api = post_lower_library_api_evidence_id(
+    let api = post_lower_library_api_evidence_with_pack_id(
         il,
         call,
         contract.id,
         contract.callee,
         arg_count,
-        "library_api_java_collection_constructor",
+        JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
+        JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
         dependencies,
     );
     post_lower_record_library_api_result_domain(
@@ -496,12 +526,13 @@ fn record_post_lower_receiver_method_library_api(
     ) else {
         return false;
     };
-    let api = post_lower_library_api_evidence_id(
+    let api = post_lower_library_api_evidence_with_pack_id(
         il,
         call,
         contract.id,
         contract.callee,
         arg_count,
+        contract.pack_id,
         contract.rule,
         dependencies,
     );

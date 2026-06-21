@@ -89,6 +89,7 @@ pub fn library_property_builtin_contract(
     let (result, receiver) = property_builtin_contract_shape(lang, name)?;
     let property = library_property_selector_name(name)?;
     Some(LibraryPropertyBuiltinContract {
+        pack_id: PROPERTY_BUILTIN_PROTOCOL_PACK_ID,
         id: LibraryApiContractId::PropertyBuiltin(result),
         callee: LibraryApiCalleeContract::Property { property, receiver },
         result,
@@ -111,7 +112,13 @@ pub fn library_scalar_integer_method_contract(
 ) -> Option<LibraryScalarIntegerMethodContract> {
     let result = scalar_integer_method_contract_shape(lang, method, arg_count)?;
     let method = library_method_selector_name(method)?;
+    let pack_id = match (lang, result.receiver) {
+        (Lang::Rust, MethodReceiverContract::ExactInteger) => RUST_STDLIB_INTEGER_METHOD_PACK_ID,
+        (Lang::Java, MethodReceiverContract::UnshadowedGlobal("Math")) => JAVA_STDLIB_MATH_PACK_ID,
+        _ => unreachable!("scalar integer method contract has no broad builtin pack"),
+    };
     Some(LibraryScalarIntegerMethodContract {
+        pack_id,
         id: LibraryApiContractId::ScalarIntegerMethod(result.semantic),
         callee: LibraryApiCalleeContract::Method {
             method,
@@ -132,6 +139,7 @@ pub fn library_rust_option_some_constructor_contract(
     let name = rust_option_some_selector_name(lang, name)?;
     let shadow = rust_option_some_constructor_contract(lang, name)?;
     Some(LibraryRustOptionConstructorContract {
+        pack_id: RUST_STDLIB_OPTION_PACK_ID,
         id: LibraryApiContractId::RustOptionSomeConstructor,
         callee: LibraryApiCalleeContract::FreeName {
             name,
@@ -148,6 +156,7 @@ pub fn library_rust_option_none_sentinel_contract(
     let name = rust_option_none_selector_name(lang, name)?;
     let shadow = rust_option_none_sentinel_contract(lang, name)?;
     Some(LibraryRustOptionSentinelContract {
+        pack_id: RUST_STDLIB_OPTION_PACK_ID,
         id: LibraryApiContractId::RustOptionNoneSentinel,
         callee: LibraryApiCalleeContract::FreeName {
             name,
@@ -166,6 +175,7 @@ pub fn library_rust_option_and_then_contract(
         return None;
     }
     Some(LibraryRustOptionAndThenContract {
+        pack_id: RUST_STDLIB_OPTION_PACK_ID,
         id: LibraryApiContractId::RustOptionAndThen,
         callee: LibraryApiCalleeContract::Method {
             method: "and_then",

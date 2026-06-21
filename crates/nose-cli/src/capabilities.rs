@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-const CAPABILITIES_SCHEMA_VERSION: u32 = 2;
+const CAPABILITIES_SCHEMA_VERSION: u32 = 3;
 
 #[derive(serde::Serialize)]
 struct Report {
@@ -69,6 +69,8 @@ struct SemanticPacks {
     trust: Vec<&'static str>,
     external_packs_enabled_by_default: bool,
     external_pack_influence: &'static str,
+    external_influence_blockers: Vec<&'static str>,
+    external_pack_execution: &'static str,
 }
 
 #[derive(serde::Serialize)]
@@ -132,19 +134,26 @@ impl Report {
             semantic_packs: SemanticPacks {
                 api_versions: vec![nose_semantics::SEMANTIC_PACK_API_VERSION],
                 loading: vec![
-                    "compiled-first-party",
+                    "compiled-builtin",
                     "local-manifest-file",
                     "local-manifest-directory",
                 ],
                 conformance: vec!["local-manifest-file", "local-manifest-directory"],
                 conformance_output_formats: vec!["human", "json"],
-                trust: vec![
-                    "default-first-party",
-                    "first-party-optional",
-                    "external-opt-in",
-                ],
+                trust: vec!["builtin-default", "builtin-optional", "external-opt-in"],
                 external_packs_enabled_by_default: false,
                 external_pack_influence: "metadata-only",
+                external_influence_blockers: vec![
+                    nose_semantics::ExternalInfluenceBlocker::DataOnlyRegistration.as_str(),
+                    nose_semantics::ExternalInfluenceBlocker::DependencyBackedEvidenceUnavailable
+                        .as_str(),
+                    nose_semantics::ExternalInfluenceBlocker::ExplicitInfluenceTrustGateMissing
+                        .as_str(),
+                    nose_semantics::ExternalInfluenceBlocker::ExecutableConformanceUnavailable
+                        .as_str(),
+                    nose_semantics::ExternalInfluenceBlocker::RowConflict.as_str(),
+                ],
+                external_pack_execution: "none",
             },
             il: Il {
                 output_formats: vec!["sexpr", "json"],

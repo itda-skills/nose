@@ -55,6 +55,16 @@ fn own_property_guard_record(
     )
 }
 
+fn own_property_surface_evidence(id: u32, span: Span) -> EvidenceRecord {
+    language_core_evidence(
+        id,
+        EvidenceAnchor::sequence(span),
+        EvidenceKind::SequenceSurface(SequenceSurfaceKind::OwnPropertyGuard),
+        EvidenceStatus::Asserted,
+        Lang::JavaScript,
+    )
+}
+
 #[test]
 fn own_property_guard_requires_dedicated_guard_evidence() {
     let interner = Interner::new();
@@ -62,12 +72,7 @@ fn own_property_guard_requires_dedicated_guard_evidence() {
 
     assert!(!own_property_guard_for_node(&il, &interner, guard));
 
-    il.evidence.push(evidence(
-        0,
-        EvidenceAnchor::sequence(sp(22)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::OwnPropertyGuard),
-        EvidenceStatus::Asserted,
-    ));
+    il.evidence.push(own_property_surface_evidence(0, sp(22)));
     assert!(!own_property_guard_for_node(&il, &interner, guard));
 
     il.evidence.push(qualified_global_dependency(
@@ -107,12 +112,7 @@ fn own_property_guard_requires_dedicated_guard_evidence() {
 fn own_property_guard_validates_api_dependencies() {
     let interner = Interner::new();
     let (mut il, guard) = js_own_property_guard_il(&interner);
-    il.evidence.push(evidence(
-        0,
-        EvidenceAnchor::sequence(sp(22)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::OwnPropertyGuard),
-        EvidenceStatus::Asserted,
-    ));
+    il.evidence.push(own_property_surface_evidence(0, sp(22)));
     il.evidence.push(qualified_global_dependency(
         1,
         sp(22),
@@ -130,12 +130,7 @@ fn own_property_guard_validates_api_dependencies() {
     assert!(!own_property_guard_for_node(&il, &interner, guard));
 
     let (mut il, guard) = js_own_property_guard_il(&interner);
-    il.evidence.push(evidence(
-        0,
-        EvidenceAnchor::sequence(sp(22)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::OwnPropertyGuard),
-        EvidenceStatus::Asserted,
-    ));
+    il.evidence.push(own_property_surface_evidence(0, sp(22)));
     il.evidence.push(qualified_global_dependency(
         1,
         sp(22),
@@ -153,12 +148,7 @@ fn own_property_guard_validates_api_dependencies() {
     assert!(!own_property_guard_for_node(&il, &interner, guard));
 
     let (mut il, guard) = js_own_property_guard_il(&interner);
-    il.evidence.push(evidence(
-        0,
-        EvidenceAnchor::sequence(sp(22)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::OwnPropertyGuard),
-        EvidenceStatus::Asserted,
-    ));
+    il.evidence.push(own_property_surface_evidence(0, sp(22)));
     il.evidence.push(qualified_global_dependency(
         1,
         sp(22),
@@ -180,12 +170,7 @@ fn own_property_guard_validates_api_dependencies() {
 fn own_property_guard_rejects_ambiguous_guard_evidence() {
     let interner = Interner::new();
     let (mut il, guard) = js_own_property_guard_il(&interner);
-    il.evidence.push(evidence(
-        0,
-        EvidenceAnchor::sequence(sp(22)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::OwnPropertyGuard),
-        EvidenceStatus::Asserted,
-    ));
+    il.evidence.push(own_property_surface_evidence(0, sp(22)));
     il.evidence.push(qualified_global_dependency(
         1,
         sp(22),

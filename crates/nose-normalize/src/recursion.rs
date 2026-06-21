@@ -32,7 +32,7 @@
 //! the interpreter now executes as a real call (see [`crate::interp`]) — and the rewritten
 //! loop, and flags any behavioral difference.
 
-use nose_il::{Il, IlBuilder, NodeId, NodeKind, Op, Payload, UnitKind};
+use nose_il::{Il, IlBuilder, Interner, NodeId, NodeKind, Op, Payload, UnitKind};
 use nose_semantics::{
     direct_function_call_target_at_call, domain_evidence_for_param, semantics, ValueDomain,
 };
@@ -41,7 +41,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 mod structural_fold;
 mod tail;
 
-pub(crate) fn run(old: &Il) -> Il {
+pub(crate) fn run(old: &Il, interner: &Interner) -> Il {
     // Direct self-recursion is recognized only through call-target evidence. The spelling used
     // by the callee node is a producer-side selector, not proof that a call reaches this unit.
     // Methods remain additionally gated to receiver/field-free bodies. First-party producers do
@@ -59,7 +59,7 @@ pub(crate) fn run(old: &Il) -> Il {
             admit.then_some(u.root.0)
         })
         .collect();
-    if recursion_targets.is_empty() || !has_possible_self_call(old, &recursion_targets) {
+    if recursion_targets.is_empty() || !has_possible_self_call(old, interner, &recursion_targets) {
         return old.clone();
     }
     let unit_root_set: FxHashSet<u32> = old.units.iter().map(|u| u.root.0).collect();
@@ -67,6 +67,7 @@ pub(crate) fn run(old: &Il) -> Il {
         old,
         b: IlBuilder::with_capacity(old.file, old.nodes.len(), old.edges.len()),
         recursion_targets,
+        interner,
         unit_root_set,
         remap: FxHashMap::default(),
     };
@@ -75,13 +76,17 @@ pub(crate) fn run(old: &Il) -> Il {
     crate::finalize_rebuild(old, &rb.remap, rb.b, new_root, old.cid_names.clone())
 }
 
-fn has_possible_self_call(old: &Il, recursion_targets: &FxHashSet<u32>) -> bool {
+fn has_possible_self_call(
+    old: &Il,
+    interner: &Interner,
+    recursion_targets: &FxHashSet<u32>,
+) -> bool {
     old.nodes.iter().enumerate().any(|(idx, node)| {
         let id = NodeId(idx as u32);
         node.kind == NodeKind::Call
             && recursion_targets
                 .iter()
-                .any(|&root| direct_function_call_target_at_call(old, id, NodeId(root)))
+                .any(|&root| direct_function_call_target_at_call(old, interner, id, NodeId(root)))
     })
 }
 
@@ -101,6 +106,7 @@ struct Rebuilder<'a> {
     old: &'a Il,
     b: IlBuilder,
     recursion_targets: FxHashSet<u32>,
+    interner: &'a Interner,
     unit_root_set: FxHashSet<u32>,
     remap: FxHashMap<u32, NodeId>,
 }
@@ -163,7 +169,7 @@ impl Rebuilder<'_> {
         if !matches!(self.old.node(node).payload, Payload::None) {
             return None;
         }
-        if !direct_function_call_target_at_call(self.old, node, fid) {
+        if !direct_function_call_target_at_call(self.old, self.interner, node, fid) {
             return None;
         }
         let kids = self.old.children(node);
@@ -462,14 +468,13 @@ mod tests {
         EvidenceProvenance, EvidenceRecord, EvidenceStatus, FileId, FileMeta, IlBuilder, Interner,
         Lang, Span, Unit,
     };
-    use nose_semantics::FIRST_PARTY_PACK_ID;
+    use nose_semantics::language_core_evidence_provenance;
 
     fn sp(n: u32) -> Span {
         Span::new(FileId(0), n, n + 1, n, n)
     }
 
-    fn tail_recursive_function(with_target_evidence: bool) -> Il {
-        let interner = Interner::new();
+    fn tail_recursive_function(interner: &Interner, with_target_evidence: bool) -> Il {
         let f = interner.intern("f");
         let mut b = IlBuilder::new(FileId(0));
         let param = b.add(NodeKind::Param, Payload::Cid(0), sp(1), &[]);
@@ -517,6 +522,7 @@ mod tests {
             Vec::new(),
         );
         if with_target_evidence {
+            let (pack_id, producer_id) = language_core_evidence_provenance(Lang::Python);
             il.evidence.push(EvidenceRecord {
                 id: nose_il::EvidenceId(0),
                 anchor: EvidenceAnchor::node(il.node(self_call).span, NodeKind::Call),
@@ -525,9 +531,9 @@ mod tests {
                     name_hash: interner.symbol_hash(f),
                 }),
                 provenance: EvidenceProvenance {
-                    emitter: EvidenceEmitter::FirstParty,
-                    pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
-                    rule_hash: Some(stable_symbol_hash("recursion-test")),
+                    emitter: EvidenceEmitter::Builtin,
+                    pack_hash: Some(stable_symbol_hash(pack_id)),
+                    rule_hash: Some(stable_symbol_hash(producer_id)),
                 },
                 dependencies: Vec::new(),
                 status: EvidenceStatus::Asserted,
@@ -542,13 +548,15 @@ mod tests {
 
     #[test]
     fn tail_recursion_requires_call_target_evidence() {
-        let rewritten = run(&tail_recursive_function(false));
+        let interner = Interner::new();
+        let rewritten = run(&tail_recursive_function(&interner, false), &interner);
         assert!(!contains_kind(&rewritten, NodeKind::Loop));
     }
 
     #[test]
     fn tail_recursion_uses_call_target_evidence() {
-        let rewritten = run(&tail_recursive_function(true));
+        let interner = Interner::new();
+        let rewritten = run(&tail_recursive_function(&interner, true), &interner);
         assert!(contains_kind(&rewritten, NodeKind::Loop));
     }
 }

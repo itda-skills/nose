@@ -323,7 +323,6 @@ mod tests {
     use nose_il::{
         EvidenceAnchor, EvidenceKind, FileId, FileMeta, Lang, SequenceSurfaceKind, Span,
     };
-    use nose_semantics::FIRST_PARTY_PACK_ID;
 
     fn sp() -> Span {
         Span::new(FileId(0), 1, 1, 1, 1)
@@ -408,11 +407,13 @@ mod tests {
             Vec::new(),
             Vec::new(),
         );
-        il.find_or_push_first_party_evidence(
+        let (pack_id, producer_id) =
+            nose_semantics::language_core_evidence_provenance(Lang::JavaScript);
+        il.find_or_push_builtin_evidence(
             EvidenceAnchor::sequence(sp()),
             EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
-            FIRST_PARTY_PACK_ID,
-            "test_sequence_surface",
+            pack_id,
+            producer_id,
             Vec::new(),
         );
 

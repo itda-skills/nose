@@ -73,7 +73,7 @@ fn run_value_or_default(value: NodeId, default: NodeId, mut b: IlBuilder, sp: Sp
         func,
         FileMeta {
             path: "t".into(),
-            lang: Lang::JavaScript,
+            lang: Lang::Rust,
         },
         Vec::new(),
         Vec::new(),

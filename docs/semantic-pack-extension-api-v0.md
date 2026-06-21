@@ -1,20 +1,23 @@
 # Semantic pack extension API v0
 
 Status: design v0 plus local metadata loading and a local conformance harness.
-nose can load local manifests for explicit opt-in provenance reporting, and pack
+nose can load local manifests for explicit opt-in metadata validation, and pack
 authors can run `nose semantic-pack check` against manifests and declared fixture
 assets. External packs are still `metadata-only`: they do not emit evidence or
-open exact contracts. The first compiled first-party pilot pack now reports
+open exact contracts. Local `declares.evidence_producers`,
+`declares.contracts`, and `declares.value_laws` entries are registered as
+data-only rows for future conflict/adoption gates, but they do not influence
+normalize, value-graph rewrites, or exact matching. The first compiled builtin pilot pack now reports
 Python `typing`, `collections.abc`, and `asyncio` stdlib type-domain alias
 evidence through this vocabulary. This page defines the extension surface that
-first-party compiled packs and future external packs must use.
+builtin compiled packs and future external packs must use.
 
 ## Context
 
 nose is moving toward a DefinitelyTyped-style semantic-pack ecosystem: providers
 publish language, standard-library, library, protocol, and law packs; users opt
 into the packs they trust; nose validates the extension shape and fails closed
-when required facts are absent. nose certifies only the first-party default packs
+when required facts are absent. nose certifies only the builtin default packs
 that it ships and gates in CI.
 
 The current implementation already has the internal pieces that this API narrows
@@ -33,8 +36,8 @@ reports provenance; it does not execute external producers.
   be used.
 - Preserve exact-channel precision by making missing, ambiguous, conflicting, or
   dependency-broken evidence fail closed.
-- Let first-party built-in semantics use the same vocabulary as future external
-  packs, even while first-party packs remain compiled into nose.
+- Let builtin semantics use the same vocabulary as future external packs, even
+  while builtin packs remain compiled into nose.
 - Give pack authors a conformance checklist that is clear enough for users to
   judge external packs without implying nose approval.
 
@@ -87,12 +90,12 @@ A v0 manifest has these top-level sections:
 The manifest is declarative. It is not a hook API. A data-only external pack can
 declare rows that the local metadata loader validates and reports. A later
 producer runtime may feed compatible rows into kernel helpers only after the same
-fail-closed evidence obligations are satisfied. First-party compiled packs can
+fail-closed evidence obligations are satisfied. Builtin compiled packs can
 generate the same manifest metadata for reports and conformance gates while
 still emitting facts from Rust.
-The Python stdlib type-domain example mirrors the first compiled first-party pilot
+The Python stdlib type-domain example mirrors the first compiled builtin pilot
 surface; loading that example locally remains metadata-only because local
-manifests cannot claim first-party trust.
+manifests cannot claim builtin trust.
 
 ## Pack Kinds
 
@@ -115,17 +118,19 @@ Trust policy is separate from channel eligibility.
 
 | trust | meaning |
 |---|---|
-| `default-first-party` | maintained, tested, and enabled by nose by default |
-| `first-party-optional` | maintained and tested by nose, but not enabled by default |
+| `builtin-default` | maintained, tested, and enabled by nose by default |
+| `builtin-optional` | maintained and tested by nose, but not enabled by default |
 | `external-opt-in` | provider/user responsibility; must be enabled explicitly by the user |
 
 Local external manifests must set `trust: "external-opt-in"` and
 `enabled_by_default: false`. The loader rejects local manifests that claim
-first-party trust or default enablement. A manifest may declare that a contract
-is intended for `exact-empirical` or `exact-proven`, but nose does not certify
-that claim for external packs. A user may still opt into such a pack, and nose
-should surface provenance so the user can see which external pack affected a
-match.
+builtin trust or default enablement. For compatibility with older v0 examples,
+the parser still accepts `default-first-party` and `first-party-optional` as
+aliases for builtin trust labels before validation rejects them for local
+external manifests. A manifest may declare that a contract is intended for
+`exact-empirical` or `exact-proven`, but nose does not certify that claim for
+external packs. A user may still opt into such a pack, and nose should surface
+provenance so the user can see which external pack affected a match.
 
 ## Channel Eligibility
 
@@ -337,7 +342,7 @@ target span and no shadowing along the relevant lexical path.
 ### Value Laws
 
 Value laws declare reusable semantic rewrites or equivalence laws. They are the
-future pack-facing shape for current first-party value-graph rule modules.
+future pack-facing shape for current builtin value-graph rule modules.
 
 A law must declare:
 
@@ -347,16 +352,19 @@ A law must declare:
 - protocol operation or operator family;
 - proof status and proof-obligation references;
 - positive fixtures and hard negatives;
-- whether the law is first-party certified or external provider/user trust.
+- whether the law is builtin certified or external provider/user trust.
 
-External law declarations do not let a pack bypass the first-party law registry
-or emit private value-graph nodes. Until the law registry is pack-facing, external
-law packs should stay `near-only` unless nose adopts them as first-party.
+External law declarations do not let a pack bypass the builtin law registry
+or emit private value-graph nodes. The loader records external producer,
+contract, and law declarations as pack-scoped data rows, but current normalize,
+value-graph, and exact consumers still read only builtin registered rows. Until
+the law registry is pack-facing, external law packs should stay `near-only`
+unless nose adopts them as builtin.
 
-The first compiled first-party `LawPack` pilot is `nose.value_graph.laws`. It
+The first compiled builtin `LawPack` pilot is `nose.value_graph.laws`. It
 reports pack-facing law provenance for two proof-backed value-graph laws:
 numeric common-factor distribution and integer ordered min/max clamp. Those laws
-still execute from compiled first-party Rust and their exact status is tied to
+still execute from compiled builtin Rust and their exact status is tied to
 the project's formal obligation registry. The [law-pack example](examples/semantic-packs/v0/law-pack.json)
 shows the external v0 declaration shape and fixtures, but loading that manifest
 locally remains `metadata-only`.
@@ -375,6 +383,21 @@ The default policy is fail closed:
   priority for exact matching;
 - user configuration may disable or select packs, but selection does not make
   missing proof appear.
+
+Local loading now exposes a data-only external row conflict report for producer,
+contract, and value-law ids that overlap builtin rows or another loaded external
+pack. A conflict report does not reject metadata-only manifests, because users
+may intentionally mirror builtin vocabulary for documentation or migration
+tests. Any future external influence gate must treat those conflicts as blocking
+until an explicit composition or replacement policy exists.
+
+Local loading also exposes a data-only influence preflight report. In v0, all
+external rows are blocked from influence because they are registered as data
+only, have no dependency-backed evidence runtime, lack an explicit influence
+trust gate, and, for exact-capable rows, lack executable conformance. Conflicting
+rows carry an additional conflict blocker. This report is an implementation
+contract for future adoption work; query, normalize, and detection consumers do
+not read it.
 
 Near-mode scoring may retain conflict provenance as a review signal. Exact
 semantic fingerprints must not.
@@ -424,15 +447,15 @@ nose does not validate or certify for external packs:
   provider identity is trustworthy;
 - whether an external pack is safe to enable in a user's risk model.
 
-First-party default packs are different: nose owns their tests, hard negatives,
+Builtin default packs are different: nose owns their tests, hard negatives,
 proof obligations, release gating, and documentation.
 
 Expectation labels are provider-authored strings. The example LawPack uses
 `semantic-law-provenance-present` only for report-visible provenance and
-`internal-law-unit-positive` for narrower fixtures that exercise a first-party
+`internal-law-unit-positive` for narrower fixtures that exercise a builtin
 law without promising a scan-family JSON row.
 
-## First-Party Mapping
+## Builtin Mapping
 
 The current `nose.first_party` compiled facade should be understood as a set of
 implicit v0 packs:
@@ -441,15 +464,75 @@ implicit v0 packs:
   containers emit source, symbol, import, domain, guard, place/effect,
   call-target, and sequence-surface evidence;
 - stdlib packs declare library API occurrence contracts such as Python builtins,
-  Python `math.prod`, Rust `Vec::new`, Rust `Option` constructors, Java
-  `java.util` factories, JS-like globals, regex literal methods, selected
-  property builtins, receiver-method APIs, and builder append APIs;
-- protocol/law packs correspond to current first-party protocol operations,
+  Rust `Option` constructors, Java `java.util` factories, JS-like globals,
+  regex literal methods, receiver-method APIs, and builder append APIs;
+- `nose.python.stdlib.math` owns the current Python `math.prod`
+  product-reduction API occurrence contract;
+- `nose.rust.stdlib.vec` owns the current Rust `Vec::new` and `vec!`
+  collection-factory API occurrence contracts;
+- `nose.rust.stdlib.option` owns the current Rust `Some`, `None`, and
+  `and_then` Option API occurrence contracts;
+- `nose.rust.stdlib.integer_methods` owns the current Rust primitive integer
+  `abs`/`min`/`max`/`clamp` method API occurrence contracts;
+- `nose.java.stdlib.math` owns the current Java `Math.abs`, `Math.min`, and
+  `Math.max` scalar integer API occurrence contracts;
+- `nose.javascript.builtins.promise` owns the current JS/TS `Promise.resolve`
+  and `.then` Promise API occurrence contracts;
+- `nose.javascript.builtins.array` owns the current JS/TS `Array.from` and
+  `Array.isArray` API occurrence contracts;
+- `nose.javascript.builtins.boolean` owns the current JS/TS `Boolean(...)` API
+  occurrence contract;
+- `nose.javascript.builtins.regex` owns the current JS/TS regex literal
+  `.test(...)` API occurrence contract;
+- `nose.javascript.builtins.static_index_membership` owns the current JS/TS
+  static `indexOf`/`findIndex` membership API occurrence contracts;
+- `nose.javascript.builtins.collection_constructors` owns the current JS/TS
+  `new Set(...)` and `new Map(...)` API occurrence contracts;
+- `nose.rust.stdlib.collection_factories` owns the current selected Rust
+  `std::collections::{HashSet,BTreeSet,VecDeque}::from` collection-factory API
+  occurrence contracts;
+- `nose.rust.stdlib.map_factories` owns the current selected Rust
+  `std::collections::{HashMap,BTreeMap}::from` map-factory API occurrence
+  contracts;
+- `nose.java.stdlib.map_factories` owns Java `java.util.Map.of` and
+  `java.util.Map.ofEntries` map-factory API occurrence contracts;
+- `nose.java.stdlib.map_entries` owns Java `java.util.Map.entry` map-entry API
+  occurrence contracts;
+- `nose.java.stdlib.collection_factories` owns Java `java.util.List.of`,
+  `Set.of`, and `Arrays.asList` collection-factory API occurrence contracts;
+- `nose.java.stdlib.collection_constructors` owns Java empty `new
+  ArrayList<>()` and `new LinkedList<>()` collection-constructor API occurrence
+  contracts;
+- `nose.java.stdlib.static_collection_adapters` owns Java
+  `java.util.Arrays.stream` static collection adapter API occurrence contracts;
+- `nose.protocols.map_get` owns Java/Rust/JS-family `map.get(key)` API
+  occurrence contracts under exact-map receiver proof;
+- `nose.protocols.map_get_default` owns Python `dict.get(key, default)`, Ruby
+  `Hash#fetch(key, default)` or zero-arg block fallback, and Java
+  `Map.getOrDefault(key, default)` API occurrence contracts under exact-map
+  receiver proof;
+- `nose.protocols.free_function_builtins` owns unshadowed Python/Go/Swift
+  free-name builtin API occurrence contracts;
+- `nose.protocols.receiver_membership` owns receiver-method membership API
+  occurrence contracts for map, collection, and set-or-map receiver proofs;
+- `nose.protocols.map_key_views` owns Python/Ruby `keys`, Java `keySet`, and
+  JS-family `Map.keys()` API occurrence contracts under exact-map receiver
+  proof;
+- `nose.protocols.property_builtins` owns selected JavaScript/TypeScript,
+  Java, and Swift property builtin API occurrence contracts such as `length`,
+  `count`, and `isEmpty` under receiver proof;
+- `nose.protocols.builtin_method_calls` owns generic method-call and
+  namespace-call builtin semantics that have not moved to a narrower protocol
+  pack;
+- `nose.protocols.iterator_identity_adapters` owns the current Rust
+  `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
+  `.stream()` iterator identity adapter API occurrence contracts;
+- protocol/law packs correspond to current builtin protocol operations,
   demand profiles, operator laws, value-domain laws, and named value-graph rule
   modules.
 
 Those packs may remain compiled Rust for now. The important rule is that new
-first-party work should add or consume the same pack-shaped evidence and contract
+builtin work should add or consume the same pack-shaped evidence and contract
 vocabulary that an external pack would use later.
 
 ## Conformance Checklist
@@ -474,7 +557,7 @@ publish:
 - proof links for `exact-proven` laws;
 - a reproducible conformance command.
 
-First-party packs must run this checklist in nose CI before becoming default.
+Builtin packs must run this checklist in nose CI before becoming default.
 External packs should ship it so users can evaluate the pack. Passing
 `nose semantic-pack check` is not nose certification; it only proves the local
 manifest and declared fixture assets satisfy the v0 structural contract.
@@ -487,7 +570,7 @@ This issue is complete when:
 - the schema has at least one language-pack and one library-pack example;
 - examples are checked by the local conformance harness and docs example gate;
 - the docs state that external pack correctness is provider/user responsibility;
-- the docs state that first-party built-in semantics use the same extension
+- the docs state that builtin semantics use the same extension
   vocabulary even if they remain compiled in initially.
 
 ## See also

@@ -45,8 +45,9 @@ fn record_guard_value_tag_requires_guard_evidence() {
         ValOp::Seq(SEQ_VALUE_RECORD_GUARD)
     ));
 
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_evidence(
         0,
+        Lang::JavaScript,
         EvidenceAnchor::sequence(sp(60)),
         EvidenceKind::SequenceSurface(SequenceSurfaceKind::RecordGuard),
     ));
@@ -166,8 +167,9 @@ fn own_property_guard_value_tag_requires_node_shape_and_guard_evidence() {
     let root = b.add(NodeKind::Block, Payload::None, sp(62), &[malformed, guard]);
     let mut il = finish_test_il(b, root, Lang::JavaScript);
     for (id, span) in [(0, sp(62)), (4, sp(63))] {
-        il.evidence.push(evidence(
+        il.evidence.push(language_core_evidence(
             id,
+            Lang::JavaScript,
             EvidenceAnchor::sequence(span),
             EvidenceKind::SequenceSurface(SequenceSurfaceKind::OwnPropertyGuard),
         ));

@@ -3,7 +3,15 @@ use std::collections::HashSet;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use super::compiled::is_compiled_first_party_pack_id;
+use super::compiled::is_compiled_builtin_pack_id;
+
+pub(super) struct LoadedLocalManifest {
+    pub summary: SemanticPackSummary,
+    pub external_evidence_producer_rows: Vec<ExternalEvidenceProducerRow>,
+    pub external_contract_rows: Vec<ExternalContractRow>,
+    pub external_value_law_rows: Vec<ExternalValueLawRow>,
+}
+
 pub fn check_semantic_pack_conformance(
     paths: &[PathBuf],
 ) -> Result<SemanticPackConformanceReport, SemanticPackLoadError> {
@@ -21,7 +29,7 @@ pub fn check_semantic_pack_conformance(
                     message,
                 }
             })?;
-        if is_compiled_first_party_pack_id(&pack.id) {
+        if is_compiled_builtin_pack_id(&pack.id) {
             return Err(SemanticPackLoadError::DuplicatePackId {
                 id: pack.id,
                 first_path: None,
@@ -119,6 +127,43 @@ pub fn load_local_manifest(path: &Path) -> Result<SemanticPackSummary, SemanticP
             path: path.to_path_buf(),
             message,
         }
+    })
+}
+
+pub(super) fn load_local_manifest_with_rows(
+    path: &Path,
+) -> Result<LoadedLocalManifest, SemanticPackLoadError> {
+    let manifest = read_local_manifest(path)?;
+    let external_evidence_producer_rows = manifest
+        .declares
+        .evidence_producers
+        .iter()
+        .map(|producer| ExternalEvidenceProducerRow::from_manifest(path, &manifest, producer))
+        .collect();
+    let external_contract_rows = manifest
+        .declares
+        .contracts
+        .iter()
+        .map(|contract| ExternalContractRow::from_manifest(path, &manifest, contract))
+        .collect();
+    let external_value_law_rows = manifest
+        .declares
+        .value_laws
+        .iter()
+        .map(|law| ExternalValueLawRow::from_manifest(path, &manifest, law))
+        .collect();
+    let summary =
+        SemanticPackSummary::from_manifest(path.to_path_buf(), manifest).map_err(|message| {
+            SemanticPackLoadError::InvalidManifest {
+                path: path.to_path_buf(),
+                message,
+            }
+        })?;
+    Ok(LoadedLocalManifest {
+        summary,
+        external_evidence_producer_rows,
+        external_contract_rows,
+        external_value_law_rows,
     })
 }
 
@@ -279,5 +324,5 @@ impl std::error::Error for SemanticPackLoadError {
 fn display_optional_path(path: &Option<PathBuf>) -> String {
     path.as_ref()
         .map(|path| path.display().to_string())
-        .unwrap_or_else(|| "<compiled first-party>".to_string())
+        .unwrap_or_else(|| "<compiled builtin>".to_string())
 }

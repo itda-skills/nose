@@ -2,12 +2,13 @@ use super::super::bindings::assignment_rhs;
 use super::super::resolve_imported_immutable_bindings;
 use super::super::snapshot::{append_snapshot, snapshot_subtree};
 use super::support::{
-    coordinate_import_binding_assignment, lookup_dict_provider, lookup_import_consumer,
-    provider_with_lookup_export_evidence, test_provenance,
+    coordinate_import_binding_assignment, language_core_provenance, lookup_dict_provider,
+    lookup_import_consumer, provider_with_lookup_export_evidence, snapshot_count,
 };
 use nose_il::{
-    stable_symbol_hash, EvidenceAnchor, EvidenceId, EvidenceKind, EvidenceStatus, FileId, FileMeta,
-    IlBuilder, ImportEvidenceKind, Interner, Lang, NodeKind, Payload, SequenceSurfaceKind, Span,
+    stable_symbol_hash, EvidenceAnchor, EvidenceEmitter, EvidenceId, EvidenceKind,
+    EvidenceProvenance, EvidenceStatus, FileId, FileMeta, IlBuilder, ImportEvidenceKind, Interner,
+    Lang, NodeKind, Payload, SequenceSurfaceKind, Span,
 };
 
 #[test]
@@ -84,7 +85,10 @@ fn snapshot_append_copies_relevant_evidence_with_source_origin_spans() {
         copied_surface.anchor,
         EvidenceAnchor::sequence(Span::new(FileId(0), 4, 12, 1, 1))
     );
-    assert_eq!(copied_surface.provenance, test_provenance("surface"));
+    assert_eq!(
+        copied_surface.provenance,
+        language_core_provenance(Lang::Python)
+    );
 
     let copied_export = importer
         .evidence
@@ -97,6 +101,15 @@ fn snapshot_append_copies_relevant_evidence_with_source_origin_spans() {
         })
         .unwrap();
     assert_eq!(copied_export.dependencies, vec![copied_surface.id]);
+    let (pack_id, producer_id) = nose_semantics::language_core_evidence_provenance(Lang::Python);
+    assert_eq!(
+        copied_export.provenance.pack_hash,
+        Some(stable_symbol_hash(pack_id))
+    );
+    assert_eq!(
+        copied_export.provenance.rule_hash,
+        Some(stable_symbol_hash(producer_id))
+    );
 }
 
 #[test]
@@ -126,6 +139,15 @@ fn resolve_imported_literal_records_snapshot_provenance_dependencies() {
             )
         })
         .unwrap();
+    let (pack_id, producer_id) = nose_semantics::language_core_evidence_provenance(Lang::Python);
+    assert_eq!(
+        provenance.provenance.pack_hash,
+        Some(stable_symbol_hash(pack_id))
+    );
+    assert_eq!(
+        provenance.provenance.rule_hash,
+        Some(stable_symbol_hash(producer_id))
+    );
     assert!(
         provenance.dependencies.contains(&EvidenceId(0)),
         "snapshot provenance must depend on the importer static import proof"
@@ -157,4 +179,79 @@ fn resolve_imported_literal_records_snapshot_provenance_dependencies() {
         }),
         "snapshot provenance must depend on copied provider export evidence"
     );
+}
+
+#[test]
+fn resolve_imported_literal_does_not_snapshot_across_languages() {
+    let interner = Interner::new();
+    let lookup = interner.intern("LOOKUP");
+    let provider = lookup_dict_provider(&interner, lookup);
+    let import_span = Span::new(FileId(1), 0, 24, 1, 1);
+    let mut b = IlBuilder::new(FileId(1));
+    let lhs = b.add(NodeKind::Var, Payload::Name(lookup), import_span, &[]);
+    let module = b.add(
+        NodeKind::Lit,
+        Payload::LitStr(stable_symbol_hash("tables")),
+        import_span,
+        &[],
+    );
+    let exported = b.add(
+        NodeKind::Lit,
+        Payload::LitStr(stable_symbol_hash("LOOKUP")),
+        import_span,
+        &[],
+    );
+    let import_rhs = b.add(
+        NodeKind::Seq,
+        Payload::None,
+        import_span,
+        &[module, exported],
+    );
+    let import_assign = b.add(
+        NodeKind::Assign,
+        Payload::None,
+        import_span,
+        &[lhs, import_rhs],
+    );
+    let root = b.add(
+        NodeKind::Module,
+        Payload::None,
+        import_span,
+        &[import_assign],
+    );
+    let mut importer = b.finish(
+        root,
+        FileMeta {
+            path: "Consumer.java".into(),
+            lang: Lang::Java,
+        },
+        Vec::new(),
+        Vec::new(),
+    );
+    let (pack_id, producer_id) = nose_semantics::language_core_evidence_provenance(Lang::Java);
+    importer.evidence.push(nose_il::EvidenceRecord {
+        id: EvidenceId(0),
+        anchor: EvidenceAnchor::sequence(import_span),
+        kind: EvidenceKind::Import(ImportEvidenceKind::Binding {
+            module_hash: stable_symbol_hash("tables"),
+            exported_hash: stable_symbol_hash("LOOKUP"),
+        }),
+        provenance: EvidenceProvenance {
+            emitter: EvidenceEmitter::Builtin,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
+        },
+        dependencies: Vec::new(),
+        status: EvidenceStatus::Asserted,
+    });
+
+    let mut files = vec![provider, importer];
+    resolve_imported_immutable_bindings(&mut files, &interner);
+
+    assert_eq!(
+        assignment_rhs(&files[1], import_assign),
+        Some(import_rhs),
+        "same module/export hashes across languages must not replace the import RHS"
+    );
+    assert_eq!(snapshot_count(&files[1]), 0);
 }

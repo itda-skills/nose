@@ -2,7 +2,7 @@ use super::super::tree::{collect_cids, parent_of};
 use crate::il_utils::node_mentions_any_cid;
 use nose_il::{Il, Interner, NodeId, NodeKind, Payload};
 use nose_semantics::{
-    admitted_builtin_semantics_at_call, opaque_argument_escape_args,
+    admitted_builtin_semantics_at_call_with_interner, opaque_argument_escape_args,
     receiver_mutation_call_receiver,
 };
 use rustc_hash::FxHashSet;
@@ -101,7 +101,7 @@ pub(in crate::units) fn call_may_mutate_blocked_cid(
         return node_mentions_any_cid(il, receiver, blocked);
     }
     if let Payload::Builtin(builtin) = il.node(node).payload {
-        if admitted_builtin_semantics_at_call(il, node, builtin) {
+        if admitted_builtin_semantics_at_call_with_interner(il, interner, node, builtin) {
             return false;
         }
         return il

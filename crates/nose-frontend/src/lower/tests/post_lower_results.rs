@@ -65,6 +65,111 @@ fn assert_rust_and_ruby_factory_result_domains(interner: &Interner) {
         &vec_api,
     ));
 
+    let qualified_rust_vec = lower_fixture(
+        "qualified_vec.rs",
+        b"fn f() { let xs = std::vec::Vec::new(); }",
+        Lang::Rust,
+        interner,
+    );
+    let qualified_vec_contract =
+        library_rust_vec_new_factory_contract(Lang::Rust, "std::vec::Vec::new").unwrap();
+    let qualified_vec_api = contract_api_ids(
+        &qualified_rust_vec.evidence,
+        qualified_vec_contract.id,
+        qualified_vec_contract.callee,
+    );
+    assert!(result_domain_depends_on_any_api(
+        &qualified_rust_vec.evidence,
+        DomainEvidence::Collection,
+        &qualified_vec_api,
+    ));
+
+    let rust_vec_alias_shadow = lower_fixture(
+        "vec_type_alias_shadow.rs",
+        b"struct Custom;\nimpl Custom { fn new() -> Self { Custom } }\ntype Vec = Custom;\nfn f() { let xs = Vec::new(); }",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        result_domain_record_count(&rust_vec_alias_shadow.evidence, DomainEvidence::Collection),
+        0,
+        "Rust type aliases named Vec must not emit stdlib Vec result-domain evidence"
+    );
+
+    let rust_hashset = lower_fixture(
+        "hashset.rs",
+        b"fn f() { let xs = std::collections::HashSet::from([1, 2]); }",
+        Lang::Rust,
+        interner,
+    );
+    let hashset_contract = library_free_name_collection_factory_contract(
+        Lang::Rust,
+        "std::collections::HashSet::from",
+    )
+    .unwrap();
+    let hashset_api = contract_api_ids(
+        &rust_hashset.evidence,
+        hashset_contract.id,
+        hashset_contract.callee,
+    );
+    assert!(result_domain_depends_on_any_api(
+        &rust_hashset.evidence,
+        DomainEvidence::Set,
+        &hashset_api,
+    ));
+
+    let rust_vecdeque = lower_fixture(
+        "vecdeque.rs",
+        b"fn f() { let xs = std::collections::VecDeque::from([1, 2]); }",
+        Lang::Rust,
+        interner,
+    );
+    let vecdeque_contract = library_free_name_collection_factory_contract(
+        Lang::Rust,
+        "std::collections::VecDeque::from",
+    )
+    .unwrap();
+    let vecdeque_api = contract_api_ids(
+        &rust_vecdeque.evidence,
+        vecdeque_contract.id,
+        vecdeque_contract.callee,
+    );
+    assert!(result_domain_depends_on_any_api(
+        &rust_vecdeque.evidence,
+        DomainEvidence::Collection,
+        &vecdeque_api,
+    ));
+
+    let rust_shadowed_std = lower_fixture(
+        "hashset_shadowed_std.rs",
+        b"mod std { pub mod collections { pub struct HashSet; } }\nfn f() { let xs = std::collections::HashSet::from([1, 2]); }",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        result_domain_record_count(&rust_shadowed_std.evidence, DomainEvidence::Set),
+        0,
+        "local std module must not emit stdlib HashSet result-domain evidence"
+    );
+
+    let rust_vec_macro = lower_fixture(
+        "vec_macro.rs",
+        b"fn f() { let xs = vec![1, 2]; }",
+        Lang::Rust,
+        interner,
+    );
+    let vec_macro_contract = library_rust_vec_macro_factory_contract(Lang::Rust, "vec").unwrap();
+    let vec_macro_api = contract_api_ids(
+        &rust_vec_macro.evidence,
+        vec_macro_contract.id,
+        vec_macro_contract.callee,
+    );
+    assert!(result_domain_depends_on_any_api(
+        &rust_vec_macro.evidence,
+        DomainEvidence::Collection,
+        &vec_macro_api,
+    ));
+
     let rust_map = lower_fixture(
         "hash_map.rs",
         b"fn f() { let xs = std::collections::HashMap::from([(\"red\", 1)]); }",
@@ -80,6 +185,38 @@ fn assert_rust_and_ruby_factory_result_domains(interner: &Interner) {
         DomainEvidence::Map,
         &map_api,
     ));
+
+    let rust_btreemap = lower_fixture(
+        "btree_map.rs",
+        b"fn f() { let xs = std::collections::BTreeMap::from([(\"red\", 1)]); }",
+        Lang::Rust,
+        interner,
+    );
+    let btreemap_contract =
+        library_free_name_map_factory_contract(Lang::Rust, "std::collections::BTreeMap::from")
+            .unwrap();
+    let btreemap_api = contract_api_ids(
+        &rust_btreemap.evidence,
+        btreemap_contract.id,
+        btreemap_contract.callee,
+    );
+    assert!(result_domain_depends_on_any_api(
+        &rust_btreemap.evidence,
+        DomainEvidence::Map,
+        &btreemap_api,
+    ));
+
+    let rust_map_shadowed_std = lower_fixture(
+        "hashmap_shadowed_std.rs",
+        b"mod std { pub mod collections { pub struct HashMap; } }\nfn f() { let xs = std::collections::HashMap::from([(\"red\", 1)]); }",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        result_domain_record_count(&rust_map_shadowed_std.evidence, DomainEvidence::Map),
+        0,
+        "local std module must not emit stdlib HashMap result-domain evidence"
+    );
 
     let ruby = lower_fixture(
         "set.rb",
@@ -157,6 +294,19 @@ fn java_empty_collection_constructor_emits_occurrence_evidence() {
         library_api_callee_contract_hash(contract.callee),
     );
     assert_eq!(api.len(), 1);
+    let api_record = il.evidence_record_by_id(api[0]).expect("api record");
+    assert_eq!(
+        api_record.provenance.pack_hash,
+        Some(stable_symbol_hash(
+            JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID
+        ))
+    );
+    assert_eq!(
+        api_record.provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID
+        ))
+    );
     assert!(
         il.evidence.iter().any(|record| {
             record.kind == EvidenceKind::Domain(DomainEvidence::Collection)
@@ -195,6 +345,18 @@ fn java_empty_collection_constructor_wildcard_import_is_dependency_backed() {
             )
         })
         .expect("wildcard java.util import should admit supported ArrayList constructor");
+    assert_eq!(
+        api.provenance.pack_hash,
+        Some(stable_symbol_hash(
+            JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID
+        ))
+    );
+    assert_eq!(
+        api.provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID
+        ))
+    );
     assert!(api.dependencies.iter().any(|id| {
         wildcard.evidence_record_by_id(*id).is_some_and(|record| {
             matches!(
@@ -239,5 +401,23 @@ fn java_empty_collection_constructor_wildcard_import_is_dependency_backed() {
         ),
         0,
         "explicit same-name imports must close java.util wildcard constructor proof"
+    );
+
+    let exact_import_conflict = crate::lower_source(
+            FileId(0),
+            "C.java",
+            b"import other.ArrayList;\nimport java.util.ArrayList;\nclass C { Object f() { return new ArrayList<>(); } }\n",
+            Lang::Java,
+            &interner,
+        )
+        .expect("java lowering should succeed");
+    assert_eq!(
+        library_api_evidence_count_in_records(
+            &exact_import_conflict.evidence,
+            library_api_contract_id_hash(contract.id),
+            library_api_callee_contract_hash(contract.callee),
+        ),
+        0,
+        "conflicting exact imports must close the java.util constructor occurrence"
     );
 }

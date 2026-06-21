@@ -1,5 +1,5 @@
 use super::super::resolve_imported_immutable_bindings;
-use super::super::snapshot::push_first_party_evidence_with_dependencies;
+use super::super::snapshot::push_builtin_evidence_with_dependencies;
 use nose_il::{
     stable_symbol_hash, EffectEvidenceKind, EvidenceAnchor, EvidenceEmitter, EvidenceId,
     EvidenceKind, EvidenceProvenance, EvidenceRecord, EvidenceStatus, FileId, FileMeta, Il,
@@ -40,14 +40,14 @@ pub(super) fn module_with_binding_method(method: &str) -> (Il, Interner, Symbol,
         Vec::new(),
         Vec::new(),
     );
-    push_first_party_evidence_with_dependencies(
+    push_builtin_evidence_with_dependencies(
         &mut il,
         EvidenceAnchor::node(span, NodeKind::Assign),
         EvidenceKind::Effect(EffectEvidenceKind::BindingWrite),
         "effect_binding_write_test",
         Vec::new(),
     );
-    push_first_party_evidence_with_dependencies(
+    push_builtin_evidence_with_dependencies(
         &mut il,
         EvidenceAnchor::node(span, NodeKind::Call),
         EvidenceKind::Effect(EffectEvidenceKind::OpaqueArgumentEscape),
@@ -57,7 +57,7 @@ pub(super) fn module_with_binding_method(method: &str) -> (Il, Interner, Symbol,
     if let Some(contract) =
         nose_semantics::module_binding_mutating_method_contract(Lang::JavaScript, method, 1)
     {
-        push_first_party_evidence_with_dependencies(
+        push_builtin_evidence_with_dependencies(
             &mut il,
             EvidenceAnchor::node(span, NodeKind::Call),
             EvidenceKind::Effect(contract.effect),
@@ -174,6 +174,15 @@ pub(super) fn test_provenance(rule: &str) -> EvidenceProvenance {
     }
 }
 
+pub(super) fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
+    let (pack_id, producer_id) = nose_semantics::language_core_evidence_provenance(lang);
+    EvidenceProvenance {
+        emitter: EvidenceEmitter::Builtin,
+        pack_hash: Some(stable_symbol_hash(pack_id)),
+        rule_hash: Some(stable_symbol_hash(producer_id)),
+    }
+}
+
 pub(super) fn add_import_binding_evidence(
     il: &mut Il,
     span: Span,
@@ -187,7 +196,7 @@ pub(super) fn add_import_binding_evidence(
             module_hash: stable_symbol_hash("java.util"),
             exported_hash: stable_symbol_hash("Map"),
         }),
-        provenance: test_provenance("import_binding"),
+        provenance: language_core_provenance(il.meta.lang),
         dependencies: Vec::new(),
         status,
     });
@@ -216,7 +225,7 @@ pub(super) fn provider_with_lookup_export_evidence(interner: &Interner) -> (Il, 
         id: EvidenceId(0),
         anchor: EvidenceAnchor::sequence(span),
         kind: EvidenceKind::SequenceSurface(SequenceSurfaceKind::Map),
-        provenance: test_provenance("surface"),
+        provenance: language_core_provenance(Lang::Python),
         dependencies: Vec::new(),
         status: EvidenceStatus::Asserted,
     });
@@ -228,7 +237,7 @@ pub(super) fn provider_with_lookup_export_evidence(interner: &Interner) -> (Il, 
             exported_hash: stable_symbol_hash("LOOKUP"),
             root_kind: NodeKind::Seq,
         }),
-        provenance: test_provenance("export"),
+        provenance: language_core_provenance(provider.meta.lang),
         dependencies: vec![EvidenceId(0)],
         status: EvidenceStatus::Asserted,
     });
@@ -247,7 +256,7 @@ pub(super) fn provider_with_lookup_export_evidence(interner: &Interner) -> (Il, 
         id: EvidenceId(3),
         anchor: EvidenceAnchor::sequence(span),
         kind: EvidenceKind::SequenceSurface(SequenceSurfaceKind::Map),
-        provenance: test_provenance("ambiguous_surface"),
+        provenance: language_core_provenance(Lang::Python),
         dependencies: Vec::new(),
         status: EvidenceStatus::Ambiguous,
     });
@@ -287,7 +296,7 @@ pub(super) fn lookup_dict_provider(interner: &Interner, lookup: Symbol) -> Il {
         id: EvidenceId(0),
         anchor: EvidenceAnchor::sequence(provider_span),
         kind: EvidenceKind::SequenceSurface(SequenceSurfaceKind::Map),
-        provenance: test_provenance("provider_surface"),
+        provenance: language_core_provenance(Lang::Python),
         dependencies: Vec::new(),
         status: EvidenceStatus::Asserted,
     });
@@ -346,7 +355,7 @@ pub(super) fn lookup_import_consumer(lookup: Symbol) -> (Il, NodeId) {
             module_hash: stable_symbol_hash("tables"),
             exported_hash: stable_symbol_hash("LOOKUP"),
         }),
-        provenance: test_provenance("import"),
+        provenance: language_core_provenance(importer.meta.lang),
         dependencies: Vec::new(),
         status: EvidenceStatus::Asserted,
     });

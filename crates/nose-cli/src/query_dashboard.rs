@@ -1,6 +1,7 @@
 use super::query_model::*;
 use super::query_views::{loc_cell, metrics_cell};
 use crate::legacy_prelude::*;
+use crate::query_semantic_packs::with_semantic_packs;
 
 /// Print a block of candidate rows in aligned columns (location · metrics · drill command),
 /// coloured. Widths are computed from each cell's visible length so the ANSI codes never
@@ -51,6 +52,7 @@ pub(super) fn render_query_dashboard(
     baseline_cmp: Option<&BaselineComparison>,
     since: Option<&BaselineComparison>,
     markdown: &[nose_markdown::Family],
+    semantic_packs: &[serde_json::Value],
 ) {
     // Default surface, slice-folds removed (shown under their primary) — matches analysis.
     let def: Vec<&nose_detect::RefactorFamily> = families
@@ -73,27 +75,30 @@ pub(super) fn render_query_dashboard(
             .collect();
         println!(
             "{}",
-            serde_json::json!({
-                "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
-                "tool": "nose",
-                "view": "dashboard",
-                "path": path,
-                "summary": {
-                    "scanned_files": scope.files,
-                    "families": def.len(),
-                    "by_confidence": {"exact": count("exact"), "subdag": count("subdag"),
-                        "copy_paste": count("copy-paste"), "similar": count("similar")},
-                    "reinvented": reinvented_prod,
-                    "shown": top.len(),
-                },
-                "families": top,
-                "top_candidates": top,
-                // Markdown near-duplicate families (separate prose engine). Additive key —
-                // query-JSON consumers that don't know it simply ignore it.
-                "markdown": markdown::families_json(markdown),
-                "next": [format!("nose query {path} sort=extractability"), format!("nose query {path} group=dir"),
-                    format!("nose query {path} witness=exact"), format!("nose query {path} all")],
-            })
+            with_semantic_packs(
+                serde_json::json!({
+                    "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
+                    "tool": "nose",
+                    "view": "dashboard",
+                    "path": path,
+                    "summary": {
+                        "scanned_files": scope.files,
+                        "families": def.len(),
+                        "by_confidence": {"exact": count("exact"), "subdag": count("subdag"),
+                            "copy_paste": count("copy-paste"), "similar": count("similar")},
+                        "reinvented": reinvented_prod,
+                        "shown": top.len(),
+                    },
+                    "families": top,
+                    "top_candidates": top,
+                    // Markdown near-duplicate families (separate prose engine). Additive key —
+                    // query-JSON consumers that don't know it simply ignore it.
+                    "markdown": markdown::families_json(markdown),
+                    "next": [format!("nose query {path} sort=extractability"), format!("nose query {path} group=dir"),
+                        format!("nose query {path} witness=exact"), format!("nose query {path} all")],
+                }),
+                semantic_packs
+            )
         );
         return;
     }

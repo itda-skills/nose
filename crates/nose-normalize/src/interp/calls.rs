@@ -7,7 +7,7 @@ impl<'a> Interp<'a> {
             _ => return self.eval_user_call(node, env), // self-recursion, else opaque
         };
         let kids = self.il.children(node).to_vec();
-        if !admitted_builtin_semantics_at_call(self.il, node, b) {
+        if !admitted_builtin_semantics_at_call_with_interner(self.il, self.interner, node, b) {
             // Unproven builtin spelling: an opaque, identified operation — not a bail.
             return self.opaque_call(sym_id(0xCA11_B170, &[hashed(&b)]), &kids, env);
         }
@@ -245,7 +245,7 @@ impl<'a> Interp<'a> {
     pub(super) fn proven_call_target(&self, call: NodeId) -> Option<NodeId> {
         let mut found = None;
         for &root in &self.callable_roots {
-            if !direct_function_call_target_at_call(self.il, call, root) {
+            if !direct_function_call_target_at_call(self.il, self.interner, call, root) {
                 continue;
             }
             if found.replace(root).is_some() {
@@ -311,7 +311,12 @@ impl<'a> Interp<'a> {
     ) -> R<Option<Flow>> {
         if self.il.kind(e) != NodeKind::Call
             || !matches!(self.il.node(e).payload, Payload::Builtin(Builtin::Append))
-            || !admitted_builtin_semantics_at_call(self.il, e, Builtin::Append)
+            || !admitted_builtin_semantics_at_call_with_interner(
+                self.il,
+                self.interner,
+                e,
+                Builtin::Append,
+            )
         {
             return Ok(None);
         }

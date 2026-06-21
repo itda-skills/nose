@@ -15,7 +15,9 @@ pub(in crate::library_api) use api_records::{
 };
 pub use api_records::{
     library_api_dependency_id_for_canonical_builtin_call,
+    library_api_dependency_id_for_canonical_builtin_call_with_interner,
     library_api_dependency_id_for_canonical_builtin_method_call,
+    library_api_dependency_id_for_canonical_builtin_method_call_with_interner,
 };
 pub(in crate::library_api) use domain::{
     domain_dependency_id_for_receiver_requirement, domain_or_sequence_dependency_ids,
@@ -53,7 +55,14 @@ pub fn library_api_receiver_dependencies_for_call_with_cache(
     match callee {
         LibraryApiCalleeContract::Method { method, receiver } => {
             let receiver_node = method_callee_receiver(il, interner, callee_node, method)?;
-            method_receiver_dependency_ids(il, interner, receiver_node, receiver, args, cache)
+            let mut dependencies =
+                method_receiver_dependency_ids(il, interner, receiver_node, receiver, args, cache)?;
+            if receiver == MethodReceiverContract::UnshadowedGlobal("Math") {
+                dependencies.extend(integer_value_argument_dependency_ids(
+                    il, interner, args, cache,
+                )?);
+            }
+            Some(dependencies)
         }
         LibraryApiCalleeContract::IteratorAdapterMethod { method, receiver } => {
             let receiver_node = method_callee_receiver(il, interner, callee_node, method)?;
@@ -87,6 +96,37 @@ pub fn library_api_property_dependencies_for_field_with_cache(
     }
     let receiver_node = il.children(field).first().copied()?;
     method_receiver_dependency_ids(il, interner, receiver_node, receiver, &[], cache)
+}
+
+fn integer_value_argument_dependency_ids(
+    il: &Il,
+    interner: &Interner,
+    args: &[NodeId],
+    cache: &mut LibraryApiDependencyCache,
+) -> Option<Vec<EvidenceId>> {
+    let mut dependencies = Vec::new();
+    for &arg in args {
+        if matches!(il.node(arg).payload, Payload::LitInt(_)) {
+            continue;
+        }
+        let dependency = domain_dependency_id_for_receiver_requirement(
+            il,
+            interner,
+            arg,
+            DomainRequirement::Integer,
+            cache,
+        )
+        .or_else(|| {
+            library_api_dependency_id_for_receiver_domain_requirement(
+                il,
+                interner,
+                arg,
+                DomainRequirement::Integer,
+            )
+        })?;
+        dependencies.push(dependency);
+    }
+    Some(dependencies)
 }
 
 pub(in crate::library_api) fn method_receiver_dependency_ids(
@@ -367,10 +407,25 @@ pub(in crate::library_api) fn symbol_dependency_id_for_node(
     expected: SymbolEvidenceKind,
 ) -> Option<EvidenceId> {
     let anchor = EvidenceAnchor::node(il.node(node).span, il.kind(node));
+    let requires_admitted_record = matches!(expected, SymbolEvidenceKind::UnshadowedGlobal { .. });
+    if requires_admitted_record
+        && !matches!(
+            language_core_symbol_identity_at_anchor_matches(
+                il,
+                il.node(node).span,
+                il.kind(node),
+                expected
+            ),
+            EvidenceResolution::Found(true)
+        )
+    {
+        return None;
+    }
     il.evidence_anchored_at(anchor.span()).find_map(|record| {
         (record.anchor == anchor
             && record.status == EvidenceStatus::Asserted
             && record.kind == EvidenceKind::Symbol(expected)
+            && (!requires_admitted_record || symbol_record_has_admitted_provenance(il, record))
             && il.evidence_dependencies_asserted(record))
         .then_some(record.id)
     })
@@ -383,10 +438,26 @@ pub(in crate::library_api) fn imported_symbol_dependency_id_for_node(
     expected: SymbolEvidenceKind,
 ) -> Option<EvidenceId> {
     let anchor = EvidenceAnchor::node(il.node(node).span, il.kind(node));
+    let requires_admitted_record = matches!(expected, SymbolEvidenceKind::ImportedNamespace { .. });
+    if requires_admitted_record
+        && !matches!(
+            language_core_symbol_identity_at_anchor_matches(
+                il,
+                il.node(node).span,
+                il.kind(node),
+                expected
+            ),
+            EvidenceResolution::Found(true)
+        )
+    {
+        return None;
+    }
     il.evidence_anchored_at(anchor.span()).find_map(|record| {
         (record.anchor == anchor
             && record.status == EvidenceStatus::Asserted
             && record.kind == EvidenceKind::Symbol(expected)
+            && (!requires_admitted_record || symbol_record_has_admitted_provenance(il, record))
+            && (!requires_admitted_record || il.evidence_dependencies_asserted(record))
             && imported_occurrence_symbol_dependencies_valid(il, interner, record, expected))
         .then_some(record.id)
     })

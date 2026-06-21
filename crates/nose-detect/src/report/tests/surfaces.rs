@@ -20,7 +20,7 @@ fn pack_facing_laws_become_family_provenance_only_when_registered() {
     assert_eq!(family.semantic_laws.len(), 1);
     assert_eq!(
         family.semantic_laws[0].pack_id,
-        nose_semantics::FIRST_PARTY_VALUE_LAW_PACK_ID
+        nose_semantics::VALUE_GRAPH_LAW_PACK_ID
     );
     assert_eq!(
         family.semantic_laws[0].law_id,

@@ -2,6 +2,7 @@ use super::query_model::*;
 use crate::divergence;
 use crate::legacy_prelude::*;
 use crate::query_family_text::print_member_proposal;
+use crate::query_semantic_packs::with_semantic_packs;
 
 pub(super) fn print_query_prelude() {
     println!("nose finds duplication in code and docs.");
@@ -83,6 +84,7 @@ pub(super) fn render_query_base(
     path: &str,
     top: Option<usize>,
     json: bool,
+    semantic_packs: &[serde_json::Value],
 ) {
     let limit = query_row_limit(top);
     let fire_eligible = flagged.iter().filter(|d| d.fire_eligible).count();
@@ -98,22 +100,25 @@ pub(super) fn render_query_base(
         };
         println!(
             "{}",
-            serde_json::json!({
-                "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
-                "tool": "nose",
-                "view": "base",
-                "path": path,
-                "base": base_ref,
-                "summary": {
-                    "changed_files": changed_files,
-                    "divergences": flagged.len(),
-                    "shown_divergences": items.len(),
-                    "limit": limit_value,
-                    "fire_eligible": fire_eligible,
-                },
-                "items": items,
-                "next": [format!("nose query {path} base={base_ref} --fail-on any")],
-            })
+            with_semantic_packs(
+                serde_json::json!({
+                    "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
+                    "tool": "nose",
+                    "view": "base",
+                    "path": path,
+                    "base": base_ref,
+                    "summary": {
+                        "changed_files": changed_files,
+                        "divergences": flagged.len(),
+                        "shown_divergences": items.len(),
+                        "limit": limit_value,
+                        "fire_eligible": fire_eligible,
+                    },
+                    "items": items,
+                    "next": [format!("nose query {path} base={base_ref} --fail-on any")],
+                }),
+                semantic_packs
+            )
         );
         return;
     }
@@ -175,6 +180,7 @@ pub(super) fn render_query_reinvented(
     path: &str,
     top: Option<usize>,
     json: bool,
+    semantic_packs: &[serde_json::Value],
 ) {
     let shown: Vec<&nose_detect::ReinventedHelper> = reinvented
         .iter()
@@ -206,16 +212,19 @@ pub(super) fn render_query_reinvented(
             .collect();
         println!(
             "{}",
-            serde_json::json!({
-                "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
-                "tool": "nose",
-                "view": "reinvented",
-                "path": path,
-                "summary": {"findings": shown.len(), "shown": shown.len().min(limit),
-                    "in_test": in_test, "test_helper": test_helper},
-                "items": items,
-                "next": [format!("nose query {path} shape=call-existing-helper")],
-            })
+            with_semantic_packs(
+                serde_json::json!({
+                    "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
+                    "tool": "nose",
+                    "view": "reinvented",
+                    "path": path,
+                    "summary": {"findings": shown.len(), "shown": shown.len().min(limit),
+                        "in_test": in_test, "test_helper": test_helper},
+                    "items": items,
+                    "next": [format!("nose query {path} shape=call-existing-helper")],
+                }),
+                semantic_packs
+            )
         );
         return;
     }
@@ -273,6 +282,7 @@ fn query_list_json(
     widen: bool,
     baseline_cmp: Option<&BaselineComparison>,
     since: Option<&BaselineComparison>,
+    semantic_packs: &[serde_json::Value],
 ) -> serde_json::Value {
     let top = query_row_limit(q.top);
     let shown = sel.len().min(top);
@@ -294,15 +304,18 @@ fn query_list_json(
             )
         })
         .collect();
-    serde_json::json!({
-        "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
-        "tool": "nose",
-        "view": "list",
-        "path": path,
-        "summary": { "families": sel.len(), "shown": shown, "widened": widen },
-        "families": fams,
-        "next": [format!("nose query {path} group=dir"), format!("nose query {path} group=witness")],
-    })
+    with_semantic_packs(
+        serde_json::json!({
+            "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION,
+            "tool": "nose",
+            "view": "list",
+            "path": path,
+            "summary": { "families": sel.len(), "shown": shown, "widened": widen },
+            "families": fams,
+            "next": [format!("nose query {path} group=dir"), format!("nose query {path} group=witness")],
+        }),
+        semantic_packs,
+    )
 }
 
 #[allow(clippy::too_many_arguments)] // dataset + view + selection state for one list render
@@ -317,13 +330,24 @@ pub(super) fn render_query_list(
     json: bool,
     baseline_cmp: Option<&BaselineComparison>,
     since: Option<&BaselineComparison>,
+    semantic_packs: &[serde_json::Value],
 ) {
     let top = query_row_limit(q.top);
     let shown = sel.len().min(top);
     if json {
         println!(
             "{}",
-            query_list_json(sel, ov, opp, q, path, widen, baseline_cmp, since)
+            query_list_json(
+                sel,
+                ov,
+                opp,
+                q,
+                path,
+                widen,
+                baseline_cmp,
+                since,
+                semantic_packs,
+            )
         );
         return;
     }
@@ -419,6 +443,7 @@ struct GroupAgg {
     exemplar_row: String,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn render_query_group(
     sel: &[&nose_detect::RefactorFamily],
     field: &str,
@@ -427,6 +452,7 @@ pub(super) fn render_query_group(
     json: bool,
     baseline_cmp: Option<&BaselineComparison>,
     since: Option<&BaselineComparison>,
+    semantic_packs: &[serde_json::Value],
 ) {
     use std::collections::HashMap;
     let key = |f: &nose_detect::RefactorFamily| -> String {
@@ -486,10 +512,13 @@ pub(super) fn render_query_group(
             .collect();
         println!(
             "{}",
-            serde_json::json!({
-                "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION, "tool": "nose", "view": "group", "path": path,
-                "field": field, "groups": groups,
-            })
+            with_semantic_packs(
+                serde_json::json!({
+                    "schema_version": schema_versions::QUERY_JSON_SCHEMA_VERSION, "tool": "nose", "view": "group", "path": path,
+                    "field": field, "groups": groups,
+                }),
+                semantic_packs
+            )
         );
         return;
     }

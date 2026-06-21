@@ -51,13 +51,38 @@ fn push_canonical_java_minmax_builtin_evidence(il: &mut Il, first_id: u32) {
         };
         let contract = library_scalar_integer_method_contract(il.meta.lang, method, arg_count)
             .expect("min/max integer contract");
-        il.evidence.push(library_api_contract_evidence(
+        let math_id = next_id;
+        next_id += 1;
+        il.evidence.push(language_core_symbol_evidence(
+            math_id,
+            il.meta.lang,
+            EvidenceAnchor::node(il.node(node).span, NodeKind::Var),
+            SymbolEvidenceKind::UnshadowedGlobal {
+                name_hash: stable_symbol_hash("Math"),
+            },
+        ));
+        let mut dependencies = vec![EvidenceId(math_id)];
+        let args = il.children(node).to_vec();
+        for arg in args {
+            if matches!(il.node(arg).payload, Payload::LitInt(_)) {
+                continue;
+            }
+            let arg_id = next_id;
+            next_id += 1;
+            il.evidence.push(evidence(
+                arg_id,
+                EvidenceAnchor::node(il.node(arg).span, il.kind(arg)),
+                EvidenceKind::Domain(DomainEvidence::Integer),
+            ));
+            dependencies.push(EvidenceId(arg_id));
+        }
+        il.evidence.push(java_stdlib_math_evidence(
             next_id,
             il.node(node).span,
             contract.id,
             contract.callee,
             arg_count as u16,
-            Vec::new(),
+            dependencies,
         ));
         next_id += 1;
     }

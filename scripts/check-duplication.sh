@@ -71,6 +71,12 @@ set -euo pipefail
 # `body_depends_on_iter` / `foreach_effect_body_depends_on_iter` / `single_branch_statement`,
 # folded under the loop-effect family in human output. It is tracked design debt, not code
 # introduced here.
+#
+# 36 -> 55 (builtin semantic-pack migration): moving language/library/protocol evidence into
+# pack-owned provenance and file-length-compliant modules makes many existing semantic-evidence
+# test helpers/resolver negatives visible as separate near families. A few production families are
+# known semantic-kernel plumbing made more explicit by the migration. Reviewed in docs/dogfooding.md;
+# accepted as migration debt rather than deduped inside the architecture move.
 BIN="${NOSE_BIN:-./target/release/nose}"
 BASELINE="${NOSE_DUP_BASELINE:-scripts/duplication-baseline.json}"
 

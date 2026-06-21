@@ -166,8 +166,9 @@ fn nullish_global_value_requires_symbol_evidence() {
         "raw undefined spelling must not prove the nullish constant"
     );
 
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_evidence(
         0,
+        Lang::JavaScript,
         EvidenceAnchor::node(sp(1), NodeKind::Var),
         EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("undefined"),
@@ -208,7 +209,8 @@ fn raw_sequence_tags_do_not_prove_value_graph_surfaces() {
         ValOp::Seq(SEQ_VALUE_COLLECTION)
     ));
 
-    il.evidence.push(collection_sequence_evidence(0, sp(21)));
+    il.evidence
+        .push(collection_sequence_evidence(0, Lang::JavaScript, sp(21)));
     let mut builder = Builder::new(&il, &interner);
     let proven = builder.eval(seq, &FxHashMap::default());
     assert!(matches!(

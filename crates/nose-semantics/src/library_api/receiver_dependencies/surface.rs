@@ -13,25 +13,10 @@ pub(in crate::library_api) fn sequence_surface_dependency_id_for_receiver(
     if !sequence_surface_satisfies_method_receiver(surface, contract) {
         return None;
     }
-    let anchor = EvidenceAnchor::sequence(il.node(receiver).span);
-    let mut found = None;
-    for record in il.evidence_anchored_at(anchor.span()) {
-        let EvidenceKind::SequenceSurface(kind) = record.kind else {
-            continue;
-        };
-        if record.anchor != anchor
-            || record.status != EvidenceStatus::Asserted
-            || !il.evidence_dependencies_asserted(record)
-        {
-            continue;
-        }
-        match found {
-            None => found = Some((kind, record.id)),
-            Some((existing, _)) if existing == kind => {}
-            Some(_) => return None,
-        }
+    match sequence_surface_evidence_record_at_sequence_span(il, il.node(receiver).span) {
+        EvidenceResolution::Found((_, id)) => Some(id),
+        EvidenceResolution::Missing | EvidenceResolution::Ambiguous => None,
     }
-    found.map(|(_, id)| id)
 }
 
 pub(in crate::library_api) fn static_index_membership_receiver_dependency_id(
@@ -59,25 +44,12 @@ pub(in crate::library_api) fn static_index_membership_receiver_dependency_id_at_
     if !static_index_membership_receiver_shape_matches(il, interner, receiver, contract) {
         return None;
     }
-    let anchor = EvidenceAnchor::sequence(span);
-    let mut found = None;
-    for record in il.evidence_anchored_at(anchor.span()) {
-        let EvidenceKind::SequenceSurface(kind) = record.kind else {
-            continue;
-        };
-        if record.anchor != anchor
-            || record.status != EvidenceStatus::Asserted
-            || !il.evidence_dependencies_asserted(record)
-        {
-            continue;
-        }
-        match found {
-            None => found = Some((kind, record.id)),
-            Some((existing, _)) if existing == kind => {}
-            Some(_) => return None,
-        }
+    match sequence_surface_evidence_record_at_sequence_span(il, span) {
+        EvidenceResolution::Found((SequenceSurfaceKind::Collection, id)) => Some(id),
+        EvidenceResolution::Found(_)
+        | EvidenceResolution::Missing
+        | EvidenceResolution::Ambiguous => None,
     }
-    found.and_then(|(kind, id)| (kind == SequenceSurfaceKind::Collection).then_some(id))
 }
 
 pub(in crate::library_api) fn static_index_membership_receiver_shape_matches(

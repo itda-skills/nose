@@ -27,7 +27,7 @@ fn value_domain_inference_does_not_treat_python_repetition_as_numeric_proof() {
     assert_eq!(
         inferred_domains_for_multiplied_literal(Lang::Rust),
         vec![ValueDomain::Number],
-        "Rust `*` remains a strict numeric operator for the first-party language profile"
+        "Rust `*` remains a strict numeric operator for the builtin language profile"
     );
 }
 
@@ -59,8 +59,143 @@ fn first_party_profile_wraps_each_language() {
     for &lang in ALL_LANGS {
         let profile = semantics(lang);
         assert_eq!(profile.lang(), lang);
-        assert_eq!(profile.pack_id(), FIRST_PARTY_PACK_ID);
-        assert_eq!(profile.trust(), PackTrust::DefaultFirstParty);
+        assert_eq!(profile.pack_id(), builtin_language_pack_id(lang));
+        assert_eq!(profile.trust(), PackTrust::BuiltinDefault);
+    }
+}
+
+#[test]
+fn language_core_evidence_provenance_covers_each_language() {
+    let expected = [
+        (
+            Lang::Python,
+            PYTHON_LANGUAGE_PACK_ID,
+            PYTHON_LANGUAGE_CORE_PRODUCER_ID,
+        ),
+        (
+            Lang::JavaScript,
+            JS_TS_LANGUAGE_PACK_ID,
+            JS_TS_LANGUAGE_CORE_PRODUCER_ID,
+        ),
+        (
+            Lang::TypeScript,
+            JS_TS_LANGUAGE_PACK_ID,
+            JS_TS_LANGUAGE_CORE_PRODUCER_ID,
+        ),
+        (Lang::Go, GO_LANGUAGE_PACK_ID, GO_LANGUAGE_CORE_PRODUCER_ID),
+        (
+            Lang::Rust,
+            RUST_LANGUAGE_PACK_ID,
+            RUST_LANGUAGE_CORE_PRODUCER_ID,
+        ),
+        (
+            Lang::Java,
+            JAVA_LANGUAGE_PACK_ID,
+            JAVA_LANGUAGE_CORE_PRODUCER_ID,
+        ),
+        (Lang::C, C_LANGUAGE_PACK_ID, C_LANGUAGE_CORE_PRODUCER_ID),
+        (
+            Lang::Ruby,
+            RUBY_LANGUAGE_PACK_ID,
+            RUBY_LANGUAGE_CORE_PRODUCER_ID,
+        ),
+        (
+            Lang::Swift,
+            SWIFT_LANGUAGE_PACK_ID,
+            SWIFT_LANGUAGE_CORE_PRODUCER_ID,
+        ),
+        (
+            Lang::Css,
+            CSS_LANGUAGE_PACK_ID,
+            CSS_LANGUAGE_CORE_PRODUCER_ID,
+        ),
+        (
+            Lang::Vue,
+            HTML_EMBEDDED_LANGUAGE_PACK_ID,
+            HTML_EMBEDDED_LANGUAGE_CORE_PRODUCER_ID,
+        ),
+        (
+            Lang::Svelte,
+            HTML_EMBEDDED_LANGUAGE_PACK_ID,
+            HTML_EMBEDDED_LANGUAGE_CORE_PRODUCER_ID,
+        ),
+        (
+            Lang::Html,
+            HTML_EMBEDDED_LANGUAGE_PACK_ID,
+            HTML_EMBEDDED_LANGUAGE_CORE_PRODUCER_ID,
+        ),
+    ];
+    for (lang, pack_id, producer_id) in expected {
+        assert_eq!(
+            language_core_evidence_provenance(lang),
+            (pack_id, producer_id)
+        );
+    }
+}
+
+#[test]
+fn language_source_fact_provenance_covers_each_language() {
+    let expected = [
+        (
+            Lang::Python,
+            PYTHON_LANGUAGE_PACK_ID,
+            PYTHON_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (
+            Lang::JavaScript,
+            JS_TS_LANGUAGE_PACK_ID,
+            JS_TS_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (
+            Lang::TypeScript,
+            JS_TS_LANGUAGE_PACK_ID,
+            JS_TS_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (Lang::Go, GO_LANGUAGE_PACK_ID, GO_SOURCE_FACT_PRODUCER_ID),
+        (
+            Lang::Rust,
+            RUST_LANGUAGE_PACK_ID,
+            RUST_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (
+            Lang::Java,
+            JAVA_LANGUAGE_PACK_ID,
+            JAVA_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (Lang::C, C_LANGUAGE_PACK_ID, C_SOURCE_FACT_PRODUCER_ID),
+        (
+            Lang::Ruby,
+            RUBY_LANGUAGE_PACK_ID,
+            RUBY_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (
+            Lang::Swift,
+            SWIFT_LANGUAGE_PACK_ID,
+            SWIFT_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (Lang::Css, CSS_LANGUAGE_PACK_ID, CSS_SOURCE_FACT_PRODUCER_ID),
+        (
+            Lang::Vue,
+            HTML_EMBEDDED_LANGUAGE_PACK_ID,
+            HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (
+            Lang::Svelte,
+            HTML_EMBEDDED_LANGUAGE_PACK_ID,
+            HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (
+            Lang::Html,
+            HTML_EMBEDDED_LANGUAGE_PACK_ID,
+            HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID,
+        ),
+    ];
+
+    for (lang, pack_id, producer_id) in expected {
+        assert_eq!(
+            language_source_fact_provenance(lang),
+            (pack_id, producer_id)
+        );
     }
 }
 

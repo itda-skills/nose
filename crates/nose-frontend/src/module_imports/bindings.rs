@@ -1,9 +1,6 @@
 use super::snapshot::{snapshot_subtree, SubtreeSnapshot};
-use nose_il::{
-    EvidenceAnchor, EvidenceId, EvidenceKind, EvidenceStatus, Il, ImportEvidenceKind, Interner,
-    NodeId, NodeKind, Payload, Symbol, UnitKind,
-};
-use nose_semantics::{import_fact_evidence_rhs, ImportFactKind};
+use nose_il::{EvidenceId, Il, Interner, NodeId, NodeKind, Payload, Symbol, UnitKind};
+use nose_semantics::{import_fact_proof_rhs, ImportFactKind};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 pub(super) struct ImportBindingProof {
@@ -79,34 +76,16 @@ pub(super) fn import_binding_key(il: &Il, stmt: NodeId) -> Option<(u64, u64)> {
 
 pub(super) fn import_binding_proof(il: &Il, stmt: NodeId) -> Option<ImportBindingProof> {
     let rhs = assignment_rhs(il, stmt)?;
-    let fact = import_fact_evidence_rhs(il, rhs)?;
+    let proof = import_fact_proof_rhs(il, rhs)?;
+    let fact = proof.fact;
     if fact.kind != ImportFactKind::Binding {
         return None;
     }
     let exported_hash = fact.exported_hash?;
-    let evidence = import_fact_evidence_id_for_rhs(il, rhs)?;
     Some(ImportBindingProof {
         module_hash: fact.module_hash,
         exported_hash,
-        evidence,
-    })
-}
-
-fn import_fact_evidence_id_for_rhs(il: &Il, rhs: NodeId) -> Option<EvidenceId> {
-    let span = il.node(rhs).span;
-    il.evidence.iter().find_map(|record| {
-        if record.status != EvidenceStatus::Asserted
-            || record.anchor != EvidenceAnchor::sequence(span)
-        {
-            return None;
-        }
-        matches!(
-            record.kind,
-            EvidenceKind::Import(
-                ImportEvidenceKind::Binding { .. } | ImportEvidenceKind::Namespace { .. }
-            )
-        )
-        .then_some(record.id)
+        evidence: proof.evidence,
     })
 }
 

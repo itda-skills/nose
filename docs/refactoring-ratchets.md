@@ -129,10 +129,10 @@ and behavior easier to reason about:
   field-state proof, statement execution, expression evaluation, call/builtin
   handling, higher-order evaluation, and oracle tests now live in focused
   `nose-normalize/src/interp/*` modules;
-- keep first-party call-target evidence as a small pass root; direct in-file
-  function targets, scope/binding collection, imported call-target materialization,
-  and tests now live in focused `nose-normalize/src/call_target_evidence/*`
-  modules;
+- keep builtin language-core call-target evidence as a small pass root; direct
+  in-file function targets, scope/binding collection, imported call-target
+  materialization, and tests now live in focused
+  `nose-normalize/src/call_target_evidence/*` modules;
 - keep imperative frontend language lowerers split by lowering concern; C, Go,
   Java, Python, Ruby, Rust, and Swift roots are thin entry points, while items,
   statements/control, expressions/calls, imports/factories, language-specific

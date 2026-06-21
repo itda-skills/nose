@@ -25,10 +25,15 @@ impl<'a> StrictFacts<'a> {
         self.immutable_names.contains(&name)
     }
 
-    pub(super) fn direct_function_target_at_call(&self, il: &Il, call: NodeId) -> bool {
+    pub(super) fn direct_function_target_at_call(
+        &self,
+        il: &Il,
+        interner: &Interner,
+        call: NodeId,
+    ) -> bool {
         self.function_roots
             .iter()
-            .any(|&root| direct_function_call_target_at_call(il, call, root))
+            .any(|&root| direct_function_call_target_at_call(il, interner, call, root))
     }
 
     pub(super) fn direct_method_target_at_call(

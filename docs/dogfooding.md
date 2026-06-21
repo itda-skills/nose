@@ -19,7 +19,7 @@ included in the current ratchet so fixture/scaffolding copy-paste stays visible 
 of being policed only by the file-length gate. A family disappearing also requires a
 baseline/docs update, so an unrelated removal cannot mask a newly introduced duplicate.
 
-## Current tests-included ratchet baseline
+## 2026-06-19 tests-included ratchet baseline snapshot
 
 Reviewed on 2026-06-19 with the current binary and current tree. The production-only
 default surface reports 24 substantial families; the tests-included default surface
@@ -27,8 +27,9 @@ reports 36. The reviewed default-surface families below are accepted as pre-exis
 debt, not as permission to add more. Update the baseline only when the corresponding
 family delta is reviewed here.
 
-The exact machine baseline is the union of the retained family IDs below and the
-reviewed scope-expansion or refresh rows that follow:
+This is a historical snapshot of the first tests-included ratchet baseline. The exact
+current machine baseline is [`scripts/duplication-baseline.json`](../scripts/duplication-baseline.json);
+later sections record reviewed deltas from this 36-family state.
 
 `0a5ac734c56c9f54`, `0a5cdb261739af70`, `1267c115f7832175`, `1639812e75927a23`,
 `18b10c46c5eef924`, `1dfaba2582163d7c`, `1fc08105c8b5d5c0`, `209fdc39157ececd`,
@@ -260,3 +261,20 @@ statement body" skeleton, but the two loop-effect paths deliberately differ in t
 recording and recognizer contracts while `single_branch_statement` belongs to conditional-guard
 summarization. Extracting it would be a high-parameter helper that couples separate detector
 responsibilities, so the family is recorded as design debt and the budget is re-baselined to 28.
+
+## Budget 36 → 55 and builtin semantic-pack migration
+
+The builtin semantic-pack migration splits a large amount of semantic evidence coverage into
+pack-owned producer/provenance tests and smaller file-length-compliant modules. Re-running the
+dogfooding gate reports 55 default-surface substantial near families against the prior 36-family
+baseline: 28 current IDs are newly visible and 9 old baseline IDs are no longer reported.
+
+The new families were reviewed during the migration. Most are test scaffolding around pack-owned
+`LibraryApi` evidence records, resolver hard negatives, and generated-style builtin-pack report
+assertions. A few production families are known semantic-kernel plumbing that this PR intentionally
+made more explicit rather than abstracting away: language-core provenance helpers, sequence-surface
+provenance checks, span callee-dependency matchers, builtin evidence upsert helpers, and the
+pre-existing `Builder`/`FileReferents` whole-impl span. They are candidates for later cleanup, but
+deduping them inside this migration would couple unrelated pack slices and slow the safer
+architecture move. The baseline is therefore refreshed to 55 while keeping the gate as a ratchet:
+future increases still need dedupe or a fresh documented acceptance.

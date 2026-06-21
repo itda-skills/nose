@@ -150,8 +150,6 @@ pub struct ValueLawProvenance {
     pub proof_obligation_id: String,
 }
 
-const VALUE_GRAPH_LAW_PACK_ID: &str = FIRST_PARTY_VALUE_LAW_PACK_ID;
-
 const FACTOR_DISTRIBUTE_REQUIREMENTS: &[&str] = &[
     "ValueDomain.Number for distributed operands and shared factor",
     "numeric domain comes from a strict numeric operator surface or explicit domain evidence",

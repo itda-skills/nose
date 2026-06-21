@@ -72,6 +72,48 @@ fn source_fact_evidence_conflicts_fail_closed() {
 }
 
 #[test]
+fn c_unsigned_32_cast_fact_requires_c_language_pack_provenance() {
+    let build = || {
+        let mut b = IlBuilder::new(FileId(0));
+        let cast = b.add(NodeKind::Call, Payload::None, sp(10), &[]);
+        let root = b.add(NodeKind::Block, Payload::None, sp(10), &[cast]);
+        (finish_il(b, root, Lang::C), cast)
+    };
+
+    let (mut wrong_pack, cast) = build();
+    wrong_pack.evidence.push(evidence(
+        0,
+        EvidenceAnchor::source_span(sp(10)),
+        EvidenceKind::Source(SourceFactKind::Cast(SourceCastKind::CUnsigned32)),
+        EvidenceStatus::Asserted,
+    ));
+    assert_eq!(source_cast_at_node(&wrong_pack, cast), None);
+
+    let (mut wrong_producer, cast) = build();
+    let mut record = c_unsigned_32_source_cast_evidence(
+        0,
+        EvidenceAnchor::source_span(sp(10)),
+        EvidenceStatus::Asserted,
+        Vec::new(),
+    );
+    record.provenance.rule_hash = Some(stable_symbol_hash("c.source.cast.other"));
+    wrong_producer.evidence.push(record);
+    assert_eq!(source_cast_at_node(&wrong_producer, cast), None);
+
+    let (mut admitted, cast) = build();
+    admitted.evidence.push(c_unsigned_32_source_cast_evidence(
+        0,
+        EvidenceAnchor::source_span(sp(10)),
+        EvidenceStatus::Asserted,
+        Vec::new(),
+    ));
+    assert_eq!(
+        source_cast_at_node(&admitted, cast),
+        Some(SourceCastKind::CUnsigned32)
+    );
+}
+
+#[test]
 fn source_range_and_pattern_facts_are_span_keyed_evidence() {
     let mut b = IlBuilder::new(FileId(0));
     let range = b.add(NodeKind::Seq, Payload::None, sp(12), &[]);

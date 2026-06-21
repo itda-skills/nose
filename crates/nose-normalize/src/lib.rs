@@ -295,7 +295,7 @@ pub fn normalize(il: &Il, interner: &Interner, opts: &NormalizeOptions) -> Il {
     // (the oracle interprets the original recursion to validate this rewrite). First in the
     // phase, so the loops it emits flow through dataflow / cfg-norm / the value graph and
     // converge with hand-written iteration.
-    out = recursion::run(&out);
+    out = recursion::run(&out, interner);
     timer.lap("recursion");
     if opts.dataflow {
         out = dataflow::run(&out);

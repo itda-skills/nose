@@ -1,6 +1,6 @@
 //! Library and standard-library API contracts plus occurrence-evidence admission.
 //!
-//! Contract rows describe first-party API semantics. Admission remains separate:
+//! Contract rows describe builtin API semantics. Admission remains separate:
 //! consumers only rely on a contract after matching `LibraryApi` evidence and its
 //! source/import/symbol/domain dependencies.
 
@@ -37,6 +37,7 @@ pub(in crate::library_api) use registry::{
 pub use resolvers::*;
 pub use rows::*;
 
+pub(in crate::library_api) use admission::library_api_record_provenance_matches_contract;
 pub use admission::{
     library_api_contract_evidence_at_call_span, library_api_contract_evidence_for_call,
     library_api_contract_evidence_for_node,
@@ -47,7 +48,9 @@ pub use imported_occurrences::{
 };
 pub use receiver_dependencies::{
     library_api_dependency_id_for_canonical_builtin_call,
+    library_api_dependency_id_for_canonical_builtin_call_with_interner,
     library_api_dependency_id_for_canonical_builtin_method_call,
+    library_api_dependency_id_for_canonical_builtin_method_call_with_interner,
     library_api_property_dependencies_for_field_with_cache,
     library_api_receiver_dependencies_for_call,
     library_api_receiver_dependencies_for_call_with_cache, LibraryApiDependencyCache,

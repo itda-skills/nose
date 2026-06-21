@@ -429,3 +429,58 @@ pub(crate) fn json_array_strings<'a>(value: &'a serde_json::Value, key: &str) ->
         })
         .collect()
 }
+
+pub(crate) fn assert_query_json_reports_semantic_packs(json: &serde_json::Value) {
+    let packs = json["semantic_packs"]
+        .as_array()
+        .unwrap_or_else(|| panic!("query JSON should report semantic_packs: {json}"));
+    for id in [
+        "nose.first_party",
+        "nose.lang.python",
+        "nose.lang.javascript-typescript",
+        "nose.lang.go",
+        "nose.lang.rust",
+        "nose.lang.java",
+        "nose.lang.c",
+        "nose.lang.ruby",
+        "nose.lang.swift",
+        "nose.lang.css",
+        "nose.lang.html",
+        "nose.python.builtins.collection_factories",
+        "nose.python.stdlib.collection_factories",
+        "nose.python.stdlib.math",
+        "nose.ruby.stdlib.set",
+        "nose.rust.stdlib.vec",
+        "nose.rust.stdlib.option",
+        "nose.rust.stdlib.integer_methods",
+        "nose.rust.stdlib.collection_factories",
+        "nose.rust.stdlib.map_factories",
+        "nose.java.stdlib.math",
+        "nose.java.stdlib.map_factories",
+        "nose.java.stdlib.map_entries",
+        "nose.java.stdlib.collection_factories",
+        "nose.java.stdlib.collection_constructors",
+        "nose.java.stdlib.static_collection_adapters",
+        "nose.protocols.map_get",
+        "nose.protocols.map_get_default",
+        "nose.protocols.free_function_builtins",
+        "nose.protocols.receiver_membership",
+        "nose.protocols.map_key_views",
+        "nose.protocols.property_builtins",
+        "nose.protocols.builtin_method_calls",
+        "nose.protocols.iterator_identity_adapters",
+        "nose.javascript.builtins.promise",
+        "nose.javascript.builtins.array",
+        "nose.javascript.builtins.boolean",
+        "nose.javascript.builtins.regex",
+        "nose.javascript.builtins.static_index_membership",
+        "nose.javascript.builtins.collection_constructors",
+        "nose.python.stdlib.type_domain",
+        "nose.value_graph.laws",
+    ] {
+        assert!(
+            packs.iter().any(|pack| pack["id"] == id),
+            "query JSON should report builtin semantic pack {id}: {json}"
+        );
+    }
+}

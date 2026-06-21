@@ -355,8 +355,10 @@ pub fn admitted_java_map_entry_at_call(
     interner: &Interner,
     call: NodeId,
 ) -> Option<AdmittedLibraryApiCall<LibraryMapEntryFactoryContract>> {
-    admitted_named_receiver_method_call(il, interner, call, |receiver_name, method, _arg_count| {
-        library_java_map_entry_contract(il.meta.lang, receiver_name, method)
+    admitted_named_receiver_method_call(il, interner, call, |receiver_name, method, arg_count| {
+        (arg_count == 2)
+            .then(|| library_java_map_entry_contract(il.meta.lang, receiver_name, method))
+            .flatten()
     })
 }
 
@@ -366,6 +368,9 @@ pub fn admitted_java_map_entry_at_call_span(
     occurrence: LibraryApiSpanCall,
     method_hash: u64,
 ) -> Option<AdmittedLibraryApiSpanCall<LibraryMapEntryFactoryContract>> {
+    if occurrence.arg_count != 2 {
+        return None;
+    }
     let contract = library_java_map_entry_contract_by_hash(il.meta.lang, "Map", method_hash)?;
     admitted_library_span_call(il, interner, occurrence, contract)
 }

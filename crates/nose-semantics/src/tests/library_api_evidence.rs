@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments, clippy::too_many_lines)]
+
 use super::*;
 
 mod admission_resolvers;
@@ -16,7 +18,48 @@ fn library_api_record(
     library_api_record_with_arity(id, span, contract_id, callee, 1, status, dependencies)
 }
 
-fn library_api_record_with_arity(
+fn language_core_symbol_record(
+    id: u32,
+    anchor: EvidenceAnchor,
+    symbol: SymbolEvidenceKind,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+    lang: Lang,
+) -> EvidenceRecord {
+    language_core_evidence_with_dependencies(
+        id,
+        anchor,
+        EvidenceKind::Symbol(symbol),
+        status,
+        dependencies.iter().copied().map(EvidenceId).collect(),
+        lang,
+    )
+}
+
+fn library_api_record_with_provenance(
+    id: u32,
+    span: Span,
+    contract_id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+    pack_id: &str,
+    rule: &str,
+) -> EvidenceRecord {
+    library_api_record_with_provenance_and_arity(
+        id,
+        span,
+        contract_id,
+        callee,
+        1,
+        status,
+        dependencies,
+        pack_id,
+        rule,
+    )
+}
+
+fn library_api_record_with_provenance_and_arity(
     id: u32,
     span: Span,
     contract_id: LibraryApiContractId,
@@ -24,80 +67,94 @@ fn library_api_record_with_arity(
     arity: u16,
     status: EvidenceStatus,
     dependencies: &[u32],
+    pack_id: &str,
+    rule: &str,
 ) -> EvidenceRecord {
-    evidence_with_dependencies(
+    let mut record =
+        library_api_record_with_arity(id, span, contract_id, callee, arity, status, dependencies);
+    record.provenance.pack_hash = Some(stable_symbol_hash(pack_id));
+    record.provenance.rule_hash = Some(stable_symbol_hash(rule));
+    record
+}
+
+fn property_builtin_record(
+    id: u32,
+    span: Span,
+    contract: LibraryPropertyBuiltinContract,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance_and_arity(
         id,
-        EvidenceAnchor::node(span, NodeKind::Call),
-        EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
-            contract_hash: library_api_contract_id_hash(contract_id),
-            callee_hash: library_api_callee_contract_hash(callee),
-            arity,
-        }),
+        span,
+        contract.id,
+        contract.callee,
+        0,
         status,
-        dependencies.iter().copied().map(EvidenceId).collect(),
+        dependencies,
+        PROPERTY_BUILTIN_PROTOCOL_PACK_ID,
+        PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID,
     )
 }
 
-fn contract_status_for_call(
-    il: &Il,
-    interner: &Interner,
-    call: NodeId,
-    id: LibraryApiContractId,
-    callee: LibraryApiCalleeContract,
-) -> LibraryApiEvidenceStatus {
-    library_api_contract_evidence_for_call(il, interner, call, id, callee, 1)
-}
-
-fn java_list_of_import_evidence_il(
-    interner: &Interner,
-    import_in_root: bool,
-) -> (Il, NodeId, NodeId, Symbol, LibraryCollectionFactoryContract) {
-    let mut b = IlBuilder::new(FileId(0));
-    let local = interner.intern("List");
-    let lhs = b.add(NodeKind::Var, Payload::Name(local), sp(30), &[]);
-    let rhs = b.add(NodeKind::Seq, Payload::None, sp(30), &[]);
-    let import = b.add(NodeKind::Assign, Payload::None, sp(30), &[lhs, rhs]);
-    let receiver = b.add(NodeKind::Var, Payload::Name(local), sp(31), &[]);
-    let callee = b.add(
-        NodeKind::Field,
-        Payload::Name(interner.intern("of")),
-        sp(32),
-        &[receiver],
-    );
-    let arg = b.add(NodeKind::Lit, Payload::LitInt(1), sp(33), &[]);
-    let call = b.add(NodeKind::Call, Payload::None, sp(34), &[callee, arg]);
-    let root = if import_in_root {
-        b.add(NodeKind::Module, Payload::None, sp(29), &[import, call])
-    } else {
-        b.add(NodeKind::Func, Payload::None, sp(35), &[call])
-    };
-    let mut il = finish_il(b, root, Lang::Java);
-    let contract = library_java_collection_factory_contract(Lang::Java, "List", "of")
-        .expect("List.of contract");
-    let binding_symbol = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
-        module_hash: stable_symbol_hash("java.util"),
-        exported_hash: stable_symbol_hash("List"),
-    });
-    il.evidence.push(evidence(
-        0,
-        EvidenceAnchor::binding(sp(30), stable_symbol_hash("List")),
-        binding_symbol,
-        EvidenceStatus::Asserted,
-    ));
-    il.evidence.push(evidence_with_dependencies(
-        1,
-        EvidenceAnchor::node(sp(31), NodeKind::Var),
-        binding_symbol,
-        EvidenceStatus::Asserted,
-        vec![EvidenceId(0)],
-    ));
-    il.evidence.push(library_api_record(
-        2,
-        sp(34),
+fn python_builtin_collection_factory_record(
+    id: u32,
+    span: Span,
+    contract: LibraryCollectionFactoryContract,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance(
+        id,
+        span,
         contract.id,
         contract.callee,
-        EvidenceStatus::Asserted,
-        &[1],
-    ));
-    (il, call, root, local, contract)
+        status,
+        dependencies,
+        PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
+        PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
+    )
 }
+
+fn python_stdlib_collection_factory_record(
+    id: u32,
+    span: Span,
+    contract: LibraryCollectionFactoryContract,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance(
+        id,
+        span,
+        contract.id,
+        contract.callee,
+        status,
+        dependencies,
+        PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
+        PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+    )
+}
+
+fn python_stdlib_math_record(
+    id: u32,
+    span: Span,
+    contract: LibraryImportedNamespaceFunctionContract,
+    arity: u16,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance_and_arity(
+        id,
+        span,
+        contract.id,
+        contract.callee,
+        arity,
+        status,
+        dependencies,
+        PYTHON_STDLIB_MATH_PACK_ID,
+        PYTHON_STDLIB_MATH_PRODUCER_ID,
+    )
+}
+
+mod records;
+pub(super) use records::*;

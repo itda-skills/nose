@@ -29,6 +29,18 @@ fn js_static_index_membership_emits_occurrence_evidence() {
             )
         })
         .expect("static index membership should emit a LibraryApi occurrence");
+    assert_eq!(
+        api.provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID
+        ))
+    );
+    assert_eq!(
+        api.provenance.rule_hash,
+        Some(stable_symbol_hash(
+            JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PRODUCER_ID
+        ))
+    );
     assert!(api.dependencies.iter().any(|id| {
         il.evidence_record_by_id(*id).is_some_and(|record| {
             matches!(
@@ -87,6 +99,60 @@ fn core_lowering_emits_java_and_regex_library_api_occurrences() {
             library_api_callee_contract_hash(contract.callee),
         ),
         1
+    );
+    let regex_records = contract_api_records(&lo.evidence, contract.id, contract.callee);
+    assert_eq!(
+        regex_records[0].provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JS_LIKE_BUILTIN_REGEX_PACK_ID
+        ))
+    );
+    assert_eq!(
+        regex_records[0].provenance.rule_hash,
+        Some(stable_symbol_hash(JS_LIKE_BUILTIN_REGEX_PRODUCER_ID))
+    );
+}
+
+#[test]
+fn generic_source_facts_use_builtin_language_pack_provenance() {
+    let interner = Interner::new();
+    let mut lo = Lowering::new(FileId(0), b"", Lang::Python, &interner);
+    lo.record_source_fact(
+        sp_at(1),
+        SourceFactKind::Comprehension(nose_il::SourceComprehensionKind::PythonListComprehension),
+    );
+    let record = lo.evidence.last().expect("source fact evidence");
+    assert_eq!(
+        record.provenance.pack_hash,
+        Some(stable_symbol_hash(nose_semantics::PYTHON_LANGUAGE_PACK_ID))
+    );
+    assert_eq!(
+        record.provenance.rule_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::PYTHON_SOURCE_FACT_PRODUCER_ID
+        ))
+    );
+}
+
+#[test]
+fn generic_lowering_evidence_uses_builtin_language_core_provenance() {
+    let interner = Interner::new();
+    let mut lo = Lowering::new(FileId(0), b"", Lang::Java, &interner);
+    lo.record_evidence(
+        EvidenceAnchor::node(sp_at(1), NodeKind::Var),
+        EvidenceKind::Place(PlaceEvidenceKind::SelfReceiver),
+        "place_self_receiver",
+    );
+    let record = lo.evidence.last().expect("generic evidence");
+    assert_eq!(
+        record.provenance.pack_hash,
+        Some(stable_symbol_hash(nose_semantics::JAVA_LANGUAGE_PACK_ID))
+    );
+    assert_eq!(
+        record.provenance.rule_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::JAVA_LANGUAGE_CORE_PRODUCER_ID
+        ))
     );
 }
 

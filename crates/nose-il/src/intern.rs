@@ -63,10 +63,13 @@ pub const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
 /// compares a literal hash against a known name (`"asList"`, `"go_literal_zero_map"`, …).
 /// All those comparisons rely on this being one definition, so it lives here in `nose-il`
 /// rather than being re-derived per crate.
-pub fn stable_symbol_hash(name: &str) -> u64 {
+pub const fn stable_symbol_hash(name: &str) -> u64 {
     let mut h = FNV_OFFSET_BASIS;
-    for b in name.bytes() {
-        h = (h ^ b as u64).wrapping_mul(FNV_PRIME);
+    let bytes = name.as_bytes();
+    let mut idx = 0;
+    while idx < bytes.len() {
+        h = (h ^ bytes[idx] as u64).wrapping_mul(FNV_PRIME);
+        idx += 1;
     }
     h
 }

@@ -86,6 +86,18 @@ use nose_semantics::{
     sequence_surface_kind_for_tag, type_domain_from_source_text, ImportFactKind,
     LibraryApiCalleeContract, LibraryApiContractId, LibraryApiDependencyCache,
     MethodReceiverContract, StaticIndexMembershipReceiverContract,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+    JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
+    JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID,
+    JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID, JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PRODUCER_ID,
+    JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID, JS_LIKE_BUILTIN_BOOLEAN_PRODUCER_ID,
+    JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID, JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
+    JS_LIKE_BUILTIN_REGEX_PRODUCER_ID, JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PRODUCER_ID,
+    PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
+    PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID, PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+    PYTHON_STDLIB_MATH_PRODUCER_ID, RUBY_STDLIB_SET_PACK_ID, RUBY_STDLIB_SET_PRODUCER_ID,
+    RUST_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, RUST_STDLIB_MAP_FACTORY_PRODUCER_ID,
+    RUST_STDLIB_OPTION_PRODUCER_ID, RUST_STDLIB_VEC_PRODUCER_ID,
 };
 use tree_sitter::Node as TsNode;
 
@@ -121,6 +133,8 @@ pub(crate) struct Lowering<'a> {
     pub src: &'a [u8],
     pub lang: Lang,
     pub interner: &'a Interner,
+    pub language_core_provenance: EvidenceProvenance,
+    pub language_source_fact_provenance: EvidenceProvenance,
     pub units: Vec<Unit>,
     pub evidence: Vec<EvidenceRecord>,
     pub type_domain_aliases: TypeDomainAliases,
@@ -134,11 +148,20 @@ pub(crate) struct Lowering<'a> {
 
 impl<'a> Lowering<'a> {
     pub(crate) fn new(file: FileId, src: &'a [u8], lang: Lang, interner: &'a Interner) -> Self {
+        let (core_pack_id, core_producer_id) =
+            nose_semantics::language_core_evidence_provenance(lang);
+        let (source_pack_id, source_producer_id) =
+            nose_semantics::language_source_fact_provenance(lang);
         Lowering {
             b: IlBuilder::new(file),
             src,
             lang,
             interner,
+            language_core_provenance: builtin_evidence_provenance(core_pack_id, core_producer_id),
+            language_source_fact_provenance: builtin_evidence_provenance(
+                source_pack_id,
+                source_producer_id,
+            ),
             units: Vec::new(),
             evidence: Vec::new(),
             type_domain_aliases: TypeDomainAliases::default(),
@@ -201,6 +224,19 @@ impl<'a> Lowering<'a> {
         }
         id
     }
+}
+
+pub(crate) fn builtin_evidence_provenance(pack_id: &str, rule: &str) -> EvidenceProvenance {
+    EvidenceProvenance {
+        emitter: EvidenceEmitter::Builtin,
+        pack_hash: Some(stable_symbol_hash(pack_id)),
+        rule_hash: Some(stable_symbol_hash(rule)),
+    }
+}
+
+#[allow(dead_code)]
+pub(crate) fn first_party_evidence_provenance(pack_id: &str, rule: &str) -> EvidenceProvenance {
+    builtin_evidence_provenance(pack_id, rule)
 }
 
 #[cfg(test)]

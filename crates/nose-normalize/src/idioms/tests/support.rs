@@ -7,9 +7,17 @@ pub(super) use nose_il::{
     UnitKind,
 };
 pub(super) use nose_semantics::{
-    library_free_function_builtin_contract, library_free_name_map_factory_contract,
-    library_iterator_identity_adapter_contract, library_map_get_contract,
-    library_map_key_view_contract, library_method_call_contract,
+    language_core_evidence_provenance, library_free_function_builtin_contract,
+    library_free_name_map_factory_contract, library_iterator_identity_adapter_contract,
+    library_map_get_contract, library_map_get_default_contract, library_map_key_view_contract,
+    library_method_call_contract, library_receiver_membership_contract,
+    BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+    ITERATOR_IDENTITY_ADAPTER_PACK_ID, ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID,
+    MAP_GET_DEFAULT_PROTOCOL_PACK_ID, MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
+    MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID, MAP_KEY_VIEW_PROTOCOL_PACK_ID,
+    MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
+    RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
 };
 
 pub(super) fn sp() -> Span {
@@ -41,12 +49,65 @@ pub(super) fn evidence_with_dependencies(
         anchor,
         kind,
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(nose_semantics::FIRST_PARTY_PACK_ID)),
+            emitter: EvidenceEmitter::Builtin,
+            pack_hash: Some(stable_symbol_hash(nose_semantics::BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("test")),
         },
         dependencies,
         status,
+    }
+}
+
+pub(super) fn language_core_evidence(
+    id: u32,
+    lang: Lang,
+    anchor: EvidenceAnchor,
+    kind: EvidenceKind,
+    status: EvidenceStatus,
+) -> EvidenceRecord {
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor,
+        kind,
+        provenance: EvidenceProvenance {
+            emitter: EvidenceEmitter::Builtin,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
+        },
+        dependencies: Vec::new(),
+        status,
+    }
+}
+
+pub(super) fn language_core_symbol_evidence(
+    id: u32,
+    lang: Lang,
+    anchor: EvidenceAnchor,
+    symbol: SymbolEvidenceKind,
+    status: EvidenceStatus,
+) -> EvidenceRecord {
+    language_core_evidence(id, lang, anchor, EvidenceKind::Symbol(symbol), status)
+}
+
+pub(super) fn sequence_surface_evidence(
+    id: u32,
+    lang: Lang,
+    span: Span,
+    surface: SequenceSurfaceKind,
+) -> EvidenceRecord {
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor: EvidenceAnchor::sequence(span),
+        kind: EvidenceKind::SequenceSurface(surface),
+        provenance: EvidenceProvenance {
+            emitter: EvidenceEmitter::Builtin,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
+        },
+        dependencies: Vec::new(),
+        status: EvidenceStatus::Asserted,
     }
 }
 
@@ -67,11 +128,11 @@ pub(super) fn push_sequence_surface_evidence(
     surface: SequenceSurfaceKind,
 ) -> EvidenceId {
     let id = next_evidence_id(il);
-    il.evidence.push(evidence(
+    il.evidence.push(sequence_surface_evidence(
         id,
-        EvidenceAnchor::sequence(il.node(node).span),
-        EvidenceKind::SequenceSurface(surface),
-        EvidenceStatus::Asserted,
+        il.meta.lang,
+        il.node(node).span,
+        surface,
     ));
     EvidenceId(id)
 }
@@ -101,23 +162,79 @@ pub(super) fn push_receiver_method_library_api_evidence(
     let method = interner.resolve(method);
     let arg_count = args.len();
     let contract = library_map_get_contract(il.meta.lang, method, arg_count)
-        .map(|contract| (contract.id, contract.callee))
-        .or_else(|| {
-            library_map_key_view_contract(il.meta.lang, method, arg_count)
-                .map(|contract| (contract.id, contract.callee))
+        .map(|contract| {
+            (
+                contract.id,
+                contract.callee,
+                Some((MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID)),
+            )
         })
         .or_else(|| {
-            library_iterator_identity_adapter_contract(il.meta.lang, method, arg_count)
-                .map(|contract| (contract.id, contract.callee))
+            library_map_get_default_contract(il.meta.lang, method, arg_count).map(|contract| {
+                (
+                    contract.id,
+                    contract.callee,
+                    Some((
+                        MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
+                        MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
+                    )),
+                )
+            })
         })
         .or_else(|| {
-            library_method_call_contract(il.meta.lang, method, arg_count)
-                .map(|contract| (contract.id, contract.callee))
+            library_map_key_view_contract(il.meta.lang, method, arg_count).map(|contract| {
+                (
+                    contract.id,
+                    contract.callee,
+                    Some((
+                        MAP_KEY_VIEW_PROTOCOL_PACK_ID,
+                        MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
+                    )),
+                )
+            })
+        })
+        .or_else(|| {
+            library_receiver_membership_contract(il.meta.lang, method, arg_count).map(|contract| {
+                (
+                    contract.id,
+                    contract.callee,
+                    Some((
+                        RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
+                        RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
+                    )),
+                )
+            })
+        })
+        .or_else(|| {
+            library_iterator_identity_adapter_contract(il.meta.lang, method, arg_count).map(
+                |contract| {
+                    (
+                        contract.id,
+                        contract.callee,
+                        Some((
+                            ITERATOR_IDENTITY_ADAPTER_PACK_ID,
+                            ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID,
+                        )),
+                    )
+                },
+            )
+        })
+        .or_else(|| {
+            library_method_call_contract(il.meta.lang, method, arg_count).map(|contract| {
+                (
+                    contract.id,
+                    contract.callee,
+                    Some((
+                        BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+                        BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+                    )),
+                )
+            })
         })?;
     let dependencies =
         nose_semantics::library_api_receiver_dependencies_for_call(il, interner, call, contract.1)?;
     let id = next_evidence_id(il);
-    il.evidence.push(evidence_with_dependencies(
+    let mut record = evidence_with_dependencies(
         id,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -127,7 +244,12 @@ pub(super) fn push_receiver_method_library_api_evidence(
         }),
         EvidenceStatus::Asserted,
         dependencies,
-    ));
+    );
+    if let Some((pack_id, producer_id)) = contract.2 {
+        record.provenance.pack_hash = Some(stable_symbol_hash(pack_id));
+        record.provenance.rule_hash = Some(stable_symbol_hash(producer_id));
+    }
+    il.evidence.push(record);
     Some(EvidenceId(id))
 }
 
@@ -147,12 +269,13 @@ pub(super) fn push_free_function_builtin_library_api_evidence(
     let name = interner.resolve(symbol);
     let contract = library_free_function_builtin_contract(il.meta.lang, name, arg_count)?;
     let symbol_id = next_evidence_id(il);
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         symbol_id,
+        il.meta.lang,
         EvidenceAnchor::node(callee_span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash(name),
-        }),
+        },
         EvidenceStatus::Asserted,
     ));
     let id = next_evidence_id(il);
@@ -166,6 +289,11 @@ pub(super) fn push_free_function_builtin_library_api_evidence(
         }),
         EvidenceStatus::Asserted,
         vec![EvidenceId(symbol_id)],
+    ));
+    let record = il.evidence.last_mut().expect("just pushed API evidence");
+    record.provenance.pack_hash = Some(stable_symbol_hash(FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID));
+    record.provenance.rule_hash = Some(stable_symbol_hash(
+        FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
     ));
     Some(EvidenceId(id))
 }

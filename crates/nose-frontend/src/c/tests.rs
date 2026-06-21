@@ -1,5 +1,19 @@
 use super::*;
-use nose_il::EvidenceKind;
+use nose_il::{EvidenceEmitter, EvidenceKind, EvidenceRecord};
+
+fn assert_c_unsigned_32_cast_provenance(record: &EvidenceRecord) {
+    assert_eq!(record.provenance.emitter, EvidenceEmitter::Builtin);
+    assert_eq!(
+        record.provenance.pack_hash,
+        Some(stable_symbol_hash(nose_semantics::C_LANGUAGE_PACK_ID))
+    );
+    assert_eq!(
+        record.provenance.rule_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID
+        ))
+    );
+}
 
 fn raw_names(src: &str) -> Vec<String> {
     let interner = Interner::new();
@@ -107,6 +121,57 @@ fn unsigned_32_byte_lane_cast_emits_source_cast_evidence() {
         vec![u32_type.id],
         "alias-based unsigned casts should depend on the alias Type proof"
     );
+    assert_c_unsigned_32_cast_provenance(cast);
+}
+
+#[test]
+fn direct_unsigned_32_byte_lane_cast_emits_pack_owned_source_cast_evidence() {
+    let interner = Interner::new();
+    let il = lower(
+        FileId(0),
+        "t.c",
+        b"typedef unsigned char u8;\nunsigned int f(const u8 *a){ return ((unsigned int)a[0]) << 24; }",
+        &interner,
+    )
+    .expect("lower");
+
+    let cast = il
+        .evidence
+        .iter()
+        .find(|record| {
+            record.kind == EvidenceKind::Source(SourceFactKind::Cast(SourceCastKind::CUnsigned32))
+        })
+        .expect("direct unsigned byte-lane casts must emit source evidence");
+    assert!(
+        cast.dependencies.is_empty(),
+        "direct unsigned int casts should not depend on alias evidence"
+    );
+    assert_c_unsigned_32_cast_provenance(cast);
+}
+
+#[test]
+fn unsupported_c_cast_surfaces_do_not_emit_unsigned_32_source_fact() {
+    for source in [
+        "typedef unsigned char u8;\nint f(const u8 *a){ return ((int)a[0]) << 24; }",
+        "typedef unsigned int u32;\nu32 f(u32 x){ return ((u32)x) << 24; }",
+    ] {
+        let interner = Interner::new();
+        let il = lower(FileId(0), "t.c", source.as_bytes(), &interner).expect("lower");
+        assert!(
+            !il.evidence.iter().any(|record| {
+                record.kind
+                    == EvidenceKind::Source(SourceFactKind::Cast(SourceCastKind::CUnsigned32))
+            }),
+            "unsupported cast surfaces must stay exact-closed: {source}"
+        );
+        assert!(
+            !il.nodes.iter().any(|node| {
+                node.kind == NodeKind::Call
+                    && node.payload == Payload::Builtin(Builtin::UnsignedCast32)
+            }),
+            "unsupported cast surfaces must not lower to the canonical unsigned-cast builtin: {source}"
+        );
+    }
 }
 
 #[test]
@@ -185,6 +250,7 @@ fn direct_quote_include_aliases_emit_import_type_and_dependent_facts() {
         })
         .expect("included u32 cast alias must emit Source cast evidence");
     assert_eq!(cast.dependencies, vec![u32_type.id]);
+    assert_c_unsigned_32_cast_provenance(cast);
 
     let _ = fs::remove_dir_all(&dir);
 }
@@ -253,6 +319,7 @@ fn direct_quote_include_alias_lookup_is_not_hardcoded_to_u8_u32_names() {
         })
         .expect("included word cast alias must emit Source cast evidence");
     assert_eq!(cast.dependencies, vec![word_type.id]);
+    assert_c_unsigned_32_cast_provenance(cast);
 
     let _ = fs::remove_dir_all(&dir);
 }

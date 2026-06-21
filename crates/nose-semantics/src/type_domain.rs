@@ -3,7 +3,7 @@ use nose_il::{DomainEvidence, Lang};
 mod python_stdlib;
 
 pub use python_stdlib::{
-    python_stdlib_type_domain, python_stdlib_type_domain_contract,
+    python_stdlib_type_domain, python_stdlib_type_domain_contract, BuiltinTypeDomainAliasContract,
     FirstPartyTypeDomainAliasContract, PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS,
     PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID, PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID,
 };

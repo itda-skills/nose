@@ -33,13 +33,14 @@ fn same_spelled_function_call_requires_direct_call_target_evidence() {
         "same spelling alone must not prove a direct function callee"
     );
 
-    il.evidence.push(evidence(
+    il.evidence.push(call_target_evidence(
         0,
-        EvidenceAnchor::node(sp(52), NodeKind::Call),
-        EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectFunction {
+        Lang::TypeScript,
+        sp(52),
+        CallTargetEvidenceKind::DirectFunction {
             target_span: sp(40),
             name_hash: stable_symbol_hash("helper"),
-        }),
+        },
         Vec::new(),
     ));
     let facts = StrictFacts::collect(&il, &interner);
@@ -73,6 +74,7 @@ fn imported_function_call_target_opens_opaque_exact_identity() {
 
     il.evidence.push(call_target_evidence(
         0,
+        Lang::Python,
         sp(82),
         CallTargetEvidenceKind::ImportedFunction {
             module_hash: stable_symbol_hash("math"),
@@ -115,6 +117,7 @@ fn ambiguous_call_target_evidence_blocks_parameter_callee_fallback() {
 
     il.evidence.push(call_target_evidence(
         0,
+        Lang::Python,
         sp(94),
         CallTargetEvidenceKind::ImportedFunction {
             module_hash: stable_symbol_hash("math"),
@@ -125,6 +128,7 @@ fn ambiguous_call_target_evidence_blocks_parameter_callee_fallback() {
     ));
     il.evidence.push(call_target_evidence(
         1,
+        Lang::Python,
         sp(94),
         CallTargetEvidenceKind::ImportedFunction {
             module_hash: stable_symbol_hash("statistics"),
@@ -177,6 +181,7 @@ fn imported_member_call_target_opens_static_member_identity() {
 
     il.evidence.push(call_target_evidence(
         0,
+        Lang::Python,
         sp(103),
         CallTargetEvidenceKind::ImportedMember {
             module_hash: stable_symbol_hash("math"),
@@ -267,6 +272,7 @@ fn direct_method_call_target_does_not_skip_receiver_identity() {
     );
     il.evidence.push(call_target_evidence(
         0,
+        Lang::TypeScript,
         sp(114),
         CallTargetEvidenceKind::DirectMethod {
             target_span: il.node(method).span,

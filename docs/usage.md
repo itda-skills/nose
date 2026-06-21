@@ -59,7 +59,7 @@ To analyze disjoint trees in one run, pass every root explicitly:
 analyzed path.
 
 `nose query` carries the analysis flags, the `--fail-on` CI gate, and a structured contract: with
-`--format json` every view emits the versioned [query-JSON v3 contract](query-json.md), and
+`--format json` every view emits the versioned [query-JSON contract](query-json.md), and
 `--format markdown`/`sarif` produce a ranked report.
 
 ```text

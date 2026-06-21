@@ -19,7 +19,9 @@ pub(crate) fn function_binding_safe(
         | NodeKind::Throw => false,
         NodeKind::Func if node != root => false,
         NodeKind::Call => match il.node(node).payload {
-            Payload::Builtin(builtin) => admitted_builtin_semantics_at_call(il, node, builtin),
+            Payload::Builtin(builtin) => {
+                admitted_builtin_semantics_at_call_with_interner(il, interner, node, builtin)
+            }
             _ => false,
         },
         NodeKind::Seq => strict_exact_safe_seq(il, interner, node),

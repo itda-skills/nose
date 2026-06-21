@@ -16,7 +16,7 @@ makes soundness depend on scattered `Lang` checks.
 
 The semantic kernel is the boundary that all exact semantic reasoning must cross.
 The first internal facade now lives in `nose-semantics`; it is still a compiled
-first-party implementation for evidence/contract execution. Local external
+builtin implementation for evidence/contract execution. Local external
 manifests can be loaded for metadata/provenance reporting, but they are not an
 external producer runtime.
 The external API design starts at
@@ -42,7 +42,7 @@ Build a research-grade, practical semantic kernel that:
   and effect observability;
 - represents library semantics through versioned packs, not ad hoc builtin
   recognizers;
-- lets first-party and external packs add language and library knowledge through
+- lets builtin and external packs add language and library knowledge through
   well-defined extension points;
 - keeps the exact `semantic` channel fail-closed unless the required semantic facts
   and contracts are present;
@@ -75,13 +75,15 @@ under the user's configured trust policy.
 
 There are two responsibility classes.
 
-**First-party packs** ship with nose and are maintained by the Corca/nose
-project. Their exact contracts must be covered by the same quality gates as the
-engine: regression tests, hard negatives, the interpreter oracle where
-applicable, benchmark checks, and Lean obligations for proof-sensitive laws.
+**Builtin packs** ship with nose and are maintained by the Corca/nose project.
+Their exact contracts must be covered by the same quality gates as the engine:
+regression tests, hard negatives, the interpreter oracle where applicable,
+benchmark checks, and Lean obligations for proof-sensitive laws.
 
-The first-party packs enabled by the default nose distribution are the **default
-packs**; nose owns their review, validation, and release quality.
+Builtin packs enabled by the default nose distribution are
+`builtin-default`; nose owns their review, validation, and release quality.
+Builtin packs may also be `builtin-optional` until their default-surface risk is
+accepted.
 
 **External packs** are not approved or certified by nose. The provider owns their
 semantic claims, version constraints, tests, and documentation. The user owns the
@@ -107,17 +109,17 @@ through the same extension points.
 | `ProtocolPack` | language-neutral semantic protocols such as `Iterable`, `Iterator`, `Stream`, `Option`, `Result`, `Map`, `Set`, `Future`, `Promise`, `Observable`, and `Tensor` |
 | `LawPack` | reusable semantic laws such as map fusion, filter fusion, monoid folds, short-circuit reductions, and nullish defaulting |
 
-First-party packs may be compiled Rust. External packs should start as data-only
+Builtin packs may be compiled Rust. External packs should start as data-only
 manifests for simple APIs, with restricted recognizer hooks added later for cases
 that require code. In both cases, packs emit kernel-defined facts and contracts,
 not private value-graph operations.
 
 Current named value-graph rule modules such as `value_graph/rules/clamp.rs` are
-the internal precursor to `LawPack` law ids. The first compiled first-party pilot,
+the internal precursor to `LawPack` law ids. The first compiled builtin pilot,
 `nose.value_graph.laws`, reports per-family provenance for numeric
 factor-distribution and integer ordered-clamp laws. External packs may declare
 evidence and API facts that make a law applicable, but they must not bypass the
-first-party law registry or emit private canonical value-graph nodes.
+builtin law registry or emit private canonical value-graph nodes.
 
 ## Extension boundary
 
@@ -194,7 +196,7 @@ Examples:
 - async, promise, future, and observable APIs whose construction and observation
   happen at different times.
 
-The implemented first-party substrate now names these as
+The implemented builtin substrate now names these as
 `DemandEffectProfile` contracts for admitted operations. The profiles cover
 current eager, short-circuit, eager HOF, pull-lazy HOF/generator, async
 continuation, generator suspension, channel-boundary, and protocol-boundary
@@ -238,9 +240,9 @@ Rewrites should be registered as semantic laws with explicit preconditions:
 required domains, effect conditions, demand conditions, and proof status.
 
 Proof statuses mirror [formal-soundness](formal-soundness.md): `proven`,
-`covered`, `missing`, `empirical-only`, and `rejected-counterexample`. First-party
+`covered`, `missing`, `empirical-only`, and `rejected-counterexample`. Builtin
 exact laws need project-owned evidence. External laws may declare evidence, but
-nose does not certify it unless the law ships as first-party.
+nose does not certify it unless the law ships as builtin.
 
 ## Channel eligibility
 
@@ -259,13 +261,18 @@ separately.
 
 | trust policy | use |
 |---|---|
-| `default-first-party` | maintained, gated, and enabled by the nose project |
-| `first-party-optional` | maintained and gated by nose, but not enabled by default |
+| `builtin-default` | maintained, gated, and enabled by the nose project |
+| `builtin-optional` | maintained and gated by nose, but not enabled by default |
 | `external-opt-in` | provider/user responsibility; enabled only by explicit user choice |
+
+Current query JSON and capabilities output use builtin labels. The v0 manifest
+parser still accepts legacy `default-first-party` and `first-party-optional`
+spelling as aliases, but local manifests that claim builtin trust remain
+invalid. Changing public strings requires a schema/capabilities update.
 
 External packs may declare their intended eligibility, but users choose whether
 to trust that declaration. Today, explicitly loaded external packs are reported
-as `metadata-only`; exact matching is enabled only by compiled first-party
+as `metadata-only`; exact matching is enabled only by compiled builtin
 evidence/contracts.
 
 ## Pack conformance
@@ -291,10 +298,10 @@ Every pack should declare:
 - provenance labels that can appear in reports.
 
 Packs that claim exact eligibility should also provide a reproducible conformance
-command. First-party packs must run that command in nose CI. External packs
+command. Builtin packs must run that command in nose CI. External packs
 should ship it so users can run `nose semantic-pack check`, but passing the
 structural harness is not nose approval of external semantic correctness unless
-the pack is adopted as first-party.
+the pack is adopted as builtin.
 
 ## Practical architecture
 
@@ -314,6 +321,9 @@ source
 This does not require a flag-day rewrite. The migration can start with wrappers
 around existing behavior: replace `Lang` checks with semantic predicates, then
 move duplicated library recognizers and strict gates behind shared contracts.
+The current #473 phase plan, contributor rule, product behavior gate, and
+performance gate are defined in
+[semantic-pack-architecture](semantic-pack-architecture.md).
 
 ## Design rule
 

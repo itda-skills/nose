@@ -6,6 +6,7 @@
 mod features;
 mod fragments;
 mod model;
+mod test_paths;
 mod timing;
 mod tree;
 
@@ -21,6 +22,7 @@ pub use model::UnitFeat;
 use nose_il::{Il, Interner, NodeId, NodeKind, Payload, Span, Symbol, UnitKind, UnitOrigin};
 use nose_semantics::ValueLaw;
 use std::time::Instant;
+use test_paths::is_test_path;
 use timing::{UnitTimer, UnitTimingSample, UnitTimingSkipSample};
 use tree::collect_pre;
 pub(crate) use tree::{build_parent_index, subtree_spans_within};
@@ -168,7 +170,7 @@ pub(crate) fn extract(
             emitted_roots.push(root);
         }
     }
-    fill_called_helper_returns(il, &mut out, &emitted_roots);
+    fill_called_helper_returns(il, interner, &mut out, &emitted_roots);
     unit_timer.report_summary(&il.meta.path);
     out
 }
@@ -244,7 +246,12 @@ pub fn unit_dags_at(
 /// is the unit *using* a helper — generalized inlining splices the callee's value graph
 /// into the caller's fingerprint, so without this record every well-behaved caller of a
 /// helper would read as "reinventing" it.
-fn fill_called_helper_returns(il: &Il, units: &mut [UnitFeat], roots: &[NodeId]) {
+fn fill_called_helper_returns(
+    il: &Il,
+    interner: &Interner,
+    units: &mut [UnitFeat],
+    roots: &[NodeId],
+) {
     use nose_semantics::direct_function_call_target_span_at_call;
     use rustc_hash::FxHashMap;
     // DirectFunction target spans are function ROOT spans; within one file the line
@@ -265,7 +272,7 @@ fn fill_called_helper_returns(il: &Il, units: &mut [UnitFeat], roots: &[NodeId])
         let mut stack = vec![root];
         while let Some(node) = stack.pop() {
             if il.kind(node) == NodeKind::Call {
-                if let Some(span) = direct_function_call_target_span_at_call(il, node) {
+                if let Some(span) = direct_function_call_target_span_at_call(il, interner, node) {
                     if let Some(returns) = by_span.get(&(span.start_line, span.end_line)) {
                         called.extend_from_slice(returns);
                     }
@@ -483,28 +490,6 @@ fn test_structural_unit(large_test_file: bool, kind: UnitKind) -> bool {
 
 pub(crate) fn large_test_file(il: &Il) -> bool {
     is_test_path(&il.meta.path) && il.nodes.len() > LARGE_TEST_FILE_NODE_CUTOFF
-}
-
-fn is_test_path(path: &str) -> bool {
-    let p = path.to_ascii_lowercase();
-    p.contains("/test/")
-        || p.contains("/tests/")
-        || p.contains("/__tests__/")
-        || p.contains("/spec/")
-        || p.starts_with("test/")
-        || p.starts_with("tests/")
-        || p.ends_with("_test.go")
-        || p.ends_with("conftest.py")
-        || ["_test.", ".test.", ".spec.", "_spec."]
-            .iter()
-            .any(|m| p.contains(m))
-        || p.rsplit('/')
-            .next()
-            .unwrap_or(&p)
-            .split('.')
-            .next()
-            .unwrap_or("")
-            .starts_with("test_")
 }
 
 fn extract_unit(

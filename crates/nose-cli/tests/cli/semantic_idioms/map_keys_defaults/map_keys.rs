@@ -4,7 +4,7 @@ use super::*;
 // intentional until the fixture setup has a clearer table-builder abstraction.
 #[allow(clippy::too_many_lines)]
 #[test]
-fn query_mode_semantic_proves_typed_typescript_map_key_membership() {
+fn query_mode_semantic_proves_typed_typescript_receiver_membership() {
     let dir = std::env::temp_dir().join(format!("nose_typed_ts_map_key_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();

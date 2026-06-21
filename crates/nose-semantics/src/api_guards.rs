@@ -4,7 +4,7 @@
 //! families that are risky to let converge as ordinary opaque calls when the
 //! matching `LibraryApi` occurrence proof is absent.
 
-use crate::{ChannelEligibility, FIRST_PARTY_PACK_ID};
+use crate::{ChannelEligibility, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID};
 use nose_il::Lang;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -48,7 +48,7 @@ pub fn unproven_membership_like_method_contract(
         .copied()
         .find(|candidate| *candidate == method)?;
     Some(UnprovenMembershipLikeCallContract {
-        pack_id: FIRST_PARTY_PACK_ID,
+        pack_id: RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
         id: ApiGuardContractId::UnprovenMembershipLikeCall,
         lang,
         method,

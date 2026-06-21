@@ -1,4 +1,4 @@
-//! Contract registry helpers for resolving evidence hashes back to first-party rows.
+//! Contract registry helpers for resolving evidence hashes back to builtin rows.
 
 use super::*;
 
@@ -19,6 +19,30 @@ pub(super) fn library_api_contract_result_domain_for_arity(
         | LibraryApiContractId::JsLikeSetConstructor => {
             library_collection_factory_result_domain_for_arity(
                 LibraryCollectionFactoryContract {
+                    pack_id: match id {
+                        LibraryApiContractId::PythonBuiltinCollectionFactory => {
+                            PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID
+                        }
+                        LibraryApiContractId::PythonImportedCollectionFactory => {
+                            PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID
+                        }
+                        LibraryApiContractId::RustVecMacroFactory
+                        | LibraryApiContractId::RustVecNewFactory => RUST_STDLIB_VEC_PACK_ID,
+                        LibraryApiContractId::RustStdCollectionFactory => {
+                            RUST_STDLIB_COLLECTION_FACTORY_PACK_ID
+                        }
+                        LibraryApiContractId::JavaCollectionFactory(_) => {
+                            JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID
+                        }
+                        LibraryApiContractId::JavaCollectionConstructor(_) => {
+                            JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID
+                        }
+                        LibraryApiContractId::RubySetFactory => RUBY_STDLIB_SET_PACK_ID,
+                        LibraryApiContractId::JsLikeSetConstructor => {
+                            JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
+                        }
+                        _ => unreachable!("collection-factory contract has no broad builtin pack"),
+                    },
                     id,
                     callee,
                     result: LibraryCollectionFactoryResult::SequenceArgument,
@@ -30,6 +54,14 @@ pub(super) fn library_api_contract_result_domain_for_arity(
         | LibraryApiContractId::JavaMapFactory(_)
         | LibraryApiContractId::JsLikeMapConstructor => Some(library_map_factory_result_domain(
             LibraryMapFactoryContract {
+                pack_id: match id {
+                    LibraryApiContractId::RustStdMapFactory => RUST_STDLIB_MAP_FACTORY_PACK_ID,
+                    LibraryApiContractId::JavaMapFactory(_) => JAVA_STDLIB_MAP_FACTORY_PACK_ID,
+                    LibraryApiContractId::JsLikeMapConstructor => {
+                        JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
+                    }
+                    _ => unreachable!("map-factory contract has no broad builtin pack"),
+                },
                 id,
                 callee,
                 result: LibraryMapFactoryResult::EntrySequence {
@@ -39,6 +71,7 @@ pub(super) fn library_api_contract_result_domain_for_arity(
         )),
         LibraryApiContractId::MapKeyViewWrapper => Some(
             library_map_key_view_wrapper_result_domain(LibraryMapKeyViewWrapperContract {
+                pack_id: JS_LIKE_BUILTIN_ARRAY_PACK_ID,
                 id,
                 callee,
                 result: MapKeyViewWrapperContract {

@@ -55,18 +55,18 @@ pub(super) fn rust_hash_map_from_call(
         "array" => SequenceSurfaceKind::Collection,
         other => panic!("unexpected test entry surface: {other}"),
     };
-    il.evidence.push(evidence(
+    il.evidence.push(sequence_surface_evidence(
         0,
-        EvidenceAnchor::sequence(entry_span),
-        EvidenceKind::SequenceSurface(entry_kind),
-        EvidenceStatus::Asserted,
+        Lang::Rust,
+        entry_span,
+        entry_kind,
     ));
     if with_entries_surface {
-        il.evidence.push(evidence(
+        il.evidence.push(sequence_surface_evidence(
             1,
-            EvidenceAnchor::sequence(entries_span),
-            EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
-            EvidenceStatus::Asserted,
+            Lang::Rust,
+            entries_span,
+            SequenceSurfaceKind::Collection,
         ));
     }
     (il, interner, call)
@@ -77,16 +77,17 @@ pub(super) fn push_rust_hash_map_library_api_evidence(il: &mut Il) {
         library_free_name_map_factory_contract(Lang::Rust, "std::collections::HashMap::from")
             .expect("Rust HashMap::from contract");
     let symbol_id = next_evidence_id(il);
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         symbol_id,
+        Lang::Rust,
         EvidenceAnchor::node(sp(), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("std::collections::HashMap::from"),
-        }),
+        },
         EvidenceStatus::Asserted,
     ));
     let api_id = next_evidence_id(il);
-    il.evidence.push(evidence_with_dependencies(
+    let mut record = evidence_with_dependencies(
         api_id,
         EvidenceAnchor::node(sp(), NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -96,5 +97,10 @@ pub(super) fn push_rust_hash_map_library_api_evidence(il: &mut Il) {
         }),
         EvidenceStatus::Asserted,
         vec![EvidenceId(symbol_id)],
+    );
+    record.provenance.pack_hash = Some(stable_symbol_hash(contract.pack_id));
+    record.provenance.rule_hash = Some(stable_symbol_hash(
+        nose_semantics::RUST_STDLIB_MAP_FACTORY_PRODUCER_ID,
     ));
+    il.evidence.push(record);
 }
