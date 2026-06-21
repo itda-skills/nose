@@ -211,6 +211,7 @@ pub(super) fn post_lower_require_call_callee_if_matches(
     .then_some(kids[0])
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn post_lower_library_api_evidence_with_pack_id(
     il: &mut Il,
     call: NodeId,
@@ -221,7 +222,7 @@ pub(super) fn post_lower_library_api_evidence_with_pack_id(
     rule: &str,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceId {
-    Some(il.find_or_push_builtin_evidence(
+    il.find_or_push_builtin_evidence(
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
             contract_hash: library_api_contract_id_hash(id),
@@ -231,10 +232,10 @@ pub(super) fn post_lower_library_api_evidence_with_pack_id(
         pack_id,
         rule,
         dependencies,
-    ))
-    .expect("post-lower LibraryApi evidence insertion should always produce an id")
+    )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn post_lower_library_api_node_evidence_with_pack_id(
     il: &mut Il,
     node: NodeId,
@@ -245,7 +246,7 @@ pub(super) fn post_lower_library_api_node_evidence_with_pack_id(
     rule: &str,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceId {
-    Some(il.find_or_push_builtin_evidence(
+    il.find_or_push_builtin_evidence(
         EvidenceAnchor::node(il.node(node).span, il.kind(node)),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
             contract_hash: library_api_contract_id_hash(id),
@@ -255,8 +256,7 @@ pub(super) fn post_lower_library_api_node_evidence_with_pack_id(
         pack_id,
         rule,
         dependencies,
-    ))
-    .expect("post-lower node LibraryApi evidence insertion should always produce an id")
+    )
 }
 
 pub(super) fn post_lower_record_library_api_result_domain(

@@ -288,7 +288,7 @@ fn test_method_builtin_dependencies(
             *next_id += 1;
             Some(vec![occurrence_id])
         }
-        _ => return None,
+        _ => None,
     }
 }
 

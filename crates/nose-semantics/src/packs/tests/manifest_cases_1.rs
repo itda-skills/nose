@@ -97,7 +97,7 @@ fn local_manifest_registers_external_value_law_rows_as_data_only() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest_with_value_law("com.example.laws")).unwrap();
 
-    let set = SemanticPackSet::new_local(&[path.clone()]).expect("pack loads");
+    let set = SemanticPackSet::new_local(std::slice::from_ref(&path)).expect("pack loads");
     let external = set.packs().last().expect("external pack summary");
     assert_eq!(external.id, "com.example.laws");
     assert_eq!(external.influence, SemanticPackInfluence::MetadataOnly);
@@ -136,7 +136,7 @@ fn local_manifest_registers_external_producer_and_contract_rows_as_data_only() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.contracts")).unwrap();
 
-    let set = SemanticPackSet::new_local(&[path.clone()]).expect("pack loads");
+    let set = SemanticPackSet::new_local(std::slice::from_ref(&path)).expect("pack loads");
     let external = set.packs().last().expect("external pack summary");
     assert_eq!(external.id, "com.example.contracts");
     assert_eq!(external.influence, SemanticPackInfluence::MetadataOnly);
@@ -221,7 +221,8 @@ fn external_rows_report_builtin_id_conflicts_without_rejecting_metadata_only_pac
         .replace("Example", "PythonStdlibTypeDomainAlias");
     fs::write(&path, mirror).unwrap();
 
-    let set = SemanticPackSet::new_local(&[path.clone()]).expect("metadata-only pack loads");
+    let set =
+        SemanticPackSet::new_local(std::slice::from_ref(&path)).expect("metadata-only pack loads");
     let external = set.packs().last().expect("external pack summary");
     assert_eq!(external.id, "com.example.python-stdlib-type-domain-mirror");
     assert_eq!(external.influence, SemanticPackInfluence::MetadataOnly);

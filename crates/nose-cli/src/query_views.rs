@@ -443,6 +443,7 @@ struct GroupAgg {
     exemplar_row: String,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn render_query_group(
     sel: &[&nose_detect::RefactorFamily],
     field: &str,

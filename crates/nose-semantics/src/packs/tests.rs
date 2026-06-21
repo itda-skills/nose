@@ -1,3 +1,9 @@
+#![allow(
+    clippy::cognitive_complexity,
+    clippy::too_many_arguments,
+    clippy::too_many_lines
+)]
+
 use super::*;
 use std::collections::HashSet;
 use std::fs;

@@ -96,7 +96,7 @@ fn library_api_records(il: &Il, node: NodeId) -> Vec<&EvidenceRecord> {
         .collect()
 }
 
-fn asserted<'a>(records: Vec<&'a EvidenceRecord>) -> Vec<&'a EvidenceRecord> {
+fn asserted(records: Vec<&EvidenceRecord>) -> Vec<&EvidenceRecord> {
     records
         .into_iter()
         .filter(|record| record.status == EvidenceStatus::Asserted)

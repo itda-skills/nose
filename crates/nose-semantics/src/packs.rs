@@ -573,8 +573,8 @@ fn builtin_descriptor_contains_row_id(
             .iter()
             .chain(descriptor.source_fact_producer_ids.iter())
             .any(|id| *id == row_id),
-        ExternalRowKind::Contract => descriptor.contract_ids.iter().any(|id| *id == row_id),
-        ExternalRowKind::ValueLaw => descriptor.value_law_ids().iter().any(|id| *id == row_id),
+        ExternalRowKind::Contract => descriptor.contract_ids.contains(&row_id),
+        ExternalRowKind::ValueLaw => descriptor.value_law_ids().contains(&row_id),
     }
 }
 
