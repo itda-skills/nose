@@ -90,6 +90,11 @@ Builtin language packs may keep parser and lowering implementation in tree. The
 first goal is pack ownership, provenance, and shared admission vocabulary, not an
 external parser plugin runtime.
 
+Promotion from external or optional support to official builtin support is
+defined by [semantic-pack-adoption](semantic-pack-adoption.md). Promotion changes
+ownership, trust, default enablement, CI gates, and rollback responsibility; it
+does not create a separate semantic vocabulary.
+
 ## Contributor Rule
 
 New builtin language, stdlib, library, or law semantics should be pack-owned. If
@@ -302,5 +307,6 @@ previous semantic-kernel tranches.
 
 - [semantic-kernel](semantic-kernel.md)
 - [semantic-kernel-roadmap](semantic-kernel-roadmap.md)
+- [semantic-pack-adoption](semantic-pack-adoption.md)
 - [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md)
 - [semantic-pack-loading](semantic-pack-loading.md)
