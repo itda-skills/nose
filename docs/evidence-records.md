@@ -124,6 +124,10 @@ matching `nose.lang.*` pack provenance for the lowered file language:
   receivers use the module/export/member coordinate. Receiver rebinding,
   ambiguous/conflicting symbol evidence, dependency-broken import proof, and
   selector mismatches stay closed.
+  Node-anchored `UnshadowedGlobal` and `ImportedNamespace` identity helpers
+  admit only matching builtin language-core provenance; broad, wrong-language,
+  external, ambiguous, or dependency-broken occurrence rows do not prove public
+  global/imported-namespace identity.
 
 There is not yet a builtin producer for `DirectMethod` or `DynamicDispatch`.
 Duplicate function names, lexical shadowing, nested/non-top-level functions,

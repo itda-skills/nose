@@ -166,8 +166,9 @@ fn nullish_global_value_requires_symbol_evidence() {
         "raw undefined spelling must not prove the nullish constant"
     );
 
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_evidence(
         0,
+        Lang::JavaScript,
         EvidenceAnchor::node(sp(1), NodeKind::Var),
         EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("undefined"),

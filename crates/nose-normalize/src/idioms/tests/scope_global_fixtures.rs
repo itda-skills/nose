@@ -118,8 +118,9 @@ pub(super) fn console_log_il(shadow_console: bool) -> (Il, Interner, NodeId) {
         cid_names,
     );
     if !shadow_console {
-        il.evidence.push(evidence(
+        il.evidence.push(language_core_evidence(
             0,
+            Lang::JavaScript,
             EvidenceAnchor::node(il.node(receiver).span, NodeKind::Var),
             EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
                 name_hash: stable_symbol_hash("console"),

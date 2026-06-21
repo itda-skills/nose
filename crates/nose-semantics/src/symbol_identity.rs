@@ -2,15 +2,6 @@
 
 use super::*;
 
-pub(super) fn symbol_evidence_at_node(
-    il: &Il,
-    node: NodeId,
-) -> EvidenceResolution<SymbolEvidenceKind> {
-    let span = il.node(node).span;
-    let kind = il.kind(node);
-    symbol_evidence_at_node_anchor(il, span, kind)
-}
-
 pub(super) fn symbol_evidence_at_node_anchor(
     il: &Il,
     span: Span,
@@ -59,12 +50,40 @@ pub(super) fn symbol_evidence_for_binding(
     )
 }
 
-pub(super) fn symbol_identity_at_node_matches(
+fn language_core_symbol_evidence_at_node(
+    il: &Il,
+    node: NodeId,
+) -> EvidenceResolution<SymbolEvidenceKind> {
+    let anchor = EvidenceAnchor::node(il.node(node).span, il.kind(node));
+    let mut found = None;
+    for record in il.evidence_anchored_at(anchor.span()) {
+        if record.anchor != anchor {
+            continue;
+        }
+        let EvidenceKind::Symbol(symbol) = record.kind else {
+            continue;
+        };
+        if !symbol_record_has_admitted_provenance(il, record) {
+            continue;
+        }
+        if record.status != EvidenceStatus::Asserted || !il.evidence_dependencies_asserted(record) {
+            return EvidenceResolution::Ambiguous;
+        }
+        match found {
+            None => found = Some(symbol),
+            Some(existing) if existing == symbol => {}
+            Some(_) => return EvidenceResolution::Ambiguous,
+        }
+    }
+    found.map_or(EvidenceResolution::Missing, EvidenceResolution::Found)
+}
+
+fn language_core_symbol_identity_at_node_matches(
     il: &Il,
     node: NodeId,
     expected: SymbolEvidenceKind,
 ) -> EvidenceResolution<bool> {
-    match symbol_evidence_at_node(il, node) {
+    match language_core_symbol_evidence_at_node(il, node) {
         EvidenceResolution::Found(actual) => EvidenceResolution::Found(actual == expected),
         EvidenceResolution::Ambiguous => EvidenceResolution::Ambiguous,
         EvidenceResolution::Missing => EvidenceResolution::Missing,
@@ -108,6 +127,78 @@ pub(super) fn imported_symbol_identity_at_node_matches(
     EvidenceResolution::Found(actual == expected && dependencies_valid)
 }
 
+fn language_core_imported_namespace_identity_at_node_matches(
+    il: &Il,
+    interner: &Interner,
+    node: NodeId,
+    expected: SymbolEvidenceKind,
+) -> EvidenceResolution<bool> {
+    let span = il.node(node).span;
+    let kind = il.kind(node);
+    let anchor = EvidenceAnchor::node(span, kind);
+    let mut found = None;
+    let mut dependencies_valid = true;
+    for record in il.evidence_anchored_at(span) {
+        if record.anchor != anchor {
+            continue;
+        }
+        let EvidenceKind::Symbol(actual) = record.kind else {
+            continue;
+        };
+        if !matches!(actual, SymbolEvidenceKind::ImportedNamespace { .. }) {
+            if record.status != EvidenceStatus::Asserted
+                || !il.evidence_dependencies_asserted(record)
+            {
+                return EvidenceResolution::Ambiguous;
+            }
+            match found {
+                None => found = Some(actual),
+                Some(existing) if existing == actual => {}
+                Some(_) => return EvidenceResolution::Ambiguous,
+            }
+            continue;
+        }
+        if !symbol_record_has_admitted_provenance(il, record) {
+            continue;
+        }
+        if record.status != EvidenceStatus::Asserted {
+            return EvidenceResolution::Ambiguous;
+        }
+        match found {
+            None => found = Some(actual),
+            Some(existing) if existing == actual => {}
+            Some(_) => return EvidenceResolution::Ambiguous,
+        }
+        if actual == expected
+            && !imported_occurrence_symbol_dependencies_valid(il, interner, record, expected)
+        {
+            dependencies_valid = false;
+        }
+    }
+    let Some(actual) = found else {
+        return EvidenceResolution::Missing;
+    };
+    EvidenceResolution::Found(actual == expected && dependencies_valid)
+}
+
+pub(super) fn symbol_record_has_admitted_provenance(il: &Il, record: &EvidenceRecord) -> bool {
+    match record.kind {
+        EvidenceKind::Symbol(
+            SymbolEvidenceKind::UnshadowedGlobal { .. }
+            | SymbolEvidenceKind::ImportedNamespace { .. },
+        ) => {
+            if record.provenance.emitter != EvidenceEmitter::FirstParty {
+                return false;
+            }
+            let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+            record.provenance.pack_hash == Some(stable_symbol_hash(pack_id))
+                && record.provenance.rule_hash == Some(stable_symbol_hash(producer_id))
+        }
+        EvidenceKind::Symbol(_) => true,
+        _ => false,
+    }
+}
+
 pub(super) fn binding_identity_matches(
     il: &Il,
     local_hash: u64,
@@ -132,7 +223,7 @@ pub fn asserted_unshadowed_global_symbol(il: &Il, node: NodeId, name: &str) -> b
     let expected = SymbolEvidenceKind::UnshadowedGlobal {
         name_hash: stable_symbol_hash(name),
     };
-    match symbol_identity_at_node_matches(il, node, expected) {
+    match language_core_symbol_identity_at_node_matches(il, node, expected) {
         EvidenceResolution::Found(matches) => matches,
         EvidenceResolution::Ambiguous | EvidenceResolution::Missing => false,
     }
@@ -140,10 +231,16 @@ pub fn asserted_unshadowed_global_symbol(il: &Il, node: NodeId, name: &str) -> b
 
 /// Prove that `node` denotes a static imported namespace for `module`.
 pub fn imported_namespace_symbol(il: &Il, interner: &Interner, node: NodeId, module: &str) -> bool {
+    if il.kind(node) != NodeKind::Var {
+        return false;
+    }
     let expected = SymbolEvidenceKind::ImportedNamespace {
         module_hash: stable_symbol_hash(module),
     };
-    imported_symbol(il, interner, node, expected)
+    match language_core_imported_namespace_identity_at_node_matches(il, interner, node, expected) {
+        EvidenceResolution::Found(matches) => matches,
+        EvidenceResolution::Ambiguous | EvidenceResolution::Missing => false,
+    }
 }
 
 /// Prove that `node` denotes a static imported binding for `module.exported`.

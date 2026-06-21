@@ -761,10 +761,13 @@ migrated.
   `CallTarget::ImportedFunction` or `CallTarget::ImportedMember` records. The
   normalize call-target producer now emits these records and their call-site
   imported symbol occurrence dependencies with the file language's builtin
-  language-core pack provenance. The shared call-target resolver and value-DAG
-  referent extraction consume only matching builtin language-core, asserted,
-  dependency-closed, selector-matching evidence, while library semantics still
-  require admitted API occurrence evidence.
+  language-core pack provenance. Public node-anchored `UnshadowedGlobal` and
+  `ImportedNamespace` identity helpers consume only matching builtin
+  language-core, asserted, dependency-valid occurrence proof. The shared
+  call-target resolver and value-DAG referent extraction consume only matching
+  builtin language-core, asserted, dependency-closed, selector-matching
+  evidence, while library semantics still require admitted API occurrence
+  evidence.
 - Java stream source adapters are split by proof through library API contracts:
   `receiver.stream()` requires an exact iterable receiver, while
   `Arrays.stream(xs)` requires the `java.util.Arrays` import binding and no local

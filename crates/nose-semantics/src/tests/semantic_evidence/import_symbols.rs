@@ -448,16 +448,59 @@ fn imported_occurrence_symbol_evidence_requires_binding_dependency() {
     );
     let root = b.add(NodeKind::Module, Payload::None, sp(20), &[receiver]);
     let mut il = finish_il(b, root, Lang::Python);
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_evidence(
         0,
         EvidenceAnchor::node(sp(20), NodeKind::Var),
         EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
             module_hash: stable_symbol_hash("math"),
         }),
         EvidenceStatus::Asserted,
+        Lang::Python,
     ));
 
     assert!(!imported_namespace_symbol(&il, &interner, receiver, "math"));
+
+    il.evidence.clear();
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::binding(sp(19), local_hash),
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+            module_hash: stable_symbol_hash("math"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    il.evidence.push(language_core_evidence_with_dependencies(
+        1,
+        EvidenceAnchor::node(sp(20), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+            module_hash: stable_symbol_hash("math"),
+        }),
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(0)],
+        Lang::Python,
+    ));
+
+    assert!(imported_namespace_symbol(&il, &interner, receiver, "math"));
+    assert!(!imported_namespace_symbol(
+        &il,
+        &interner,
+        receiver,
+        "collections"
+    ));
+
+    il.evidence.push(evidence(
+        2,
+        EvidenceAnchor::node(sp(20), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
+            module_hash: stable_symbol_hash("collections"),
+            exported_hash: stable_symbol_hash("deque"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    assert!(
+        !imported_namespace_symbol(&il, &interner, receiver, "math"),
+        "conflicting same-node Symbol identity must keep imported namespace proof closed"
+    );
 
     il.evidence.clear();
     il.evidence.push(evidence(
@@ -477,14 +520,86 @@ fn imported_occurrence_symbol_evidence_requires_binding_dependency() {
         EvidenceStatus::Asserted,
         vec![EvidenceId(0)],
     ));
+    assert!(
+        !imported_namespace_symbol(&il, &interner, receiver, "math"),
+        "legacy broad imported-namespace occurrence evidence must not prove the public symbol identity"
+    );
 
-    assert!(imported_namespace_symbol(&il, &interner, receiver, "math"));
-    assert!(!imported_namespace_symbol(
-        &il,
-        &interner,
-        receiver,
-        "collections"
+    il.evidence.clear();
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::binding(sp(19), local_hash),
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+            module_hash: stable_symbol_hash("math"),
+        }),
+        EvidenceStatus::Asserted,
     ));
+    il.evidence.push(language_core_evidence_with_dependencies(
+        1,
+        EvidenceAnchor::node(sp(20), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+            module_hash: stable_symbol_hash("math"),
+        }),
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(0)],
+        Lang::JavaScript,
+    ));
+    assert!(
+        !imported_namespace_symbol(&il, &interner, receiver, "math"),
+        "wrong-language imported-namespace occurrence evidence must not prove the public symbol identity"
+    );
+
+    il.evidence.clear();
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::binding(sp(19), local_hash),
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+            module_hash: stable_symbol_hash("math"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    let mut external = language_core_evidence_with_dependencies(
+        1,
+        EvidenceAnchor::node(sp(20), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+            module_hash: stable_symbol_hash("math"),
+        }),
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(0)],
+        Lang::Python,
+    );
+    external.provenance.emitter = EvidenceEmitter::External;
+    il.evidence.push(external);
+    assert!(
+        !imported_namespace_symbol(&il, &interner, receiver, "math"),
+        "external imported-namespace occurrence evidence must not prove the public symbol identity"
+    );
+
+    il.evidence.clear();
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::binding(sp(19), local_hash),
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+            module_hash: stable_symbol_hash("math"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    let mut missing_pack = language_core_evidence_with_dependencies(
+        1,
+        EvidenceAnchor::node(sp(20), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+            module_hash: stable_symbol_hash("math"),
+        }),
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(0)],
+        Lang::Python,
+    );
+    missing_pack.provenance.pack_hash = None;
+    il.evidence.push(missing_pack);
+    assert!(
+        !imported_namespace_symbol(&il, &interner, receiver, "math"),
+        "missing-pack imported-namespace occurrence evidence must not prove the public symbol identity"
+    );
 }
 
 #[test]
@@ -576,13 +691,14 @@ fn global_symbol_requires_asserted_evidence() {
         "a bare spelling without Symbol evidence must not open the exact path"
     );
 
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_evidence(
         0,
         EvidenceAnchor::node(sp(23), NodeKind::Var),
         EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Math"),
         }),
         EvidenceStatus::Ambiguous,
+        Lang::JavaScript,
     ));
     assert!(
         !asserted_unshadowed_global_symbol(&il, math, "Math"),
@@ -599,7 +715,71 @@ fn global_symbol_requires_asserted_evidence() {
         EvidenceStatus::Asserted,
     ));
     assert!(
+        !asserted_unshadowed_global_symbol(&il, math, "Math"),
+        "legacy broad Symbol evidence must not prove the unshadowed global"
+    );
+
+    il.evidence.clear();
+    il.evidence.push(language_core_evidence(
+        0,
+        EvidenceAnchor::node(sp(23), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("Math"),
+        }),
+        EvidenceStatus::Asserted,
+        Lang::Python,
+    ));
+    assert!(
+        !asserted_unshadowed_global_symbol(&il, math, "Math"),
+        "wrong-language Symbol evidence must not prove the unshadowed global"
+    );
+
+    il.evidence.clear();
+    let mut external = language_core_evidence(
+        0,
+        EvidenceAnchor::node(sp(23), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("Math"),
+        }),
+        EvidenceStatus::Asserted,
+        Lang::JavaScript,
+    );
+    external.provenance.emitter = EvidenceEmitter::External;
+    il.evidence.push(external);
+    assert!(
+        !asserted_unshadowed_global_symbol(&il, math, "Math"),
+        "external Symbol evidence must not prove the unshadowed global"
+    );
+
+    il.evidence.clear();
+    let mut missing_pack = language_core_evidence(
+        0,
+        EvidenceAnchor::node(sp(23), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("Math"),
+        }),
+        EvidenceStatus::Asserted,
+        Lang::JavaScript,
+    );
+    missing_pack.provenance.pack_hash = None;
+    il.evidence.push(missing_pack);
+    assert!(
+        !asserted_unshadowed_global_symbol(&il, math, "Math"),
+        "missing-pack Symbol evidence must not prove the unshadowed global"
+    );
+
+    il.evidence.clear();
+    il.evidence.push(language_core_evidence(
+        0,
+        EvidenceAnchor::node(sp(23), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("Math"),
+        }),
+        EvidenceStatus::Asserted,
+        Lang::JavaScript,
+    ));
+    assert!(
         asserted_unshadowed_global_symbol(&il, math, "Math"),
-        "asserted Symbol evidence proves the unshadowed global"
+        "matching language-core Symbol evidence proves the unshadowed global"
     );
 }

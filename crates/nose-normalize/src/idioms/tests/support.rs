@@ -58,6 +58,28 @@ pub(super) fn evidence_with_dependencies(
     }
 }
 
+pub(super) fn language_core_evidence(
+    id: u32,
+    lang: Lang,
+    anchor: EvidenceAnchor,
+    kind: EvidenceKind,
+    status: EvidenceStatus,
+) -> EvidenceRecord {
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor,
+        kind,
+        provenance: EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
+        },
+        dependencies: Vec::new(),
+        status,
+    }
+}
+
 pub(super) fn sequence_surface_evidence(
     id: u32,
     lang: Lang,
