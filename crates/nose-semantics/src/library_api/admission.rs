@@ -165,7 +165,7 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
 ) -> bool {
     match id {
         LibraryApiContractId::PythonBuiltinCollectionFactory => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(
                         PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
@@ -176,7 +176,7 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                     ))
         }
         LibraryApiContractId::PythonImportedCollectionFactory => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID))
                 && record.provenance.rule_hash
@@ -185,7 +185,7 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                     ))
         }
         LibraryApiContractId::FreeFunctionBuiltin(_) => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID))
                 && record.provenance.rule_hash
@@ -199,7 +199,7 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                 identity: 1,
             },
         ) => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(PYTHON_STDLIB_MATH_PACK_ID))
                 && record.provenance.rule_hash
@@ -207,35 +207,35 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
         }
         LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve)
         | LibraryApiContractId::PromiseThen => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(JS_LIKE_BUILTIN_PROMISE_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID))
         }
         LibraryApiContractId::MapKeyViewWrapper | LibraryApiContractId::JsArrayIsArray => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(JS_LIKE_BUILTIN_ARRAY_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID))
         }
         LibraryApiContractId::JsBooleanCoercion => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(JS_LIKE_BUILTIN_BOOLEAN_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(JS_LIKE_BUILTIN_BOOLEAN_PRODUCER_ID))
         }
         LibraryApiContractId::RegexTest => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(JS_LIKE_BUILTIN_REGEX_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(JS_LIKE_BUILTIN_REGEX_PRODUCER_ID))
         }
         LibraryApiContractId::JsLikeStaticIndexMembership(_) => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(
                         JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID,
@@ -246,7 +246,7 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                     ))
         }
         LibraryApiContractId::JsLikeSetConstructor | LibraryApiContractId::JsLikeMapConstructor => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(
                         JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
@@ -257,7 +257,7 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                     ))
         }
         LibraryApiContractId::RustVecMacroFactory | LibraryApiContractId::RustVecNewFactory => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash == Some(stable_symbol_hash(RUST_STDLIB_VEC_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(RUST_STDLIB_VEC_PRODUCER_ID))
@@ -265,7 +265,7 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
         LibraryApiContractId::RustOptionSomeConstructor
         | LibraryApiContractId::RustOptionNoneSentinel
         | LibraryApiContractId::RustOptionAndThen => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(RUST_STDLIB_OPTION_PACK_ID))
                 && record.provenance.rule_hash
@@ -280,7 +280,7 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                 }
             ) =>
         {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(RUST_STDLIB_INTEGER_METHOD_PACK_ID))
                 && record.provenance.rule_hash
@@ -295,20 +295,20 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                 }
             ) =>
         {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash == Some(stable_symbol_hash(JAVA_STDLIB_MATH_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(JAVA_STDLIB_MATH_PRODUCER_ID))
         }
         LibraryApiContractId::IteratorIdentityAdapter => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(ITERATOR_IDENTITY_ADAPTER_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID))
         }
         LibraryApiContractId::MapGet => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash == Some(stable_symbol_hash(MAP_GET_PROTOCOL_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(MAP_GET_PROTOCOL_PRODUCER_ID))
@@ -323,7 +323,7 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
             }
         ) =>
         {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PACK_ID))
                 && record.provenance.rule_hash
@@ -341,28 +341,28 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                 }
             ) =>
         {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID))
         }
         LibraryApiContractId::MapKeyView(_) => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(MAP_KEY_VIEW_PROTOCOL_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID))
         }
         LibraryApiContractId::PropertyBuiltin(_) => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(PROPERTY_BUILTIN_PROTOCOL_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID))
         }
         LibraryApiContractId::RustStdCollectionFactory => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(RUST_STDLIB_COLLECTION_FACTORY_PACK_ID))
                 && record.provenance.rule_hash
@@ -371,28 +371,28 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                     ))
         }
         LibraryApiContractId::RustStdMapFactory => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(RUST_STDLIB_MAP_FACTORY_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(RUST_STDLIB_MAP_FACTORY_PRODUCER_ID))
         }
         LibraryApiContractId::JavaMapFactory(_) => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(JAVA_STDLIB_MAP_FACTORY_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID))
         }
         LibraryApiContractId::JavaMapEntryFactory => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(JAVA_STDLIB_MAP_ENTRY_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID))
         }
         LibraryApiContractId::JavaCollectionFactory(_) => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID))
                 && record.provenance.rule_hash
@@ -401,7 +401,7 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                     ))
         }
         LibraryApiContractId::JavaCollectionConstructor(_) => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(
                         JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
@@ -412,7 +412,7 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                     ))
         }
         LibraryApiContractId::StaticCollectionAdapter => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(
                         JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID,
@@ -423,13 +423,13 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                     ))
         }
         LibraryApiContractId::RubySetFactory => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash == Some(stable_symbol_hash(RUBY_STDLIB_SET_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(RUBY_STDLIB_SET_PRODUCER_ID))
         }
         LibraryApiContractId::MethodCall(_) => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash
                     == Some(stable_symbol_hash(BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID))
                 && record.provenance.rule_hash

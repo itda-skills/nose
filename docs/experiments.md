@@ -1415,7 +1415,7 @@ What landed, all output-preserving (byte-identical scan JSON on
 redis/git/tokio/guava/sympy/netty and the full test suite before/after):
 
 1. **Every anchored evidence query goes through the index.**
-   `find_or_push_first_party_evidence` (the emit-path dedup scan — quadratic on
+   `find_or_push_builtin_evidence` (the emit-path dedup scan — quadratic on
    its own output), both evidence `upsert`s, the call-target/binding/library-api
    pass helpers, and ~15 anchored scans in `nose-semantics` now query the
    span bucket. `EvidenceIndex` gained a `by_binding_hash` bucket for the

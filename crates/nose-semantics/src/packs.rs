@@ -5,7 +5,7 @@
 //! require occurrence evidence and kernel-owned admission checks.
 
 use crate::{
-    pack_facing_value_laws, FirstPartyTypeDomainAliasContract, PackTrust, BUILTIN_COMPAT_PACK_ID,
+    pack_facing_value_laws, BuiltinTypeDomainAliasContract, PackTrust, BUILTIN_COMPAT_PACK_ID,
     BUILTIN_METHOD_CALL_CONTRACT_ID, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
     BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, CSS_LANGUAGE_CORE_PRODUCER_ID, CSS_LANGUAGE_PACK_ID,
     CSS_SOURCE_FACT_PRODUCER_ID, C_LANGUAGE_CORE_PRODUCER_ID, C_LANGUAGE_PACK_ID,

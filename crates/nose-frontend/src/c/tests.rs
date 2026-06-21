@@ -2,7 +2,7 @@ use super::*;
 use nose_il::{EvidenceEmitter, EvidenceKind, EvidenceRecord};
 
 fn assert_c_unsigned_32_cast_provenance(record: &EvidenceRecord) {
-    assert_eq!(record.provenance.emitter, EvidenceEmitter::FirstParty);
+    assert_eq!(record.provenance.emitter, EvidenceEmitter::Builtin);
     assert_eq!(
         record.provenance.pack_hash,
         Some(stable_symbol_hash(nose_semantics::C_LANGUAGE_PACK_ID))

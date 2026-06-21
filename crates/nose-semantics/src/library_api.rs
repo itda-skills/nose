@@ -1,6 +1,6 @@
 //! Library and standard-library API contracts plus occurrence-evidence admission.
 //!
-//! Contract rows describe first-party API semantics. Admission remains separate:
+//! Contract rows describe builtin API semantics. Admission remains separate:
 //! consumers only rely on a contract after matching `LibraryApi` evidence and its
 //! source/import/symbol/domain dependencies.
 

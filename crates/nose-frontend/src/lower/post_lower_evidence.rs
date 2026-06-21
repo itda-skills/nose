@@ -221,7 +221,7 @@ pub(super) fn post_lower_library_api_evidence_with_pack_id(
     rule: &str,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceId {
-    Some(il.find_or_push_first_party_evidence(
+    Some(il.find_or_push_builtin_evidence(
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
             contract_hash: library_api_contract_id_hash(id),
@@ -245,7 +245,7 @@ pub(super) fn post_lower_library_api_node_evidence_with_pack_id(
     rule: &str,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceId {
-    Some(il.find_or_push_first_party_evidence(
+    Some(il.find_or_push_builtin_evidence(
         EvidenceAnchor::node(il.node(node).span, il.kind(node)),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
             contract_hash: library_api_contract_id_hash(id),
@@ -300,7 +300,7 @@ pub(super) fn post_lower_find_or_push_evidence(
 ) -> Option<EvidenceId> {
     let _ = rule;
     let (pack_id, producer_id) = nose_semantics::language_core_evidence_provenance(il.meta.lang);
-    Some(il.find_or_push_first_party_evidence(anchor, kind, pack_id, producer_id, dependencies))
+    Some(il.find_or_push_builtin_evidence(anchor, kind, pack_id, producer_id, dependencies))
 }
 
 pub(super) fn post_lower_top_level_statements(il: &Il) -> Vec<NodeId> {

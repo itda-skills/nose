@@ -14,7 +14,7 @@ fn call_target_record(
         anchor: EvidenceAnchor::node(span, NodeKind::Call),
         kind: EvidenceKind::CallTarget(target),
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         },

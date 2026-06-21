@@ -184,7 +184,7 @@ pub(crate) fn sequence_surface_evidence_record_at_sequence_span(
 }
 
 fn language_core_sequence_surface_record(il: &Il, record: &EvidenceRecord) -> bool {
-    if record.provenance.emitter != EvidenceEmitter::FirstParty {
+    if record.provenance.emitter != EvidenceEmitter::Builtin {
         return false;
     }
     let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);

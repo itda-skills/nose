@@ -409,7 +409,7 @@ mod tests {
         );
         let (pack_id, producer_id) =
             nose_semantics::language_core_evidence_provenance(Lang::JavaScript);
-        il.find_or_push_first_party_evidence(
+        il.find_or_push_builtin_evidence(
             EvidenceAnchor::sequence(sp()),
             EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
             pack_id,

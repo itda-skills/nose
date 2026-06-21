@@ -59,8 +59,14 @@ impl EvidenceAnchor {
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub enum EvidenceEmitter {
-    FirstParty,
+    #[serde(rename = "FirstParty", alias = "Builtin")]
+    Builtin,
     External,
+}
+
+impl EvidenceEmitter {
+    #[allow(non_upper_case_globals)]
+    pub const FirstParty: Self = Self::Builtin;
 }
 
 /// Provenance attached to semantic evidence. Hashes are stable symbol hashes so

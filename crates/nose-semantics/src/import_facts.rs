@@ -187,7 +187,7 @@ fn imported_literal_record_matches(
 }
 
 fn language_core_record_for_il(il: &Il, record: &EvidenceRecord) -> bool {
-    if record.provenance.emitter != EvidenceEmitter::FirstParty {
+    if record.provenance.emitter != EvidenceEmitter::Builtin {
         return false;
     }
     let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);

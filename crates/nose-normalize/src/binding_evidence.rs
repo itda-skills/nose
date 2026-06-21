@@ -242,7 +242,7 @@ fn sequence_domain_evidence_record_for_node(
 }
 
 fn sequence_surface_record_has_language_core_provenance(il: &Il, record: &EvidenceRecord) -> bool {
-    if record.provenance.emitter != EvidenceEmitter::FirstParty {
+    if record.provenance.emitter != EvidenceEmitter::Builtin {
         return false;
     }
     let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
@@ -444,18 +444,13 @@ fn find_or_push_evidence(
     provenance: EvidenceProvenance,
     dependencies: Vec<EvidenceId>,
 ) -> Option<EvidenceId> {
-    Some(il.find_or_push_first_party_evidence_with_provenance(
-        anchor,
-        kind,
-        provenance,
-        dependencies,
-    ))
+    Some(il.find_or_push_builtin_evidence_with_provenance(anchor, kind, provenance, dependencies))
 }
 
 fn binding_domain_provenance(il: &Il) -> EvidenceProvenance {
     let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
     EvidenceProvenance {
-        emitter: EvidenceEmitter::FirstParty,
+        emitter: EvidenceEmitter::Builtin,
         pack_hash: Some(stable_symbol_hash(pack_id)),
         rule_hash: Some(stable_symbol_hash(producer_id)),
     }

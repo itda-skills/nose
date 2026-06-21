@@ -1683,7 +1683,7 @@ Remaining after the #109 closeout:
   and unmodeled module/export dependencies rather than source/domain side tables.
 - Add scope, dependency, and ambiguity validation for evidence records before
   they become a stable external extension surface.
-- Expand the exact fragment facade from first-party helper functions into
+- Expand the exact fragment facade from builtin helper functions into
   versioned pack-facing effect/place evidence records. The current substrate
   covers canonical append calls, C/Go/Java non-overloadable index writes, Java
   self-receiver/self-field writes, binding writes, receiver-mutation risks, and

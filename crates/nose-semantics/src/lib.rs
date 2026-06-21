@@ -1,6 +1,6 @@
 //! Semantic contracts for language and library facts used by exact matching.
 //!
-//! This crate is the first-party semantic-kernel facade. The initial migration is
+//! This crate is the builtin semantic-kernel facade. The initial migration is
 //! deliberately behavior-preserving: it names the semantic assumptions that were
 //! previously encoded as scattered `Lang` matches. Future pack loading should
 //! extend this contract surface rather than letting packs mint fingerprints or
@@ -118,8 +118,9 @@ use symbol_identity::{
 };
 pub use type_domain::{
     python_stdlib_type_domain, python_stdlib_type_domain_contract, type_domain_from_source_text,
-    FirstPartyTypeDomainAliasContract, PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS,
-    PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID, PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID,
+    BuiltinTypeDomainAliasContract, FirstPartyTypeDomainAliasContract,
+    PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
+    PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID,
 };
 
 /// Stable pack id for the legacy builtin compatibility facade.

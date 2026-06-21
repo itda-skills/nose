@@ -157,11 +157,8 @@ impl<'a> Lowering<'a> {
             src,
             lang,
             interner,
-            language_core_provenance: first_party_evidence_provenance(
-                core_pack_id,
-                core_producer_id,
-            ),
-            language_source_fact_provenance: first_party_evidence_provenance(
+            language_core_provenance: builtin_evidence_provenance(core_pack_id, core_producer_id),
+            language_source_fact_provenance: builtin_evidence_provenance(
                 source_pack_id,
                 source_producer_id,
             ),
@@ -229,12 +226,17 @@ impl<'a> Lowering<'a> {
     }
 }
 
-pub(crate) fn first_party_evidence_provenance(pack_id: &str, rule: &str) -> EvidenceProvenance {
+pub(crate) fn builtin_evidence_provenance(pack_id: &str, rule: &str) -> EvidenceProvenance {
     EvidenceProvenance {
-        emitter: EvidenceEmitter::FirstParty,
+        emitter: EvidenceEmitter::Builtin,
         pack_hash: Some(stable_symbol_hash(pack_id)),
         rule_hash: Some(stable_symbol_hash(rule)),
     }
+}
+
+#[allow(dead_code)]
+pub(crate) fn first_party_evidence_provenance(pack_id: &str, rule: &str) -> EvidenceProvenance {
+    builtin_evidence_provenance(pack_id, rule)
 }
 
 #[cfg(test)]

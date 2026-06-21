@@ -1,4 +1,4 @@
-//! Contract registry helpers for resolving evidence hashes back to first-party rows.
+//! Contract registry helpers for resolving evidence hashes back to builtin rows.
 
 use super::*;
 

@@ -59,7 +59,7 @@ pub(super) fn evidence(
         anchor,
         kind,
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("strict-exact-test")),
         },

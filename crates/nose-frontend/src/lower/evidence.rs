@@ -92,7 +92,7 @@ impl<'a> Lowering<'a> {
         self.record_evidence_with_provenance_dependencies(
             anchor,
             kind,
-            first_party_evidence_provenance(pack_id, rule),
+            builtin_evidence_provenance(pack_id, rule),
             dependencies,
         )
     }

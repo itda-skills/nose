@@ -1,6 +1,6 @@
 # Semantic evidence records
 
-Evidence records are the internal substrate that lets current first-party
+Evidence records are the internal substrate that lets current builtin
 frontends, and future language/library packs, emit proof facts without giving
 those producers authority to approve exact clones. They are facts, not verdicts.
 Contracts in `nose-semantics` decide whether a fact can satisfy an exact-channel
@@ -14,11 +14,16 @@ precondition.
 - Make facts carry stable ids, anchors, provenance, dependencies, and status.
 - Keep exact matching fail-closed when evidence is missing, ambiguous, or
   conflicting.
-- Preserve existing behavior while first-party frontends emit source,
+- Preserve existing behavior while builtin frontends emit source,
   parameter-domain, import, symbol, guard, place/effect, library API, and
   sequence-surface facts directly into the record shape.
 - Make the future external pack schema a narrowing of an implemented internal
   boundary, not a speculative document-only API.
+
+Internal Rust evidence provenance uses `EvidenceEmitter::Builtin` for shipped
+nose producers and `EvidenceEmitter::External` for provider/user opt-in data.
+The current serialized IL wire name for builtin evidence remains `FirstParty`
+for compatibility.
 
 ## Non-goals
 

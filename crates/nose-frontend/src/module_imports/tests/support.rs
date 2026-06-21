@@ -1,5 +1,5 @@
 use super::super::resolve_imported_immutable_bindings;
-use super::super::snapshot::push_first_party_evidence_with_dependencies;
+use super::super::snapshot::push_builtin_evidence_with_dependencies;
 use nose_il::{
     stable_symbol_hash, EffectEvidenceKind, EvidenceAnchor, EvidenceEmitter, EvidenceId,
     EvidenceKind, EvidenceProvenance, EvidenceRecord, EvidenceStatus, FileId, FileMeta, Il,
@@ -40,14 +40,14 @@ pub(super) fn module_with_binding_method(method: &str) -> (Il, Interner, Symbol,
         Vec::new(),
         Vec::new(),
     );
-    push_first_party_evidence_with_dependencies(
+    push_builtin_evidence_with_dependencies(
         &mut il,
         EvidenceAnchor::node(span, NodeKind::Assign),
         EvidenceKind::Effect(EffectEvidenceKind::BindingWrite),
         "effect_binding_write_test",
         Vec::new(),
     );
-    push_first_party_evidence_with_dependencies(
+    push_builtin_evidence_with_dependencies(
         &mut il,
         EvidenceAnchor::node(span, NodeKind::Call),
         EvidenceKind::Effect(EffectEvidenceKind::OpaqueArgumentEscape),
@@ -57,7 +57,7 @@ pub(super) fn module_with_binding_method(method: &str) -> (Il, Interner, Symbol,
     if let Some(contract) =
         nose_semantics::module_binding_mutating_method_contract(Lang::JavaScript, method, 1)
     {
-        push_first_party_evidence_with_dependencies(
+        push_builtin_evidence_with_dependencies(
             &mut il,
             EvidenceAnchor::node(span, NodeKind::Call),
             EvidenceKind::Effect(contract.effect),
@@ -177,7 +177,7 @@ pub(super) fn test_provenance(rule: &str) -> EvidenceProvenance {
 pub(super) fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
     let (pack_id, producer_id) = nose_semantics::language_core_evidence_provenance(lang);
     EvidenceProvenance {
-        emitter: EvidenceEmitter::FirstParty,
+        emitter: EvidenceEmitter::Builtin,
         pack_hash: Some(stable_symbol_hash(pack_id)),
         rule_hash: Some(stable_symbol_hash(producer_id)),
     }

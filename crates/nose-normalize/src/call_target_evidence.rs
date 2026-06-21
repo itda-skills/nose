@@ -121,7 +121,7 @@ fn upsert(
         if record.anchor == anchor
             && record.kind == kind
             && record.status == EvidenceStatus::Asserted
-            && record.provenance.emitter == EvidenceEmitter::FirstParty
+            && record.provenance.emitter == EvidenceEmitter::Builtin
         {
             if record.provenance.pack_hash == provenance.current.pack_hash {
                 current.get_or_insert(idx);
@@ -137,19 +137,14 @@ fn upsert(
         record.dependencies = dependencies;
         return record.id;
     }
-    il.find_or_push_first_party_evidence_with_provenance(
-        anchor,
-        kind,
-        provenance.current,
-        dependencies,
-    )
+    il.find_or_push_builtin_evidence_with_provenance(anchor, kind, provenance.current, dependencies)
 }
 
 fn call_target_evidence_provenance(il: &Il) -> CallTargetEvidenceProvenance {
     let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
     CallTargetEvidenceProvenance {
         current: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         },

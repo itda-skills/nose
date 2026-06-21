@@ -271,7 +271,7 @@ pub fn source_cast_at_node(il: &Il, node: NodeId) -> Option<SourceCastKind> {
 fn source_cast_provenance_admitted(record: &EvidenceRecord, cast: SourceCastKind) -> bool {
     match cast {
         SourceCastKind::CUnsigned32 => {
-            record.provenance.emitter == EvidenceEmitter::FirstParty
+            record.provenance.emitter == EvidenceEmitter::Builtin
                 && record.provenance.pack_hash == Some(stable_symbol_hash(C_LANGUAGE_PACK_ID))
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID))
@@ -456,7 +456,7 @@ fn language_core_call_target_evidence_at_call(
 fn language_core_call_target_provenance(il: &Il) -> EvidenceProvenance {
     let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
     EvidenceProvenance {
-        emitter: EvidenceEmitter::FirstParty,
+        emitter: EvidenceEmitter::Builtin,
         pack_hash: Some(stable_symbol_hash(pack_id)),
         rule_hash: Some(stable_symbol_hash(producer_id)),
     }

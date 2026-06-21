@@ -351,7 +351,7 @@ fn push_language_core_evidence_with_dependencies(
         anchor,
         kind,
         EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         },
@@ -360,7 +360,7 @@ fn push_language_core_evidence_with_dependencies(
 }
 
 #[cfg(test)]
-pub(super) fn push_first_party_evidence_with_dependencies(
+pub(super) fn push_builtin_evidence_with_dependencies(
     il: &mut Il,
     anchor: EvidenceAnchor,
     kind: EvidenceKind,
@@ -372,7 +372,7 @@ pub(super) fn push_first_party_evidence_with_dependencies(
         anchor,
         kind,
         EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(nose_semantics::BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash(rule)),
         },

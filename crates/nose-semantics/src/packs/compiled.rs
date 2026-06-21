@@ -529,7 +529,7 @@ const PYTHON_STDLIB_TYPE_DOMAIN_CONTRACT_IDS: &[&str] =
 const PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_IDS: &[&str] = &[PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID];
 const PYTHON_STDLIB_TYPE_DOMAIN_HARD_NEGATIVE_REFS: &[&str] =
     &["python-typing-domain-wrong-module-hard-negative"];
-const NO_TYPE_DOMAIN_ALIAS_CONTRACTS: &[FirstPartyTypeDomainAliasContract] = &[];
+const NO_TYPE_DOMAIN_ALIAS_CONTRACTS: &[BuiltinTypeDomainAliasContract] = &[];
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct BuiltinLanguageBinding {
@@ -552,7 +552,7 @@ pub struct BuiltinPackDescriptor {
     pub evidence_producer_ids: &'static [&'static str],
     pub source_fact_producer_ids: &'static [&'static str],
     pub contract_ids: &'static [&'static str],
-    pub type_domain_alias_contracts: &'static [FirstPartyTypeDomainAliasContract],
+    pub type_domain_alias_contracts: &'static [BuiltinTypeDomainAliasContract],
     static_value_law_ids: &'static [&'static str],
     dynamic_value_law_ids: Option<fn() -> Vec<&'static str>>,
     static_conformance_refs: &'static [&'static str],

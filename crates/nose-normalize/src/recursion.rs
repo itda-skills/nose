@@ -531,7 +531,7 @@ mod tests {
                     name_hash: interner.symbol_hash(f),
                 }),
                 provenance: EvidenceProvenance {
-                    emitter: EvidenceEmitter::FirstParty,
+                    emitter: EvidenceEmitter::Builtin,
                     pack_hash: Some(stable_symbol_hash(pack_id)),
                     rule_hash: Some(stable_symbol_hash(producer_id)),
                 },

@@ -12,7 +12,7 @@ fn sp(line: u32) -> Span {
 fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
     let (pack_id, producer_id) = language_core_evidence_provenance(lang);
     EvidenceProvenance {
-        emitter: EvidenceEmitter::FirstParty,
+        emitter: EvidenceEmitter::Builtin,
         pack_hash: Some(stable_symbol_hash(pack_id)),
         rule_hash: Some(stable_symbol_hash(producer_id)),
     }

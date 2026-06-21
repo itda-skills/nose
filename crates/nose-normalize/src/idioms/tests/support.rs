@@ -49,7 +49,7 @@ pub(super) fn evidence_with_dependencies(
         anchor,
         kind,
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(nose_semantics::BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("test")),
         },
@@ -71,7 +71,7 @@ pub(super) fn language_core_evidence(
         anchor,
         kind,
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         },
@@ -102,7 +102,7 @@ pub(super) fn sequence_surface_evidence(
         anchor: EvidenceAnchor::sequence(span),
         kind: EvidenceKind::SequenceSurface(surface),
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         },

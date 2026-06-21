@@ -240,7 +240,7 @@ fn upsert(
         if record.anchor == anchor
             && record.kind == kind
             && record.status == EvidenceStatus::Asserted
-            && record.provenance.emitter == EvidenceEmitter::FirstParty
+            && record.provenance.emitter == EvidenceEmitter::Builtin
             && (record.provenance.pack_hash == provenance.current.pack_hash
                 || record.provenance.pack_hash == Some(provenance.legacy_pack_hash))
         {
@@ -253,7 +253,7 @@ fn upsert(
         }
     }
     found.unwrap_or_else(|| {
-        il.find_or_push_first_party_evidence_with_provenance(
+        il.find_or_push_builtin_evidence_with_provenance(
             anchor,
             kind,
             provenance.current,
@@ -266,7 +266,7 @@ fn effect_evidence_provenance(il: &Il) -> EffectEvidenceProvenance {
     let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
     EffectEvidenceProvenance {
         current: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         },
@@ -287,7 +287,7 @@ mod tests {
     fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
         let (pack_id, producer_id) = language_core_evidence_provenance(lang);
         EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         }
@@ -346,7 +346,7 @@ mod tests {
         let contract =
             library_free_function_builtin_contract(Lang::Go, "append", 2).expect("Go append");
         let (pack_id, producer_id) = language_core_evidence_provenance(Lang::Go);
-        let symbol = il.find_or_push_first_party_evidence(
+        let symbol = il.find_or_push_builtin_evidence(
             EvidenceAnchor::node(il.node(append).span, NodeKind::Var),
             EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
                 name_hash: stable_symbol_hash("append"),
@@ -355,7 +355,7 @@ mod tests {
             producer_id,
             Vec::new(),
         );
-        let api = il.find_or_push_first_party_evidence(
+        let api = il.find_or_push_builtin_evidence(
             EvidenceAnchor::node(il.node(append).span, NodeKind::Call),
             EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
                 contract_hash: library_api_contract_id_hash(contract.id),
@@ -381,7 +381,7 @@ mod tests {
         let contract =
             library_free_function_builtin_contract(Lang::Go, "append", 2).expect("Go append");
         let (pack_id, producer_id) = language_core_evidence_provenance(Lang::Go);
-        let symbol = il.find_or_push_first_party_evidence(
+        let symbol = il.find_or_push_builtin_evidence(
             EvidenceAnchor::node(il.node(append).span, NodeKind::Var),
             EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
                 name_hash: stable_symbol_hash("append"),
@@ -390,7 +390,7 @@ mod tests {
             producer_id,
             Vec::new(),
         );
-        let api = il.find_or_push_first_party_evidence(
+        let api = il.find_or_push_builtin_evidence(
             EvidenceAnchor::node(il.node(append).span, NodeKind::Call),
             EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
                 contract_hash: library_api_contract_id_hash(contract.id),
@@ -401,7 +401,7 @@ mod tests {
             FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
             vec![symbol],
         );
-        il.find_or_push_first_party_evidence(
+        il.find_or_push_builtin_evidence(
             EvidenceAnchor::node(il.node(append).span, NodeKind::Call),
             EvidenceKind::Effect(EffectEvidenceKind::BuilderAppendCall),
             BUILTIN_COMPAT_PACK_ID,

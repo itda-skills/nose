@@ -70,7 +70,7 @@ fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
 
 fn pack_provenance(pack_id: &str, producer_id: &str) -> EvidenceProvenance {
     EvidenceProvenance {
-        emitter: EvidenceEmitter::FirstParty,
+        emitter: EvidenceEmitter::Builtin,
         pack_hash: Some(stable_symbol_hash(pack_id)),
         rule_hash: Some(stable_symbol_hash(producer_id)),
     }

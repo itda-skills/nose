@@ -20,7 +20,7 @@ pub(super) fn wide_sp(start: u32, end: u32) -> Span {
 pub(super) fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
     let (pack_id, producer_id) = language_core_evidence_provenance(lang);
     EvidenceProvenance {
-        emitter: EvidenceEmitter::FirstParty,
+        emitter: EvidenceEmitter::Builtin,
         pack_hash: Some(stable_symbol_hash(pack_id)),
         rule_hash: Some(stable_symbol_hash(producer_id)),
     }
@@ -38,7 +38,7 @@ fn evidence_with_dependencies(
         anchor,
         kind,
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("test")),
         },

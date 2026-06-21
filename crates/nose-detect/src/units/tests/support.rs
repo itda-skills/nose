@@ -34,7 +34,7 @@ pub(super) fn evidence(
         anchor,
         kind,
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("test")),
         },
@@ -56,7 +56,7 @@ pub(super) fn language_core_evidence(
         anchor,
         kind,
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         },

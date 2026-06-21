@@ -9,5 +9,8 @@ rust-version.workspace = true
 serde = { workspace = true }
 lasso = { workspace = true }
 
+[dev-dependencies]
+serde_json = { workspace = true }
+
 [lints]
 workspace = true

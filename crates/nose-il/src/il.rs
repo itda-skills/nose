@@ -337,7 +337,7 @@ impl Il {
         by_node
     }
 
-    pub fn find_or_push_first_party_evidence(
+    pub fn find_or_push_builtin_evidence(
         &mut self,
         anchor: EvidenceAnchor,
         kind: EvidenceKind,
@@ -346,19 +346,14 @@ impl Il {
         dependencies: Vec<EvidenceId>,
     ) -> EvidenceId {
         let provenance = EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(rule)),
         };
-        self.find_or_push_first_party_evidence_with_provenance(
-            anchor,
-            kind,
-            provenance,
-            dependencies,
-        )
+        self.find_or_push_builtin_evidence_with_provenance(anchor, kind, provenance, dependencies)
     }
 
-    pub fn find_or_push_first_party_evidence_with_provenance(
+    pub fn find_or_push_builtin_evidence_with_provenance(
         &mut self,
         anchor: EvidenceAnchor,
         kind: EvidenceKind,
@@ -366,7 +361,7 @@ impl Il {
         dependencies: Vec<EvidenceId>,
     ) -> EvidenceId {
         let provenance = EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: provenance.pack_hash,
             rule_hash: provenance.rule_hash,
         };
@@ -393,6 +388,27 @@ impl Il {
             status: EvidenceStatus::Asserted,
         });
         id
+    }
+
+    pub fn find_or_push_first_party_evidence(
+        &mut self,
+        anchor: EvidenceAnchor,
+        kind: EvidenceKind,
+        pack_id: &str,
+        rule: &str,
+        dependencies: Vec<EvidenceId>,
+    ) -> EvidenceId {
+        self.find_or_push_builtin_evidence(anchor, kind, pack_id, rule, dependencies)
+    }
+
+    pub fn find_or_push_first_party_evidence_with_provenance(
+        &mut self,
+        anchor: EvidenceAnchor,
+        kind: EvidenceKind,
+        provenance: EvidenceProvenance,
+        dependencies: Vec<EvidenceId>,
+    ) -> EvidenceId {
+        self.find_or_push_builtin_evidence_with_provenance(anchor, kind, provenance, dependencies)
     }
 
     #[inline]

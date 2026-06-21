@@ -128,7 +128,7 @@ fn evidence_with_dependencies(
         anchor,
         kind,
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("test")),
         },
@@ -161,7 +161,7 @@ fn language_core_evidence_with_dependencies(
         anchor,
         kind,
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         },
@@ -181,7 +181,7 @@ fn c_unsigned_32_source_cast_evidence(
         anchor,
         kind: EvidenceKind::Source(SourceFactKind::Cast(SourceCastKind::CUnsigned32)),
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(C_LANGUAGE_PACK_ID)),
             rule_hash: Some(stable_symbol_hash(C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID)),
         },

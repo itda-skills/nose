@@ -78,7 +78,7 @@ fn record_rust_option_some_library_api(il: &mut Il, interner: &Interner, call: N
     let Some(symbol_dependency) = unshadowed_symbol_evidence_id(il, callee, name) else {
         return false;
     };
-    let api = upsert_first_party_evidence_with_pack_id(
+    let api = upsert_builtin_evidence_with_pack_id(
         il,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -130,7 +130,7 @@ fn record_builder_append_method_library_api(
     else {
         return false;
     };
-    upsert_first_party_evidence_with_pack_id(
+    upsert_builtin_evidence_with_pack_id(
         il,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -227,7 +227,7 @@ fn language_core_append_receiver_domain_dependency(il: &Il, dependency: Evidence
     let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
     domain.is_array_collection_or_set()
         && record.status == EvidenceStatus::Asserted
-        && record.provenance.emitter == EvidenceEmitter::FirstParty
+        && record.provenance.emitter == EvidenceEmitter::Builtin
         && record.provenance.pack_hash == Some(stable_symbol_hash(pack_id))
         && record.provenance.rule_hash == Some(stable_symbol_hash(producer_id))
 }
@@ -245,7 +245,7 @@ fn close_legacy_duplicates_for_language_core_dependency(il: &mut Il, dependency:
             && duplicate.anchor == anchor
             && duplicate.kind == kind
             && duplicate.status == EvidenceStatus::Asserted
-            && duplicate.provenance.emitter == EvidenceEmitter::FirstParty
+            && duplicate.provenance.emitter == EvidenceEmitter::Builtin
             && duplicate.provenance.pack_hash == Some(legacy_pack_hash)
         {
             duplicate.status = EvidenceStatus::Ambiguous;
@@ -262,7 +262,7 @@ fn legacy_first_party_append_receiver_domain_dependency(il: &Il, dependency: Evi
     };
     domain.is_array_collection_or_set()
         && record.status == EvidenceStatus::Asserted
-        && record.provenance.emitter == EvidenceEmitter::FirstParty
+        && record.provenance.emitter == EvidenceEmitter::Builtin
         && record.provenance.pack_hash == Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID))
 }
 
@@ -385,7 +385,7 @@ fn sequence_surface_evidence_id_for_node(
 }
 
 fn sequence_surface_record_has_language_core_provenance(il: &Il, record: &EvidenceRecord) -> bool {
-    if record.provenance.emitter != EvidenceEmitter::FirstParty {
+    if record.provenance.emitter != EvidenceEmitter::Builtin {
         return false;
     }
     let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
@@ -419,7 +419,7 @@ fn record_property_library_api(
     ) else {
         return false;
     };
-    upsert_first_party_evidence_with_pack_id(
+    upsert_builtin_evidence_with_pack_id(
         il,
         EvidenceAnchor::node(il.node(field).span, NodeKind::Field),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -452,7 +452,7 @@ fn record_rust_option_none_library_api(il: &mut Il, interner: &Interner, var: No
     let Some(symbol_dependency) = unshadowed_symbol_evidence_id(il, var, name) else {
         return false;
     };
-    let api = upsert_first_party_evidence_with_pack_id(
+    let api = upsert_builtin_evidence_with_pack_id(
         il,
         EvidenceAnchor::node(il.node(var).span, NodeKind::Var),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -500,7 +500,7 @@ fn record_receiver_method_library_api(
     ) else {
         return false;
     };
-    upsert_first_party_evidence_with_pack_id(
+    upsert_builtin_evidence_with_pack_id(
         il,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -656,7 +656,7 @@ fn upsert_language_core_evidence(
         if record.anchor == anchor
             && record.kind == kind
             && record.status == EvidenceStatus::Asserted
-            && record.provenance.emitter == EvidenceEmitter::FirstParty
+            && record.provenance.emitter == EvidenceEmitter::Builtin
         {
             match record.provenance.pack_hash {
                 Some(hash) if hash == pack_hash => {
@@ -683,13 +683,7 @@ fn upsert_language_core_evidence(
         }
     }
     let Some(idx) = current_idx.or(legacy_idx) else {
-        return il.find_or_push_first_party_evidence(
-            anchor,
-            kind,
-            pack_id,
-            producer_id,
-            dependencies,
-        );
+        return il.find_or_push_builtin_evidence(anchor, kind, pack_id, producer_id, dependencies);
     };
     let record = &mut il.evidence[idx as usize];
     record.provenance.pack_hash = Some(pack_hash);
@@ -702,7 +696,7 @@ fn upsert_language_core_evidence(
     id
 }
 
-fn upsert_first_party_evidence_with_pack_id(
+fn upsert_builtin_evidence_with_pack_id(
     il: &mut Il,
     anchor: EvidenceAnchor,
     kind: EvidenceKind,
@@ -720,7 +714,7 @@ fn upsert_first_party_evidence_with_pack_id(
         if record.anchor == anchor
             && record.kind == kind
             && record.status == EvidenceStatus::Asserted
-            && record.provenance.emitter == EvidenceEmitter::FirstParty
+            && record.provenance.emitter == EvidenceEmitter::Builtin
             && record.provenance.pack_hash == Some(pack_hash)
         {
             if found.is_none() {
@@ -731,7 +725,7 @@ fn upsert_first_party_evidence_with_pack_id(
         }
     }
     found.unwrap_or_else(|| {
-        il.find_or_push_first_party_evidence(anchor, kind, pack_id, rule, dependencies)
+        il.find_or_push_builtin_evidence(anchor, kind, pack_id, rule, dependencies)
     })
 }
 

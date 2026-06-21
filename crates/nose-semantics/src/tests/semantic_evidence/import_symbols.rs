@@ -38,7 +38,7 @@ fn import_fact_evidence_with_provenance(
 fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
     let (pack_id, producer_id) = language_core_evidence_provenance(lang);
     EvidenceProvenance {
-        emitter: EvidenceEmitter::FirstParty,
+        emitter: EvidenceEmitter::Builtin,
         pack_hash: Some(stable_symbol_hash(pack_id)),
         rule_hash: Some(stable_symbol_hash(producer_id)),
     }
@@ -200,7 +200,7 @@ fn import_fact_admission_requires_matching_language_core_provenance() {
         sp(11),
         kind,
         EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("import_fact")),
         },
@@ -219,7 +219,7 @@ fn import_fact_admission_requires_matching_language_core_provenance() {
         sp(13),
         kind,
         EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: None,
             rule_hash: Some(stable_symbol_hash("python.language.core")),
         },
@@ -274,7 +274,7 @@ fn imported_literal_producer_requires_matching_language_core_provenance() {
         sp(15),
         kind,
         EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("module_immutable_literal_export")),
         },
@@ -321,7 +321,7 @@ fn imported_literal_producer_requires_matching_language_core_provenance() {
         sp(15),
         kind,
         EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("module_immutable_literal_export")),
         },

@@ -129,7 +129,7 @@ pub(super) fn lower_static_import(lo: &mut Lowering, node: TsNode) -> Option<Nod
                     contract.domain,
                     import_evidence,
                     crate::type_domain_aliases::TypeDomainEvidenceProvenance {
-                        evidence_provenance: crate::lower::first_party_evidence_provenance(
+                        evidence_provenance: crate::lower::builtin_evidence_provenance(
                             contract.pack_id,
                             contract.producer_id,
                         ),

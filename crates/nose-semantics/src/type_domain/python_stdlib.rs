@@ -4,7 +4,7 @@ pub const PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID: &str = "nose.python.stdlib.type_dom
 pub const PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID: &str = "python.stdlib.type-domain-alias-domain";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct FirstPartyTypeDomainAliasContract {
+pub struct BuiltinTypeDomainAliasContract {
     pub pack_id: &'static str,
     pub producer_id: &'static str,
     pub contract_id: &'static str,
@@ -15,7 +15,9 @@ pub struct FirstPartyTypeDomainAliasContract {
     pub hard_negative_fixture: &'static str,
 }
 
-pub const PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS: &[FirstPartyTypeDomainAliasContract] = &[
+pub type FirstPartyTypeDomainAliasContract = BuiltinTypeDomainAliasContract;
+
+pub const PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS: &[BuiltinTypeDomainAliasContract] = &[
     python_stdlib_type_domain_alias_contract(
         "typing",
         "Dict",
@@ -276,8 +278,8 @@ const fn python_stdlib_type_domain_alias_contract(
     domain: DomainEvidence,
     positive_fixture: &'static str,
     hard_negative_fixture: &'static str,
-) -> FirstPartyTypeDomainAliasContract {
-    FirstPartyTypeDomainAliasContract {
+) -> BuiltinTypeDomainAliasContract {
+    BuiltinTypeDomainAliasContract {
         pack_id: PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID,
         producer_id: PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID,
         contract_id: "python.stdlib.type-domain-alias.contract",
@@ -292,7 +294,7 @@ const fn python_stdlib_type_domain_alias_contract(
 pub fn python_stdlib_type_domain_contract(
     module: &str,
     exported: &str,
-) -> Option<&'static FirstPartyTypeDomainAliasContract> {
+) -> Option<&'static BuiltinTypeDomainAliasContract> {
     let module = module.trim();
     let exported = exported.trim();
     PYTHON_STDLIB_TYPE_DOMAIN_ALIAS_CONTRACTS

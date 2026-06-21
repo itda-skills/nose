@@ -237,7 +237,7 @@ fn resolve_imported_literal_does_not_snapshot_across_languages() {
             exported_hash: stable_symbol_hash("LOOKUP"),
         }),
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         },

@@ -25,7 +25,7 @@ use nose_semantics::{
 fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
     let (pack_id, producer_id) = language_core_evidence_provenance(lang);
     EvidenceProvenance {
-        emitter: EvidenceEmitter::FirstParty,
+        emitter: EvidenceEmitter::Builtin,
         pack_hash: Some(stable_symbol_hash(pack_id)),
         rule_hash: Some(stable_symbol_hash(producer_id)),
     }
@@ -330,7 +330,7 @@ fn test_library_api_record(
             arity,
         }),
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(rule_id)),
         },
@@ -345,7 +345,7 @@ fn test_domain_record(id: u32, il: &Il, node: NodeId, domain: DomainEvidence) ->
         anchor: EvidenceAnchor::node(il.node(node).span, il.kind(node)),
         kind: EvidenceKind::Domain(domain),
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("interp-test")),
         },
@@ -410,7 +410,7 @@ fn test_effect_record(id: u32, span: Span, effect: EffectEvidenceKind) -> Eviden
         anchor: EvidenceAnchor::node(span, NodeKind::Call),
         kind: EvidenceKind::Effect(effect),
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("interp-test")),
         },
@@ -432,7 +432,7 @@ fn test_node_place_record(
         anchor: EvidenceAnchor::node(il.node(node).span, il.kind(node)),
         kind: EvidenceKind::Place(place),
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         },
@@ -453,7 +453,7 @@ fn test_node_effect_record(
         anchor: EvidenceAnchor::node(il.node(node).span, il.kind(node)),
         kind: EvidenceKind::Effect(effect),
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("interp-test")),
         },
@@ -521,7 +521,7 @@ fn test_source_record(id: u32, span: Span, fact: SourceFactKind) -> EvidenceReco
         anchor: EvidenceAnchor::source_span(span),
         kind: EvidenceKind::Source(fact),
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(BUILTIN_COMPAT_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("interp-test")),
         },
@@ -545,7 +545,7 @@ fn test_call_target_record(
             name_hash,
         }),
         provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
+            emitter: EvidenceEmitter::Builtin,
             pack_hash: Some(stable_symbol_hash(pack_id)),
             rule_hash: Some(stable_symbol_hash(producer_id)),
         },
