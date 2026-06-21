@@ -175,8 +175,10 @@ producer, contract, and value-law declarations as data-only rows, can report
 row-id conflicts with builtin or other external rows, and can run a data-only
 influence preflight report. Today that preflight blocks all external rows until
 dependency-backed evidence, explicit influence trust gates, executable
-conformance for exact-capable rows, and conflict-free row ids exist. It does not
-yet:
+conformance for exact-capable rows, and conflict-free row ids exist.
+`nose semantic-pack check --format json` exposes that row-level preflight to
+providers and integrations, but query, normalize, value-graph, exact, and
+detection consumers do not read it. It does not yet:
 
 - execute external evidence producers;
 - register external contract rows with exact consumers;

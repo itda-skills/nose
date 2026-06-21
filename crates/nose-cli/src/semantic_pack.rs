@@ -14,6 +14,7 @@ struct CheckJsonReport {
     schema_version: u32,
     status: &'static str,
     totals: CheckJsonTotals,
+    influence_preflight: CheckJsonInfluencePreflight,
     manifests: Vec<CheckJsonManifest>,
 }
 
@@ -23,6 +24,8 @@ struct CheckJsonTotals {
     positive_fixtures: usize,
     hard_negatives: usize,
     fixture_issues: usize,
+    influence_rows: usize,
+    blocked_influence_rows: usize,
 }
 
 #[derive(serde::Serialize)]
@@ -65,8 +68,30 @@ struct CheckJsonFixture {
     issues: Vec<&'static str>,
 }
 
+#[derive(serde::Serialize)]
+struct CheckJsonInfluencePreflight {
+    status: &'static str,
+    rows: Vec<CheckJsonInfluenceRow>,
+}
+
+#[derive(serde::Serialize)]
+struct CheckJsonInfluenceRow {
+    kind: &'static str,
+    row_id: String,
+    row_hash: String,
+    pack_id: String,
+    pack_hash: String,
+    manifest_path: String,
+    channel: &'static str,
+    passed: bool,
+    blockers: Vec<&'static str>,
+}
+
 impl CheckJsonReport {
-    fn new(report: &nose_semantics::SemanticPackConformanceReport) -> Self {
+    fn new(
+        report: &nose_semantics::SemanticPackConformanceReport,
+        influence_preflight: &nose_semantics::ExternalInfluencePreflightReport,
+    ) -> Self {
         Self {
             schema_version: CONFORMANCE_SCHEMA_VERSION,
             status: if report.passed() { "ok" } else { "failed" },
@@ -75,7 +100,10 @@ impl CheckJsonReport {
                 positive_fixtures: report.positive_fixture_count(),
                 hard_negatives: report.hard_negative_count(),
                 fixture_issues: report.fixture_issue_count(),
+                influence_rows: influence_preflight.rows.len(),
+                blocked_influence_rows: influence_preflight.blocked_count(),
             },
+            influence_preflight: CheckJsonInfluencePreflight::new(influence_preflight),
             manifests: report
                 .manifests
                 .iter()
@@ -123,14 +151,43 @@ impl CheckJsonReport {
     }
 }
 
+impl CheckJsonInfluencePreflight {
+    fn new(report: &nose_semantics::ExternalInfluencePreflightReport) -> Self {
+        Self {
+            status: if report.passed() { "ok" } else { "blocked" },
+            rows: report
+                .rows
+                .iter()
+                .map(|row| CheckJsonInfluenceRow {
+                    kind: row.kind.as_str(),
+                    row_id: row.row_id.clone(),
+                    row_hash: format!("{:016x}", row.row_hash),
+                    pack_id: row.pack_id.clone(),
+                    pack_hash: format!("{:016x}", row.pack_hash),
+                    manifest_path: row.manifest_path.display().to_string(),
+                    channel: row.channel.as_str(),
+                    passed: row.passed(),
+                    blockers: row
+                        .blockers
+                        .iter()
+                        .map(|blocker| blocker.as_str())
+                        .collect(),
+                })
+                .collect(),
+        }
+    }
+}
+
 pub(crate) fn cmd_check(paths: Vec<PathBuf>, format: CheckFormat) -> Result<()> {
     let report = nose_semantics::check_semantic_pack_conformance(&paths)?;
     match format {
         CheckFormat::Human => print_human(&report),
         CheckFormat::Json => {
+            let influence_preflight =
+                nose_semantics::SemanticPackSet::new_local(&paths)?.external_influence_preflight();
             println!(
                 "{}",
-                serde_json::to_string_pretty(&CheckJsonReport::new(&report))?
+                serde_json::to_string_pretty(&CheckJsonReport::new(&report, &influence_preflight))?
             );
         }
     }

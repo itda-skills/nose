@@ -123,6 +123,15 @@ fn semantic_pack_by_id<'a>(json: &'a serde_json::Value, id: &str) -> &'a serde_j
         .unwrap_or_else(|| panic!("semantic_packs should include {id}: {json}"))
 }
 
+fn assert_hex_hash(value: &serde_json::Value) {
+    let hash = value.as_str().expect("hash should be a string");
+    assert_eq!(hash.len(), 16, "hash should be 16 hex digits: {hash}");
+    assert!(
+        hash.chars().all(|ch| ch.is_ascii_hexdigit()),
+        "hash should be hex: {hash}"
+    );
+}
+
 fn assert_example_external_pack(pack: &serde_json::Value, expected_id: &str) {
     assert_eq!(pack["id"], expected_id);
     assert_eq!(pack["kind"], "LibraryPack");
@@ -1183,6 +1192,49 @@ fn semantic_pack_check_json_reports_conformance_success() {
     assert_eq!(json["totals"]["positive_fixtures"], 1);
     assert_eq!(json["totals"]["hard_negatives"], 1);
     assert_eq!(json["totals"]["fixture_issues"], 0);
+    assert_eq!(json["totals"]["influence_rows"], 2);
+    assert_eq!(json["totals"]["blocked_influence_rows"], 2);
+    assert_eq!(json["influence_preflight"]["status"], "blocked");
+    let influence_rows = json["influence_preflight"]["rows"].as_array().unwrap();
+    assert_eq!(influence_rows.len(), 2);
+    for row in influence_rows {
+        assert_eq!(row["pack_id"], "com.example.semantic-pack");
+        assert_eq!(row["passed"], false);
+        assert_hex_hash(&row["row_hash"]);
+        assert_hex_hash(&row["pack_hash"]);
+        assert!(
+            row["blockers"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|blocker| blocker == "data-only-registration"),
+            "preflight row should report data-only blocker: {row}"
+        );
+        assert!(
+            row["blockers"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|blocker| blocker == "dependency-backed-evidence-unavailable"),
+            "preflight row should report dependency-backed evidence blocker: {row}"
+        );
+        assert!(
+            row["blockers"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|blocker| blocker == "explicit-influence-trust-gate-missing"),
+            "preflight row should report explicit trust gate blocker: {row}"
+        );
+        assert!(
+            row["blockers"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|blocker| blocker == "executable-conformance-unavailable"),
+            "exact-capable preflight row should report executable conformance blocker: {row}"
+        );
+    }
     assert_eq!(json["manifests"][0]["id"], "com.example.semantic-pack");
     assert_eq!(
         json["manifests"][0]["fixtures"][0]["issues"]
@@ -1221,6 +1273,16 @@ fn semantic_pack_check_fails_on_missing_fixture_files() {
         serde_json::from_str(&stdout).expect("failed check should still emit JSON");
     assert_eq!(json["status"], "failed");
     assert_eq!(json["totals"]["fixture_issues"], 2);
+    assert_eq!(json["totals"]["influence_rows"], 2);
+    assert_eq!(json["totals"]["blocked_influence_rows"], 2);
+    assert_eq!(json["influence_preflight"]["status"], "blocked");
+    assert_eq!(
+        json["influence_preflight"]["rows"]
+            .as_array()
+            .expect("preflight rows should be present")
+            .len(),
+        2
+    );
     assert_eq!(
         json["manifests"][0]["fixtures"][0]["issues"][0],
         "missing-file"

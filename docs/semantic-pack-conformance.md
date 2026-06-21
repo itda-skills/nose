@@ -30,6 +30,8 @@ The harness does not:
 
 - execute external evidence producers;
 - register external contract rows with exact consumers;
+- treat a passing structural check as permission for external rows to influence
+  analysis;
 - run a behavioral oracle over fixture contents;
 - prove that the provider's semantic claims are complete or true;
 - certify, approve, rank, or endorse external packs;
@@ -83,7 +85,30 @@ execute them.
     "manifests": 1,
     "positive_fixtures": 1,
     "hard_negatives": 2,
-    "fixture_issues": 0
+    "fixture_issues": 0,
+    "influence_rows": 1,
+    "blocked_influence_rows": 1
+  },
+  "influence_preflight": {
+    "status": "blocked",
+    "rows": [
+      {
+        "kind": "contract",
+        "row_id": "python.example.contract",
+        "row_hash": "0123456789abcdef",
+        "pack_id": "com.example.semantic-pack",
+        "pack_hash": "fedcba9876543210",
+        "manifest_path": "/repo/packs/example.json",
+        "channel": "exact-empirical",
+        "passed": false,
+        "blockers": [
+          "data-only-registration",
+          "dependency-backed-evidence-unavailable",
+          "explicit-influence-trust-gate-missing",
+          "executable-conformance-unavailable"
+        ]
+      }
+    ]
   },
   "manifests": []
 }
@@ -93,6 +118,17 @@ Each manifest entry includes pack provenance, declaration counts, the optional
 provider-supplied conformance command, proof links, and per-fixture issue labels
 such as `missing-path`, `missing-expectation`, `missing-file`, and
 `absolute-path`.
+
+The JSON report also includes `influence_preflight`. This is a row-level
+admission preview for local external declarations, not a grant of influence. In
+v0, structurally valid external producer, contract, and value-law rows still
+report blockers such as `data-only-registration`,
+`dependency-backed-evidence-unavailable`,
+`explicit-influence-trust-gate-missing`,
+`executable-conformance-unavailable`, and `row-conflict`. The `totals` object
+includes `influence_rows` and `blocked_influence_rows` so integrations can fail a
+provider workflow when a pack is structurally valid but still not admissible for
+analysis. Row and pack hashes are stable 16-hex-digit strings.
 
 Integrations should discover support through [capabilities](capabilities.md):
 `commands.stable` includes `semantic-pack`, `schemas.semantic_pack_conformance`
@@ -112,7 +148,8 @@ External pack providers own:
 
 Passing `nose semantic-pack check` means the pack is structurally well-formed and
 its declared fixtures are present. It does not mean the pack is safe to enable in
-every user's risk model.
+every user's risk model, and it does not let external rows influence query,
+normalize, value-graph, exact, or detection consumers.
 
 ## User Responsibilities
 

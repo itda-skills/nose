@@ -147,7 +147,7 @@ release so it can't drift.
 | `schemas.capabilities` | array | Supported capabilities schema versions. |
 | `schemas.query_json` | array | Supported `nose query --format json` schema versions ([query-json](query-json.md)). |
 | `schemas.semantic_packs` | array | Supported semantic-pack manifest API versions, currently `nose.semantic-pack.v0`. |
-| `schemas.semantic_pack_conformance` | array | Supported `nose semantic-pack check --format json` schema versions. |
+| `schemas.semantic_pack_conformance` | array | Supported `nose semantic-pack check --format json` schema versions. Version 1 reports structural conformance plus row-level external influence preflight blockers. |
 | `query.modes` | array | Supported `--mode` values. |
 | `query.default_modes` | array | Modes used by `nose query` when `--mode` is omitted. |
 | `query.output_formats` | array | Supported `nose query --format` values. |
