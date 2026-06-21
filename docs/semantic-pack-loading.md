@@ -168,8 +168,12 @@ snapshot prose may group packs by migration narrative instead.
 ## Current limits
 
 The loader validates manifest shape and pack provenance, registers external
-producer, contract, and value-law declarations as data-only rows, and can report
-row-id conflicts with builtin or other external rows. It does not yet:
+producer, contract, and value-law declarations as data-only rows, can report
+row-id conflicts with builtin or other external rows, and can run a data-only
+influence preflight report. Today that preflight blocks all external rows until
+dependency-backed evidence, explicit influence trust gates, executable
+conformance for exact-capable rows, and conflict-free row ids exist. It does not
+yet:
 
 - execute external evidence producers;
 - register external contract rows with exact consumers;

@@ -391,6 +391,14 @@ may intentionally mirror builtin vocabulary for documentation or migration
 tests. Any future external influence gate must treat those conflicts as blocking
 until an explicit composition or replacement policy exists.
 
+Local loading also exposes a data-only influence preflight report. In v0, all
+external rows are blocked from influence because they are registered as data
+only, have no dependency-backed evidence runtime, lack an explicit influence
+trust gate, and, for exact-capable rows, lack executable conformance. Conflicting
+rows carry an additional conflict blocker. This report is an implementation
+contract for future adoption work; query, normalize, and detection consumers do
+not read it.
+
 Near-mode scoring may retain conflict provenance as a review signal. Exact
 semantic fingerprints must not.
 

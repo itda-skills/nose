@@ -95,7 +95,7 @@ pub use loading::{
 };
 
 use compiled::compiled_builtin_packs;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use validation::validate_manifest;
 pub const SEMANTIC_PACK_API_VERSION: &str = "nose.semantic-pack.v0";
 
@@ -513,6 +513,66 @@ impl ExternalRowConflictReport {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum ExternalInfluenceBlocker {
+    DataOnlyRegistration,
+    DependencyBackedEvidenceUnavailable,
+    ExplicitInfluenceTrustGateMissing,
+    ExecutableConformanceUnavailable,
+    RowConflict,
+}
+
+impl ExternalInfluenceBlocker {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            ExternalInfluenceBlocker::DataOnlyRegistration => "data-only-registration",
+            ExternalInfluenceBlocker::DependencyBackedEvidenceUnavailable => {
+                "dependency-backed-evidence-unavailable"
+            }
+            ExternalInfluenceBlocker::ExplicitInfluenceTrustGateMissing => {
+                "explicit-influence-trust-gate-missing"
+            }
+            ExternalInfluenceBlocker::ExecutableConformanceUnavailable => {
+                "executable-conformance-unavailable"
+            }
+            ExternalInfluenceBlocker::RowConflict => "row-conflict",
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ExternalRowInfluencePreflight {
+    pub kind: ExternalRowKind,
+    pub row_id: String,
+    pub row_hash: u64,
+    pub pack_id: String,
+    pub pack_hash: u64,
+    pub manifest_path: PathBuf,
+    pub channel: SemanticPackChannel,
+    pub blockers: Vec<ExternalInfluenceBlocker>,
+}
+
+impl ExternalRowInfluencePreflight {
+    pub fn passed(&self) -> bool {
+        self.blockers.is_empty()
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ExternalInfluencePreflightReport {
+    pub rows: Vec<ExternalRowInfluencePreflight>,
+}
+
+impl ExternalInfluencePreflightReport {
+    pub fn passed(&self) -> bool {
+        self.rows.iter().all(ExternalRowInfluencePreflight::passed)
+    }
+
+    pub fn blocked_count(&self) -> usize {
+        self.rows.iter().filter(|row| !row.passed()).count()
+    }
+}
+
 #[derive(Clone)]
 struct ExternalRowCoordinate {
     kind: ExternalRowKind,
@@ -521,6 +581,7 @@ struct ExternalRowCoordinate {
     pack_id: String,
     pack_hash: u64,
     manifest_path: PathBuf,
+    channel: SemanticPackChannel,
 }
 
 impl ExternalRowCoordinate {
@@ -532,6 +593,7 @@ impl ExternalRowCoordinate {
             pack_id: row.pack_id.clone(),
             pack_hash: row.pack_hash,
             manifest_path: row.manifest_path.clone(),
+            channel: row.channel,
         }
     }
 
@@ -543,6 +605,7 @@ impl ExternalRowCoordinate {
             pack_id: row.pack_id.clone(),
             pack_hash: row.pack_hash,
             manifest_path: row.manifest_path.clone(),
+            channel: row.channel,
         }
     }
 
@@ -554,6 +617,7 @@ impl ExternalRowCoordinate {
             pack_id: row.pack_id.clone(),
             pack_hash: row.pack_hash,
             manifest_path: row.manifest_path.clone(),
+            channel: row.channel,
         }
     }
 }
@@ -715,6 +779,56 @@ impl SemanticPackSet {
             }
         }
         ExternalRowConflictReport { conflicts }
+    }
+
+    pub fn external_influence_preflight(&self) -> ExternalInfluencePreflightReport {
+        let coordinates = self.external_row_coordinates();
+        let mut conflicting_rows = HashSet::new();
+        for conflict in self.external_row_conflicts().conflicts {
+            conflicting_rows.insert((
+                conflict.kind,
+                conflict.row_hash,
+                conflict.external_pack_hash,
+            ));
+            if conflict.conflicting_source == SemanticPackSource::LocalManifest {
+                conflicting_rows.insert((
+                    conflict.kind,
+                    conflict.row_hash,
+                    conflict.conflicting_pack_hash,
+                ));
+            }
+        }
+        let rows = coordinates
+            .into_iter()
+            .map(|coordinate| {
+                let mut blockers = vec![
+                    ExternalInfluenceBlocker::DataOnlyRegistration,
+                    ExternalInfluenceBlocker::DependencyBackedEvidenceUnavailable,
+                    ExternalInfluenceBlocker::ExplicitInfluenceTrustGateMissing,
+                ];
+                if coordinate.channel.exact_capable() {
+                    blockers.push(ExternalInfluenceBlocker::ExecutableConformanceUnavailable);
+                }
+                if conflicting_rows.contains(&(
+                    coordinate.kind,
+                    coordinate.row_hash,
+                    coordinate.pack_hash,
+                )) {
+                    blockers.push(ExternalInfluenceBlocker::RowConflict);
+                }
+                ExternalRowInfluencePreflight {
+                    kind: coordinate.kind,
+                    row_id: coordinate.row_id,
+                    row_hash: coordinate.row_hash,
+                    pack_id: coordinate.pack_id,
+                    pack_hash: coordinate.pack_hash,
+                    manifest_path: coordinate.manifest_path,
+                    channel: coordinate.channel,
+                    blockers,
+                }
+            })
+            .collect();
+        ExternalInfluencePreflightReport { rows }
     }
 
     fn external_row_coordinates(&self) -> Vec<ExternalRowCoordinate> {

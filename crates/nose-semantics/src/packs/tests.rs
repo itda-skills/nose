@@ -2085,6 +2085,93 @@ fn external_rows_report_builtin_value_law_conflicts_without_rejecting_pack() {
 }
 
 #[test]
+fn external_influence_preflight_blocks_data_only_rows_before_consumer_admission() {
+    let dir = unique_dir("external_influence_preflight");
+    let path = dir.join("pack.json");
+    fs::write(&path, manifest("com.example.preflight")).unwrap();
+
+    let builtin = SemanticPackSet::builtin_only().external_influence_preflight();
+    assert!(builtin.rows.is_empty());
+    assert!(builtin.passed());
+
+    let set = SemanticPackSet::new_local(&[path]).expect("metadata-only pack loads");
+    let report = set.external_influence_preflight();
+    assert_eq!(report.rows.len(), 2);
+    assert_eq!(report.blocked_count(), 2);
+    assert!(!report.passed());
+    for row in &report.rows {
+        assert_eq!(row.pack_id, "com.example.preflight");
+        assert!(row
+            .blockers
+            .contains(&ExternalInfluenceBlocker::DataOnlyRegistration));
+        assert!(row
+            .blockers
+            .contains(&ExternalInfluenceBlocker::DependencyBackedEvidenceUnavailable));
+        assert!(row
+            .blockers
+            .contains(&ExternalInfluenceBlocker::ExplicitInfluenceTrustGateMissing));
+        assert!(row
+            .blockers
+            .contains(&ExternalInfluenceBlocker::ExecutableConformanceUnavailable));
+        assert!(!row
+            .blockers
+            .contains(&ExternalInfluenceBlocker::RowConflict));
+    }
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
+fn external_influence_preflight_marks_conflicting_rows_as_blocked() {
+    let dir = unique_dir("external_preflight_conflicts");
+    let path = dir.join("pack.json");
+    let mirror = manifest("com.example.python-stdlib-type-domain-mirror")
+        .replace(
+            "python.library-api.example",
+            "python.stdlib.type-domain-alias-domain",
+        )
+        .replace("LibraryApi.Contract", "Domain.TypeAlias")
+        .replace(
+            "python.example.contract",
+            "python.stdlib.type-domain-alias.contract",
+        )
+        .replace("Example", "PythonStdlibTypeDomainAlias");
+    fs::write(&path, mirror).unwrap();
+
+    let set = SemanticPackSet::new_local(&[path]).expect("metadata-only pack loads");
+    let report = set.external_influence_preflight();
+    assert_eq!(report.rows.len(), 2);
+    assert!(report.rows.iter().all(|row| row
+        .blockers
+        .contains(&ExternalInfluenceBlocker::RowConflict)));
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
+fn external_influence_preflight_marks_both_external_duplicate_rows_as_conflicting() {
+    let dir = unique_dir("external_preflight_duplicate_conflicts");
+    let first = dir.join("a.json");
+    let second = dir.join("b.json");
+    fs::write(&first, manifest("com.example.first")).unwrap();
+    fs::write(&second, manifest("com.example.second")).unwrap();
+
+    let set = SemanticPackSet::new_local(&[first, second]).expect("metadata-only packs load");
+    let report = set.external_influence_preflight();
+    assert_eq!(report.rows.len(), 4);
+    for pack_id in ["com.example.first", "com.example.second"] {
+        let rows = report
+            .rows
+            .iter()
+            .filter(|row| row.pack_id == pack_id)
+            .collect::<Vec<_>>();
+        assert_eq!(rows.len(), 2);
+        assert!(rows.iter().all(|row| row
+            .blockers
+            .contains(&ExternalInfluenceBlocker::RowConflict)));
+    }
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
 fn conformance_check_reports_declared_fixture_files() {
     let dir = unique_dir("conformance_ok");
     let fixture_dir = dir.join("fixtures");
