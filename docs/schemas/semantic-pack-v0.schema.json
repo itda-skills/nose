@@ -57,6 +57,8 @@
         },
         "trust": {
           "enum": [
+            "builtin-default",
+            "builtin-optional",
             "default-first-party",
             "first-party-optional",
             "external-opt-in"

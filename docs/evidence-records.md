@@ -249,7 +249,7 @@ itself is admitted only through a `ValueLaw` contract in `nose-semantics`. This
 keeps string and sequence concatenation ordered when evidence proves those
 domains, while numeric and boolean laws still require positive domain proof.
 The first pack-facing law pilot now reports per-family provenance for selected
-compiled first-party value laws through `nose.value_graph.laws`: numeric
+compiled builtin value laws through `nose.value_graph.laws`: numeric
 common-factor distribution and integer ordered min/max clamp. That provenance
 records the pack id, stable law id, exact channel, proof status, and formal
 obligation id only when the value graph actually applied the law. It is not a

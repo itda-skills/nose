@@ -142,8 +142,8 @@ impl ChannelEligibility {
 /// Trust/provenance policy for a pack, separate from which analysis channel a fact may enter.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PackTrust {
-    DefaultFirstParty,
-    FirstPartyOptional,
+    BuiltinDefault,
+    BuiltinOptional,
     ExternalOptIn,
 }
 

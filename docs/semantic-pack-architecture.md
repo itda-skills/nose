@@ -18,12 +18,12 @@ Use `builtin` for packs maintained and shipped by nose.
 | `builtin-optional` | shipped with nose but opt-in until default-surface risk is accepted |
 | `external-opt-in` | provider/user responsibility; enabled only by explicit user choice |
 
-Current v0 manifests and capabilities output still expose compatibility
-spellings. Keep accepting them while their schema is supported:
+Current v0 manifest parsing still accepts legacy compatibility spellings, but
+machine output uses builtin vocabulary:
 
-- `default-first-party`: trust label for `builtin-default`;
-- `first-party-optional`: trust label for `builtin-optional`;
-- `compiled-first-party`: source/loading label for compiled builtin packs.
+- `builtin-default`: trust label for builtin packs enabled by default;
+- `builtin-optional`: trust label for nose-owned builtin packs not enabled by default;
+- `compiled-builtin`: source/loading label for compiled builtin packs.
 
 Use the builtin vocabulary in docs, internal naming, and future schema planning.
 A public enum or field-value rename requires a schema/capabilities update, not a
@@ -183,7 +183,7 @@ previous semantic-kernel tranches.
    builtin packs without adding plugin lifecycle, sandboxing, remote registries,
    or external execution.
 3. **Phase 2, query reporting:** carry the active `SemanticPackSet` through
-   `nose query` and add top-level `semantic_packs` to query JSON schema v5.
+   `nose query` and add top-level `semantic_packs` to query JSON schema v6.
    Update [query-json](query-json.md) and [capabilities](capabilities.md) in
    the same PR because older query JSON schemas reject unknown fields.
 4. **Phase 3, reference stdlib pack:** make `nose.python.stdlib.type_domain` the first

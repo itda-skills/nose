@@ -49,10 +49,11 @@ external producers or certify semantic correctness. See
 Trust is separate from channel eligibility.
 
 - Compiled builtin packs are enabled by default and are the only packs that
-  currently influence evidence and contracts. Current v0 machine output still
-  uses compatibility labels such as `compiled-first-party` and
-  `default-first-party`; docs and new implementation work should use
-  `builtin`. `nose.first_party` is the temporary broad compatibility facade;
+  currently influence evidence and contracts. Machine output reports them with
+  `compiled-builtin` source and `builtin-default` trust. Older v0 manifest
+  examples may still use legacy first-party trust aliases, but local manifests
+  that claim builtin trust are rejected after parsing. `nose.first_party` is the
+  temporary broad compatibility facade;
   `nose.lang.python`, `nose.lang.javascript-typescript`, `nose.lang.go`,
   `nose.lang.rust`, `nose.lang.java`, `nose.lang.c`, `nose.lang.ruby`,
   `nose.lang.swift`, `nose.lang.css`, and `nose.lang.html` report official

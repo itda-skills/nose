@@ -115,17 +115,19 @@ Trust policy is separate from channel eligibility.
 
 | trust | meaning |
 |---|---|
-| `default-first-party` | v0 compatibility spelling for `builtin-default`: maintained, tested, and enabled by nose by default |
-| `first-party-optional` | v0 compatibility spelling for `builtin-optional`: maintained and tested by nose, but not enabled by default |
+| `builtin-default` | maintained, tested, and enabled by nose by default |
+| `builtin-optional` | maintained and tested by nose, but not enabled by default |
 | `external-opt-in` | provider/user responsibility; must be enabled explicitly by the user |
 
 Local external manifests must set `trust: "external-opt-in"` and
 `enabled_by_default: false`. The loader rejects local manifests that claim
-builtin trust or default enablement. A manifest may declare that a contract
-is intended for `exact-empirical` or `exact-proven`, but nose does not certify
-that claim for external packs. A user may still opt into such a pack, and nose
-should surface provenance so the user can see which external pack affected a
-match.
+builtin trust or default enablement. For compatibility with older v0 examples,
+the parser still accepts `default-first-party` and `first-party-optional` as
+aliases for builtin trust labels before validation rejects them for local
+external manifests. A manifest may declare that a contract is intended for
+`exact-empirical` or `exact-proven`, but nose does not certify that claim for
+external packs. A user may still opt into such a pack, and nose should surface
+provenance so the user can see which external pack affected a match.
 
 ## Channel Eligibility
 

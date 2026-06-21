@@ -1,4 +1,4 @@
-# nose query JSON (schema v5)
+# nose query JSON (schema v6)
 
 `nose query <path> [terms…] --format json` emits a structured, versioned contract over the
 duplicated-code family dataset — the **machine** form of the
@@ -8,7 +8,7 @@ For multi-root analysis, use repeated roots:
 `nose query --root <path> --root <path> [terms…] --format json`.
 
 Discover support with [`nose capabilities`](capabilities.md): `schemas.query_json` lists the
-versions the installed binary emits (currently `[5]`).
+versions the installed binary emits (currently `[6]`).
 
 ## Envelope
 
@@ -16,7 +16,7 @@ Every response is an object with:
 
 | field | meaning |
 |---|---|
-| `schema_version` | `5` |
+| `schema_version` | `6` |
 | `tool` | `"nose"` |
 | `view` | which surface produced it: `dashboard` \| `list` \| `group` \| `family` \| `reinvented` \| `base` |
 | `path` | the analyzed path expression, as given; multi-root commands render the repeated `--root`/`-r` flags |
@@ -25,9 +25,10 @@ Every response is an object with:
 plus the view-specific body below. Like the human surface, a result is a pure function of
 (repo state, command); an unknown field or enum value is a hard error.
 
-Schema v5 adds only the top-level `semantic_packs` reporting field. Descriptor
-and reporting-only migrations should not change `families`, ranking, witnesses,
-surfaces, or exact/near results.
+Schema v6 keeps the schema-v5 top-level `semantic_packs` reporting field and
+renames pack-facing trust/source values from legacy first-party spelling to
+builtin spelling. Descriptor and reporting-only migrations should not change
+`families`, ranking, witnesses, surfaces, or exact/near results.
 
 ## Semantic packs
 
@@ -41,9 +42,9 @@ Each entry has:
 | `kind` | string | `LanguagePack`, `StdlibPack`, `LibraryPack`, `ProtocolPack`, or `LawPack`. |
 | `version` | string | Pack version from the manifest or the nose package version for compiled builtin packs. |
 | `display_name` | string | Human-readable pack name. |
-| `trust` | string | Current v0 trust label: `default-first-party`, `first-party-optional`, or `external-opt-in`. Builtin terminology maps these compatibility labels to `builtin-default`, `builtin-optional`, and `external-opt-in` in docs and planning. |
+| `trust` | string | `builtin-default`, `builtin-optional`, or `external-opt-in`. Local manifests must still use `external-opt-in`; builtin trust is reserved for packs shipped and gated with nose. |
 | `enabled_by_default` | boolean | Whether the pack is default-enabled. Local manifests are rejected unless this is `false`; compiled builtin packs report `true`. |
-| `source` | string | `compiled-first-party` for compiled builtin packs, or `local-manifest` for local manifest opt-ins. The `compiled-first-party` spelling is a v0 compatibility label. |
+| `source` | string | `compiled-builtin` for compiled builtin packs, or `local-manifest` for local manifest opt-ins. |
 | `influence` | string | `evidence-and-contracts` for compiled builtin semantics, `metadata-only` for loaded local external packs today. |
 | `path` | string or null | Canonical local manifest path for loaded manifests; `null` for compiled builtin packs. |
 | `provider`, `repository`, `license` | string | Pack provenance fields. |
@@ -51,7 +52,7 @@ Each entry has:
 | `counts` | object | Counts of declared `evidence_producers`, `contracts`, `value_laws`, `positive_fixtures`, and `hard_negatives`. |
 
 Local external packs are reported for provenance and validation only in schema
-v5. They must not change families, ranking, witnesses, surfaces, or exact/near
+v6. They must not change families, ranking, witnesses, surfaces, or exact/near
 results while their `influence` is `metadata-only`.
 
 ## Views

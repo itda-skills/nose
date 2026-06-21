@@ -86,7 +86,7 @@ pub use loading::{
     SemanticPackLoadError,
 };
 
-use compiled::compiled_first_party_packs;
+use compiled::compiled_builtin_packs;
 use validation::validate_manifest;
 pub const SEMANTIC_PACK_API_VERSION: &str = "nose.semantic-pack.v0";
 
@@ -107,14 +107,18 @@ const ALLOWED_REQUIREMENT_PREFIXES: &[&str] = &[
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum SemanticPackSource {
-    CompiledFirstParty,
+    CompiledBuiltin,
     LocalManifest,
 }
 
 impl SemanticPackSource {
+    #[allow(non_upper_case_globals)]
+    #[deprecated(note = "use SemanticPackSource::CompiledBuiltin")]
+    pub const CompiledFirstParty: Self = Self::CompiledBuiltin;
+
     pub const fn as_str(self) -> &'static str {
         match self {
-            SemanticPackSource::CompiledFirstParty => "compiled-first-party",
+            SemanticPackSource::CompiledBuiltin => "compiled-builtin",
             SemanticPackSource::LocalManifest => "local-manifest",
         }
     }
@@ -223,10 +227,18 @@ enum SemanticPackSchemaVersion {
 }
 
 impl PackTrust {
+    #[allow(non_upper_case_globals)]
+    #[deprecated(note = "use PackTrust::BuiltinDefault")]
+    pub const DefaultFirstParty: Self = Self::BuiltinDefault;
+
+    #[allow(non_upper_case_globals)]
+    #[deprecated(note = "use PackTrust::BuiltinOptional")]
+    pub const FirstPartyOptional: Self = Self::BuiltinOptional;
+
     pub const fn as_manifest_str(self) -> &'static str {
         match self {
-            PackTrust::DefaultFirstParty => "default-first-party",
-            PackTrust::FirstPartyOptional => "first-party-optional",
+            PackTrust::BuiltinDefault => "builtin-default",
+            PackTrust::BuiltinOptional => "builtin-optional",
             PackTrust::ExternalOptIn => "external-opt-in",
         }
     }
@@ -238,8 +250,10 @@ impl<'de> Deserialize<'de> for PackTrust {
         D: serde::Deserializer<'de>,
     {
         match String::deserialize(deserializer)?.as_str() {
-            "default-first-party" => Ok(PackTrust::DefaultFirstParty),
-            "first-party-optional" => Ok(PackTrust::FirstPartyOptional),
+            "builtin-default" => Ok(PackTrust::BuiltinDefault),
+            "default-first-party" => Ok(PackTrust::BuiltinDefault),
+            "builtin-optional" => Ok(PackTrust::BuiltinOptional),
+            "first-party-optional" => Ok(PackTrust::BuiltinOptional),
             "external-opt-in" => Ok(PackTrust::ExternalOptIn),
             other => Err(serde::de::Error::custom(format!(
                 "unknown pack trust `{other}`"
@@ -328,7 +342,7 @@ pub struct SemanticPackSet {
 impl SemanticPackSet {
     pub fn new_local(paths: &[PathBuf]) -> Result<Self, SemanticPackLoadError> {
         let manifest_paths = discover_manifest_paths(paths)?;
-        let mut packs = compiled_first_party_packs();
+        let mut packs = compiled_builtin_packs();
         for path in manifest_paths {
             let pack = load_local_manifest(&path)?;
             if let Some(existing) = packs.iter().find(|existing| existing.id == pack.id) {
@@ -343,10 +357,14 @@ impl SemanticPackSet {
         Ok(Self { packs })
     }
 
-    pub fn first_party_only() -> Self {
+    pub fn builtin_only() -> Self {
         Self {
-            packs: compiled_first_party_packs(),
+            packs: compiled_builtin_packs(),
         }
+    }
+
+    pub fn first_party_only() -> Self {
+        Self::builtin_only()
     }
 
     pub fn packs(&self) -> &[SemanticPackSummary] {

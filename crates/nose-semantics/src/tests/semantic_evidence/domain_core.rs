@@ -65,7 +65,7 @@ fn first_party_profile_wraps_each_language() {
             FIRST_PARTY_PACK_ID
         };
         assert_eq!(profile.pack_id(), expected_pack_id);
-        assert_eq!(profile.trust(), PackTrust::DefaultFirstParty);
+        assert_eq!(profile.trust(), PackTrust::BuiltinDefault);
     }
 }
 

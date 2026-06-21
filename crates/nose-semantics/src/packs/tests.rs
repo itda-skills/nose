@@ -165,7 +165,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     assert_eq!(ids.iter().copied().collect::<HashSet<_>>().len(), ids.len());
     assert!(descriptors
         .iter()
-        .all(|descriptor| descriptor.trust == PackTrust::DefaultFirstParty));
+        .all(|descriptor| descriptor.trust == PackTrust::BuiltinDefault));
     assert!(descriptors
         .iter()
         .all(|descriptor| descriptor.enabled_by_default));
@@ -1160,7 +1160,7 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(pack.id, FIRST_PARTY_PACK_ID);
     assert_eq!(pack.hash, stable_symbol_hash(FIRST_PARTY_PACK_ID));
     assert_eq!(pack.influence, SemanticPackInfluence::EvidenceAndContracts);
-    let set = SemanticPackSet::first_party_only();
+    let set = SemanticPackSet::builtin_only();
     let c = set
         .packs()
         .iter()
@@ -1879,22 +1879,44 @@ fn external_pack_enabled_by_default_is_rejected() {
 }
 
 #[test]
-fn local_manifest_claiming_first_party_trust_is_rejected() {
-    let dir = unique_dir("first_party_trust");
+fn local_manifest_claiming_builtin_trust_is_rejected() {
+    let dir = unique_dir("builtin_trust");
     let path = dir.join("pack.json");
     fs::write(
         &path,
         manifest("com.example.pack").replace(
             r#""trust": "external-opt-in""#,
-            r#""trust": "default-first-party""#,
+            r#""trust": "builtin-default""#,
         ),
     )
     .unwrap();
-    let err = load_local_manifest(&path).expect_err("local manifest must not claim first-party");
+    let err = load_local_manifest(&path).expect_err("local manifest must not claim builtin trust");
     assert!(err
         .to_string()
         .contains("must be external-opt-in and disabled by default"));
     let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
+fn local_manifest_legacy_first_party_trust_aliases_are_rejected_after_parse() {
+    for legacy_trust in ["default-first-party", "first-party-optional"] {
+        let dir = unique_dir(&format!("legacy_{}_trust", legacy_trust.replace('-', "_")));
+        let path = dir.join("pack.json");
+        fs::write(
+            &path,
+            manifest("com.example.pack").replace(
+                r#""trust": "external-opt-in""#,
+                &format!(r#""trust": "{legacy_trust}""#),
+            ),
+        )
+        .unwrap();
+        let err =
+            load_local_manifest(&path).expect_err("legacy alias must be reserved for builtin");
+        assert!(err
+            .to_string()
+            .contains("must be external-opt-in and disabled by default"));
+        let _ = fs::remove_dir_all(dir);
+    }
 }
 
 #[test]
@@ -2079,8 +2101,8 @@ fn duplicate_pack_ids_fail_closed() {
 }
 
 #[test]
-fn local_manifest_cannot_claim_compiled_first_party_pack_id() {
-    let dir = unique_dir("compiled_first_party_id");
+fn local_manifest_cannot_claim_compiled_builtin_pack_id() {
+    let dir = unique_dir("compiled_builtin_id");
     let path = dir.join("pack.json");
     fs::write(&path, manifest(PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID)).unwrap();
     let err = SemanticPackSet::new_local(&[path]).expect_err("compiled id is reserved");
@@ -2099,8 +2121,8 @@ fn local_manifest_cannot_claim_builtin_language_pack_id() {
 }
 
 #[test]
-fn conformance_check_cannot_claim_compiled_first_party_pack_id() {
-    let dir = unique_dir("compiled_first_party_conformance");
+fn conformance_check_cannot_claim_compiled_builtin_pack_id() {
+    let dir = unique_dir("compiled_builtin_conformance");
     let path = dir.join("pack.json");
     fs::write(&path, manifest(PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID)).unwrap();
     let err = check_semantic_pack_conformance(&[path]).expect_err("compiled id is reserved");

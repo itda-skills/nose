@@ -86,7 +86,7 @@ impl LanguageProfile {
     }
 
     pub fn trust(self) -> PackTrust {
-        PackTrust::DefaultFirstParty
+        PackTrust::BuiltinDefault
     }
 
     pub fn operators(self) -> OperatorSemantics {

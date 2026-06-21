@@ -265,10 +265,10 @@ separately.
 | `builtin-optional` | maintained and gated by nose, but not enabled by default |
 | `external-opt-in` | provider/user responsibility; enabled only by explicit user choice |
 
-Current v0 manifests and capabilities output still use the compatibility labels
-`default-first-party` and `first-party-optional`. Those map to
-`builtin-default` and `builtin-optional` while v0 is supported; changing the
-public strings requires a schema/capabilities update.
+Current query JSON and capabilities output use builtin labels. The v0 manifest
+parser still accepts legacy `default-first-party` and `first-party-optional`
+spelling as aliases, but local manifests that claim builtin trust remain
+invalid. Changing public strings requires a schema/capabilities update.
 
 External packs may declare their intended eligibility, but users choose whether
 to trust that declaration. Today, explicitly loaded external packs are reported

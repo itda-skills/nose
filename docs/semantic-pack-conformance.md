@@ -36,12 +36,12 @@ The harness does not:
 - compare `compatibility.nose` against the installed nose version beyond checking
   that the declared requirement is parseable as a version constraint.
 
-First-party default packs are different. nose owns their tests, hard negatives,
+Builtin default packs are different. nose owns their tests, hard negatives,
 proof obligations, release gates, and documentation because those packs ship with
 the binary and affect exact analysis by default. The Python stdlib type-domain
-example manifest mirrors the first compiled first-party pilot pack, but local
+example manifest mirrors the first compiled builtin pilot pack, but local
 copies of that manifest still load only as external metadata unless nose ships
-the pack as compiled first-party code.
+the pack as compiled builtin code.
 
 ## Command
 
@@ -58,7 +58,7 @@ JSON children only, sorted by filename, no recursion, no registry, and no networ
 Relative fixture paths are resolved from the manifest's directory.
 
 The command exits non-zero when any manifest is invalid, when pack ids collide
-with each other or any compiled first-party pack id, or when declared conformance
+with each other or any compiled builtin pack id, or when declared conformance
 fixtures are missing a path, missing an expectation, or point at a file that does
 not exist. For `--format json`, the command still writes the report before
 returning the non-zero exit.
@@ -125,7 +125,7 @@ Users who opt into external packs own the enablement decision. They should inspe
 - the pack's own test or proof evidence outside nose.
 
 `nose query --semantic-pack` and `[query].semantic-packs` validate local
-external pack manifests and query JSON schema v5 reports the active pack set in
+external pack manifests and query JSON schema v6 reports the active pack set in
 top-level `semantic_packs`. Future producer execution must keep the same
 provenance and fail-closed behavior before external packs can affect `near` or
 exact results.

@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use super::compiled::is_compiled_first_party_pack_id;
+use super::compiled::is_compiled_builtin_pack_id;
 pub fn check_semantic_pack_conformance(
     paths: &[PathBuf],
 ) -> Result<SemanticPackConformanceReport, SemanticPackLoadError> {
@@ -21,7 +21,7 @@ pub fn check_semantic_pack_conformance(
                     message,
                 }
             })?;
-        if is_compiled_first_party_pack_id(&pack.id) {
+        if is_compiled_builtin_pack_id(&pack.id) {
             return Err(SemanticPackLoadError::DuplicatePackId {
                 id: pack.id,
                 first_path: None,
@@ -279,5 +279,5 @@ impl std::error::Error for SemanticPackLoadError {
 fn display_optional_path(path: &Option<PathBuf>) -> String {
     path.as_ref()
         .map(|path| path.display().to_string())
-        .unwrap_or_else(|| "<compiled first-party>".to_string())
+        .unwrap_or_else(|| "<compiled builtin>".to_string())
 }

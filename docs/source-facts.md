@@ -175,7 +175,7 @@ claims exact eligibility for a source/API surface must declare:
 - known unsupported or unsound boundaries;
 - provenance labels suitable for reports.
 
-Meeting this shape is not nose certification. First-party default packs are
+Meeting this shape is not nose certification. Builtin default packs are
 validated by the nose project. External packs are provider/user responsibility
 and must be explicitly enabled by the user.
 

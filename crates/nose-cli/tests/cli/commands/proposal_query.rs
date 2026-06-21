@@ -249,12 +249,12 @@ fn query_dashboard_filter_and_family() {
         "query --fail-on new requires --baseline"
     );
 
-    // The JSON form is the structured, versioned query-v5 contract (every view).
+    // The JSON form is the structured, versioned query-v6 contract (every view).
     let dash: serde_json::Value =
         serde_json::from_str(&run_raw(&["query", p, "--format", "json"])).unwrap();
     assert_eq!(
-        dash["schema_version"], 5,
-        "dashboard json is schema v5: {dash}"
+        dash["schema_version"], 6,
+        "dashboard json is schema v6: {dash}"
     );
     assert_eq!(dash["view"], "dashboard");
     assert_query_json_reports_semantic_packs(&dash);

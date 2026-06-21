@@ -142,15 +142,15 @@ fn query_json_reports_builtin_semantic_packs() {
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
-    assert_eq!(first_party["source"], "compiled-first-party");
+    assert_eq!(first_party["source"], "compiled-builtin");
     assert_eq!(first_party["influence"], "evidence-and-contracts");
-    assert_eq!(first_party["trust"], "default-first-party");
+    assert_eq!(first_party["trust"], "builtin-default");
     assert_eq!(first_party["enabled_by_default"], true);
     assert!(first_party["path"].is_null());
 
     let python_lang = semantic_pack_by_id(&json, "nose.lang.python");
     assert_eq!(python_lang["kind"], "LanguagePack");
-    assert_eq!(python_lang["source"], "compiled-first-party");
+    assert_eq!(python_lang["source"], "compiled-builtin");
     assert_eq!(
         json_array_strings(python_lang, "supported_languages"),
         vec!["python"]
@@ -178,7 +178,7 @@ fn query_json_reports_builtin_semantic_packs() {
 
     let c = semantic_pack_by_id(&json, "nose.lang.c");
     assert_eq!(c["kind"], "LanguagePack");
-    assert_eq!(c["source"], "compiled-first-party");
+    assert_eq!(c["source"], "compiled-builtin");
     assert_eq!(json_array_strings(c, "supported_languages"), vec!["c"]);
     assert_eq!(c["counts"]["evidence_producers"], 2);
     assert_eq!(c["counts"]["contracts"], 0);
@@ -211,9 +211,9 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(math["hash"], "9abb9da5e7aa81e0");
     assert_eq!(math["kind"], "StdlibPack");
     assert_eq!(math["display_name"], "nose Python stdlib math pack");
-    assert_eq!(math["source"], "compiled-first-party");
+    assert_eq!(math["source"], "compiled-builtin");
     assert_eq!(math["influence"], "evidence-and-contracts");
-    assert_eq!(math["trust"], "default-first-party");
+    assert_eq!(math["trust"], "builtin-default");
     assert_eq!(math["enabled_by_default"], true);
     assert_eq!(math["path"], serde_json::Value::Null);
     assert_eq!(math["provider"], "Corca, Inc.");
@@ -244,9 +244,9 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(rust_vec["hash"], "cc787cbb5aa0a87c");
     assert_eq!(rust_vec["kind"], "StdlibPack");
     assert_eq!(rust_vec["display_name"], "nose Rust stdlib Vec pack");
-    assert_eq!(rust_vec["source"], "compiled-first-party");
+    assert_eq!(rust_vec["source"], "compiled-builtin");
     assert_eq!(rust_vec["influence"], "evidence-and-contracts");
-    assert_eq!(rust_vec["trust"], "default-first-party");
+    assert_eq!(rust_vec["trust"], "builtin-default");
     assert_eq!(rust_vec["enabled_by_default"], true);
     assert_eq!(rust_vec["path"], serde_json::Value::Null);
     assert_eq!(rust_vec["provider"], "Corca, Inc.");
@@ -266,9 +266,9 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(rust_option["hash"], "8ffb410363be1b73");
     assert_eq!(rust_option["kind"], "StdlibPack");
     assert_eq!(rust_option["display_name"], "nose Rust stdlib Option pack");
-    assert_eq!(rust_option["source"], "compiled-first-party");
+    assert_eq!(rust_option["source"], "compiled-builtin");
     assert_eq!(rust_option["influence"], "evidence-and-contracts");
-    assert_eq!(rust_option["trust"], "default-first-party");
+    assert_eq!(rust_option["trust"], "builtin-default");
     assert_eq!(rust_option["enabled_by_default"], true);
     assert_eq!(rust_option["path"], serde_json::Value::Null);
     assert_eq!(rust_option["provider"], "Corca, Inc.");
@@ -294,9 +294,9 @@ fn query_json_reports_builtin_semantic_packs() {
         rust_integer_methods["display_name"],
         "nose Rust stdlib integer method pack"
     );
-    assert_eq!(rust_integer_methods["source"], "compiled-first-party");
+    assert_eq!(rust_integer_methods["source"], "compiled-builtin");
     assert_eq!(rust_integer_methods["influence"], "evidence-and-contracts");
-    assert_eq!(rust_integer_methods["trust"], "default-first-party");
+    assert_eq!(rust_integer_methods["trust"], "builtin-default");
     assert_eq!(rust_integer_methods["enabled_by_default"], true);
     assert_eq!(rust_integer_methods["path"], serde_json::Value::Null);
     assert_eq!(rust_integer_methods["provider"], "Corca, Inc.");
@@ -322,9 +322,9 @@ fn query_json_reports_builtin_semantic_packs() {
         rust_collections["display_name"],
         "nose Rust stdlib collection factory pack"
     );
-    assert_eq!(rust_collections["source"], "compiled-first-party");
+    assert_eq!(rust_collections["source"], "compiled-builtin");
     assert_eq!(rust_collections["influence"], "evidence-and-contracts");
-    assert_eq!(rust_collections["trust"], "default-first-party");
+    assert_eq!(rust_collections["trust"], "builtin-default");
     assert_eq!(rust_collections["enabled_by_default"], true);
     assert_eq!(rust_collections["path"], serde_json::Value::Null);
     assert_eq!(rust_collections["provider"], "Corca, Inc.");
@@ -350,9 +350,9 @@ fn query_json_reports_builtin_semantic_packs() {
         rust_maps["display_name"],
         "nose Rust stdlib map factory pack"
     );
-    assert_eq!(rust_maps["source"], "compiled-first-party");
+    assert_eq!(rust_maps["source"], "compiled-builtin");
     assert_eq!(rust_maps["influence"], "evidence-and-contracts");
-    assert_eq!(rust_maps["trust"], "default-first-party");
+    assert_eq!(rust_maps["trust"], "builtin-default");
     assert_eq!(rust_maps["enabled_by_default"], true);
     assert_eq!(rust_maps["path"], serde_json::Value::Null);
     assert_eq!(rust_maps["provider"], "Corca, Inc.");
@@ -375,9 +375,9 @@ fn query_json_reports_builtin_semantic_packs() {
         java_maps["display_name"],
         "nose Java stdlib map factory pack"
     );
-    assert_eq!(java_maps["source"], "compiled-first-party");
+    assert_eq!(java_maps["source"], "compiled-builtin");
     assert_eq!(java_maps["influence"], "evidence-and-contracts");
-    assert_eq!(java_maps["trust"], "default-first-party");
+    assert_eq!(java_maps["trust"], "builtin-default");
     assert_eq!(java_maps["enabled_by_default"], true);
     assert_eq!(java_maps["path"], serde_json::Value::Null);
     assert_eq!(java_maps["provider"], "Corca, Inc.");
@@ -397,9 +397,9 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(java_math["hash"], "55fabb9892e17a4e");
     assert_eq!(java_math["kind"], "StdlibPack");
     assert_eq!(java_math["display_name"], "nose Java stdlib Math pack");
-    assert_eq!(java_math["source"], "compiled-first-party");
+    assert_eq!(java_math["source"], "compiled-builtin");
     assert_eq!(java_math["influence"], "evidence-and-contracts");
-    assert_eq!(java_math["trust"], "default-first-party");
+    assert_eq!(java_math["trust"], "builtin-default");
     assert_eq!(java_math["enabled_by_default"], true);
     assert_eq!(java_math["path"], serde_json::Value::Null);
     assert_eq!(java_math["provider"], "Corca, Inc.");
@@ -419,9 +419,9 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(map_get["hash"], "4f21cd668f95363e");
     assert_eq!(map_get["kind"], "ProtocolPack");
     assert_eq!(map_get["display_name"], "nose map-get protocol pack");
-    assert_eq!(map_get["source"], "compiled-first-party");
+    assert_eq!(map_get["source"], "compiled-builtin");
     assert_eq!(map_get["influence"], "evidence-and-contracts");
-    assert_eq!(map_get["trust"], "default-first-party");
+    assert_eq!(map_get["trust"], "builtin-default");
     assert_eq!(map_get["enabled_by_default"], true);
     assert_eq!(map_get["path"], serde_json::Value::Null);
     assert_eq!(map_get["provider"], "Corca, Inc.");
@@ -452,9 +452,9 @@ fn query_json_reports_builtin_semantic_packs() {
         map_get_default["display_name"],
         "nose map-get-default protocol pack"
     );
-    assert_eq!(map_get_default["source"], "compiled-first-party");
+    assert_eq!(map_get_default["source"], "compiled-builtin");
     assert_eq!(map_get_default["influence"], "evidence-and-contracts");
-    assert_eq!(map_get_default["trust"], "default-first-party");
+    assert_eq!(map_get_default["trust"], "builtin-default");
     assert_eq!(map_get_default["enabled_by_default"], true);
     assert_eq!(map_get_default["path"], serde_json::Value::Null);
     assert_eq!(map_get_default["provider"], "Corca, Inc.");
@@ -480,9 +480,9 @@ fn query_json_reports_builtin_semantic_packs() {
         free_function_builtin["display_name"],
         "nose free-function builtin protocol pack"
     );
-    assert_eq!(free_function_builtin["source"], "compiled-first-party");
+    assert_eq!(free_function_builtin["source"], "compiled-builtin");
     assert_eq!(free_function_builtin["influence"], "evidence-and-contracts");
-    assert_eq!(free_function_builtin["trust"], "default-first-party");
+    assert_eq!(free_function_builtin["trust"], "builtin-default");
     assert_eq!(free_function_builtin["enabled_by_default"], true);
     assert_eq!(free_function_builtin["path"], serde_json::Value::Null);
     assert_eq!(free_function_builtin["provider"], "Corca, Inc.");
@@ -508,9 +508,9 @@ fn query_json_reports_builtin_semantic_packs() {
         receiver_membership["display_name"],
         "nose receiver-membership protocol pack"
     );
-    assert_eq!(receiver_membership["source"], "compiled-first-party");
+    assert_eq!(receiver_membership["source"], "compiled-builtin");
     assert_eq!(receiver_membership["influence"], "evidence-and-contracts");
-    assert_eq!(receiver_membership["trust"], "default-first-party");
+    assert_eq!(receiver_membership["trust"], "builtin-default");
     assert_eq!(receiver_membership["enabled_by_default"], true);
     assert_eq!(receiver_membership["path"], serde_json::Value::Null);
     assert_eq!(receiver_membership["provider"], "Corca, Inc.");
@@ -547,9 +547,9 @@ fn query_json_reports_builtin_semantic_packs() {
         map_key_view["display_name"],
         "nose map-key-view protocol pack"
     );
-    assert_eq!(map_key_view["source"], "compiled-first-party");
+    assert_eq!(map_key_view["source"], "compiled-builtin");
     assert_eq!(map_key_view["influence"], "evidence-and-contracts");
-    assert_eq!(map_key_view["trust"], "default-first-party");
+    assert_eq!(map_key_view["trust"], "builtin-default");
     assert_eq!(map_key_view["enabled_by_default"], true);
     assert_eq!(map_key_view["path"], serde_json::Value::Null);
     assert_eq!(map_key_view["provider"], "Corca, Inc.");
@@ -584,9 +584,9 @@ fn query_json_reports_builtin_semantic_packs() {
         builtin_method_call["display_name"],
         "nose builtin method-call protocol pack"
     );
-    assert_eq!(builtin_method_call["source"], "compiled-first-party");
+    assert_eq!(builtin_method_call["source"], "compiled-builtin");
     assert_eq!(builtin_method_call["influence"], "evidence-and-contracts");
-    assert_eq!(builtin_method_call["trust"], "default-first-party");
+    assert_eq!(builtin_method_call["trust"], "builtin-default");
     assert_eq!(builtin_method_call["enabled_by_default"], true);
     assert_eq!(builtin_method_call["path"], serde_json::Value::Null);
     assert_eq!(builtin_method_call["provider"], "Corca, Inc.");
@@ -624,9 +624,9 @@ fn query_json_reports_builtin_semantic_packs() {
         java_entries["display_name"],
         "nose Java stdlib map entry pack"
     );
-    assert_eq!(java_entries["source"], "compiled-first-party");
+    assert_eq!(java_entries["source"], "compiled-builtin");
     assert_eq!(java_entries["influence"], "evidence-and-contracts");
-    assert_eq!(java_entries["trust"], "default-first-party");
+    assert_eq!(java_entries["trust"], "builtin-default");
     assert_eq!(java_entries["enabled_by_default"], true);
     assert_eq!(java_entries["path"], serde_json::Value::Null);
     assert_eq!(java_entries["provider"], "Corca, Inc.");
@@ -652,9 +652,9 @@ fn query_json_reports_builtin_semantic_packs() {
         java_collections["display_name"],
         "nose Java stdlib collection factory pack"
     );
-    assert_eq!(java_collections["source"], "compiled-first-party");
+    assert_eq!(java_collections["source"], "compiled-builtin");
     assert_eq!(java_collections["influence"], "evidence-and-contracts");
-    assert_eq!(java_collections["trust"], "default-first-party");
+    assert_eq!(java_collections["trust"], "builtin-default");
     assert_eq!(java_collections["enabled_by_default"], true);
     assert_eq!(java_collections["path"], serde_json::Value::Null);
     assert_eq!(java_collections["provider"], "Corca, Inc.");
@@ -680,9 +680,9 @@ fn query_json_reports_builtin_semantic_packs() {
         java_constructors["display_name"],
         "nose Java stdlib collection constructor pack"
     );
-    assert_eq!(java_constructors["source"], "compiled-first-party");
+    assert_eq!(java_constructors["source"], "compiled-builtin");
     assert_eq!(java_constructors["influence"], "evidence-and-contracts");
-    assert_eq!(java_constructors["trust"], "default-first-party");
+    assert_eq!(java_constructors["trust"], "builtin-default");
     assert_eq!(java_constructors["enabled_by_default"], true);
     assert_eq!(java_constructors["path"], serde_json::Value::Null);
     assert_eq!(java_constructors["provider"], "Corca, Inc.");
@@ -709,9 +709,9 @@ fn query_json_reports_builtin_semantic_packs() {
         java_static_adapters["display_name"],
         "nose Java stdlib static collection adapter pack"
     );
-    assert_eq!(java_static_adapters["source"], "compiled-first-party");
+    assert_eq!(java_static_adapters["source"], "compiled-builtin");
     assert_eq!(java_static_adapters["influence"], "evidence-and-contracts");
-    assert_eq!(java_static_adapters["trust"], "default-first-party");
+    assert_eq!(java_static_adapters["trust"], "builtin-default");
     assert_eq!(java_static_adapters["enabled_by_default"], true);
     assert_eq!(java_static_adapters["path"], serde_json::Value::Null);
     assert_eq!(java_static_adapters["provider"], "Corca, Inc.");
@@ -737,9 +737,9 @@ fn query_json_reports_builtin_semantic_packs() {
         iterator_identity["display_name"],
         "nose iterator identity adapter protocol pack"
     );
-    assert_eq!(iterator_identity["source"], "compiled-first-party");
+    assert_eq!(iterator_identity["source"], "compiled-builtin");
     assert_eq!(iterator_identity["influence"], "evidence-and-contracts");
-    assert_eq!(iterator_identity["trust"], "default-first-party");
+    assert_eq!(iterator_identity["trust"], "builtin-default");
     assert_eq!(iterator_identity["enabled_by_default"], true);
     assert_eq!(iterator_identity["path"], serde_json::Value::Null);
     assert_eq!(iterator_identity["provider"], "Corca, Inc.");
@@ -765,9 +765,9 @@ fn query_json_reports_builtin_semantic_packs() {
         js_promise["display_name"],
         "nose JavaScript builtins Promise pack"
     );
-    assert_eq!(js_promise["source"], "compiled-first-party");
+    assert_eq!(js_promise["source"], "compiled-builtin");
     assert_eq!(js_promise["influence"], "evidence-and-contracts");
-    assert_eq!(js_promise["trust"], "default-first-party");
+    assert_eq!(js_promise["trust"], "builtin-default");
     assert_eq!(js_promise["enabled_by_default"], true);
     assert_eq!(js_promise["path"], serde_json::Value::Null);
     assert_eq!(js_promise["provider"], "Corca, Inc.");
@@ -790,9 +790,9 @@ fn query_json_reports_builtin_semantic_packs() {
         js_array["display_name"],
         "nose JavaScript builtins Array pack"
     );
-    assert_eq!(js_array["source"], "compiled-first-party");
+    assert_eq!(js_array["source"], "compiled-builtin");
     assert_eq!(js_array["influence"], "evidence-and-contracts");
-    assert_eq!(js_array["trust"], "default-first-party");
+    assert_eq!(js_array["trust"], "builtin-default");
     assert_eq!(js_array["enabled_by_default"], true);
     assert_eq!(js_array["path"], serde_json::Value::Null);
     assert_eq!(js_array["provider"], "Corca, Inc.");
@@ -815,9 +815,9 @@ fn query_json_reports_builtin_semantic_packs() {
         js_boolean["display_name"],
         "nose JavaScript builtins Boolean pack"
     );
-    assert_eq!(js_boolean["source"], "compiled-first-party");
+    assert_eq!(js_boolean["source"], "compiled-builtin");
     assert_eq!(js_boolean["influence"], "evidence-and-contracts");
-    assert_eq!(js_boolean["trust"], "default-first-party");
+    assert_eq!(js_boolean["trust"], "builtin-default");
     assert_eq!(js_boolean["enabled_by_default"], true);
     assert_eq!(js_boolean["path"], serde_json::Value::Null);
     assert_eq!(js_boolean["provider"], "Corca, Inc.");
@@ -840,9 +840,9 @@ fn query_json_reports_builtin_semantic_packs() {
         js_regex["display_name"],
         "nose JavaScript builtins RegExp pack"
     );
-    assert_eq!(js_regex["source"], "compiled-first-party");
+    assert_eq!(js_regex["source"], "compiled-builtin");
     assert_eq!(js_regex["influence"], "evidence-and-contracts");
-    assert_eq!(js_regex["trust"], "default-first-party");
+    assert_eq!(js_regex["trust"], "builtin-default");
     assert_eq!(js_regex["enabled_by_default"], true);
     assert_eq!(js_regex["path"], serde_json::Value::Null);
     assert_eq!(js_regex["provider"], "Corca, Inc.");
@@ -866,9 +866,9 @@ fn query_json_reports_builtin_semantic_packs() {
         js_static_index["display_name"],
         "nose JavaScript builtins static index membership pack"
     );
-    assert_eq!(js_static_index["source"], "compiled-first-party");
+    assert_eq!(js_static_index["source"], "compiled-builtin");
     assert_eq!(js_static_index["influence"], "evidence-and-contracts");
-    assert_eq!(js_static_index["trust"], "default-first-party");
+    assert_eq!(js_static_index["trust"], "builtin-default");
     assert_eq!(js_static_index["enabled_by_default"], true);
     assert_eq!(js_static_index["path"], serde_json::Value::Null);
     assert_eq!(js_static_index["provider"], "Corca, Inc.");
@@ -895,9 +895,9 @@ fn query_json_reports_builtin_semantic_packs() {
         js_collections["display_name"],
         "nose JavaScript builtins collection constructor pack"
     );
-    assert_eq!(js_collections["source"], "compiled-first-party");
+    assert_eq!(js_collections["source"], "compiled-builtin");
     assert_eq!(js_collections["influence"], "evidence-and-contracts");
-    assert_eq!(js_collections["trust"], "default-first-party");
+    assert_eq!(js_collections["trust"], "builtin-default");
     assert_eq!(js_collections["enabled_by_default"], true);
     assert_eq!(js_collections["path"], serde_json::Value::Null);
     assert_eq!(js_collections["provider"], "Corca, Inc.");
@@ -927,7 +927,7 @@ fn query_json_reports_builtin_semantic_packs() {
 
     let laws = semantic_pack_by_id(&json, "nose.value_graph.laws");
     assert_eq!(laws["kind"], "LawPack");
-    assert_eq!(laws["source"], "compiled-first-party");
+    assert_eq!(laws["source"], "compiled-builtin");
     let _ = fs::remove_dir_all(&dir);
 }
 
