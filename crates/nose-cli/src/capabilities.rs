@@ -69,6 +69,8 @@ struct SemanticPacks {
     trust: Vec<&'static str>,
     external_packs_enabled_by_default: bool,
     external_pack_influence: &'static str,
+    external_influence_blockers: Vec<&'static str>,
+    external_pack_execution: &'static str,
 }
 
 #[derive(serde::Serialize)]
@@ -141,6 +143,17 @@ impl Report {
                 trust: vec!["builtin-default", "builtin-optional", "external-opt-in"],
                 external_packs_enabled_by_default: false,
                 external_pack_influence: "metadata-only",
+                external_influence_blockers: vec![
+                    nose_semantics::ExternalInfluenceBlocker::DataOnlyRegistration.as_str(),
+                    nose_semantics::ExternalInfluenceBlocker::DependencyBackedEvidenceUnavailable
+                        .as_str(),
+                    nose_semantics::ExternalInfluenceBlocker::ExplicitInfluenceTrustGateMissing
+                        .as_str(),
+                    nose_semantics::ExternalInfluenceBlocker::ExecutableConformanceUnavailable
+                        .as_str(),
+                    nose_semantics::ExternalInfluenceBlocker::RowConflict.as_str(),
+                ],
+                external_pack_execution: "none",
             },
             il: Il {
                 output_formats: vec!["sexpr", "json"],

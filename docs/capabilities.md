@@ -100,7 +100,15 @@ nose capabilities
       "external-opt-in"
     ],
     "external_packs_enabled_by_default": false,
-    "external_pack_influence": "metadata-only"
+    "external_pack_influence": "metadata-only",
+    "external_influence_blockers": [
+      "data-only-registration",
+      "dependency-backed-evidence-unavailable",
+      "explicit-influence-trust-gate-missing",
+      "executable-conformance-unavailable",
+      "row-conflict"
+    ],
+    "external_pack_execution": "none"
   },
   "il": {
     "output_formats": ["sexpr", "json"],
@@ -153,6 +161,8 @@ release so it can't drift.
 | `semantic_packs.trust` | array | Supported trust policy labels. |
 | `semantic_packs.external_packs_enabled_by_default` | boolean | Always `false`; external packs require explicit CLI/config opt-in. |
 | `semantic_packs.external_pack_influence` | string | Current influence of loaded external packs, `metadata-only`. |
+| `semantic_packs.external_influence_blockers` | array | Stable blocker labels that currently prevent external rows from influencing analysis. |
+| `semantic_packs.external_pack_execution` | string | Current external pack execution support. Version 3 reports `none`; local external packs do not run recognizers, parser/lowering plugins, producer code, sandboxed code, or fixture contents. |
 | `il.output_formats` | array | Supported `nose il --format` values. |
 | `il.normalized` | boolean | Whether `nose il --normalized` is supported. |
 | `il.cfg_norm_toggle` | boolean | Whether `nose il --no-cfg-norm` is supported. |

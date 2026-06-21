@@ -99,6 +99,17 @@ fn capabilities_command_reports_semantic_pack_il_and_stats_surfaces() {
         "metadata-only"
     );
     assert_eq!(
+        json_array_strings(&json["semantic_packs"], "external_influence_blockers"),
+        vec![
+            "data-only-registration",
+            "dependency-backed-evidence-unavailable",
+            "explicit-influence-trust-gate-missing",
+            "executable-conformance-unavailable",
+            "row-conflict"
+        ]
+    );
+    assert_eq!(json["semantic_packs"]["external_pack_execution"], "none");
+    assert_eq!(
         json_array_strings(&json["semantic_packs"], "conformance"),
         vec!["local-manifest-file", "local-manifest-directory"]
     );

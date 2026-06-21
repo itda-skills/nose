@@ -7,7 +7,10 @@ they do not emit evidence, open exact contracts, mint fingerprints, approve clon
 pairs, or change exact/near query results. Local `declares.evidence_producers`,
 `declares.contracts`, and `declares.value_laws` entries are registered as
 data-only rows on the active `SemanticPackSet`, but no normalize, value-graph,
-or exact consumer reads those external rows yet.
+or exact consumer reads those external rows yet. `nose capabilities` reports the
+same boundary with `external_pack_influence = "metadata-only"`,
+the current external influence blocker labels, and
+`external_pack_execution = "none"`.
 
 ## Local entry points
 
@@ -185,7 +188,8 @@ yet:
 
 Future loader work should keep this boundary: external pack claims can become
 usable only through dependency-backed evidence records and fail-closed kernel
-contracts, never through raw selectors or manifest presence alone.
+contracts, never through raw selectors, arbitrary recognizer hooks, sandboxed
+code execution, parser/lowering plugins, or manifest presence alone.
 
 ## See also
 
