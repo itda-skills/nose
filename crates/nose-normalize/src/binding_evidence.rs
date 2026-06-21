@@ -1,10 +1,11 @@
 use nose_il::{
-    stable_symbol_hash, DomainEvidence, EvidenceAnchor, EvidenceId, EvidenceKind, EvidenceRecord,
-    EvidenceStatus, Il, Interner, NodeId, NodeKind, Payload, SequenceSurfaceKind, Symbol,
+    stable_symbol_hash, DomainEvidence, EvidenceAnchor, EvidenceEmitter, EvidenceId, EvidenceKind,
+    EvidenceProvenance, EvidenceRecord, EvidenceStatus, Il, Interner, NodeId, NodeKind, Payload,
+    SequenceSurfaceKind, Symbol,
 };
 use nose_semantics::{
-    binding_write_target, opaque_argument_escape_args, receiver_mutation_call_receiver,
-    FIRST_PARTY_PACK_ID,
+    binding_write_target, language_core_evidence_provenance, opaque_argument_escape_args,
+    receiver_mutation_call_receiver,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -17,7 +18,7 @@ struct BindingAssignment {
     control_gated: bool,
 }
 
-/// Emit first-party domain evidence for immutable local/module bindings.
+/// Emit builtin language-core domain evidence for immutable local/module bindings.
 ///
 /// This runs after desugaring and before alpha-renaming: the IL has canonical
 /// surface shapes and evidence records, but binding names are still available
@@ -113,6 +114,7 @@ fn record_assignments_in_scope(
     });
 
     let mutation_facts = ScopeMutationFacts::collect(il, interner, scope);
+    let provenance = binding_domain_provenance(il);
     for assignment in ordered {
         if assignment.control_gated {
             continue;
@@ -138,7 +140,7 @@ fn record_assignments_in_scope(
             il,
             EvidenceAnchor::binding(il.node(assignment.lhs).span, local_hash),
             EvidenceKind::Domain(domain),
-            "immutable_binding_domain",
+            provenance,
             dependencies,
         ) else {
             continue;
@@ -427,16 +429,24 @@ fn find_or_push_evidence(
     il: &mut Il,
     anchor: EvidenceAnchor,
     kind: EvidenceKind,
-    rule: &str,
+    provenance: EvidenceProvenance,
     dependencies: Vec<EvidenceId>,
 ) -> Option<EvidenceId> {
-    Some(il.find_or_push_first_party_evidence(
+    Some(il.find_or_push_first_party_evidence_with_provenance(
         anchor,
         kind,
-        FIRST_PARTY_PACK_ID,
-        rule,
+        provenance,
         dependencies,
     ))
+}
+
+fn binding_domain_provenance(il: &Il) -> EvidenceProvenance {
+    let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+    EvidenceProvenance {
+        emitter: EvidenceEmitter::FirstParty,
+        pack_hash: Some(stable_symbol_hash(pack_id)),
+        rule_hash: Some(stable_symbol_hash(producer_id)),
+    }
 }
 
 fn binding_node_name(il: &Il, node: NodeId) -> Option<Symbol> {

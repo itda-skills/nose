@@ -444,12 +444,13 @@ migrated.
   at that point. This preserves the current
   Array/Collection/Set/Map/Option/String/Integer/Number and ByteArray
   distinctions. First-party producers also attach receiver-expression domain
-  facts directly for selected admitted library/API factory results, and
-  normalize emits binding-anchored `Domain` evidence for single-assignment
-  local/module bindings whose initializer has asserted sequence or result-domain
-  evidence and whose binding has no direct binding-write, receiver-mutation, or
-  opaque-argument-escape risk under first-party `Effect` evidence. Binding-domain
-  lookup matches the binding `local_hash` and only applies an assignment to
+  facts directly for selected admitted library/API factory results, and normalize
+  emits binding-anchored `Domain` evidence with matching `nose.lang.*`
+  language-core provenance for single-assignment local/module bindings whose
+  initializer has asserted sequence or result-domain evidence and whose binding
+  has no direct binding-write, receiver-mutation, or opaque-argument-escape risk
+  under first-party `Effect` evidence. Binding-domain lookup matches the binding
+  `local_hash` and only applies an assignment to
   receiver uses that occur after it. Strict exact receiver gates consume this
   resolver directly instead of caching raw collection/map names or CIDs from an
   assignment scan. Domain evidence can satisfy a receiver-domain precondition,

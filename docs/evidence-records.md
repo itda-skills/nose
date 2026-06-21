@@ -615,8 +615,9 @@ callers:
   strict exact receiver gates. Consumers ask `nose-semantics` whether a receiver
   satisfies a `DomainRequirement`, using the shared
   `ReceiverDomainEvidenceIndex` cache when they inspect many receivers. That
-  keeps node-anchored receiver evidence, immutable local/module binding
-  evidence, scoped parameter evidence, selected API result-domain evidence,
+  keeps node-anchored receiver evidence, builtin language-core immutable
+  local/module binding evidence, scoped parameter evidence, selected API
+  result-domain evidence,
   ambiguity handling, and compatibility fallback under one kernel-owned policy
   instead of reimplementing those rules per consumer. Desugaring and early idiom
   canonicalization still run before normalize emits additional immutable

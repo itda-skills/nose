@@ -9,6 +9,15 @@ fn sp(line: u32) -> Span {
     Span::new(FileId(0), line, line, line, line)
 }
 
+fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    EvidenceProvenance {
+        emitter: EvidenceEmitter::FirstParty,
+        pack_hash: Some(stable_symbol_hash(pack_id)),
+        rule_hash: Some(stable_symbol_hash(producer_id)),
+    }
+}
+
 fn finish(builder: IlBuilder, root: NodeId, lang: Lang) -> Il {
     builder.finish(
         root,
@@ -26,16 +35,12 @@ fn finish(builder: IlBuilder, root: NodeId, lang: Lang) -> Il {
     )
 }
 
-fn sequence_evidence(id: u32, span: Span, kind: SequenceSurfaceKind) -> EvidenceRecord {
+fn sequence_evidence(id: u32, span: Span, kind: SequenceSurfaceKind, lang: Lang) -> EvidenceRecord {
     EvidenceRecord {
         id: EvidenceId(id),
         anchor: EvidenceAnchor::sequence(span),
         kind: EvidenceKind::SequenceSurface(kind),
-        provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
-            rule_hash: Some(stable_symbol_hash("test")),
-        },
+        provenance: language_core_provenance(lang),
         dependencies: Vec::new(),
         status: EvidenceStatus::Asserted,
     }
@@ -83,11 +88,19 @@ fn append_call(b: &mut IlBuilder, name: Symbol, span: Span) -> NodeId {
     )
 }
 
-fn finish_with_sequence_evidence(b: IlBuilder, root: NodeId) -> Il {
-    let mut il = finish(b, root, Lang::TypeScript);
-    il.evidence
-        .push(sequence_evidence(0, sp(2), SequenceSurfaceKind::Collection));
+fn finish_with_sequence_evidence_for_lang(b: IlBuilder, root: NodeId, lang: Lang) -> Il {
+    let mut il = finish(b, root, lang);
+    il.evidence.push(sequence_evidence(
+        0,
+        sp(2),
+        SequenceSurfaceKind::Collection,
+        lang,
+    ));
     il
+}
+
+fn finish_with_sequence_evidence(b: IlBuilder, root: NodeId) -> Il {
+    finish_with_sequence_evidence_for_lang(b, root, Lang::TypeScript)
 }
 
 #[derive(Clone, Copy)]
@@ -124,7 +137,7 @@ fn mutation_case_il(interner: &Interner, case: MutationCase) -> Il {
     il.find_or_push_first_party_evidence(
         EvidenceAnchor::node(append_span, NodeKind::Call),
         EvidenceKind::Effect(EffectEvidenceKind::BuilderAppendCall),
-        FIRST_PARTY_PACK_ID,
+        nose_semantics::FIRST_PARTY_PACK_ID,
         "test_builder_append_effect",
         Vec::new(),
     );
@@ -148,6 +161,27 @@ fn records_binding_domain_from_sequence_surface_evidence() {
         EvidenceKind::Domain(DomainEvidence::Collection)
     ));
     assert_eq!(record.dependencies, vec![EvidenceId(0)]);
+    assert_eq!(
+        record.provenance,
+        language_core_provenance(Lang::TypeScript)
+    );
+}
+
+#[test]
+fn binding_domain_provenance_follows_file_language() {
+    let interner = Interner::new();
+    for lang in [Lang::Python, Lang::Java, Lang::Rust] {
+        let xs = interner.intern("xs");
+        let mut b = IlBuilder::new(FileId(0));
+        let (assign, _) = array_assignment(&mut b, &interner, xs, sp(1), sp(2));
+        let root = b.add(NodeKind::Func, Payload::None, sp(1), &[assign]);
+        let mut il = finish_with_sequence_evidence_for_lang(b, root, lang);
+
+        run(&mut il, &interner);
+
+        let record = binding_domain_record(&il, "xs").expect("binding domain evidence");
+        assert_eq!(record.provenance, language_core_provenance(lang));
+    }
 }
 
 #[test]
