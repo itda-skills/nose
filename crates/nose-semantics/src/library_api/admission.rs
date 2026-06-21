@@ -320,6 +320,24 @@ pub(in crate::library_api) fn library_api_record_provenance_matches_contract(
                 && record.provenance.rule_hash
                     == Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID))
         }
+        LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::Contains))
+            if matches!(
+                callee,
+                LibraryApiCalleeContract::Method {
+                    receiver: MethodReceiverContract::ExactMap
+                        | MethodReceiverContract::ExactCollectionOrMap
+                        | MethodReceiverContract::ExactCollectionOrJavaKeySet
+                        | MethodReceiverContract::ExactSetOrMap,
+                    ..
+                }
+            ) =>
+        {
+            record.provenance.emitter == EvidenceEmitter::FirstParty
+                && record.provenance.pack_hash
+                    == Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID))
+                && record.provenance.rule_hash
+                    == Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID))
+        }
         LibraryApiContractId::MapKeyView(_) => {
             record.provenance.emitter == EvidenceEmitter::FirstParty
                 && record.provenance.pack_hash

@@ -121,6 +121,10 @@ The next code slices are intentionally incremental:
    `nose.protocols.map_get_default` for Python `dict.get(key, default)`, Ruby
    `Hash#fetch(key, default)` or zero-arg block fallback, and Java
    `Map.getOrDefault(key, default)` occurrence provenance, then
+   `nose.protocols.receiver_membership` for receiver-method `Contains`
+   contracts with receiver proof, including Java/Rust/Ruby map-key membership,
+   Python `__contains__`, JS-like `has`/`includes`, Java/Swift `contains`, and
+   Ruby `member?`, then
    `nose.protocols.map_key_views` for Python/Ruby `keys`, Java `keySet`, and
    JS-family `Map.keys()` occurrence provenance, then
    `nose.protocols.iterator_identity_adapters` for Rust
@@ -741,6 +745,30 @@ remain separate, and the slice does not add per-node descriptor scans or
 repeated registry walks on hot paths. Binary size changed 20,181,440 ->
 20,181,648 bytes for this slice.
 
+Phase 5 receiver-membership protocol pack measurement note, local run on
+2026-06-21: product query-regression r15 compared the previous
+`nose.protocols.map_get_default` slice with the
+`nose.protocols.receiver_membership` slice over the same 9-repo subset. Family
+summaries, locations, fragment buckets, reason-code counts, surface counts, and
+family shapes were unchanged after ignoring `result_json_bytes`. Each repo's
+JSON grew by exactly 608 bytes from the new top-level `semantic_packs` entry,
+for a total subset byte delta of 687,956 -> 693,428 bytes (+5,472, +0.8%).
+The saved primary artifacts are
+`/tmp/nose-473-phase5-receiver-membership-prev-r15.json`,
+`/tmp/nose-473-phase5-receiver-membership-current-r15.json`, and
+`/tmp/nose-473-phase5-receiver-membership-vs-prev-r15.md`. The primary
+sequential r15 compare showed one runtime investigation trigger on `chi`; a
+focused `chi` r30 rerun cleared it at
+`/tmp/nose-473-phase5-receiver-membership-chi-r30.md`, and the saved current
+r15 artifact showed aggregate median wall 1803.07 ms -> 1741.16 ms (-3.4%).
+Root-cause note: this slice adds static protocol-pack metadata,
+receiver-membership producer provenance, and fail-closed admission provenance
+checks for existing receiver-method `Contains` rows with receiver proof. Go
+`slices.Contains` remains outside this pack because it uses the imported
+`slices` namespace and `GoSliceContains` argument semantics. The slice does not
+add per-node descriptor scans or repeated registry walks on hot paths. Binary
+size changed 20,181,648 -> 20,181,712 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -891,6 +919,13 @@ repeated registry walks on hot paths. Binary size changed 20,181,440 ->
   `Map.getOrDefault(key, default)` `LibraryApi` occurrence evidence now reports
   `nose.protocols.map_get_default` pack and producer provenance while
   preserving exact-map receiver and unsupported-arity hard negatives.
+- Receiver-membership protocol occurrences started moving out of the broad
+  compatibility facade. Java/Rust/Ruby map-key membership, Python
+  `__contains__`, JS-like `has`/`includes`, Java/Swift `contains`, and Ruby
+  `member?` `LibraryApi` occurrence evidence now reports
+  `nose.protocols.receiver_membership` pack and producer provenance while
+  preserving receiver-proof, unsupported-arity, and Go `slices.Contains`
+  out-of-scope hard negatives.
 - Iterator identity adapters started moving out of the broad compatibility
   facade. Rust `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned`
   and Java `.stream()` `LibraryApi` occurrence evidence now reports

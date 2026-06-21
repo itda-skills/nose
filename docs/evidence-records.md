@@ -511,7 +511,10 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   present, Python `dict.get(key, default)`, Ruby `Hash#fetch(key, default)` or
   zero-arg block fallback, and Java `Map.getOrDefault(key, default)` lookups with
   `nose.protocols.map_get_default` provenance when exact-map receiver proof is
-  present, Python/Ruby `keys`, Java `keySet`, and JS-family `Map.keys()` views
+  present, receiver-method membership calls with
+  `nose.protocols.receiver_membership` provenance when their map, collection, or
+  set-or-map receiver proof is present, Python/Ruby `keys`, Java `keySet`, and
+  JS-family `Map.keys()` views
   with `nose.protocols.map_key_views` provenance when exact-map receiver proof
   is present, Rust
   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java

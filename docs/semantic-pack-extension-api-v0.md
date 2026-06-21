@@ -489,6 +489,8 @@ implicit v0 packs:
   `Hash#fetch(key, default)` or zero-arg block fallback, and Java
   `Map.getOrDefault(key, default)` API occurrence contracts under exact-map
   receiver proof;
+- `nose.protocols.receiver_membership` owns receiver-method membership API
+  occurrence contracts for map, collection, and set-or-map receiver proofs;
 - `nose.protocols.map_key_views` owns Python/Ruby `keys`, Java `keySet`, and
   JS-family `Map.keys()` API occurrence contracts under exact-map receiver
   proof;

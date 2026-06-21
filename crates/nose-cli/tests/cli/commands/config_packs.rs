@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        29
+        30
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -444,6 +444,45 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(map_get_default["counts"]["value_laws"], 0);
     assert_eq!(map_get_default["counts"]["positive_fixtures"], 3);
     assert_eq!(map_get_default["counts"]["hard_negatives"], 2);
+
+    let receiver_membership = semantic_pack_by_id(&json, "nose.protocols.receiver_membership");
+    assert_eq!(receiver_membership["hash"], "b01cdfb3d7ec79c9");
+    assert_eq!(receiver_membership["kind"], "ProtocolPack");
+    assert_eq!(
+        receiver_membership["display_name"],
+        "nose receiver-membership protocol pack"
+    );
+    assert_eq!(receiver_membership["source"], "compiled-first-party");
+    assert_eq!(receiver_membership["influence"], "evidence-and-contracts");
+    assert_eq!(receiver_membership["trust"], "default-first-party");
+    assert_eq!(receiver_membership["enabled_by_default"], true);
+    assert_eq!(receiver_membership["path"], serde_json::Value::Null);
+    assert_eq!(receiver_membership["provider"], "Corca, Inc.");
+    assert_eq!(
+        receiver_membership["repository"],
+        "https://github.com/corca-ai/nose"
+    );
+    assert_eq!(receiver_membership["license"], "MIT");
+    assert_eq!(
+        json_array_strings(receiver_membership, "supported_languages"),
+        vec![
+            "python",
+            "ruby",
+            "java",
+            "rust",
+            "swift",
+            "javascript",
+            "typescript",
+            "vue",
+            "svelte",
+            "html"
+        ]
+    );
+    assert_eq!(receiver_membership["counts"]["evidence_producers"], 1);
+    assert_eq!(receiver_membership["counts"]["contracts"], 1);
+    assert_eq!(receiver_membership["counts"]["value_laws"], 0);
+    assert_eq!(receiver_membership["counts"]["positive_fixtures"], 10);
+    assert_eq!(receiver_membership["counts"]["hard_negatives"], 3);
 
     let map_key_view = semantic_pack_by_id(&json, "nose.protocols.map_key_views");
     assert_eq!(map_key_view["hash"], "fc74f28c4e454838");

@@ -108,6 +108,8 @@ Trust is separate from channel eligibility.
   `Hash#fetch(key, default)` or zero-arg block fallback, and Java
   `Map.getOrDefault(key, default)` API occurrence provenance under exact-map
   receiver proof;
+  `nose.protocols.receiver_membership` owns receiver-method membership API
+  occurrence provenance for map, collection, and set-or-map receiver contracts;
   `nose.protocols.map_key_views` owns Python/Ruby `keys`, Java `keySet`, and
   JS-family `Map.keys()` API occurrence provenance under exact-map receiver
   proof;

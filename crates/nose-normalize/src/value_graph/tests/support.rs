@@ -20,7 +20,7 @@ pub(super) use nose_semantics::{
     library_scalar_integer_method_contract, library_static_index_membership_contract,
     DomainEvidence, LibraryApiCalleeContract, LibraryApiContractId,
     LibraryCollectionFactoryContract, LibraryMapFactoryContract, LibraryMethodCallContract,
-    MethodReceiverContract, MethodSemanticContract, C_LANGUAGE_PACK_ID,
+    MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract, C_LANGUAGE_PACK_ID,
     C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID, FIRST_PARTY_PACK_ID,
     JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID, JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
@@ -33,6 +33,7 @@ pub(super) use nose_semantics::{
     MAP_KEY_VIEW_PROTOCOL_PACK_ID, MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
     PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
     PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID, PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+    RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID, RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
     RUST_STDLIB_INTEGER_METHOD_PACK_ID, RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID,
     RUST_STDLIB_OPTION_PACK_ID, RUST_STDLIB_OPTION_PRODUCER_ID,
 };
@@ -504,8 +505,29 @@ pub(super) fn push_method_call_library_api_evidence(
         record.provenance.pack_hash = Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PACK_ID));
         record.provenance.rule_hash =
             Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID));
+    } else if is_receiver_membership_method_call(contract) {
+        record.provenance.pack_hash =
+            Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID));
     }
     il.evidence.push(record);
+}
+
+fn is_receiver_membership_method_call(contract: LibraryMethodCallContract) -> bool {
+    contract.id
+        == LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::Contains))
+        && matches!(
+            contract.callee,
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactMap
+                    | MethodReceiverContract::ExactCollectionOrMap
+                    | MethodReceiverContract::ExactCollectionOrJavaKeySet
+                    | MethodReceiverContract::ExactSetOrMap,
+                ..
+            }
+        )
+        && contract.result.args == MethodBuiltinArgs::FirstThenReceiver
 }
 
 fn is_map_get_default_method_call(contract: LibraryMethodCallContract) -> bool {

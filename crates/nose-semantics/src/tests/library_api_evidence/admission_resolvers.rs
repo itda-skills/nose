@@ -6,6 +6,7 @@ mod map_get;
 mod map_get_default;
 mod map_key_view;
 mod promise;
+mod receiver_membership;
 mod regex;
 mod scalar_integer;
 mod span;

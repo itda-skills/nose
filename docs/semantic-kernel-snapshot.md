@@ -151,6 +151,11 @@ still being migrated toward it.
   default)`, Ruby `Hash#fetch(key, default)` or zero-arg block fallback, and
   Java `Map.getOrDefault(key, default)` contract and occurrence producer ids,
   while non-map receivers and unsupported arities remain hard negatives. The
+  `nose.protocols.receiver_membership` descriptor owns receiver-method
+  membership contracts for Java/Rust/Ruby map-key membership, Python
+  `__contains__`, JS-like `has`/`includes`, Java/Swift `contains`, and Ruby
+  `member?`, while missing receiver proof, unsupported arities, and Go
+  `slices.Contains` remain hard negatives. The
   `nose.protocols.map_key_views` descriptor owns Python/Ruby `keys`, Java
   `keySet`, and JS-family `Map.keys()` contract and occurrence producer ids,
   while non-map receivers and unsupported arities remain hard negatives. The
@@ -219,6 +224,9 @@ still being migrated toward it.
   `nose.protocols.map_get_default`, a default builtin protocol pack for Python
   `dict.get(key, default)`, Ruby `Hash#fetch(key, default)` or zero-arg block
   fallback, and Java `Map.getOrDefault(key, default)` API provenance, and
+  `nose.protocols.receiver_membership`, a default builtin protocol pack for
+  receiver-method membership API provenance across map, collection, and
+  set-or-map receiver contracts, and
   `nose.protocols.map_key_views`, a default builtin protocol pack for
   Python/Ruby `keys`, Java `keySet`, and JS-family `Map.keys()` API provenance,
   and
@@ -472,6 +480,12 @@ migrated.
   `nose.protocols.map_get_default` provenance. Rust `unwrap_or` remains a
   separate Option/defaulting contract; when it models map lookup defaulting, the
   nested `MapGet` dependency must also be pack-proven.
+- Receiver-method membership APIs are language-, arity-, and receiver-proof
+  constrained through admitted `LibraryApi` occurrence evidence with
+  `nose.protocols.receiver_membership` provenance. This covers Java/Rust/Ruby
+  map-key membership, Python `__contains__`, JS-like `has`/`includes`,
+  Java/Swift `contains`, and Ruby `member?`; Go `slices.Contains` remains a
+  namespace-function contract outside this receiver-method protocol slice.
 - Rust method `zip(...)` is admitted as a protocol-pair operation only through
   the Rust library method-call occurrence contract and exact protocol proof for
   both sides.

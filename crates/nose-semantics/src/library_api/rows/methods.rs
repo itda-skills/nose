@@ -399,6 +399,28 @@ pub fn library_map_get_default_contract(
     exact_map_get_default.then_some(contract)
 }
 
+pub fn library_receiver_membership_contract(
+    lang: Lang,
+    method: &str,
+    arg_count: usize,
+) -> Option<LibraryMethodCallContract> {
+    let contract = library_method_call_contract(lang, method, arg_count)?;
+    let receiver_membership = contract.id
+        == LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::Contains))
+        && matches!(
+            contract.callee,
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactMap
+                    | MethodReceiverContract::ExactCollectionOrMap
+                    | MethodReceiverContract::ExactCollectionOrJavaKeySet
+                    | MethodReceiverContract::ExactSetOrMap,
+                ..
+            }
+        )
+        && contract.result.args == MethodBuiltinArgs::FirstThenReceiver;
+    receiver_membership.then_some(contract)
+}
+
 pub fn library_receiver_method_api_contract(
     lang: Lang,
     method: &str,
@@ -479,6 +501,17 @@ pub fn library_receiver_method_api_contract(
                     id: contract.id,
                     callee: contract.callee,
                     rule: MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
+                    result_domain: None,
+                }
+            })
+        })
+        .or_else(|| {
+            library_receiver_membership_contract(lang, method, arg_count).map(|contract| {
+                LibraryReceiverMethodApiContract {
+                    pack_id: RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
+                    id: contract.id,
+                    callee: contract.callee,
+                    rule: RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
                     result_domain: None,
                 }
             })

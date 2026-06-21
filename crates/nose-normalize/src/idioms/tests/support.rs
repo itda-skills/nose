@@ -10,10 +10,11 @@ pub(super) use nose_semantics::{
     library_free_function_builtin_contract, library_free_name_map_factory_contract,
     library_iterator_identity_adapter_contract, library_map_get_contract,
     library_map_get_default_contract, library_map_key_view_contract, library_method_call_contract,
-    ITERATOR_IDENTITY_ADAPTER_PACK_ID, ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID,
-    MAP_GET_DEFAULT_PROTOCOL_PACK_ID, MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
-    MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID, MAP_KEY_VIEW_PROTOCOL_PACK_ID,
-    MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
+    library_receiver_membership_contract, ITERATOR_IDENTITY_ADAPTER_PACK_ID,
+    ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID, MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
+    MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID, MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID,
+    MAP_KEY_VIEW_PROTOCOL_PACK_ID, MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
+    RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID, RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
 };
 
 pub(super) fn sp() -> Span {
@@ -132,6 +133,18 @@ pub(super) fn push_receiver_method_library_api_evidence(
                     Some((
                         MAP_KEY_VIEW_PROTOCOL_PACK_ID,
                         MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
+                    )),
+                )
+            })
+        })
+        .or_else(|| {
+            library_receiver_membership_contract(il.meta.lang, method, arg_count).map(|contract| {
+                (
+                    contract.id,
+                    contract.callee,
+                    Some((
+                        RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
+                        RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
                     )),
                 )
             })

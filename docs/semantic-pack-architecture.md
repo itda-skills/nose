@@ -52,6 +52,7 @@ ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.java.stdlib.static_collection_adapters`,
 `nose.protocols.map_get`,
 `nose.protocols.map_get_default`,
+`nose.protocols.receiver_membership`,
 `nose.protocols.map_key_views`,
 `nose.protocols.iterator_identity_adapters`,
 `nose.python.stdlib.type_domain`, and
@@ -254,6 +255,11 @@ previous semantic-kernel tranches.
    which owns Python `dict.get(key, default)`, Ruby `Hash#fetch(key, default)`
    or zero-arg block fallback, and Java `Map.getOrDefault(key, default)` API
    occurrence provenance under the shared exact-map receiver contract.
+   The current receiver-membership protocol slice is
+   `nose.protocols.receiver_membership`, which owns receiver-method membership
+   API occurrence provenance for map, collection, and set-or-map receiver
+   contracts. Go `slices.Contains` remains outside this slice because it is a
+   namespace-function-style contract.
    The current map-key-view protocol slice is `nose.protocols.map_key_views`,
    which owns Python/Ruby `keys`, Java `keySet`, and JS-family `Map.keys()` API
    occurrence provenance under the shared exact-map receiver contract.

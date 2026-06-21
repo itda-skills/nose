@@ -197,6 +197,57 @@ fn library_iterator_adapter_and_method_call_contracts_carry_obligations() {
         })
     );
     assert_eq!(
+        library_receiver_membership_contract(Lang::Rust, "contains_key", 1),
+        Some(LibraryMethodCallContract {
+            id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
+                Builtin::Contains,
+            )),
+            callee: LibraryApiCalleeContract::Method {
+                method: "contains_key",
+                receiver: MethodReceiverContract::ExactMap,
+            },
+            result: MethodCallContract {
+                semantic: MethodSemanticContract::Builtin(Builtin::Contains),
+                receiver: MethodReceiverContract::ExactMap,
+                args: MethodBuiltinArgs::FirstThenReceiver,
+            },
+        })
+    );
+    assert_eq!(
+        library_receiver_membership_contract(Lang::TypeScript, "has", 1),
+        Some(LibraryMethodCallContract {
+            id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
+                Builtin::Contains,
+            )),
+            callee: LibraryApiCalleeContract::Method {
+                method: "has",
+                receiver: MethodReceiverContract::ExactSetOrMap,
+            },
+            result: MethodCallContract {
+                semantic: MethodSemanticContract::Builtin(Builtin::Contains),
+                receiver: MethodReceiverContract::ExactSetOrMap,
+                args: MethodBuiltinArgs::FirstThenReceiver,
+            },
+        })
+    );
+    assert_eq!(
+        library_receiver_membership_contract(Lang::Python, "__contains__", 1),
+        Some(LibraryMethodCallContract {
+            id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
+                Builtin::Contains,
+            )),
+            callee: LibraryApiCalleeContract::Method {
+                method: "__contains__",
+                receiver: MethodReceiverContract::ExactCollectionOrMap,
+            },
+            result: MethodCallContract {
+                semantic: MethodSemanticContract::Builtin(Builtin::Contains),
+                receiver: MethodReceiverContract::ExactCollectionOrMap,
+                args: MethodBuiltinArgs::FirstThenReceiver,
+            },
+        })
+    );
+    assert_eq!(
         library_method_call_contract(Lang::Go, "Contains", 2),
         Some(LibraryMethodCallContract {
             id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
@@ -280,6 +331,14 @@ fn library_promise_adapter_and_method_contracts_reject_raw_name_only_matches() {
     );
     assert_eq!(
         library_static_collection_adapter_contract(Lang::Java, "Arrays", "stream", 0),
+        None
+    );
+    assert_eq!(
+        library_receiver_membership_contract(Lang::Go, "Contains", 2),
+        None
+    );
+    assert_eq!(
+        library_receiver_membership_contract(Lang::JavaScript, "contains", 1),
         None
     );
     assert_eq!(library_method_call_contract(Lang::Python, "min", 2), None);
