@@ -1983,6 +1983,108 @@ fn local_manifest_registers_external_producer_and_contract_rows_as_data_only() {
 }
 
 #[test]
+fn external_rows_report_builtin_id_conflicts_without_rejecting_metadata_only_pack() {
+    let dir = unique_dir("external_builtin_row_conflicts");
+    let path = dir.join("pack.json");
+    let mirror = manifest("com.example.python-stdlib-type-domain-mirror")
+        .replace(
+            "python.library-api.example",
+            "python.stdlib.type-domain-alias-domain",
+        )
+        .replace("LibraryApi.Contract", "Domain.TypeAlias")
+        .replace(
+            "python.example.contract",
+            "python.stdlib.type-domain-alias.contract",
+        )
+        .replace("Example", "PythonStdlibTypeDomainAlias");
+    fs::write(&path, mirror).unwrap();
+
+    let set = SemanticPackSet::new_local(&[path.clone()]).expect("metadata-only pack loads");
+    let external = set.packs().last().expect("external pack summary");
+    assert_eq!(external.id, "com.example.python-stdlib-type-domain-mirror");
+    assert_eq!(external.influence, SemanticPackInfluence::MetadataOnly);
+
+    let report = set.external_row_conflicts();
+    assert_eq!(report.conflict_count(), 2);
+    assert!(!report.passed());
+    assert!(report.conflicts.iter().any(|conflict| {
+        conflict.kind == ExternalRowKind::EvidenceProducer
+            && conflict.row_id == "python.stdlib.type-domain-alias-domain"
+            && conflict.conflicting_pack_id == PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID
+            && conflict.conflicting_source == SemanticPackSource::CompiledBuiltin
+            && conflict.conflicting_manifest_path.is_none()
+    }));
+    assert!(report.conflicts.iter().any(|conflict| {
+        conflict.kind == ExternalRowKind::Contract
+            && conflict.row_id == "python.stdlib.type-domain-alias.contract"
+            && conflict.conflicting_pack_id == PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID
+            && conflict.conflicting_source == SemanticPackSource::CompiledBuiltin
+            && conflict.conflicting_manifest_path.is_none()
+    }));
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
+fn external_rows_report_external_duplicate_id_conflicts_without_rejecting_packs() {
+    let dir = unique_dir("external_duplicate_row_conflicts");
+    let first = dir.join("a.json");
+    let second = dir.join("b.json");
+    fs::write(&first, manifest("com.example.first")).unwrap();
+    fs::write(&second, manifest("com.example.second")).unwrap();
+
+    let set = SemanticPackSet::new_local(&[first.clone(), second.clone()])
+        .expect("metadata-only packs load");
+    let first = first.canonicalize().unwrap();
+    let report = set.external_row_conflicts();
+    assert_eq!(report.conflict_count(), 2);
+    assert!(report.conflicts.iter().any(|conflict| {
+        conflict.kind == ExternalRowKind::EvidenceProducer
+            && conflict.row_id == "python.library-api.example"
+            && conflict.external_pack_id == "com.example.second"
+            && conflict.conflicting_pack_id == "com.example.first"
+            && conflict.conflicting_source == SemanticPackSource::LocalManifest
+            && conflict.conflicting_manifest_path.as_deref() == Some(first.as_path())
+    }));
+    assert!(report.conflicts.iter().any(|conflict| {
+        conflict.kind == ExternalRowKind::Contract
+            && conflict.row_id == "python.example.contract"
+            && conflict.external_pack_id == "com.example.second"
+            && conflict.conflicting_pack_id == "com.example.first"
+            && conflict.conflicting_source == SemanticPackSource::LocalManifest
+            && conflict.conflicting_manifest_path.as_deref() == Some(first.as_path())
+    }));
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
+fn external_rows_report_builtin_value_law_conflicts_without_rejecting_pack() {
+    let dir = unique_dir("external_builtin_law_conflicts");
+    let path = dir.join("pack.json");
+    let manifest = manifest_with_value_law("com.example.law-mirror").replace(
+        "python.example.numeric-law",
+        "value-graph.factor-distribute.numeric-common-factor",
+    );
+    fs::write(&path, manifest).unwrap();
+
+    let set = SemanticPackSet::new_local(&[path]).expect("metadata-only pack loads");
+    let report = set.external_row_conflicts();
+    assert_eq!(report.conflict_count(), 1);
+    let conflict = &report.conflicts[0];
+    assert_eq!(conflict.kind, ExternalRowKind::ValueLaw);
+    assert_eq!(
+        conflict.row_id,
+        "value-graph.factor-distribute.numeric-common-factor"
+    );
+    assert_eq!(conflict.external_pack_id, "com.example.law-mirror");
+    assert_eq!(conflict.conflicting_pack_id, VALUE_GRAPH_LAW_PACK_ID);
+    assert_eq!(
+        conflict.conflicting_source,
+        SemanticPackSource::CompiledBuiltin
+    );
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
 fn conformance_check_reports_declared_fixture_files() {
     let dir = unique_dir("conformance_ok");
     let fixture_dir = dir.join("fixtures");

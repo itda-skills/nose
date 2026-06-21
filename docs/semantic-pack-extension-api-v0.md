@@ -384,6 +384,13 @@ The default policy is fail closed:
 - user configuration may disable or select packs, but selection does not make
   missing proof appear.
 
+Local loading now exposes a data-only external row conflict report for producer,
+contract, and value-law ids that overlap builtin rows or another loaded external
+pack. A conflict report does not reject metadata-only manifests, because users
+may intentionally mirror builtin vocabulary for documentation or migration
+tests. Any future external influence gate must treat those conflicts as blocking
+until an explicit composition or replacement policy exists.
+
 Near-mode scoring may retain conflict provenance as a review signal. Exact
 semantic fingerprints must not.
 

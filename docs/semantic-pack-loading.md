@@ -167,9 +167,9 @@ snapshot prose may group packs by migration narrative instead.
 
 ## Current limits
 
-The loader validates manifest shape and pack provenance, and registers external
-producer, contract, and value-law declarations as data-only rows. It does not
-yet:
+The loader validates manifest shape and pack provenance, registers external
+producer, contract, and value-law declarations as data-only rows, and can report
+row-id conflicts with builtin or other external rows. It does not yet:
 
 - execute external evidence producers;
 - register external contract rows with exact consumers;
