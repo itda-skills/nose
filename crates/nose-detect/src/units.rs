@@ -6,6 +6,7 @@
 mod features;
 mod fragments;
 mod model;
+mod test_paths;
 mod timing;
 mod tree;
 
@@ -21,6 +22,7 @@ pub use model::UnitFeat;
 use nose_il::{Il, Interner, NodeId, NodeKind, Payload, Span, Symbol, UnitKind, UnitOrigin};
 use nose_semantics::ValueLaw;
 use std::time::Instant;
+use test_paths::is_test_path;
 use timing::{UnitTimer, UnitTimingSample, UnitTimingSkipSample};
 use tree::collect_pre;
 pub(crate) use tree::{build_parent_index, subtree_spans_within};
@@ -488,28 +490,6 @@ fn test_structural_unit(large_test_file: bool, kind: UnitKind) -> bool {
 
 pub(crate) fn large_test_file(il: &Il) -> bool {
     is_test_path(&il.meta.path) && il.nodes.len() > LARGE_TEST_FILE_NODE_CUTOFF
-}
-
-fn is_test_path(path: &str) -> bool {
-    let p = path.to_ascii_lowercase();
-    p.contains("/test/")
-        || p.contains("/tests/")
-        || p.contains("/__tests__/")
-        || p.contains("/spec/")
-        || p.starts_with("test/")
-        || p.starts_with("tests/")
-        || p.ends_with("_test.go")
-        || p.ends_with("conftest.py")
-        || ["_test.", ".test.", ".spec.", "_spec."]
-            .iter()
-            .any(|m| p.contains(m))
-        || p.rsplit('/')
-            .next()
-            .unwrap_or(&p)
-            .split('.')
-            .next()
-            .unwrap_or("")
-            .starts_with("test_")
 }
 
 fn extract_unit(
