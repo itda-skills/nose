@@ -5,13 +5,13 @@
 //! direct in-file or imported callable target is materialized as evidence.
 
 use nose_il::{
-    CallTargetEvidenceKind, EvidenceAnchor, EvidenceEmitter, EvidenceId, EvidenceKind,
-    EvidenceProvenance, EvidenceRecord, EvidenceStatus, Il, Interner, LoopKind, NodeId, NodeKind,
-    Payload, Symbol, SymbolEvidenceKind, UnitKind,
+    stable_symbol_hash, CallTargetEvidenceKind, EvidenceAnchor, EvidenceEmitter, EvidenceId,
+    EvidenceKind, EvidenceProvenance, EvidenceRecord, EvidenceStatus, Il, Interner, LoopKind,
+    NodeId, NodeKind, Payload, Symbol, SymbolEvidenceKind, UnitKind,
 };
 use nose_semantics::{
-    imported_occurrence_symbol_dependencies_valid_with_cache, ImportedOccurrenceValidationCache,
-    FIRST_PARTY_PACK_ID,
+    imported_occurrence_symbol_dependencies_valid_with_cache, language_core_evidence_provenance,
+    ImportedOccurrenceValidationCache, FIRST_PARTY_PACK_ID,
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -51,7 +51,14 @@ enum ImportedBindingUse {
     MemberReceiver,
 }
 
+#[derive(Clone, Copy)]
+struct CallTargetEvidenceProvenance {
+    current: EvidenceProvenance,
+    legacy_pack_hash: u64,
+}
+
 pub(crate) fn run(il: &mut Il, interner: &Interner) {
+    let provenance = call_target_evidence_provenance(il);
     let targets = unique_direct_function_targets(il, interner);
     let mut calls = Vec::new();
     collect_call_nodes(il, il.root, &mut calls);
@@ -72,20 +79,81 @@ pub(crate) fn run(il: &mut Il, interner: &Interner) {
         );
     }
     for (call, target) in proven {
-        il.find_or_push_first_party_evidence(
+        upsert(
+            il,
             EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
             EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectFunction {
                 target_span: il.node(target.root).span,
                 name_hash: target.name_hash,
             }),
-            FIRST_PARTY_PACK_ID,
             DIRECT_FUNCTION_RULE,
+            provenance,
             Vec::new(),
         );
     }
     let mut imported_occurrence_cache = ImportedOccurrenceValidationCache::default();
     for call in calls {
-        record_imported_call_target(il, interner, call, &mut imported_occurrence_cache);
+        record_imported_call_target(
+            il,
+            interner,
+            call,
+            provenance,
+            &mut imported_occurrence_cache,
+        );
+    }
+}
+
+fn upsert(
+    il: &mut Il,
+    anchor: EvidenceAnchor,
+    kind: EvidenceKind,
+    _rule: &'static str,
+    provenance: CallTargetEvidenceProvenance,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceId {
+    let mut current = None;
+    let mut legacy = None;
+    // Index-backed: call-target and imported occurrence refreshes run per call,
+    // so only scan records anchored at this exact node span. In-place migration
+    // avoids broad `nose.first_party` duplicates that can bloat evidence output.
+    for idx in il.evidence_indices_anchored_at(anchor.span()) {
+        let record = &il.evidence[idx as usize];
+        if record.anchor == anchor
+            && record.kind == kind
+            && record.status == EvidenceStatus::Asserted
+            && record.provenance.emitter == EvidenceEmitter::FirstParty
+        {
+            if record.provenance.pack_hash == provenance.current.pack_hash {
+                current.get_or_insert(idx);
+            } else if record.provenance.pack_hash == Some(provenance.legacy_pack_hash) {
+                legacy.get_or_insert(idx);
+            }
+        }
+    }
+    if let Some(idx) = current.or(legacy) {
+        let record = &mut il.evidence[idx as usize];
+        record.provenance.pack_hash = provenance.current.pack_hash;
+        record.provenance.rule_hash = provenance.current.rule_hash;
+        record.dependencies = dependencies;
+        return record.id;
+    }
+    il.find_or_push_first_party_evidence_with_provenance(
+        anchor,
+        kind,
+        provenance.current,
+        dependencies,
+    )
+}
+
+fn call_target_evidence_provenance(il: &Il) -> CallTargetEvidenceProvenance {
+    let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+    CallTargetEvidenceProvenance {
+        current: EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
+        },
+        legacy_pack_hash: stable_symbol_hash(FIRST_PARTY_PACK_ID),
     }
 }
 

@@ -195,8 +195,9 @@ previous semantic-kernel tranches.
    HTML/Vue/Svelte embedded-region lowering. Generic language-core evidence and
    source-fact provenance now emit through those language packs, including
    immutable local/module binding-domain proof, normalize/front-end place/effect
-   proof, and module-import immutable literal export/snapshot proof. `nose.lang.c`
-   also covers the explicit unsigned 32-bit byte-lane cast source-fact producer.
+   proof, normalize call-target/imported-occurrence proof, and module-import
+   immutable literal export/snapshot proof. `nose.lang.c` also covers the
+   explicit unsigned 32-bit byte-lane cast source-fact producer.
 6. **Phase 5, builtin stdlib/library/law packs:** move official semantic rows behind
    narrow builtin pack ids and shared admitted-contract resolvers. The first
    slice is `nose.python.builtins.collection_factories`, which owns Python

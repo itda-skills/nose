@@ -4,6 +4,7 @@
 //! lightweight value/domain contracts consumed by operators, normalize, and detect.
 
 use super::*;
+use nose_il::EvidenceProvenance;
 use rustc_hash::FxHashMap;
 
 mod domain;
@@ -344,43 +345,41 @@ pub fn source_pattern_at_node(il: &Il, node: NodeId) -> Option<SourcePatternKind
     }
 }
 
-pub fn direct_function_call_target_at_call(il: &Il, call: NodeId, target_root: NodeId) -> bool {
+pub fn direct_function_call_target_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+    target_root: NodeId,
+) -> bool {
     if il.kind(target_root) != NodeKind::Func {
         return false;
     }
-    direct_function_call_target_span_at_call(il, call)
+    direct_function_call_target_span_at_call(il, interner, call)
         .is_some_and(|proven_span| proven_span == il.node(target_root).span)
 }
 
-/// The proven `DirectFunction` target span at `call`, when the call carries
-/// exactly one asserted `CallTarget` record and it is `DirectFunction`. The
+/// The proven `DirectFunction` target span at `call`, when the call carries a
+/// unique admitted builtin language-core `CallTarget::DirectFunction` record. The
 /// span-returning form lets a consumer with many possible targets resolve the
 /// evidence once and look the target up, instead of re-resolving per target.
-pub fn direct_function_call_target_span_at_call(il: &Il, call: NodeId) -> Option<Span> {
-    if il.kind(call) != NodeKind::Call {
-        return None;
-    }
-    let call_span = il.node(call).span;
-    match unique_asserted_evidence_at(
-        il,
-        call_span,
-        |anchor| matches!(anchor, EvidenceAnchor::Node { span, kind } if span == call_span && kind == NodeKind::Call),
-        |evidence| match evidence {
-            EvidenceKind::CallTarget(target) => Some(target),
-            _ => None,
-        },
-    ) {
-        EvidenceResolution::Found(CallTargetEvidenceKind::DirectFunction {
+pub fn direct_function_call_target_span_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> Option<Span> {
+    match call_target_evidence_status_at_call(il, interner, call) {
+        CallTargetEvidenceStatus::Admitted(CallTargetEvidenceKind::DirectFunction {
             target_span: proven_span,
             ..
         }) => Some(proven_span),
-        EvidenceResolution::Found(
+        CallTargetEvidenceStatus::Admitted(
             CallTargetEvidenceKind::DirectMethod { .. }
             | CallTargetEvidenceKind::ImportedFunction { .. }
             | CallTargetEvidenceKind::ImportedMember { .. }
             | CallTargetEvidenceKind::DynamicDispatch { .. },
-        ) => None,
-        EvidenceResolution::Ambiguous | EvidenceResolution::Missing => None,
+        )
+        | CallTargetEvidenceStatus::Missing
+        | CallTargetEvidenceStatus::Rejected => None,
     }
 }
 
@@ -410,16 +409,7 @@ pub fn call_target_evidence_status_at_call(
     if il.kind(call) != NodeKind::Call {
         return CallTargetEvidenceStatus::Missing;
     }
-    let call_span = il.node(call).span;
-    let target = match unique_asserted_evidence_at(
-        il,
-        call_span,
-        |anchor| matches!(anchor, EvidenceAnchor::Node { span, kind } if span == call_span && kind == NodeKind::Call),
-        |evidence| match evidence {
-            EvidenceKind::CallTarget(target) => Some(target),
-            _ => None,
-        },
-    ) {
+    let target = match language_core_call_target_evidence_at_call(il, call) {
         EvidenceResolution::Found(target) => target,
         EvidenceResolution::Ambiguous => return CallTargetEvidenceStatus::Rejected,
         EvidenceResolution::Missing => return CallTargetEvidenceStatus::Missing,
@@ -428,6 +418,47 @@ pub fn call_target_evidence_status_at_call(
         CallTargetEvidenceStatus::Admitted(target)
     } else {
         CallTargetEvidenceStatus::Rejected
+    }
+}
+
+fn language_core_call_target_evidence_at_call(
+    il: &Il,
+    call: NodeId,
+) -> EvidenceResolution<CallTargetEvidenceKind> {
+    let call_span = il.node(call).span;
+    let expected_provenance = language_core_call_target_provenance(il);
+    let mut found = None;
+    for record in il.evidence_anchored_at(call_span) {
+        if !matches!(
+            record.anchor,
+            EvidenceAnchor::Node { span, kind } if span == call_span && kind == NodeKind::Call
+        ) {
+            continue;
+        }
+        let EvidenceKind::CallTarget(target) = record.kind else {
+            continue;
+        };
+        if record.provenance != expected_provenance {
+            continue;
+        }
+        if record.status != EvidenceStatus::Asserted || !il.evidence_dependencies_asserted(record) {
+            return EvidenceResolution::Ambiguous;
+        }
+        match found {
+            None => found = Some(target),
+            Some(existing) if existing == target => {}
+            Some(_) => return EvidenceResolution::Ambiguous,
+        }
+    }
+    found.map_or(EvidenceResolution::Missing, EvidenceResolution::Found)
+}
+
+fn language_core_call_target_provenance(il: &Il) -> EvidenceProvenance {
+    let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+    EvidenceProvenance {
+        emitter: EvidenceEmitter::FirstParty,
+        pack_hash: Some(stable_symbol_hash(pack_id)),
+        rule_hash: Some(stable_symbol_hash(producer_id)),
     }
 }
 

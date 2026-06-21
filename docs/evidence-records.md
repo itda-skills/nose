@@ -84,6 +84,9 @@ verdicts.
 spelling such as `f(...)`, `obj.f(...)`, or `ns.f(...)` is only a selector that a
 producer may inspect; consumers must require an asserted, dependency-closed,
 unambiguous `CallTarget` record anchored to the exact `Call` node. The current
+resolver admits only the lowered file language's builtin language-core
+provenance; legacy broad-provenance, wrong-language, external, dependency-broken,
+or selector-mismatched call-target rows cannot open exact call identity. The current
 vocabulary separates concrete exact identity from broader dispatch facts:
 
 - `DirectFunction` names a unique in-file function target by function span and
@@ -100,7 +103,8 @@ vocabulary separates concrete exact identity from broader dispatch facts:
 - `DynamicDispatch` names a protocol/dispatch family and method selector, but it
   does not by itself prove one concrete implementation target.
 
-The first-party call-target producer currently emits:
+The builtin language-core call-target producer emits these records with the
+matching `nose.lang.*` pack provenance for the lowered file language:
 
 - `DirectFunction` for unique top-level in-file `Function` units when neither
   the current lexical scope nor any enclosing lexical scope has a parameter,
@@ -121,7 +125,7 @@ The first-party call-target producer currently emits:
   ambiguous/conflicting symbol evidence, dependency-broken import proof, and
   selector mismatches stay closed.
 
-There is not yet a first-party producer for `DirectMethod` or `DynamicDispatch`.
+There is not yet a builtin producer for `DirectMethod` or `DynamicDispatch`.
 Duplicate function names, lexical shadowing, nested/non-top-level functions,
 methods without explicit target proof, computed callees, selector mismatches,
 dependency-broken records, and conflicting evidence stay closed.
@@ -386,11 +390,11 @@ evidence, or Java `java.util.List.of`/`Set.of`/`Arrays.asList` factories with
 evidence, or Java empty `new ArrayList<>()`/`new LinkedList<>()` constructors
 with `nose.java.stdlib.collection_constructors` provenance-backed `LibraryApi`
 occurrence evidence. Canonical
-`Append` still needs `Effect(BuilderAppendCall)`, and the first-party normalize
-producer emits that effect only when the same call also has the same-span
-`LibraryApi` proof for the append API; the effect record depends on that API
-record. Raw or unadmitted builtin payloads stay opaque in the value graph and
-closed in exact/oracle consumers.
+`Append` still needs `Effect(BuilderAppendCall)`, and the builtin language-core
+normalize producer emits that effect only when the same call also has the
+same-span `LibraryApi` proof for the append API; the effect record depends on
+that API record. Raw or unadmitted builtin payloads stay opaque in the value
+graph and closed in exact/oracle consumers.
 When a receiver obligation makes an API result more specific than the selector
 alone, the dependency chain must prove that specialization. For example, Rust
 `unwrap_or` is an option defaulting API in isolation, but the canonical

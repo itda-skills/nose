@@ -173,7 +173,7 @@ fn self_call_with_error_arg_ignored_by_callee() -> Value {
         il.node(func).span,
         interner.symbol_hash(func_name),
     ));
-    run_admitted_unit(il, func, &[Value::Bool(false), Value::Int(0)])
+    run_admitted_unit_with_interner(il, &interner, func, &[Value::Bool(false), Value::Int(0)])
         .expect("run_unit")
         .ret
 }
@@ -387,7 +387,10 @@ fn cross_function_call_result() -> Value {
         il.node(g_func).span,
         interner.symbol_hash(g_name),
     ));
-    run_admitted_unit(il, f_func, &[Value::Int(3)])
+    assert!(direct_function_call_target_at_call(
+        &il, &interner, call, g_func
+    ));
+    run_admitted_unit_with_interner(il, &interner, f_func, &[Value::Int(3)])
         .expect("run_unit")
         .ret
 }

@@ -13,6 +13,7 @@ pub(super) fn record_imported_call_target(
     il: &mut Il,
     interner: &Interner,
     call: NodeId,
+    provenance: CallTargetEvidenceProvenance,
     cache: &mut ImportedOccurrenceValidationCache,
 ) {
     if il.kind(call) != NodeKind::Call || !matches!(il.node(call).payload, Payload::None) {
@@ -23,31 +24,34 @@ pub(super) fn record_imported_call_target(
     };
     match il.kind(callee) {
         NodeKind::Var => {
-            if let Some(target) = imported_function_target(il, interner, callee, cache) {
-                il.find_or_push_first_party_evidence(
+            if let Some(target) = imported_function_target(il, interner, callee, provenance, cache)
+            {
+                upsert(
+                    il,
                     EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
                     EvidenceKind::CallTarget(CallTargetEvidenceKind::ImportedFunction {
                         module_hash: target.module_hash,
                         exported_hash: target.exported_hash,
                         local_hash: target.local_hash,
                     }),
-                    FIRST_PARTY_PACK_ID,
                     IMPORTED_FUNCTION_RULE,
+                    provenance,
                     vec![target.dependency],
                 );
             }
         }
         NodeKind::Field => {
-            if let Some(target) = imported_member_target(il, interner, callee, cache) {
-                il.find_or_push_first_party_evidence(
+            if let Some(target) = imported_member_target(il, interner, callee, provenance, cache) {
+                upsert(
+                    il,
                     EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
                     EvidenceKind::CallTarget(CallTargetEvidenceKind::ImportedMember {
                         module_hash: target.module_hash,
                         exported_hash: target.exported_hash,
                         member_hash: target.member_hash,
                     }),
-                    FIRST_PARTY_PACK_ID,
                     IMPORTED_MEMBER_RULE,
+                    provenance,
                     vec![target.dependency],
                 );
             }
@@ -60,6 +64,7 @@ fn imported_function_target(
     il: &mut Il,
     interner: &Interner,
     callee: NodeId,
+    provenance: CallTargetEvidenceProvenance,
     cache: &mut ImportedOccurrenceValidationCache,
 ) -> Option<ImportedFunctionTarget> {
     let local_hash = node_name_hash(il, interner, callee)?;
@@ -78,6 +83,7 @@ fn imported_function_target(
         callee,
         symbol,
         binding_dependency,
+        provenance,
         cache,
     )?;
     Some(ImportedFunctionTarget {
@@ -92,6 +98,7 @@ fn imported_member_target(
     il: &mut Il,
     interner: &Interner,
     callee: NodeId,
+    provenance: CallTargetEvidenceProvenance,
     cache: &mut ImportedOccurrenceValidationCache,
 ) -> Option<ImportedMemberTarget> {
     let Payload::Name(member) = il.node(callee).payload else {
@@ -110,6 +117,7 @@ fn imported_member_target(
         receiver,
         symbol,
         binding_dependency,
+        provenance,
         cache,
     )?;
     match symbol {
@@ -181,6 +189,7 @@ fn upsert_valid_imported_symbol_occurrence(
     node: NodeId,
     symbol: SymbolEvidenceKind,
     binding_dependency: EvidenceId,
+    provenance: CallTargetEvidenceProvenance,
     cache: &mut ImportedOccurrenceValidationCache,
 ) -> Option<EvidenceId> {
     if !imported_symbol_occurrence_can_be_upserted(il, interner, node, symbol, cache) {
@@ -198,11 +207,7 @@ fn upsert_valid_imported_symbol_occurrence(
         id: EvidenceId(u32::MAX),
         anchor,
         kind,
-        provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
-            pack_hash: None,
-            rule_hash: None,
-        },
+        provenance: provenance.current,
         dependencies: dependencies.clone(),
         status: EvidenceStatus::Asserted,
     };
@@ -211,8 +216,7 @@ fn upsert_valid_imported_symbol_occurrence(
     ) {
         return None;
     }
-    let id =
-        il.find_or_push_first_party_evidence(anchor, kind, FIRST_PARTY_PACK_ID, rule, dependencies);
+    let id = upsert(il, anchor, kind, rule, provenance, dependencies);
     Some(id)
 }
 

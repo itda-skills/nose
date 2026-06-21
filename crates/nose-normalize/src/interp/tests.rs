@@ -13,19 +13,29 @@ use nose_il::{
     PlaceEvidenceKind, SourceCastKind, SourceFactKind, Span, SymbolEvidenceKind, Unit, UnitKind,
 };
 use nose_semantics::{
-    library_api_callee_contract_hash, library_api_contract_id_hash,
-    library_free_function_builtin_contract, library_method_call_contract, DomainEvidence,
-    LibraryApiCalleeContract, LibraryApiContractId, LibraryApiShadowPolicy,
-    LibraryMethodCallContract, MethodReceiverContract, MethodSemanticContract,
-    BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
-    FIRST_PARTY_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
-    FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+    language_core_evidence_provenance, library_api_callee_contract_hash,
+    library_api_contract_id_hash, library_free_function_builtin_contract,
+    library_method_call_contract, DomainEvidence, LibraryApiCalleeContract, LibraryApiContractId,
+    LibraryApiShadowPolicy, LibraryMethodCallContract, MethodReceiverContract,
+    MethodSemanticContract, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, FIRST_PARTY_PACK_ID,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
 };
 
 fn run_admitted_unit(mut il: Il, root: NodeId, args: &[Value]) -> Option<Behavior> {
     admit_test_builtin_calls(&mut il);
     let interner = Interner::new();
     run_unit(&il, &interner, root, args)
+}
+
+fn run_admitted_unit_with_interner(
+    mut il: Il,
+    interner: &Interner,
+    root: NodeId,
+    args: &[Value],
+) -> Option<Behavior> {
+    admit_test_builtin_calls(&mut il);
+    run_unit(&il, interner, root, args)
 }
 
 #[test]
@@ -374,14 +384,15 @@ fn test_node_place_record(
     place: PlaceEvidenceKind,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceRecord {
+    let (pack_id, producer_id) = language_core_evidence_provenance(Lang::Python);
     EvidenceRecord {
         id: EvidenceId(id),
         anchor: EvidenceAnchor::node(il.node(node).span, il.kind(node)),
         kind: EvidenceKind::Place(place),
         provenance: EvidenceProvenance {
             emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
-            rule_hash: Some(stable_symbol_hash("interp-test")),
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
         },
         dependencies,
         status: EvidenceStatus::Asserted,
@@ -483,6 +494,7 @@ fn test_call_target_record(
     target_span: Span,
     name_hash: u64,
 ) -> EvidenceRecord {
+    let (pack_id, producer_id) = language_core_evidence_provenance(Lang::Python);
     EvidenceRecord {
         id: EvidenceId(id),
         anchor: EvidenceAnchor::node(call_span, NodeKind::Call),
@@ -492,8 +504,8 @@ fn test_call_target_record(
         }),
         provenance: EvidenceProvenance {
             emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
-            rule_hash: Some(stable_symbol_hash("interp-test")),
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
         },
         dependencies: Vec::new(),
         status: EvidenceStatus::Asserted,

@@ -152,6 +152,8 @@ fn symbol_evidence_suppresses_direct_function_raw_name_fallback() {
 
     run(&mut il, &interner);
 
-    assert!(!direct_function_call_target_at_call(&il, call, func));
+    assert!(!direct_function_call_target_at_call(
+        &il, &interner, call, func
+    ));
     assert_eq!(call_target_evidence_at_call(&il, &interner, call), None);
 }

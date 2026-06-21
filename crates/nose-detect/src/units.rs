@@ -168,7 +168,7 @@ pub(crate) fn extract(
             emitted_roots.push(root);
         }
     }
-    fill_called_helper_returns(il, &mut out, &emitted_roots);
+    fill_called_helper_returns(il, interner, &mut out, &emitted_roots);
     unit_timer.report_summary(&il.meta.path);
     out
 }
@@ -244,7 +244,12 @@ pub fn unit_dags_at(
 /// is the unit *using* a helper — generalized inlining splices the callee's value graph
 /// into the caller's fingerprint, so without this record every well-behaved caller of a
 /// helper would read as "reinventing" it.
-fn fill_called_helper_returns(il: &Il, units: &mut [UnitFeat], roots: &[NodeId]) {
+fn fill_called_helper_returns(
+    il: &Il,
+    interner: &Interner,
+    units: &mut [UnitFeat],
+    roots: &[NodeId],
+) {
     use nose_semantics::direct_function_call_target_span_at_call;
     use rustc_hash::FxHashMap;
     // DirectFunction target spans are function ROOT spans; within one file the line
@@ -265,7 +270,7 @@ fn fill_called_helper_returns(il: &Il, units: &mut [UnitFeat], roots: &[NodeId])
         let mut stack = vec![root];
         while let Some(node) = stack.pop() {
             if il.kind(node) == NodeKind::Call {
-                if let Some(span) = direct_function_call_target_span_at_call(il, node) {
+                if let Some(span) = direct_function_call_target_span_at_call(il, interner, node) {
                     if let Some(returns) = by_span.get(&(span.start_line, span.end_line)) {
                         called.extend_from_slice(returns);
                     }

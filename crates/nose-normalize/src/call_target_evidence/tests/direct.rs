@@ -5,7 +5,98 @@ fn emits_direct_function_call_target_for_unique_unshadowed_function() {
     let interner = Interner::new();
     let (mut il, func, call) = function_with_call(&interner, "f", "f", false);
     run(&mut il, &interner);
-    assert!(direct_function_call_target_at_call(&il, call, func));
+    assert!(direct_function_call_target_at_call(
+        &il, &interner, call, func
+    ));
+    let target = CallTargetEvidenceKind::DirectFunction {
+        target_span: il.node(func).span,
+        name_hash: stable_symbol_hash("f"),
+    };
+    let record = il
+        .evidence
+        .iter()
+        .find(|record| record.kind == EvidenceKind::CallTarget(target))
+        .expect("direct function call-target evidence");
+    assert_eq!(record.provenance, language_core_provenance(Lang::Python));
+}
+
+#[test]
+fn updates_legacy_first_party_direct_function_call_target() {
+    let interner = Interner::new();
+    let (mut il, func, call) = function_with_call(&interner, "f", "f", false);
+    let target = EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectFunction {
+        target_span: il.node(func).span,
+        name_hash: stable_symbol_hash("f"),
+    });
+    il.find_or_push_first_party_evidence(
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+        target,
+        FIRST_PARTY_PACK_ID,
+        "legacy_direct_function_call_target",
+        Vec::new(),
+    );
+
+    run(&mut il, &interner);
+
+    let records: Vec<_> = il
+        .evidence
+        .iter()
+        .filter(|record| {
+            record.anchor == EvidenceAnchor::node(il.node(call).span, NodeKind::Call)
+                && record.kind == target
+        })
+        .collect();
+    assert_eq!(records.len(), 1);
+    assert_eq!(
+        records[0].provenance,
+        language_core_provenance(Lang::Python)
+    );
+}
+
+#[test]
+fn does_not_promote_current_and_legacy_direct_function_duplicates() {
+    let interner = Interner::new();
+    let (mut il, func, call) = function_with_call(&interner, "f", "f", false);
+    let target = EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectFunction {
+        target_span: il.node(func).span,
+        name_hash: stable_symbol_hash("f"),
+    });
+    il.find_or_push_first_party_evidence_with_provenance(
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+        target,
+        language_core_provenance(Lang::Python),
+        Vec::new(),
+    );
+    il.find_or_push_first_party_evidence(
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+        target,
+        FIRST_PARTY_PACK_ID,
+        "legacy_direct_function_call_target",
+        Vec::new(),
+    );
+
+    run(&mut il, &interner);
+
+    let current_records = il
+        .evidence
+        .iter()
+        .filter(|record| {
+            record.kind == target && record.provenance == language_core_provenance(Lang::Python)
+        })
+        .count();
+    let legacy_records = il
+        .evidence
+        .iter()
+        .filter(|record| {
+            record.kind == target
+                && record.provenance.pack_hash == Some(stable_symbol_hash(FIRST_PARTY_PACK_ID))
+        })
+        .count();
+    assert_eq!(current_records, 1);
+    assert_eq!(legacy_records, 1);
+    assert!(direct_function_call_target_at_call(
+        &il, &interner, call, func
+    ));
 }
 
 #[test]
@@ -36,7 +127,9 @@ fn does_not_emit_when_local_binder_shadows_function_name() {
     );
 
     run(&mut il, &interner);
-    assert!(!direct_function_call_target_at_call(&il, call, func));
+    assert!(!direct_function_call_target_at_call(
+        &il, &interner, call, func
+    ));
 }
 
 #[test]
@@ -44,7 +137,9 @@ fn does_not_emit_for_duplicate_function_names() {
     let interner = Interner::new();
     let (mut il, func, call) = function_with_call(&interner, "f", "f", true);
     run(&mut il, &interner);
-    assert!(!direct_function_call_target_at_call(&il, call, func));
+    assert!(!direct_function_call_target_at_call(
+        &il, &interner, call, func
+    ));
 }
 
 #[test]
@@ -74,7 +169,9 @@ fn does_not_emit_for_method_bare_call() {
     );
 
     run(&mut il, &interner);
-    assert!(!direct_function_call_target_at_call(&il, call, method));
+    assert!(!direct_function_call_target_at_call(
+        &il, &interner, call, method
+    ));
 }
 
 #[test]
@@ -106,7 +203,9 @@ fn does_not_emit_for_nested_function_not_visible_as_top_level() {
     );
 
     run(&mut il, &interner);
-    assert!(!direct_function_call_target_at_call(&il, call, nested));
+    assert!(!direct_function_call_target_at_call(
+        &il, &interner, call, nested
+    ));
 }
 
 #[test]
@@ -159,5 +258,7 @@ fn does_not_emit_when_enclosing_scope_binds_function_name() {
     );
 
     run(&mut il, &interner);
-    assert!(!direct_function_call_target_at_call(&il, call, target));
+    assert!(!direct_function_call_target_at_call(
+        &il, &interner, call, target
+    ));
 }

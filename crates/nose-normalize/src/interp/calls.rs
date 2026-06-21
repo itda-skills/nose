@@ -245,7 +245,7 @@ impl<'a> Interp<'a> {
     pub(super) fn proven_call_target(&self, call: NodeId) -> Option<NodeId> {
         let mut found = None;
         for &root in &self.callable_roots {
-            if !direct_function_call_target_at_call(self.il, call, root) {
+            if !direct_function_call_target_at_call(self.il, self.interner, call, root) {
                 continue;
             }
             if found.replace(root).is_some() {

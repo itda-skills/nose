@@ -49,6 +49,10 @@ fn emits_imported_function_call_target_from_binding_symbol() {
         .iter()
         .find(|record| record.kind == EvidenceKind::CallTarget(expected))
         .expect("imported function call-target evidence");
+    assert_eq!(
+        target_record.provenance,
+        language_core_provenance(Lang::Python)
+    );
     let [occurrence_dependency] = target_record.dependencies.as_slice() else {
         panic!("call-target should depend on exactly one occurrence symbol");
     };
@@ -63,6 +67,10 @@ fn emits_imported_function_call_target_from_binding_symbol() {
         })
     );
     assert_eq!(occurrence.dependencies, vec![EvidenceId(0)]);
+    assert_eq!(
+        occurrence.provenance,
+        language_core_provenance(Lang::Python)
+    );
 }
 
 #[test]
@@ -155,4 +163,93 @@ fn emits_imported_member_call_target_from_imported_binding_receiver() {
             member_hash: interner.symbol_hash(of),
         })
     );
+}
+
+#[test]
+fn updates_legacy_first_party_imported_function_records() {
+    let interner = Interner::new();
+    let p = interner.intern("p");
+    let mut b = IlBuilder::new(FileId(0));
+    let callee = b.add(NodeKind::Var, Payload::Name(p), sp(10), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(12), &[callee]);
+    let ret = b.add(NodeKind::Return, Payload::None, sp(13), &[call]);
+    let body = b.add(NodeKind::Block, Payload::None, sp(14), &[ret]);
+    let func = b.add(NodeKind::Func, Payload::None, wide_sp(8, 20), &[body]);
+    let module = b.add(NodeKind::Module, Payload::None, wide_sp(0, 30), &[func]);
+    let mut il = b.finish(
+        module,
+        FileMeta {
+            path: "t".into(),
+            lang: Lang::Python,
+        },
+        Vec::new(),
+        Vec::new(),
+    );
+    il.evidence.push(binding_symbol(
+        0,
+        sp(1),
+        "p",
+        SymbolEvidenceKind::ImportedBinding {
+            module_hash: stable_symbol_hash("math"),
+            exported_hash: stable_symbol_hash("prod"),
+        },
+        EvidenceStatus::Asserted,
+    ));
+    let symbol = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
+        module_hash: stable_symbol_hash("math"),
+        exported_hash: stable_symbol_hash("prod"),
+    });
+    let legacy_occurrence = il.find_or_push_first_party_evidence(
+        EvidenceAnchor::node(il.node(callee).span, NodeKind::Var),
+        symbol,
+        FIRST_PARTY_PACK_ID,
+        "legacy_imported_symbol_occurrence",
+        vec![EvidenceId(0)],
+    );
+    let target = EvidenceKind::CallTarget(CallTargetEvidenceKind::ImportedFunction {
+        module_hash: stable_symbol_hash("math"),
+        exported_hash: stable_symbol_hash("prod"),
+        local_hash: interner.symbol_hash(p),
+    });
+    il.find_or_push_first_party_evidence(
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+        target,
+        FIRST_PARTY_PACK_ID,
+        "legacy_imported_function_call_target",
+        vec![legacy_occurrence],
+    );
+
+    run(&mut il, &interner);
+
+    let target_records: Vec<_> = il
+        .evidence
+        .iter()
+        .filter(|record| {
+            record.anchor == EvidenceAnchor::node(il.node(call).span, NodeKind::Call)
+                && record.kind == target
+        })
+        .collect();
+    assert_eq!(target_records.len(), 1);
+    assert_eq!(
+        target_records[0].provenance,
+        language_core_provenance(Lang::Python)
+    );
+    let [occurrence_dependency] = target_records[0].dependencies.as_slice() else {
+        panic!("call-target should depend on exactly one occurrence symbol");
+    };
+    let occurrence_records: Vec<_> = il
+        .evidence
+        .iter()
+        .filter(|record| {
+            record.anchor == EvidenceAnchor::node(il.node(callee).span, NodeKind::Var)
+                && record.kind == symbol
+        })
+        .collect();
+    assert_eq!(occurrence_records.len(), 1);
+    assert_eq!(occurrence_records[0].id, *occurrence_dependency);
+    assert_eq!(
+        occurrence_records[0].provenance,
+        language_core_provenance(Lang::Python)
+    );
+    assert_eq!(occurrence_records[0].dependencies, vec![EvidenceId(0)]);
 }

@@ -19,6 +19,7 @@
 
 use super::*;
 use nose_il::{CallTargetEvidenceKind, EvidenceKind, ImportEvidenceKind};
+use nose_semantics::call_target_evidence_at_call;
 
 /// Stable self-referent marker: a unit's call to itself (recursion) resolves here, so
 /// two recursive clones pair as "self ↔ self" rather than content-comparing two
@@ -311,11 +312,14 @@ impl<'a> FileReferents<'a> {
             })
             .collect();
         let mut call_evidence: Vec<(Span, CallTargetEvidenceKind)> = il
-            .evidence
+            .nodes
             .iter()
-            .filter_map(|ev| match ev.kind {
-                EvidenceKind::CallTarget(k) => Some((ev.anchor.span(), k)),
-                _ => None,
+            .enumerate()
+            .filter_map(|(idx, node)| {
+                (node.kind == NodeKind::Call)
+                    .then(|| call_target_evidence_at_call(il, interner, NodeId(idx as u32)))
+                    .flatten()
+                    .map(|target| (node.span, target))
             })
             .collect();
         call_evidence.sort_by_key(|(s, _)| s.start_byte);

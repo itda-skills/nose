@@ -63,8 +63,9 @@ fn pure_inline_caller_il(interner: &Interner, with_target_evidence: bool) -> (Il
         Vec::new(),
     );
     if with_target_evidence {
-        il.evidence.push(evidence(
+        il.evidence.push(language_core_evidence(
             0,
+            Lang::Python,
             EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
             EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectFunction {
                 target_span: il.node(helper).span,
@@ -123,6 +124,61 @@ fn pure_inline_consumes_call_target_evidence_not_raw_callee_name() {
         direct,
         value_fingerprint(&proven_call_il, proven_call_root, &interner),
         "explicit CallTarget evidence should admit pure helper beta-substitution"
+    );
+}
+
+#[test]
+fn value_dag_referents_use_only_admitted_call_target_evidence() {
+    let interner = Interner::new();
+    let prod = interner.intern("prod");
+    let mut b = IlBuilder::new(FileId(0));
+    let callee = b.add(NodeKind::Var, Payload::Name(prod), sp(31), &[]);
+    let arg = b.add(NodeKind::Lit, Payload::LitInt(3), sp(32), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(33), &[callee, arg]);
+    let ret = b.add(NodeKind::Return, Payload::None, sp(34), &[call]);
+    let body = b.add(NodeKind::Block, Payload::None, sp(35), &[ret]);
+    let func = b.add(
+        NodeKind::Func,
+        Payload::None,
+        Span::new(FileId(0), 30, 40, 30, 40),
+        &[body],
+    );
+    let mut legacy_il = finish_test_il(b, func, Lang::Python);
+    let target = EvidenceKind::CallTarget(CallTargetEvidenceKind::ImportedFunction {
+        module_hash: stable_symbol_hash("math"),
+        exported_hash: stable_symbol_hash("prod"),
+        local_hash: interner.symbol_hash(prod),
+    });
+    legacy_il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(legacy_il.node(call).span, NodeKind::Call),
+        target,
+    ));
+
+    let referents = FileReferents::new(&legacy_il, &interner);
+    let dag = value_dag(&legacy_il, func, &interner, None, &referents);
+    assert!(
+        dag.referents
+            .iter()
+            .all(|referent| referent.referent.is_none()),
+        "legacy broad CallTarget evidence must not enter value-DAG referents"
+    );
+
+    let mut admitted_il = legacy_il.clone();
+    admitted_il.evidence.clear();
+    admitted_il.evidence.push(language_core_evidence(
+        0,
+        Lang::Python,
+        EvidenceAnchor::node(admitted_il.node(call).span, NodeKind::Call),
+        target,
+    ));
+    let referents = FileReferents::new(&admitted_il, &interner);
+    let dag = value_dag(&admitted_il, func, &interner, None, &referents);
+    assert!(
+        dag.referents
+            .iter()
+            .any(|referent| referent.referent.is_some()),
+        "language-core CallTarget evidence should still enter value-DAG referents"
     );
 }
 

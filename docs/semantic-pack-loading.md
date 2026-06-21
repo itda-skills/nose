@@ -60,10 +60,10 @@ Trust is separate from channel eligibility.
   parser/lowering ownership metadata plus generic language-core and source-fact
   producer provenance for builtin language support while the implementation
   stays in tree. Immutable local/module binding-domain proof, normalize/front-end
-  place/effect proof, and module-import immutable literal export/snapshot proof
-  also use the matching builtin language-core producer. `nose.lang.c` owns the
-  specialized unsigned-cast source-fact producer used by exact byte-pack
-  admission;
+  place/effect proof, normalize call-target/imported-occurrence proof, and
+  module-import immutable literal export/snapshot proof also use the matching
+  builtin language-core producer. `nose.lang.c` owns the specialized
+  unsigned-cast source-fact producer used by exact byte-pack admission;
 
   Builtin pack ids, including the `nose.lang.*` language descriptor ids, are
   reserved. A local external manifest that claims one of those ids is rejected

@@ -1471,18 +1471,23 @@ repeated registry walks on hot paths. Binary size changed 20,181,712 ->
   a spelling hash, so internal-looking payload names such as `record_guard` or
   `own_property_guard` cannot become semantic proof channels.
 - Raw user-call spelling no longer proves direct recursion or in-file call
-  execution. `nose-il` now has `CallTarget` evidence, the first-party normalize
-  producer emits `DirectFunction` only for unique top-level in-file function
-  targets with no current or enclosing lexical shadowing, and recursion,
+  execution. `nose-il` now has `CallTarget` evidence, the builtin language-core
+  normalize producer emits `DirectFunction` only for unique top-level in-file
+  function targets with no current or enclosing lexical shadowing, and recursion,
   interpreter, value-graph pure-inline, and strict exact direct-function callee
-  consumers require that occurrence proof. The follow-up call-target producer
-  slice emits `ImportedFunction` and `ImportedMember` only from
-  dependency-backed imported binding or imported namespace symbol proof, added a
-  shared fail-closed resolver, and taught strict exact to admit imported
-  function/member opaque identity only through explicit evidence. The vocabulary
-  also includes `DirectMethod` and `DynamicDispatch`, but no first-party producer
-  emits those records yet; direct methods still require exact receiver identity,
-  and dynamic-dispatch records do not by themselves prove one concrete target.
+  consumers require that occurrence proof. The call-target producer now emits
+  `DirectFunction`, `ImportedFunction`, `ImportedMember`, and dependency-backed
+  call-site imported symbol occurrence records with builtin language-core
+  provenance. Imported function/member records still require dependency-backed
+  imported binding or imported namespace symbol proof, the shared resolver stays
+  fail-closed, and strict exact admits imported function/member opaque identity
+  only through explicit matching-language builtin evidence. Legacy broad
+  provenance, wrong-language rows, external rows, selector mismatches, and
+  dependency-broken records do not enter call-target admission or value-DAG
+  referents. The vocabulary also includes `DirectMethod` and `DynamicDispatch`,
+  but no builtin producer emits those records yet; direct methods still require
+  exact receiver identity, and dynamic-dispatch records do not by themselves
+  prove one concrete target.
 - C byte-pack proof moved onto evidence-backed alias and cast records. Local
   typedefs and direct quote includes emit `Type(CTypeAlias)` evidence, included
   aliases depend on `Import(CQuoteInclude)`, alias-based `Domain(ByteArray)` and

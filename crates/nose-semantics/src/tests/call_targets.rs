@@ -3,17 +3,24 @@ use super::*;
 fn call_target_record(
     id: u32,
     span: Span,
+    lang: Lang,
     target: CallTargetEvidenceKind,
     status: EvidenceStatus,
     dependencies: &[u32],
 ) -> EvidenceRecord {
-    evidence_with_dependencies(
-        id,
-        EvidenceAnchor::node(span, NodeKind::Call),
-        EvidenceKind::CallTarget(target),
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor: EvidenceAnchor::node(span, NodeKind::Call),
+        kind: EvidenceKind::CallTarget(target),
+        provenance: EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
+        },
+        dependencies: dependencies.iter().copied().map(EvidenceId).collect(),
         status,
-        dependencies.iter().copied().map(EvidenceId).collect(),
-    )
+    }
 }
 
 fn imported_function_call_il(interner: &Interner) -> (Il, NodeId) {
@@ -55,6 +62,7 @@ fn imported_function_call_target_requires_matching_local_selector() {
     il.evidence.push(call_target_record(
         0,
         sp(12),
+        Lang::Python,
         CallTargetEvidenceKind::ImportedFunction {
             module_hash: stable_symbol_hash("math"),
             exported_hash: stable_symbol_hash("prod"),
@@ -76,12 +84,90 @@ fn imported_function_call_target_requires_matching_local_selector() {
 }
 
 #[test]
+fn legacy_first_party_call_target_does_not_admit_identity() {
+    let interner = Interner::new();
+    let (mut il, call) = imported_function_call_il(&interner);
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(sp(12), NodeKind::Call),
+        EvidenceKind::CallTarget(CallTargetEvidenceKind::ImportedFunction {
+            module_hash: stable_symbol_hash("math"),
+            exported_hash: stable_symbol_hash("prod"),
+            local_hash: interner.symbol_hash(interner.intern("prod")),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+
+    assert_eq!(
+        call_target_evidence_status_at_call(&il, &interner, call),
+        CallTargetEvidenceStatus::Missing
+    );
+}
+
+#[test]
+fn wrong_language_core_call_target_does_not_admit_identity() {
+    let interner = Interner::new();
+    let (mut il, call) = imported_function_call_il(&interner);
+    il.evidence.push(call_target_record(
+        0,
+        sp(12),
+        Lang::TypeScript,
+        CallTargetEvidenceKind::ImportedFunction {
+            module_hash: stable_symbol_hash("math"),
+            exported_hash: stable_symbol_hash("prod"),
+            local_hash: interner.symbol_hash(interner.intern("prod")),
+        },
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+
+    assert_eq!(
+        call_target_evidence_status_at_call(&il, &interner, call),
+        CallTargetEvidenceStatus::Missing
+    );
+}
+
+#[test]
+fn direct_function_span_helper_requires_selector_shape() {
+    let interner = Interner::new();
+    let f = interner.intern("f");
+    let g = interner.intern("g");
+    let mut b = IlBuilder::new(FileId(0));
+    let target_body = b.add(NodeKind::Block, Payload::None, sp(1), &[]);
+    let target = b.add(NodeKind::Func, Payload::None, sp(2), &[target_body]);
+    let callee = b.add(NodeKind::Var, Payload::Name(g), sp(3), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(4), &[callee]);
+    let module = b.add(NodeKind::Module, Payload::None, sp(5), &[target, call]);
+    let mut il = finish_il(b, module, Lang::Python);
+    il.evidence.push(call_target_record(
+        0,
+        sp(4),
+        Lang::Python,
+        CallTargetEvidenceKind::DirectFunction {
+            target_span: il.node(target).span,
+            name_hash: interner.symbol_hash(f),
+        },
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+
+    assert_eq!(
+        direct_function_call_target_span_at_call(&il, &interner, call),
+        None
+    );
+    assert!(!direct_function_call_target_at_call(
+        &il, &interner, call, target
+    ));
+}
+
+#[test]
 fn wrong_imported_function_selector_is_rejected_not_missing() {
     let interner = Interner::new();
     let (mut il, call) = imported_function_call_il(&interner);
     il.evidence.push(call_target_record(
         0,
         sp(12),
+        Lang::Python,
         CallTargetEvidenceKind::ImportedFunction {
             module_hash: stable_symbol_hash("math"),
             exported_hash: stable_symbol_hash("prod"),
@@ -114,6 +200,7 @@ fn dependency_broken_call_target_is_rejected() {
     il.evidence.push(call_target_record(
         1,
         sp(12),
+        Lang::Python,
         CallTargetEvidenceKind::ImportedFunction {
             module_hash: stable_symbol_hash("math"),
             exported_hash: stable_symbol_hash("prod"),
@@ -136,6 +223,7 @@ fn conflicting_call_targets_stay_closed() {
     il.evidence.push(call_target_record(
         0,
         sp(12),
+        Lang::Python,
         CallTargetEvidenceKind::ImportedFunction {
             module_hash: stable_symbol_hash("math"),
             exported_hash: stable_symbol_hash("prod"),
@@ -147,6 +235,7 @@ fn conflicting_call_targets_stay_closed() {
     il.evidence.push(call_target_record(
         1,
         sp(12),
+        Lang::Python,
         CallTargetEvidenceKind::ImportedFunction {
             module_hash: stable_symbol_hash("statistics"),
             exported_hash: stable_symbol_hash("prod"),
@@ -186,6 +275,7 @@ fn direct_method_target_requires_matching_selector_and_target_span() {
     il.evidence.push(call_target_record(
         0,
         sp(34),
+        Lang::TypeScript,
         CallTargetEvidenceKind::DirectMethod {
             target_span: il.node(target).span,
             receiver_type_hash: stable_symbol_hash("Worker"),
@@ -207,6 +297,7 @@ fn dynamic_dispatch_is_evidence_but_not_imported_member_identity() {
     il.evidence.push(call_target_record(
         0,
         sp(23),
+        Lang::Python,
         CallTargetEvidenceKind::DynamicDispatch {
             protocol_hash: stable_symbol_hash("Iterator"),
             method_hash: interner.symbol_hash(interner.intern("next")),

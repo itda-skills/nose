@@ -6,6 +6,7 @@ pub(super) use nose_il::{
 pub(super) use nose_semantics::{
     call_target_evidence_at_call, direct_function_call_target_at_call,
     imported_function_call_target_at_call, imported_member_call_target_at_call,
+    language_core_evidence_provenance,
 };
 
 pub(super) fn sp(n: u32) -> Span {
@@ -14,6 +15,15 @@ pub(super) fn sp(n: u32) -> Span {
 
 pub(super) fn wide_sp(start: u32, end: u32) -> Span {
     Span::new(FileId(0), start, end, start, end)
+}
+
+pub(super) fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    EvidenceProvenance {
+        emitter: EvidenceEmitter::FirstParty,
+        pack_hash: Some(stable_symbol_hash(pack_id)),
+        rule_hash: Some(stable_symbol_hash(producer_id)),
+    }
 }
 
 fn evidence_with_dependencies(

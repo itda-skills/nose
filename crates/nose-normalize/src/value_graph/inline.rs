@@ -333,7 +333,7 @@ impl<'a> Builder<'a> {
         // per-unit conditions deferred from candidate collection (see
         // `InlineCandidate`): the consuming-unit exclusion and the seeded
         // global-binding requirement (against the adopt-time snapshot).
-        let proven_span = direct_function_call_target_span_at_call(self.il, call)?;
+        let proven_span = direct_function_call_target_span_at_call(self.il, self.interner, call)?;
         let exclude_root = self.inline_exclude_root;
         let mut found = None;
         for candidate in candidates {

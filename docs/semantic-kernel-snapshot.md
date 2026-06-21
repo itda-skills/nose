@@ -744,8 +744,13 @@ migrated.
   same-callee call comparable as an opaque value operation. Same-spelled
   file-local functions still require `CallTarget::DirectFunction` evidence,
   imported function/member calls can enter opaque identity only through explicit
-  `CallTarget::ImportedFunction` or `CallTarget::ImportedMember` records, and
-  library semantics still require admitted API occurrence evidence.
+  `CallTarget::ImportedFunction` or `CallTarget::ImportedMember` records. The
+  normalize call-target producer now emits these records and their call-site
+  imported symbol occurrence dependencies with the file language's builtin
+  language-core pack provenance. The shared call-target resolver and value-DAG
+  referent extraction consume only matching builtin language-core, asserted,
+  dependency-closed, selector-matching evidence, while library semantics still
+  require admitted API occurrence evidence.
 - Java stream source adapters are split by proof through library API contracts:
   `receiver.stream()` requires an exact iterable receiver, while
   `Arrays.stream(xs)` requires the `java.util.Arrays` import binding and no local
@@ -830,21 +835,23 @@ migrated.
   integer-domain proof before they use the modeled Abs node, so untyped and
   element-derived operands keep the signed-zero boundary closed.
 - User-defined and imported opaque call identity now consume `CallTarget`
-  evidence. The first-party producer admits `DirectFunction` records for unique
-  top-level in-file function targets with no current or enclosing lexical
-  shadowing, and imported function/member records only from dependency-backed
-  imported binding or imported namespace symbol proof at the call occurrence.
-  Same raw callee spelling, same field selector spelling, rebinding, ambiguous
-  import proof, conflicting symbol evidence, dependency-broken proof, and
-  locally visible same-name function units stay closed. Recursion normalization,
-  the interpreter oracle, value-graph pure helper inlining, and strict exact
-  direct-function callee gates no longer treat same raw callee spelling as
-  call-target proof. The shared resolver also understands `DirectMethod` and
-  `DynamicDispatch` records, but no first-party producer emits them yet. Strict
-  exact admits imported function/member identity only through explicit evidence,
-  requires exact receiver identity for direct methods, treats dynamic-dispatch
-  records as non-concrete by themselves, and closes on selector mismatch,
-  dependency-broken records, or conflicting target evidence.
+  evidence. The builtin language-core producer admits `DirectFunction` records
+  for unique top-level in-file function targets with no current or enclosing
+  lexical shadowing, and imported function/member records only from
+  dependency-backed imported binding or imported namespace symbol proof at the
+  call occurrence. Same raw callee spelling, same field selector spelling, stale
+  broad-provenance rows, wrong-language provenance, external rows, rebinding,
+  ambiguous import proof, conflicting symbol evidence, dependency-broken proof,
+  and locally visible same-name function units stay closed. Recursion
+  normalization, the interpreter oracle, value-graph pure helper inlining,
+  value-DAG referents, and strict exact direct-function callee gates no longer
+  treat same raw callee spelling as call-target proof. The shared resolver also
+  understands `DirectMethod` and `DynamicDispatch` records, but no builtin
+  producer emits them yet. Strict exact admits imported function/member identity
+  only through explicit evidence, requires exact receiver identity for direct
+  methods, treats dynamic-dispatch records as non-concrete by themselves, and
+  closes on selector mismatch, dependency-broken records, wrong provenance, or
+  conflicting target evidence.
 - JS-like `typeof` exact-safety now consumes a language- and arity-constrained
   operator contract plus `Source::Operator(Typeof)` evidence at the call span.
   A raw `Call(Var("typeof"), arg)` shape, same-named function from another
