@@ -49,10 +49,13 @@ impl<'a> Lowering<'a> {
     }
 
     pub(crate) fn record_source_fact(&mut self, span: Span, kind: SourceFactKind) {
-        self.record_evidence(
+        let (pack_id, producer_id) = nose_semantics::language_source_fact_provenance(self.lang);
+        self.record_evidence_with_pack_dependencies(
             EvidenceAnchor::source_span(span),
             EvidenceKind::Source(kind),
-            "source_fact",
+            pack_id,
+            producer_id,
+            Vec::new(),
         );
     }
 

@@ -72,10 +72,11 @@ still being migrated toward it.
   analysis behavior. Builtin language descriptors now report official
   parser/lowering ownership metadata for Python, JavaScript/TypeScript, Go,
   Rust, Java, C, Ruby, Swift, CSS, and HTML/Vue/Svelte embedded-region support.
-  The first provenance-bearing language slice is `nose.lang.c`; it owns the C
-  file-extension identity, `tree-sitter-c` parser binding,
-  `nose_frontend::c::lower` lowering entrypoint metadata, and the
-  `c.source.cast.unsigned32` source-fact producer id. The
+  Generic source facts emitted by frontend lowering now carry those
+  `nose.lang.*` pack producers. `nose.lang.c` also owns the C file-extension
+  identity, `tree-sitter-c` parser binding, `nose_frontend::c::lower` lowering
+  entrypoint metadata, and the `c.source.cast.unsigned32` source-fact producer
+  id. The
   `nose.python.builtins.collection_factories` descriptor owns the Python builtin
   `list`, `set`, `frozenset`, and `tuple` collection-factory contract id and
   `LibraryApi` occurrence producer id, while shadowed names and wildcard imports
@@ -186,8 +187,8 @@ still being migrated toward it.
   top-level `semantic_packs`. External packs are still `metadata-only`; builtin
   producers remain compiled Rust and are expected to map onto the same
   vocabulary. The first compiled pilots are the `nose.lang.*` builtin language
-  descriptor set, with `nose.lang.c` as the first source-provenance-bearing
-  language slice for C unsigned-cast source provenance,
+  descriptor/source-fact producer set, with `nose.lang.c` also carrying C
+  unsigned-cast source provenance,
   `nose.python.builtins.collection_factories`, a default builtin stdlib pack for
   Python builtin collection-factory API provenance, and
   `nose.python.stdlib.collection_factories`, a default builtin stdlib pack for

@@ -91,6 +91,9 @@ source-fact helpers in `nose-semantics`. Source-origin proof is evidence-only:
 frontends emit `EvidenceKind::Source` records directly, and consumers do not
 fall back to a side-table mirror when source evidence is missing.
 
+- Generic source facts emitted by frontend lowering carry the current builtin
+  language pack producer provenance, such as `nose.lang.python`,
+  `nose.lang.javascript-typescript`, `nose.lang.rust`, or `nose.lang.html`.
 - JS/TS lowering emits source facts for construct syntax, async `await`
   boundaries, generator `yield` boundaries, regex literals, strict equality,
   strict inequality, loose equality, loose inequality, unary `typeof`, and
@@ -106,8 +109,8 @@ fall back to a side-table mirror when source evidence is missing.
 - C lowering emits source facts for explicit unsigned 32-bit byte-lane casts.
   Direct casts such as `(unsigned int)a[0]` are dependency-free source facts;
   alias casts such as `(u32)a[0]` or `(word)a[0]` depend on the corresponding
-  exact-spelling C type-alias evidence. These records now carry `nose.lang.c`
-  pack provenance and the `c.source.cast.unsigned32` producer id.
+  exact-spelling C type-alias evidence. These records carry `nose.lang.c` pack
+  provenance and the specialized `c.source.cast.unsigned32` producer id.
 - Rust lowering emits source facts for macro invocation syntax, half-open versus
   inclusive range expressions, tuple-struct single-wildcard patterns such as
   `Some(_)`, `.await`, async blocks, and `?` error propagation.

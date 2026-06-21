@@ -192,9 +192,9 @@ previous semantic-kernel tranches.
    implementation in tree, but report builtin language ownership through
    `nose.lang.<language>` descriptors. The registry now has descriptor metadata
    for Python, JavaScript/TypeScript, Go, Rust, Java, C, Ruby, Swift, CSS, and
-   HTML/Vue/Svelte embedded-region lowering. The first provenance-bearing
-   source-fact slice is `nose.lang.c`, covering the existing C parser/lowering
-   binding and the explicit unsigned 32-bit byte-lane cast source-fact producer.
+   HTML/Vue/Svelte embedded-region lowering, and generic source-fact provenance
+   is emitted through those language packs. `nose.lang.c` also covers the
+   explicit unsigned 32-bit byte-lane cast source-fact producer.
 6. **Phase 5, builtin stdlib/library/law packs:** move official semantic rows behind
    narrow builtin pack ids and shared admitted-contract resolvers. The first
    slice is `nose.python.builtins.collection_factories`, which owns Python

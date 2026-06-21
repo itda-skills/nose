@@ -74,7 +74,7 @@ The next code slices are intentionally incremental:
    stdlib pack;
 5. Phase 4: report all official language/region parser-lowering ownership
    through `nose.lang.*` builtin descriptors, with `nose.lang.c` as the first
-   provenance-bearing source-fact slice;
+   specialized source-fact slice for unsigned-cast proof;
 6. Phase 5: move narrow stdlib/library/law rows behind pack-owned descriptors and shared
    admitted-contract resolvers, starting with
    `nose.python.builtins.collection_factories` for Python builtin collection

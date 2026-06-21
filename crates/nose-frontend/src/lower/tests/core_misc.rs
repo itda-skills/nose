@@ -114,6 +114,27 @@ fn core_lowering_emits_java_and_regex_library_api_occurrences() {
 }
 
 #[test]
+fn generic_source_facts_use_builtin_language_pack_provenance() {
+    let interner = Interner::new();
+    let mut lo = Lowering::new(FileId(0), b"", Lang::Python, &interner);
+    lo.record_source_fact(
+        sp_at(1),
+        SourceFactKind::Comprehension(nose_il::SourceComprehensionKind::PythonListComprehension),
+    );
+    let record = lo.evidence.last().expect("source fact evidence");
+    assert_eq!(
+        record.provenance.pack_hash,
+        Some(stable_symbol_hash(nose_semantics::PYTHON_LANGUAGE_PACK_ID))
+    );
+    assert_eq!(
+        record.provenance.rule_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::PYTHON_SOURCE_FACT_PRODUCER_ID
+        ))
+    );
+}
+
+#[test]
 fn core_lowering_emits_effect_and_place_evidence() {
     let interner = Interner::new();
     let mut lo = Lowering::new(FileId(0), b"", Lang::Java, &interner);

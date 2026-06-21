@@ -70,6 +70,72 @@ fn first_party_profile_wraps_each_language() {
 }
 
 #[test]
+fn language_source_fact_provenance_covers_each_language() {
+    let expected = [
+        (
+            Lang::Python,
+            PYTHON_LANGUAGE_PACK_ID,
+            PYTHON_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (
+            Lang::JavaScript,
+            JS_TS_LANGUAGE_PACK_ID,
+            JS_TS_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (
+            Lang::TypeScript,
+            JS_TS_LANGUAGE_PACK_ID,
+            JS_TS_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (Lang::Go, GO_LANGUAGE_PACK_ID, GO_SOURCE_FACT_PRODUCER_ID),
+        (
+            Lang::Rust,
+            RUST_LANGUAGE_PACK_ID,
+            RUST_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (
+            Lang::Java,
+            JAVA_LANGUAGE_PACK_ID,
+            JAVA_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (Lang::C, C_LANGUAGE_PACK_ID, C_SOURCE_FACT_PRODUCER_ID),
+        (
+            Lang::Ruby,
+            RUBY_LANGUAGE_PACK_ID,
+            RUBY_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (
+            Lang::Swift,
+            SWIFT_LANGUAGE_PACK_ID,
+            SWIFT_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (Lang::Css, CSS_LANGUAGE_PACK_ID, CSS_SOURCE_FACT_PRODUCER_ID),
+        (
+            Lang::Vue,
+            HTML_EMBEDDED_LANGUAGE_PACK_ID,
+            HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (
+            Lang::Svelte,
+            HTML_EMBEDDED_LANGUAGE_PACK_ID,
+            HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (
+            Lang::Html,
+            HTML_EMBEDDED_LANGUAGE_PACK_ID,
+            HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID,
+        ),
+    ];
+
+    for (lang, pack_id, producer_id) in expected {
+        assert_eq!(
+            language_source_fact_provenance(lang),
+            (pack_id, producer_id)
+        );
+    }
+}
+
+#[test]
 fn domain_evidence_preserves_param_semantic_boundaries() {
     assert_eq!(
         domain_evidence_from_param_semantic(ParamSemantic::Array),

@@ -9,13 +9,14 @@ fn unique_dir(tag: &str) -> PathBuf {
     dir
 }
 
-fn assert_metadata_only_language_descriptor(
+fn assert_source_fact_language_descriptor(
     pack_id: &str,
     supported_languages: &[&str],
     langs: &[nose_il::Lang],
     file_extensions: &[&str],
     parser: &str,
     lowering_entrypoint: &str,
+    source_fact_producer_id: &str,
 ) {
     let descriptor = builtin_pack_descriptor(pack_id).expect("language descriptor");
     assert_eq!(descriptor.kind, SemanticPackKind::LanguagePack);
@@ -28,10 +29,13 @@ fn assert_metadata_only_language_descriptor(
     assert_eq!(language.file_extensions, file_extensions);
     assert_eq!(language.parser, parser);
     assert_eq!(language.lowering_entrypoint, lowering_entrypoint);
-    assert!(descriptor.evidence_producer_ids.is_empty());
-    assert!(descriptor.source_fact_producer_ids.is_empty());
+    assert_eq!(descriptor.evidence_producer_ids, &[source_fact_producer_id]);
+    assert_eq!(
+        descriptor.source_fact_producer_ids,
+        &[source_fact_producer_id]
+    );
     assert!(descriptor.contract_ids.is_empty());
-    assert_eq!(descriptor.counts().evidence_producers, 0);
+    assert_eq!(descriptor.counts().evidence_producers, 1);
     assert_eq!(descriptor.counts().contracts, 0);
     assert_eq!(descriptor.counts().positive_fixtures, 0);
     assert_eq!(descriptor.counts().hard_negatives, 0);
@@ -169,45 +173,50 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
 
 #[test]
 fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
-    assert_metadata_only_language_descriptor(
+    assert_source_fact_language_descriptor(
         PYTHON_LANGUAGE_PACK_ID,
         &["python"],
         &[nose_il::Lang::Python],
         &["py", "pyi"],
         "tree-sitter-python",
         "nose_frontend::python::lower",
+        PYTHON_SOURCE_FACT_PRODUCER_ID,
     );
-    assert_metadata_only_language_descriptor(
+    assert_source_fact_language_descriptor(
         JS_TS_LANGUAGE_PACK_ID,
         &["javascript", "typescript"],
         &[nose_il::Lang::JavaScript, nose_il::Lang::TypeScript],
         &["js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts"],
         "tree-sitter-javascript/tree-sitter-typescript",
         "nose_frontend::js_ts::lower",
+        JS_TS_SOURCE_FACT_PRODUCER_ID,
     );
-    assert_metadata_only_language_descriptor(
+    assert_source_fact_language_descriptor(
         GO_LANGUAGE_PACK_ID,
         &["go"],
         &[nose_il::Lang::Go],
         &["go"],
         "tree-sitter-go",
         "nose_frontend::go::lower",
+        GO_SOURCE_FACT_PRODUCER_ID,
     );
-    assert_metadata_only_language_descriptor(
+    assert_source_fact_language_descriptor(
         RUST_LANGUAGE_PACK_ID,
         &["rust"],
         &[nose_il::Lang::Rust],
         &["rs"],
         "tree-sitter-rust",
         "nose_frontend::rust::lower",
+        RUST_SOURCE_FACT_PRODUCER_ID,
     );
-    assert_metadata_only_language_descriptor(
+    assert_source_fact_language_descriptor(
         JAVA_LANGUAGE_PACK_ID,
         &["java"],
         &[nose_il::Lang::Java],
         &["java"],
         "tree-sitter-java",
         "nose_frontend::java::lower",
+        JAVA_SOURCE_FACT_PRODUCER_ID,
     );
     let c = builtin_pack_descriptor(C_LANGUAGE_PACK_ID).expect("C language descriptor");
     assert_eq!(c.kind, SemanticPackKind::LanguagePack);
@@ -222,44 +231,53 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
     assert_eq!(language.lowering_entrypoint, "nose_frontend::c::lower");
     assert_eq!(
         c.evidence_producer_ids,
-        &[C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID]
+        &[
+            C_SOURCE_FACT_PRODUCER_ID,
+            C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID
+        ]
     );
     assert_eq!(
         c.source_fact_producer_ids,
-        &[C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID]
+        &[
+            C_SOURCE_FACT_PRODUCER_ID,
+            C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID
+        ]
     );
-    assert_eq!(c.counts().evidence_producers, 1);
+    assert_eq!(c.counts().evidence_producers, 2);
     assert_eq!(c.counts().contracts, 0);
     assert_eq!(c.counts().positive_fixtures, 2);
     assert_eq!(c.counts().hard_negatives, 2);
     assert!(c
         .conformance_refs()
         .contains(&"c-unsigned32-signed-cast-hard-negative"));
-    assert_metadata_only_language_descriptor(
+    assert_source_fact_language_descriptor(
         RUBY_LANGUAGE_PACK_ID,
         &["ruby"],
         &[nose_il::Lang::Ruby],
         &["rb"],
         "tree-sitter-ruby",
         "nose_frontend::ruby::lower",
+        RUBY_SOURCE_FACT_PRODUCER_ID,
     );
-    assert_metadata_only_language_descriptor(
+    assert_source_fact_language_descriptor(
         SWIFT_LANGUAGE_PACK_ID,
         &["swift"],
         &[nose_il::Lang::Swift],
         &["swift"],
         "tree-sitter-swift",
         "nose_frontend::swift::lower",
+        SWIFT_SOURCE_FACT_PRODUCER_ID,
     );
-    assert_metadata_only_language_descriptor(
+    assert_source_fact_language_descriptor(
         CSS_LANGUAGE_PACK_ID,
         &["css"],
         &[nose_il::Lang::Css],
         &["css"],
         "tree-sitter-css",
         "nose_frontend::css::lower",
+        CSS_SOURCE_FACT_PRODUCER_ID,
     );
-    assert_metadata_only_language_descriptor(
+    assert_source_fact_language_descriptor(
         HTML_EMBEDDED_LANGUAGE_PACK_ID,
         &["html", "vue", "svelte"],
         &[
@@ -270,6 +288,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         &["html", "htm", "vue", "svelte"],
         "tree-sitter-html + embedded JS/TS/CSS extraction",
         "nose_frontend::embedded::lower_regions",
+        HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID,
     );
 
     let python_builtins = builtin_pack_descriptor(PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID)
@@ -1150,7 +1169,7 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(c.id, C_LANGUAGE_PACK_ID);
     assert_eq!(c.hash, stable_symbol_hash(C_LANGUAGE_PACK_ID));
     assert_eq!(c.kind, SemanticPackKind::LanguagePack);
-    assert_eq!(c.counts.evidence_producers, 1);
+    assert_eq!(c.counts.evidence_producers, 2);
     let python_builtins = set
         .packs()
         .iter()

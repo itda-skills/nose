@@ -12,6 +12,16 @@ pub const RUBY_LANGUAGE_PACK_ID: &str = "nose.lang.ruby";
 pub const SWIFT_LANGUAGE_PACK_ID: &str = "nose.lang.swift";
 pub const CSS_LANGUAGE_PACK_ID: &str = "nose.lang.css";
 pub const HTML_EMBEDDED_LANGUAGE_PACK_ID: &str = "nose.lang.html";
+pub const PYTHON_SOURCE_FACT_PRODUCER_ID: &str = "python.source.fact";
+pub const JS_TS_SOURCE_FACT_PRODUCER_ID: &str = "javascript-typescript.source.fact";
+pub const GO_SOURCE_FACT_PRODUCER_ID: &str = "go.source.fact";
+pub const RUST_SOURCE_FACT_PRODUCER_ID: &str = "rust.source.fact";
+pub const JAVA_SOURCE_FACT_PRODUCER_ID: &str = "java.source.fact";
+pub const C_SOURCE_FACT_PRODUCER_ID: &str = "c.source.fact";
+pub const RUBY_SOURCE_FACT_PRODUCER_ID: &str = "ruby.source.fact";
+pub const SWIFT_SOURCE_FACT_PRODUCER_ID: &str = "swift.source.fact";
+pub const CSS_SOURCE_FACT_PRODUCER_ID: &str = "css.source.fact";
+pub const HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID: &str = "html-embedded.source.fact";
 pub const C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID: &str = "c.source.cast.unsigned32";
 
 /// A first-party language profile. Keep this cheap and copyable; callers use it as a
@@ -23,6 +33,26 @@ pub struct LanguageProfile {
 
 pub fn semantics(lang: Lang) -> LanguageProfile {
     LanguageProfile { lang }
+}
+
+pub fn language_source_fact_provenance(lang: Lang) -> (&'static str, &'static str) {
+    match lang {
+        Lang::Python => (PYTHON_LANGUAGE_PACK_ID, PYTHON_SOURCE_FACT_PRODUCER_ID),
+        Lang::JavaScript | Lang::TypeScript => {
+            (JS_TS_LANGUAGE_PACK_ID, JS_TS_SOURCE_FACT_PRODUCER_ID)
+        }
+        Lang::Go => (GO_LANGUAGE_PACK_ID, GO_SOURCE_FACT_PRODUCER_ID),
+        Lang::Rust => (RUST_LANGUAGE_PACK_ID, RUST_SOURCE_FACT_PRODUCER_ID),
+        Lang::Java => (JAVA_LANGUAGE_PACK_ID, JAVA_SOURCE_FACT_PRODUCER_ID),
+        Lang::C => (C_LANGUAGE_PACK_ID, C_SOURCE_FACT_PRODUCER_ID),
+        Lang::Ruby => (RUBY_LANGUAGE_PACK_ID, RUBY_SOURCE_FACT_PRODUCER_ID),
+        Lang::Swift => (SWIFT_LANGUAGE_PACK_ID, SWIFT_SOURCE_FACT_PRODUCER_ID),
+        Lang::Css => (CSS_LANGUAGE_PACK_ID, CSS_SOURCE_FACT_PRODUCER_ID),
+        Lang::Vue | Lang::Svelte | Lang::Html => (
+            HTML_EMBEDDED_LANGUAGE_PACK_ID,
+            HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID,
+        ),
+    }
 }
 
 impl LanguageProfile {
