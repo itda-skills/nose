@@ -256,13 +256,14 @@ fn record_post_lower_property_library_api(
     ) else {
         return false;
     };
-    post_lower_library_api_node_evidence_id(
+    post_lower_library_api_node_evidence_with_pack_id(
         il,
         field,
         contract.id,
         contract.callee,
         0,
-        "library_api_property_builtin",
+        contract.pack_id,
+        PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID,
         dependencies,
     );
     true

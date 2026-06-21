@@ -52,6 +52,12 @@ fn method_protocol_contracts_are_language_constrained() {
         Some(Builtin::Len)
     );
     assert_eq!(
+        library_property_builtin_contract(Lang::JavaScript, "length")
+            .expect("JS length property contract")
+            .pack_id,
+        PROPERTY_BUILTIN_PROTOCOL_PACK_ID
+    );
+    assert_eq!(
         property_builtin_contract(Lang::Swift, "count"),
         Some(Builtin::Len)
     );

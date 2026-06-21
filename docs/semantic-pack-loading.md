@@ -130,6 +130,9 @@ Trust is separate from channel eligibility.
   `nose.protocols.map_key_views` owns Python/Ruby `keys`, Java `keySet`, and
   JS-family `Map.keys()` API occurrence provenance under exact-map receiver
   proof;
+  `nose.protocols.property_builtins` owns JS/TS/HTML-family and Java `.length`,
+  plus Swift `count` and `isEmpty`, API occurrence provenance under
+  receiver-domain proof;
   `nose.protocols.builtin_method_calls` owns generic method-call and
   namespace-call builtin semantics that have not moved to a narrower protocol
   pack;

@@ -89,6 +89,7 @@ pub fn library_property_builtin_contract(
     let (result, receiver) = property_builtin_contract_shape(lang, name)?;
     let property = library_property_selector_name(name)?;
     Some(LibraryPropertyBuiltinContract {
+        pack_id: PROPERTY_BUILTIN_PROTOCOL_PACK_ID,
         id: LibraryApiContractId::PropertyBuiltin(result),
         callee: LibraryApiCalleeContract::Property { property, receiver },
         result,
@@ -114,7 +115,7 @@ pub fn library_scalar_integer_method_contract(
     let pack_id = match (lang, result.receiver) {
         (Lang::Rust, MethodReceiverContract::ExactInteger) => RUST_STDLIB_INTEGER_METHOD_PACK_ID,
         (Lang::Java, MethodReceiverContract::UnshadowedGlobal("Math")) => JAVA_STDLIB_MATH_PACK_ID,
-        _ => FIRST_PARTY_PACK_ID,
+        _ => unreachable!("scalar integer method contract has no broad builtin pack"),
     };
     Some(LibraryScalarIntegerMethodContract {
         pack_id,

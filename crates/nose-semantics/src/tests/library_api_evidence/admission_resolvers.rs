@@ -691,7 +691,7 @@ fn admitted_node_resolvers_require_api_occurrence_evidence() {
     let (mut missing_dependency, interner, field, _receiver) = js_length_field_il();
     missing_dependency
         .evidence
-        .push(asserted_library_api_node_record(
+        .push(asserted_library_api_node_record_with_provenance(
             0,
             &missing_dependency,
             field,
@@ -699,10 +699,33 @@ fn admitted_node_resolvers_require_api_occurrence_evidence() {
             contract.callee,
             0,
             &[],
+            PROPERTY_BUILTIN_PROTOCOL_PACK_ID,
+            PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID,
         ));
     assert!(
         admitted_property_builtin_at_field(&missing_dependency, &interner, field).is_none(),
         "property API occurrence without receiver-domain dependency is rejected"
+    );
+
+    let (mut wrong_pack, interner, field, receiver) = js_length_field_il();
+    wrong_pack.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(wrong_pack.node(receiver).span, NodeKind::Var),
+        EvidenceKind::Domain(DomainEvidence::Collection),
+        EvidenceStatus::Asserted,
+    ));
+    wrong_pack.evidence.push(asserted_library_api_node_record(
+        1,
+        &wrong_pack,
+        field,
+        contract.id,
+        contract.callee,
+        0,
+        &[0],
+    ));
+    assert!(
+        admitted_property_builtin_at_field(&wrong_pack, &interner, field).is_none(),
+        "legacy broad property API occurrence evidence is rejected"
     );
 
     let (mut admitted, interner, field, receiver) = js_length_field_il();
@@ -712,15 +735,19 @@ fn admitted_node_resolvers_require_api_occurrence_evidence() {
         EvidenceKind::Domain(DomainEvidence::Collection),
         EvidenceStatus::Asserted,
     ));
-    admitted.evidence.push(asserted_library_api_node_record(
-        1,
-        &admitted,
-        field,
-        contract.id,
-        contract.callee,
-        0,
-        &[0],
-    ));
+    admitted
+        .evidence
+        .push(asserted_library_api_node_record_with_provenance(
+            1,
+            &admitted,
+            field,
+            contract.id,
+            contract.callee,
+            0,
+            &[0],
+            PROPERTY_BUILTIN_PROTOCOL_PACK_ID,
+            PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID,
+        ));
     let resolved = admitted_property_builtin_at_field(&admitted, &interner, field).unwrap();
     assert_eq!(
         resolved.contract.id,

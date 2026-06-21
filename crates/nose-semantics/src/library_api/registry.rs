@@ -41,7 +41,7 @@ pub(super) fn library_api_contract_result_domain_for_arity(
                         LibraryApiContractId::JsLikeSetConstructor => {
                             JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
                         }
-                        _ => FIRST_PARTY_PACK_ID,
+                        _ => unreachable!("collection-factory contract has no broad builtin pack"),
                     },
                     id,
                     callee,
@@ -60,7 +60,7 @@ pub(super) fn library_api_contract_result_domain_for_arity(
                     LibraryApiContractId::JsLikeMapConstructor => {
                         JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
                     }
-                    _ => FIRST_PARTY_PACK_ID,
+                    _ => unreachable!("map-factory contract has no broad builtin pack"),
                 },
                 id,
                 callee,

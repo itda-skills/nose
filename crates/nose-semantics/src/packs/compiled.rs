@@ -105,6 +105,15 @@ const MAP_KEY_VIEW_PROTOCOL_LANGUAGES: &[&str] = &[
     "svelte",
     "html",
 ];
+const PROPERTY_BUILTIN_PROTOCOL_LANGUAGES: &[&str] = &[
+    "javascript",
+    "typescript",
+    "vue",
+    "svelte",
+    "html",
+    "java",
+    "swift",
+];
 const BUILTIN_METHOD_CALL_PROTOCOL_LANGUAGES: &[&str] = &[
     "python",
     "javascript",
@@ -154,6 +163,8 @@ const RECEIVER_MEMBERSHIP_PROTOCOL_PACKAGES: &[&str] = &[
     "std::collections",
 ];
 const MAP_KEY_VIEW_PROTOCOL_PACKAGES: &[&str] = &["dict", "Hash", "Map", "java.util"];
+const PROPERTY_BUILTIN_PROTOCOL_PACKAGES: &[&str] =
+    &["Array", "Collection", "Swift.Collection", "java.lang"];
 const BUILTIN_METHOD_CALL_PROTOCOL_PACKAGES: &[&str] = &[
     "Collection",
     "Option",
@@ -409,6 +420,20 @@ const MAP_KEY_VIEW_PROTOCOL_CONFORMANCE_REFS: &[&str] = &[
     "map-key-view-js-keys-positive",
     "map-key-view-non-map-receiver-hard-negative",
     "map-key-view-unsupported-arity-hard-negative",
+];
+const PROPERTY_BUILTIN_PROTOCOL_PRODUCER_IDS: &[&str] = &[PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID];
+const PROPERTY_BUILTIN_PROTOCOL_CONTRACT_IDS: &[&str] = &[
+    PROPERTY_BUILTIN_LEN_CONTRACT_ID,
+    PROPERTY_BUILTIN_IS_EMPTY_CONTRACT_ID,
+];
+const PROPERTY_BUILTIN_PROTOCOL_CONFORMANCE_REFS: &[&str] = &[
+    "property-builtin-js-length-positive",
+    "property-builtin-java-length-positive",
+    "property-builtin-swift-count-positive",
+    "property-builtin-swift-is-empty-positive",
+    "property-builtin-missing-receiver-proof-hard-negative",
+    "property-builtin-wrong-pack-hard-negative",
+    "property-builtin-unsupported-property-hard-negative",
 ];
 const BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_IDS: &[&str] =
     &[BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID];
@@ -947,6 +972,22 @@ fn map_key_view_protocol_counts() -> SemanticPackCounts {
             .filter(|id| !id.contains("hard-negative"))
             .count(),
         hard_negatives: MAP_KEY_VIEW_PROTOCOL_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
+fn property_builtin_protocol_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: PROPERTY_BUILTIN_PROTOCOL_PRODUCER_IDS.len(),
+        contracts: PROPERTY_BUILTIN_PROTOCOL_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: PROPERTY_BUILTIN_PROTOCOL_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: PROPERTY_BUILTIN_PROTOCOL_CONFORMANCE_REFS
             .iter()
             .filter(|id| id.contains("hard-negative"))
             .count(),
@@ -1770,6 +1811,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: MAP_KEY_VIEW_PROTOCOL_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: map_key_view_protocol_counts,
+    },
+    BuiltinPackDescriptor {
+        id: PROPERTY_BUILTIN_PROTOCOL_PACK_ID,
+        kind: SemanticPackKind::ProtocolPack,
+        display_name: "nose property builtin protocol pack",
+        trust: PackTrust::BuiltinDefault,
+        enabled_by_default: true,
+        supported_languages: PROPERTY_BUILTIN_PROTOCOL_LANGUAGES,
+        supported_packages: PROPERTY_BUILTIN_PROTOCOL_PACKAGES,
+        language: None,
+        evidence_producer_ids: PROPERTY_BUILTIN_PROTOCOL_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: PROPERTY_BUILTIN_PROTOCOL_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: PROPERTY_BUILTIN_PROTOCOL_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: property_builtin_protocol_counts,
     },
     BuiltinPackDescriptor {
         id: BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,

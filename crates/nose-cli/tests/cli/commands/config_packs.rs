@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        41
+        42
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -576,6 +576,42 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(map_key_view["counts"]["value_laws"], 0);
     assert_eq!(map_key_view["counts"]["positive_fixtures"], 4);
     assert_eq!(map_key_view["counts"]["hard_negatives"], 2);
+
+    let property_builtin = semantic_pack_by_id(&json, "nose.protocols.property_builtins");
+    assert_eq!(property_builtin["hash"], "0bb1fdeb809a7e81");
+    assert_eq!(property_builtin["kind"], "ProtocolPack");
+    assert_eq!(
+        property_builtin["display_name"],
+        "nose property builtin protocol pack"
+    );
+    assert_eq!(property_builtin["source"], "compiled-builtin");
+    assert_eq!(property_builtin["influence"], "evidence-and-contracts");
+    assert_eq!(property_builtin["trust"], "builtin-default");
+    assert_eq!(property_builtin["enabled_by_default"], true);
+    assert_eq!(property_builtin["path"], serde_json::Value::Null);
+    assert_eq!(property_builtin["provider"], "Corca, Inc.");
+    assert_eq!(
+        property_builtin["repository"],
+        "https://github.com/corca-ai/nose"
+    );
+    assert_eq!(property_builtin["license"], "MIT");
+    assert_eq!(
+        json_array_strings(property_builtin, "supported_languages"),
+        vec![
+            "javascript",
+            "typescript",
+            "vue",
+            "svelte",
+            "html",
+            "java",
+            "swift"
+        ]
+    );
+    assert_eq!(property_builtin["counts"]["evidence_producers"], 1);
+    assert_eq!(property_builtin["counts"]["contracts"], 2);
+    assert_eq!(property_builtin["counts"]["value_laws"], 0);
+    assert_eq!(property_builtin["counts"]["positive_fixtures"], 4);
+    assert_eq!(property_builtin["counts"]["hard_negatives"], 3);
 
     let builtin_method_call = semantic_pack_by_id(&json, "nose.protocols.builtin_method_calls");
     assert_eq!(builtin_method_call["hash"], "2b97688a4e1cf076");

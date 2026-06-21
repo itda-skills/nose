@@ -694,16 +694,12 @@ fn canonical_property_builtin_admission_accepts_field_span_evidence() {
     let mut il = finish_il(b, root, Lang::JavaScript);
     let contract =
         library_property_builtin_contract(Lang::JavaScript, "length").expect("length contract");
-    il.evidence.push(evidence_with_dependencies(
+    il.evidence.push(property_builtin_record(
         10,
-        EvidenceAnchor::node(il.node(call).span, NodeKind::Field),
-        EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
-            contract_hash: library_api_contract_id_hash(contract.id),
-            callee_hash: library_api_callee_contract_hash(contract.callee),
-            arity: 0,
-        }),
+        il.node(call).span,
+        contract,
         EvidenceStatus::Asserted,
-        Vec::new(),
+        &[],
     ));
 
     assert!(admitted_builtin_semantics_at_call(&il, call, Builtin::Len));
@@ -719,16 +715,12 @@ fn canonical_property_builtin_admission_accepts_field_span_evidence() {
     let root = swift_len.add(NodeKind::Func, Payload::None, sp(52), &[count]);
     let mut swift_len = finish_il(swift_len, root, Lang::Swift);
     let contract = library_property_builtin_contract(Lang::Swift, "count").expect("count contract");
-    swift_len.evidence.push(evidence_with_dependencies(
+    swift_len.evidence.push(property_builtin_record(
         11,
-        EvidenceAnchor::node(swift_len.node(count).span, NodeKind::Field),
-        EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
-            contract_hash: library_api_contract_id_hash(contract.id),
-            callee_hash: library_api_callee_contract_hash(contract.callee),
-            arity: 0,
-        }),
+        swift_len.node(count).span,
+        contract,
         EvidenceStatus::Asserted,
-        Vec::new(),
+        &[],
     ));
     assert!(admitted_builtin_semantics_at_call(
         &swift_len,
@@ -748,16 +740,12 @@ fn canonical_property_builtin_admission_accepts_field_span_evidence() {
     let mut swift_empty = finish_il(swift_empty, root, Lang::Swift);
     let contract =
         library_property_builtin_contract(Lang::Swift, "isEmpty").expect("isEmpty contract");
-    swift_empty.evidence.push(evidence_with_dependencies(
+    swift_empty.evidence.push(property_builtin_record(
         12,
-        EvidenceAnchor::node(swift_empty.node(is_empty).span, NodeKind::Field),
-        EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
-            contract_hash: library_api_contract_id_hash(contract.id),
-            callee_hash: library_api_callee_contract_hash(contract.callee),
-            arity: 0,
-        }),
+        swift_empty.node(is_empty).span,
+        contract,
         EvidenceStatus::Asserted,
-        Vec::new(),
+        &[],
     ));
     assert!(admitted_builtin_semantics_at_call(
         &swift_empty,

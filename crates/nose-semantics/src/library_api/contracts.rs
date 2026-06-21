@@ -74,6 +74,10 @@ pub const MAP_KEY_VIEW_PROTOCOL_PACK_ID: &str = "nose.protocols.map_key_views";
 pub const MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID: &str = "protocols.map-key-view-api";
 pub const MAP_KEY_VIEW_COLLECTION_CONTRACT_ID: &str = "map_key_view.collection";
 pub const MAP_KEY_VIEW_ITERATOR_CONTRACT_ID: &str = "map_key_view.iterator";
+pub const PROPERTY_BUILTIN_PROTOCOL_PACK_ID: &str = "nose.protocols.property_builtins";
+pub const PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID: &str = "protocols.property-builtin-api";
+pub const PROPERTY_BUILTIN_LEN_CONTRACT_ID: &str = "property_builtin.len";
+pub const PROPERTY_BUILTIN_IS_EMPTY_CONTRACT_ID: &str = "property_builtin.is_empty";
 pub const BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID: &str = "nose.protocols.builtin_method_calls";
 pub const BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID: &str = "protocols.builtin-method-call-api";
 pub const BUILTIN_METHOD_CALL_CONTRACT_ID: &str = "builtin_method.call";
@@ -467,6 +471,7 @@ pub struct LibraryMethodCallContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryPropertyBuiltinContract {
+    pub pack_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: Builtin,

@@ -520,7 +520,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   set-or-map receiver proof is present, Python/Ruby `keys`, Java `keySet`, and
   JS-family `Map.keys()` views
   with `nose.protocols.map_key_views` provenance when exact-map receiver proof
-  is present, Rust
+  is present, JS/TS/HTML-family and Java `.length`, plus Swift `count` and
+  `isEmpty`, with `nose.protocols.property_builtins` provenance when
+  receiver-domain proof is present, Rust
   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
   `.stream()` iterator identity adapters with
   `nose.protocols.iterator_identity_adapters` provenance when protocol receiver
@@ -696,10 +698,11 @@ callers:
 - value-graph direct API eval paths, node-level API consumers, and provider
   literal export safety share the same admitted occurrence resolver layer where
   they still have the source `Call` or `Field` node. This includes direct
-  factory/constructor eval, property builtins such as JS/TS/Java `.length`, Rust
-  `Some` callee-node checks, static index-membership, Rust scalar integer method
-  calls under `nose.rust.stdlib.integer_methods`, Java Math scalar integer calls
-  under `nose.java.stdlib.math`, builder append API admission, pack-owned
+  factory/constructor eval, property builtins such as JS/TS/Java `.length` with
+  `nose.protocols.property_builtins` provenance, Rust `Some` callee-node checks,
+  static index-membership, Rust scalar integer method calls under
+  `nose.rust.stdlib.integer_methods`, Java Math scalar integer calls under
+  `nose.java.stdlib.math`, builder append API admission, pack-owned
   Promise `resolve`, and
   Promise `.then` contract lookup. Promise continuation reduction additionally requires a
   recoverable supported settled value and preserves a Promise boundary in the

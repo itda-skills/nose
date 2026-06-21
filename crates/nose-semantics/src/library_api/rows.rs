@@ -1,4 +1,4 @@
-//! First-party library/API row constructors.
+//! Builtin library/API row constructors.
 
 use super::*;
 
@@ -26,7 +26,7 @@ fn library_collection_factory_pack_id(id: LibraryApiContractId) -> &'static str 
         LibraryApiContractId::JsLikeSetConstructor => {
             JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
         }
-        _ => FIRST_PARTY_PACK_ID,
+        _ => unreachable!("collection-factory contract has no broad builtin pack"),
     }
 }
 
@@ -38,7 +38,7 @@ fn library_map_factory_pack_id(id: LibraryApiContractId) -> &'static str {
         LibraryApiContractId::JsLikeMapConstructor => {
             JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
         }
-        _ => FIRST_PARTY_PACK_ID,
+        _ => unreachable!("map-factory contract has no broad builtin pack"),
     }
 }
 

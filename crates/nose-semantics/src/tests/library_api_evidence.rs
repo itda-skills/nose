@@ -57,6 +57,26 @@ fn library_api_record_with_provenance_and_arity(
     record
 }
 
+fn property_builtin_record(
+    id: u32,
+    span: Span,
+    contract: LibraryPropertyBuiltinContract,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    library_api_record_with_provenance_and_arity(
+        id,
+        span,
+        contract.id,
+        contract.callee,
+        0,
+        status,
+        dependencies,
+        PROPERTY_BUILTIN_PROTOCOL_PACK_ID,
+        PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID,
+    )
+}
+
 fn python_builtin_collection_factory_record(
     id: u32,
     span: Span,

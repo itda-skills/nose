@@ -235,27 +235,6 @@ pub(super) fn post_lower_library_api_evidence_with_pack_id(
     .expect("post-lower LibraryApi evidence insertion should always produce an id")
 }
 
-pub(super) fn post_lower_library_api_node_evidence_id(
-    il: &mut Il,
-    node: NodeId,
-    id: LibraryApiContractId,
-    callee: LibraryApiCalleeContract,
-    arg_count: usize,
-    rule: &str,
-    dependencies: Vec<EvidenceId>,
-) -> EvidenceId {
-    post_lower_library_api_node_evidence_with_pack_id(
-        il,
-        node,
-        id,
-        callee,
-        arg_count,
-        nose_semantics::FIRST_PARTY_PACK_ID,
-        rule,
-        dependencies,
-    )
-}
-
 pub(super) fn post_lower_library_api_node_evidence_with_pack_id(
     il: &mut Il,
     node: NodeId,

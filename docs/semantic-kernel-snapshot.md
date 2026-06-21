@@ -170,6 +170,10 @@ still being migrated toward it.
   `nose.protocols.map_key_views` descriptor owns Python/Ruby `keys`, Java
   `keySet`, and JS-family `Map.keys()` contract and occurrence producer ids,
   while non-map receivers and unsupported arities remain hard negatives. The
+  `nose.protocols.property_builtins` descriptor owns JS/TS/HTML-family and Java
+  `.length`, plus Swift `count` and `isEmpty`, property-builtin contract and
+  occurrence producer ids, while missing receiver proof, wrong-pack evidence,
+  and unsupported properties remain hard negatives. The
   `nose.protocols.builtin_method_calls` descriptor owns generic method-call
   and namespace-call builtin semantics that have not moved to a narrower
   protocol pack, including selected `fmt`, `strings`, and `slices` namespace
@@ -247,6 +251,9 @@ still being migrated toward it.
   `nose.protocols.map_key_views`, a default builtin protocol pack for
   Python/Ruby `keys`, Java `keySet`, and JS-family `Map.keys()` API provenance,
   and
+  `nose.protocols.property_builtins`, a default builtin protocol pack for
+  JS/TS/HTML-family and Java `.length`, plus Swift `count` and `isEmpty`,
+  property-builtin API provenance, and
   `nose.protocols.builtin_method_calls`, a default builtin protocol pack for
   generic method-call and namespace-call builtin semantics that have not moved
   to a narrower protocol pack, and

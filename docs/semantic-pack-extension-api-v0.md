@@ -444,8 +444,7 @@ implicit v0 packs:
   call-target, and sequence-surface evidence;
 - stdlib packs declare library API occurrence contracts such as Python builtins,
   Rust `Option` constructors, Java `java.util` factories, JS-like globals,
-  regex literal methods, selected property builtins, receiver-method APIs, and
-  builder append APIs;
+  regex literal methods, receiver-method APIs, and builder append APIs;
 - `nose.python.stdlib.math` owns the current Python `math.prod`
   product-reduction API occurrence contract;
 - `nose.rust.stdlib.vec` owns the current Rust `Vec::new` and `vec!`
@@ -498,6 +497,9 @@ implicit v0 packs:
 - `nose.protocols.map_key_views` owns Python/Ruby `keys`, Java `keySet`, and
   JS-family `Map.keys()` API occurrence contracts under exact-map receiver
   proof;
+- `nose.protocols.property_builtins` owns selected JavaScript/TypeScript,
+  Java, and Swift property builtin API occurrence contracts such as `length`,
+  `count`, and `isEmpty` under receiver proof;
 - `nose.protocols.builtin_method_calls` owns generic method-call and
   namespace-call builtin semantics that have not moved to a narrower protocol
   pack;

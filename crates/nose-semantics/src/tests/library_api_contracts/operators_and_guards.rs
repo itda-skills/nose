@@ -262,7 +262,7 @@ fn builder_append_contracts_are_language_and_arity_constrained() {
 fn unproven_membership_like_guard_is_negative_api_policy() {
     let guard = unproven_membership_like_method_contract(Lang::TypeScript, "includes", 1)
         .expect("includes guard");
-    assert_eq!(guard.pack_id, FIRST_PARTY_PACK_ID);
+    assert_eq!(guard.pack_id, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID);
     assert_eq!(guard.id, ApiGuardContractId::UnprovenMembershipLikeCall);
     assert_eq!(guard.lang, Lang::TypeScript);
     assert_eq!(guard.method, "includes");

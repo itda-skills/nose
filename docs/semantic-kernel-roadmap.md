@@ -131,6 +131,8 @@ The next code slices are intentionally incremental:
    Ruby `member?`, then
    `nose.protocols.map_key_views` for Python/Ruby `keys`, Java `keySet`, and
    JS-family `Map.keys()` occurrence provenance, then
+   `nose.protocols.property_builtins` for JS/TS/HTML-family and Java `.length`
+   plus Swift `count`/`isEmpty` occurrence provenance, then
    `nose.protocols.builtin_method_calls` for generic method-call and
    namespace-call builtin semantics not yet owned by a narrower protocol pack,
    then
@@ -959,6 +961,11 @@ repeated registry walks on hot paths. Binary size changed 20,181,712 ->
   `nose.protocols.receiver_membership` pack and producer provenance while
   preserving receiver-proof, unsupported-arity, and Go `slices.Contains`
   out-of-scope hard negatives.
+- Property-builtin protocol occurrences started moving out of the broad
+  compatibility facade. JS/TS/HTML-family and Java `.length`, plus Swift
+  `count` and `isEmpty`, `LibraryApi` occurrence evidence now reports
+  `nose.protocols.property_builtins` pack and producer provenance while
+  preserving receiver-proof, wrong-pack, and unsupported-property hard negatives.
 - Builtin method-call protocol occurrences started moving out of the broad
   compatibility facade. Generic method-call and namespace-call builtin
   `LibraryApi` occurrence evidence now reports
@@ -1229,9 +1236,11 @@ repeated registry walks on hot paths. Binary size changed 20,181,712 ->
   with `nose.protocols.map_get` provenance, map-get-default occurrences with
   `nose.protocols.map_get_default` provenance, free-function builtin
   occurrences with `nose.protocols.free_function_builtins` provenance,
-  map-key-view occurrences with `nose.protocols.map_key_views` provenance, and
-  JS-like regex-literal `.test`. Producers emit call-site `Symbol` dependencies for imported
-  binding/namespace occurrences or `Source` dependencies for regex literals;
+  map-key-view occurrences with `nose.protocols.map_key_views` provenance,
+  property-builtin occurrences with `nose.protocols.property_builtins`
+  provenance, and JS-like regex-literal `.test`. Producers emit call-site
+  `Symbol` dependencies for imported binding/namespace occurrences or `Source`
+  dependencies for regex literals;
   value-graph, idiom, and strict exact consumers consult these records first and
   close fallback on rejected records. Imported occurrence symbols now require
   binding-anchor dependencies, rebinding/local-shadow validation, span-matched

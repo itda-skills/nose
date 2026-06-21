@@ -31,6 +31,9 @@ fn assert_ts_length_property_occurrences(interner: &Interner) {
         1,
         "typed exact-collection property access should carry LibraryApi occurrence evidence"
     );
+    let property_records =
+        contract_api_records(&ts.evidence, property_contract.id, property_contract.callee);
+    assert_property_builtin_record_provenance(property_records[0]);
     let ts_filter_length = lower_fixture(
             "t.ts",
             b"function f(value: string) { return [\"red\", \"blue\"].filter((item: string) => item === value).length >= 1; }\n",
@@ -53,6 +56,12 @@ fn assert_ts_length_property_occurrences(interner: &Interner) {
         1,
         "HOF result property access should carry LibraryApi occurrence evidence"
     );
+    let filter_length_records = contract_api_records(
+        &ts_filter_length.evidence,
+        property_contract.id,
+        property_contract.callee,
+    );
+    assert_property_builtin_record_provenance(filter_length_records[0]);
 }
 
 fn assert_ts_promise_then_occurrences(interner: &Interner) {
@@ -211,5 +220,18 @@ fn assert_js_like_promise_record_provenance(record: &EvidenceRecord) {
     assert_eq!(
         record.provenance.rule_hash,
         Some(stable_symbol_hash(JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID))
+    );
+}
+
+fn assert_property_builtin_record_provenance(record: &EvidenceRecord) {
+    assert_eq!(
+        record.provenance.pack_hash,
+        Some(stable_symbol_hash(
+            nose_semantics::PROPERTY_BUILTIN_PROTOCOL_PACK_ID
+        ))
+    );
+    assert_eq!(
+        record.provenance.rule_hash,
+        Some(stable_symbol_hash(PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID))
     );
 }

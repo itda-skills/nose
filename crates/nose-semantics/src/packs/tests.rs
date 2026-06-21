@@ -115,7 +115,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 41);
+    assert_eq!(descriptors.len(), 42);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -154,6 +154,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
             RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
             MAP_KEY_VIEW_PROTOCOL_PACK_ID,
+            PROPERTY_BUILTIN_PROTOCOL_PACK_ID,
             BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
             ITERATOR_IDENTITY_ADAPTER_PACK_ID,
             JS_LIKE_BUILTIN_PROMISE_PACK_ID,
@@ -819,6 +820,45 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
         .conformance_refs()
         .contains(&"builtin-method-call-wrong-pack-hard-negative"));
 
+    let property_builtin = builtin_pack_descriptor(PROPERTY_BUILTIN_PROTOCOL_PACK_ID)
+        .expect("property builtin protocol descriptor");
+    assert_eq!(property_builtin.kind, SemanticPackKind::ProtocolPack);
+    assert_eq!(
+        property_builtin.supported_languages,
+        &[
+            "javascript",
+            "typescript",
+            "vue",
+            "svelte",
+            "html",
+            "java",
+            "swift"
+        ]
+    );
+    assert_eq!(
+        property_builtin.supported_packages,
+        &["Array", "Collection", "Swift.Collection", "java.lang"]
+    );
+    assert_eq!(
+        property_builtin.evidence_producer_ids,
+        &[PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID]
+    );
+    assert!(property_builtin.source_fact_producer_ids.is_empty());
+    assert_eq!(
+        property_builtin.contract_ids,
+        &[
+            PROPERTY_BUILTIN_LEN_CONTRACT_ID,
+            PROPERTY_BUILTIN_IS_EMPTY_CONTRACT_ID
+        ]
+    );
+    assert_eq!(property_builtin.counts().evidence_producers, 1);
+    assert_eq!(property_builtin.counts().contracts, 2);
+    assert_eq!(property_builtin.counts().positive_fixtures, 4);
+    assert_eq!(property_builtin.counts().hard_negatives, 3);
+    assert!(property_builtin
+        .conformance_refs()
+        .contains(&"property-builtin-wrong-pack-hard-negative"));
+
     let receiver_membership = builtin_pack_descriptor(RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID)
         .expect("receiver-membership protocol descriptor");
     assert_eq!(receiver_membership.kind, SemanticPackKind::ProtocolPack);
@@ -1431,6 +1471,24 @@ fn first_party_pack_hash_matches_evidence_provenance_hash_policy() {
     assert_eq!(map_key_view.counts.contracts, 2);
     assert_eq!(map_key_view.counts.positive_fixtures, 4);
     assert_eq!(map_key_view.counts.hard_negatives, 2);
+    let property_builtin = set
+        .packs()
+        .iter()
+        .find(|pack| pack.id == PROPERTY_BUILTIN_PROTOCOL_PACK_ID)
+        .expect("property-builtin protocol summary");
+    assert_eq!(
+        property_builtin.hash,
+        stable_symbol_hash(PROPERTY_BUILTIN_PROTOCOL_PACK_ID)
+    );
+    assert_eq!(property_builtin.kind, SemanticPackKind::ProtocolPack);
+    assert_eq!(
+        property_builtin.influence,
+        SemanticPackInfluence::EvidenceAndContracts
+    );
+    assert_eq!(property_builtin.counts.evidence_producers, 1);
+    assert_eq!(property_builtin.counts.contracts, 2);
+    assert_eq!(property_builtin.counts.positive_fixtures, 4);
+    assert_eq!(property_builtin.counts.hard_negatives, 3);
     let java_stdlib_maps = set
         .packs()
         .iter()
@@ -1703,7 +1761,7 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 42);
+    assert_eq!(set.packs().len(), 43);
     assert_eq!(set.packs()[1].id, PYTHON_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[2].id, JS_TS_LANGUAGE_PACK_ID);
     assert_eq!(set.packs()[3].id, GO_LANGUAGE_PACK_ID);
@@ -1743,23 +1801,24 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     assert_eq!(set.packs()[28].id, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID);
     assert_eq!(set.packs()[29].id, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID);
     assert_eq!(set.packs()[30].id, MAP_KEY_VIEW_PROTOCOL_PACK_ID);
-    assert_eq!(set.packs()[31].id, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID);
-    assert_eq!(set.packs()[32].id, ITERATOR_IDENTITY_ADAPTER_PACK_ID);
-    assert_eq!(set.packs()[33].id, JS_LIKE_BUILTIN_PROMISE_PACK_ID);
-    assert_eq!(set.packs()[34].id, JS_LIKE_BUILTIN_ARRAY_PACK_ID);
-    assert_eq!(set.packs()[35].id, JS_LIKE_BUILTIN_BOOLEAN_PACK_ID);
-    assert_eq!(set.packs()[36].id, JS_LIKE_BUILTIN_REGEX_PACK_ID);
+    assert_eq!(set.packs()[31].id, PROPERTY_BUILTIN_PROTOCOL_PACK_ID);
+    assert_eq!(set.packs()[32].id, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID);
+    assert_eq!(set.packs()[33].id, ITERATOR_IDENTITY_ADAPTER_PACK_ID);
+    assert_eq!(set.packs()[34].id, JS_LIKE_BUILTIN_PROMISE_PACK_ID);
+    assert_eq!(set.packs()[35].id, JS_LIKE_BUILTIN_ARRAY_PACK_ID);
+    assert_eq!(set.packs()[36].id, JS_LIKE_BUILTIN_BOOLEAN_PACK_ID);
+    assert_eq!(set.packs()[37].id, JS_LIKE_BUILTIN_REGEX_PACK_ID);
     assert_eq!(
-        set.packs()[37].id,
+        set.packs()[38].id,
         JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID
     );
     assert_eq!(
-        set.packs()[38].id,
+        set.packs()[39].id,
         JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
     );
-    assert_eq!(set.packs()[39].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[40].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[41];
+    assert_eq!(set.packs()[40].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[41].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[42];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);

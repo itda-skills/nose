@@ -297,7 +297,7 @@ fn record_property_library_api(
     ) else {
         return false;
     };
-    upsert_first_party_evidence(
+    upsert_first_party_evidence_with_pack_id(
         il,
         EvidenceAnchor::node(il.node(field).span, NodeKind::Field),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -305,7 +305,8 @@ fn record_property_library_api(
             callee_hash: library_api_callee_contract_hash(contract.callee),
             arity: 0,
         }),
-        "library_api_property_builtin",
+        contract.pack_id,
+        nose_semantics::PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID,
         dependencies,
     );
     true
