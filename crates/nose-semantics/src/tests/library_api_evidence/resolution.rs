@@ -33,21 +33,25 @@ fn is_array_contract() -> LibraryStaticGlobalMethodContract {
 fn admitted_js_array_is_array_il(interner: &Interner) -> (Il, NodeId, NodeId, NodeId) {
     let (mut il, call, callee, array) = js_array_is_array_call_il(interner);
     let contract = is_array_contract();
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(il.node(array).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Array"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::JavaScript,
     ));
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_record(
         1,
         EvidenceAnchor::source_span(il.node(callee).span),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Array"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::JavaScript,
     ));
     il.evidence.push(evidence_with_dependencies(
         2,
@@ -91,13 +95,15 @@ fn js_boolean_call_il(interner: &Interner) -> (Il, NodeId, NodeId) {
 fn admitted_js_boolean_il(interner: &Interner) -> (Il, NodeId, NodeId) {
     let (mut il, call, boolean) = js_boolean_call_il(interner);
     let contract = library_js_boolean_coercion_contract(Lang::JavaScript, "Boolean", 1).unwrap();
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(il.node(boolean).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Boolean"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::JavaScript,
     ));
     il.evidence.push(js_like_builtin_boolean_record(
         1,
@@ -348,13 +354,15 @@ fn library_api_evidence_resolution_rejects_missing_or_ambiguous_dependencies() {
     );
 
     let (mut ambiguous_dep, call, callee, array) = js_array_is_array_call_il(&interner);
-    ambiguous_dep.evidence.push(evidence(
+    ambiguous_dep.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(ambiguous_dep.node(array).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Array"),
-        }),
+        },
         EvidenceStatus::Ambiguous,
+        &[],
+        Lang::JavaScript,
     ));
     ambiguous_dep.evidence.push(evidence(
         1,
@@ -390,13 +398,15 @@ fn library_api_evidence_resolution_rejects_conflicting_or_misanchored_records() 
     let contract = is_array_contract();
 
     let (mut conflicting_dep, call, callee, array) = js_array_is_array_call_il(&interner);
-    conflicting_dep.evidence.push(evidence(
+    conflicting_dep.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(conflicting_dep.node(array).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Array"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::JavaScript,
     ));
     conflicting_dep.evidence.push(evidence(
         1,
@@ -406,13 +416,15 @@ fn library_api_evidence_resolution_rejects_conflicting_or_misanchored_records() 
         }),
         EvidenceStatus::Asserted,
     ));
-    conflicting_dep.evidence.push(evidence(
+    conflicting_dep.evidence.push(language_core_symbol_record(
         2,
         EvidenceAnchor::node(conflicting_dep.node(array).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Map"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::JavaScript,
     ));
     conflicting_dep.evidence.push(js_like_builtin_array_record(
         3,

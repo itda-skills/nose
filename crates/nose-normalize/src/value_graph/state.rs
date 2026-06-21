@@ -403,7 +403,7 @@ impl<'a> Builder<'a> {
     }
 
     pub(super) fn admitted_builtin_call(&self, node: NodeId, builtin: Builtin) -> bool {
-        admitted_builtin_semantics_at_call(self.il, node, builtin)
+        admitted_builtin_semantics_at_call_with_interner(self.il, self.interner, node, builtin)
     }
 
     pub(super) fn domain_evidence_for_param(&self, param: NodeId) -> Option<DomainEvidence> {

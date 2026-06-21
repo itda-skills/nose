@@ -16,6 +16,24 @@ fn library_api_record(
     library_api_record_with_arity(id, span, contract_id, callee, 1, status, dependencies)
 }
 
+fn language_core_symbol_record(
+    id: u32,
+    anchor: EvidenceAnchor,
+    symbol: SymbolEvidenceKind,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+    lang: Lang,
+) -> EvidenceRecord {
+    language_core_evidence_with_dependencies(
+        id,
+        anchor,
+        EvidenceKind::Symbol(symbol),
+        status,
+        dependencies.iter().copied().map(EvidenceId).collect(),
+        lang,
+    )
+}
+
 fn library_api_record_with_provenance(
     id: u32,
     span: Span,

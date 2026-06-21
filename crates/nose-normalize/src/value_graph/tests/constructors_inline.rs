@@ -23,12 +23,13 @@ fn js_new_set_il(interner: &Interner) -> (Il, NodeId) {
         EvidenceAnchor::source_span(sp(73)),
         EvidenceKind::Source(SourceFactKind::Call(SourceCallKind::Construct)),
     ));
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         1,
+        Lang::JavaScript,
         EvidenceAnchor::node(sp(70), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Set"),
-        }),
+        },
     ));
     il.evidence
         .push(collection_sequence_evidence(2, Lang::JavaScript, sp(72)));

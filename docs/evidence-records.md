@@ -183,6 +183,15 @@ Current first-party `LibraryApi` callee coordinates are intentionally specific:
   infer semantics from a selector spelling alone. The current `AsyncMethod`
   row is JS-like Promise `.then`; it requires PromiseLike receiver proof.
 
+When a `LibraryApi` occurrence depends on node-anchored
+`Symbol(UnshadowedGlobal)` or `Symbol(ImportedNamespace)` proof, admission uses
+the same builtin language-core provenance gate as the public symbol identity
+helpers. Broad `nose.first_party`, wrong-language, external, ambiguous, or
+dependency-broken symbol occurrence rows do not license free-name, namespace, or
+receiver-method API evidence. `ImportedBinding` dependencies remain on the
+import-backed binding path and are not reinterpreted as language-core namespace
+proof.
+
 ## Consumption Rules
 
 Consumers should go through `nose-semantics` helpers rather than scanning raw IL

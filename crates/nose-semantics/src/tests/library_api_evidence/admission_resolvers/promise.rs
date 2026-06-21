@@ -49,14 +49,15 @@ fn js_promise_resolve_call_il() -> (Il, Interner, NodeId, NodeId, NodeId) {
 }
 
 fn push_promise_resolve_dependencies(il: &mut Il, callee: NodeId, promise: NodeId) {
-    il.evidence.push(evidence_with_dependencies(
+    il.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::source_span(il.node(callee).span),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Promise"),
-        }),
+        },
         EvidenceStatus::Asserted,
-        vec![],
+        &[],
+        Lang::JavaScript,
     ));
     il.evidence.push(evidence_with_dependencies(
         1,
@@ -67,14 +68,15 @@ fn push_promise_resolve_dependencies(il: &mut Il, callee: NodeId, promise: NodeI
         EvidenceStatus::Asserted,
         vec![EvidenceId(0)],
     ));
-    il.evidence.push(evidence_with_dependencies(
+    il.evidence.push(language_core_symbol_record(
         2,
         EvidenceAnchor::node(il.node(promise).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Promise"),
-        }),
+        },
         EvidenceStatus::Asserted,
-        vec![],
+        &[],
+        Lang::JavaScript,
     ));
 }
 

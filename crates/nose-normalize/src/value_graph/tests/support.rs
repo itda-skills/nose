@@ -112,6 +112,31 @@ pub(super) fn language_core_evidence_with_dependencies(
     }
 }
 
+pub(super) fn language_core_symbol_evidence(
+    id: u32,
+    lang: Lang,
+    anchor: EvidenceAnchor,
+    symbol: SymbolEvidenceKind,
+) -> EvidenceRecord {
+    language_core_symbol_evidence_with_dependencies(id, lang, anchor, symbol, Vec::new())
+}
+
+pub(super) fn language_core_symbol_evidence_with_dependencies(
+    id: u32,
+    lang: Lang,
+    anchor: EvidenceAnchor,
+    symbol: SymbolEvidenceKind,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    language_core_evidence_with_dependencies(
+        id,
+        lang,
+        anchor,
+        EvidenceKind::Symbol(symbol),
+        dependencies,
+    )
+}
+
 pub(super) fn rust_option_evidence_with_dependencies(
     id: u32,
     anchor: EvidenceAnchor,
@@ -143,10 +168,10 @@ pub(super) fn imported_binding_symbol(module: &str, exported: &str) -> EvidenceK
     })
 }
 
-pub(super) fn imported_namespace_symbol_kind(module: &str) -> EvidenceKind {
-    EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+pub(super) fn imported_namespace_symbol_kind(module: &str) -> SymbolEvidenceKind {
+    SymbolEvidenceKind::ImportedNamespace {
         module_hash: stable_symbol_hash(module),
-    })
+    }
 }
 
 pub(super) fn push_imported_binding_use(
@@ -181,17 +206,20 @@ pub(super) fn push_imported_namespace_use(
     module: &str,
 ) {
     let symbol = imported_namespace_symbol_kind(module);
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         binding_id,
+        il.meta.lang,
         EvidenceAnchor::binding(binding_span, stable_symbol_hash(module)),
         symbol,
     ));
-    il.evidence.push(evidence_with_dependencies(
-        occurrence_id,
-        EvidenceAnchor::node(occurrence_span, NodeKind::Var),
-        symbol,
-        vec![EvidenceId(binding_id)],
-    ));
+    il.evidence
+        .push(language_core_symbol_evidence_with_dependencies(
+            occurrence_id,
+            il.meta.lang,
+            EvidenceAnchor::node(occurrence_span, NodeKind::Var),
+            symbol,
+            vec![EvidenceId(binding_id)],
+        ));
 }
 
 pub(super) fn collection_sequence_evidence(id: u32, lang: Lang, span: Span) -> EvidenceRecord {

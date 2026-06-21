@@ -28,14 +28,15 @@ fn js_array_from_call_il() -> (Il, Interner, NodeId, NodeId, NodeId) {
 }
 
 fn push_array_from_dependencies(il: &mut Il, callee: NodeId, array: NodeId) {
-    il.evidence.push(evidence_with_dependencies(
+    il.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::source_span(il.node(callee).span),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Array"),
-        }),
+        },
         EvidenceStatus::Asserted,
-        vec![],
+        &[],
+        Lang::JavaScript,
     ));
     il.evidence.push(evidence_with_dependencies(
         1,
@@ -46,14 +47,15 @@ fn push_array_from_dependencies(il: &mut Il, callee: NodeId, array: NodeId) {
         EvidenceStatus::Asserted,
         vec![EvidenceId(0)],
     ));
-    il.evidence.push(evidence_with_dependencies(
+    il.evidence.push(language_core_symbol_record(
         2,
         EvidenceAnchor::node(il.node(array).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Array"),
-        }),
+        },
         EvidenceStatus::Asserted,
-        vec![],
+        &[],
+        Lang::JavaScript,
     ));
 }
 

@@ -22,6 +22,15 @@ use nose_semantics::{
     FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
 };
 
+fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    EvidenceProvenance {
+        emitter: EvidenceEmitter::FirstParty,
+        pack_hash: Some(stable_symbol_hash(pack_id)),
+        rule_hash: Some(stable_symbol_hash(producer_id)),
+    }
+}
+
 fn run_admitted_unit(mut il: Il, root: NodeId, args: &[Value]) -> Option<Behavior> {
     admit_test_builtin_calls(&mut il);
     let interner = Interner::new();
@@ -110,8 +119,12 @@ fn admit_test_builtin_calls(il: &mut Il) {
                 test_free_function_builtin_contract(il.meta.lang, builtin, source_arg_count)
             {
                 let symbol_id = EvidenceId(next_id);
-                il.evidence
-                    .push(test_symbol_record(next_id, span, contract.result.name));
+                il.evidence.push(test_symbol_record(
+                    next_id,
+                    il.meta.lang,
+                    span,
+                    contract.result.name,
+                ));
                 next_id += 1;
                 (
                     contract.id,
@@ -242,9 +255,9 @@ fn test_method_builtin_dependencies(
     let LibraryApiCalleeContract::Method { receiver, .. } = contract.callee else {
         return None;
     };
-    let id = EvidenceId(*next_id);
     match receiver {
         MethodReceiverContract::ExactOption | MethodReceiverContract::RustMapGetOrExactOption => {
+            let id = EvidenceId(*next_id);
             let receiver_node = il.children(node).first().copied()?;
             il.evidence.push(test_domain_record(
                 *next_id,
@@ -252,18 +265,31 @@ fn test_method_builtin_dependencies(
                 receiver_node,
                 DomainEvidence::Option,
             ));
+            *next_id += 1;
+            Some(vec![id])
         }
         MethodReceiverContract::ImportedNamespace(module) => {
-            il.evidence.push(test_imported_namespace_record(
+            let binding_id = EvidenceId(*next_id);
+            il.evidence.push(test_imported_namespace_binding_record(
                 *next_id,
+                il.meta.lang,
                 il.node(node).span,
                 module,
             ));
+            *next_id += 1;
+            let occurrence_id = EvidenceId(*next_id);
+            il.evidence.push(test_imported_namespace_record(
+                *next_id,
+                il.meta.lang,
+                il.node(node).span,
+                module,
+                binding_id,
+            ));
+            *next_id += 1;
+            Some(vec![occurrence_id])
         }
         _ => return None,
     }
-    *next_id += 1;
-    Some(vec![id])
 }
 
 fn test_callee_contract() -> LibraryApiCalleeContract {
@@ -328,35 +354,51 @@ fn test_domain_record(id: u32, il: &Il, node: NodeId, domain: DomainEvidence) ->
     }
 }
 
-fn test_imported_namespace_record(id: u32, span: Span, module: &str) -> EvidenceRecord {
+fn test_imported_namespace_binding_record(
+    id: u32,
+    lang: Lang,
+    span: Span,
+    module: &str,
+) -> EvidenceRecord {
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor: EvidenceAnchor::binding(span, stable_symbol_hash(module)),
+        kind: EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+            module_hash: stable_symbol_hash(module),
+        }),
+        provenance: language_core_provenance(lang),
+        dependencies: Vec::new(),
+        status: EvidenceStatus::Asserted,
+    }
+}
+
+fn test_imported_namespace_record(
+    id: u32,
+    lang: Lang,
+    span: Span,
+    module: &str,
+    binding_id: EvidenceId,
+) -> EvidenceRecord {
     EvidenceRecord {
         id: EvidenceId(id),
         anchor: EvidenceAnchor::node(span, NodeKind::Var),
         kind: EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
             module_hash: stable_symbol_hash(module),
         }),
-        provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
-            rule_hash: Some(stable_symbol_hash("interp-test")),
-        },
-        dependencies: Vec::new(),
+        provenance: language_core_provenance(lang),
+        dependencies: vec![binding_id],
         status: EvidenceStatus::Asserted,
     }
 }
 
-fn test_symbol_record(id: u32, span: Span, name: &str) -> EvidenceRecord {
+fn test_symbol_record(id: u32, lang: Lang, span: Span, name: &str) -> EvidenceRecord {
     EvidenceRecord {
         id: EvidenceId(id),
         anchor: EvidenceAnchor::node(span, NodeKind::Var),
         kind: EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash(name),
         }),
-        provenance: EvidenceProvenance {
-            emitter: EvidenceEmitter::FirstParty,
-            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
-            rule_hash: Some(stable_symbol_hash("interp-test")),
-        },
+        provenance: language_core_provenance(lang),
         dependencies: Vec::new(),
         status: EvidenceStatus::Asserted,
     }

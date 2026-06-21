@@ -77,12 +77,13 @@ pub(super) fn push_rust_hash_map_library_api_evidence(il: &mut Il) {
         library_free_name_map_factory_contract(Lang::Rust, "std::collections::HashMap::from")
             .expect("Rust HashMap::from contract");
     let symbol_id = next_evidence_id(il);
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         symbol_id,
+        Lang::Rust,
         EvidenceAnchor::node(sp(), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("std::collections::HashMap::from"),
-        }),
+        },
         EvidenceStatus::Asserted,
     ));
     let api_id = next_evidence_id(il);

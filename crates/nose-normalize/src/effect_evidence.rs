@@ -345,13 +345,14 @@ mod tests {
         let (mut il, append) = append_il();
         let contract =
             library_free_function_builtin_contract(Lang::Go, "append", 2).expect("Go append");
+        let (pack_id, producer_id) = language_core_evidence_provenance(Lang::Go);
         let symbol = il.find_or_push_first_party_evidence(
             EvidenceAnchor::node(il.node(append).span, NodeKind::Var),
             EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
                 name_hash: stable_symbol_hash("append"),
             }),
-            FIRST_PARTY_PACK_ID,
-            "test_go_append_symbol",
+            pack_id,
+            producer_id,
             Vec::new(),
         );
         let api = il.find_or_push_first_party_evidence(
@@ -379,13 +380,14 @@ mod tests {
         let (mut il, append) = append_il();
         let contract =
             library_free_function_builtin_contract(Lang::Go, "append", 2).expect("Go append");
+        let (pack_id, producer_id) = language_core_evidence_provenance(Lang::Go);
         let symbol = il.find_or_push_first_party_evidence(
             EvidenceAnchor::node(il.node(append).span, NodeKind::Var),
             EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
                 name_hash: stable_symbol_hash("append"),
             }),
-            FIRST_PARTY_PACK_ID,
-            "test_go_append_symbol",
+            pack_id,
+            producer_id,
             Vec::new(),
         );
         let api = il.find_or_push_first_party_evidence(

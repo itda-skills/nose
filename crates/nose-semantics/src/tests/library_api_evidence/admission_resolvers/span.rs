@@ -262,13 +262,15 @@ fn admitted_span_rust_std_map_factory_requires_pack_provenance() {
         receiver_span: None,
         arg_count: 1,
     };
-    wrong_pack.evidence.push(evidence(
+    wrong_pack.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_pack.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("std::collections::HashMap::from"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_pack.evidence.push(library_api_record_with_provenance(
         1,
@@ -295,13 +297,15 @@ fn admitted_span_rust_std_map_factory_requires_pack_provenance() {
         receiver_span: None,
         arg_count: 1,
     };
-    wrong_producer.evidence.push(evidence(
+    wrong_producer.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_producer.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("std::collections::HashMap::from"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_producer
         .evidence
@@ -333,13 +337,15 @@ fn admitted_span_rust_std_map_factory_requires_pack_provenance() {
         receiver_span: None,
         arg_count: 1,
     };
-    admitted.evidence.push(evidence(
+    admitted.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(admitted.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("std::collections::HashMap::from"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     admitted.evidence.push(rust_stdlib_map_factory_record(
         1,

@@ -62,7 +62,6 @@ use evidence::{
 pub use free_builtins::*;
 pub use guard_evidence::*;
 pub use import_facts::*;
-pub(crate) use language_profile::js_like_lang;
 pub use language_profile::{
     builtin_language_pack_id, is_builtin_language_pack_hash, language_core_evidence_provenance,
     language_source_fact_provenance, semantics, LanguageProfile, CSS_LANGUAGE_CORE_PRODUCER_ID,
@@ -78,6 +77,7 @@ pub use language_profile::{
     RUST_SOURCE_FACT_PRODUCER_ID, SWIFT_LANGUAGE_CORE_PRODUCER_ID, SWIFT_LANGUAGE_PACK_ID,
     SWIFT_SOURCE_FACT_PRODUCER_ID,
 };
+pub(crate) use language_profile::{js_like_lang, language_core_evidence_provenance_hashes};
 pub use library_api::*;
 use library_api::{
     language_core_builtin_at_call, library_api_dependency_id_for_normalized_hof,
@@ -109,10 +109,11 @@ pub use symbol_identity::{
     qualified_global_symbol_at_span,
 };
 use symbol_identity::{
-    assignment_alias_hash, assignment_parts, binding_identity_matches, literal_string_hash,
-    node_name, node_name_hash, qualified_global_dependency_valid,
-    qualified_global_symbol_at_evidence_anchor, qualified_global_symbol_record_valid,
-    symbol_evidence_at_node_anchor, top_level_statements, unit_defines_hash,
+    assignment_alias_hash, assignment_parts, binding_identity_matches,
+    language_core_symbol_identity_at_anchor_matches, literal_string_hash, node_name,
+    node_name_hash, qualified_global_dependency_valid, qualified_global_symbol_at_evidence_anchor,
+    qualified_global_symbol_record_valid, symbol_evidence_at_node_anchor,
+    symbol_record_has_admitted_provenance, top_level_statements, unit_defines_hash,
     unit_defines_hash_visible_at,
 };
 pub use type_domain::{

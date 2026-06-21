@@ -22,12 +22,13 @@ fn free_name_collection_factory_value_graph_requires_library_api_evidence() {
     let mut il = finish_test_il(b, root, Lang::Python);
     il.evidence
         .push(collection_sequence_evidence(0, Lang::Python, sp(22)));
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         1,
+        Lang::Python,
         EvidenceAnchor::node(sp(20), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("list"),
-        }),
+        },
     ));
     assert!(
         eval_proven_collection_op(&il, &interner, call).is_none(),
@@ -68,12 +69,13 @@ fn free_name_minmax_value_graph_requires_library_api_evidence() {
     );
     let root = b.add(NodeKind::Block, Payload::None, sp(23), &[call]);
     let mut il = finish_test_il(b, root, Lang::Python);
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         0,
+        Lang::Python,
         EvidenceAnchor::node(sp(24), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("min"),
-        }),
+        },
     ));
     assert!(
         !matches!(eval_op(&il, &interner, call), ValOp::Bin(op) if op == MIN_CODE),
@@ -204,12 +206,13 @@ fn rust_some_wildcard_pattern_value_graph_requires_library_api_and_source_patter
 
     let contract = library_rust_option_some_constructor_contract(Lang::Rust, "Some", 1)
         .expect("Rust Some contract");
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         1,
+        Lang::Rust,
         EvidenceAnchor::node(sp(168), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Some"),
-        }),
+        },
     ));
     il.evidence.push(rust_option_evidence_with_dependencies(
         2,
@@ -296,12 +299,13 @@ fn rust_option_none_pattern_value_graph_requires_library_api_evidence() {
     );
 
     let contract = library_rust_option_none_sentinel_contract(Lang::Rust, "None").unwrap();
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         0,
+        Lang::Rust,
         EvidenceAnchor::node(sp(172), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("None"),
-        }),
+        },
     ));
     il.evidence.push(rust_option_evidence_with_dependencies(
         1,

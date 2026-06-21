@@ -146,9 +146,30 @@ pub fn library_api_dependency_id_for_canonical_builtin_call(
     call: NodeId,
     builtin: Builtin,
 ) -> Option<EvidenceId> {
-    library_api_dependency_id_for_canonical_builtin_call_contract(il, call, |record, id, _, _| {
-        library_api_record_models_canonical_builtin(il, call, record, id, builtin)
-    })
+    library_api_dependency_id_for_canonical_builtin_call_contract(
+        il,
+        None,
+        call,
+        |record, id, _, _| {
+            library_api_record_models_canonical_builtin(il, call, record, id, builtin)
+        },
+    )
+}
+
+pub fn library_api_dependency_id_for_canonical_builtin_call_with_interner(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+    builtin: Builtin,
+) -> Option<EvidenceId> {
+    library_api_dependency_id_for_canonical_builtin_call_contract(
+        il,
+        Some(interner),
+        call,
+        |record, id, _, _| {
+            library_api_record_models_canonical_builtin(il, call, record, id, builtin)
+        },
+    )
 }
 
 pub fn library_api_dependency_id_for_canonical_builtin_method_call(
@@ -160,6 +181,27 @@ pub fn library_api_dependency_id_for_canonical_builtin_method_call(
 ) -> Option<EvidenceId> {
     library_api_dependency_id_for_canonical_builtin_call_contract(
         il,
+        None,
+        call,
+        |record, id, callee, arity| {
+            library_api_record_models_canonical_builtin(il, call, record, id, builtin)
+                && callee == Some(expected_callee)
+                && arity == expected_arity
+        },
+    )
+}
+
+pub fn library_api_dependency_id_for_canonical_builtin_method_call_with_interner(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+    builtin: Builtin,
+    expected_callee: LibraryApiCalleeContract,
+    expected_arity: u16,
+) -> Option<EvidenceId> {
+    library_api_dependency_id_for_canonical_builtin_call_contract(
+        il,
+        Some(interner),
         call,
         |record, id, callee, arity| {
             library_api_record_models_canonical_builtin(il, call, record, id, builtin)
@@ -171,6 +213,7 @@ pub fn library_api_dependency_id_for_canonical_builtin_method_call(
 
 pub(in crate::library_api) fn library_api_dependency_id_for_canonical_builtin_call_contract(
     il: &Il,
+    interner: Option<&Interner>,
     call: NodeId,
     accepts: impl Fn(
         &EvidenceRecord,
@@ -184,6 +227,7 @@ pub(in crate::library_api) fn library_api_dependency_id_for_canonical_builtin_ca
     }
     let span = il.node(call).span;
     let mut found = None;
+    let mut imported_occurrence_cache = ImportedOccurrenceValidationCache::default();
     for record in il.evidence_anchored_at(span) {
         if !matches!(
             record.anchor,
@@ -206,7 +250,15 @@ pub(in crate::library_api) fn library_api_dependency_id_for_canonical_builtin_ca
             continue;
         };
         let callee = library_api_callee_contract_for_hash(il.meta.lang, id, callee_hash);
-        if !canonical_record_provenance_and_dependencies_match(il, call, record, id, callee) {
+        if !canonical_record_provenance_and_dependencies_match(
+            il,
+            interner,
+            &mut imported_occurrence_cache,
+            call,
+            record,
+            id,
+            callee,
+        ) {
             return None;
         }
         if !accepts(record, id, callee, arity) {
@@ -226,6 +278,8 @@ pub(in crate::library_api) fn library_api_dependency_id_for_canonical_builtin_ca
 
 fn canonical_record_provenance_and_dependencies_match(
     il: &Il,
+    interner: Option<&Interner>,
+    imported_occurrence_cache: &mut ImportedOccurrenceValidationCache,
     call: NodeId,
     record: &EvidenceRecord,
     id: LibraryApiContractId,
@@ -269,7 +323,15 @@ fn canonical_record_provenance_and_dependencies_match(
             LibraryApiCalleeContract::FreeName { name, .. },
         ) => canonical_record_has_unshadowed_symbol_dependency(il, call, record, name),
         (LibraryApiContractId::MethodCall(_), LibraryApiCalleeContract::Method { .. }) => {
-            canonical_method_call_record_dependencies_match(il, call, record, id, callee)
+            canonical_method_call_record_dependencies_match(
+                il,
+                interner,
+                imported_occurrence_cache,
+                call,
+                record,
+                id,
+                callee,
+            )
         }
         _ => true,
     }
@@ -306,9 +368,15 @@ fn canonical_record_has_unshadowed_symbol_dependency(
         };
         dependency.status == EvidenceStatus::Asserted
             && dependency.kind == EvidenceKind::Symbol(expected)
+            && symbol_record_has_admitted_provenance(il, dependency)
+            && il.evidence_dependencies_asserted(dependency)
             && span.file == call_span.file
             && span.start_byte == call_span.start_byte
             && span.end_byte <= call_span.end_byte
+            && matches!(
+                language_core_symbol_identity_at_anchor_matches(il, span, NodeKind::Var, expected),
+                EvidenceResolution::Found(true)
+            )
     })
 }
 
@@ -429,6 +497,8 @@ fn library_api_method_call_record_contract(
 
 fn canonical_method_call_record_dependencies_match(
     il: &Il,
+    interner: Option<&Interner>,
+    imported_occurrence_cache: &mut ImportedOccurrenceValidationCache,
     call: NodeId,
     record: &EvidenceRecord,
     id: LibraryApiContractId,
@@ -441,7 +511,14 @@ fn canonical_method_call_record_dependencies_match(
     let Some(contract) = library_api_method_call_record_contract(il, id, callee, arity) else {
         return false;
     };
-    method_call_receiver_dependencies_match(il, call, record, contract)
+    method_call_receiver_dependencies_match(
+        il,
+        interner,
+        imported_occurrence_cache,
+        call,
+        record,
+        contract,
+    )
 }
 
 fn normalized_hof_method_call_dependencies_match(
@@ -458,6 +535,8 @@ fn normalized_hof_method_call_dependencies_match(
 
 fn method_call_receiver_dependencies_match(
     il: &Il,
+    interner: Option<&Interner>,
+    imported_occurrence_cache: &mut ImportedOccurrenceValidationCache,
     call: NodeId,
     record: &EvidenceRecord,
     contract: LibraryMethodCallContract,
@@ -467,7 +546,17 @@ fn method_call_receiver_dependencies_match(
             canonical_record_has_unshadowed_symbol_dependency(il, call, record, name)
         }
         MethodReceiverContract::ImportedNamespace(module) => {
-            canonical_record_has_imported_namespace_dependency(il, record, module)
+            let Some(interner) = interner else {
+                return false;
+            };
+            canonical_record_has_imported_namespace_dependency(
+                il,
+                interner,
+                imported_occurrence_cache,
+                call,
+                record,
+                module,
+            )
         }
         receiver => {
             let Some(receiver_node) =
@@ -578,25 +667,44 @@ fn library_api_record_depends_on_normalized_hof(
 
 fn canonical_record_has_imported_namespace_dependency(
     il: &Il,
+    interner: &Interner,
+    imported_occurrence_cache: &mut ImportedOccurrenceValidationCache,
+    call: NodeId,
     record: &EvidenceRecord,
     module: &str,
 ) -> bool {
-    let expected = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+    let call_span = il.node(call).span;
+    let expected = SymbolEvidenceKind::ImportedNamespace {
         module_hash: stable_symbol_hash(module),
-    });
+    };
     record.dependencies.iter().any(|&id| {
         let Some(dependency) = il.evidence_record_by_id(id) else {
             return false;
         };
+        let EvidenceAnchor::Node {
+            span,
+            kind: NodeKind::Var,
+        } = dependency.anchor
+        else {
+            return false;
+        };
         dependency.status == EvidenceStatus::Asserted
             && il.evidence_dependencies_asserted(dependency)
-            && dependency.kind == expected
+            && dependency.kind == EvidenceKind::Symbol(expected)
+            && symbol_record_has_admitted_provenance(il, dependency)
+            && span.file == call_span.file
+            && span.start_byte == call_span.start_byte
+            && span.end_byte <= call_span.end_byte
             && matches!(
-                dependency.anchor,
-                EvidenceAnchor::Node {
-                    kind: NodeKind::Var,
-                    ..
-                }
+                language_core_symbol_identity_at_anchor_matches(il, span, NodeKind::Var, expected),
+                EvidenceResolution::Found(true)
+            )
+            && imported_occurrence_symbol_dependencies_valid_with_cache(
+                il,
+                interner,
+                dependency,
+                expected,
+                imported_occurrence_cache,
             )
     })
 }

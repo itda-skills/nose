@@ -7,7 +7,7 @@ pub(super) fn strict_exact_safe_call(
     node: NodeId,
 ) -> bool {
     if let Payload::Builtin(builtin) = il.node(node).payload {
-        if !admitted_builtin_semantics_at_call(il, node, builtin) {
+        if !admitted_builtin_semantics_at_call_with_interner(il, interner, node, builtin) {
             return false;
         }
         let kids = il.children(node);

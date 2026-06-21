@@ -65,6 +65,16 @@ pub(super) fn language_core_evidence(
     }
 }
 
+pub(super) fn language_core_symbol_evidence(
+    id: u32,
+    lang: Lang,
+    anchor: EvidenceAnchor,
+    symbol: SymbolEvidenceKind,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    language_core_evidence(id, lang, anchor, EvidenceKind::Symbol(symbol), dependencies)
+}
+
 pub(super) fn sequence_surface_evidence(
     id: u32,
     lang: Lang,
@@ -269,12 +279,13 @@ pub(super) fn js_new_set_il(interner: &Interner) -> (Il, NodeId) {
         EvidenceKind::Source(SourceFactKind::Call(SourceCallKind::Construct)),
         Vec::new(),
     ));
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         1,
+        Lang::JavaScript,
         EvidenceAnchor::node(sp(10), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Set"),
-        }),
+        },
         Vec::new(),
     ));
     il.evidence.push(sequence_surface_evidence(

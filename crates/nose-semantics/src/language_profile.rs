@@ -77,6 +77,51 @@ pub fn language_core_evidence_provenance(lang: Lang) -> (&'static str, &'static 
     }
 }
 
+pub(crate) fn language_core_evidence_provenance_hashes(lang: Lang) -> (u64, u64) {
+    match lang {
+        Lang::Python => (
+            stable_symbol_hash(PYTHON_LANGUAGE_PACK_ID),
+            stable_symbol_hash(PYTHON_LANGUAGE_CORE_PRODUCER_ID),
+        ),
+        Lang::JavaScript | Lang::TypeScript => (
+            stable_symbol_hash(JS_TS_LANGUAGE_PACK_ID),
+            stable_symbol_hash(JS_TS_LANGUAGE_CORE_PRODUCER_ID),
+        ),
+        Lang::Go => (
+            stable_symbol_hash(GO_LANGUAGE_PACK_ID),
+            stable_symbol_hash(GO_LANGUAGE_CORE_PRODUCER_ID),
+        ),
+        Lang::Rust => (
+            stable_symbol_hash(RUST_LANGUAGE_PACK_ID),
+            stable_symbol_hash(RUST_LANGUAGE_CORE_PRODUCER_ID),
+        ),
+        Lang::Java => (
+            stable_symbol_hash(JAVA_LANGUAGE_PACK_ID),
+            stable_symbol_hash(JAVA_LANGUAGE_CORE_PRODUCER_ID),
+        ),
+        Lang::C => (
+            stable_symbol_hash(C_LANGUAGE_PACK_ID),
+            stable_symbol_hash(C_LANGUAGE_CORE_PRODUCER_ID),
+        ),
+        Lang::Ruby => (
+            stable_symbol_hash(RUBY_LANGUAGE_PACK_ID),
+            stable_symbol_hash(RUBY_LANGUAGE_CORE_PRODUCER_ID),
+        ),
+        Lang::Swift => (
+            stable_symbol_hash(SWIFT_LANGUAGE_PACK_ID),
+            stable_symbol_hash(SWIFT_LANGUAGE_CORE_PRODUCER_ID),
+        ),
+        Lang::Css => (
+            stable_symbol_hash(CSS_LANGUAGE_PACK_ID),
+            stable_symbol_hash(CSS_LANGUAGE_CORE_PRODUCER_ID),
+        ),
+        Lang::Vue | Lang::Svelte | Lang::Html => (
+            stable_symbol_hash(HTML_EMBEDDED_LANGUAGE_PACK_ID),
+            stable_symbol_hash(HTML_EMBEDDED_LANGUAGE_CORE_PRODUCER_ID),
+        ),
+    }
+}
+
 pub fn builtin_language_pack_id(lang: Lang) -> &'static str {
     match lang {
         Lang::Python => PYTHON_LANGUAGE_PACK_ID,

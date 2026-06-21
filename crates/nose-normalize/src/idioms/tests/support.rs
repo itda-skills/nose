@@ -80,6 +80,16 @@ pub(super) fn language_core_evidence(
     }
 }
 
+pub(super) fn language_core_symbol_evidence(
+    id: u32,
+    lang: Lang,
+    anchor: EvidenceAnchor,
+    symbol: SymbolEvidenceKind,
+    status: EvidenceStatus,
+) -> EvidenceRecord {
+    language_core_evidence(id, lang, anchor, EvidenceKind::Symbol(symbol), status)
+}
+
 pub(super) fn sequence_surface_evidence(
     id: u32,
     lang: Lang,
@@ -259,12 +269,13 @@ pub(super) fn push_free_function_builtin_library_api_evidence(
     let name = interner.resolve(symbol);
     let contract = library_free_function_builtin_contract(il.meta.lang, name, arg_count)?;
     let symbol_id = next_evidence_id(il);
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         symbol_id,
+        il.meta.lang,
         EvidenceAnchor::node(callee_span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash(name),
-        }),
+        },
         EvidenceStatus::Asserted,
     ));
     let id = next_evidence_id(il);

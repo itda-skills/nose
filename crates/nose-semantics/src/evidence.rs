@@ -596,6 +596,19 @@ pub fn admitted_builtin_semantics_at_call(il: &Il, node: NodeId, builtin: Builti
         || library_api_dependency_id_for_canonical_builtin_call(il, node, builtin).is_some()
 }
 
+pub fn admitted_builtin_semantics_at_call_with_interner(
+    il: &Il,
+    interner: &Interner,
+    node: NodeId,
+    builtin: Builtin,
+) -> bool {
+    admitted_builtin_semantics_at_call(il, node, builtin)
+        || library_api_dependency_id_for_canonical_builtin_call_with_interner(
+            il, interner, node, builtin,
+        )
+        .is_some()
+}
+
 pub fn construct_syntax_proof(il: &Il, node: NodeId) -> bool {
     source_call_at_node(il, node) == Some(SourceCallKind::Construct)
 }

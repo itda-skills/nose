@@ -74,12 +74,13 @@ fn strict_exact_raw_builtin_payload_requires_admission() {
 
     let contract = library_free_function_builtin_contract(Lang::Python, "abs", 1)
         .expect("Python abs contract");
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         0,
+        Lang::Python,
         EvidenceAnchor::node(sp(72), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("abs"),
-        }),
+        },
         Vec::new(),
     ));
     il.evidence.push(library_api_contract_evidence(
@@ -107,12 +108,13 @@ fn function_binding_safe_raw_builtin_payload_requires_admission() {
 
     let contract = library_free_function_builtin_contract(Lang::Python, "abs", 1)
         .expect("Python abs contract");
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         0,
+        Lang::Python,
         EvidenceAnchor::node(sp(72), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("abs"),
-        }),
+        },
         Vec::new(),
     ));
     il.evidence.push(library_api_contract_evidence(

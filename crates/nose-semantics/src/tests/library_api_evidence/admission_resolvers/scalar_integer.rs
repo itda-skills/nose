@@ -71,13 +71,15 @@ fn java_math_call_il(method: &str, arg_count: usize) -> (Il, Interner, NodeId, N
 }
 
 fn push_java_math_receiver_dependency(il: &mut Il, math: NodeId) {
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(il.node(math).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Math"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Java,
     ));
 }
 
@@ -336,6 +338,38 @@ fn admitted_java_scalar_integer_method_requires_math_builtin_pack_provenance() {
     assert_admitted_java_math_method("abs", 1, ScalarIntegerMethod::Abs);
     assert_admitted_java_math_method("min", 2, ScalarIntegerMethod::Min);
     assert_admitted_java_math_method("max", 2, ScalarIntegerMethod::Max);
+}
+
+#[test]
+fn java_math_receiver_dependency_rejects_conflicting_symbol_identity() {
+    let (mut il, interner, call, math) = java_math_call_il("abs", 1);
+    push_java_math_receiver_dependency(&mut il, math);
+    let arg_dependencies = push_java_math_arg_dependencies(&mut il, call, 1);
+    let contract = library_scalar_integer_method_contract(Lang::Java, "abs", 1)
+        .expect("Java Math.abs contract");
+    assert_eq!(
+        library_api_receiver_dependencies_for_call(&il, &interner, call, contract.callee),
+        Some(
+            std::iter::once(EvidenceId(0))
+                .chain(arg_dependencies.iter().copied().map(EvidenceId))
+                .collect()
+        )
+    );
+
+    il.evidence.push(language_core_symbol_record(
+        9,
+        EvidenceAnchor::node(il.node(math).span, NodeKind::Var),
+        SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("NotMath"),
+        },
+        EvidenceStatus::Asserted,
+        &[],
+        Lang::Java,
+    ));
+    assert!(
+        library_api_receiver_dependencies_for_call(&il, &interner, call, contract.callee).is_none(),
+        "conflicting same-anchor language-core symbol evidence must close receiver dependency generation"
+    );
 }
 
 #[test]

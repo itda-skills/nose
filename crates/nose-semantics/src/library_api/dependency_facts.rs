@@ -119,13 +119,15 @@ pub(in crate::library_api) fn require_dependency_has_unshadowed_require(
         dependency.id == *id
             && dependency.status == EvidenceStatus::Asserted
             && dependency.kind == EvidenceKind::Symbol(expected)
+            && symbol_record_has_admitted_provenance(il, dependency)
+            && il.evidence_dependencies_asserted(dependency)
             && span.file == require_span.file
             && span.start_byte >= require_span.start_byte
             && span.end_byte <= require_span.end_byte
             && !file_defines_name_visible_at(il, interner, "require", span)
             && matches!(
-                symbol_evidence_at_node_anchor(il, span, NodeKind::Var),
-                EvidenceResolution::Found(actual) if actual == expected
+                language_core_symbol_identity_at_anchor_matches(il, span, NodeKind::Var, expected),
+                EvidenceResolution::Found(true)
             )
     })
 }
@@ -152,16 +154,16 @@ pub(in crate::library_api) fn dependency_has_unshadowed_global_anchor(
         name_hash: stable_symbol_hash(expected),
     };
     if !matches!(
-        symbol_evidence_at_node_anchor(il, span, kind),
-        EvidenceResolution::Found(actual) if actual == expected_kind
+        language_core_symbol_identity_at_anchor_matches(il, span, kind, expected_kind),
+        EvidenceResolution::Found(true)
     ) {
         return false;
     }
-    dependency_has_asserted_record(
+    dependency_has_admitted_symbol_record(
         il,
         record,
         EvidenceAnchor::node(span, kind),
-        EvidenceKind::Symbol(expected_kind),
+        expected_kind,
     )
 }
 
@@ -321,19 +323,28 @@ pub(in crate::library_api) fn dependency_has_imported_symbol_dependency(
     record: &EvidenceRecord,
     expected: SymbolEvidenceKind,
 ) -> bool {
+    let requires_admitted_record = matches!(expected, SymbolEvidenceKind::ImportedNamespace { .. });
     record.dependencies.iter().any(|&id| {
         let Some(dependency) = il.evidence_record_by_id(id) else {
             return false;
         };
+        let EvidenceAnchor::Node {
+            span,
+            kind: NodeKind::Var,
+        } = dependency.anchor
+        else {
+            return false;
+        };
+        let dependency_anchor_matches = !requires_admitted_record
+            || matches!(
+                language_core_symbol_identity_at_anchor_matches(il, span, NodeKind::Var, expected),
+                EvidenceResolution::Found(true)
+            );
         dependency.status == EvidenceStatus::Asserted
             && dependency.kind == EvidenceKind::Symbol(expected)
-            && matches!(
-                dependency.anchor,
-                EvidenceAnchor::Node {
-                    kind: NodeKind::Var,
-                    ..
-                }
-            )
+            && (!requires_admitted_record || symbol_record_has_admitted_provenance(il, dependency))
+            && (!requires_admitted_record || il.evidence_dependencies_asserted(dependency))
+            && dependency_anchor_matches
             && imported_occurrence_symbol_dependencies_valid(il, interner, dependency, expected)
     })
 }
@@ -349,7 +360,16 @@ pub(in crate::library_api) fn dependency_has_imported_symbol_anchor(
     if kind != NodeKind::Var {
         return false;
     }
-    if !matches!(
+    let anchor = EvidenceAnchor::node(span, kind);
+    let requires_admitted_record = matches!(expected, SymbolEvidenceKind::ImportedNamespace { .. });
+    if requires_admitted_record {
+        if !matches!(
+            language_core_symbol_identity_at_anchor_matches(il, span, kind, expected),
+            EvidenceResolution::Found(true)
+        ) {
+            return false;
+        }
+    } else if !matches!(
         symbol_evidence_at_node_anchor(il, span, kind),
         EvidenceResolution::Found(actual) if actual == expected
     ) {
@@ -357,14 +377,33 @@ pub(in crate::library_api) fn dependency_has_imported_symbol_anchor(
     }
     let Some(symbol_record) = record.dependencies.iter().find_map(|&id| {
         let dependency = il.evidence_record_by_id(id)?;
-        (dependency.anchor == EvidenceAnchor::node(span, kind)
+        (dependency.anchor == anchor
             && dependency.status == EvidenceStatus::Asserted
-            && dependency.kind == EvidenceKind::Symbol(expected))
+            && dependency.kind == EvidenceKind::Symbol(expected)
+            && (!requires_admitted_record || symbol_record_has_admitted_provenance(il, dependency))
+            && (!requires_admitted_record || il.evidence_dependencies_asserted(dependency)))
         .then_some(dependency)
     }) else {
         return false;
     };
     imported_occurrence_symbol_dependencies_valid(il, interner, symbol_record, expected)
+}
+
+fn dependency_has_admitted_symbol_record(
+    il: &Il,
+    record: &EvidenceRecord,
+    anchor: EvidenceAnchor,
+    symbol: SymbolEvidenceKind,
+) -> bool {
+    record.dependencies.iter().any(|&id| {
+        il.evidence_record_by_id(id).is_some_and(|dependency| {
+            dependency.anchor == anchor
+                && dependency.status == EvidenceStatus::Asserted
+                && dependency.kind == EvidenceKind::Symbol(symbol)
+                && symbol_record_has_admitted_provenance(il, dependency)
+                && il.evidence_dependencies_asserted(dependency)
+        })
+    })
 }
 
 pub(in crate::library_api) fn dependency_has_asserted_record(

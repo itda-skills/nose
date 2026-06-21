@@ -15,7 +15,9 @@ pub(in crate::library_api) use api_records::{
 };
 pub use api_records::{
     library_api_dependency_id_for_canonical_builtin_call,
+    library_api_dependency_id_for_canonical_builtin_call_with_interner,
     library_api_dependency_id_for_canonical_builtin_method_call,
+    library_api_dependency_id_for_canonical_builtin_method_call_with_interner,
 };
 pub(in crate::library_api) use domain::{
     domain_dependency_id_for_receiver_requirement, domain_or_sequence_dependency_ids,
@@ -405,10 +407,25 @@ pub(in crate::library_api) fn symbol_dependency_id_for_node(
     expected: SymbolEvidenceKind,
 ) -> Option<EvidenceId> {
     let anchor = EvidenceAnchor::node(il.node(node).span, il.kind(node));
+    let requires_admitted_record = matches!(expected, SymbolEvidenceKind::UnshadowedGlobal { .. });
+    if requires_admitted_record
+        && !matches!(
+            language_core_symbol_identity_at_anchor_matches(
+                il,
+                il.node(node).span,
+                il.kind(node),
+                expected
+            ),
+            EvidenceResolution::Found(true)
+        )
+    {
+        return None;
+    }
     il.evidence_anchored_at(anchor.span()).find_map(|record| {
         (record.anchor == anchor
             && record.status == EvidenceStatus::Asserted
             && record.kind == EvidenceKind::Symbol(expected)
+            && (!requires_admitted_record || symbol_record_has_admitted_provenance(il, record))
             && il.evidence_dependencies_asserted(record))
         .then_some(record.id)
     })
@@ -421,10 +438,26 @@ pub(in crate::library_api) fn imported_symbol_dependency_id_for_node(
     expected: SymbolEvidenceKind,
 ) -> Option<EvidenceId> {
     let anchor = EvidenceAnchor::node(il.node(node).span, il.kind(node));
+    let requires_admitted_record = matches!(expected, SymbolEvidenceKind::ImportedNamespace { .. });
+    if requires_admitted_record
+        && !matches!(
+            language_core_symbol_identity_at_anchor_matches(
+                il,
+                il.node(node).span,
+                il.kind(node),
+                expected
+            ),
+            EvidenceResolution::Found(true)
+        )
+    {
+        return None;
+    }
     il.evidence_anchored_at(anchor.span()).find_map(|record| {
         (record.anchor == anchor
             && record.status == EvidenceStatus::Asserted
             && record.kind == EvidenceKind::Symbol(expected)
+            && (!requires_admitted_record || symbol_record_has_admitted_provenance(il, record))
+            && (!requires_admitted_record || il.evidence_dependencies_asserted(record))
             && imported_occurrence_symbol_dependencies_valid(il, interner, record, expected))
         .then_some(record.id)
     })

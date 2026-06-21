@@ -249,21 +249,25 @@ fn ruby_set_factory_call_il() -> (Il, Interner, NodeId, NodeId) {
 }
 
 fn push_ruby_set_require_dependencies(il: &mut Il, receiver: NodeId) {
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(il.node(receiver).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Set"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Ruby,
     ));
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_record(
         1,
         EvidenceAnchor::node(sp(70), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("require"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Ruby,
     ));
     il.evidence.push(evidence_with_dependencies(
         2,
@@ -325,22 +329,91 @@ fn python_math_prod_call_il_with_arg_count(arg_count: usize) -> (Il, Interner, N
 }
 
 fn push_python_math_namespace_dependencies(il: &mut Il, receiver: NodeId) {
-    let namespace_symbol = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+    let namespace_symbol = SymbolEvidenceKind::ImportedNamespace {
         module_hash: stable_symbol_hash("math"),
-    });
-    il.evidence.push(evidence(
+    };
+    il.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::binding(sp(66), stable_symbol_hash("math")),
         namespace_symbol,
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Python,
     ));
-    il.evidence.push(evidence_with_dependencies(
+    il.evidence.push(language_core_symbol_record(
         1,
         EvidenceAnchor::node(il.node(receiver).span, NodeKind::Var),
         namespace_symbol,
         EvidenceStatus::Asserted,
-        vec![EvidenceId(0)],
+        &[0],
+        Lang::Python,
     ));
+}
+
+fn go_fmt_println_call_il() -> (Il, Interner, NodeId, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let fmt = b.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern("fmt")),
+        sp(64),
+        &[],
+    );
+    let callee = b.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("Println")),
+        sp(65),
+        &[fmt],
+    );
+    let arg = b.add(NodeKind::Var, Payload::Cid(0), sp(66), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(67), &[callee, arg]);
+    let root = b.add(NodeKind::Func, Payload::None, sp(68), &[call]);
+    (finish_il(b, root, Lang::Go), interner, call, fmt)
+}
+
+#[test]
+fn imported_namespace_receiver_dependency_rejects_conflicting_symbol_identity() {
+    let (mut il, interner, call, fmt) = go_fmt_println_call_il();
+    let contract =
+        library_method_call_contract(Lang::Go, "Println", 1).expect("Go fmt.Println contract");
+    let fmt_symbol = SymbolEvidenceKind::ImportedNamespace {
+        module_hash: stable_symbol_hash("fmt"),
+    };
+    il.evidence.push(language_core_symbol_record(
+        0,
+        EvidenceAnchor::binding(sp(63), stable_symbol_hash("fmt")),
+        fmt_symbol,
+        EvidenceStatus::Asserted,
+        &[],
+        Lang::Go,
+    ));
+    il.evidence.push(language_core_symbol_record(
+        1,
+        EvidenceAnchor::node(il.node(fmt).span, NodeKind::Var),
+        fmt_symbol,
+        EvidenceStatus::Asserted,
+        &[0],
+        Lang::Go,
+    ));
+    assert_eq!(
+        library_api_receiver_dependencies_for_call(&il, &interner, call, contract.callee),
+        Some(vec![EvidenceId(1)])
+    );
+
+    il.evidence.push(language_core_symbol_record(
+        9,
+        EvidenceAnchor::node(il.node(fmt).span, NodeKind::Var),
+        SymbolEvidenceKind::ImportedNamespace {
+            module_hash: stable_symbol_hash("log"),
+        },
+        EvidenceStatus::Asserted,
+        &[],
+        Lang::Go,
+    ));
+    assert!(
+        library_api_receiver_dependencies_for_call(&il, &interner, call, contract.callee).is_none(),
+        "conflicting same-anchor language-core namespace evidence must close receiver dependency generation"
+    );
 }
 
 fn java_arrays_stream_call_il() -> (Il, Interner, NodeId, NodeId) {
@@ -517,13 +590,15 @@ fn push_js_global_constructor_dependencies(il: &mut Il, call: NodeId, callee: No
         EvidenceKind::Source(SourceFactKind::Call(SourceCallKind::Construct)),
         EvidenceStatus::Asserted,
     ));
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_record(
         1,
         EvidenceAnchor::node(il.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash(name),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::JavaScript,
     ));
 }
 
@@ -574,13 +649,15 @@ fn admitted_library_api_call_resolvers_require_evidence() {
     );
 
     let (mut wrong_pack, interner, call, callee) = rust_some_call_il();
-    wrong_pack.evidence.push(evidence(
+    wrong_pack.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_pack.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Some"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_pack.evidence.push(library_api_record_with_provenance(
         1,
@@ -598,13 +675,15 @@ fn admitted_library_api_call_resolvers_require_evidence() {
     );
 
     let (mut wrong_producer, interner, call, callee) = rust_some_call_il();
-    wrong_producer.evidence.push(evidence(
+    wrong_producer.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_producer.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Some"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_producer
         .evidence
@@ -624,13 +703,15 @@ fn admitted_library_api_call_resolvers_require_evidence() {
     );
 
     let (mut wrong_emitter, interner, call, callee) = rust_some_call_il();
-    wrong_emitter.evidence.push(evidence(
+    wrong_emitter.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_emitter.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Some"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     let mut external_record = rust_stdlib_option_record(
         1,
@@ -649,13 +730,15 @@ fn admitted_library_api_call_resolvers_require_evidence() {
     );
 
     let (mut admitted, interner, call, callee) = rust_some_call_il();
-    admitted.evidence.push(evidence(
+    admitted.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(admitted.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Some"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     admitted.evidence.push(rust_stdlib_option_record(
         1,
@@ -787,13 +870,15 @@ fn admitted_node_resolvers_require_api_occurrence_evidence() {
     );
 
     let (mut admitted, interner, _call, callee) = rust_some_call_il();
-    admitted.evidence.push(evidence(
+    admitted.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(admitted.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Some"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     admitted
         .evidence
@@ -830,13 +915,15 @@ fn admitted_rust_option_none_sentinel_resolver_requires_pack_provenance() {
     let contract = library_rust_option_none_sentinel_contract(Lang::Rust, "None")
         .expect("Rust None sentinel contract");
     let (mut wrong_pack, interner, none) = rust_none_node_il();
-    wrong_pack.evidence.push(evidence(
+    wrong_pack.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_pack.node(none).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("None"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_pack
         .evidence
@@ -857,13 +944,15 @@ fn admitted_rust_option_none_sentinel_resolver_requires_pack_provenance() {
     );
 
     let (mut wrong_producer, interner, none) = rust_none_node_il();
-    wrong_producer.evidence.push(evidence(
+    wrong_producer.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_producer.node(none).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("None"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_producer
         .evidence
@@ -884,13 +973,15 @@ fn admitted_rust_option_none_sentinel_resolver_requires_pack_provenance() {
     );
 
     let (mut wrong_emitter, interner, none) = rust_none_node_il();
-    wrong_emitter.evidence.push(evidence(
+    wrong_emitter.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_emitter.node(none).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("None"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     let mut external_record = asserted_library_api_node_record_with_provenance(
         1,
@@ -911,13 +1002,15 @@ fn admitted_rust_option_none_sentinel_resolver_requires_pack_provenance() {
     );
 
     let (mut admitted, interner, none) = rust_none_node_il();
-    admitted.evidence.push(evidence(
+    admitted.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(admitted.node(none).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("None"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     admitted
         .evidence
@@ -1071,22 +1164,26 @@ fn admitted_free_function_builtin_resolver_requires_api_occurrence_evidence() {
     );
 
     let (mut admitted, interner, call, callee) = python_len_builtin_call_il();
-    admitted.evidence.push(evidence(
+    admitted.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(admitted.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("len"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Python,
     ));
     let (mut wrong_pack, wrong_interner, wrong_call, wrong_callee) = python_len_builtin_call_il();
-    wrong_pack.evidence.push(evidence(
+    wrong_pack.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_pack.node(wrong_callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("len"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Python,
     ));
     wrong_pack.evidence.push(library_api_record_with_provenance(
         1,
@@ -1105,13 +1202,15 @@ fn admitted_free_function_builtin_resolver_requires_api_occurrence_evidence() {
 
     let (mut wrong_producer, wrong_interner, wrong_call, wrong_callee) =
         python_len_builtin_call_il();
-    wrong_producer.evidence.push(evidence(
+    wrong_producer.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_producer.node(wrong_callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("len"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Python,
     ));
     wrong_producer
         .evidence
@@ -1148,6 +1247,34 @@ fn admitted_free_function_builtin_resolver_requires_api_occurrence_evidence() {
     assert_eq!(occurrence.callee, callee);
     assert_eq!(occurrence.receiver, None);
     assert_eq!(occurrence.arg_count, 1);
+}
+
+#[test]
+fn admitted_free_function_builtin_rejects_broad_symbol_dependency() {
+    let (mut il, interner, call, callee) = python_len_builtin_call_il();
+    let contract = library_free_function_builtin_contract(Lang::Python, "len", 1)
+        .expect("Python len contract");
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::node(il.node(callee).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("len"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    il.evidence.push(free_function_builtin_protocol_record(
+        1,
+        il.node(call).span,
+        contract,
+        1,
+        EvidenceStatus::Asserted,
+        &[0],
+    ));
+
+    assert!(
+        admitted_free_function_builtin_at_call(&il, &interner, call).is_none(),
+        "broad first-party unshadowed-global symbol evidence must not license builtin API evidence"
+    );
 }
 
 #[test]
@@ -1268,6 +1395,42 @@ fn admitted_imported_namespace_function_resolver_requires_pack_provenance() {
 }
 
 #[test]
+fn admitted_imported_namespace_function_rejects_broad_namespace_dependency() {
+    let (mut il, interner, call, receiver) = python_math_prod_call_il();
+    let contract = library_imported_namespace_function_contract(Lang::Python, "prod", 1)
+        .expect("Python math.prod contract");
+    let namespace_symbol = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+        module_hash: stable_symbol_hash("math"),
+    });
+    il.evidence.push(evidence(
+        0,
+        EvidenceAnchor::binding(sp(66), stable_symbol_hash("math")),
+        namespace_symbol,
+        EvidenceStatus::Asserted,
+    ));
+    il.evidence.push(evidence_with_dependencies(
+        1,
+        EvidenceAnchor::node(il.node(receiver).span, NodeKind::Var),
+        namespace_symbol,
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(0)],
+    ));
+    il.evidence.push(python_stdlib_math_record(
+        2,
+        il.node(call).span,
+        contract,
+        1,
+        EvidenceStatus::Asserted,
+        &[1],
+    ));
+
+    assert!(
+        admitted_imported_namespace_function_at_call(&il, &interner, call).is_none(),
+        "broad first-party namespace occurrence evidence must not license imported API evidence"
+    );
+}
+
+#[test]
 fn admitted_collection_factory_resolver_requires_api_occurrence_evidence() {
     let (il, interner, call, _callee) = python_list_factory_call_il();
     assert!(
@@ -1294,13 +1457,15 @@ fn admitted_collection_factory_resolver_requires_api_occurrence_evidence() {
     );
 
     let (mut wrong_pack, interner, call, callee) = python_list_factory_call_il();
-    wrong_pack.evidence.push(evidence(
+    wrong_pack.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_pack.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("list"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Python,
     ));
     wrong_pack.evidence.push(library_api_record_with_provenance(
         1,
@@ -1318,13 +1483,15 @@ fn admitted_collection_factory_resolver_requires_api_occurrence_evidence() {
     );
 
     let (mut wrong_producer, interner, call, callee) = python_list_factory_call_il();
-    wrong_producer.evidence.push(evidence(
+    wrong_producer.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_producer.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("list"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Python,
     ));
     wrong_producer
         .evidence
@@ -1344,13 +1511,15 @@ fn admitted_collection_factory_resolver_requires_api_occurrence_evidence() {
     );
 
     let (mut admitted, interner, call, callee) = python_list_factory_call_il();
-    admitted.evidence.push(evidence(
+    admitted.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(admitted.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("list"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Python,
     ));
     admitted
         .evidence
@@ -1404,13 +1573,15 @@ fn admitted_rust_std_collection_factory_resolver_requires_pack_provenance() {
     );
 
     let (mut wrong_pack, interner, call, callee) = rust_std_collection_factory_call_il();
-    wrong_pack.evidence.push(evidence(
+    wrong_pack.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_pack.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("std::collections::HashSet::from"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_pack.evidence.push(library_api_record_with_provenance(
         1,
@@ -1428,13 +1599,15 @@ fn admitted_rust_std_collection_factory_resolver_requires_pack_provenance() {
     );
 
     let (mut wrong_producer, interner, call, callee) = rust_std_collection_factory_call_il();
-    wrong_producer.evidence.push(evidence(
+    wrong_producer.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_producer.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("std::collections::HashSet::from"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_producer
         .evidence
@@ -1454,13 +1627,15 @@ fn admitted_rust_std_collection_factory_resolver_requires_pack_provenance() {
     );
 
     let (mut admitted, interner, call, callee) = rust_std_collection_factory_call_il();
-    admitted.evidence.push(evidence(
+    admitted.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(admitted.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("std::collections::HashSet::from"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     admitted
         .evidence
@@ -1511,13 +1686,15 @@ fn admitted_rust_std_map_factory_resolver_requires_pack_provenance() {
     );
 
     let (mut wrong_pack, interner, call, callee) = rust_std_map_factory_call_il();
-    wrong_pack.evidence.push(evidence(
+    wrong_pack.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_pack.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("std::collections::HashMap::from"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_pack.evidence.push(library_api_record_with_provenance(
         1,
@@ -1535,13 +1712,15 @@ fn admitted_rust_std_map_factory_resolver_requires_pack_provenance() {
     );
 
     let (mut wrong_producer, interner, call, callee) = rust_std_map_factory_call_il();
-    wrong_producer.evidence.push(evidence(
+    wrong_producer.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_producer.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("std::collections::HashMap::from"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_producer
         .evidence
@@ -1561,13 +1740,15 @@ fn admitted_rust_std_map_factory_resolver_requires_pack_provenance() {
     );
 
     let (mut admitted, interner, call, callee) = rust_std_map_factory_call_il();
-    admitted.evidence.push(evidence(
+    admitted.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(admitted.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("std::collections::HashMap::from"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     admitted.evidence.push(rust_stdlib_map_factory_record(
         1,
@@ -2187,13 +2368,15 @@ fn admitted_rust_vec_new_factory_resolver_requires_pack_provenance() {
     );
 
     let (mut wrong_pack, interner, call, callee) = rust_vec_new_call_il();
-    wrong_pack.evidence.push(evidence(
+    wrong_pack.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_pack.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Vec::new"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_pack
         .evidence
@@ -2214,13 +2397,15 @@ fn admitted_rust_vec_new_factory_resolver_requires_pack_provenance() {
     );
 
     let (mut wrong_producer, interner, call, callee) = rust_vec_new_call_il();
-    wrong_producer.evidence.push(evidence(
+    wrong_producer.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(wrong_producer.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Vec::new"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_producer
         .evidence
@@ -2241,13 +2426,15 @@ fn admitted_rust_vec_new_factory_resolver_requires_pack_provenance() {
     );
 
     let (mut admitted, interner, call, callee) = rust_vec_new_call_il();
-    admitted.evidence.push(evidence(
+    admitted.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(admitted.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Vec::new"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     admitted.evidence.push(rust_stdlib_vec_record(
         1,
@@ -2300,13 +2487,15 @@ fn admitted_rust_vec_macro_factory_resolver_requires_pack_provenance() {
         EvidenceKind::Source(SourceFactKind::Call(SourceCallKind::MacroInvocation)),
         EvidenceStatus::Asserted,
     ));
-    wrong_pack.evidence.push(evidence(
+    wrong_pack.evidence.push(language_core_symbol_record(
         1,
         EvidenceAnchor::node(wrong_pack.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("vec"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_pack.evidence.push(library_api_record_with_provenance(
         2,
@@ -2330,13 +2519,15 @@ fn admitted_rust_vec_macro_factory_resolver_requires_pack_provenance() {
         EvidenceKind::Source(SourceFactKind::Call(SourceCallKind::MacroInvocation)),
         EvidenceStatus::Asserted,
     ));
-    wrong_producer.evidence.push(evidence(
+    wrong_producer.evidence.push(language_core_symbol_record(
         1,
         EvidenceAnchor::node(wrong_producer.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("vec"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     wrong_producer
         .evidence
@@ -2362,13 +2553,15 @@ fn admitted_rust_vec_macro_factory_resolver_requires_pack_provenance() {
         EvidenceKind::Source(SourceFactKind::Call(SourceCallKind::MacroInvocation)),
         EvidenceStatus::Asserted,
     ));
-    admitted.evidence.push(evidence(
+    admitted.evidence.push(language_core_symbol_record(
         1,
         EvidenceAnchor::node(admitted.node(callee).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("vec"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Rust,
     ));
     admitted.evidence.push(rust_stdlib_vec_record(
         2,

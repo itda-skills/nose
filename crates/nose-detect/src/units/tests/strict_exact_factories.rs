@@ -93,12 +93,13 @@ fn strict_exact_python_builtin_factory_requires_library_api_evidence() {
     ));
 
     let contract = library_free_name_collection_factory_contract(Lang::Python, "list").unwrap();
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         1,
+        Lang::Python,
         EvidenceAnchor::node(sp(40), NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("list"),
-        }),
+        },
         Vec::new(),
     ));
     il.evidence.push(python_builtin_collection_factory_evidence(

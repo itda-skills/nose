@@ -53,12 +53,13 @@ fn push_canonical_java_minmax_builtin_evidence(il: &mut Il, first_id: u32) {
             .expect("min/max integer contract");
         let math_id = next_id;
         next_id += 1;
-        il.evidence.push(evidence(
+        il.evidence.push(language_core_symbol_evidence(
             math_id,
+            il.meta.lang,
             EvidenceAnchor::node(il.node(node).span, NodeKind::Var),
-            EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            SymbolEvidenceKind::UnshadowedGlobal {
                 name_hash: stable_symbol_hash("Math"),
-            }),
+            },
         ));
         let mut dependencies = vec![EvidenceId(math_id)];
         let args = il.children(node).to_vec();

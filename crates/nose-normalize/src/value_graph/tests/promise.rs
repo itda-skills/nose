@@ -96,12 +96,13 @@ fn push_promise_resolve_evidence(il: &mut Il, call: NodeId, base_id: u32) {
     let qualified_id = EvidenceId(base_id + 1);
     let receiver_id = EvidenceId(base_id + 2);
     let api_id = EvidenceId(base_id + 3);
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         root_id.0,
+        Lang::JavaScript,
         EvidenceAnchor::source_span(callee_span),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Promise"),
-        }),
+        },
     ));
     il.evidence.push(evidence_with_dependencies(
         qualified_id.0,
@@ -111,12 +112,13 @@ fn push_promise_resolve_evidence(il: &mut Il, call: NodeId, base_id: u32) {
         }),
         vec![root_id],
     ));
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         receiver_id.0,
+        Lang::JavaScript,
         EvidenceAnchor::node(promise_span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Promise"),
-        }),
+        },
     ));
     let contract = library_promise_resolve_contract(il.meta.lang, "Promise", "resolve", 1).unwrap();
     il.evidence.push(js_like_promise_evidence_with_dependencies(

@@ -235,12 +235,13 @@ fn raw_library_builtin_payloads_do_not_fold_without_admission() {
 
     let contract = library_free_function_builtin_contract(Lang::Python, "abs", 1)
         .expect("Python abs contract");
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         0,
+        Lang::Python,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("abs"),
-        }),
+        },
     ));
     il.evidence.push(library_api_contract_evidence(
         1,
@@ -320,12 +321,13 @@ fn rust_full_range_seq_requires_source_range_evidence() {
     let mut il = finish_test_il(b, root, Lang::Python);
     let len_contract =
         library_free_function_builtin_contract(Lang::Python, "len", 1).expect("len contract");
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_evidence(
         0,
+        Lang::Python,
         EvidenceAnchor::node(il.node(len).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("len"),
-        }),
+        },
     ));
     il.evidence.push(library_api_contract_evidence(
         1,

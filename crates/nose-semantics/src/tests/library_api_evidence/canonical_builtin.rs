@@ -19,14 +19,50 @@ fn python_len_canonical_call_il() -> (Il, NodeId) {
     canonical_builtin_call_il(Lang::Python, Builtin::Len, &[arg], b, arg)
 }
 
+fn go_print_canonical_call_il() -> (Il, NodeId) {
+    let mut b = IlBuilder::new(FileId(0));
+    let arg = b.add(NodeKind::Var, Payload::Cid(0), sp(49), &[]);
+    canonical_builtin_call_il(Lang::Go, Builtin::Print, &[arg], b, arg)
+}
+
 fn push_canonical_unshadowed_symbol_dependency(il: &mut Il, id: u32, call: NodeId, name: &str) {
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_record(
         id,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash(name),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        il.meta.lang,
+    ));
+}
+
+fn push_canonical_imported_namespace_dependency(
+    il: &mut Il,
+    binding_id: u32,
+    occurrence_id: u32,
+    call: NodeId,
+    module: &str,
+) {
+    let symbol = SymbolEvidenceKind::ImportedNamespace {
+        module_hash: stable_symbol_hash(module),
+    };
+    il.evidence.push(language_core_symbol_record(
+        binding_id,
+        EvidenceAnchor::binding(sp(48), stable_symbol_hash(module)),
+        symbol,
+        EvidenceStatus::Asserted,
+        &[],
+        il.meta.lang,
+    ));
+    il.evidence.push(language_core_symbol_record(
+        occurrence_id,
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Var),
+        symbol,
+        EvidenceStatus::Asserted,
+        &[binding_id],
+        il.meta.lang,
     ));
 }
 
@@ -64,13 +100,15 @@ fn java_math_canonical_builtin_call_il(builtin: Builtin, arg_count: usize) -> (I
 
 fn push_java_math_canonical_dependencies(il: &mut Il, call: NodeId) -> Vec<u32> {
     let call_span = il.node(call).span;
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_symbol_record(
         0,
         EvidenceAnchor::node(call_span, NodeKind::Var),
-        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+        SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash("Math"),
-        }),
+        },
         EvidenceStatus::Asserted,
+        &[],
+        Lang::Java,
     ));
     let args = il.children(call).to_vec();
     let mut dependencies = vec![0];
@@ -106,6 +144,182 @@ fn canonical_builtin_admission_requires_language_core_or_library_api_evidence() 
     ));
     assert!(admitted_builtin_semantics_at_call(&il, call, Builtin::Len));
     assert!(!admitted_builtin_semantics_at_call(&il, call, Builtin::Abs));
+}
+
+#[test]
+fn canonical_builtin_admission_rejects_broad_unshadowed_symbol_dependency() {
+    let (mut il, call) = python_len_canonical_call_il();
+    let contract = library_free_function_builtin_contract(Lang::Python, "len", 1)
+        .expect("Python len contract");
+    il.evidence.push(evidence(
+        9,
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("len"),
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    il.evidence.push(free_function_builtin_protocol_record(
+        10,
+        il.node(call).span,
+        contract,
+        1,
+        EvidenceStatus::Asserted,
+        &[9],
+    ));
+
+    assert!(
+        !admitted_builtin_semantics_at_call(&il, call, Builtin::Len),
+        "canonical free-name builtin API evidence must reject broad symbol dependencies"
+    );
+}
+
+#[test]
+fn canonical_builtin_admission_requires_language_core_namespace_dependency() {
+    let interner = Interner::new();
+    let contract =
+        library_method_call_contract(Lang::Go, "Println", 1).expect("Go fmt.Println contract");
+
+    let (mut broad_namespace, call) = go_print_canonical_call_il();
+    let namespace = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace {
+        module_hash: stable_symbol_hash("fmt"),
+    });
+    broad_namespace.evidence.push(evidence(
+        0,
+        EvidenceAnchor::binding(sp(48), stable_symbol_hash("fmt")),
+        namespace,
+        EvidenceStatus::Asserted,
+    ));
+    broad_namespace.evidence.push(evidence_with_dependencies(
+        1,
+        EvidenceAnchor::node(broad_namespace.node(call).span, NodeKind::Var),
+        namespace,
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(0)],
+    ));
+    broad_namespace
+        .evidence
+        .push(builtin_method_call_protocol_record(
+            2,
+            broad_namespace.node(call).span,
+            contract,
+            1,
+            EvidenceStatus::Asserted,
+            &[1],
+        ));
+    assert!(
+        !admitted_builtin_semantics_at_call_with_interner(
+            &broad_namespace,
+            &interner,
+            call,
+            Builtin::Print
+        ),
+        "canonical namespace builtin API evidence must reject broad namespace dependencies"
+    );
+
+    let (mut admitted, call) = go_print_canonical_call_il();
+    push_canonical_imported_namespace_dependency(&mut admitted, 0, 1, call, "fmt");
+    admitted.evidence.push(builtin_method_call_protocol_record(
+        2,
+        admitted.node(call).span,
+        contract,
+        1,
+        EvidenceStatus::Asserted,
+        &[1],
+    ));
+    assert!(admitted_builtin_semantics_at_call_with_interner(
+        &admitted,
+        &interner,
+        call,
+        Builtin::Print
+    ));
+}
+
+#[test]
+fn canonical_builtin_admission_requires_import_backed_namespace_dependency() {
+    let interner = Interner::new();
+    let contract =
+        library_method_call_contract(Lang::Go, "Println", 1).expect("Go fmt.Println contract");
+    let symbol = SymbolEvidenceKind::ImportedNamespace {
+        module_hash: stable_symbol_hash("fmt"),
+    };
+
+    let (mut missing_binding, call) = go_print_canonical_call_il();
+    missing_binding.evidence.push(language_core_symbol_record(
+        0,
+        EvidenceAnchor::node(missing_binding.node(call).span, NodeKind::Var),
+        symbol,
+        EvidenceStatus::Asserted,
+        &[],
+        Lang::Go,
+    ));
+    missing_binding
+        .evidence
+        .push(builtin_method_call_protocol_record(
+            1,
+            missing_binding.node(call).span,
+            contract,
+            1,
+            EvidenceStatus::Asserted,
+            &[0],
+        ));
+    assert!(
+        !admitted_builtin_semantics_at_call_with_interner(
+            &missing_binding,
+            &interner,
+            call,
+            Builtin::Print
+        ),
+        "canonical namespace builtin API evidence must reject occurrence symbols without import bindings"
+    );
+}
+
+#[test]
+fn canonical_builtin_admission_rejects_namespace_dependency_from_other_call() {
+    let interner = Interner::new();
+    let contract =
+        library_method_call_contract(Lang::Go, "Println", 1).expect("Go fmt.Println contract");
+    let mut b = IlBuilder::new(FileId(0));
+    let first_arg = b.add(NodeKind::Var, Payload::Cid(0), sp(49), &[]);
+    let first_call = b.add(
+        NodeKind::Call,
+        Payload::Builtin(Builtin::Print),
+        sp(40),
+        &[first_arg],
+    );
+    let second_arg = b.add(NodeKind::Var, Payload::Cid(1), sp(69), &[]);
+    let second_call = b.add(
+        NodeKind::Call,
+        Payload::Builtin(Builtin::Print),
+        sp(60),
+        &[second_arg],
+    );
+    let root = b.add(
+        NodeKind::Func,
+        Payload::None,
+        sp(70),
+        &[first_call, second_call],
+    );
+    let mut il = finish_il(b, root, Lang::Go);
+    push_canonical_imported_namespace_dependency(&mut il, 0, 1, first_call, "fmt");
+    il.evidence.push(builtin_method_call_protocol_record(
+        2,
+        il.node(second_call).span,
+        contract,
+        1,
+        EvidenceStatus::Asserted,
+        &[1],
+    ));
+
+    assert!(
+        !admitted_builtin_semantics_at_call_with_interner(
+            &il,
+            &interner,
+            second_call,
+            Builtin::Print
+        ),
+        "canonical namespace builtin API evidence must depend on this call's namespace occurrence"
+    );
 }
 
 #[test]

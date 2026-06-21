@@ -50,11 +50,12 @@ pub(super) fn symbol_evidence_for_binding(
     )
 }
 
-fn language_core_symbol_evidence_at_node(
+pub(super) fn language_core_symbol_evidence_at_anchor(
     il: &Il,
-    node: NodeId,
+    span: Span,
+    kind: NodeKind,
 ) -> EvidenceResolution<SymbolEvidenceKind> {
-    let anchor = EvidenceAnchor::node(il.node(node).span, il.kind(node));
+    let anchor = EvidenceAnchor::node(span, kind);
     let mut found = None;
     for record in il.evidence_anchored_at(anchor.span()) {
         if record.anchor != anchor {
@@ -78,16 +79,25 @@ fn language_core_symbol_evidence_at_node(
     found.map_or(EvidenceResolution::Missing, EvidenceResolution::Found)
 }
 
+pub(super) fn language_core_symbol_identity_at_anchor_matches(
+    il: &Il,
+    span: Span,
+    kind: NodeKind,
+    expected: SymbolEvidenceKind,
+) -> EvidenceResolution<bool> {
+    match language_core_symbol_evidence_at_anchor(il, span, kind) {
+        EvidenceResolution::Found(actual) => EvidenceResolution::Found(actual == expected),
+        EvidenceResolution::Ambiguous => EvidenceResolution::Ambiguous,
+        EvidenceResolution::Missing => EvidenceResolution::Missing,
+    }
+}
+
 fn language_core_symbol_identity_at_node_matches(
     il: &Il,
     node: NodeId,
     expected: SymbolEvidenceKind,
 ) -> EvidenceResolution<bool> {
-    match language_core_symbol_evidence_at_node(il, node) {
-        EvidenceResolution::Found(actual) => EvidenceResolution::Found(actual == expected),
-        EvidenceResolution::Ambiguous => EvidenceResolution::Ambiguous,
-        EvidenceResolution::Missing => EvidenceResolution::Missing,
-    }
+    language_core_symbol_identity_at_anchor_matches(il, il.node(node).span, il.kind(node), expected)
 }
 
 pub(super) fn imported_symbol_identity_at_node_matches(
@@ -127,14 +137,13 @@ pub(super) fn imported_symbol_identity_at_node_matches(
     EvidenceResolution::Found(actual == expected && dependencies_valid)
 }
 
-fn language_core_imported_namespace_identity_at_node_matches(
+pub(super) fn language_core_imported_namespace_identity_at_anchor_matches(
     il: &Il,
     interner: &Interner,
-    node: NodeId,
+    span: Span,
+    kind: NodeKind,
     expected: SymbolEvidenceKind,
 ) -> EvidenceResolution<bool> {
-    let span = il.node(node).span;
-    let kind = il.kind(node);
     let anchor = EvidenceAnchor::node(span, kind);
     let mut found = None;
     let mut dependencies_valid = true;
@@ -181,6 +190,21 @@ fn language_core_imported_namespace_identity_at_node_matches(
     EvidenceResolution::Found(actual == expected && dependencies_valid)
 }
 
+fn language_core_imported_namespace_identity_at_node_matches(
+    il: &Il,
+    interner: &Interner,
+    node: NodeId,
+    expected: SymbolEvidenceKind,
+) -> EvidenceResolution<bool> {
+    language_core_imported_namespace_identity_at_anchor_matches(
+        il,
+        interner,
+        il.node(node).span,
+        il.kind(node),
+        expected,
+    )
+}
+
 pub(super) fn symbol_record_has_admitted_provenance(il: &Il, record: &EvidenceRecord) -> bool {
     match record.kind {
         EvidenceKind::Symbol(
@@ -190,9 +214,9 @@ pub(super) fn symbol_record_has_admitted_provenance(il: &Il, record: &EvidenceRe
             if record.provenance.emitter != EvidenceEmitter::FirstParty {
                 return false;
             }
-            let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
-            record.provenance.pack_hash == Some(stable_symbol_hash(pack_id))
-                && record.provenance.rule_hash == Some(stable_symbol_hash(producer_id))
+            let (pack_hash, rule_hash) = language_core_evidence_provenance_hashes(il.meta.lang);
+            record.provenance.pack_hash == Some(pack_hash)
+                && record.provenance.rule_hash == Some(rule_hash)
         }
         EvidenceKind::Symbol(_) => true,
         _ => false,
