@@ -137,6 +137,39 @@ fn evidence_with_dependencies(
     }
 }
 
+fn language_core_evidence(
+    id: u32,
+    anchor: EvidenceAnchor,
+    kind: EvidenceKind,
+    status: EvidenceStatus,
+    lang: Lang,
+) -> EvidenceRecord {
+    language_core_evidence_with_dependencies(id, anchor, kind, status, Vec::new(), lang)
+}
+
+fn language_core_evidence_with_dependencies(
+    id: u32,
+    anchor: EvidenceAnchor,
+    kind: EvidenceKind,
+    status: EvidenceStatus,
+    dependencies: Vec<EvidenceId>,
+    lang: Lang,
+) -> EvidenceRecord {
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor,
+        kind,
+        provenance: EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
+        },
+        dependencies,
+        status,
+    }
+}
+
 fn c_unsigned_32_source_cast_evidence(
     id: u32,
     anchor: EvidenceAnchor,

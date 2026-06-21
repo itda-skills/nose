@@ -20,7 +20,8 @@ fn free_name_collection_factory_value_graph_requires_library_api_evidence() {
     let call = b.add(NodeKind::Call, Payload::None, sp(23), &[callee, seq]);
     let root = b.add(NodeKind::Block, Payload::None, sp(19), &[call]);
     let mut il = finish_test_il(b, root, Lang::Python);
-    il.evidence.push(collection_sequence_evidence(0, sp(22)));
+    il.evidence
+        .push(collection_sequence_evidence(0, Lang::Python, sp(22)));
     il.evidence.push(evidence(
         1,
         EvidenceAnchor::node(sp(20), NodeKind::Var),

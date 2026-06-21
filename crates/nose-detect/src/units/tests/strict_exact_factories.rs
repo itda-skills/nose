@@ -81,11 +81,11 @@ fn strict_exact_python_builtin_factory_requires_library_api_evidence() {
         Vec::new(),
         Vec::new(),
     );
-    il.evidence.push(evidence(
+    il.evidence.push(sequence_surface_evidence(
         0,
-        EvidenceAnchor::sequence(sp(42)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
-        Vec::new(),
+        Lang::Python,
+        sp(42),
+        SequenceSurfaceKind::Collection,
     ));
     let facts = StrictFacts::collect(&il, &interner);
     assert!(!strict_exact_python_collection_factory_safe(

@@ -25,11 +25,11 @@ fn strict_exact_sequence_surfaces_require_evidence() {
         &il, &interner, &facts, seq
     ));
 
-    il.evidence.push(evidence(
+    il.evidence.push(sequence_surface_evidence(
         0,
-        EvidenceAnchor::sequence(sp(61)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
-        Vec::new(),
+        Lang::JavaScript,
+        sp(61),
+        SequenceSurfaceKind::Collection,
     ));
     let facts = StrictFacts::collect(&il, &interner);
 

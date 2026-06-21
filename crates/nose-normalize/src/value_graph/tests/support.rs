@@ -194,9 +194,10 @@ pub(super) fn push_imported_namespace_use(
     ));
 }
 
-pub(super) fn collection_sequence_evidence(id: u32, span: Span) -> EvidenceRecord {
-    evidence(
+pub(super) fn collection_sequence_evidence(id: u32, lang: Lang, span: Span) -> EvidenceRecord {
+    language_core_evidence(
         id,
+        lang,
         EvidenceAnchor::sequence(span),
         EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
     )

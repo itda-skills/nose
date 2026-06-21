@@ -15,7 +15,12 @@ fn method_call_il(
     let mut builder = IlBuilder::new(FileId(0));
     let name = interner.intern("r");
     let seed_span = sp(1);
-    let seed = builder.add(NodeKind::Seq, Payload::None, seed_span, &[]);
+    let seed = builder.add(
+        NodeKind::Seq,
+        Payload::Name(interner.intern("array")),
+        seed_span,
+        &[],
+    );
     let target = builder.add(NodeKind::Var, Payload::Name(name), sp(2), &[]);
     let assign = builder.add(NodeKind::Assign, Payload::None, sp(2), &[target, seed]);
     let receiver = builder.add(NodeKind::Var, Payload::Name(name), sp(3), &[]);
@@ -43,11 +48,12 @@ fn method_call_il(
         Vec::new(),
         Vec::new(),
     );
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
     il.find_or_push_first_party_evidence(
         EvidenceAnchor::sequence(seed_span),
         EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
-        FIRST_PARTY_PACK_ID,
-        "test_collection_seed",
+        pack_id,
+        producer_id,
         Vec::new(),
     );
     (il, call, receiver, first_arg)
@@ -88,4 +94,70 @@ fn builder_append_method_api_evidence_is_language_and_arity_scoped() {
 
         assert!(admitted_builder_append_method_call_args(&il, &interner, call).is_none());
     }
+}
+
+#[test]
+fn builder_append_method_api_evidence_closes_on_conflicting_sequence_surface_seed() {
+    let mut interner = Interner::new();
+    let (mut il, call, _, _) = method_call_il(&mut interner, Lang::JavaScript, "push", 1);
+    let (pack_id, producer_id) = language_core_evidence_provenance(Lang::JavaScript);
+    il.find_or_push_first_party_evidence(
+        EvidenceAnchor::sequence(sp(1)),
+        EvidenceKind::SequenceSurface(SequenceSurfaceKind::Map),
+        pack_id,
+        producer_id,
+        Vec::new(),
+    );
+
+    run(&mut il, &interner);
+
+    assert!(
+        admitted_builder_append_method_call_args(&il, &interner, call).is_none(),
+        "conflicting sequence-surface proof must not seed builder append API evidence"
+    );
+}
+
+#[test]
+fn builder_append_method_api_evidence_rejects_untagged_sequence_surface_seed() {
+    let interner = Interner::new();
+    let mut builder = IlBuilder::new(FileId(0));
+    let name = interner.intern("r");
+    let seed_span = sp(1);
+    let seed = builder.add(NodeKind::Seq, Payload::None, seed_span, &[]);
+    let target = builder.add(NodeKind::Var, Payload::Name(name), sp(2), &[]);
+    let assign = builder.add(NodeKind::Assign, Payload::None, sp(2), &[target, seed]);
+    let receiver = builder.add(NodeKind::Var, Payload::Name(name), sp(3), &[]);
+    let field = builder.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("push")),
+        sp(3),
+        &[receiver],
+    );
+    let item = builder.add(NodeKind::Var, Payload::Cid(1), sp(4), &[]);
+    let call = builder.add(NodeKind::Call, Payload::None, sp(5), &[field, item]);
+    let root = builder.add(NodeKind::Func, Payload::None, sp(6), &[assign, call]);
+    let mut il = builder.finish(
+        root,
+        FileMeta {
+            path: "method".into(),
+            lang: Lang::JavaScript,
+        },
+        Vec::new(),
+        Vec::new(),
+    );
+    let (pack_id, producer_id) = language_core_evidence_provenance(Lang::JavaScript);
+    il.find_or_push_first_party_evidence(
+        EvidenceAnchor::sequence(seed_span),
+        EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
+        pack_id,
+        producer_id,
+        Vec::new(),
+    );
+
+    run(&mut il, &interner);
+
+    assert!(
+        admitted_builder_append_method_call_args(&il, &interner, call).is_none(),
+        "untagged sequences must not become collection seeds from evidence alone"
+    );
 }

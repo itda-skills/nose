@@ -87,8 +87,9 @@ fn div_zero_map_len_il() -> (Il, NodeId) {
 
 fn push_map_contract_evidence(il: &mut Il, lang: Lang, hof: NodeId, expect_msg: &str) {
     let receiver = il.children(hof)[0];
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_evidence(
         0,
+        lang,
         EvidenceAnchor::sequence(il.node(receiver).span),
         EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
     ));

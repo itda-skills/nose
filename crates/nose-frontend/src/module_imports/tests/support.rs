@@ -174,7 +174,7 @@ pub(super) fn test_provenance(rule: &str) -> EvidenceProvenance {
     }
 }
 
-fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
+pub(super) fn language_core_provenance(lang: Lang) -> EvidenceProvenance {
     let (pack_id, producer_id) = nose_semantics::language_core_evidence_provenance(lang);
     EvidenceProvenance {
         emitter: EvidenceEmitter::FirstParty,
@@ -225,7 +225,7 @@ pub(super) fn provider_with_lookup_export_evidence(interner: &Interner) -> (Il, 
         id: EvidenceId(0),
         anchor: EvidenceAnchor::sequence(span),
         kind: EvidenceKind::SequenceSurface(SequenceSurfaceKind::Map),
-        provenance: test_provenance("surface"),
+        provenance: language_core_provenance(Lang::Python),
         dependencies: Vec::new(),
         status: EvidenceStatus::Asserted,
     });
@@ -256,7 +256,7 @@ pub(super) fn provider_with_lookup_export_evidence(interner: &Interner) -> (Il, 
         id: EvidenceId(3),
         anchor: EvidenceAnchor::sequence(span),
         kind: EvidenceKind::SequenceSurface(SequenceSurfaceKind::Map),
-        provenance: test_provenance("ambiguous_surface"),
+        provenance: language_core_provenance(Lang::Python),
         dependencies: Vec::new(),
         status: EvidenceStatus::Ambiguous,
     });
@@ -296,7 +296,7 @@ pub(super) fn lookup_dict_provider(interner: &Interner, lookup: Symbol) -> Il {
         id: EvidenceId(0),
         anchor: EvidenceAnchor::sequence(provider_span),
         kind: EvidenceKind::SequenceSurface(SequenceSurfaceKind::Map),
-        provenance: test_provenance("provider_surface"),
+        provenance: language_core_provenance(Lang::Python),
         dependencies: Vec::new(),
         status: EvidenceStatus::Asserted,
     });

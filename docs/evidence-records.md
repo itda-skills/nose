@@ -275,11 +275,13 @@ semantics. A lowered `Seq("array")`, `Seq("object")`, `Seq("tuple")`, or
 language-specific tag does not by itself prove exact-tree safety, collection
 membership, map-entry-list shape, imported-literal eligibility, or a canonical
 value-graph tag. Consumers resolve the tag only when a matching
-`SequenceSurface` record exists at the same sequence anchor and its dependencies
-remain asserted. Missing, conflicting, ambiguous, or wrong-kind surface evidence
-keeps the exact/value-graph path closed. In the value graph, a missing surface
-record produces the untagged sequence value rather than a raw spelling-derived
-hash, so a payload name cannot become a semantic proof channel by coincidence.
+`SequenceSurface` record exists at the same sequence anchor with matching
+builtin language-core provenance and its dependencies remain asserted. Missing,
+conflicting, ambiguous, broad/wrong-language, external, or wrong-kind surface
+evidence keeps the exact/value-graph path closed. In the value graph, a missing
+surface record produces the untagged sequence value rather than a raw
+spelling-derived hash, so a payload name cannot become a semantic proof channel
+by coincidence.
 
 Qualified global identity is also evidence, not a selector guess. The current
 first-party JS/TS producer emits `QualifiedGlobal` only for selected static paths
@@ -595,8 +597,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `math.prod`, `Arrays.stream`, map `get`, iterator adapters, and generic
   method contracts do not emit `Domain` records because their results are not
   simple receiver domains under the current vocabulary;
-- lowered `Seq` surfaces emit `SequenceSurface` evidence, including Go map
-  literal and Go map-entry surfaces where those tags carry first-party meaning.
+- lowered `Seq` surfaces emit `SequenceSurface` evidence under the matching
+  builtin language-core pack, including Go map literal and Go map-entry surfaces
+  where those tags carry first-party meaning.
 
 Source-origin and parameter-domain proof no longer has side-table mirror storage:
 frontends emit `Source` and `Domain` records directly, and semantic lookups are
@@ -736,10 +739,11 @@ callers:
   spelling, or `QualifiedGlobal` evidence without the required root proof, is not
   proof by itself;
 - sequence-surface admission for normalize/value-graph/detect exact paths where
-  the surface contract is independently exact-safe; guard surfaces use their
-  dedicated guard helper instead. Go zero-map literal lookup also requires
-  `SequenceSurface(GoCompositeMapLiteral)` and `SequenceSurface(GoMapEntry)`,
-  so `composite_literal`/`keyed_element` tag spelling alone no longer admits the
+  the surface contract is independently exact-safe, now requiring matching
+  builtin language-core provenance. Guard surfaces use their dedicated guard
+  helper instead. Go zero-map literal lookup also requires
+  `SequenceSurface(GoCompositeMapLiteral)` and `SequenceSurface(GoMapEntry)`, so
+  `composite_literal`/`keyed_element` tag spelling alone no longer admits the
   exact map-default path;
 - C byte-pack value-graph laws consume the first-party C byte-pack contract,
   `Domain(ByteArray)` base evidence, and source-cast evidence for the unsigned

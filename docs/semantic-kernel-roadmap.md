@@ -1739,10 +1739,10 @@ Remaining after the #109 closeout:
   map-key view/wrapper calls. Node-level property builtins, Rust `Some` callee checks,
   HOF receiver proof, Promise `resolve`, and Promise `.then` contract lookup
   also go through shared resolvers. Lowered sequence-surface consumers are now
-  evidence-only where covered. Remaining API work is broader thenable
-  assimilation, explicit async/sync protocol convergence contracts, and
-  ecosystem APIs only after demand, receiver, and effect obligations are
-  expressible.
+  evidence-only with matching builtin language-core provenance where covered.
+  Remaining API work is broader thenable assimilation, explicit async/sync
+  protocol convergence contracts, and ecosystem APIs only after demand,
+  receiver, and effect obligations are expressible.
 - Continue import/module proof migration beyond the removed raw import payloads
   and evidence-only import identity path. Value-graph import identity and
   imported-symbol exact proof are now evidence-only, imported literal replacement

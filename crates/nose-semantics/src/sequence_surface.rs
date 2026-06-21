@@ -148,15 +148,48 @@ pub(super) fn sequence_surface_evidence_at_sequence_span(
     il: &Il,
     span: Span,
 ) -> EvidenceResolution<SequenceSurfaceKind> {
-    unique_evidence_at(
-        il,
-        span,
-        |anchor| matches!(anchor, EvidenceAnchor::Sequence { span: anchor_span } if anchor_span == span),
-        |evidence| match evidence {
-            EvidenceKind::SequenceSurface(kind) => Some(kind),
-            _ => None,
-        },
-    )
+    match sequence_surface_evidence_record_at_sequence_span(il, span) {
+        EvidenceResolution::Found((kind, _)) => EvidenceResolution::Found(kind),
+        EvidenceResolution::Missing => EvidenceResolution::Missing,
+        EvidenceResolution::Ambiguous => EvidenceResolution::Ambiguous,
+    }
+}
+
+pub(crate) fn sequence_surface_evidence_record_at_sequence_span(
+    il: &Il,
+    span: Span,
+) -> EvidenceResolution<(SequenceSurfaceKind, EvidenceId)> {
+    let mut found = None;
+    for record in il.evidence_anchored_at(span) {
+        if !matches!(record.anchor, EvidenceAnchor::Sequence { span: anchor_span } if anchor_span == span)
+        {
+            continue;
+        }
+        let EvidenceKind::SequenceSurface(kind) = record.kind else {
+            continue;
+        };
+        if !language_core_sequence_surface_record(il, record) {
+            continue;
+        }
+        if record.status != EvidenceStatus::Asserted || !il.evidence_dependencies_asserted(record) {
+            return EvidenceResolution::Ambiguous;
+        }
+        match found {
+            None => found = Some((kind, record.id)),
+            Some((existing, _)) if existing == kind => {}
+            Some(_) => return EvidenceResolution::Ambiguous,
+        }
+    }
+    found.map_or(EvidenceResolution::Missing, EvidenceResolution::Found)
+}
+
+fn language_core_sequence_surface_record(il: &Il, record: &EvidenceRecord) -> bool {
+    if record.provenance.emitter != EvidenceEmitter::FirstParty {
+        return false;
+    }
+    let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+    record.provenance.pack_hash == Some(stable_symbol_hash(pack_id))
+        && record.provenance.rule_hash == Some(stable_symbol_hash(producer_id))
 }
 
 pub(super) fn sequence_surface_evidence_matches_node(

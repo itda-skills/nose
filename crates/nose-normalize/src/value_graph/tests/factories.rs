@@ -23,7 +23,8 @@ fn imported_collection_factory_value_graph_uses_library_api_evidence() {
         library_imported_collection_factory_contract(Lang::Python, "collections", "deque")
             .expect("deque contract");
     push_imported_binding_use(&mut il, 0, sp(60), 1, sp(61), "collections", "deque");
-    il.evidence.push(collection_sequence_evidence(2, sp(63)));
+    il.evidence
+        .push(collection_sequence_evidence(2, Lang::Python, sp(63)));
     assert!(
         eval_proven_collection_op(&il, &interner, call).is_none(),
         "import symbol proof alone must not prove the migrated stdlib factory"
@@ -179,7 +180,8 @@ fn static_index_membership_value_graph_uses_library_api_evidence() {
     );
     let root = b.add(NodeKind::Block, Payload::None, sp(89), &[comparison]);
     let mut il = finish_test_il(b, root, Lang::JavaScript);
-    il.evidence.push(collection_sequence_evidence(0, sp(91)));
+    il.evidence
+        .push(collection_sequence_evidence(0, Lang::JavaScript, sp(91)));
     assert!(
         !matches!(eval_op(&il, &interner, comparison), ValOp::Bin(op) if op == Op::In as u32),
         "static array receiver proof alone must not prove indexOf membership"
@@ -535,7 +537,8 @@ fn namespace_collection_factory_value_graph_uses_library_api_evidence_after_seed
         }),
     ));
     push_imported_namespace_use(&mut il, 1, sp(80), 2, sp(81), "collections");
-    il.evidence.push(collection_sequence_evidence(3, sp(84)));
+    il.evidence
+        .push(collection_sequence_evidence(3, Lang::Python, sp(84)));
     let mut builder = Builder::new(&il, &interner);
     builder.seed_module_value_bindings();
     let raw = builder.eval(call, &FxHashMap::default());

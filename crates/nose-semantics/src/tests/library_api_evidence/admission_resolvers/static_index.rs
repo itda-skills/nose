@@ -46,12 +46,13 @@ fn js_static_index_membership_call_il(
 }
 
 fn push_static_index_receiver_dependency(il: &mut Il, receiver: NodeId) {
-    il.evidence.push(evidence_with_dependencies(
+    il.evidence.push(language_core_evidence_with_dependencies(
         0,
         EvidenceAnchor::sequence(il.node(receiver).span),
         EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
         EvidenceStatus::Asserted,
         vec![],
+        Lang::JavaScript,
     ));
 }
 
@@ -138,6 +139,33 @@ fn admitted_static_index_membership_resolver_requires_static_index_builtin_pack_
     assert!(
         admitted_static_index_membership_at_call(&wrong_emitter, &interner, call).is_none(),
         "static index evidence from an external emitter is rejected"
+    );
+
+    let (mut broad_receiver_dependency, interner, call, _callee, receiver) =
+        js_static_index_membership_call_il("indexOf", false);
+    broad_receiver_dependency
+        .evidence
+        .push(evidence_with_dependencies(
+            0,
+            EvidenceAnchor::sequence(broad_receiver_dependency.node(receiver).span),
+            EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
+            EvidenceStatus::Asserted,
+            Vec::new(),
+        ));
+    broad_receiver_dependency
+        .evidence
+        .push(js_like_builtin_static_index_membership_record(
+            1,
+            broad_receiver_dependency.node(call).span,
+            contract.id,
+            contract.callee,
+            EvidenceStatus::Asserted,
+            &[0],
+        ));
+    assert!(
+        admitted_static_index_membership_at_call(&broad_receiver_dependency, &interner, call)
+            .is_none(),
+        "static index evidence cannot depend on broad sequence-surface proof"
     );
 
     let (mut admitted, interner, call, callee, receiver) =

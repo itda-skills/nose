@@ -220,6 +220,9 @@ fn sequence_domain_evidence_record_for_node(
         let EvidenceKind::SequenceSurface(surface) = record.kind else {
             continue;
         };
+        if !sequence_surface_record_has_language_core_provenance(il, record) {
+            continue;
+        }
         if !record_is_live(il, record) {
             return None;
         }
@@ -236,6 +239,15 @@ fn sequence_domain_evidence_record_for_node(
         _ => return None,
     };
     Some((domain, id))
+}
+
+fn sequence_surface_record_has_language_core_provenance(il: &Il, record: &EvidenceRecord) -> bool {
+    if record.provenance.emitter != EvidenceEmitter::FirstParty {
+        return false;
+    }
+    let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+    record.provenance.pack_hash == Some(stable_symbol_hash(pack_id))
+        && record.provenance.rule_hash == Some(stable_symbol_hash(producer_id))
 }
 
 fn record_is_live(il: &Il, record: &EvidenceRecord) -> bool {

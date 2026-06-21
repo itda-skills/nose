@@ -5,13 +5,14 @@ use nose_il::{
     SourceFactKind, Span, SymbolEvidenceKind,
 };
 use nose_semantics::{
-    library_api_callee_contract_hash, library_api_contract_id_hash, library_method_call_contract,
-    LibraryApiCalleeContract, LibraryApiContractId, LibraryCollectionFactoryContract,
-    MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract,
-    BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
-    FIRST_PARTY_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
-    FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID, JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
-    JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
+    language_core_evidence_provenance, library_api_callee_contract_hash,
+    library_api_contract_id_hash, library_method_call_contract, LibraryApiCalleeContract,
+    LibraryApiContractId, LibraryCollectionFactoryContract, MethodBuiltinArgs,
+    MethodReceiverContract, MethodSemanticContract, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, FIRST_PARTY_PACK_ID,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+    JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID, JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+    JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
     JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID, MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
     MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
     PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
@@ -40,6 +41,43 @@ pub(super) fn evidence(
         dependencies,
         status: EvidenceStatus::Asserted,
     }
+}
+
+pub(super) fn language_core_evidence(
+    id: u32,
+    lang: Lang,
+    anchor: EvidenceAnchor,
+    kind: EvidenceKind,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor,
+        kind,
+        provenance: EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
+        },
+        dependencies,
+        status: EvidenceStatus::Asserted,
+    }
+}
+
+pub(super) fn sequence_surface_evidence(
+    id: u32,
+    lang: Lang,
+    span: Span,
+    surface: SequenceSurfaceKind,
+) -> EvidenceRecord {
+    language_core_evidence(
+        id,
+        lang,
+        EvidenceAnchor::sequence(span),
+        EvidenceKind::SequenceSurface(surface),
+        Vec::new(),
+    )
 }
 
 pub(super) fn library_api_contract_evidence(
@@ -239,11 +277,11 @@ pub(super) fn js_new_set_il(interner: &Interner) -> (Il, NodeId) {
         }),
         Vec::new(),
     ));
-    il.evidence.push(evidence(
+    il.evidence.push(sequence_surface_evidence(
         2,
-        EvidenceAnchor::sequence(sp(12)),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
-        Vec::new(),
+        Lang::JavaScript,
+        sp(12),
+        SequenceSurfaceKind::Collection,
     ));
     (il, call)
 }

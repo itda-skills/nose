@@ -2,8 +2,8 @@ use super::super::bindings::assignment_rhs;
 use super::super::resolve_imported_immutable_bindings;
 use super::super::snapshot::{append_snapshot, snapshot_subtree};
 use super::support::{
-    coordinate_import_binding_assignment, lookup_dict_provider, lookup_import_consumer,
-    provider_with_lookup_export_evidence, snapshot_count, test_provenance,
+    coordinate_import_binding_assignment, language_core_provenance, lookup_dict_provider,
+    lookup_import_consumer, provider_with_lookup_export_evidence, snapshot_count,
 };
 use nose_il::{
     stable_symbol_hash, EvidenceAnchor, EvidenceEmitter, EvidenceId, EvidenceKind,
@@ -85,7 +85,10 @@ fn snapshot_append_copies_relevant_evidence_with_source_origin_spans() {
         copied_surface.anchor,
         EvidenceAnchor::sequence(Span::new(FileId(0), 4, 12, 1, 1))
     );
-    assert_eq!(copied_surface.provenance, test_provenance("surface"));
+    assert_eq!(
+        copied_surface.provenance,
+        language_core_provenance(Lang::Python)
+    );
 
     let copied_export = importer
         .evidence

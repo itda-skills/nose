@@ -27,19 +27,19 @@ fn map_like_literal_respects_sequence_surface_evidence() {
         "raw map tag alone must not prove a semantic map surface"
     );
 
-    il.evidence.push(evidence(
+    il.evidence.push(sequence_surface_evidence(
         0,
-        EvidenceAnchor::sequence(sp()),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::Map),
-        EvidenceStatus::Asserted,
+        Lang::Python,
+        sp(),
+        SequenceSurfaceKind::Map,
     ));
     assert!(map_like_literal(&il, &interner, map));
 
-    il.evidence.push(evidence(
+    il.evidence.push(sequence_surface_evidence(
         1,
-        EvidenceAnchor::sequence(sp()),
-        EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
-        EvidenceStatus::Asserted,
+        Lang::Python,
+        sp(),
+        SequenceSurfaceKind::Collection,
     ));
     assert!(
         !map_like_literal(&il, &interner, map),

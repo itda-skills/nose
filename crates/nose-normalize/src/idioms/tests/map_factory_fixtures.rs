@@ -55,18 +55,18 @@ pub(super) fn rust_hash_map_from_call(
         "array" => SequenceSurfaceKind::Collection,
         other => panic!("unexpected test entry surface: {other}"),
     };
-    il.evidence.push(evidence(
+    il.evidence.push(sequence_surface_evidence(
         0,
-        EvidenceAnchor::sequence(entry_span),
-        EvidenceKind::SequenceSurface(entry_kind),
-        EvidenceStatus::Asserted,
+        Lang::Rust,
+        entry_span,
+        entry_kind,
     ));
     if with_entries_surface {
-        il.evidence.push(evidence(
+        il.evidence.push(sequence_surface_evidence(
             1,
-            EvidenceAnchor::sequence(entries_span),
-            EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
-            EvidenceStatus::Asserted,
+            Lang::Rust,
+            entries_span,
+            SequenceSurfaceKind::Collection,
         ));
     }
     (il, interner, call)

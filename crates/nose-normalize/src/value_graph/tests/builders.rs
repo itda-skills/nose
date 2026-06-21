@@ -208,7 +208,8 @@ fn raw_sequence_tags_do_not_prove_value_graph_surfaces() {
         ValOp::Seq(SEQ_VALUE_COLLECTION)
     ));
 
-    il.evidence.push(collection_sequence_evidence(0, sp(21)));
+    il.evidence
+        .push(collection_sequence_evidence(0, Lang::JavaScript, sp(21)));
     let mut builder = Builder::new(&il, &interner);
     let proven = builder.eval(seq, &FxHashMap::default());
     assert!(matches!(

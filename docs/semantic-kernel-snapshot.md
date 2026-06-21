@@ -717,11 +717,12 @@ migrated.
   map-entry-list admission, imported-literal eligibility, and value-graph
   canonical tags. Strict exact gates, value-graph sequence lowering, and
   sibling-module literal export checks consume this contract only through
-  matching `SequenceSurface` evidence rather than raw tag spelling or local
-  string allowlists. Missing surface evidence now lowers to the untagged
-  sequence value in the value graph, not a spelling-derived raw hash. Untagged
-  `Seq` remains an internal grouping surface and does not itself prove exact
-  collection semantics; the older Python empty sequence collection case is
+  matching `SequenceSurface` evidence with builtin language-core provenance
+  rather than raw tag spelling or local string allowlists. Missing surface
+  evidence now lowers to the untagged sequence value in the value graph, not a
+  spelling-derived raw hash. Untagged `Seq` remains an internal grouping surface
+  and does not itself prove exact collection semantics; the older Python empty
+  sequence collection case is
   handled only by the explicit collection profile path.
 - Collection reductions such as Rust `Iterator::count()` and Java
   `Stream.count()` are admitted through library method contracts plus exact
@@ -894,10 +895,10 @@ migrated.
   outer `composite_literal` and per-entry `keyed_element` sequence surfaces plus
   the supported zero-default payload classes. Normalize and strict exact paths
   require matching `SequenceSurface(GoCompositeMapLiteral)` and
-  `SequenceSurface(GoMapEntry)` evidence, so raw tag spelling alone is not
-  enough. Go `composite_literal` no longer falls back to a generic collection
-  sequence tag; it is consumed only by the Go map contract or left as a distinct
-  surface.
+  `SequenceSurface(GoMapEntry)` evidence with Go language-core provenance, so
+  raw tag spelling alone is not enough. Go `composite_literal` no longer falls
+  back to a generic collection sequence tag; it is consumed only by the Go map
+  contract or left as a distinct surface.
 - Static JS-like `indexOf`/`findIndex` membership requires a call occurrence
   with `nose.javascript.builtins.static_index_membership` provenance whose
   receiver sequence surface has membership-collection admission. Untagged

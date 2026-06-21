@@ -7,16 +7,17 @@ pub(super) use nose_il::{
     UnitKind,
 };
 pub(super) use nose_semantics::{
-    library_free_function_builtin_contract, library_free_name_map_factory_contract,
-    library_iterator_identity_adapter_contract, library_map_get_contract,
-    library_map_get_default_contract, library_map_key_view_contract, library_method_call_contract,
-    library_receiver_membership_contract, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
-    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
-    FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID, ITERATOR_IDENTITY_ADAPTER_PACK_ID,
-    ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID, MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
-    MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID, MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID,
-    MAP_KEY_VIEW_PROTOCOL_PACK_ID, MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
-    RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID, RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
+    language_core_evidence_provenance, library_free_function_builtin_contract,
+    library_free_name_map_factory_contract, library_iterator_identity_adapter_contract,
+    library_map_get_contract, library_map_get_default_contract, library_map_key_view_contract,
+    library_method_call_contract, library_receiver_membership_contract,
+    BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+    ITERATOR_IDENTITY_ADAPTER_PACK_ID, ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID,
+    MAP_GET_DEFAULT_PROTOCOL_PACK_ID, MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
+    MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID, MAP_KEY_VIEW_PROTOCOL_PACK_ID,
+    MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
+    RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
 };
 
 pub(super) fn sp() -> Span {
@@ -57,6 +58,27 @@ pub(super) fn evidence_with_dependencies(
     }
 }
 
+pub(super) fn sequence_surface_evidence(
+    id: u32,
+    lang: Lang,
+    span: Span,
+    surface: SequenceSurfaceKind,
+) -> EvidenceRecord {
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor: EvidenceAnchor::sequence(span),
+        kind: EvidenceKind::SequenceSurface(surface),
+        provenance: EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
+        },
+        dependencies: Vec::new(),
+        status: EvidenceStatus::Asserted,
+    }
+}
+
 pub(super) fn next_evidence_id(il: &Il) -> u32 {
     il.evidence.len() as u32
 }
@@ -74,11 +96,11 @@ pub(super) fn push_sequence_surface_evidence(
     surface: SequenceSurfaceKind,
 ) -> EvidenceId {
     let id = next_evidence_id(il);
-    il.evidence.push(evidence(
+    il.evidence.push(sequence_surface_evidence(
         id,
-        EvidenceAnchor::sequence(il.node(node).span),
-        EvidenceKind::SequenceSurface(surface),
-        EvidenceStatus::Asserted,
+        il.meta.lang,
+        il.node(node).span,
+        surface,
     ));
     EvidenceId(id)
 }

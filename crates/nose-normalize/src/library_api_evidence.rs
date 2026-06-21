@@ -1,18 +1,19 @@
 use nose_il::{
     stable_symbol_hash, Builtin, DomainEvidence, EvidenceAnchor, EvidenceEmitter, EvidenceId,
-    EvidenceKind, EvidenceStatus, Il, Interner, LibraryApiEvidenceKind, NodeId, NodeKind, Payload,
-    SequenceSurfaceKind, Symbol, SymbolEvidenceKind,
+    EvidenceKind, EvidenceRecord, EvidenceStatus, Il, Interner, LibraryApiEvidenceKind, NodeId,
+    NodeKind, Payload, SequenceSurfaceKind, Symbol, SymbolEvidenceKind,
 };
 use nose_semantics::{
-    builder_append_method_contract, library_api_callee_contract_hash, library_api_contract_id_hash,
+    builder_append_method_contract, language_core_evidence_provenance,
+    library_api_callee_contract_hash, library_api_contract_id_hash,
     library_api_free_name_shadow_safe, library_api_property_dependencies_for_field_with_cache,
     library_api_receiver_dependencies_for_call_with_cache, library_method_call_contract,
     library_property_builtin_contract, library_receiver_method_api_contract,
     library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
-    LibraryApiCalleeContract, LibraryApiDependencyCache, MethodBuiltinArgs,
-    MethodEffectReceiverContract, MethodReceiverContract, MethodSemanticContract,
-    BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
-    FIRST_PARTY_PACK_ID, RUST_STDLIB_OPTION_PRODUCER_ID,
+    sequence_surface_kind_for_tag, LibraryApiCalleeContract, LibraryApiDependencyCache,
+    MethodBuiltinArgs, MethodEffectReceiverContract, MethodReceiverContract,
+    MethodSemanticContract, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, FIRST_PARTY_PACK_ID, RUST_STDLIB_OPTION_PRODUCER_ID,
 };
 
 pub(crate) fn run(il: &mut Il, interner: &Interner) {
@@ -166,7 +167,7 @@ fn builder_append_method_dependencies(
     };
     let callee_node = *il.children(call).first()?;
     let receiver = method_callee_receiver_node(il, interner, callee_node, method)?;
-    let seed_dependency = local_collection_seed_dependency_id(il, call, receiver)?;
+    let seed_dependency = local_collection_seed_dependency_id(il, interner, call, receiver)?;
     let receiver_domain = upsert_first_party_evidence(
         il,
         EvidenceAnchor::node(il.node(receiver).span, il.kind(receiver)),
@@ -197,6 +198,7 @@ fn method_callee_receiver_node(
 
 fn local_collection_seed_dependency_id(
     il: &Il,
+    interner: &Interner,
     call: NodeId,
     receiver: NodeId,
 ) -> Option<EvidenceId> {
@@ -219,7 +221,7 @@ fn local_collection_seed_dependency_id(
         if binding_node_name(il, *target) != Some(receiver_name) {
             continue;
         }
-        let dependency = collection_seed_dependency_id(il, *rhs)?;
+        let dependency = collection_seed_dependency_id(il, interner, *rhs)?;
         match found {
             None => found = Some(dependency),
             Some(_) => return None,
@@ -232,9 +234,9 @@ fn nearest_scope(il: &Il, node: NodeId) -> Option<NodeId> {
     il.nearest_scope(node)
 }
 
-fn collection_seed_dependency_id(il: &Il, node: NodeId) -> Option<EvidenceId> {
+fn collection_seed_dependency_id(il: &Il, interner: &Interner, node: NodeId) -> Option<EvidenceId> {
     domain_evidence_id_for_node(il, node, DomainEvidence::Collection).or_else(|| {
-        sequence_surface_evidence_id_for_node(il, node, SequenceSurfaceKind::Collection)
+        sequence_surface_evidence_id_for_node(il, interner, node, SequenceSurfaceKind::Collection)
     })
 }
 
@@ -255,20 +257,52 @@ fn domain_evidence_id_for_node(
 
 fn sequence_surface_evidence_id_for_node(
     il: &Il,
+    interner: &Interner,
     node: NodeId,
     expected: SequenceSurfaceKind,
 ) -> Option<EvidenceId> {
     if il.kind(node) != NodeKind::Seq {
         return None;
     }
+    let raw_tag = match il.node(node).payload {
+        Payload::None => None,
+        Payload::Name(name) => Some(interner.resolve(name)),
+        _ => return None,
+    };
+    if sequence_surface_kind_for_tag(il.meta.lang, raw_tag) != Some(expected) {
+        return None;
+    }
     let anchor = EvidenceAnchor::sequence(il.node(node).span);
-    il.evidence_anchored_at(anchor.span()).find_map(|record| {
-        (record.anchor == anchor
-            && record.kind == EvidenceKind::SequenceSurface(expected)
-            && record.status == EvidenceStatus::Asserted
-            && il.evidence_dependencies_asserted(record))
-        .then_some(record.id)
-    })
+    let mut found = None;
+    for record in il.evidence_anchored_at(anchor.span()) {
+        if record.anchor != anchor {
+            continue;
+        }
+        let EvidenceKind::SequenceSurface(kind) = record.kind else {
+            continue;
+        };
+        if !sequence_surface_record_has_language_core_provenance(il, record) {
+            continue;
+        }
+        if record.status != EvidenceStatus::Asserted || !il.evidence_dependencies_asserted(record) {
+            return None;
+        }
+        match found {
+            None => found = Some((kind, record.id)),
+            Some((existing, _)) if existing == kind => {}
+            Some(_) => return None,
+        }
+    }
+    found.and_then(|(kind, id)| (kind == expected).then_some(id))
+}
+
+fn sequence_surface_record_has_language_core_provenance(il: &Il, record: &EvidenceRecord) -> bool {
+    if record.provenance.emitter != EvidenceEmitter::FirstParty {
+        return false;
+    }
+    let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+    record.provenance.pack_hash == Some(stable_symbol_hash(pack_id))
+        && record.provenance.rule_hash == Some(stable_symbol_hash(producer_id))
 }
 
 fn record_property_library_api(

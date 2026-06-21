@@ -916,19 +916,12 @@ fn library_api_record_depends_on_receiver_sequence_surface(
         return false;
     }
     record.dependencies.iter().any(|&id| {
-        let Some(dependency) = il.evidence_record_by_id(id) else {
-            return false;
-        };
-        let EvidenceKind::SequenceSurface(kind) = dependency.kind else {
-            return false;
-        };
-        dependency.status == EvidenceStatus::Asserted
-            && il.evidence_dependencies_asserted(dependency)
-            && matches!(
-                dependency.anchor,
-                EvidenceAnchor::Sequence { span } if span == il.node(receiver).span
-            )
-            && sequence_surface_kind_satisfies_method_receiver(kind, contract)
+        matches!(
+            sequence_surface_evidence_record_at_sequence_span(il, il.node(receiver).span),
+            EvidenceResolution::Found((kind, dependency_id))
+                if dependency_id == id
+                    && sequence_surface_kind_satisfies_method_receiver(kind, contract)
+        )
     })
 }
 

@@ -100,6 +100,7 @@ pub use packs::*;
 pub use sequence_surface::*;
 use sequence_surface::{
     sequence_surface_evidence_at_sequence_span, sequence_surface_evidence_matches_node,
+    sequence_surface_evidence_record_at_sequence_span,
 };
 pub use stdlib_semantics::*;
 pub use symbol_identity::{

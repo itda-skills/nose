@@ -108,8 +108,9 @@ fn admitted_sequence_surface_controls_sequence_value_tag() {
         &interner,
         "array",
         Lang::JavaScript,
-        vec![evidence(
+        vec![language_core_evidence(
             0,
+            Lang::JavaScript,
             EvidenceAnchor::sequence(sp(44)),
             EvidenceKind::SequenceSurface(SequenceSurfaceKind::Collection),
         )],

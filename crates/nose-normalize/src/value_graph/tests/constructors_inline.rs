@@ -30,7 +30,8 @@ fn js_new_set_il(interner: &Interner) -> (Il, NodeId) {
             name_hash: stable_symbol_hash("Set"),
         }),
     ));
-    il.evidence.push(collection_sequence_evidence(2, sp(72)));
+    il.evidence
+        .push(collection_sequence_evidence(2, Lang::JavaScript, sp(72)));
     (il, call)
 }
 

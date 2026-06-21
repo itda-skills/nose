@@ -193,7 +193,8 @@ fn normalized_binding_membership_op(case: BindingMembershipCase) -> ValOp {
     let body = b.add(NodeKind::Block, Payload::None, sp(9), &root_children);
     let root = b.add(NodeKind::Func, Payload::None, sp(8), &[body]);
     let mut il = finish_test_il(b, root, Lang::TypeScript);
-    il.evidence.push(collection_sequence_evidence(0, seq_span));
+    il.evidence
+        .push(collection_sequence_evidence(0, Lang::TypeScript, seq_span));
     if let Some(span) = mutation_span {
         il.evidence.push(evidence(
             1,
