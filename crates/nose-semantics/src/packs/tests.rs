@@ -1909,6 +1909,80 @@ fn local_manifest_registers_external_value_law_rows_as_data_only() {
 }
 
 #[test]
+fn local_manifest_registers_external_producer_and_contract_rows_as_data_only() {
+    let dir = unique_dir("external_contract_rows");
+    let path = dir.join("pack.json");
+    fs::write(&path, manifest("com.example.contracts")).unwrap();
+
+    let set = SemanticPackSet::new_local(&[path.clone()]).expect("pack loads");
+    let external = set.packs().last().expect("external pack summary");
+    assert_eq!(external.id, "com.example.contracts");
+    assert_eq!(external.influence, SemanticPackInfluence::MetadataOnly);
+    assert_eq!(external.counts.evidence_producers, 1);
+    assert_eq!(external.counts.contracts, 1);
+
+    let producers = set.external_evidence_producer_rows();
+    assert_eq!(producers.len(), 1);
+    let producer = &producers[0];
+    assert_eq!(producer.pack_id, "com.example.contracts");
+    assert_eq!(
+        producer.pack_hash,
+        stable_symbol_hash("com.example.contracts")
+    );
+    assert_eq!(producer.manifest_path, path.canonicalize().unwrap());
+    assert_eq!(producer.producer_id, "python.library-api.example");
+    assert_eq!(
+        producer.producer_hash,
+        stable_symbol_hash("python.library-api.example")
+    );
+    assert_eq!(producer.kind, "LibraryApi.Contract");
+    assert_eq!(producer.anchors, [SemanticPackAnchor::Node]);
+    assert_eq!(producer.channel, SemanticPackChannel::ExactEmpirical);
+    assert!(producer.emits.is_empty());
+    assert!(producer.requirements.is_empty());
+    assert_eq!(
+        producer.stable_hash_inputs,
+        ["pack.id", "producer.id", "call_span"]
+    );
+    assert_eq!(producer.conflict_policy, "fail-closed");
+    assert!(producer.notes.is_none());
+
+    let contracts = set.external_contract_rows();
+    assert_eq!(contracts.len(), 1);
+    let contract = &contracts[0];
+    assert_eq!(contract.pack_id, "com.example.contracts");
+    assert_eq!(
+        contract.pack_hash,
+        stable_symbol_hash("com.example.contracts")
+    );
+    assert_eq!(contract.manifest_path, path.canonicalize().unwrap());
+    assert_eq!(contract.contract_id, "python.example.contract");
+    assert_eq!(
+        contract.contract_hash,
+        stable_symbol_hash("python.example.contract")
+    );
+    assert_eq!(contract.surface["kind"], "function");
+    assert_eq!(contract.requirements.len(), 1);
+    assert_eq!(
+        contract.requirements[0].ref_id,
+        "python.library-api.example"
+    );
+    assert_eq!(contract.requirements[0].subject, "call");
+    assert!(contract.requirements[0].required);
+    assert_eq!(contract.semantics["operation"], "Example");
+    assert_eq!(contract.channel, SemanticPackChannel::ExactEmpirical);
+    assert_eq!(contract.proof_status, SemanticPackProofStatus::Covered);
+    assert_eq!(contract.conformance_refs, ["positive", "negative"]);
+    assert!(contract.known_unsupported.is_empty());
+    assert!(contract.notes.is_none());
+
+    let builtin = SemanticPackSet::builtin_only();
+    assert!(builtin.external_evidence_producer_rows().is_empty());
+    assert!(builtin.external_contract_rows().is_empty());
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
 fn conformance_check_reports_declared_fixture_files() {
     let dir = unique_dir("conformance_ok");
     let fixture_dir = dir.join("fixtures");

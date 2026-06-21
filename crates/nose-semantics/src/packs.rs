@@ -170,7 +170,7 @@ impl SemanticPackKind {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-enum SemanticPackAnchor {
+pub enum SemanticPackAnchor {
     SourceSpan,
     Node,
     Param,
@@ -178,6 +178,20 @@ enum SemanticPackAnchor {
     Sequence,
     Module,
     Package,
+}
+
+impl SemanticPackAnchor {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            SemanticPackAnchor::SourceSpan => "source-span",
+            SemanticPackAnchor::Node => "node",
+            SemanticPackAnchor::Param => "param",
+            SemanticPackAnchor::Binding => "binding",
+            SemanticPackAnchor::Sequence => "sequence",
+            SemanticPackAnchor::Module => "module",
+            SemanticPackAnchor::Package => "package",
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize)]
@@ -324,6 +338,96 @@ impl SemanticPackRequirementSummary {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ExternalEvidenceProducerRow {
+    pub pack_id: String,
+    pub pack_hash: u64,
+    pub manifest_path: PathBuf,
+    pub producer_id: String,
+    pub producer_hash: u64,
+    pub kind: String,
+    pub anchors: Vec<SemanticPackAnchor>,
+    pub channel: SemanticPackChannel,
+    pub emits: Vec<String>,
+    pub requirements: Vec<SemanticPackRequirementSummary>,
+    pub stable_hash_inputs: Vec<String>,
+    pub conflict_policy: String,
+    pub notes: Option<String>,
+}
+
+impl ExternalEvidenceProducerRow {
+    fn from_manifest(
+        manifest_path: &std::path::Path,
+        manifest: &SemanticPackManifest,
+        producer: &ManifestEvidenceProducer,
+    ) -> Self {
+        Self {
+            pack_id: manifest.pack.id.clone(),
+            pack_hash: semantic_pack_hash(&manifest.pack.id),
+            manifest_path: manifest_path.to_path_buf(),
+            producer_id: producer.id.clone(),
+            producer_hash: stable_symbol_hash(&producer.id),
+            kind: producer.kind.clone(),
+            anchors: producer.anchors.clone(),
+            channel: producer.channel,
+            emits: producer.emits.clone(),
+            requirements: producer
+                .requires
+                .iter()
+                .map(SemanticPackRequirementSummary::from_manifest)
+                .collect(),
+            stable_hash_inputs: producer.stable_hash_inputs.clone(),
+            conflict_policy: producer.conflict_policy.clone(),
+            notes: producer.notes.clone(),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ExternalContractRow {
+    pub pack_id: String,
+    pub pack_hash: u64,
+    pub manifest_path: PathBuf,
+    pub contract_id: String,
+    pub contract_hash: u64,
+    pub surface: serde_json::Value,
+    pub requirements: Vec<SemanticPackRequirementSummary>,
+    pub semantics: serde_json::Value,
+    pub channel: SemanticPackChannel,
+    pub proof_status: SemanticPackProofStatus,
+    pub conformance_refs: Vec<String>,
+    pub known_unsupported: Vec<String>,
+    pub notes: Option<String>,
+}
+
+impl ExternalContractRow {
+    fn from_manifest(
+        manifest_path: &std::path::Path,
+        manifest: &SemanticPackManifest,
+        contract: &ManifestContract,
+    ) -> Self {
+        Self {
+            pack_id: manifest.pack.id.clone(),
+            pack_hash: semantic_pack_hash(&manifest.pack.id),
+            manifest_path: manifest_path.to_path_buf(),
+            contract_id: contract.id.clone(),
+            contract_hash: stable_symbol_hash(&contract.id),
+            surface: contract.surface.clone(),
+            requirements: contract
+                .requires
+                .iter()
+                .map(SemanticPackRequirementSummary::from_manifest)
+                .collect(),
+            semantics: contract.semantics.clone(),
+            channel: contract.channel,
+            proof_status: contract.proof_status,
+            conformance_refs: contract.conformance_refs.clone(),
+            known_unsupported: contract.known_unsupported.clone(),
+            notes: contract.notes.clone(),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ExternalValueLawRow {
     pub pack_id: String,
     pub pack_hash: u64,
@@ -409,6 +513,8 @@ pub fn semantic_pack_hash(pack_id: &str) -> u64 {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct SemanticPackSet {
     packs: Vec<SemanticPackSummary>,
+    external_evidence_producer_rows: Vec<ExternalEvidenceProducerRow>,
+    external_contract_rows: Vec<ExternalContractRow>,
     external_value_law_rows: Vec<ExternalValueLawRow>,
 }
 
@@ -416,6 +522,8 @@ impl SemanticPackSet {
     pub fn new_local(paths: &[PathBuf]) -> Result<Self, SemanticPackLoadError> {
         let manifest_paths = discover_manifest_paths(paths)?;
         let mut packs = compiled_builtin_packs();
+        let mut external_evidence_producer_rows = Vec::new();
+        let mut external_contract_rows = Vec::new();
         let mut external_value_law_rows = Vec::new();
         for path in manifest_paths {
             let loaded = loading::load_local_manifest_with_rows(&path)?;
@@ -429,11 +537,15 @@ impl SemanticPackSet {
                     second_path: Some(path),
                 });
             }
+            external_evidence_producer_rows.extend(loaded.external_evidence_producer_rows);
+            external_contract_rows.extend(loaded.external_contract_rows);
             external_value_law_rows.extend(loaded.external_value_law_rows);
             packs.push(loaded.summary);
         }
         Ok(Self {
             packs,
+            external_evidence_producer_rows,
+            external_contract_rows,
             external_value_law_rows,
         })
     }
@@ -441,6 +553,8 @@ impl SemanticPackSet {
     pub fn builtin_only() -> Self {
         Self {
             packs: compiled_builtin_packs(),
+            external_evidence_producer_rows: Vec::new(),
+            external_contract_rows: Vec::new(),
             external_value_law_rows: Vec::new(),
         }
     }
@@ -451,6 +565,14 @@ impl SemanticPackSet {
 
     pub fn packs(&self) -> &[SemanticPackSummary] {
         &self.packs
+    }
+
+    pub fn external_evidence_producer_rows(&self) -> &[ExternalEvidenceProducerRow] {
+        &self.external_evidence_producer_rows
+    }
+
+    pub fn external_contract_rows(&self) -> &[ExternalContractRow] {
+        &self.external_contract_rows
     }
 
     pub fn external_value_law_rows(&self) -> &[ExternalValueLawRow] {

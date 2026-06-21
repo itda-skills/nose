@@ -7,6 +7,8 @@ use super::compiled::is_compiled_builtin_pack_id;
 
 pub(super) struct LoadedLocalManifest {
     pub summary: SemanticPackSummary,
+    pub external_evidence_producer_rows: Vec<ExternalEvidenceProducerRow>,
+    pub external_contract_rows: Vec<ExternalContractRow>,
     pub external_value_law_rows: Vec<ExternalValueLawRow>,
 }
 
@@ -132,6 +134,18 @@ pub(super) fn load_local_manifest_with_rows(
     path: &Path,
 ) -> Result<LoadedLocalManifest, SemanticPackLoadError> {
     let manifest = read_local_manifest(path)?;
+    let external_evidence_producer_rows = manifest
+        .declares
+        .evidence_producers
+        .iter()
+        .map(|producer| ExternalEvidenceProducerRow::from_manifest(path, &manifest, producer))
+        .collect();
+    let external_contract_rows = manifest
+        .declares
+        .contracts
+        .iter()
+        .map(|contract| ExternalContractRow::from_manifest(path, &manifest, contract))
+        .collect();
     let external_value_law_rows = manifest
         .declares
         .value_laws
@@ -147,6 +161,8 @@ pub(super) fn load_local_manifest_with_rows(
         })?;
     Ok(LoadedLocalManifest {
         summary,
+        external_evidence_producer_rows,
+        external_contract_rows,
         external_value_law_rows,
     })
 }
