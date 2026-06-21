@@ -83,6 +83,9 @@ pub(crate) fn resolve_imported_immutable_bindings(files: &mut [Il], interner: &I
                     if export.file_idx == file_idx {
                         return None;
                     }
+                    if files[export.file_idx].meta.lang != il.meta.lang {
+                        return None;
+                    }
                     if binding_uses.binding_mutated(il, local, stmt) {
                         return None;
                     }

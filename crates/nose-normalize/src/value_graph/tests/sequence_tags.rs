@@ -28,8 +28,9 @@ fn import_binding_value_requires_sequence_evidence() {
     ));
     assert!(!builder.is_import_binding_value(raw, "collections", "deque"));
 
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_evidence(
         0,
+        Lang::Python,
         EvidenceAnchor::sequence(sp(40)),
         EvidenceKind::Import(ImportEvidenceKind::Binding {
             module_hash: stable_symbol_hash("collections"),
@@ -138,8 +139,9 @@ fn namespace_member_import_binding_requires_proven_namespace_value() {
     assert!(matches!(builder.nodes[raw as usize].op, ValOp::Field(_)));
     assert!(!builder.is_import_binding_value(raw, "math", "prod"));
 
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_evidence(
         0,
+        Lang::Python,
         EvidenceAnchor::sequence(sp(50)),
         EvidenceKind::Import(ImportEvidenceKind::Namespace {
             module_hash: stable_symbol_hash("math"),

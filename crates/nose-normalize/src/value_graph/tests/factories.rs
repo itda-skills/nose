@@ -258,8 +258,9 @@ fn push_java_map_lookup_evidence(
 ) {
     let contract =
         library_java_map_factory_contract(Lang::Java, "Map", "of").expect("Map.of contract");
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_evidence(
         0,
+        Lang::Java,
         EvidenceAnchor::sequence(import_span),
         EvidenceKind::Import(ImportEvidenceKind::Binding {
             module_hash: stable_symbol_hash("java.util"),
@@ -274,8 +275,9 @@ fn push_java_map_lookup_evidence(
         4,
         vec![EvidenceId(2)],
     ));
-    il.evidence.push(evidence_with_dependencies(
+    il.evidence.push(language_core_evidence_with_dependencies(
         4,
+        Lang::Java,
         EvidenceAnchor::node(call_span, NodeKind::Call),
         EvidenceKind::Import(ImportEvidenceKind::ImportedLiteralSnapshot {
             module_hash: stable_symbol_hash(snapshot_module),
@@ -478,7 +480,7 @@ fn raw_name_module_assignment_without_evidence_is_not_seeded() {
 
     assert!(
         !builder.global_env.contains_key(&table),
-        "raw Name assignments need first-party import or imported-literal evidence"
+        "raw Name assignments need matching language-core import or imported-literal evidence"
     );
 }
 
@@ -524,8 +526,9 @@ fn namespace_collection_factory_value_graph_uses_library_api_evidence_after_seed
     let contract =
         library_imported_collection_factory_contract(Lang::Python, "collections", "deque")
             .expect("deque contract");
-    il.evidence.push(evidence(
+    il.evidence.push(language_core_evidence(
         0,
+        Lang::Python,
         EvidenceAnchor::sequence(sp(80)),
         EvidenceKind::Import(ImportEvidenceKind::Namespace {
             module_hash: stable_symbol_hash("collections"),

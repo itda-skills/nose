@@ -237,7 +237,7 @@ pub(super) fn provider_with_lookup_export_evidence(interner: &Interner) -> (Il, 
             exported_hash: stable_symbol_hash("LOOKUP"),
             root_kind: NodeKind::Seq,
         }),
-        provenance: test_provenance("export"),
+        provenance: language_core_provenance(provider.meta.lang),
         dependencies: vec![EvidenceId(0)],
         status: EvidenceStatus::Asserted,
     });

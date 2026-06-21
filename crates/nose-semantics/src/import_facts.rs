@@ -107,59 +107,83 @@ pub fn import_fact_proof_rhs(il: &Il, rhs: NodeId) -> Option<ImportFactProof> {
     }
 }
 
-/// Prove that `span/kind` is a first-party imported-literal producer or copied
-/// snapshot whose recorded dependencies are all asserted. This proof preserves a
-/// provider-scope literal producer after cross-file replacement; consumers must
-/// still check the expression shape/result contract they are about to build.
+/// Prove that `span/kind` is a builtin language-core imported-literal producer
+/// or copied snapshot whose recorded dependencies are all asserted. This proof
+/// preserves a provider-scope literal producer after cross-file replacement;
+/// consumers must still check the expression shape/result contract they are
+/// about to build.
 pub fn imported_literal_producer_evidence_at_span(il: &Il, span: Span, kind: NodeKind) -> bool {
-    il.evidence_anchored_at(span).any(|record| {
-        record.status == EvidenceStatus::Asserted
-            && first_party_record(record)
-            && record.anchor == EvidenceAnchor::node(span, kind)
-            && matches!(
-                record.kind,
-                EvidenceKind::Import(
-                    ImportEvidenceKind::ImmutableLiteralExport {
-                        root_kind,
-                        ..
-                    } | ImportEvidenceKind::ImportedLiteralSnapshot {
-                        root_kind,
-                        ..
-                    }
-                ) if root_kind == kind
-            )
-            && il.evidence_dependencies_asserted(record)
-    })
+    matches!(
+        imported_literal_evidence_at_span(il, span, kind, ImportedLiteralAdmission::Producer),
+        EvidenceResolution::Found(())
+    )
 }
 
 pub fn imported_literal_snapshot_evidence_at_span(il: &Il, span: Span, kind: NodeKind) -> bool {
-    il.evidence_anchored_at(span).any(|record| {
-        record.status == EvidenceStatus::Asserted
-            && first_party_record(record)
-            && record.anchor == EvidenceAnchor::node(span, kind)
-            && matches!(
-                record.kind,
-                EvidenceKind::Import(ImportEvidenceKind::ImportedLiteralSnapshot {
-                    root_kind,
-                    ..
-                }) if root_kind == kind
-            )
-            && il.evidence_dependencies_asserted(record)
-    })
+    matches!(
+        imported_literal_evidence_at_span(il, span, kind, ImportedLiteralAdmission::SnapshotOnly),
+        EvidenceResolution::Found(())
+    )
 }
 
 pub fn imported_literal_producer_evidence_for_node(il: &Il, node: NodeId) -> bool {
     imported_literal_producer_evidence_at_span(il, il.node(node).span, il.kind(node))
 }
 
-pub(super) fn first_party_record(record: &EvidenceRecord) -> bool {
-    if record.provenance.emitter != EvidenceEmitter::FirstParty {
-        return false;
+#[derive(Clone, Copy)]
+enum ImportedLiteralAdmission {
+    Producer,
+    SnapshotOnly,
+}
+
+fn imported_literal_evidence_at_span(
+    il: &Il,
+    span: Span,
+    kind: NodeKind,
+    admission: ImportedLiteralAdmission,
+) -> EvidenceResolution<()> {
+    let mut found = false;
+    for record in il.evidence_anchored_at(span) {
+        if record.anchor != EvidenceAnchor::node(span, kind) {
+            continue;
+        }
+        if !imported_literal_record_matches(record.kind, kind, admission) {
+            continue;
+        }
+        if record.status != EvidenceStatus::Asserted
+            || !language_core_record_for_il(il, record)
+            || !il.evidence_dependencies_asserted(record)
+        {
+            return EvidenceResolution::Ambiguous;
+        }
+        found = true;
     }
-    let Some(pack_hash) = record.provenance.pack_hash else {
-        return false;
-    };
-    pack_hash == stable_symbol_hash(FIRST_PARTY_PACK_ID) || is_builtin_language_pack_hash(pack_hash)
+    if found {
+        EvidenceResolution::Found(())
+    } else {
+        EvidenceResolution::Missing
+    }
+}
+
+fn imported_literal_record_matches(
+    evidence: EvidenceKind,
+    kind: NodeKind,
+    admission: ImportedLiteralAdmission,
+) -> bool {
+    match (admission, evidence) {
+        (
+            ImportedLiteralAdmission::Producer,
+            EvidenceKind::Import(
+                ImportEvidenceKind::ImmutableLiteralExport { root_kind, .. }
+                | ImportEvidenceKind::ImportedLiteralSnapshot { root_kind, .. },
+            ),
+        ) => root_kind == kind,
+        (
+            ImportedLiteralAdmission::SnapshotOnly,
+            EvidenceKind::Import(ImportEvidenceKind::ImportedLiteralSnapshot { root_kind, .. }),
+        ) => root_kind == kind,
+        _ => false,
+    }
 }
 
 fn language_core_record_for_il(il: &Il, record: &EvidenceRecord) -> bool {

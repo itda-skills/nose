@@ -9,13 +9,13 @@ pub(super) use nose_il::{
     SymbolEvidenceKind, Unit, UnitKind,
 };
 pub(super) use nose_semantics::{
-    admitted_hof_demand_effect_profile_at_node, builtin_tag, library_api_callee_contract_hash,
-    library_api_contract_id_hash, library_free_function_builtin_contract,
-    library_free_name_collection_factory_contract, library_imported_collection_factory_contract,
-    library_java_collection_constructor_contract, library_java_collection_factory_contract,
-    library_java_map_factory_contract, library_js_like_map_constructor_contract,
-    library_js_like_set_constructor_contract, library_method_call_contract,
-    library_promise_resolve_contract, library_promise_then_contract,
+    admitted_hof_demand_effect_profile_at_node, builtin_tag, language_core_evidence_provenance,
+    library_api_callee_contract_hash, library_api_contract_id_hash,
+    library_free_function_builtin_contract, library_free_name_collection_factory_contract,
+    library_imported_collection_factory_contract, library_java_collection_constructor_contract,
+    library_java_collection_factory_contract, library_java_map_factory_contract,
+    library_js_like_map_constructor_contract, library_js_like_set_constructor_contract,
+    library_method_call_contract, library_promise_resolve_contract, library_promise_then_contract,
     library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
     library_scalar_integer_method_contract, library_static_index_membership_contract,
     DomainEvidence, LibraryApiCalleeContract, LibraryApiContractId,
@@ -75,6 +75,37 @@ pub(super) fn evidence_with_dependencies(
             emitter: EvidenceEmitter::FirstParty,
             pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
             rule_hash: Some(stable_symbol_hash("test")),
+        },
+        dependencies,
+        status: EvidenceStatus::Asserted,
+    }
+}
+
+pub(super) fn language_core_evidence(
+    id: u32,
+    lang: Lang,
+    anchor: EvidenceAnchor,
+    kind: EvidenceKind,
+) -> EvidenceRecord {
+    language_core_evidence_with_dependencies(id, lang, anchor, kind, Vec::new())
+}
+
+pub(super) fn language_core_evidence_with_dependencies(
+    id: u32,
+    lang: Lang,
+    anchor: EvidenceAnchor,
+    kind: EvidenceKind,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    let (pack_id, producer_id) = language_core_evidence_provenance(lang);
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor,
+        kind,
+        provenance: EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(pack_id)),
+            rule_hash: Some(stable_symbol_hash(producer_id)),
         },
         dependencies,
         status: EvidenceStatus::Asserted,

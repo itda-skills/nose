@@ -96,7 +96,9 @@ fall back to a side-table mirror when source evidence is missing.
   `nose.lang.python`, `nose.lang.javascript-typescript`, `nose.lang.rust`, or
   `nose.lang.html`. Specialized consumers can require source-fact producer ids
   for narrow syntax proof, while broad type, place, symbol, and domain evidence
-  uses the language-core producer for the same builtin language pack.
+  uses the language-core producer for the same builtin language pack. Cross-file
+  module-import immutable literal export/snapshot proof is also language-core
+  evidence.
 - JS/TS lowering emits source facts for construct syntax, async `await`
   boundaries, generator `yield` boundaries, regex literals, strict equality,
   strict inequality, loose equality, loose inequality, unary `typeof`, and

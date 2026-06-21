@@ -59,8 +59,10 @@ Trust is separate from channel eligibility.
   `nose.lang.swift`, `nose.lang.css`, and `nose.lang.html` report official
   parser/lowering ownership metadata plus generic language-core and source-fact
   producer provenance for builtin language support while the implementation
-  stays in tree. `nose.lang.c` also owns the specialized unsigned-cast
-  source-fact producer used by exact byte-pack admission;
+  stays in tree. Module-import immutable literal export/snapshot proof also
+  uses the matching builtin language-core producer. `nose.lang.c` owns the
+  specialized unsigned-cast source-fact producer used by exact byte-pack
+  admission;
 
   Builtin pack ids, including the `nose.lang.*` language descriptor ids, are
   reserved. A local external manifest that claims one of those ids is rejected

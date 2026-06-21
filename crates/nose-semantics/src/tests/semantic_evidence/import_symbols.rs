@@ -57,6 +57,24 @@ fn namespace_import_fact(module: &str) -> EvidenceKind {
     })
 }
 
+fn imported_literal_evidence_with_provenance(
+    id: u32,
+    span: Span,
+    kind: EvidenceKind,
+    provenance: EvidenceProvenance,
+    status: EvidenceStatus,
+    dependencies: Vec<EvidenceId>,
+) -> EvidenceRecord {
+    EvidenceRecord {
+        id: EvidenceId(id),
+        anchor: EvidenceAnchor::node(span, NodeKind::Seq),
+        kind,
+        provenance,
+        dependencies,
+        status,
+    }
+}
+
 #[test]
 fn import_fact_contracts_resolve_evidence_only_binding_and_namespace_proofs() {
     let mut b = IlBuilder::new(FileId(0));
@@ -222,6 +240,98 @@ fn import_fact_admission_requires_matching_language_core_provenance() {
     assert_eq!(import_fact_evidence_rhs(&il, wrong_language), None);
     assert_eq!(import_fact_evidence_rhs(&il, no_pack), None);
     assert_eq!(import_fact_evidence_rhs(&il, broken_dependency), None);
+}
+
+#[test]
+fn imported_literal_producer_requires_matching_language_core_provenance() {
+    let mut b = IlBuilder::new(FileId(0));
+    let value = b.add(NodeKind::Seq, Payload::None, sp(15), &[]);
+    let root = b.add(NodeKind::Module, Payload::None, sp(15), &[value]);
+    let mut il = finish_il(b, root, Lang::Python);
+    let kind = EvidenceKind::Import(ImportEvidenceKind::ImmutableLiteralExport {
+        module_hash: stable_symbol_hash("tables"),
+        exported_hash: stable_symbol_hash("LOOKUP"),
+        root_kind: NodeKind::Seq,
+    });
+
+    il.evidence.push(imported_literal_evidence_with_provenance(
+        0,
+        sp(15),
+        kind,
+        EvidenceProvenance {
+            emitter: EvidenceEmitter::External,
+            pack_hash: Some(stable_symbol_hash("com.example.pack")),
+            rule_hash: Some(stable_symbol_hash("python.language.core")),
+        },
+        EvidenceStatus::Asserted,
+        Vec::new(),
+    ));
+    assert!(!imported_literal_producer_evidence_for_node(&il, value));
+
+    il.evidence.clear();
+    il.evidence.push(imported_literal_evidence_with_provenance(
+        0,
+        sp(15),
+        kind,
+        EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+            rule_hash: Some(stable_symbol_hash("module_immutable_literal_export")),
+        },
+        EvidenceStatus::Asserted,
+        Vec::new(),
+    ));
+    assert!(!imported_literal_producer_evidence_for_node(&il, value));
+
+    il.evidence.clear();
+    il.evidence.push(imported_literal_evidence_with_provenance(
+        0,
+        sp(15),
+        kind,
+        language_core_provenance(Lang::Java),
+        EvidenceStatus::Asserted,
+        Vec::new(),
+    ));
+    assert!(!imported_literal_producer_evidence_for_node(&il, value));
+
+    il.evidence.clear();
+    il.evidence.push(imported_literal_evidence_with_provenance(
+        0,
+        sp(15),
+        kind,
+        language_core_provenance(Lang::Python),
+        EvidenceStatus::Asserted,
+        vec![EvidenceId(99)],
+    ));
+    assert!(!imported_literal_producer_evidence_for_node(&il, value));
+
+    il.evidence.clear();
+    il.evidence.push(imported_literal_evidence_with_provenance(
+        0,
+        sp(15),
+        kind,
+        language_core_provenance(Lang::Python),
+        EvidenceStatus::Asserted,
+        Vec::new(),
+    ));
+    assert!(imported_literal_producer_evidence_for_node(&il, value));
+
+    il.evidence.push(imported_literal_evidence_with_provenance(
+        1,
+        sp(15),
+        kind,
+        EvidenceProvenance {
+            emitter: EvidenceEmitter::FirstParty,
+            pack_hash: Some(stable_symbol_hash(FIRST_PARTY_PACK_ID)),
+            rule_hash: Some(stable_symbol_hash("module_immutable_literal_export")),
+        },
+        EvidenceStatus::Asserted,
+        Vec::new(),
+    ));
+    assert!(
+        !imported_literal_producer_evidence_for_node(&il, value),
+        "mixed valid and invalid imported-literal proof must stay closed"
+    );
 }
 
 #[test]
