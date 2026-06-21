@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        28
+        29
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -416,6 +416,34 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(map_get["counts"]["value_laws"], 0);
     assert_eq!(map_get["counts"]["positive_fixtures"], 3);
     assert_eq!(map_get["counts"]["hard_negatives"], 2);
+
+    let map_get_default = semantic_pack_by_id(&json, "nose.protocols.map_get_default");
+    assert_eq!(map_get_default["hash"], "9e15f7b838928d64");
+    assert_eq!(map_get_default["kind"], "ProtocolPack");
+    assert_eq!(
+        map_get_default["display_name"],
+        "nose map-get-default protocol pack"
+    );
+    assert_eq!(map_get_default["source"], "compiled-first-party");
+    assert_eq!(map_get_default["influence"], "evidence-and-contracts");
+    assert_eq!(map_get_default["trust"], "default-first-party");
+    assert_eq!(map_get_default["enabled_by_default"], true);
+    assert_eq!(map_get_default["path"], serde_json::Value::Null);
+    assert_eq!(map_get_default["provider"], "Corca, Inc.");
+    assert_eq!(
+        map_get_default["repository"],
+        "https://github.com/corca-ai/nose"
+    );
+    assert_eq!(map_get_default["license"], "MIT");
+    assert_eq!(
+        json_array_strings(map_get_default, "supported_languages"),
+        vec!["python", "ruby", "java"]
+    );
+    assert_eq!(map_get_default["counts"]["evidence_producers"], 1);
+    assert_eq!(map_get_default["counts"]["contracts"], 1);
+    assert_eq!(map_get_default["counts"]["value_laws"], 0);
+    assert_eq!(map_get_default["counts"]["positive_fixtures"], 3);
+    assert_eq!(map_get_default["counts"]["hard_negatives"], 2);
 
     let map_key_view = semantic_pack_by_id(&json, "nose.protocols.map_key_views");
     assert_eq!(map_key_view["hash"], "fc74f28c4e454838");

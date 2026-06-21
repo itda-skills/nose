@@ -9,8 +9,9 @@ pub(super) use nose_il::{
 pub(super) use nose_semantics::{
     library_free_function_builtin_contract, library_free_name_map_factory_contract,
     library_iterator_identity_adapter_contract, library_map_get_contract,
-    library_map_key_view_contract, library_method_call_contract, LibraryApiContractId,
+    library_map_get_default_contract, library_map_key_view_contract, library_method_call_contract,
     ITERATOR_IDENTITY_ADAPTER_PACK_ID, ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID,
+    MAP_GET_DEFAULT_PROTOCOL_PACK_ID, MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
     MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID, MAP_KEY_VIEW_PROTOCOL_PACK_ID,
     MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
 };
@@ -104,18 +105,54 @@ pub(super) fn push_receiver_method_library_api_evidence(
     let method = interner.resolve(method);
     let arg_count = args.len();
     let contract = library_map_get_contract(il.meta.lang, method, arg_count)
-        .map(|contract| (contract.id, contract.callee))
-        .or_else(|| {
-            library_map_key_view_contract(il.meta.lang, method, arg_count)
-                .map(|contract| (contract.id, contract.callee))
+        .map(|contract| {
+            (
+                contract.id,
+                contract.callee,
+                Some((MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID)),
+            )
         })
         .or_else(|| {
-            library_iterator_identity_adapter_contract(il.meta.lang, method, arg_count)
-                .map(|contract| (contract.id, contract.callee))
+            library_map_get_default_contract(il.meta.lang, method, arg_count).map(|contract| {
+                (
+                    contract.id,
+                    contract.callee,
+                    Some((
+                        MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
+                        MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
+                    )),
+                )
+            })
+        })
+        .or_else(|| {
+            library_map_key_view_contract(il.meta.lang, method, arg_count).map(|contract| {
+                (
+                    contract.id,
+                    contract.callee,
+                    Some((
+                        MAP_KEY_VIEW_PROTOCOL_PACK_ID,
+                        MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
+                    )),
+                )
+            })
+        })
+        .or_else(|| {
+            library_iterator_identity_adapter_contract(il.meta.lang, method, arg_count).map(
+                |contract| {
+                    (
+                        contract.id,
+                        contract.callee,
+                        Some((
+                            ITERATOR_IDENTITY_ADAPTER_PACK_ID,
+                            ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID,
+                        )),
+                    )
+                },
+            )
         })
         .or_else(|| {
             library_method_call_contract(il.meta.lang, method, arg_count)
-                .map(|contract| (contract.id, contract.callee))
+                .map(|contract| (contract.id, contract.callee, None))
         })?;
     let dependencies =
         nose_semantics::library_api_receiver_dependencies_for_call(il, interner, call, contract.1)?;
@@ -131,16 +168,9 @@ pub(super) fn push_receiver_method_library_api_evidence(
         EvidenceStatus::Asserted,
         dependencies,
     );
-    if contract.0 == LibraryApiContractId::IteratorIdentityAdapter {
-        record.provenance.pack_hash = Some(stable_symbol_hash(ITERATOR_IDENTITY_ADAPTER_PACK_ID));
-        record.provenance.rule_hash =
-            Some(stable_symbol_hash(ITERATOR_IDENTITY_ADAPTER_PRODUCER_ID));
-    } else if contract.0 == LibraryApiContractId::MapGet {
-        record.provenance.pack_hash = Some(stable_symbol_hash(MAP_GET_PROTOCOL_PACK_ID));
-        record.provenance.rule_hash = Some(stable_symbol_hash(MAP_GET_PROTOCOL_PRODUCER_ID));
-    } else if matches!(contract.0, LibraryApiContractId::MapKeyView(_)) {
-        record.provenance.pack_hash = Some(stable_symbol_hash(MAP_KEY_VIEW_PROTOCOL_PACK_ID));
-        record.provenance.rule_hash = Some(stable_symbol_hash(MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID));
+    if let Some((pack_id, producer_id)) = contract.2 {
+        record.provenance.pack_hash = Some(stable_symbol_hash(pack_id));
+        record.provenance.rule_hash = Some(stable_symbol_hash(producer_id));
     }
     il.evidence.push(record);
     Some(EvidenceId(id))

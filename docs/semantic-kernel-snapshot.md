@@ -147,6 +147,10 @@ still being migrated toward it.
   `nose.protocols.map_get` descriptor owns Java/Rust/JS-family `map.get(key)`
   contract and occurrence producer ids, while non-map receivers and unsupported
   arities remain hard negatives. The
+  `nose.protocols.map_get_default` descriptor owns Python `dict.get(key,
+  default)`, Ruby `Hash#fetch(key, default)` or zero-arg block fallback, and
+  Java `Map.getOrDefault(key, default)` contract and occurrence producer ids,
+  while non-map receivers and unsupported arities remain hard negatives. The
   `nose.protocols.map_key_views` descriptor owns Python/Ruby `keys`, Java
   `keySet`, and JS-family `Map.keys()` contract and occurrence producer ids,
   while non-map receivers and unsupported arities remain hard negatives. The
@@ -212,6 +216,9 @@ still being migrated toward it.
   and
   `nose.protocols.map_get`, a default builtin protocol pack for Java/Rust/
   JS-family `map.get(key)` API provenance, and
+  `nose.protocols.map_get_default`, a default builtin protocol pack for Python
+  `dict.get(key, default)`, Ruby `Hash#fetch(key, default)` or zero-arg block
+  fallback, and Java `Map.getOrDefault(key, default)` API provenance, and
   `nose.protocols.map_key_views`, a default builtin protocol pack for
   Python/Ruby `keys`, Java `keySet`, and JS-family `Map.keys()` API provenance,
   and
@@ -458,10 +465,13 @@ migrated.
   signed-zero/NaN boundary.
 - Java/Rust/JS-family `map.get(key)` is language-, arity-, and exact-map
   receiver constrained through admitted `LibraryApi` occurrence evidence with
-  `nose.protocols.map_get` provenance. Defaulting selectors such as Python
-  `dict.get(key, default)`, Java `getOrDefault`, Ruby `fetch`, and Rust
-  `unwrap_or` remain separate method/defaulting contracts; when they rely on a
-  map lookup, the nested `MapGet` dependency must also be pack-proven.
+  `nose.protocols.map_get` provenance. Python `dict.get(key, default)`, Ruby
+  `Hash#fetch(key, default)` or zero-arg block fallback, and Java
+  `Map.getOrDefault(key, default)` are constrained through admitted
+  `LibraryApi` occurrence evidence with
+  `nose.protocols.map_get_default` provenance. Rust `unwrap_or` remains a
+  separate Option/defaulting contract; when it models map lookup defaulting, the
+  nested `MapGet` dependency must also be pack-proven.
 - Rust method `zip(...)` is admitted as a protocol-pair operation only through
   the Rust library method-call occurrence contract and exact protocol proof for
   both sides.
@@ -504,14 +514,15 @@ migrated.
   `Arrays.asList(x)` with exactly one argument is excluded because
   array-spread versus single-element provenance is ambiguous without additional
   proof. `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`, `math.prod`,
-  `Arrays.stream`, pack-proven map `get`, iterator adapters, and generic method
-  contracts do not emit result-domain evidence under the current vocabulary.
+  `Arrays.stream`, pack-proven map `get`, pack-proven map get-default, iterator
+  adapters, and generic method contracts do not emit result-domain evidence
+  under the current vocabulary.
   Entry-shape, mutation, demand, and exact-safety obligations remain
   separate contract checks at the consumer.
 - Selected non-factory library/API surfaces also consume `LibraryApiContract`
   rows before normalize, value-graph, or strict exact paths assign semantics.
   Current rows cover map-key views and wrappers, Java/Rust/JS-like pack-proven
-  map `get`, Python/Java/Ruby map defaulting through method contracts, Rust
+  map `get`, Python/Java/Ruby pack-proven map get-default, Rust
   `get(...).is_some()`/`unwrap_or(...)`, JS-like `Array.isArray`, `Boolean(...)`,
   regex-literal `.test(...)`, Python `math.prod`, promise `.then`, Rust/Java
   iterator adapters, Java `Arrays.stream`, and the language-scoped method-call
@@ -570,9 +581,9 @@ migrated.
   mutation, and demand/effect obligations remain separate.
 - Receiver-method calls that remain as raw `Field`/`Call` nodes now emit
   `LibraryApi` occurrence evidence for the first-party method families currently
-  backed by `LibraryApiContract`: pack-proven map `get`, map-key views,
-  iterator identity adapters, and generic language-scoped method-call contracts such as
-  collection/map membership, map defaulting, count methods,
+  backed by `LibraryApiContract`: pack-proven map `get`, pack-proven map
+  get-default, map-key views, iterator identity adapters, and generic
+  language-scoped method-call contracts such as collection/map membership, count methods,
   string/collection predicates, Rust scalar integer methods with
   `nose.rust.stdlib.integer_methods` provenance, Java Math scalar integer
   methods with `nose.java.stdlib.math` provenance, Rust `Option::and_then`,
@@ -581,8 +592,8 @@ migrated.
   depends on receiver proof: node/binding/parameter `Domain`, `SequenceSurface`,
   imported namespace or unshadowed-global `Symbol`, or a nested admitted
   `LibraryApi` result such as a collection/map factory, map-key view, iterator
-  adapter, HOF, or pack-proven map `get`. First-party lowering seeds these
-  records when the receiver proof already exists; normalize refreshes and upserts first-party
+  adapter, HOF, pack-proven map `get`, or pack-proven map get-default.
+  First-party lowering seeds these records when the receiver proof already exists; normalize refreshes and upserts first-party
   records after immutable binding-domain inference and again after final
   CFG/dataflow/algebra rewrites, so bindings such as
   `VALUES = List.of(...); VALUES.contains(x)` keep the same semantic fingerprint
@@ -681,16 +692,16 @@ migrated.
   recombining raw selector parsing with evidence admission locally. Normalize
   idiom canonicalization uses the same resolver layer for
   supported free-function builtins, generic method contracts, HOF receiver
-  proof, pack-proven map `get`, pack-proven map-key views, iterator/static
-  collection adapters, Rust `Some(...)`, Rust map factory receiver proof, Promise
-  `resolve`, and Promise `.then` contract lookup. Promise continuation
+  proof, pack-proven map `get`, pack-proven map get-default, pack-proven
+  map-key views, iterator/static collection adapters, Rust `Some(...)`, Rust
+  map factory receiver proof, Promise `resolve`, and Promise `.then` contract lookup. Promise continuation
   reduction remains fail-closed
   unless a supported settled value can be recovered and the final value remains
   behind a Promise boundary. Value-level CSE paths that query
   by call span now use span-query resolvers for free-name/imported collection
   factories, Java/Ruby/Rust collection factories, free-name/Java map factories,
-  Java map entries, pack-proven map `get`, and pack-proven map-key view/wrapper
-  calls.
+  Java map entries, pack-proven map `get`, pack-proven map get-default, and
+  pack-proven map-key view/wrapper calls.
 - Opaque exact callee identity remains separate from library/API admission. A
   parameter callee or proof-backed immutable/imported callee may keep an exact
   same-callee call comparable as an opaque value operation. Same-spelled

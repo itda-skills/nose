@@ -6,10 +6,12 @@ use nose_il::{
 };
 use nose_semantics::{
     library_api_callee_contract_hash, library_api_contract_id_hash, library_method_call_contract,
-    LibraryApiCalleeContract, LibraryCollectionFactoryContract, FIRST_PARTY_PACK_ID,
+    LibraryApiCalleeContract, LibraryApiContractId, LibraryCollectionFactoryContract,
+    MethodReceiverContract, MethodSemanticContract, FIRST_PARTY_PACK_ID,
     JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID, JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
     JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
-    JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
+    JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID, MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
+    MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
     PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
 };
 
@@ -40,7 +42,7 @@ pub(super) fn evidence(
 pub(super) fn library_api_contract_evidence(
     id: u32,
     call_span: Span,
-    contract_id: nose_semantics::LibraryApiContractId,
+    contract_id: LibraryApiContractId,
     callee: LibraryApiCalleeContract,
     arity: u16,
     dependencies: Vec<EvidenceId>,
@@ -60,7 +62,7 @@ pub(super) fn library_api_contract_evidence(
 pub(super) fn js_like_builtin_collection_constructor_evidence(
     id: u32,
     call_span: Span,
-    contract_id: nose_semantics::LibraryApiContractId,
+    contract_id: LibraryApiContractId,
     callee: LibraryApiCalleeContract,
     arity: u16,
     dependencies: Vec<EvidenceId>,
@@ -109,21 +111,36 @@ pub(super) fn method_call_library_api_evidence(
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceRecord {
     let contract = library_method_call_contract(lang, method, arity).expect("method call contract");
-    library_api_contract_evidence(
+    let mut record = library_api_contract_evidence(
         id,
         call_span,
         contract.id,
         contract.callee,
         arity as u16,
         dependencies,
-    )
+    );
+    if contract.id
+        == LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::GetOrDefault))
+        && matches!(
+            contract.callee,
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactMap,
+                ..
+            }
+        )
+    {
+        record.provenance.pack_hash = Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID));
+    }
+    record
 }
 
 /// Push the `List.of(…)`-shaped factory contract plus the dependent `contains`
 /// method-call evidence used by the Java collection-factory tests.
 pub(super) fn push_java_factory_contract_evidence(
     il: &mut Il,
-    contract_id: nose_semantics::LibraryApiContractId,
+    contract_id: LibraryApiContractId,
     callee: LibraryApiCalleeContract,
 ) {
     let mut record =

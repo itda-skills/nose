@@ -377,6 +377,28 @@ pub fn library_method_call_contract(
     })
 }
 
+pub fn library_map_get_default_contract(
+    lang: Lang,
+    method: &str,
+    arg_count: usize,
+) -> Option<LibraryMethodCallContract> {
+    let contract = library_method_call_contract(lang, method, arg_count)?;
+    let exact_map_get_default = contract.id
+        == LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::GetOrDefault))
+        && matches!(
+            contract.callee,
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactMap,
+                ..
+            }
+        )
+        && matches!(
+            contract.result.args,
+            MethodBuiltinArgs::MapGetDefault | MethodBuiltinArgs::MapGetDefaultOrZeroArgLambda
+        );
+    exact_map_get_default.then_some(contract)
+}
+
 pub fn library_receiver_method_api_contract(
     lang: Lang,
     method: &str,
@@ -447,6 +469,17 @@ pub fn library_receiver_method_api_contract(
                     callee: contract.callee,
                     rule: JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
                     result_domain: Some(DomainEvidence::PromiseLike),
+                }
+            })
+        })
+        .or_else(|| {
+            library_map_get_default_contract(lang, method, arg_count).map(|contract| {
+                LibraryReceiverMethodApiContract {
+                    pack_id: MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
+                    id: contract.id,
+                    callee: contract.callee,
+                    rule: MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
+                    result_domain: None,
                 }
             })
         })

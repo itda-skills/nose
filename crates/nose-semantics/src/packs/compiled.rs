@@ -14,6 +14,7 @@ const C_LANGUAGE_CONFORMANCE_REFS: &[&str] = &[
 const JS_LIKE_LANGUAGE: &[&str] = &["javascript", "typescript"];
 const JAVA_LANGUAGE: &[&str] = &["java"];
 const JAVA_RUST_LANGUAGE: &[&str] = &["java", "rust"];
+const MAP_GET_DEFAULT_PROTOCOL_LANGUAGES: &[&str] = &["python", "ruby", "java"];
 const MAP_KEY_VIEW_PROTOCOL_LANGUAGES: &[&str] = &[
     "python",
     "ruby",
@@ -46,6 +47,7 @@ const JAVA_STDLIB_MATH_PACKAGES: &[&str] = &["java.lang"];
 const JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACKAGES: &[&str] = &["java.util"];
 const ITERATOR_IDENTITY_ADAPTER_PACKAGES: &[&str] = &["core::iter", "java.util.stream"];
 const MAP_GET_PROTOCOL_PACKAGES: &[&str] = &["Map", "java.util", "std::collections"];
+const MAP_GET_DEFAULT_PROTOCOL_PACKAGES: &[&str] = &["dict", "Hash", "java.util"];
 const MAP_KEY_VIEW_PROTOCOL_PACKAGES: &[&str] = &["dict", "Hash", "Map", "java.util"];
 const JS_LIKE_BUILTIN_ARRAY_PACKAGES: &[&str] = &["Array"];
 const JS_LIKE_BUILTIN_BOOLEAN_PACKAGES: &[&str] = &["Boolean"];
@@ -237,6 +239,15 @@ const MAP_GET_PROTOCOL_CONFORMANCE_REFS: &[&str] = &[
     "map-get-js-positive",
     "map-get-non-map-receiver-hard-negative",
     "map-get-unsupported-arity-hard-negative",
+];
+const MAP_GET_DEFAULT_PROTOCOL_PRODUCER_IDS: &[&str] = &[MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID];
+const MAP_GET_DEFAULT_PROTOCOL_CONTRACT_IDS: &[&str] = &[MAP_GET_DEFAULT_CONTRACT_ID];
+const MAP_GET_DEFAULT_PROTOCOL_CONFORMANCE_REFS: &[&str] = &[
+    "map-get-default-python-get-positive",
+    "map-get-default-ruby-fetch-positive",
+    "map-get-default-java-get-or-default-positive",
+    "map-get-default-non-map-receiver-hard-negative",
+    "map-get-default-unsupported-arity-hard-negative",
 ];
 const MAP_KEY_VIEW_PROTOCOL_PRODUCER_IDS: &[&str] = &[MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID];
 const MAP_KEY_VIEW_PROTOCOL_CONTRACT_IDS: &[&str] = &[
@@ -697,6 +708,22 @@ fn map_get_protocol_counts() -> SemanticPackCounts {
             .filter(|id| !id.contains("hard-negative"))
             .count(),
         hard_negatives: MAP_GET_PROTOCOL_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
+fn map_get_default_protocol_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: MAP_GET_DEFAULT_PROTOCOL_PRODUCER_IDS.len(),
+        contracts: MAP_GET_DEFAULT_PROTOCOL_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: MAP_GET_DEFAULT_PROTOCOL_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: MAP_GET_DEFAULT_PROTOCOL_CONFORMANCE_REFS
             .iter()
             .filter(|id| id.contains("hard-negative"))
             .count(),
@@ -1228,6 +1255,25 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: MAP_GET_PROTOCOL_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: map_get_protocol_counts,
+    },
+    BuiltinPackDescriptor {
+        id: MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
+        kind: SemanticPackKind::ProtocolPack,
+        display_name: "nose map-get-default protocol pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: MAP_GET_DEFAULT_PROTOCOL_LANGUAGES,
+        supported_packages: MAP_GET_DEFAULT_PROTOCOL_PACKAGES,
+        language: None,
+        evidence_producer_ids: MAP_GET_DEFAULT_PROTOCOL_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: MAP_GET_DEFAULT_PROTOCOL_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: MAP_GET_DEFAULT_PROTOCOL_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: map_get_default_protocol_counts,
     },
     BuiltinPackDescriptor {
         id: MAP_KEY_VIEW_PROTOCOL_PACK_ID,

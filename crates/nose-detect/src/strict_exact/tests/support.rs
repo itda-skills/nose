@@ -7,8 +7,10 @@ pub(super) use nose_il::{
 use nose_normalize::{normalize, NormalizeOptions};
 use nose_semantics::{
     library_api_callee_contract_hash, library_api_contract_id_hash, library_map_get_contract,
-    library_method_call_contract, FIRST_PARTY_PACK_ID, MAP_GET_PROTOCOL_PACK_ID,
-    MAP_GET_PROTOCOL_PRODUCER_ID,
+    library_method_call_contract, LibraryApiCalleeContract, LibraryApiContractId,
+    MethodReceiverContract, MethodSemanticContract, FIRST_PARTY_PACK_ID,
+    MAP_GET_DEFAULT_PROTOCOL_PACK_ID, MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
+    MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID,
 };
 
 pub(super) fn sp(line: u32) -> Span {
@@ -73,7 +75,7 @@ pub(super) fn method_call_library_api_evidence(
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceRecord {
     let contract = library_method_call_contract(lang, method, arity).expect("method call contract");
-    evidence(
+    let mut record = evidence(
         id,
         EvidenceAnchor::node(call_span, NodeKind::Call),
         EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -82,7 +84,22 @@ pub(super) fn method_call_library_api_evidence(
             arity: arity as u16,
         }),
         dependencies,
-    )
+    );
+    if contract.id
+        == LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::GetOrDefault))
+        && matches!(
+            contract.callee,
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactMap,
+                ..
+            }
+        )
+    {
+        record.provenance.pack_hash = Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID));
+    }
+    record
 }
 
 pub(super) fn map_get_library_api_evidence(

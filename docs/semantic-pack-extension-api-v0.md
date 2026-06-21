@@ -485,6 +485,10 @@ implicit v0 packs:
   `java.util.Arrays.stream` static collection adapter API occurrence contracts;
 - `nose.protocols.map_get` owns Java/Rust/JS-family `map.get(key)` API
   occurrence contracts under exact-map receiver proof;
+- `nose.protocols.map_get_default` owns Python `dict.get(key, default)`, Ruby
+  `Hash#fetch(key, default)` or zero-arg block fallback, and Java
+  `Map.getOrDefault(key, default)` API occurrence contracts under exact-map
+  receiver proof;
 - `nose.protocols.map_key_views` owns Python/Ruby `keys`, Java `keySet`, and
   JS-family `Map.keys()` API occurrence contracts under exact-map receiver
   proof;

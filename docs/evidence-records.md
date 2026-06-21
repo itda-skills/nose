@@ -508,6 +508,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   APIs with `nose.java.stdlib.math` provenance when unshadowed `Math` and
   integer-domain proof are present, Java/Rust/JS-family `map.get(key)` lookups
   with `nose.protocols.map_get` provenance when exact-map receiver proof is
+  present, Python `dict.get(key, default)`, Ruby `Hash#fetch(key, default)` or
+  zero-arg block fallback, and Java `Map.getOrDefault(key, default)` lookups with
+  `nose.protocols.map_get_default` provenance when exact-map receiver proof is
   present, Python/Ruby `keys`, Java `keySet`, and JS-family `Map.keys()` views
   with `nose.protocols.map_key_views` provenance when exact-map receiver proof
   is present, Rust
@@ -547,9 +550,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
 - first-party lowering plus post-binding and final-normalization refresh passes
   emit `LibraryApi`
   occurrence evidence for selected receiver methods that remain as raw call
-  nodes: map `get`, map-key views, iterator identity adapters, and the
-  language-scoped method-call contracts currently used for collection/map
-  membership, map defaulting, count, predicates, pack-owned Rust scalar integer
+  nodes: map `get`, map get-default, map-key views, iterator identity adapters,
+  and the language-scoped method-call contracts currently used for
+  collection/map membership, count, predicates, pack-owned Rust scalar integer
   methods, Rust `Option::and_then`, Rust `zip`, HOF, and reduction methods. Property
   cardinality such as JS/TS `length` is modeled as `Property`, not as a method
   call. The post-binding refresh exists because immutable
@@ -663,7 +666,8 @@ callers:
   argument, entry-shape, mutation, `Source`, `Domain`, and `SequenceSurface`
   obligations, but API occurrence admission itself is shared where covered;
 - strict exact consumers share the same admitted occurrence resolver layer for
-  selected method, pack-proven map-get, pack-proven map-key-view, regex, JS static/global,
+  selected method, pack-proven map-get, pack-proven map-get-default,
+  pack-proven map-key-view, regex, JS static/global,
   static-index, iterator-adapter, Rust Option sentinel, Rust `Vec::new`, and first-party
   collection/map factory and constructor paths instead of locally recombining
   selector strings with evidence checks. Opaque same-callee exact identity
@@ -671,7 +675,8 @@ callers:
   assign cross-language or library semantics;
 - normalize idiom canonicalization shares the admitted occurrence resolver layer
   for supported free-function builtins, generic receiver-method contracts,
-  pack-proven map `get`, pack-proven map-key views, iterator identity adapters with
+  pack-proven map `get`, pack-proven map get-default, pack-proven map-key
+  views, iterator identity adapters with
   `nose.protocols.iterator_identity_adapters` provenance, Java `Arrays.stream`,
   Java map entries, Rust `Some(...)`, Rust map factory receiver proof, and HOF
   receiver proof instead of locally recombining selector strings with `LibraryApi`
@@ -692,8 +697,8 @@ callers:
   spans now also go through span-query resolvers for free-name/imported
   collection factories, Java/Ruby/Rust collection factories, Java collection
   constructors, free-name/Java map factories, Java map entries, pack-proven map
-  `get`, and pack-proven map-key view/wrapper calls. The
-  value graph no longer locally recombines those contract rows with `LibraryApi`
+  `get`, pack-proven map get-default, and pack-proven map-key view/wrapper
+  calls. The value graph no longer locally recombines those contract rows with `LibraryApi`
   span evidence;
 - value-graph consumers that query by source span re-check the original source
   `Call` node shape and its evidence dependencies when that call can be

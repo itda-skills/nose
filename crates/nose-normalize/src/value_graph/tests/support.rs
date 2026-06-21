@@ -18,17 +18,19 @@ pub(super) use nose_semantics::{
     library_promise_resolve_contract, library_promise_then_contract,
     library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
     library_scalar_integer_method_contract, library_static_index_membership_contract,
-    DomainEvidence, LibraryApiContractId, LibraryCollectionFactoryContract,
-    LibraryMapFactoryContract, C_LANGUAGE_PACK_ID, C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID,
-    FIRST_PARTY_PACK_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
-    JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID, JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID,
-    JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, JAVA_STDLIB_MAP_FACTORY_PACK_ID,
-    JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID, JAVA_STDLIB_MATH_PACK_ID, JAVA_STDLIB_MATH_PRODUCER_ID,
-    JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
+    DomainEvidence, LibraryApiCalleeContract, LibraryApiContractId,
+    LibraryCollectionFactoryContract, LibraryMapFactoryContract, LibraryMethodCallContract,
+    MethodReceiverContract, MethodSemanticContract, C_LANGUAGE_PACK_ID,
+    C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID, FIRST_PARTY_PACK_ID,
+    JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
+    JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID, JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+    JAVA_STDLIB_MAP_FACTORY_PACK_ID, JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID, JAVA_STDLIB_MATH_PACK_ID,
+    JAVA_STDLIB_MATH_PRODUCER_ID, JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID,
     JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PRODUCER_ID, JS_LIKE_BUILTIN_PROMISE_PACK_ID,
     JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID, JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID,
-    JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PRODUCER_ID, MAP_GET_PROTOCOL_PACK_ID,
-    MAP_GET_PROTOCOL_PRODUCER_ID, MAP_KEY_VIEW_PROTOCOL_PACK_ID, MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
+    JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PRODUCER_ID, MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
+    MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID, MAP_GET_PROTOCOL_PACK_ID, MAP_GET_PROTOCOL_PRODUCER_ID,
+    MAP_KEY_VIEW_PROTOCOL_PACK_ID, MAP_KEY_VIEW_PROTOCOL_PRODUCER_ID,
     PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
     PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID, PYTHON_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
     RUST_STDLIB_INTEGER_METHOD_PACK_ID, RUST_STDLIB_INTEGER_METHOD_PRODUCER_ID,
@@ -490,14 +492,32 @@ pub(super) fn push_method_call_library_api_evidence(
         contract.callee,
     )
     .expect("method receiver dependencies");
-    il.evidence.push(library_api_contract_evidence(
+    let mut record = library_api_contract_evidence(
         id,
         il.node(call).span,
         contract.id,
         contract.callee,
         arity as u16,
         dependencies,
-    ));
+    );
+    if is_map_get_default_method_call(contract) {
+        record.provenance.pack_hash = Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PACK_ID));
+        record.provenance.rule_hash =
+            Some(stable_symbol_hash(MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID));
+    }
+    il.evidence.push(record);
+}
+
+fn is_map_get_default_method_call(contract: LibraryMethodCallContract) -> bool {
+    contract.id
+        == LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::GetOrDefault))
+        && matches!(
+            contract.callee,
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ExactMap,
+                ..
+            }
+        )
 }
 
 pub(super) fn push_library_api_evidence_for_callee(

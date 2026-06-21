@@ -118,6 +118,9 @@ The next code slices are intentionally incremental:
    static collection adapter occurrence provenance, then
    `nose.protocols.map_get` for Java/Rust/JS-family `map.get(key)` occurrence
    provenance, then
+   `nose.protocols.map_get_default` for Python `dict.get(key, default)`, Ruby
+   `Hash#fetch(key, default)` or zero-arg block fallback, and Java
+   `Map.getOrDefault(key, default)` occurrence provenance, then
    `nose.protocols.map_key_views` for Python/Ruby `keys`, Java `keySet`, and
    JS-family `Map.keys()` occurrence provenance, then
    `nose.protocols.iterator_identity_adapters` for Rust
@@ -719,6 +722,25 @@ JavaScript Array builtin pack, and the slice does not add per-node descriptor
 scans or repeated registry walks on hot paths. Binary size changed 20,181,264
 -> 20,181,440 bytes for this slice.
 
+Phase 5 map-get-default protocol pack measurement note, local run on
+2026-06-21: product query-regression r15 compared the previous
+`nose.protocols.map_key_views` slice with the `nose.protocols.map_get_default`
+slice over the same 9-repo subset. Family summaries, locations, fragment
+buckets, reason-code counts, surface counts, and family shapes were unchanged
+after ignoring `result_json_bytes`. Each repo's JSON grew by exactly 536 bytes
+from the new top-level `semantic_packs` entry, for a total subset byte delta of
+683,132 -> 687,956 bytes (+4,824). The saved primary artifacts are
+`/tmp/nose-473-phase5-map-get-default-prev-r15.json`,
+`/tmp/nose-473-phase5-map-get-default-current-r15.json`, and
+`/tmp/nose-473-phase5-map-get-default-vs-prev-r15.md`. The sequential r15
+compare showed zero harness investigation triggers. Root-cause note: this slice
+adds static protocol-pack metadata, map-get-default producer provenance, and
+fail-closed admission provenance checks for existing Python/Ruby/Java
+map-specific defaulting method-call paths. Rust Option/defaulting selectors
+remain separate, and the slice does not add per-node descriptor scans or
+repeated registry walks on hot paths. Binary size changed 20,181,440 ->
+20,181,648 bytes for this slice.
+
 ## History
 
 - The original architecture lowered every supported language into one shared IL,
@@ -863,6 +885,12 @@ scans or repeated registry walks on hot paths. Binary size changed 20,181,264
   `Map.keys()` `LibraryApi` occurrence evidence now reports
   `nose.protocols.map_key_views` pack and producer provenance while preserving
   exact-map receiver and unsupported-arity hard negatives.
+- Map-get-default protocol occurrences started moving out of the broad
+  compatibility facade. Python `dict.get(key, default)`, Ruby
+  `Hash#fetch(key, default)` or zero-arg block fallback, and Java
+  `Map.getOrDefault(key, default)` `LibraryApi` occurrence evidence now reports
+  `nose.protocols.map_get_default` pack and producer provenance while
+  preserving exact-map receiver and unsupported-arity hard negatives.
 - Iterator identity adapters started moving out of the broad compatibility
   facade. Rust `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned`
   and Java `.stream()` `LibraryApi` occurrence evidence now reports
@@ -926,8 +954,9 @@ scans or repeated registry walks on hot paths. Binary size changed 20,181,264
   contracts for the outer literal surface, per-entry surface, and supported
   zero-default payload classes.
 - Map `get(key)` lookup surfaces for Java, Rust, and JS-like typed/proven maps
-  moved behind an explicit map-get contract. Defaulting surfaces continue through
-  the existing `GetOrDefault` method contract.
+  moved behind an explicit map-get contract. Python/Ruby/Java map-specific
+  defaulting surfaces moved behind an explicit map-get-default contract; Rust
+  Option/defaulting selectors remain separate.
 - JS-like static array `indexOf`/`findIndex` membership and their accepted
   threshold comparisons moved behind shared semantic contracts.
 - Channel eligibility and pack trust were split: first-party/default status is
@@ -1123,7 +1152,8 @@ scans or repeated registry walks on hot paths. Binary size changed 20,181,264
   `nose.java.stdlib.static_collection_adapters` provenance, Java Math scalar
   integer APIs (`Math.abs`/`Math.min`/`Math.max`) with
   `nose.java.stdlib.math` provenance, Java/Rust/JS-family map-get occurrences
-  with `nose.protocols.map_get` provenance, map-key-view occurrences with
+  with `nose.protocols.map_get` provenance, map-get-default occurrences with
+  `nose.protocols.map_get_default` provenance, map-key-view occurrences with
   `nose.protocols.map_key_views` provenance, and
   JS-like regex-literal `.test`. Producers emit call-site `Symbol` dependencies for imported
   binding/namespace occurrences or `Source` dependencies for regex literals;
@@ -1178,8 +1208,8 @@ scans or repeated registry walks on hot paths. Binary size changed 20,181,264
   deliberately excludes lookalikes, Java single-argument `Arrays.asList(x)`
   without element-provenance proof, and non-container results such as
   `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`, `math.prod`,
-  `Arrays.stream`, pack-proven map `get`, promise `.then`, iterator adapters,
-  and generic method contracts.
+  `Arrays.stream`, pack-proven map `get`, pack-proven map get-default, promise
+  `.then`, iterator adapters, and generic method contracts.
 - Immutable local/module binding domains now produce binding-anchored `Domain`
   evidence during normalization when the initializer has asserted sequence or
   result-domain evidence, the binding is single-assignment in the current scope,
@@ -1196,9 +1226,9 @@ scans or repeated registry walks on hot paths. Binary size changed 20,181,264
 - The receiver-method `LibraryApi` occurrence slice moved broad method-family
   consumers behind dependency-backed call occurrence records. First-party
   lowering now emits occurrence evidence for pack-proven map `get`,
-  pack-proven map-key views, iterator identity adapters, and language-scoped
-  method-call contracts only when the exact language/method/arity row and
-  receiver proof are present.
+  pack-proven map get-default, pack-proven map-key views, iterator identity
+  adapters, and language-scoped method-call contracts only when the exact
+  language/method/arity row and receiver proof are present.
   Normalize runs
   receiver-method refresh passes after immutable binding-domain inference and
   after final CFG/dataflow/algebra rewrites, so binding receivers such as
@@ -1408,17 +1438,17 @@ scans or repeated registry walks on hot paths. Binary size changed 20,181,264
   canonicalization and direct value-graph API consumers behind shared
   `nose-semantics` admitted occurrence resolvers. This covers free-function
   builtins, generic receiver-method contracts, pack-proven map `get`,
-  pack-proven map-key views, iterator identity adapters, Java static collection
-  adapters, Rust `Some(...)`, Rust map factory receiver proof, static
+  pack-proven map get-default, pack-proven map-key views, iterator identity
+  adapters, Java static collection adapters, Rust `Some(...)`, Rust map factory receiver proof, static
   index-membership, and Rust scalar integer methods where the source `Call`
   node is still available.
 - The value-graph span-query resolver cleanup moved value-level CSE consumers
   that no longer carry a source `Call` node behind dedicated `nose-semantics`
   admitted span resolvers. Free-name/imported collection factories,
   Java/Ruby/Rust collection factories, free-name/Java map factories, Java map
-  entries, pack-proven map `get`, pack-proven map-key view calls, and
-  JS Array-pack-proven map-key-view wrapper calls now resolve contract identity
-  and `LibraryApi` occurrence evidence in one place.
+  entries, pack-proven map `get`, pack-proven map get-default, pack-proven
+  map-key view calls, and JS Array-pack-proven map-key-view wrapper calls now
+  resolve contract identity and `LibraryApi` occurrence evidence in one place.
 - The node-level/API resolver cleanup moved property builtin field admission,
   Rust `Some` callee-node admission, HOF receiver proof in desugaring, and
   promise `.then` contract lookup behind shared admitted occurrence resolvers.
@@ -1607,7 +1637,7 @@ Remaining after the #109 closeout:
   evidence, as do generic Python/Go free-function builtins and selected
   receiver-method families. Selected normalize idiom, value-graph, and strict
   exact consumers now call shared `nose-semantics` admitted occurrence resolvers
-  for method, free-function builtin, map-get, map-key-view, regex, JS
+  for method, free-function builtin, map-get, map-get-default, map-key-view, regex, JS
   static/global, static-index, iterator/static collection adapter, Rust
   Option/scalar/`Vec::new`, and first-party factory/constructor calls instead of
   locally recombining raw selector parsing with evidence admission. Value-graph
@@ -1615,8 +1645,8 @@ Remaining after the #109 closeout:
   those resolvers where they still operate on source call nodes; selected
   value-level span-query paths now use dedicated span resolvers for
   free-name/imported collection factories, Java/Ruby/Rust collection factories,
-  free-name/Java map factories, Java map entries, map-get, and map-key
-  view/wrapper calls. Node-level property builtins, Rust `Some` callee checks,
+  free-name/Java map factories, Java map entries, map-get, map-get-default, and
+  map-key view/wrapper calls. Node-level property builtins, Rust `Some` callee checks,
   HOF receiver proof, Promise `resolve`, and Promise `.then` contract lookup
   also go through shared resolvers. Lowered sequence-surface consumers are now
   evidence-only where covered. Remaining API work is broader thenable
