@@ -6,7 +6,7 @@
     "kind": "LawPack",
     "version": "0.1.0",
     "display_name": "Example value-graph law pack",
-    "description": "Illustrative v0 metadata for reusable value laws. Loading this example is metadata-only and does not register external laws.",
+    "description": "Illustrative v0 metadata for reusable value laws. Loading this example registers data-only law rows but does not register them with value-graph or exact consumers.",
     "trust": "external-opt-in",
     "enabled_by_default": false,
     "status": "draft-example"
@@ -182,7 +182,7 @@
     ],
     "known_unsupported": [
       "External LawPack declarations are metadata-only in v0 and do not register new value-graph laws.",
-      "The first-party law registry owns exact fingerprint rewrites."
+      "The builtin law registry owns exact fingerprint rewrites."
     ],
     "command": "nose semantic-pack check law-pack.json --format json",
     "proofs": [

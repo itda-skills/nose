@@ -4,7 +4,9 @@ Status: nose can validate local semantic-pack v0 manifests on `nose query`, and
 it can run a separate local conformance check for manifests and declared fixture
 assets. External packs are explicit opt-ins and are currently `metadata-only`:
 they do not emit evidence, open exact contracts, mint fingerprints, approve clone
-pairs, or change exact/near query results.
+pairs, or change exact/near query results. Local `declares.value_laws` entries
+are registered as data-only rows on the active `SemanticPackSet`, but no value
+graph or exact consumer reads those external rows yet.
 
 ## Local entry points
 
@@ -155,16 +157,21 @@ Trust is separate from channel eligibility.
 `nose query --format json` validates configured and CLI-provided semantic-pack
 paths before analysis and reports the active builtin/local pack set in the
 top-level `semantic_packs` array. Local external packs remain metadata-only
-while builtin compiled packs report `evidence-and-contracts` influence. Builtin
-pack order in this array follows the compiled registry's stable reporting order;
-roadmap and snapshot prose may group packs by migration narrative instead.
+while builtin compiled packs report `evidence-and-contracts` influence. External
+value-law rows are available to the loaded pack set for future conflict checks
+and adoption gates, but they are not serialized into clone-family law provenance
+and do not affect analysis. Builtin pack order in this array follows the
+compiled registry's stable reporting order; roadmap and snapshot prose may group
+packs by migration narrative instead.
 
 ## Current limits
 
-The loader validates manifest shape and pack provenance only. It does not yet:
+The loader validates manifest shape and pack provenance, and registers external
+value-law declarations as data-only rows. It does not yet:
 
 - execute external evidence producers;
 - register external contract rows with exact consumers;
+- register external value-law rows with value-graph or exact consumers;
 - execute fixture contents or run a behavioral oracle;
 - compare semantic version ranges against the installed nose version beyond
   requiring a parseable declared compatibility field;

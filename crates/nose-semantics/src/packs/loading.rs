@@ -4,6 +4,12 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 
 use super::compiled::is_compiled_builtin_pack_id;
+
+pub(super) struct LoadedLocalManifest {
+    pub summary: SemanticPackSummary,
+    pub external_value_law_rows: Vec<ExternalValueLawRow>,
+}
+
 pub fn check_semantic_pack_conformance(
     paths: &[PathBuf],
 ) -> Result<SemanticPackConformanceReport, SemanticPackLoadError> {
@@ -119,6 +125,29 @@ pub fn load_local_manifest(path: &Path) -> Result<SemanticPackSummary, SemanticP
             path: path.to_path_buf(),
             message,
         }
+    })
+}
+
+pub(super) fn load_local_manifest_with_rows(
+    path: &Path,
+) -> Result<LoadedLocalManifest, SemanticPackLoadError> {
+    let manifest = read_local_manifest(path)?;
+    let external_value_law_rows = manifest
+        .declares
+        .value_laws
+        .iter()
+        .map(|law| ExternalValueLawRow::from_manifest(path, &manifest, law))
+        .collect();
+    let summary =
+        SemanticPackSummary::from_manifest(path.to_path_buf(), manifest).map_err(|message| {
+            SemanticPackLoadError::InvalidManifest {
+                path: path.to_path_buf(),
+                message,
+            }
+        })?;
+    Ok(LoadedLocalManifest {
+        summary,
+        external_value_law_rows,
     })
 }
 

@@ -112,6 +112,30 @@ fn manifest(id: &str) -> String {
     )
 }
 
+fn manifest_with_value_law(id: &str) -> String {
+    manifest(id).replace(
+        r#""value_laws": []"#,
+        r#""value_laws": [{
+      "id": "python.example.numeric-law",
+      "requires": [{
+        "ref": "Domain.Number",
+        "subject": "operands",
+        "required": true,
+        "same_anchor_as": "value"
+      }],
+      "semantics": {
+        "law": "x + 0 == x",
+        "domain": "numeric-only",
+        "demand": { "arguments": "preserve-original-expression-demand" },
+        "effects": ["no-new-effects"]
+      },
+      "channel": "exact-proven",
+      "proof_status": "proven",
+      "conformance_refs": ["positive", "negative"]
+    }]"#,
+    )
+}
+
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
@@ -1842,6 +1866,45 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     assert_eq!(external.source, SemanticPackSource::LocalManifest);
     assert_eq!(external.influence, SemanticPackInfluence::MetadataOnly);
     assert_eq!(external.counts.contracts, 1);
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
+fn local_manifest_registers_external_value_law_rows_as_data_only() {
+    let dir = unique_dir("external_value_law_rows");
+    let path = dir.join("pack.json");
+    fs::write(&path, manifest_with_value_law("com.example.laws")).unwrap();
+
+    let set = SemanticPackSet::new_local(&[path.clone()]).expect("pack loads");
+    let external = set.packs().last().expect("external pack summary");
+    assert_eq!(external.id, "com.example.laws");
+    assert_eq!(external.influence, SemanticPackInfluence::MetadataOnly);
+    assert_eq!(external.counts.value_laws, 1);
+
+    let rows = set.external_value_law_rows();
+    assert_eq!(rows.len(), 1);
+    let row = &rows[0];
+    assert_eq!(row.pack_id, "com.example.laws");
+    assert_eq!(row.pack_hash, stable_symbol_hash("com.example.laws"));
+    assert_eq!(row.manifest_path, path.canonicalize().unwrap());
+    assert_eq!(row.law_id, "python.example.numeric-law");
+    assert_eq!(
+        row.law_hash,
+        stable_symbol_hash("python.example.numeric-law")
+    );
+    assert_eq!(row.channel, SemanticPackChannel::ExactProven);
+    assert_eq!(row.proof_status, SemanticPackProofStatus::Proven);
+    assert_eq!(row.requirements.len(), 1);
+    assert_eq!(row.requirements[0].ref_id, "Domain.Number");
+    assert_eq!(row.requirements[0].subject, "operands");
+    assert!(row.requirements[0].required);
+    assert_eq!(row.requirements[0].same_anchor_as.as_deref(), Some("value"));
+    assert_eq!(row.conformance_refs, ["positive", "negative"]);
+    assert_eq!(row.semantics["law"], "x + 0 == x");
+
+    assert!(SemanticPackSet::builtin_only()
+        .external_value_law_rows()
+        .is_empty());
     let _ = fs::remove_dir_all(dir);
 }
 

@@ -90,6 +90,30 @@ fn semantic_pack_manifest(id: &str) -> String {
     )
 }
 
+fn semantic_pack_manifest_with_value_law(id: &str) -> String {
+    semantic_pack_manifest(id).replace(
+        r#""value_laws": []"#,
+        r#""value_laws": [{
+      "id": "python.example.numeric-law",
+      "requires": [{
+        "ref": "Domain.Number",
+        "subject": "operands",
+        "required": true,
+        "same_anchor_as": "value"
+      }],
+      "semantics": {
+        "law": "x + 0 == x",
+        "domain": "numeric-only",
+        "demand": { "arguments": "preserve-original-expression-demand" },
+        "effects": ["no-new-effects"]
+      },
+      "channel": "exact-proven",
+      "proof_status": "proven",
+      "conformance_refs": ["positive", "negative"]
+    }]"#,
+    )
+}
+
 fn semantic_pack_by_id<'a>(json: &'a serde_json::Value, id: &str) -> &'a serde_json::Value {
     json["semantic_packs"]
         .as_array()
@@ -1003,6 +1027,68 @@ fn query_json_reports_cli_semantic_pack_metadata_without_changing_families() {
         reported["path"].as_str(),
         Some(pack.canonicalize().unwrap().to_str().unwrap())
     );
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn external_value_law_pack_does_not_add_semantic_law_provenance() {
+    let dir = make_project("semantic_pack_external_law_metadata");
+    fs::write(
+        dir.join("repetition.py"),
+        "def repeated(a, b):\n    return a * 2 + b * 2\n\n\ndef grouped(a, b):\n    return (a + b) * 2\n",
+    )
+    .unwrap();
+    let pack = dir.join("law-pack.json");
+    fs::write(
+        &pack,
+        semantic_pack_manifest_with_value_law("com.example.external-value-laws"),
+    )
+    .unwrap();
+
+    let without_pack = query_json(&run(&[
+        "query",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--min-size",
+        "1",
+        "--min-lines",
+        "1",
+        "top=0",
+        "--format",
+        "json",
+    ]));
+    let with_pack = query_json(&run(&[
+        "query",
+        dir.to_str().unwrap(),
+        "--mode",
+        "semantic",
+        "--semantic-pack",
+        pack.to_str().unwrap(),
+        "--min-size",
+        "1",
+        "--min-lines",
+        "1",
+        "top=0",
+        "--format",
+        "json",
+    ]));
+
+    assert_eq!(
+        query_families(&with_pack),
+        query_families(&without_pack),
+        "external value-law manifests must not change reported families"
+    );
+    assert!(
+        query_families(&with_pack)
+            .iter()
+            .all(|family| family["semantic_laws"].is_null()),
+        "external value-law manifests must not add semantic_laws provenance: {with_pack}"
+    );
+    let reported = semantic_pack_by_id(&with_pack, "com.example.external-value-laws");
+    assert_eq!(reported["source"], "local-manifest");
+    assert_eq!(reported["influence"], "metadata-only");
+    assert_eq!(reported["counts"]["value_laws"], 1);
     let _ = fs::remove_dir_all(&dir);
 }
 

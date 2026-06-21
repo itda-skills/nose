@@ -4,7 +4,9 @@ Status: design v0 plus local metadata loading and a local conformance harness.
 nose can load local manifests for explicit opt-in metadata validation, and pack
 authors can run `nose semantic-pack check` against manifests and declared fixture
 assets. External packs are still `metadata-only`: they do not emit evidence or
-open exact contracts. The first compiled builtin pilot pack now reports
+open exact contracts. Local `declares.value_laws` entries are registered as
+data-only rows for future conflict/adoption gates, but they do not influence
+value-graph rewrites or exact matching. The first compiled builtin pilot pack now reports
 Python `typing`, `collections.abc`, and `asyncio` stdlib type-domain alias
 evidence through this vocabulary. This page defines the extension surface that
 builtin compiled packs and future external packs must use.
@@ -352,8 +354,10 @@ A law must declare:
 - whether the law is builtin certified or external provider/user trust.
 
 External law declarations do not let a pack bypass the builtin law registry
-or emit private value-graph nodes. Until the law registry is pack-facing, external
-law packs should stay `near-only` unless nose adopts them as builtin.
+or emit private value-graph nodes. The loader records external law declarations
+as pack-scoped data rows, but current value-graph and exact consumers still read
+only builtin registered laws. Until the law registry is pack-facing, external law
+packs should stay `near-only` unless nose adopts them as builtin.
 
 The first compiled builtin `LawPack` pilot is `nose.value_graph.laws`. It
 reports pack-facing law provenance for two proof-backed value-graph laws:

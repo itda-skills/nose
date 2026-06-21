@@ -298,6 +298,70 @@ pub struct SemanticPackSummary {
     pub counts: SemanticPackCounts,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct SemanticPackRequirementSummary {
+    pub ref_id: String,
+    pub subject: String,
+    pub required: bool,
+    pub same_anchor_as: Option<String>,
+    pub within_scope: Option<String>,
+    pub before: Option<String>,
+    pub after: Option<String>,
+}
+
+impl SemanticPackRequirementSummary {
+    fn from_manifest(requirement: &ManifestRequirement) -> Self {
+        Self {
+            ref_id: requirement.ref_id.clone(),
+            subject: requirement.subject.clone(),
+            required: requirement.required,
+            same_anchor_as: requirement.same_anchor_as.clone(),
+            within_scope: requirement.within_scope.clone(),
+            before: requirement.before.clone(),
+            after: requirement.after.clone(),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ExternalValueLawRow {
+    pub pack_id: String,
+    pub pack_hash: u64,
+    pub manifest_path: PathBuf,
+    pub law_id: String,
+    pub law_hash: u64,
+    pub channel: SemanticPackChannel,
+    pub proof_status: SemanticPackProofStatus,
+    pub requirements: Vec<SemanticPackRequirementSummary>,
+    pub conformance_refs: Vec<String>,
+    pub semantics: serde_json::Value,
+}
+
+impl ExternalValueLawRow {
+    fn from_manifest(
+        manifest_path: &std::path::Path,
+        manifest: &SemanticPackManifest,
+        law: &ManifestValueLaw,
+    ) -> Self {
+        Self {
+            pack_id: manifest.pack.id.clone(),
+            pack_hash: semantic_pack_hash(&manifest.pack.id),
+            manifest_path: manifest_path.to_path_buf(),
+            law_id: law.id.clone(),
+            law_hash: stable_symbol_hash(&law.id),
+            channel: law.channel,
+            proof_status: law.proof_status,
+            requirements: law
+                .requires
+                .iter()
+                .map(SemanticPackRequirementSummary::from_manifest)
+                .collect(),
+            conformance_refs: law.conformance_refs.clone(),
+            semantics: law.semantics.clone(),
+        }
+    }
+}
+
 impl SemanticPackSummary {
     pub fn hash_hex(&self) -> String {
         format!("{:016x}", self.hash)
@@ -345,29 +409,39 @@ pub fn semantic_pack_hash(pack_id: &str) -> u64 {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct SemanticPackSet {
     packs: Vec<SemanticPackSummary>,
+    external_value_law_rows: Vec<ExternalValueLawRow>,
 }
 
 impl SemanticPackSet {
     pub fn new_local(paths: &[PathBuf]) -> Result<Self, SemanticPackLoadError> {
         let manifest_paths = discover_manifest_paths(paths)?;
         let mut packs = compiled_builtin_packs();
+        let mut external_value_law_rows = Vec::new();
         for path in manifest_paths {
-            let pack = load_local_manifest(&path)?;
-            if let Some(existing) = packs.iter().find(|existing| existing.id == pack.id) {
+            let loaded = loading::load_local_manifest_with_rows(&path)?;
+            if let Some(existing) = packs
+                .iter()
+                .find(|existing| existing.id == loaded.summary.id)
+            {
                 return Err(SemanticPackLoadError::DuplicatePackId {
-                    id: pack.id,
+                    id: loaded.summary.id,
                     first_path: existing.manifest_path.clone(),
                     second_path: Some(path),
                 });
             }
-            packs.push(pack);
+            external_value_law_rows.extend(loaded.external_value_law_rows);
+            packs.push(loaded.summary);
         }
-        Ok(Self { packs })
+        Ok(Self {
+            packs,
+            external_value_law_rows,
+        })
     }
 
     pub fn builtin_only() -> Self {
         Self {
             packs: compiled_builtin_packs(),
+            external_value_law_rows: Vec::new(),
         }
     }
 
@@ -377,6 +451,10 @@ impl SemanticPackSet {
 
     pub fn packs(&self) -> &[SemanticPackSummary] {
         &self.packs
+    }
+
+    pub fn external_value_law_rows(&self) -> &[ExternalValueLawRow] {
+        &self.external_value_law_rows
     }
 }
 
