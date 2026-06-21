@@ -265,10 +265,17 @@ Selected `LibraryApi` result-domain evidence follows the same model. A
 first-party factory call result may carry `Domain(Collection)`, `Domain(Set)`,
 `Domain(Map)`, or `Domain(Array)` only after the call occurrence has admitted
 `LibraryApi` evidence. The `Domain` record depends on that `LibraryApi` record,
-so broken import, source, shadowing, or symbol proof closes the receiver-domain
+so broken import, source, shadowing, or symbol proof closes the result-domain
 claim as well. The result-domain record proves only the container/protocol shape
 of the call result; exact consumers still prove argument safety, entry shape,
 mutation, receiver requirements, and demand/effect obligations separately.
+Normalize-owned result-domain refreshes, helper receiver-domain facts, and
+helper call-site `Symbol` occurrence facts use the lowered file language's
+builtin language-core provenance, while the licensing `LibraryApi` occurrence
+keeps the specific builtin pack provenance. When these refreshes encounter
+older broad `nose.first_party` rows for the same asserted fact, they update the
+row in place instead of minting a duplicate; if an equivalent current row
+already exists, stale broad duplicates are closed as ambiguous.
 
 Sequence-surface evidence is also authoritative for exact/value-graph aggregate
 semantics. A lowered `Seq("array")`, `Seq("object")`, `Seq("tuple")`, or

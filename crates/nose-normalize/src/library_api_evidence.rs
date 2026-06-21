@@ -159,23 +159,111 @@ fn builder_append_method_dependencies(
         callee,
         &mut dependency_cache,
     ) {
+        if let Some(current_dependency) = dependencies
+            .iter()
+            .copied()
+            .find(|&dependency| language_core_append_receiver_domain_dependency(il, dependency))
+        {
+            close_legacy_duplicates_for_language_core_dependency(il, current_dependency);
+            return Some(dependencies);
+        }
+        if dependencies
+            .iter()
+            .copied()
+            .any(|dependency| legacy_first_party_append_receiver_domain_dependency(il, dependency))
+        {
+            if let Some((receiver, seed_dependency)) =
+                builder_append_local_receiver_seed(il, interner, call, callee)
+            {
+                let receiver_domain =
+                    upsert_local_collection_receiver_domain(il, receiver, seed_dependency);
+                return Some(vec![receiver_domain]);
+            }
+        }
         return Some(dependencies);
     }
 
+    let (receiver, seed_dependency) =
+        builder_append_local_receiver_seed(il, interner, call, callee)?;
+    let receiver_domain = upsert_local_collection_receiver_domain(il, receiver, seed_dependency);
+    Some(vec![receiver_domain])
+}
+
+fn builder_append_local_receiver_seed(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+    callee: LibraryApiCalleeContract,
+) -> Option<(NodeId, EvidenceId)> {
     let LibraryApiCalleeContract::Method { method, .. } = callee else {
         return None;
     };
     let callee_node = *il.children(call).first()?;
     let receiver = method_callee_receiver_node(il, interner, callee_node, method)?;
     let seed_dependency = local_collection_seed_dependency_id(il, interner, call, receiver)?;
-    let receiver_domain = upsert_first_party_evidence(
+    Some((receiver, seed_dependency))
+}
+
+fn upsert_local_collection_receiver_domain(
+    il: &mut Il,
+    receiver: NodeId,
+    seed_dependency: EvidenceId,
+) -> EvidenceId {
+    upsert_language_core_evidence(
         il,
         EvidenceAnchor::node(il.node(receiver).span, il.kind(receiver)),
         EvidenceKind::Domain(DomainEvidence::Collection),
-        "library_api_builder_append_receiver_domain",
         vec![seed_dependency],
-    );
-    Some(vec![receiver_domain])
+    )
+}
+
+fn language_core_append_receiver_domain_dependency(il: &Il, dependency: EvidenceId) -> bool {
+    let Some(record) = il.evidence_record_by_id(dependency) else {
+        return false;
+    };
+    let EvidenceKind::Domain(domain) = record.kind else {
+        return false;
+    };
+    let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+    domain.is_array_collection_or_set()
+        && record.status == EvidenceStatus::Asserted
+        && record.provenance.emitter == EvidenceEmitter::FirstParty
+        && record.provenance.pack_hash == Some(stable_symbol_hash(pack_id))
+        && record.provenance.rule_hash == Some(stable_symbol_hash(producer_id))
+}
+
+fn close_legacy_duplicates_for_language_core_dependency(il: &mut Il, dependency: EvidenceId) {
+    let Some(record) = il.evidence_record_by_id(dependency) else {
+        return;
+    };
+    let anchor = record.anchor;
+    let kind = record.kind;
+    let legacy_pack_hash = stable_symbol_hash(FIRST_PARTY_PACK_ID);
+    for idx in il.evidence_indices_anchored_at(anchor.span()) {
+        let duplicate = &mut il.evidence[idx as usize];
+        if duplicate.id != dependency
+            && duplicate.anchor == anchor
+            && duplicate.kind == kind
+            && duplicate.status == EvidenceStatus::Asserted
+            && duplicate.provenance.emitter == EvidenceEmitter::FirstParty
+            && duplicate.provenance.pack_hash == Some(legacy_pack_hash)
+        {
+            duplicate.status = EvidenceStatus::Ambiguous;
+        }
+    }
+}
+
+fn legacy_first_party_append_receiver_domain_dependency(il: &Il, dependency: EvidenceId) -> bool {
+    let Some(record) = il.evidence_record_by_id(dependency) else {
+        return false;
+    };
+    let EvidenceKind::Domain(domain) = record.kind else {
+        return false;
+    };
+    domain.is_array_collection_or_set()
+        && record.status == EvidenceStatus::Asserted
+        && record.provenance.emitter == EvidenceEmitter::FirstParty
+        && record.provenance.pack_hash == Some(stable_symbol_hash(FIRST_PARTY_PACK_ID))
 }
 
 fn method_callee_receiver_node(
@@ -433,11 +521,10 @@ fn record_library_api_result_domain(
     domain: DomainEvidence,
     api: EvidenceId,
 ) {
-    upsert_first_party_evidence(
+    upsert_language_core_evidence(
         il,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::Domain(domain),
-        "library_api_result_domain",
         vec![api],
     );
 }
@@ -448,11 +535,10 @@ fn record_library_api_node_result_domain(
     domain: DomainEvidence,
     api: EvidenceId,
 ) {
-    upsert_first_party_evidence(
+    upsert_language_core_evidence(
         il,
         EvidenceAnchor::node(il.node(node).span, il.kind(node)),
         EvidenceKind::Domain(domain),
-        "library_api_result_domain",
         vec![api],
     );
 }
@@ -486,13 +572,12 @@ fn seed_receiver_method_dependencies(
 
 fn unshadowed_symbol_evidence_id(il: &mut Il, node: NodeId, expected: &str) -> Option<EvidenceId> {
     (il.kind(node) == NodeKind::Var).then_some(())?;
-    Some(upsert_first_party_evidence(
+    Some(upsert_language_core_evidence(
         il,
         EvidenceAnchor::node(il.node(node).span, NodeKind::Var),
         EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
             name_hash: stable_symbol_hash(expected),
         }),
-        "symbol_unshadowed_global_normalize",
         Vec::new(),
     ))
 }
@@ -507,11 +592,10 @@ fn imported_namespace_symbol_evidence_id(
         module_hash: stable_symbol_hash(module),
     };
     let dependency = binding_symbol_evidence_id(il, interner, node, expected)?;
-    Some(upsert_first_party_evidence(
+    Some(upsert_language_core_evidence(
         il,
         EvidenceAnchor::node(il.node(node).span, NodeKind::Var),
         EvidenceKind::Symbol(expected),
-        "symbol_imported_namespace_occurrence_normalize",
         vec![dependency],
     ))
 }
@@ -554,21 +638,68 @@ fn file_defines_name_visible_at(
     nose_semantics::file_defines_name_visible_at(il, interner, name, occurrence_span)
 }
 
-fn upsert_first_party_evidence(
+fn upsert_language_core_evidence(
     il: &mut Il,
     anchor: EvidenceAnchor,
     kind: EvidenceKind,
-    rule: &str,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceId {
-    upsert_first_party_evidence_with_pack_id(
-        il,
-        anchor,
-        kind,
-        FIRST_PARTY_PACK_ID,
-        rule,
-        dependencies,
-    )
+    let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+    let pack_hash = stable_symbol_hash(pack_id);
+    let legacy_pack_hash = stable_symbol_hash(FIRST_PARTY_PACK_ID);
+    let rule_hash = stable_symbol_hash(producer_id);
+    let mut current_idx = None;
+    let mut legacy_idx = None;
+    let mut duplicate_indices = Vec::new();
+    for idx in il.evidence_indices_anchored_at(anchor.span()) {
+        let record = &il.evidence[idx as usize];
+        if record.anchor == anchor
+            && record.kind == kind
+            && record.status == EvidenceStatus::Asserted
+            && record.provenance.emitter == EvidenceEmitter::FirstParty
+        {
+            match record.provenance.pack_hash {
+                Some(hash) if hash == pack_hash => {
+                    if current_idx.is_none() {
+                        if let Some(idx) = legacy_idx.take() {
+                            duplicate_indices.push(idx);
+                        }
+                        current_idx = Some(idx);
+                    } else {
+                        duplicate_indices.push(idx);
+                    }
+                }
+                Some(hash) if hash == legacy_pack_hash => {
+                    if current_idx.is_some() {
+                        duplicate_indices.push(idx);
+                    } else if legacy_idx.is_none() {
+                        legacy_idx = Some(idx);
+                    } else {
+                        duplicate_indices.push(idx);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    let Some(idx) = current_idx.or(legacy_idx) else {
+        return il.find_or_push_first_party_evidence(
+            anchor,
+            kind,
+            pack_id,
+            producer_id,
+            dependencies,
+        );
+    };
+    let record = &mut il.evidence[idx as usize];
+    record.provenance.pack_hash = Some(pack_hash);
+    record.provenance.rule_hash = Some(rule_hash);
+    record.dependencies = dependencies;
+    let id = record.id;
+    for duplicate_idx in duplicate_indices {
+        il.evidence[duplicate_idx as usize].status = EvidenceStatus::Ambiguous;
+    }
+    id
 }
 
 fn upsert_first_party_evidence_with_pack_id(

@@ -619,7 +619,13 @@ migrated.
   dependencies of the occurrence evidence, but they no longer act as fallback
   API-identity proof for these surfaces. Where a producer emits result-domain
   evidence, that `Domain` record depends on the `LibraryApi` occurrence record,
-  so broken API proof also closes receiver-domain proof. The `LibraryApi` record
+  so broken API proof also closes result-domain proof. Normalize-owned
+  result-domain, helper receiver-domain, and helper call-site `Symbol`
+  occurrence facts use the lowered file language's builtin language-core
+  provenance, while the licensing `LibraryApi` occurrence keeps the specific
+  builtin pack provenance; legacy broad `nose.first_party` rows are updated in
+  place when the same asserted fact is refreshed, and stale broad duplicates are
+  closed when an equivalent current row already exists. The `LibraryApi` record
   itself proves API identity only; source, exact-safe argument, result-shape,
   mutation, and demand/effect obligations remain separate.
 - Receiver-method calls that remain as raw `Field`/`Call` nodes now emit
