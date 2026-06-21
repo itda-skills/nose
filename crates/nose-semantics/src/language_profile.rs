@@ -3,6 +3,15 @@
 use super::*;
 
 pub const C_LANGUAGE_PACK_ID: &str = "nose.lang.c";
+pub const PYTHON_LANGUAGE_PACK_ID: &str = "nose.lang.python";
+pub const JS_TS_LANGUAGE_PACK_ID: &str = "nose.lang.javascript-typescript";
+pub const GO_LANGUAGE_PACK_ID: &str = "nose.lang.go";
+pub const RUST_LANGUAGE_PACK_ID: &str = "nose.lang.rust";
+pub const JAVA_LANGUAGE_PACK_ID: &str = "nose.lang.java";
+pub const RUBY_LANGUAGE_PACK_ID: &str = "nose.lang.ruby";
+pub const SWIFT_LANGUAGE_PACK_ID: &str = "nose.lang.swift";
+pub const CSS_LANGUAGE_PACK_ID: &str = "nose.lang.css";
+pub const HTML_EMBEDDED_LANGUAGE_PACK_ID: &str = "nose.lang.html";
 pub const C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID: &str = "c.source.cast.unsigned32";
 
 /// A first-party language profile. Keep this cheap and copyable; callers use it as a

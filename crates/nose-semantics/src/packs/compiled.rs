@@ -3,6 +3,16 @@ use nose_il::Lang;
 
 const C_LANGUAGE: &[&str] = &["c"];
 const C_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["c", "h"];
+const PYTHON_BINDING_LANGS: &[Lang] = &[Lang::Python];
+const JS_TS_BINDING_LANGS: &[Lang] = &[Lang::JavaScript, Lang::TypeScript];
+const GO_BINDING_LANGS: &[Lang] = &[Lang::Go];
+const RUST_BINDING_LANGS: &[Lang] = &[Lang::Rust];
+const JAVA_BINDING_LANGS: &[Lang] = &[Lang::Java];
+const C_BINDING_LANGS: &[Lang] = &[Lang::C];
+const RUBY_BINDING_LANGS: &[Lang] = &[Lang::Ruby];
+const SWIFT_BINDING_LANGS: &[Lang] = &[Lang::Swift];
+const CSS_BINDING_LANGS: &[Lang] = &[Lang::Css];
+const HTML_EMBEDDED_BINDING_LANGS: &[Lang] = &[Lang::Html, Lang::Vue, Lang::Svelte];
 const C_LANGUAGE_EVIDENCE_PRODUCER_IDS: &[&str] = &[C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID];
 const C_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID];
 const C_LANGUAGE_CONFORMANCE_REFS: &[&str] = &[
@@ -11,6 +21,20 @@ const C_LANGUAGE_CONFORMANCE_REFS: &[&str] = &[
     "c-unsigned32-signed-cast-hard-negative",
     "c-unsigned32-non-byte-lane-hard-negative",
 ];
+const PYTHON_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["py", "pyi"];
+const JS_TS_LANGUAGE_FILE_EXTENSIONS: &[&str] =
+    &["js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts"];
+const GO_LANGUAGE: &[&str] = &["go"];
+const GO_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["go"];
+const RUST_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["rs"];
+const JAVA_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["java"];
+const RUBY_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["rb"];
+const SWIFT_LANGUAGE: &[&str] = &["swift"];
+const SWIFT_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["swift"];
+const CSS_LANGUAGE: &[&str] = &["css"];
+const CSS_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["css"];
+const HTML_EMBEDDED_LANGUAGES: &[&str] = &["html", "vue", "svelte"];
+const HTML_EMBEDDED_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["html", "htm", "vue", "svelte"];
 const JS_LIKE_LANGUAGE: &[&str] = &["javascript", "typescript"];
 const JAVA_LANGUAGE: &[&str] = &["java"];
 const JAVA_RUST_LANGUAGE: &[&str] = &["java", "rust"];
@@ -441,7 +465,7 @@ const NO_TYPE_DOMAIN_ALIAS_CONTRACTS: &[FirstPartyTypeDomainAliasContract] = &[]
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct BuiltinLanguageBinding {
-    pub lang: Lang,
+    pub langs: &'static [Lang],
     pub file_extensions: &'static [&'static str],
     pub parser: &'static str,
     pub lowering_entrypoint: &'static str,
@@ -1075,6 +1099,126 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         counts: empty_counts,
     },
     BuiltinPackDescriptor {
+        id: PYTHON_LANGUAGE_PACK_ID,
+        kind: SemanticPackKind::LanguagePack,
+        display_name: "nose Python language pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: PYTHON_LANGUAGE,
+        supported_packages: NO_PACKAGES,
+        language: Some(BuiltinLanguageBinding {
+            langs: PYTHON_BINDING_LANGS,
+            file_extensions: PYTHON_LANGUAGE_FILE_EXTENSIONS,
+            parser: "tree-sitter-python",
+            lowering_entrypoint: "nose_frontend::python::lower",
+        }),
+        evidence_producer_ids: NO_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: NO_IDS,
+        static_value_law_ids: NO_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: NO_IDS,
+        dynamic_conformance_refs: None,
+        counts: empty_counts,
+    },
+    BuiltinPackDescriptor {
+        id: JS_TS_LANGUAGE_PACK_ID,
+        kind: SemanticPackKind::LanguagePack,
+        display_name: "nose JavaScript/TypeScript language pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: JS_LIKE_LANGUAGE,
+        supported_packages: NO_PACKAGES,
+        language: Some(BuiltinLanguageBinding {
+            langs: JS_TS_BINDING_LANGS,
+            file_extensions: JS_TS_LANGUAGE_FILE_EXTENSIONS,
+            parser: "tree-sitter-javascript/tree-sitter-typescript",
+            lowering_entrypoint: "nose_frontend::js_ts::lower",
+        }),
+        evidence_producer_ids: NO_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: NO_IDS,
+        static_value_law_ids: NO_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: NO_IDS,
+        dynamic_conformance_refs: None,
+        counts: empty_counts,
+    },
+    BuiltinPackDescriptor {
+        id: GO_LANGUAGE_PACK_ID,
+        kind: SemanticPackKind::LanguagePack,
+        display_name: "nose Go language pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: GO_LANGUAGE,
+        supported_packages: NO_PACKAGES,
+        language: Some(BuiltinLanguageBinding {
+            langs: GO_BINDING_LANGS,
+            file_extensions: GO_LANGUAGE_FILE_EXTENSIONS,
+            parser: "tree-sitter-go",
+            lowering_entrypoint: "nose_frontend::go::lower",
+        }),
+        evidence_producer_ids: NO_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: NO_IDS,
+        static_value_law_ids: NO_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: NO_IDS,
+        dynamic_conformance_refs: None,
+        counts: empty_counts,
+    },
+    BuiltinPackDescriptor {
+        id: RUST_LANGUAGE_PACK_ID,
+        kind: SemanticPackKind::LanguagePack,
+        display_name: "nose Rust language pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: RUST_LANGUAGE,
+        supported_packages: NO_PACKAGES,
+        language: Some(BuiltinLanguageBinding {
+            langs: RUST_BINDING_LANGS,
+            file_extensions: RUST_LANGUAGE_FILE_EXTENSIONS,
+            parser: "tree-sitter-rust",
+            lowering_entrypoint: "nose_frontend::rust::lower",
+        }),
+        evidence_producer_ids: NO_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: NO_IDS,
+        static_value_law_ids: NO_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: NO_IDS,
+        dynamic_conformance_refs: None,
+        counts: empty_counts,
+    },
+    BuiltinPackDescriptor {
+        id: JAVA_LANGUAGE_PACK_ID,
+        kind: SemanticPackKind::LanguagePack,
+        display_name: "nose Java language pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: JAVA_LANGUAGE,
+        supported_packages: NO_PACKAGES,
+        language: Some(BuiltinLanguageBinding {
+            langs: JAVA_BINDING_LANGS,
+            file_extensions: JAVA_LANGUAGE_FILE_EXTENSIONS,
+            parser: "tree-sitter-java",
+            lowering_entrypoint: "nose_frontend::java::lower",
+        }),
+        evidence_producer_ids: NO_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: NO_IDS,
+        static_value_law_ids: NO_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: NO_IDS,
+        dynamic_conformance_refs: None,
+        counts: empty_counts,
+    },
+    BuiltinPackDescriptor {
         id: C_LANGUAGE_PACK_ID,
         kind: SemanticPackKind::LanguagePack,
         display_name: "nose C language pack",
@@ -1083,7 +1227,7 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         supported_languages: C_LANGUAGE,
         supported_packages: NO_PACKAGES,
         language: Some(BuiltinLanguageBinding {
-            lang: Lang::C,
+            langs: C_BINDING_LANGS,
             file_extensions: C_LANGUAGE_FILE_EXTENSIONS,
             parser: "tree-sitter-c",
             lowering_entrypoint: "nose_frontend::c::lower",
@@ -1097,6 +1241,102 @@ static BUILTIN_PACK_DESCRIPTORS: &[BuiltinPackDescriptor] = &[
         static_conformance_refs: C_LANGUAGE_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: c_language_counts,
+    },
+    BuiltinPackDescriptor {
+        id: RUBY_LANGUAGE_PACK_ID,
+        kind: SemanticPackKind::LanguagePack,
+        display_name: "nose Ruby language pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: RUBY_LANGUAGE,
+        supported_packages: NO_PACKAGES,
+        language: Some(BuiltinLanguageBinding {
+            langs: RUBY_BINDING_LANGS,
+            file_extensions: RUBY_LANGUAGE_FILE_EXTENSIONS,
+            parser: "tree-sitter-ruby",
+            lowering_entrypoint: "nose_frontend::ruby::lower",
+        }),
+        evidence_producer_ids: NO_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: NO_IDS,
+        static_value_law_ids: NO_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: NO_IDS,
+        dynamic_conformance_refs: None,
+        counts: empty_counts,
+    },
+    BuiltinPackDescriptor {
+        id: SWIFT_LANGUAGE_PACK_ID,
+        kind: SemanticPackKind::LanguagePack,
+        display_name: "nose Swift language pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: SWIFT_LANGUAGE,
+        supported_packages: NO_PACKAGES,
+        language: Some(BuiltinLanguageBinding {
+            langs: SWIFT_BINDING_LANGS,
+            file_extensions: SWIFT_LANGUAGE_FILE_EXTENSIONS,
+            parser: "tree-sitter-swift",
+            lowering_entrypoint: "nose_frontend::swift::lower",
+        }),
+        evidence_producer_ids: NO_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: NO_IDS,
+        static_value_law_ids: NO_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: NO_IDS,
+        dynamic_conformance_refs: None,
+        counts: empty_counts,
+    },
+    BuiltinPackDescriptor {
+        id: CSS_LANGUAGE_PACK_ID,
+        kind: SemanticPackKind::LanguagePack,
+        display_name: "nose CSS language pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: CSS_LANGUAGE,
+        supported_packages: NO_PACKAGES,
+        language: Some(BuiltinLanguageBinding {
+            langs: CSS_BINDING_LANGS,
+            file_extensions: CSS_LANGUAGE_FILE_EXTENSIONS,
+            parser: "tree-sitter-css",
+            lowering_entrypoint: "nose_frontend::css::lower",
+        }),
+        evidence_producer_ids: NO_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: NO_IDS,
+        static_value_law_ids: NO_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: NO_IDS,
+        dynamic_conformance_refs: None,
+        counts: empty_counts,
+    },
+    BuiltinPackDescriptor {
+        id: HTML_EMBEDDED_LANGUAGE_PACK_ID,
+        kind: SemanticPackKind::LanguagePack,
+        display_name: "nose HTML/Vue/Svelte embedded region language pack",
+        trust: PackTrust::DefaultFirstParty,
+        enabled_by_default: true,
+        supported_languages: HTML_EMBEDDED_LANGUAGES,
+        supported_packages: NO_PACKAGES,
+        language: Some(BuiltinLanguageBinding {
+            langs: HTML_EMBEDDED_BINDING_LANGS,
+            file_extensions: HTML_EMBEDDED_LANGUAGE_FILE_EXTENSIONS,
+            parser: "tree-sitter-html + embedded JS/TS/CSS extraction",
+            lowering_entrypoint: "nose_frontend::embedded::lower_regions",
+        }),
+        evidence_producer_ids: NO_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: NO_IDS,
+        static_value_law_ids: NO_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: NO_IDS,
+        dynamic_conformance_refs: None,
+        counts: empty_counts,
     },
     BuiltinPackDescriptor {
         id: PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,

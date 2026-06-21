@@ -138,7 +138,7 @@ fn query_json_reports_builtin_semantic_packs() {
             .as_array()
             .expect("semantic_packs should be an array")
             .len(),
-        32
+        41
     );
 
     let first_party = semantic_pack_by_id(&json, "nose.first_party");
@@ -147,6 +147,34 @@ fn query_json_reports_builtin_semantic_packs() {
     assert_eq!(first_party["trust"], "default-first-party");
     assert_eq!(first_party["enabled_by_default"], true);
     assert!(first_party["path"].is_null());
+
+    let python_lang = semantic_pack_by_id(&json, "nose.lang.python");
+    assert_eq!(python_lang["kind"], "LanguagePack");
+    assert_eq!(python_lang["source"], "compiled-first-party");
+    assert_eq!(
+        json_array_strings(python_lang, "supported_languages"),
+        vec!["python"]
+    );
+    assert_eq!(python_lang["counts"]["evidence_producers"], 0);
+    assert_eq!(python_lang["counts"]["contracts"], 0);
+
+    let js_ts_lang = semantic_pack_by_id(&json, "nose.lang.javascript-typescript");
+    assert_eq!(js_ts_lang["kind"], "LanguagePack");
+    assert_eq!(
+        json_array_strings(js_ts_lang, "supported_languages"),
+        vec!["javascript", "typescript"]
+    );
+    assert_eq!(js_ts_lang["counts"]["evidence_producers"], 0);
+    assert_eq!(js_ts_lang["counts"]["contracts"], 0);
+
+    let html_lang = semantic_pack_by_id(&json, "nose.lang.html");
+    assert_eq!(html_lang["kind"], "LanguagePack");
+    assert_eq!(
+        json_array_strings(html_lang, "supported_languages"),
+        vec!["html", "vue", "svelte"]
+    );
+    assert_eq!(html_lang["counts"]["evidence_producers"], 0);
+    assert_eq!(html_lang["counts"]["contracts"], 0);
 
     let c = semantic_pack_by_id(&json, "nose.lang.c");
     assert_eq!(c["kind"], "LanguagePack");

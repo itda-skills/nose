@@ -436,7 +436,16 @@ pub(crate) fn assert_query_json_reports_semantic_packs(json: &serde_json::Value)
         .unwrap_or_else(|| panic!("query JSON should report semantic_packs: {json}"));
     for id in [
         "nose.first_party",
+        "nose.lang.python",
+        "nose.lang.javascript-typescript",
+        "nose.lang.go",
+        "nose.lang.rust",
+        "nose.lang.java",
         "nose.lang.c",
+        "nose.lang.ruby",
+        "nose.lang.swift",
+        "nose.lang.css",
+        "nose.lang.html",
         "nose.python.builtins.collection_factories",
         "nose.python.stdlib.collection_factories",
         "nose.python.stdlib.math",

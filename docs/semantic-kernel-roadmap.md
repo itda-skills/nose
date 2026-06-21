@@ -72,8 +72,9 @@ The next code slices are intentionally incremental:
    v5 and update capabilities;
 4. Phase 3: make `nose.python.stdlib.type_domain` the first end-to-end reference builtin
    stdlib pack;
-5. Phase 4: use `nose.lang.c` as the first builtin language descriptor slice
-   before migrating the remaining language/region packs;
+5. Phase 4: report all official language/region parser-lowering ownership
+   through `nose.lang.*` builtin descriptors, with `nose.lang.c` as the first
+   provenance-bearing source-fact slice;
 6. Phase 5: move narrow stdlib/library/law rows behind pack-owned descriptors and shared
    admitted-contract resolvers, starting with
    `nose.python.builtins.collection_factories` for Python builtin collection

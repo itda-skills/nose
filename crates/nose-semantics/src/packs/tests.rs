@@ -9,6 +9,34 @@ fn unique_dir(tag: &str) -> PathBuf {
     dir
 }
 
+fn assert_metadata_only_language_descriptor(
+    pack_id: &str,
+    supported_languages: &[&str],
+    langs: &[nose_il::Lang],
+    file_extensions: &[&str],
+    parser: &str,
+    lowering_entrypoint: &str,
+) {
+    let descriptor = builtin_pack_descriptor(pack_id).expect("language descriptor");
+    assert_eq!(descriptor.kind, SemanticPackKind::LanguagePack);
+    assert_eq!(descriptor.supported_languages, supported_languages);
+    assert!(descriptor.supported_packages.is_empty());
+    let language = descriptor
+        .language
+        .expect("language descriptor should expose binding metadata");
+    assert_eq!(language.langs, langs);
+    assert_eq!(language.file_extensions, file_extensions);
+    assert_eq!(language.parser, parser);
+    assert_eq!(language.lowering_entrypoint, lowering_entrypoint);
+    assert!(descriptor.evidence_producer_ids.is_empty());
+    assert!(descriptor.source_fact_producer_ids.is_empty());
+    assert!(descriptor.contract_ids.is_empty());
+    assert_eq!(descriptor.counts().evidence_producers, 0);
+    assert_eq!(descriptor.counts().contracts, 0);
+    assert_eq!(descriptor.counts().positive_fixtures, 0);
+    assert_eq!(descriptor.counts().hard_negatives, 0);
+}
+
 // nose-ignore: inline semantic-pack manifest fixture; keeping the JSON shape visible matters here.
 fn manifest(id: &str) -> String {
     format!(
@@ -79,7 +107,7 @@ fn manifest(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 32);
+    assert_eq!(descriptors.len(), 41);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -88,7 +116,16 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
         ids,
         vec![
             FIRST_PARTY_PACK_ID,
+            PYTHON_LANGUAGE_PACK_ID,
+            JS_TS_LANGUAGE_PACK_ID,
+            GO_LANGUAGE_PACK_ID,
+            RUST_LANGUAGE_PACK_ID,
+            JAVA_LANGUAGE_PACK_ID,
             C_LANGUAGE_PACK_ID,
+            RUBY_LANGUAGE_PACK_ID,
+            SWIFT_LANGUAGE_PACK_ID,
+            CSS_LANGUAGE_PACK_ID,
+            HTML_EMBEDDED_LANGUAGE_PACK_ID,
             PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,
             PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID,
             PYTHON_STDLIB_MATH_PACK_ID,
@@ -132,6 +169,46 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
 
 #[test]
 fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
+    assert_metadata_only_language_descriptor(
+        PYTHON_LANGUAGE_PACK_ID,
+        &["python"],
+        &[nose_il::Lang::Python],
+        &["py", "pyi"],
+        "tree-sitter-python",
+        "nose_frontend::python::lower",
+    );
+    assert_metadata_only_language_descriptor(
+        JS_TS_LANGUAGE_PACK_ID,
+        &["javascript", "typescript"],
+        &[nose_il::Lang::JavaScript, nose_il::Lang::TypeScript],
+        &["js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts"],
+        "tree-sitter-javascript/tree-sitter-typescript",
+        "nose_frontend::js_ts::lower",
+    );
+    assert_metadata_only_language_descriptor(
+        GO_LANGUAGE_PACK_ID,
+        &["go"],
+        &[nose_il::Lang::Go],
+        &["go"],
+        "tree-sitter-go",
+        "nose_frontend::go::lower",
+    );
+    assert_metadata_only_language_descriptor(
+        RUST_LANGUAGE_PACK_ID,
+        &["rust"],
+        &[nose_il::Lang::Rust],
+        &["rs"],
+        "tree-sitter-rust",
+        "nose_frontend::rust::lower",
+    );
+    assert_metadata_only_language_descriptor(
+        JAVA_LANGUAGE_PACK_ID,
+        &["java"],
+        &[nose_il::Lang::Java],
+        &["java"],
+        "tree-sitter-java",
+        "nose_frontend::java::lower",
+    );
     let c = builtin_pack_descriptor(C_LANGUAGE_PACK_ID).expect("C language descriptor");
     assert_eq!(c.kind, SemanticPackKind::LanguagePack);
     assert_eq!(c.supported_languages, &["c"]);
@@ -139,7 +216,7 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
     let language = c
         .language
         .expect("C descriptor should expose language binding");
-    assert_eq!(language.lang, nose_il::Lang::C);
+    assert_eq!(language.langs, &[nose_il::Lang::C]);
     assert_eq!(language.file_extensions, &["c", "h"]);
     assert_eq!(language.parser, "tree-sitter-c");
     assert_eq!(language.lowering_entrypoint, "nose_frontend::c::lower");
@@ -158,6 +235,42 @@ fn builtin_pack_descriptors_enumerate_declarations_and_conformance_refs() {
     assert!(c
         .conformance_refs()
         .contains(&"c-unsigned32-signed-cast-hard-negative"));
+    assert_metadata_only_language_descriptor(
+        RUBY_LANGUAGE_PACK_ID,
+        &["ruby"],
+        &[nose_il::Lang::Ruby],
+        &["rb"],
+        "tree-sitter-ruby",
+        "nose_frontend::ruby::lower",
+    );
+    assert_metadata_only_language_descriptor(
+        SWIFT_LANGUAGE_PACK_ID,
+        &["swift"],
+        &[nose_il::Lang::Swift],
+        &["swift"],
+        "tree-sitter-swift",
+        "nose_frontend::swift::lower",
+    );
+    assert_metadata_only_language_descriptor(
+        CSS_LANGUAGE_PACK_ID,
+        &["css"],
+        &[nose_il::Lang::Css],
+        &["css"],
+        "tree-sitter-css",
+        "nose_frontend::css::lower",
+    );
+    assert_metadata_only_language_descriptor(
+        HTML_EMBEDDED_LANGUAGE_PACK_ID,
+        &["html", "vue", "svelte"],
+        &[
+            nose_il::Lang::Html,
+            nose_il::Lang::Vue,
+            nose_il::Lang::Svelte,
+        ],
+        &["html", "htm", "vue", "svelte"],
+        "tree-sitter-html + embedded JS/TS/CSS extraction",
+        "nose_frontend::embedded::lower_regions",
+    );
 
     let python_builtins = builtin_pack_descriptor(PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID)
         .expect("Python builtins descriptor");
@@ -1557,51 +1670,63 @@ fn local_manifest_loads_as_metadata_only_opt_in() {
     let path = dir.join("pack.json");
     fs::write(&path, manifest("com.example.pack")).unwrap();
     let set = SemanticPackSet::new_local(&[path]).expect("pack loads");
-    assert_eq!(set.packs().len(), 33);
-    assert_eq!(set.packs()[1].id, C_LANGUAGE_PACK_ID);
-    assert_eq!(set.packs()[2].id, PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[3].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[4].id, PYTHON_STDLIB_MATH_PACK_ID);
-    assert_eq!(set.packs()[5].id, RUBY_STDLIB_SET_PACK_ID);
-    assert_eq!(set.packs()[6].id, RUST_STDLIB_VEC_PACK_ID);
-    assert_eq!(set.packs()[7].id, RUST_STDLIB_OPTION_PACK_ID);
-    assert_eq!(set.packs()[8].id, RUST_STDLIB_INTEGER_METHOD_PACK_ID);
-    assert_eq!(set.packs()[9].id, RUST_STDLIB_COLLECTION_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[10].id, RUST_STDLIB_MAP_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[11].id, JAVA_STDLIB_MATH_PACK_ID);
-    assert_eq!(set.packs()[12].id, JAVA_STDLIB_MAP_FACTORY_PACK_ID);
-    assert_eq!(set.packs()[13].id, JAVA_STDLIB_MAP_ENTRY_PACK_ID);
-    assert_eq!(set.packs()[14].id, JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID);
+    assert_eq!(set.packs().len(), 42);
+    assert_eq!(set.packs()[1].id, PYTHON_LANGUAGE_PACK_ID);
+    assert_eq!(set.packs()[2].id, JS_TS_LANGUAGE_PACK_ID);
+    assert_eq!(set.packs()[3].id, GO_LANGUAGE_PACK_ID);
+    assert_eq!(set.packs()[4].id, RUST_LANGUAGE_PACK_ID);
+    assert_eq!(set.packs()[5].id, JAVA_LANGUAGE_PACK_ID);
+    assert_eq!(set.packs()[6].id, C_LANGUAGE_PACK_ID);
+    assert_eq!(set.packs()[7].id, RUBY_LANGUAGE_PACK_ID);
+    assert_eq!(set.packs()[8].id, SWIFT_LANGUAGE_PACK_ID);
+    assert_eq!(set.packs()[9].id, CSS_LANGUAGE_PACK_ID);
+    assert_eq!(set.packs()[10].id, HTML_EMBEDDED_LANGUAGE_PACK_ID);
     assert_eq!(
-        set.packs()[15].id,
+        set.packs()[11].id,
+        PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID
+    );
+    assert_eq!(set.packs()[12].id, PYTHON_STDLIB_COLLECTION_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[13].id, PYTHON_STDLIB_MATH_PACK_ID);
+    assert_eq!(set.packs()[14].id, RUBY_STDLIB_SET_PACK_ID);
+    assert_eq!(set.packs()[15].id, RUST_STDLIB_VEC_PACK_ID);
+    assert_eq!(set.packs()[16].id, RUST_STDLIB_OPTION_PACK_ID);
+    assert_eq!(set.packs()[17].id, RUST_STDLIB_INTEGER_METHOD_PACK_ID);
+    assert_eq!(set.packs()[18].id, RUST_STDLIB_COLLECTION_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[19].id, RUST_STDLIB_MAP_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[20].id, JAVA_STDLIB_MATH_PACK_ID);
+    assert_eq!(set.packs()[21].id, JAVA_STDLIB_MAP_FACTORY_PACK_ID);
+    assert_eq!(set.packs()[22].id, JAVA_STDLIB_MAP_ENTRY_PACK_ID);
+    assert_eq!(set.packs()[23].id, JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID);
+    assert_eq!(
+        set.packs()[24].id,
         JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID
     );
     assert_eq!(
-        set.packs()[16].id,
+        set.packs()[25].id,
         JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID
     );
-    assert_eq!(set.packs()[17].id, MAP_GET_PROTOCOL_PACK_ID);
-    assert_eq!(set.packs()[18].id, MAP_GET_DEFAULT_PROTOCOL_PACK_ID);
-    assert_eq!(set.packs()[19].id, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID);
-    assert_eq!(set.packs()[20].id, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID);
-    assert_eq!(set.packs()[21].id, MAP_KEY_VIEW_PROTOCOL_PACK_ID);
-    assert_eq!(set.packs()[22].id, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID);
-    assert_eq!(set.packs()[23].id, ITERATOR_IDENTITY_ADAPTER_PACK_ID);
-    assert_eq!(set.packs()[24].id, JS_LIKE_BUILTIN_PROMISE_PACK_ID);
-    assert_eq!(set.packs()[25].id, JS_LIKE_BUILTIN_ARRAY_PACK_ID);
-    assert_eq!(set.packs()[26].id, JS_LIKE_BUILTIN_BOOLEAN_PACK_ID);
-    assert_eq!(set.packs()[27].id, JS_LIKE_BUILTIN_REGEX_PACK_ID);
+    assert_eq!(set.packs()[26].id, MAP_GET_PROTOCOL_PACK_ID);
+    assert_eq!(set.packs()[27].id, MAP_GET_DEFAULT_PROTOCOL_PACK_ID);
+    assert_eq!(set.packs()[28].id, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID);
+    assert_eq!(set.packs()[29].id, RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID);
+    assert_eq!(set.packs()[30].id, MAP_KEY_VIEW_PROTOCOL_PACK_ID);
+    assert_eq!(set.packs()[31].id, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID);
+    assert_eq!(set.packs()[32].id, ITERATOR_IDENTITY_ADAPTER_PACK_ID);
+    assert_eq!(set.packs()[33].id, JS_LIKE_BUILTIN_PROMISE_PACK_ID);
+    assert_eq!(set.packs()[34].id, JS_LIKE_BUILTIN_ARRAY_PACK_ID);
+    assert_eq!(set.packs()[35].id, JS_LIKE_BUILTIN_BOOLEAN_PACK_ID);
+    assert_eq!(set.packs()[36].id, JS_LIKE_BUILTIN_REGEX_PACK_ID);
     assert_eq!(
-        set.packs()[28].id,
+        set.packs()[37].id,
         JS_LIKE_BUILTIN_STATIC_INDEX_MEMBERSHIP_PACK_ID
     );
     assert_eq!(
-        set.packs()[29].id,
+        set.packs()[38].id,
         JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACK_ID
     );
-    assert_eq!(set.packs()[30].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
-    assert_eq!(set.packs()[31].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
-    let external = &set.packs()[32];
+    assert_eq!(set.packs()[39].id, PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID);
+    assert_eq!(set.packs()[40].id, FIRST_PARTY_VALUE_LAW_PACK_ID);
+    let external = &set.packs()[41];
     assert_eq!(external.id, "com.example.pack");
     assert_eq!(external.hash, stable_symbol_hash("com.example.pack"));
     assert_eq!(external.trust, PackTrust::ExternalOptIn);
@@ -1945,11 +2070,32 @@ fn local_manifest_cannot_claim_compiled_first_party_pack_id() {
 }
 
 #[test]
+fn local_manifest_cannot_claim_builtin_language_pack_id() {
+    let dir = unique_dir("builtin_language_id");
+    let path = dir.join("pack.json");
+    fs::write(&path, manifest(PYTHON_LANGUAGE_PACK_ID)).unwrap();
+    let err = SemanticPackSet::new_local(&[path]).expect_err("builtin language id is reserved");
+    assert!(err.to_string().contains("duplicate semantic pack id"));
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
 fn conformance_check_cannot_claim_compiled_first_party_pack_id() {
     let dir = unique_dir("compiled_first_party_conformance");
     let path = dir.join("pack.json");
     fs::write(&path, manifest(PYTHON_STDLIB_TYPE_DOMAIN_PACK_ID)).unwrap();
     let err = check_semantic_pack_conformance(&[path]).expect_err("compiled id is reserved");
+    assert!(err.to_string().contains("duplicate semantic pack id"));
+    let _ = fs::remove_dir_all(dir);
+}
+
+#[test]
+fn conformance_check_cannot_claim_builtin_language_pack_id() {
+    let dir = unique_dir("builtin_language_conformance");
+    let path = dir.join("pack.json");
+    fs::write(&path, manifest(JS_TS_LANGUAGE_PACK_ID)).unwrap();
+    let err =
+        check_semantic_pack_conformance(&[path]).expect_err("builtin language id is reserved");
     assert!(err.to_string().contains("duplicate semantic pack id"));
     let _ = fs::remove_dir_all(dir);
 }

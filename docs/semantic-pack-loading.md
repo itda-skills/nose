@@ -53,8 +53,19 @@ Trust is separate from channel eligibility.
   uses compatibility labels such as `compiled-first-party` and
   `default-first-party`; docs and new implementation work should use
   `builtin`. `nose.first_party` is the temporary broad compatibility facade;
-  `nose.lang.c` is the first narrow builtin language pack slice for C file
-  identity, parser/lowering metadata, and unsigned-cast source provenance;
+  `nose.lang.python`, `nose.lang.javascript-typescript`, `nose.lang.go`,
+  `nose.lang.rust`, `nose.lang.java`, `nose.lang.c`, `nose.lang.ruby`,
+  `nose.lang.swift`, `nose.lang.css`, and `nose.lang.html` report official
+  parser/lowering ownership metadata for builtin language support while the
+  implementation stays in tree. Among those language packs, `nose.lang.c` is
+  the first provenance-bearing source-fact slice for C file identity,
+  parser/lowering metadata, and unsigned-cast source provenance;
+
+  Builtin pack ids, including the `nose.lang.*` language descriptor ids, are
+  reserved. A local external manifest that claims one of those ids is rejected
+  as a duplicate pack id. This is intentional fail-closed behavior: external
+  packs may use the same vocabulary, but they cannot impersonate shipped nose
+  ownership or default trust.
   `nose.python.builtins.collection_factories` is the first narrow Python
   builtins pack for `list`, `set`, `frozenset`, and `tuple` collection factory
   API occurrence provenance;

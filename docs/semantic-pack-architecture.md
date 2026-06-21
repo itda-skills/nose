@@ -32,6 +32,9 @@ silent string change.
 The broad `nose.first_party` pack id is a temporary compatibility descriptor for
 compiled semantic knowledge that has not yet moved behind narrower builtin pack
 ids. New ownership should move toward explicit ids such as `nose.lang.python`,
+`nose.lang.javascript-typescript`, `nose.lang.go`, `nose.lang.rust`,
+`nose.lang.java`, `nose.lang.c`, `nose.lang.ruby`, `nose.lang.swift`,
+`nose.lang.css`, `nose.lang.html`,
 `nose.python.builtins.collection_factories`,
 `nose.python.stdlib.collection_factories`,
 `nose.python.stdlib.math`,
@@ -185,11 +188,13 @@ previous semantic-kernel tranches.
    the same PR because older query JSON schemas reject unknown fields.
 4. **Phase 3, reference stdlib pack:** make `nose.python.stdlib.type_domain` the first
    end-to-end descriptor-backed builtin stdlib pack.
-5. **Phase 4, builtin language slice:** add one `nose.lang.<language>` descriptor that
-   owns language identity, parser/lowering metadata, and source-fact producer
-   metadata while preserving behavior. The first vertical slice is
-   `nose.lang.c`, covering the existing C parser/lowering binding and the
-   explicit unsigned 32-bit byte-lane cast source-fact producer.
+5. **Phase 4, builtin language slices:** keep official parser/lowering
+   implementation in tree, but report builtin language ownership through
+   `nose.lang.<language>` descriptors. The registry now has descriptor metadata
+   for Python, JavaScript/TypeScript, Go, Rust, Java, C, Ruby, Swift, CSS, and
+   HTML/Vue/Svelte embedded-region lowering. The first provenance-bearing
+   source-fact slice is `nose.lang.c`, covering the existing C parser/lowering
+   binding and the explicit unsigned 32-bit byte-lane cast source-fact producer.
 6. **Phase 5, builtin stdlib/library/law packs:** move official semantic rows behind
    narrow builtin pack ids and shared admitted-contract resolvers. The first
    slice is `nose.python.builtins.collection_factories`, which owns Python

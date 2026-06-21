@@ -1,6 +1,6 @@
 # Semantic kernel snapshot
 
-Snapshot date: 2026-06-09. The current implementation has an internal
+Snapshot date: 2026-06-21. The current implementation has an internal
 semantic-kernel facade, evidence-gated field state, sequence-surface contracts,
 proof-backed append fragment evidence, operator-law contracts, typed import
 facts, source-fact gates for construct/macro/literal/operator provenance,
@@ -69,8 +69,11 @@ still being migrated toward it.
   split into focused modules under `src/` and `src/library_api/`. Compiled
   builtin packs now have a small `BuiltinPackDescriptor` registry that feeds
   the existing `SemanticPackSummary` compatibility output without changing
-  analysis behavior. The first builtin language descriptor is `nose.lang.c`; it
-  owns the C file-extension identity, `tree-sitter-c` parser binding,
+  analysis behavior. Builtin language descriptors now report official
+  parser/lowering ownership metadata for Python, JavaScript/TypeScript, Go,
+  Rust, Java, C, Ruby, Swift, CSS, and HTML/Vue/Svelte embedded-region support.
+  The first provenance-bearing language slice is `nose.lang.c`; it owns the C
+  file-extension identity, `tree-sitter-c` parser binding,
   `nose_frontend::c::lower` lowering entrypoint metadata, and the
   `c.source.cast.unsigned32` source-fact producer id. The
   `nose.python.builtins.collection_factories` descriptor owns the Python builtin
@@ -182,8 +185,9 @@ still being migrated toward it.
   assets, and `nose query --format json` reports active builtin/local packs in
   top-level `semantic_packs`. External packs are still `metadata-only`; builtin
   producers remain compiled Rust and are expected to map onto the same
-  vocabulary. The first compiled pilots are `nose.lang.c`, a default builtin
-  language pack-shaped surface for C unsigned-cast source provenance,
+  vocabulary. The first compiled pilots are the `nose.lang.*` builtin language
+  descriptor set, with `nose.lang.c` as the first source-provenance-bearing
+  language slice for C unsigned-cast source provenance,
   `nose.python.builtins.collection_factories`, a default builtin stdlib pack for
   Python builtin collection-factory API provenance, and
   `nose.python.stdlib.collection_factories`, a default builtin stdlib pack for

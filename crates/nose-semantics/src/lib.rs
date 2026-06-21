@@ -64,7 +64,10 @@ pub use guard_evidence::*;
 pub use import_facts::*;
 pub(crate) use language_profile::js_like_lang;
 pub use language_profile::{
-    semantics, LanguageProfile, C_LANGUAGE_PACK_ID, C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID,
+    semantics, LanguageProfile, CSS_LANGUAGE_PACK_ID, C_LANGUAGE_PACK_ID,
+    C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID, GO_LANGUAGE_PACK_ID, HTML_EMBEDDED_LANGUAGE_PACK_ID,
+    JAVA_LANGUAGE_PACK_ID, JS_TS_LANGUAGE_PACK_ID, PYTHON_LANGUAGE_PACK_ID, RUBY_LANGUAGE_PACK_ID,
+    RUST_LANGUAGE_PACK_ID, SWIFT_LANGUAGE_PACK_ID,
 };
 pub use library_api::*;
 use library_api::{
