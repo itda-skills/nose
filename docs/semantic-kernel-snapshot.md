@@ -370,7 +370,7 @@ migrated.
   admits same-span `LibraryApi` occurrence evidence after desugaring, plus the
   narrow syntax-owned lowerings for Go map lookup-ok `Contains`, Go
   `Enumerate`, Python dict-comprehension `DictEntry`, JS-like `Keys`, C
-  `UnsignedCast32` with source-cast evidence, and append calls with
+  `UnsignedCast32` with source-cast evidence, and append calls with language-core
   `Effect(BuilderAppendCall)`. Receiver-dependent specializations also stay
   proof-chain-gated: Rust `unwrap_or` canonicalizes to map `GetOrDefault` only
   when its admitted method occurrence depends on an admitted pack-proven Rust map
@@ -667,7 +667,8 @@ migrated.
   such as `push`, `append`, or `add` is not proof by itself. First-party
   frontend/normalize paths must prove the receiver or active-builder contract,
   lower the call to canonical `Builtin::Append`, and attach
-  `Effect(BuilderAppendCall)` through explicit same-span language/API evidence
+  language-core `Effect(BuilderAppendCall)` through explicit same-span
+  language/API evidence
   before exact fragments can treat it as an append effect. Value-graph active
   list builders require emitted effect evidence, an admitted same-span
   `LibraryApi(MethodCall(Builtin(Append)))` occurrence, or the first-party
@@ -689,14 +690,14 @@ migrated.
   though they may still participate in the separate opaque-call policy as
   generic `Other` effect context.
 - Value-graph and oracle same-unit field state are evidence-gated. A cached
-  write/readback/final field sink is admitted only for the current self-field
-  substrate: Java `this.field` proven by `Place(SelfReceiver)`,
-  `Place(SelfField)`, and `Effect(SelfFieldWrite)`. Raw dynamic attribute or
-  property spellings, including Python `self.x`, do not prove exact field state;
-  they remain ordered effects or unsupported until a pack supplies explicit
-  place/effect evidence.
-- Exact-fragment place/effect gates now have the first pack-facing evidence
-  substrate. First-party lowering and normalize refreshes emit
+  write/readback/final field sink is admitted only for the current builtin
+  language-core self-field substrate: Java `this.field` proven by
+  `Place(SelfReceiver)`, `Place(SelfField)`, and `Effect(SelfFieldWrite)`. Raw
+  dynamic attribute or property spellings, including Python `self.x`, do not
+  prove exact field state; they remain ordered effects or unsupported until a
+  pack supplies explicit place/effect evidence.
+- Exact-fragment place/effect gates now have builtin language-core evidence
+  provenance. Frontend lowering and normalize refreshes emit
   `Place(SelfReceiver)` and `Place(SelfField)` for Java `this`/`this.field`,
   plus `Effect` evidence for canonical builder append calls, C/Go/Java
   non-overloadable index writes, and Java self-field writes. Fragment

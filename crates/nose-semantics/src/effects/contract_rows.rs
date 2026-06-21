@@ -1,7 +1,7 @@
 //! First-party effect contract row tables.
 
 use super::*;
-use crate::FIRST_PARTY_PACK_ID;
+use crate::builtin_language_pack_id;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct MethodEffectContractSet {
@@ -161,7 +161,7 @@ const RECEIVER_MUTATION_METHOD_EFFECTS: &[MethodEffectContractSet] = &[
 ];
 
 const MAP_BUILDER_INDEX_WRITE_CONTRACTS: &[IndexWriteContract] = &[IndexWriteContract {
-    pack_id: FIRST_PARTY_PACK_ID,
+    pack_id: crate::PYTHON_LANGUAGE_PACK_ID,
     id: IndexWriteContractId::MapBuilderEntryWrite,
     lang: Lang::Python,
     receiver: IndexWriteReceiverContract::ActiveMapBuilder,
@@ -192,7 +192,7 @@ pub(super) fn method_effect_contracts(lang: Lang) -> impl Iterator<Item = Method
                 .iter()
                 .copied()
                 .map(move |method| MethodEffectContract {
-                    pack_id: FIRST_PARTY_PACK_ID,
+                    pack_id: builtin_language_pack_id(lang),
                     id: set.id,
                     lang,
                     method,

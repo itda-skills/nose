@@ -310,16 +310,17 @@ an append effect; exact consumers need
 canonical `Builtin::Append`. Likewise, non-overloadable index writes and fixed
 self-field writes are admitted only through exact `Effect` records, with
 `Place(SelfReceiver)` and `Place(SelfField)` proving the receiver/place side.
-First-party `Place(SelfField)` depends on the matching `Place(SelfReceiver)`,
-and `Effect(SelfFieldWrite)` depends on the matching `Place(SelfField)`.
+Builtin language-core `Place(SelfField)` depends on the matching
+`Place(SelfReceiver)`, and `Effect(SelfFieldWrite)` depends on the matching
+`Place(SelfField)`.
 Missing, conflicting, ambiguous, or dependency-broken place/effect evidence
 closes exact fragments, value-graph field readback/final field sinks, and oracle
 field state instead of reopening a legacy language/shape fallback.
 
 Mutation-risk effects are intentionally separate from exact effect proofs.
 `Effect(BindingWrite)` says an assignment node writes its syntactic target;
-`Effect(ReceiverMutation)` says a call is covered by a first-party
-language-scoped receiver-mutating method-effect contract row; and
+`Effect(ReceiverMutation)` says a call is covered by a builtin language-scoped
+receiver-mutating method-effect contract row; and
 `Effect(OpaqueArgumentEscape)` says an ordinary call argument may escape to
 unknown code. These records can invalidate immutable binding, module export,
 imported literal, value-graph, or exact-fragment context assumptions, but they
@@ -458,16 +459,15 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   null/truthiness clause kind, whether JS loose equality was admitted, and
   asserted dependencies for the required `Array.isArray` API proof plus optional
   `Boolean` proof;
-- first-party lowering and normalize refreshes emit `Place(SelfReceiver)` for
-  Java `this`, `Place(SelfField)` for Java `this.field`,
-  `Effect(SelfFieldWrite)` for Java `this.field = ...`, and
+- frontend lowering and normalize refreshes emit builtin language-core
+  `Place(SelfReceiver)` for Java `this`, `Place(SelfField)` for Java
+  `this.field`, `Effect(SelfFieldWrite)` for Java `this.field = ...`, and
   `Effect(NonOverloadableIndexWrite)` for C/Go/Java index writes. Normalize also
-  emits `Effect(BuilderAppendCall)` for canonical `Builtin::Append` only when a
-  same-span append `LibraryApi` record licenses that canonical form, and records
-  the API evidence as a dependency. They also emit mutation-risk effects:
-  `Effect(BindingWrite)` for assignment nodes,
-  `Effect(ReceiverMutation)` for calls admitted by the first-party
-  language-scoped mutating-method policy, and
+  emits language-core `Effect(BuilderAppendCall)` for canonical `Builtin::Append`
+  only when a same-span append `LibraryApi` record licenses that canonical form,
+  and records the API evidence as a dependency. They also emit mutation-risk
+  effects: `Effect(BindingWrite)` for assignment nodes, `Effect(ReceiverMutation)`
+  for calls admitted by the builtin language-scoped mutating-method policy, and
   `Effect(OpaqueArgumentEscape)` for ordinary calls with arguments. The shared
   semantic helper treats opaque escape as active mutation risk only when the
   same call does not also have admitted `LibraryApi` evidence. Self-field
