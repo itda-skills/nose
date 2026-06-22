@@ -1,6 +1,10 @@
 use anyhow::Result;
 use std::path::PathBuf;
 
+mod inventory;
+
+pub(crate) use inventory::{cmd_inventory, InventoryFormat, INVENTORY_SCHEMA_VERSION};
+
 pub(crate) const CONFORMANCE_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Clone, Copy, PartialEq, clap::ValueEnum)]

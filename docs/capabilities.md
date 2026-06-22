@@ -26,7 +26,7 @@ nose capabilities
 
 ```json
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "tool": {
     "name": "nose",
     "version": "<version>"
@@ -46,10 +46,11 @@ nose capabilities
     "deprecated": []
   },
   "schemas": {
-    "capabilities": [3],
+    "capabilities": [4],
     "query_json": [6],
     "semantic_packs": ["nose.semantic-pack.v0"],
-    "semantic_pack_conformance": [2]
+    "semantic_pack_conformance": [2],
+    "semantic_pack_inventory": [1]
   },
   "query": {
     "modes": ["syntax", "semantic", "near"],
@@ -94,6 +95,8 @@ nose capabilities
       "local-manifest-directory"
     ],
     "conformance_output_formats": ["human", "json"],
+    "inventory": ["compiled-builtin"],
+    "inventory_output_formats": ["human", "json"],
     "trust": [
       "builtin-default",
       "builtin-optional",
@@ -129,11 +132,11 @@ should treat absence from `query.modes` as "not stable for automation."
 installed binary's own version (`nose --version`); the example deliberately does not pin a
 release so it can't drift.
 
-## Version 3 Fields
+## Version 4 Fields
 
 | field | type | meaning |
 |---|---|---|
-| `schema_version` | integer | Capabilities contract version. Version 3 is documented here. |
+| `schema_version` | integer | Capabilities contract version. Version 4 is documented here. |
 | `tool.name` | string | Always `nose`. |
 | `tool.version` | string | Package version of the installed binary. |
 | `platform.os` | string | Rust target OS name, such as `linux`, `macos`, or `windows`. |
@@ -143,11 +146,12 @@ release so it can't drift.
 | `interfaces.version_json` | boolean | Whether `nose --version --json` is supported. Version 1 reports `false`. |
 | `interfaces.doctor_json` | boolean | Whether `nose doctor --json` is supported. Version 1 reports `false`. |
 | `commands.stable` | array | Stable user-facing commands that integrations may invoke (incl. `query`, the interactive exploration surface — see [usage › nose query](usage.md#nose-query), with its versioned [query-JSON](query-json.md) contract). Hidden research commands are intentionally omitted. |
-| `commands.deprecated` | array | Commands that still work but are being retired. Version 3 reports an empty array. |
+| `commands.deprecated` | array | Commands that still work but are being retired. Version 4 reports an empty array. |
 | `schemas.capabilities` | array | Supported capabilities schema versions. |
 | `schemas.query_json` | array | Supported `nose query --format json` schema versions ([query-json](query-json.md)). |
 | `schemas.semantic_packs` | array | Supported semantic-pack manifest API versions, currently `nose.semantic-pack.v0`. |
 | `schemas.semantic_pack_conformance` | array | Supported `nose semantic-pack check --format json` schema versions. Version 2 reports structural conformance, executable fixture-expectation gate results, and row-level external influence preflight blockers. |
+| `schemas.semantic_pack_inventory` | array | Supported `nose semantic-pack inventory --format json` schema versions. Version 1 reports compiled builtin pack declarations, conformance refs, coverage status, and audit gaps. |
 | `query.modes` | array | Supported `--mode` values. |
 | `query.default_modes` | array | Modes used by `nose query` when `--mode` is omitted. |
 | `query.output_formats` | array | Supported `nose query --format` values. |
@@ -155,14 +159,16 @@ release so it can't drift.
 | `query.config_keys` | array | Supported `[query]` keys in `nose.toml` / `.nose.toml`. |
 | `query.capabilities` | object | Stable boolean capability flags for query workflows. |
 | `semantic_packs.api_versions` | array | Supported semantic-pack manifest API versions. |
-| `semantic_packs.loading` | array | Supported loading sources. Schema version 3 reports `compiled-builtin` for compiled builtin packs, plus local manifest files/directories. |
+| `semantic_packs.loading` | array | Supported loading sources. Schema version 4 reports `compiled-builtin` for compiled builtin packs, plus local manifest files/directories. |
 | `semantic_packs.conformance` | array | Supported conformance input sources: local manifest files/directories. |
 | `semantic_packs.conformance_output_formats` | array | Supported `nose semantic-pack check --format` values. |
+| `semantic_packs.inventory` | array | Supported inventory sources. Version 4 reports `compiled-builtin`. |
+| `semantic_packs.inventory_output_formats` | array | Supported `nose semantic-pack inventory --format` values. |
 | `semantic_packs.trust` | array | Supported trust policy labels. |
 | `semantic_packs.external_packs_enabled_by_default` | boolean | Always `false`; external packs require explicit CLI/config opt-in. |
 | `semantic_packs.external_pack_influence` | string | Current influence of loaded external packs, `metadata-only`. |
 | `semantic_packs.external_influence_blockers` | array | Stable blocker labels that currently prevent external rows from influencing analysis. |
-| `semantic_packs.external_pack_execution` | string | Current external pack execution support. Version 3 reports `none`; local external packs do not run recognizers, parser/lowering plugins, producer code, sandboxed code, or fixture contents. |
+| `semantic_packs.external_pack_execution` | string | Current external pack execution support. Version 4 reports `none`; local external packs do not run recognizers, parser/lowering plugins, producer code, sandboxed code, or fixture contents. |
 | `il.output_formats` | array | Supported `nose il --format` values. |
 | `il.normalized` | boolean | Whether `nose il --normalized` is supported. |
 | `il.cfg_norm_toggle` | boolean | Whether `nose il --no-cfg-norm` is supported. |
@@ -176,7 +182,7 @@ capabilities schema version.
 
 ## Query Capability Flags
 
-Version 3 defines these `query.capabilities` keys:
+Version 4 defines these `query.capabilities` keys:
 
 | key | meaning |
 |---|---|
