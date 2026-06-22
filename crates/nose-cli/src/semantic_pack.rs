@@ -1,8 +1,12 @@
 use anyhow::Result;
 use std::path::PathBuf;
 
+mod adoption_gates;
 mod inventory;
 
+pub(crate) use adoption_gates::{
+    cmd_adoption_gates, AdoptionGateFormat, ADOPTION_GATES_SCHEMA_VERSION,
+};
 pub(crate) use inventory::{cmd_inventory, InventoryFormat, INVENTORY_SCHEMA_VERSION};
 
 pub(crate) const CONFORMANCE_SCHEMA_VERSION: u32 = 2;

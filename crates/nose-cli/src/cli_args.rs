@@ -328,6 +328,13 @@ pub(crate) enum SemanticPackCmd {
         #[arg(long, default_value = "human")]
         format: semantic_pack::CheckFormat,
     },
+    /// Report builtin semantic-pack adoption gates for optional/default lanes.
+    #[command(name = "adoption-gates")]
+    AdoptionGates {
+        /// Output format.
+        #[arg(long, default_value = "human")]
+        format: semantic_pack::AdoptionGateFormat,
+    },
     /// Report builtin semantic-pack declarations, conformance refs, and coverage gaps.
     Inventory {
         /// Output format.
