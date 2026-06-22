@@ -57,7 +57,9 @@ The `--nose ./target/release/nose --query-sample-repos 1` form is the canonical
 command for refreshing the committed pricing JSON and Markdown because it
 records the sample product-query overlay. The `--check-artifacts` form verifies
 that the committed JSON, Markdown, and review log are internally consistent with
-the current tool and corpus digest without requiring a release binary.
+the current tool and corpus digest without requiring a release binary. It also
+validates the issue #509 v2 blocker packet and capability matrix for count,
+cross-reference, accepted-primitive, and performance-gate consistency.
 
 The tool emits:
 
@@ -69,6 +71,12 @@ The follow-up primitive census, blocker taxonomy, and accept/reject matrix for
 issue #507 are recorded in
 [semantic-kernel-capability-minimization](semantic-kernel-capability-minimization.md)
 and [`kernel_capability_matrix.v1.json`](../bench/semantic_pack/kernel_capability_matrix.v1.json).
+The larger issue #509 expansion uses the same pricing discipline with a second
+blocker packet and capability matrix:
+[`blocker_packet.v2.json`](../bench/semantic_pack/blocker_packet.v2.json),
+[`kernel_capability_matrix.v2.json`](../bench/semantic_pack/kernel_capability_matrix.v2.json),
+and
+[semantic-kernel-builtin-expansion-509](semantic-kernel-builtin-expansion-509.md).
 
 The current artifact records 20 candidate iterations. It starts from a curated
 seed list instead of attempting automatic API discovery. The scanner uses

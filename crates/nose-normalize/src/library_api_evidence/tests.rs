@@ -7,6 +7,8 @@ use nose_semantics::{
     RUST_STDLIB_OPTION_PRODUCER_ID,
 };
 
+mod receiver_method_result_domains;
+
 fn sp(byte: u32) -> Span {
     Span::new(FileId(0), byte, byte + 1, byte, byte + 1)
 }
