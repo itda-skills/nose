@@ -291,6 +291,9 @@ and may change to improve readability. The stable contract is documented in
 - `nose semantic-pack inventory [--format human|json]` — inspect compiled
   builtin pack declarations, conformance refs, exact-capable coverage status,
   and coverage gaps without running a query.
+- `nose semantic-pack adoption-gates [--format human|json]` — inspect compiled
+  builtin pack optional/default promotion gates, rollback actions, and blocker
+  status without running a query.
 - `nose il <file> [--normalized] [--no-cfg-norm] [--format sexpr|json]` — dump the IL
   for one file (`--normalized` shows the canonical form after the
   [normalization](normalization.md) passes). A debugging tool for understanding why two

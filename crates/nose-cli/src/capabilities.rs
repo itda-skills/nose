@@ -49,6 +49,7 @@ struct Schemas {
     semantic_packs: Vec<&'static str>,
     semantic_pack_conformance: Vec<u32>,
     semantic_pack_inventory: Vec<u32>,
+    semantic_pack_adoption_gates: Vec<u32>,
 }
 
 #[derive(serde::Serialize)]
@@ -69,6 +70,8 @@ struct SemanticPacks {
     conformance_output_formats: Vec<&'static str>,
     inventory: Vec<&'static str>,
     inventory_output_formats: Vec<&'static str>,
+    adoption_gates: Vec<&'static str>,
+    adoption_gate_output_formats: Vec<&'static str>,
     trust: Vec<&'static str>,
     external_packs_enabled_by_default: bool,
     external_pack_influence: &'static str,
@@ -110,13 +113,7 @@ impl Report {
                 stable: vec!["capabilities", "il", "query", "semantic-pack", "stats"],
                 deprecated: Vec::new(),
             },
-            schemas: Schemas {
-                capabilities: vec![CAPABILITIES_SCHEMA_VERSION],
-                query_json: vec![crate::schema_versions::QUERY_JSON_SCHEMA_VERSION],
-                semantic_packs: vec![nose_semantics::SEMANTIC_PACK_API_VERSION],
-                semantic_pack_conformance: vec![crate::semantic_pack::CONFORMANCE_SCHEMA_VERSION],
-                semantic_pack_inventory: vec![crate::semantic_pack::INVENTORY_SCHEMA_VERSION],
-            },
+            schemas: current_schemas(),
             query: QuerySurface {
                 modes: vec!["syntax", "semantic", "near"],
                 default_modes: vec!["syntax", "semantic", "near"],
@@ -135,32 +132,7 @@ impl Report {
                 ],
                 capabilities: query_capability_flags(),
             },
-            semantic_packs: SemanticPacks {
-                api_versions: vec![nose_semantics::SEMANTIC_PACK_API_VERSION],
-                loading: vec![
-                    "compiled-builtin",
-                    "local-manifest-file",
-                    "local-manifest-directory",
-                ],
-                conformance: vec!["local-manifest-file", "local-manifest-directory"],
-                conformance_output_formats: vec!["human", "json"],
-                inventory: vec!["compiled-builtin"],
-                inventory_output_formats: vec!["human", "json"],
-                trust: vec!["builtin-default", "builtin-optional", "external-opt-in"],
-                external_packs_enabled_by_default: false,
-                external_pack_influence: "metadata-only",
-                external_influence_blockers: vec![
-                    nose_semantics::ExternalInfluenceBlocker::DataOnlyRegistration.as_str(),
-                    nose_semantics::ExternalInfluenceBlocker::DependencyBackedEvidenceUnavailable
-                        .as_str(),
-                    nose_semantics::ExternalInfluenceBlocker::ExplicitInfluenceTrustGateMissing
-                        .as_str(),
-                    nose_semantics::ExternalInfluenceBlocker::ExecutableConformanceUnavailable
-                        .as_str(),
-                    nose_semantics::ExternalInfluenceBlocker::RowConflict.as_str(),
-                ],
-                external_pack_execution: "none",
-            },
+            semantic_packs: current_semantic_packs(),
             il: Il {
                 output_formats: vec!["sexpr", "json"],
                 normalized: true,
@@ -170,6 +142,45 @@ impl Report {
                 output_formats: vec!["human", "json"],
             },
         }
+    }
+}
+
+fn current_schemas() -> Schemas {
+    Schemas {
+        capabilities: vec![CAPABILITIES_SCHEMA_VERSION],
+        query_json: vec![crate::schema_versions::QUERY_JSON_SCHEMA_VERSION],
+        semantic_packs: vec![nose_semantics::SEMANTIC_PACK_API_VERSION],
+        semantic_pack_conformance: vec![crate::semantic_pack::CONFORMANCE_SCHEMA_VERSION],
+        semantic_pack_inventory: vec![crate::semantic_pack::INVENTORY_SCHEMA_VERSION],
+        semantic_pack_adoption_gates: vec![crate::semantic_pack::ADOPTION_GATES_SCHEMA_VERSION],
+    }
+}
+
+fn current_semantic_packs() -> SemanticPacks {
+    SemanticPacks {
+        api_versions: vec![nose_semantics::SEMANTIC_PACK_API_VERSION],
+        loading: vec![
+            "compiled-builtin",
+            "local-manifest-file",
+            "local-manifest-directory",
+        ],
+        conformance: vec!["local-manifest-file", "local-manifest-directory"],
+        conformance_output_formats: vec!["human", "json"],
+        inventory: vec!["compiled-builtin"],
+        inventory_output_formats: vec!["human", "json"],
+        adoption_gates: vec!["compiled-builtin"],
+        adoption_gate_output_formats: vec!["human", "json"],
+        trust: vec!["builtin-default", "builtin-optional", "external-opt-in"],
+        external_packs_enabled_by_default: false,
+        external_pack_influence: "metadata-only",
+        external_influence_blockers: vec![
+            nose_semantics::ExternalInfluenceBlocker::DataOnlyRegistration.as_str(),
+            nose_semantics::ExternalInfluenceBlocker::DependencyBackedEvidenceUnavailable.as_str(),
+            nose_semantics::ExternalInfluenceBlocker::ExplicitInfluenceTrustGateMissing.as_str(),
+            nose_semantics::ExternalInfluenceBlocker::ExecutableConformanceUnavailable.as_str(),
+            nose_semantics::ExternalInfluenceBlocker::RowConflict.as_str(),
+        ],
+        external_pack_execution: "none",
     }
 }
 

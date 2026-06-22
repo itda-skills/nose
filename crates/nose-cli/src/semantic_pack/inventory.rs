@@ -9,20 +9,20 @@ pub(crate) enum InventoryFormat {
 }
 
 #[derive(serde::Serialize)]
-struct InventoryJsonReport {
+pub(super) struct InventoryJsonReport {
     schema_version: u32,
-    status: &'static str,
-    totals: InventoryJsonTotals,
+    pub(super) status: &'static str,
+    pub(super) totals: InventoryJsonTotals,
     evidence_policy: InventoryJsonEvidencePolicy,
-    packs: Vec<InventoryJsonPack>,
+    pub(super) packs: Vec<InventoryJsonPack>,
 }
 
 #[derive(serde::Serialize)]
-struct InventoryJsonTotals {
-    packs: usize,
-    builtin_packs: usize,
-    exact_capable_packs: usize,
-    packs_needing_coverage: usize,
+pub(super) struct InventoryJsonTotals {
+    pub(super) packs: usize,
+    pub(super) builtin_packs: usize,
+    pub(super) exact_capable_packs: usize,
+    pub(super) packs_needing_coverage: usize,
     positive_fixtures: usize,
     hard_negatives: usize,
     conformance_refs: usize,
@@ -36,14 +36,14 @@ struct InventoryJsonEvidencePolicy {
 }
 
 #[derive(serde::Serialize)]
-struct InventoryJsonPack {
-    id: String,
+pub(super) struct InventoryJsonPack {
+    pub(super) id: String,
     hash: String,
     kind: &'static str,
     version: String,
     display_name: String,
-    trust: &'static str,
-    enabled_by_default: bool,
+    pub(super) trust: &'static str,
+    pub(super) enabled_by_default: bool,
     source: &'static str,
     influence: &'static str,
     provider: String,
@@ -53,7 +53,7 @@ struct InventoryJsonPack {
     supported_packages: Vec<String>,
     declarations: InventoryJsonDeclarations,
     conformance: InventoryJsonConformance,
-    audit: InventoryJsonAudit,
+    pub(super) audit: InventoryJsonAudit,
 }
 
 #[derive(serde::Serialize)]
@@ -84,16 +84,16 @@ struct InventoryJsonConformance {
 }
 
 #[derive(serde::Serialize)]
-struct InventoryJsonAudit {
-    exact_capable: bool,
-    coverage_status: &'static str,
-    gaps: Vec<&'static str>,
-    product_output_evidence: &'static str,
-    performance_evidence: &'static str,
+pub(super) struct InventoryJsonAudit {
+    pub(super) exact_capable: bool,
+    pub(super) coverage_status: &'static str,
+    pub(super) gaps: Vec<&'static str>,
+    pub(super) product_output_evidence: &'static str,
+    pub(super) performance_evidence: &'static str,
 }
 
 impl InventoryJsonReport {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         let builtin = nose_semantics::SemanticPackSet::builtin_only();
         let packs = nose_semantics::builtin_pack_descriptors()
             .iter()

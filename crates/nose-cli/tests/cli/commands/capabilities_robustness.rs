@@ -51,6 +51,7 @@ fn capabilities_command_lists_stable_commands_and_schemas() {
     );
     assert_eq!(json["schemas"]["semantic_pack_conformance"][0], 2);
     assert_eq!(json["schemas"]["semantic_pack_inventory"][0], 1);
+    assert_eq!(json["schemas"]["semantic_pack_adoption_gates"][0], 1);
 }
 
 #[test]
@@ -124,6 +125,14 @@ fn capabilities_command_reports_semantic_pack_il_and_stats_surfaces() {
     );
     assert_eq!(
         json_array_strings(&json["semantic_packs"], "inventory_output_formats"),
+        vec!["human", "json"]
+    );
+    assert_eq!(
+        json_array_strings(&json["semantic_packs"], "adoption_gates"),
+        vec!["compiled-builtin"]
+    );
+    assert_eq!(
+        json_array_strings(&json["semantic_packs"], "adoption_gate_output_formats"),
         vec!["human", "json"]
     );
     assert_eq!(
