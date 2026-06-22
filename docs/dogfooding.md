@@ -278,3 +278,9 @@ pre-existing `Builder`/`FileReferents` whole-impl span. They are candidates for 
 deduping them inside this migration would couple unrelated pack slices and slow the safer
 architecture move. The baseline is therefore refreshed to 55 while keeping the gate as a ratchet:
 future increases still need dedupe or a fresh documented acceptance.
+
+The builtin inventory report PR kept the count at 55 but refreshed two representative IDs:
+`b12e6a4ee3b107b6`/`b4311277f23891dd` disappeared and
+`641c27f8c0ae37ed`/`758beda0d0ed65da` appeared. The current representatives are still
+test-scope semantic-pack migration debt: pack-owned `LibraryApi` record builders and
+Rust map-get canonical builtin dependency/hard-negative fixtures. No new budget is accepted.

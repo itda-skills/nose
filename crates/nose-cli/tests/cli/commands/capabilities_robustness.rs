@@ -12,7 +12,7 @@ fn capabilities_command_emits_machine_readable_contract() {
     let json: serde_json::Value =
         serde_json::from_str(&out).expect("capabilities must emit valid JSON");
 
-    assert_eq!(json["schema_version"], 3);
+    assert_eq!(json["schema_version"], 4);
     assert_eq!(json["tool"]["name"], "nose");
     assert_eq!(json["tool"]["version"], env!("CARGO_PKG_VERSION"));
     assert!(
@@ -43,13 +43,14 @@ fn capabilities_command_lists_stable_commands_and_schemas() {
         vec!["capabilities", "il", "query", "semantic-pack", "stats"]
     );
     assert!(json_array_strings(&json["commands"], "deprecated").is_empty());
-    assert_eq!(json["schemas"]["capabilities"][0], 3);
+    assert_eq!(json["schemas"]["capabilities"][0], 4);
     assert_eq!(json["schemas"]["query_json"][0], 6);
     assert_eq!(
         json["schemas"]["semantic_packs"][0],
         "nose.semantic-pack.v0"
     );
     assert_eq!(json["schemas"]["semantic_pack_conformance"][0], 2);
+    assert_eq!(json["schemas"]["semantic_pack_inventory"][0], 1);
 }
 
 #[test]
@@ -115,6 +116,14 @@ fn capabilities_command_reports_semantic_pack_il_and_stats_surfaces() {
     );
     assert_eq!(
         json_array_strings(&json["semantic_packs"], "conformance_output_formats"),
+        vec!["human", "json"]
+    );
+    assert_eq!(
+        json_array_strings(&json["semantic_packs"], "inventory"),
+        vec!["compiled-builtin"]
+    );
+    assert_eq!(
+        json_array_strings(&json["semantic_packs"], "inventory_output_formats"),
         vec!["human", "json"]
     );
     assert_eq!(

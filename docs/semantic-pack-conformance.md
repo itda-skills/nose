@@ -78,7 +78,98 @@ Its expectation labels distinguish report-visible positives such as
 `internal-law-unit-positive`; the harness preserves those labels but does not
 execute them.
 
-## JSON Report
+Builtin packs use a separate inventory command because they are compiled into
+nose and already influence analysis:
+
+```sh
+nose semantic-pack inventory
+nose semantic-pack inventory --format json
+```
+
+The inventory is static and cheap: it reads compiled builtin descriptors, not
+source files or external manifests. It reports each builtin pack's declaration
+ids, conformance refs, positive and hard-negative refs, unsupported refs,
+pack-level exact-capable coverage status, and audit gaps. Exact-capable means
+the pack has descriptor-declared exact rows, or conformance-backed producers
+whose output already influences exact consumers. Exact-capable builtin packs
+with missing positive or hard-negative refs report `needs-coverage`; packs with
+no exact-capable rows report `tracked-no-exact-rows`.
+
+The coverage status is a descriptor-level audit. It verifies that a builtin pack
+has both positive and hard-negative conformance references, and it reports gaps
+when fixture counts and classified refs diverge. It does not yet prove that each
+individual producer, contract, law, or alias row has a one-to-one fixture pair;
+that narrower row-level coverage belongs in a later schema version.
+
+The inventory also records that product-output and performance evidence are
+`required-on-implementation-pr`. Those measurements live in the PR that changes
+behavior or pack ownership, not in a static descriptor table.
+
+## Builtin Inventory JSON
+
+`nose semantic-pack inventory --format json` emits schema version 1:
+
+```json
+{
+  "schema_version": 1,
+  "status": "ok",
+  "totals": {
+    "packs": 43,
+    "builtin_packs": 43,
+    "exact_capable_packs": 33,
+    "packs_needing_coverage": 0,
+    "positive_fixtures": 132,
+    "hard_negatives": 80,
+    "conformance_refs": 212,
+    "unsupported_refs": 13
+  },
+  "evidence_policy": {
+    "product_output": "required-on-implementation-pr",
+    "performance": "required-on-implementation-pr"
+  },
+  "packs": [
+    {
+      "id": "nose.go.stdlib.namespace_calls",
+      "kind": "StdlibPack",
+      "declarations": {
+        "contracts": ["go.stdlib.namespace_call"],
+        "type_domain_aliases": [],
+        "counts": {
+          "contracts": 1,
+          "positive_fixtures": 4,
+          "hard_negatives": 2
+        }
+      },
+      "conformance": {
+        "positive_refs": ["go-stdlib-namespace-call-fmt-print-positive"],
+        "hard_negative_refs": [
+          "go-stdlib-namespace-call-missing-import-hard-negative"
+        ],
+        "unsupported_refs": []
+      },
+      "audit": {
+        "exact_capable": true,
+        "coverage_status": "covered",
+        "gaps": []
+      }
+    }
+  ]
+}
+```
+
+Important fields:
+
+| Field | Meaning |
+| --- | --- |
+| `totals.exact_capable_packs` | Builtin packs whose declarations or conformance-backed producers currently influence exact semantic consumers. |
+| `packs[].declarations.type_domain_aliases` | Type-domain alias coordinates, formatted as `<contract-id>:<module>.<exported>:<domain>`. |
+| `packs[].conformance.positive_refs` | Conformance refs classified as positive fixtures by their stable fixture id. |
+| `packs[].conformance.hard_negative_refs` | Conformance refs classified as hard negatives by their stable fixture id. |
+| `packs[].conformance.unsupported_refs` | Refs whose stable id explicitly contains `unsupported`; other hard negatives remain in `hard_negative_refs`. |
+| `packs[].audit.coverage_status` | One of `covered`, `needs-coverage`, or `tracked-no-exact-rows`. |
+| `packs[].audit.gaps` | Descriptor-level audit gaps such as missing positive refs, missing hard negatives, unclassified ref polarity, or fixture count mismatch. |
+
+## Check JSON Report
 
 `--format json` emits schema version 2:
 
@@ -166,8 +257,9 @@ analysis. Row and pack hashes are stable 16-hex-digit strings.
 
 Integrations should discover support through [capabilities](capabilities.md):
 `commands.stable` includes `semantic-pack`, `schemas.semantic_pack_conformance`
-lists supported report schema versions, and `semantic_packs.conformance` lists
-accepted local input sources.
+and `schemas.semantic_pack_inventory` list supported report schema versions, and
+`semantic_packs.conformance` / `semantic_packs.inventory` list accepted input
+sources.
 
 ## Provider Responsibilities
 

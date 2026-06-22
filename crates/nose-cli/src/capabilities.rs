@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-const CAPABILITIES_SCHEMA_VERSION: u32 = 3;
+const CAPABILITIES_SCHEMA_VERSION: u32 = 4;
 
 #[derive(serde::Serialize)]
 struct Report {
@@ -48,6 +48,7 @@ struct Schemas {
     query_json: Vec<u32>,
     semantic_packs: Vec<&'static str>,
     semantic_pack_conformance: Vec<u32>,
+    semantic_pack_inventory: Vec<u32>,
 }
 
 #[derive(serde::Serialize)]
@@ -66,6 +67,8 @@ struct SemanticPacks {
     loading: Vec<&'static str>,
     conformance: Vec<&'static str>,
     conformance_output_formats: Vec<&'static str>,
+    inventory: Vec<&'static str>,
+    inventory_output_formats: Vec<&'static str>,
     trust: Vec<&'static str>,
     external_packs_enabled_by_default: bool,
     external_pack_influence: &'static str,
@@ -112,6 +115,7 @@ impl Report {
                 query_json: vec![crate::schema_versions::QUERY_JSON_SCHEMA_VERSION],
                 semantic_packs: vec![nose_semantics::SEMANTIC_PACK_API_VERSION],
                 semantic_pack_conformance: vec![crate::semantic_pack::CONFORMANCE_SCHEMA_VERSION],
+                semantic_pack_inventory: vec![crate::semantic_pack::INVENTORY_SCHEMA_VERSION],
             },
             query: QuerySurface {
                 modes: vec!["syntax", "semantic", "near"],
@@ -140,6 +144,8 @@ impl Report {
                 ],
                 conformance: vec!["local-manifest-file", "local-manifest-directory"],
                 conformance_output_formats: vec!["human", "json"],
+                inventory: vec!["compiled-builtin"],
+                inventory_output_formats: vec!["human", "json"],
                 trust: vec!["builtin-default", "builtin-optional", "external-opt-in"],
                 external_packs_enabled_by_default: false,
                 external_pack_influence: "metadata-only",

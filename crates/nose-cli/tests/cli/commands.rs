@@ -12,3 +12,5 @@ mod ignores_sarif;
 mod proposal_query;
 #[path = "commands/query_reinvented.rs"]
 mod query_reinvented;
+#[path = "commands/semantic_pack_inventory.rs"]
+mod semantic_pack_inventory;

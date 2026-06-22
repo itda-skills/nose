@@ -288,6 +288,9 @@ and may change to improve readability. The stable contract is documented in
   semantic-pack v0 manifest structure and declared fixture assets. It is a
   pack-author/user workflow, not external pack certification; see
   [semantic-pack-conformance](semantic-pack-conformance.md).
+- `nose semantic-pack inventory [--format human|json]` — inspect compiled
+  builtin pack declarations, conformance refs, exact-capable coverage status,
+  and coverage gaps without running a query.
 - `nose il <file> [--normalized] [--no-cfg-norm] [--format sexpr|json]` — dump the IL
   for one file (`--normalized` shows the canonical form after the
   [normalization](normalization.md) passes). A debugging tool for understanding why two

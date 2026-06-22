@@ -85,7 +85,7 @@ fundamentals; the rest is grouped by area.
 - [semantic-kernel-audit-2026-06-09](semantic-kernel-audit-2026-06-09.md) — post-PR #147 audit of remaining raw/local semantic pockets and follow-up owners.
 - [semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md) — closeout for the #109 semantic-kernel foundation and follow-up tranche.
 - [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md) — versioned v0 schema and provider-facing extension API for language/library semantic packs.
-- [semantic-pack-conformance](semantic-pack-conformance.md) — provider/user workflow for checking local pack manifests and declared fixture assets without implying nose approval.
+- [semantic-pack-conformance](semantic-pack-conformance.md) — provider/user workflow for checking local pack manifests and the builtin inventory workflow for auditing shipped pack coverage.
 - [semantic-pack-loading](semantic-pack-loading.md) — local pack manifest loading, explicit opt-in trust policy, and current metadata-only limits.
 - [evidence-records](evidence-records.md) — the internal pack-facing evidence substrate for source, domain, import, symbol, type, guard, place/effect, library API, and sequence-surface facts.
 - [demand-effect-semantics](demand-effect-semantics.md) — the internal demand/effect contract model for eager, lazy, short-circuit, async, generator, and channel boundaries.

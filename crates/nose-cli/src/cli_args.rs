@@ -328,6 +328,12 @@ pub(crate) enum SemanticPackCmd {
         #[arg(long, default_value = "human")]
         format: semantic_pack::CheckFormat,
     },
+    /// Report builtin semantic-pack declarations, conformance refs, and coverage gaps.
+    Inventory {
+        /// Output format.
+        #[arg(long, default_value = "human")]
+        format: semantic_pack::InventoryFormat,
+    },
 }
 
 #[derive(Clone, Copy, PartialEq, clap::ValueEnum)]
