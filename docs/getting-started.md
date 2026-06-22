@@ -180,9 +180,9 @@ See [divergent edits](divergent-edits.md) for how these findings are ranked and 
 gate so its surface stays stable across upgrades:
 
 ```sh
-nose query src --mode syntax --fail-on any          # jscpd-style copy-paste gate
-nose query src --baseline .nose-baseline.json --write-baseline   # accept today's state
-nose query src --baseline .nose-baseline.json --fail-on new      # then fail on new/changed
+nose query src --mode syntax --min-size 80 'dup>80' --fail-on any  # jscpd-style gate
+nose query src --mode syntax --min-size 80 'dup>80' --baseline .nose-baseline.json --write-baseline
+nose query src --mode syntax --min-size 80 'dup>80' --baseline .nose-baseline.json --fail-on new
 ```
 
 The full gate, baselines, SARIF, and fast re-runs are in

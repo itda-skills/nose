@@ -24,7 +24,8 @@ The pages are grouped by what you're here to do.
 - **Automating triage:** run `nose query <path>` for the human-readable loop, or
   `nose query <path> --format json` for tooling. Agent-specific guidance is in
   [agent-recipe](agent-recipe.md).
-- **Adding a repo gate:** `nose query <path> --fail-on any`; see
+- **Adding a repo gate:** pin the detection surface and the size budget, for example
+  `nose query <path> --mode syntax --min-size 80 'dup>80' --fail-on any`; see
   [continuous integration](continuous-integration.md), then commit shared defaults from
   [configuration](configuration.md).
 - **Building an integration:** use [capabilities](capabilities.md) before invoking a binary

@@ -18,11 +18,46 @@ serves the report/agent surface and now includes fuzzy `near` candidates, and a 
 mode keeps the gate's surface stable across nose upgrades. `--mode syntax` is the
 closest jscpd replacement.
 
-For a jscpd-style copy-paste gate:
+## Jscpd-style size budgets
+
+For a jscpd-style copy-paste gate, run only the syntax channel and decide which family size
+crosses the project's budget. The gate fires on the family selection left after the query
+terms; `top=N` only truncates display, not the gate.
 
 ```sh
-nose query src --mode syntax --fail-on any
+nose query src --mode syntax --min-size 80 'lines>25' --fail-on any
+nose query src --mode syntax --min-size 80 'shared>20' --fail-on any
+nose query src --mode syntax --min-size 80 'dup>80' --fail-on any
 ```
+
+The knobs are intentionally explicit:
+
+- `--min-size N` is the minimum duplicated IL-token run; in `--mode syntax` it is the
+  copy-paste run floor.
+- `lines>N` keeps families whose mean per-copy span is larger than `N` source lines.
+- `shared>N` keeps families with more than `N` invariant lines across the copies.
+- `dup>N` keeps families whose duplicated-line volume is above `N`; this is the closest
+  family-level stand-in for "how much repeated code did this introduce?"
+
+Quote comparison terms in shell examples (`'dup>80'`) because bare `>` is a redirection
+operator.
+
+`dup>N` is usually the best first CI policy because it accounts for both copy size and
+copy count. For an existing codebase, ratchet from the current state instead of failing on
+all historical duplication:
+
+```sh
+nose query src --mode syntax --min-size 80 'dup>80' \
+  --baseline .nose-baseline.json --write-baseline
+nose query src --mode syntax --min-size 80 'dup>80' \
+  --baseline .nose-baseline.json --fail-on new
+```
+
+Use `--fail-on any` for a greenfield or low-noise gate. Use `--baseline` plus
+`--fail-on new` when adopting nose on an existing codebase, so old accepted duplication stays
+visible in the baseline while new or changed families fail the build.
+
+## Broader gates
 
 For a broader exact gate, pin both exact channels and keep only substantial findings:
 
@@ -41,14 +76,17 @@ nose query src --mode syntax,semantic,near:0.70 --min-value 300 --min-members 3 
 For an exact semantic-only gate, use `--mode semantic`. It does not use a
 similarity threshold.
 
-With committed settings in `nose.toml`, the CI command can be just `nose query src --fail-on any`.
+With committed settings in `nose.toml`, the CI command can omit stable analysis flags such as
+`--mode`, `--min-size`, and `--exclude`; query terms such as `'dup>80'` stay on the command
+line:
+
+```sh
+nose query src 'dup>80' --fail-on any
+```
+
 If a wrapper needs to support multiple installed nose versions, have it query
 `nose capabilities` first instead of scraping `--help`; the JSON contract is
 documented in [capabilities](capabilities.md).
-
-Use `--fail-on any` for a greenfield or low-noise gate. Use `--baseline` plus
-`--fail-on new` when adopting nose on an existing codebase, so old accepted duplication stays
-visible in the baseline while new or changed families fail the build.
 
 ## Baselines — incremental adoption
 
@@ -67,6 +105,9 @@ nose query src --baseline .nose-baseline.json
 # 3. Make CI fail only when NEW or CHANGED families exist:
 nose query src --baseline .nose-baseline.json --fail-on new
 ```
+
+Real gates should repeat the same pinned `--mode`, size flags, and query terms in the
+write-baseline and fail-on-new commands; the jscpd-style example above shows that full form.
 
 `--baseline` by itself keeps the historical behavior and reports only families not
 accepted by the baseline (the default whenever `--baseline` is present). Use

@@ -44,22 +44,30 @@ next commands — replace <path> with your path; terms combine with AND:
   open    nose query <path> id=<id> full     one family: every copy + the extraction skeleton
 ```
 
-`nose query` is the **one command** for every workflow over that dataset — explore, report,
-gate a PR, or feed a machine:
+`nose query` is the **one command** for every workflow over that dataset. Use it
+broadly for agent/human exploration, and pin it tightly when it is a CI gate:
 
 ```sh
+# Explore and triage
 nose query src                               # summary, best candidates first
 nose query src id=<fam> full                 # open one family: every copy + extraction skeleton
 nose query src base=origin/main              # PR check: a change applied to one copy but not its siblings
-nose query src --mode syntax --fail-on any   # jscpd-style copy-paste gate for CI
 nose query src --format markdown             # a ranked report to paste into a PR or issue
-nose query src --format json                 # the versioned machine-readable contract (query-JSON v3)
+nose query src --format json                 # the versioned machine-readable contract (query-JSON v6)
 nose query docs                              # also reports same-language near-duplicate Markdown prose
+
+# Gate like jscpd: copy-paste only, with an explicit size budget
+nose query src --mode syntax --min-size 80 'lines>25' --fail-on any
+nose query src --mode syntax --min-size 80 'shared>20' --fail-on any
+nose query src --mode syntax --min-size 80 'dup>80' --fail-on any
 ```
 
 By default it runs all three channels — `syntax` (copy-paste runs), `semantic` (exact
 same-logic Type-4 clones), and `near` (fuzzy near-duplicates) — and respects `.gitignore`;
-pass `--mode` to run exactly the channels you list.
+pass `--mode` to run exactly the channels you list. See
+[agent-recipe](docs/agent-recipe.md) for the exploration loop and
+[continuous integration](docs/continuous-integration.md) for stable jscpd-style gates,
+baselines, and SARIF.
 
 ## Documentation
 

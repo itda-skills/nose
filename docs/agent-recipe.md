@@ -29,6 +29,12 @@ hard error (so a typo can't read as "no duplication"). Use `--format json` on an
 the same rows structured. This surface is delivered as the agent's primary path; it is *not*
 an MCP server (a Skill is the intended packaging).
 
+Do not start an agent workflow with the CI gate surface. The exploratory default intentionally
+combines `syntax`, `semantic`, and `near` so the agent sees copy-paste, exact semantic clones,
+and near-duplicates before applying judgment. A CI gate should instead pin the channel and
+budget, usually `--mode syntax` with explicit size filters; see
+[continuous integration](continuous-integration.md#jscpd-style-size-budgets).
+
 ## Inputs for the batch / gate path
 
 For non-interactive consumption — a CI gate, a one-shot triage of the whole tree, or feeding
@@ -138,5 +144,5 @@ reproduced the human-audited worthy/not-worthy verdicts — see
 [experiments §BX](experiments.md) for the run and its agreement numbers.
 
 *See also: [usage › nose query](usage.md#nose-query) · [query JSON](query-json.md) ·
-[query JSON](query-json.md) · [divergent edits](divergent-edits.md) · [structured-ignores](structured-ignores.md) ·
-[design](design.md).*
+[continuous integration](continuous-integration.md) · [divergent edits](divergent-edits.md) ·
+[structured-ignores](structured-ignores.md) · [design](design.md).*

@@ -89,10 +89,13 @@ signature), `spotclass` (leaf-only\|structural — for near families, whether th
 are clean value-leaves to parameterize or genuine logic divergence; non-near families group
 as `unwitnessed` under `group=spotclass`, which is not itself a filterable value), `status`
 (new\|changed\|unchanged — vs the `since=` snapshot), `lang`, `path`, `dir`,
-`members`, `files`, `value`, `params`, `shared`. Every row shows the payoff economics —
+`members`, `files`, `value`, `params`, `lines` (mean source-line span), `shared`
+(invariant lines), `dup` (duplicated-line volume). Every row shows the payoff economics —
 `M/REP shared, Pp · ~N removable` — so a candidate can be triaged without opening it. Each
 result is a pure function of (repo state, command); an unknown field or enum value is a hard
 error (so a typo can't read as "no duplication").
+Quote comparison terms in shell commands (`'dup>80'`, `'lines>25'`) because bare `>` is a
+redirection operator.
 
 `spotclass` reads the [graded witness](graded-witness.md), which is presentation-layer
 enrichment (the dominant extra analysis cost), so `query` computes it **on demand** — only when a term
@@ -109,6 +112,9 @@ configured by flag while scope/sort/top are the DSL's `scope=`/`sort=`/`top=`. I
 drops structured-ignored families. The gate follows the untruncated family selection addressed
 by the query terms (`top=N` only limits display), so `nose query <path> path~api --fail-on any`
 fails only on reportable `path~api` families. See [continuous-integration](continuous-integration.md).
+For jscpd-style copy-paste gates, pin `--mode syntax` and add size terms such as
+`'lines>25'`, `'shared>20'`, or `'dup>80'`; see
+[continuous integration › jscpd-style size budgets](continuous-integration.md#jscpd-style-size-budgets).
 The `base=` view is the exception: it reuses only detection flags (`--mode`, `--min-size`,
 advanced `--min-lines`, `--exclude`, `--config`), `--ignore-file`, `--format`, `top=N`, and
 `--fail-on any`; report-shaping and baseline flags are rejected instead of ignored.
@@ -186,7 +192,7 @@ Examples:
 
 ```sh
 nose query src                                  # syntax + semantic + near (the default)
-nose query src --mode syntax --fail-on any      # jscpd-style gate
+nose query src --mode syntax --min-size 80 'dup>80' --fail-on any  # jscpd-style gate
 nose query src --mode semantic                  # exact Type-4 only
 nose query src --mode near:0.70                 # Type-3 only
 nose query src --mode syntax,semantic           # exact channels only, no fuzzy near
