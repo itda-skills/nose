@@ -367,7 +367,10 @@ pub fn library_method_call_contract(
 ) -> Option<LibraryMethodCallContract> {
     let result = method_call_contract_shape(lang, name, arg_count)?;
     let method = library_method_selector_name(name)?;
+    let (pack_id, producer_id) = method_call_contract_provenance(lang, result);
     Some(LibraryMethodCallContract {
+        pack_id,
+        producer_id,
         id: LibraryApiContractId::MethodCall(result.semantic),
         callee: LibraryApiCalleeContract::Method {
             method,
@@ -375,6 +378,67 @@ pub fn library_method_call_contract(
         },
         result,
     })
+}
+
+fn method_call_contract_provenance(
+    lang: Lang,
+    contract: MethodCallContract,
+) -> (&'static str, &'static str) {
+    if lang == Lang::Go
+        && matches!(
+            (contract.semantic, contract.receiver, contract.args,),
+            (
+                MethodSemanticContract::Builtin(Builtin::Print),
+                MethodReceiverContract::ImportedNamespace("fmt"),
+                MethodBuiltinArgs::All,
+            ) | (
+                MethodSemanticContract::Builtin(Builtin::StartsWith | Builtin::EndsWith),
+                MethodReceiverContract::ImportedNamespace("strings"),
+                MethodBuiltinArgs::All,
+            ) | (
+                MethodSemanticContract::Builtin(Builtin::Contains),
+                MethodReceiverContract::ImportedNamespace("slices"),
+                MethodBuiltinArgs::GoSliceContains,
+            )
+        )
+    {
+        (
+            GO_STDLIB_NAMESPACE_CALL_PACK_ID,
+            GO_STDLIB_NAMESPACE_CALL_PRODUCER_ID,
+        )
+    } else if matches!(
+        (contract.semantic, contract.receiver, contract.args,),
+        (
+            MethodSemanticContract::Builtin(Builtin::GetOrDefault),
+            MethodReceiverContract::ExactMap,
+            MethodBuiltinArgs::MapGetDefault | MethodBuiltinArgs::MapGetDefaultOrZeroArgLambda,
+        )
+    ) {
+        (
+            MAP_GET_DEFAULT_PROTOCOL_PACK_ID,
+            MAP_GET_DEFAULT_PROTOCOL_PRODUCER_ID,
+        )
+    } else if matches!(
+        (contract.semantic, contract.receiver, contract.args,),
+        (
+            MethodSemanticContract::Builtin(Builtin::Contains),
+            MethodReceiverContract::ExactMap
+                | MethodReceiverContract::ExactCollectionOrMap
+                | MethodReceiverContract::ExactCollectionOrJavaKeySet
+                | MethodReceiverContract::ExactSetOrMap,
+            MethodBuiltinArgs::FirstThenReceiver,
+        )
+    ) {
+        (
+            RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
+            RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
+        )
+    } else {
+        (
+            BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+            BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+        )
+    }
 }
 
 pub fn library_map_get_default_contract(

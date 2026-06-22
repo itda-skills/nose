@@ -176,9 +176,11 @@ still being migrated toward it.
   and unsupported properties remain hard negatives. The
   `nose.protocols.builtin_method_calls` descriptor owns generic method-call
   and namespace-call builtin semantics that have not moved to a narrower
-  protocol pack, including selected `fmt`, `strings`, and `slices` namespace
-  calls, while receiver/symbol/import proof and unsupported arities remain hard
-  negatives. The
+  protocol or stdlib pack, while receiver/symbol/import proof and unsupported
+  arities remain hard negatives. The `nose.go.stdlib.namespace_calls`
+  descriptor owns Go `fmt.Print*`, `strings.HasPrefix`/`HasSuffix`, and
+  `slices.Contains` namespace-call API occurrence provenance under imported
+  namespace proof. The
   `nose.protocols.iterator_identity_adapters` descriptor owns Rust
   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
   `.stream()` iterator identity adapter contract and occurrence producer ids,
@@ -256,7 +258,10 @@ still being migrated toward it.
   property-builtin API provenance, and
   `nose.protocols.builtin_method_calls`, a default builtin protocol pack for
   generic method-call and namespace-call builtin semantics that have not moved
-  to a narrower protocol pack, and
+  to a narrower protocol or stdlib pack, and
+  `nose.go.stdlib.namespace_calls`, a default builtin stdlib pack for Go
+  `fmt.Print*`, `strings.HasPrefix`/`HasSuffix`, and `slices.Contains`
+  namespace-call API provenance, and
   `nose.protocols.iterator_identity_adapters`, a default builtin protocol pack
   for Rust iterator identity adapters and Java `.stream()` API provenance, and
   `nose.python.stdlib.type_domain`, a default builtin stdlib pack-shaped surface

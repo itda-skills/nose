@@ -248,7 +248,6 @@ pub(super) fn assert_group(json: &serde_json::Value) {
             "vue",
             "svelte",
             "html",
-            "go",
             "rust",
             "java",
             "ruby",
@@ -258,6 +257,34 @@ pub(super) fn assert_group(json: &serde_json::Value) {
     assert_eq!(builtin_method_call["counts"]["evidence_producers"], 1);
     assert_eq!(builtin_method_call["counts"]["contracts"], 1);
     assert_eq!(builtin_method_call["counts"]["value_laws"], 0);
-    assert_eq!(builtin_method_call["counts"]["positive_fixtures"], 9);
+    assert_eq!(builtin_method_call["counts"]["positive_fixtures"], 8);
     assert_eq!(builtin_method_call["counts"]["hard_negatives"], 3);
+
+    let go_namespace_call = semantic_pack_by_id(&json, "nose.go.stdlib.namespace_calls");
+    assert_eq!(go_namespace_call["hash"], "d3dfae6db995411b");
+    assert_eq!(go_namespace_call["kind"], "StdlibPack");
+    assert_eq!(
+        go_namespace_call["display_name"],
+        "nose Go stdlib namespace-call pack"
+    );
+    assert_eq!(go_namespace_call["source"], "compiled-builtin");
+    assert_eq!(go_namespace_call["influence"], "evidence-and-contracts");
+    assert_eq!(go_namespace_call["trust"], "builtin-default");
+    assert_eq!(go_namespace_call["enabled_by_default"], true);
+    assert_eq!(go_namespace_call["path"], serde_json::Value::Null);
+    assert_eq!(go_namespace_call["provider"], "Corca, Inc.");
+    assert_eq!(
+        go_namespace_call["repository"],
+        "https://github.com/corca-ai/nose"
+    );
+    assert_eq!(go_namespace_call["license"], "MIT");
+    assert_eq!(
+        json_array_strings(go_namespace_call, "supported_languages"),
+        vec!["go"]
+    );
+    assert_eq!(go_namespace_call["counts"]["evidence_producers"], 1);
+    assert_eq!(go_namespace_call["counts"]["contracts"], 1);
+    assert_eq!(go_namespace_call["counts"]["value_laws"], 0);
+    assert_eq!(go_namespace_call["counts"]["positive_fixtures"], 4);
+    assert_eq!(go_namespace_call["counts"]["hard_negatives"], 2);
 }

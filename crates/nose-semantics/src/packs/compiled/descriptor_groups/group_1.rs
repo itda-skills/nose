@@ -1,6 +1,6 @@
 use super::*;
 
-pub(super) const DESCRIPTORS: [BuiltinPackDescriptor; 22] = [
+pub(super) const DESCRIPTORS: [BuiltinPackDescriptor; 23] = [
     BuiltinPackDescriptor {
         id: JAVA_STDLIB_MATH_PACK_ID,
         kind: SemanticPackKind::StdlibPack,
@@ -247,6 +247,25 @@ pub(super) const DESCRIPTORS: [BuiltinPackDescriptor; 22] = [
         static_conformance_refs: BUILTIN_METHOD_CALL_PROTOCOL_CONFORMANCE_REFS,
         dynamic_conformance_refs: None,
         counts: builtin_method_call_protocol_counts,
+    },
+    BuiltinPackDescriptor {
+        id: GO_STDLIB_NAMESPACE_CALL_PACK_ID,
+        kind: SemanticPackKind::StdlibPack,
+        display_name: "nose Go stdlib namespace-call pack",
+        trust: PackTrust::BuiltinDefault,
+        enabled_by_default: true,
+        supported_languages: GO_STDLIB_NAMESPACE_CALL_LANGUAGE,
+        supported_packages: GO_STDLIB_NAMESPACE_CALL_PACKAGES,
+        language: None,
+        evidence_producer_ids: GO_STDLIB_NAMESPACE_CALL_PRODUCER_IDS,
+        source_fact_producer_ids: NO_IDS,
+        contract_ids: GO_STDLIB_NAMESPACE_CALL_CONTRACT_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        static_value_law_ids: NO_IDS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: GO_STDLIB_NAMESPACE_CALL_CONFORMANCE_REFS,
+        dynamic_conformance_refs: None,
+        counts: go_stdlib_namespace_call_counts,
     },
     BuiltinPackDescriptor {
         id: ITERATOR_IDENTITY_ADAPTER_PACK_ID,

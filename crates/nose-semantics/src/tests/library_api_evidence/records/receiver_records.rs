@@ -56,8 +56,8 @@ pub(crate) fn builtin_method_call_protocol_record(
         arity,
         status,
         dependencies,
-        BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
-        BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+        contract.pack_id,
+        contract.producer_id,
     )
 }
 

@@ -60,9 +60,41 @@ ids. New ownership should move toward explicit ids such as `nose.lang.python`,
 `nose.protocols.map_key_views`,
 `nose.protocols.property_builtins`,
 `nose.protocols.builtin_method_calls`,
+`nose.go.stdlib.namespace_calls`,
 `nose.protocols.iterator_identity_adapters`,
 `nose.python.stdlib.type_domain`, and
 `nose.value_graph.laws`.
+
+## Legacy Compatibility Inventory
+
+`nose.first_party` is no longer a place for new active semantic ownership. It
+remains only as a compatibility surface while older v0 manifests, IL snapshots,
+tests, and helper aliases still need the legacy spelling.
+
+Current intentional compatibility uses are:
+
+- the empty compiled descriptor for the `nose.first_party` wire id;
+- parser aliases for legacy `default-first-party` and `first-party-optional`
+  trust labels, which still map to builtin trust lanes before local manifests
+  that claim builtin ownership are rejected;
+- `EvidenceEmitter::FirstParty` and `FIRST_PARTY_*`/`first_party_*` helper
+  aliases for older callers and fixtures;
+- legacy broad-row hard negatives and update-in-place tests that prove old
+  broad provenance does not open exact admission when a narrower builtin pack is
+  required.
+
+Active official semantics should instead use narrow builtin packs. The current
+remaining broad slice is the generic `nose.protocols.builtin_method_calls` pack
+for method-call rows that have not yet earned a clearer stdlib/protocol
+boundary. Go namespace calls are no longer part of that catch-all: `fmt.Print*`,
+`strings.HasPrefix`/`HasSuffix`, and `slices.Contains` are owned by
+`nose.go.stdlib.namespace_calls`.
+
+Removal condition: delete the compatibility descriptor and legacy helper aliases
+only in a schema/capabilities migration that drops v0 first-party spellings and
+updates checked-in IL/test fixtures. Until then, new code should treat
+`nose.first_party` as compatibility-only and link a follow-up issue if it must
+temporarily add active semantics there.
 
 ## Boundary
 
@@ -289,9 +321,11 @@ previous semantic-kernel tranches.
    The current builtin method-call protocol slice is
    `nose.protocols.builtin_method_calls`, which owns generic method-call and
    namespace-call builtin semantics that have not moved to a narrower protocol
-   pack, such as append, cardinality, string-affix, option-default, print,
-   `strings`/`slices` namespace calls, reduction, and HOF-style receiver method
-   rows.
+   pack, such as append, cardinality, string-affix, option-default, reduction,
+   and HOF-style receiver method rows. The current Go stdlib namespace-call
+   slice is `nose.go.stdlib.namespace_calls`, which owns `fmt.Print*`,
+   `strings.HasPrefix`/`HasSuffix`, and `slices.Contains` API occurrence
+   provenance under imported-namespace proof.
    The current iterator identity adapter protocol slice is
    `nose.protocols.iterator_identity_adapters`, which owns Rust
    `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java

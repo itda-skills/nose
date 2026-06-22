@@ -404,6 +404,22 @@ pub(super) fn builtin_method_call_protocol_counts() -> SemanticPackCounts {
     }
 }
 
+pub(super) fn go_stdlib_namespace_call_counts() -> SemanticPackCounts {
+    SemanticPackCounts {
+        evidence_producers: GO_STDLIB_NAMESPACE_CALL_PRODUCER_IDS.len(),
+        contracts: GO_STDLIB_NAMESPACE_CALL_CONTRACT_IDS.len(),
+        value_laws: 0,
+        positive_fixtures: GO_STDLIB_NAMESPACE_CALL_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| !id.contains("hard-negative"))
+            .count(),
+        hard_negatives: GO_STDLIB_NAMESPACE_CALL_CONFORMANCE_REFS
+            .iter()
+            .filter(|id| id.contains("hard-negative"))
+            .count(),
+    }
+}
+
 pub(super) fn java_stdlib_map_entry_counts() -> SemanticPackCounts {
     SemanticPackCounts {
         evidence_producers: JAVA_STDLIB_MAP_ENTRY_PRODUCER_IDS.len(),

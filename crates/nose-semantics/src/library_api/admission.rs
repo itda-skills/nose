@@ -187,6 +187,7 @@ fn library_api_contract_provenance_ids(
         .or_else(|| js_like_library_api_contract_provenance_ids(id))
         .or_else(|| rust_library_api_contract_provenance_ids(id, callee))
         .or_else(|| java_library_api_contract_provenance_ids(id, callee))
+        .or_else(|| go_library_api_contract_provenance_ids(id, callee))
         .or_else(|| protocol_library_api_contract_provenance_ids(id, callee))
 }
 
@@ -321,6 +322,41 @@ fn java_library_api_contract_provenance_ids(
         LibraryApiContractId::StaticCollectionAdapter => Some((
             JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PACK_ID,
             JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PRODUCER_ID,
+        )),
+        _ => None,
+    }
+}
+
+fn go_library_api_contract_provenance_ids(
+    id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+) -> Option<(&'static str, &'static str)> {
+    match (id, callee) {
+        (
+            LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::Print)),
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ImportedNamespace("fmt"),
+                ..
+            },
+        )
+        | (
+            LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
+                Builtin::StartsWith | Builtin::EndsWith,
+            )),
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ImportedNamespace("strings"),
+                ..
+            },
+        )
+        | (
+            LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::Contains)),
+            LibraryApiCalleeContract::Method {
+                receiver: MethodReceiverContract::ImportedNamespace("slices"),
+                ..
+            },
+        ) => Some((
+            GO_STDLIB_NAMESPACE_CALL_PACK_ID,
+            GO_STDLIB_NAMESPACE_CALL_PRODUCER_ID,
         )),
         _ => None,
     }

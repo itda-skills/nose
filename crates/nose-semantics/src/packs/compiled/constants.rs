@@ -70,6 +70,7 @@ pub(super) const PYTHON_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["py", "pyi"];
 pub(super) const JS_TS_LANGUAGE_FILE_EXTENSIONS: &[&str] =
     &["js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts"];
 pub(super) const GO_LANGUAGE: &[&str] = &["go"];
+pub(super) const GO_STDLIB_NAMESPACE_CALL_LANGUAGE: &[&str] = &["go"];
 pub(super) const GO_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["go"];
 pub(super) const RUST_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["rs"];
 pub(super) const JAVA_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["java"];
@@ -124,7 +125,6 @@ pub(super) const BUILTIN_METHOD_CALL_PROTOCOL_LANGUAGES: &[&str] = &[
     "vue",
     "svelte",
     "html",
-    "go",
     "rust",
     "java",
     "ruby",
@@ -169,16 +169,9 @@ pub(super) const RECEIVER_MEMBERSHIP_PROTOCOL_PACKAGES: &[&str] = &[
 pub(super) const MAP_KEY_VIEW_PROTOCOL_PACKAGES: &[&str] = &["dict", "Hash", "Map", "java.util"];
 pub(super) const PROPERTY_BUILTIN_PROTOCOL_PACKAGES: &[&str] =
     &["Array", "Collection", "Swift.Collection", "java.lang"];
-pub(super) const BUILTIN_METHOD_CALL_PROTOCOL_PACKAGES: &[&str] = &[
-    "Collection",
-    "Option",
-    "String",
-    "console",
-    "fmt",
-    "functools",
-    "slices",
-    "strings",
-];
+pub(super) const BUILTIN_METHOD_CALL_PROTOCOL_PACKAGES: &[&str] =
+    &["Collection", "Option", "String", "console", "functools"];
+pub(super) const GO_STDLIB_NAMESPACE_CALL_PACKAGES: &[&str] = &["fmt", "slices", "strings"];
 pub(super) const JS_LIKE_BUILTIN_ARRAY_PACKAGES: &[&str] = &["Array"];
 pub(super) const JS_LIKE_BUILTIN_BOOLEAN_PACKAGES: &[&str] = &["Boolean"];
 pub(super) const JS_LIKE_BUILTIN_COLLECTION_CONSTRUCTOR_PACKAGES: &[&str] = &["Map", "Set"];
@@ -463,11 +456,22 @@ pub(super) const BUILTIN_METHOD_CALL_PROTOCOL_CONFORMANCE_REFS: &[&str] = &[
     "builtin-method-call-python-startswith-positive",
     "builtin-method-call-python-join-positive",
     "builtin-method-call-rust-unwrap-or-positive",
-    "builtin-method-call-go-fmt-print-positive",
     "builtin-method-call-python-reduce-positive",
     "builtin-method-call-missing-receiver-proof-hard-negative",
     "builtin-method-call-wrong-pack-hard-negative",
     "builtin-method-call-unsupported-arity-hard-negative",
+];
+pub(super) const GO_STDLIB_NAMESPACE_CALL_PRODUCER_IDS: &[&str] =
+    &[GO_STDLIB_NAMESPACE_CALL_PRODUCER_ID];
+pub(super) const GO_STDLIB_NAMESPACE_CALL_CONTRACT_IDS: &[&str] =
+    &[GO_STDLIB_NAMESPACE_CALL_CONTRACT_ID];
+pub(super) const GO_STDLIB_NAMESPACE_CALL_CONFORMANCE_REFS: &[&str] = &[
+    "go-stdlib-namespace-call-fmt-print-positive",
+    "go-stdlib-namespace-call-strings-has-prefix-positive",
+    "go-stdlib-namespace-call-strings-has-suffix-positive",
+    "go-stdlib-namespace-call-slices-contains-positive",
+    "go-stdlib-namespace-call-missing-import-hard-negative",
+    "go-stdlib-namespace-call-wrong-pack-hard-negative",
 ];
 pub(super) const JAVA_STDLIB_MAP_FACTORY_PRODUCER_IDS: &[&str] =
     &[JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID];

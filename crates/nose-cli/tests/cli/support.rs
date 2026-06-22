@@ -468,6 +468,7 @@ pub(crate) fn assert_query_json_reports_semantic_packs(json: &serde_json::Value)
         "nose.protocols.map_key_views",
         "nose.protocols.property_builtins",
         "nose.protocols.builtin_method_calls",
+        "nose.go.stdlib.namespace_calls",
         "nose.protocols.iterator_identity_adapters",
         "nose.javascript.builtins.promise",
         "nose.javascript.builtins.array",

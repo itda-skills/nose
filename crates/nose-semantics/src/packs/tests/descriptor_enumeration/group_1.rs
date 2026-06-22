@@ -256,7 +256,6 @@ pub(super) fn assert_group() {
             "vue",
             "svelte",
             "html",
-            "go",
             "rust",
             "java",
             "ruby",
@@ -265,16 +264,7 @@ pub(super) fn assert_group() {
     );
     assert_eq!(
         builtin_method_call.supported_packages,
-        &[
-            "Collection",
-            "Option",
-            "String",
-            "console",
-            "fmt",
-            "functools",
-            "slices",
-            "strings"
-        ]
+        &["Collection", "Option", "String", "console", "functools"]
     );
     assert_eq!(
         builtin_method_call.evidence_producer_ids,
@@ -287,11 +277,36 @@ pub(super) fn assert_group() {
     );
     assert_eq!(builtin_method_call.counts().evidence_producers, 1);
     assert_eq!(builtin_method_call.counts().contracts, 1);
-    assert_eq!(builtin_method_call.counts().positive_fixtures, 9);
+    assert_eq!(builtin_method_call.counts().positive_fixtures, 8);
     assert_eq!(builtin_method_call.counts().hard_negatives, 3);
     assert!(builtin_method_call
         .conformance_refs()
         .contains(&"builtin-method-call-wrong-pack-hard-negative"));
+
+    let go_namespace_call = builtin_pack_descriptor(GO_STDLIB_NAMESPACE_CALL_PACK_ID)
+        .expect("Go stdlib namespace-call descriptor");
+    assert_eq!(go_namespace_call.kind, SemanticPackKind::StdlibPack);
+    assert_eq!(go_namespace_call.supported_languages, &["go"]);
+    assert_eq!(
+        go_namespace_call.supported_packages,
+        &["fmt", "slices", "strings"]
+    );
+    assert_eq!(
+        go_namespace_call.evidence_producer_ids,
+        &[GO_STDLIB_NAMESPACE_CALL_PRODUCER_ID]
+    );
+    assert!(go_namespace_call.source_fact_producer_ids.is_empty());
+    assert_eq!(
+        go_namespace_call.contract_ids,
+        &[GO_STDLIB_NAMESPACE_CALL_CONTRACT_ID]
+    );
+    assert_eq!(go_namespace_call.counts().evidence_producers, 1);
+    assert_eq!(go_namespace_call.counts().contracts, 1);
+    assert_eq!(go_namespace_call.counts().positive_fixtures, 4);
+    assert_eq!(go_namespace_call.counts().hard_negatives, 2);
+    assert!(go_namespace_call
+        .conformance_refs()
+        .contains(&"go-stdlib-namespace-call-wrong-pack-hard-negative"));
 
     let property_builtin = builtin_pack_descriptor(PROPERTY_BUILTIN_PROTOCOL_PACK_ID)
         .expect("property builtin protocol descriptor");
