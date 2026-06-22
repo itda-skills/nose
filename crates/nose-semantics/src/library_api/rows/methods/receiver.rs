@@ -150,10 +150,10 @@ fn receiver_builtin_method_api_contract(
 ) -> Option<LibraryReceiverMethodApiContract> {
     library_method_call_contract(lang, method, arg_count).map(|contract| {
         receiver_method_api_contract(
-            BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+            contract.pack_id,
             contract.id,
             contract.callee,
-            BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+            contract.producer_id,
             None,
         )
     })

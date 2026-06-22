@@ -2,7 +2,8 @@ use super::*;
 use nose_il::{EvidenceProvenance, FileId, FileMeta, IlBuilder, Lang, Span};
 use nose_semantics::{
     admitted_builder_append_method_call_args, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
-    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, RUST_STDLIB_OPTION_PACK_ID,
+    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, GO_STDLIB_NAMESPACE_CALL_PACK_ID,
+    GO_STDLIB_NAMESPACE_CALL_PRODUCER_ID, RUST_STDLIB_OPTION_PACK_ID,
     RUST_STDLIB_OPTION_PRODUCER_ID,
 };
 
@@ -386,8 +387,8 @@ fn imported_namespace_helper_symbol_updates_legacy_occurrence_to_language_core()
     assert_eq!(
         api.provenance,
         pack_provenance(
-            BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
-            BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID
+            GO_STDLIB_NAMESPACE_CALL_PACK_ID,
+            GO_STDLIB_NAMESPACE_CALL_PRODUCER_ID
         )
     );
     assert_eq!(api.dependencies, vec![legacy]);

@@ -81,6 +81,9 @@ pub const PROPERTY_BUILTIN_IS_EMPTY_CONTRACT_ID: &str = "property_builtin.is_emp
 pub const BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID: &str = "nose.protocols.builtin_method_calls";
 pub const BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID: &str = "protocols.builtin-method-call-api";
 pub const BUILTIN_METHOD_CALL_CONTRACT_ID: &str = "builtin_method.call";
+pub const GO_STDLIB_NAMESPACE_CALL_PACK_ID: &str = "nose.go.stdlib.namespace_calls";
+pub const GO_STDLIB_NAMESPACE_CALL_PRODUCER_ID: &str = "go.stdlib.namespace-call-api";
+pub const GO_STDLIB_NAMESPACE_CALL_CONTRACT_ID: &str = "go.stdlib.namespace_call";
 pub const SCALAR_INTEGER_METHOD_ABS_CONTRACT_ID: &str = "scalar_integer_method.abs";
 pub const SCALAR_INTEGER_METHOD_MIN_CONTRACT_ID: &str = "scalar_integer_method.min";
 pub const SCALAR_INTEGER_METHOD_MAX_CONTRACT_ID: &str = "scalar_integer_method.max";
@@ -464,6 +467,8 @@ pub struct LibraryStaticCollectionAdapterContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct LibraryMethodCallContract {
+    pub pack_id: &'static str,
+    pub producer_id: &'static str,
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: MethodCallContract,

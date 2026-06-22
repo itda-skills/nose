@@ -92,6 +92,31 @@ fn canonical_builtin_admission_requires_language_core_namespace_dependency() {
         "canonical namespace builtin API evidence must reject broad namespace dependencies"
     );
 
+    let (mut wrong_pack, call) = go_print_canonical_call_il();
+    push_canonical_imported_namespace_dependency(&mut wrong_pack, 0, 1, call, "fmt");
+    wrong_pack
+        .evidence
+        .push(library_api_record_with_provenance_and_arity(
+            2,
+            wrong_pack.node(call).span,
+            contract.id,
+            contract.callee,
+            1,
+            EvidenceStatus::Asserted,
+            &[1],
+            BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+            BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+        ));
+    assert!(
+        !admitted_builtin_semantics_at_call_with_interner(
+            &wrong_pack,
+            &interner,
+            call,
+            Builtin::Print
+        ),
+        "Go namespace builtins must require Go stdlib namespace-call pack provenance"
+    );
+
     let (mut admitted, call) = go_print_canonical_call_il();
     push_canonical_imported_namespace_dependency(&mut admitted, 0, 1, call, "fmt");
     admitted.evidence.push(builtin_method_call_protocol_record(

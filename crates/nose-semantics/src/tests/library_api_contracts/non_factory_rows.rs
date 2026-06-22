@@ -199,6 +199,8 @@ fn library_iterator_adapter_and_method_call_contracts_carry_obligations() {
     assert_eq!(
         library_receiver_membership_contract(Lang::Rust, "contains_key", 1),
         Some(LibraryMethodCallContract {
+            pack_id: RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
+            producer_id: RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
             id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
                 Builtin::Contains,
             )),
@@ -216,6 +218,8 @@ fn library_iterator_adapter_and_method_call_contracts_carry_obligations() {
     assert_eq!(
         library_receiver_membership_contract(Lang::TypeScript, "has", 1),
         Some(LibraryMethodCallContract {
+            pack_id: RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
+            producer_id: RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
             id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
                 Builtin::Contains,
             )),
@@ -233,6 +237,8 @@ fn library_iterator_adapter_and_method_call_contracts_carry_obligations() {
     assert_eq!(
         library_receiver_membership_contract(Lang::Python, "__contains__", 1),
         Some(LibraryMethodCallContract {
+            pack_id: RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID,
+            producer_id: RECEIVER_MEMBERSHIP_PROTOCOL_PRODUCER_ID,
             id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
                 Builtin::Contains,
             )),
@@ -250,6 +256,8 @@ fn library_iterator_adapter_and_method_call_contracts_carry_obligations() {
     assert_eq!(
         library_method_call_contract(Lang::Go, "Contains", 2),
         Some(LibraryMethodCallContract {
+            pack_id: GO_STDLIB_NAMESPACE_CALL_PACK_ID,
+            producer_id: GO_STDLIB_NAMESPACE_CALL_PRODUCER_ID,
             id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
                 Builtin::Contains,
             )),
