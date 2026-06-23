@@ -9,6 +9,32 @@ semantic matches are real — equal fingerprint ⟹ equal behavior, never a fals
 equivalence — and ranks candidates by refactoring value for triage or CI. One
 self-contained Rust binary; no runtime, services, or network.
 
+## What semantic means
+
+Other copy-paste detectors compare token runs. `nose` lowers code into a
+normalized semantic IL, so it can catch repeated computation even when the code
+does not look copied:
+
+```python
+def a(xs):
+    total = 0
+    for x in xs:
+        if x > 0:
+            total += x
+    return total
+
+def b(xs):
+    return sum(x for x in xs if x > 0)
+```
+
+```python
+def a(p, q, r, s):
+    return not ((p or q) and (r or s))
+
+def b(p, q, r, s):
+    return (not s and not r) or (not q and not p)
+```
+
 ## Install
 
 ```sh
@@ -56,7 +82,7 @@ nose query src --format markdown             # a ranked report to paste into a P
 nose query src --format json                 # the versioned machine-readable contract (query-JSON v6)
 nose query docs                              # also reports same-language near-duplicate Markdown prose
 
-# Gate like jscpd: copy-paste only, with an explicit size budget
+# Gate on copy-paste only, with an explicit size budget
 nose query src --mode syntax --min-size 80 'lines>25' --fail-on any
 nose query src --mode syntax --min-size 80 'shared>20' --fail-on any
 nose query src --mode syntax --min-size 80 'dup>80' --fail-on any
@@ -66,7 +92,7 @@ By default it runs all three channels — `syntax` (copy-paste runs), `semantic`
 same-logic Type-4 clones), and `near` (fuzzy near-duplicates) — and respects `.gitignore`;
 pass `--mode` to run exactly the channels you list. See
 [agent-recipe](docs/agent-recipe.md) for the exploration loop and
-[continuous integration](docs/continuous-integration.md) for stable jscpd-style gates,
+[continuous integration](docs/continuous-integration.md) for stable copy-paste-only gates,
 baselines, and SARIF.
 
 ## Documentation
