@@ -303,6 +303,13 @@ previous semantic-kernel tranches.
    The current Java stdlib collection slice is
    `nose.java.stdlib.collection_factories`, which owns `java.util.List.of`,
    `Set.of`, and `Arrays.asList` collection-factory API occurrence provenance.
+   The current Guava immutable collection slice is
+   `nose.java.ecosystem.guava.immutable_collection_factories`, which owns
+   `ImmutableList.of`, `ImmutableSet.of`, and `ImmutableMap.of` factory API
+   occurrence provenance under exact `com.google.common.collect` import proof;
+   `ImmutableMap.of` is limited to the supported 0-10 entry overloads, static
+   null elements/key-values and duplicate static map keys stay closed, and
+   `copyOf` remains unsupported until source-domain proof exists.
    The current Java stdlib collection-constructor slice is
    `nose.java.stdlib.collection_constructors`, which owns empty `new
    ArrayList<>()` and `new LinkedList<>()` collection-constructor API occurrence

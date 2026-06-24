@@ -303,3 +303,19 @@ family after the result-domain emission path is centralized. `caf459299b305432` 
 `language_core_sequence_surface_record`. A new receiver-method test helper initially surfaced as
 avoidable test duplication and was removed by reusing the existing receiver-method IL fixture
 helper. No new budget is accepted.
+
+The #516 CPD blind-spot recall PR first kept the count below the 55-family budget after deduping
+avoidable Guava positive-fixture helper repetition. The review-hardening pass then added required
+Guava hard negatives for unsupported `ImmutableMap.of` arity, static null elements/key-values, and
+duplicate static map keys across frontend/result-domain, value-graph, strict-exact, and export
+surfaces. The current release binary reports 56 default-surface families. The two new accepted
+families are test-scope Guava hard-negative IL fixture builders repeated across the three crates
+that own those independent gates:
+`crates/nose-detect/src/units/tests/strict_exact_factories.rs`,
+`crates/nose-normalize/src/value_graph/tests/factories/guava_factories.rs`, and
+`crates/nose-semantics/src/tests/semantic_evidence/sequence_surfaces.rs`. The smaller family
+(`84edbf7d317212c7`) is the shared `eleven_entry_payloads` fixture; the larger family
+(`99408319bd080594`) is the Java `ImmutableMap.of` IL/evidence builder. Extracting them into
+production code would couple unrelated crate test surfaces, and there is no shared test-support
+crate for this boundary. The budget is therefore re-baselined to 56 while preserving the gate as a
+ratchet for future production or avoidable test duplication.

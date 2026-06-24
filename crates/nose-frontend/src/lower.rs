@@ -66,7 +66,8 @@ use nose_il::{
 };
 use nose_semantics::{
     library_api_callee_contract_hash, library_api_contract_id_hash,
-    library_api_free_name_shadow_safe, library_api_property_dependencies_for_field_with_cache,
+    library_api_free_name_shadow_safe, library_api_materialized_result_domain_for_arity,
+    library_api_property_dependencies_for_field_with_cache,
     library_api_receiver_dependencies_for_call_with_cache,
     library_collection_factory_result_domain_for_arity, library_free_function_builtin_contract,
     library_free_name_collection_factory_contract, library_free_name_map_factory_contract,
@@ -87,6 +88,8 @@ use nose_semantics::{
     LibraryApiCalleeContract, LibraryApiContractId, LibraryApiDependencyCache,
     MethodReceiverContract, StaticIndexMembershipReceiverContract,
     FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+    JAVA_GUAVA_IMMUTABLE_COLLECTION_FACTORY_PACK_ID,
+    JAVA_GUAVA_IMMUTABLE_COLLECTION_FACTORY_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID, JAVA_STDLIB_MAP_ENTRY_PRODUCER_ID,
     JAVA_STDLIB_MAP_FACTORY_PRODUCER_ID, JAVA_STDLIB_STATIC_COLLECTION_ADAPTER_PRODUCER_ID,

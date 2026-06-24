@@ -139,7 +139,7 @@ Duplicate function names, lexical shadowing, nested/non-top-level functions,
 methods without explicit target proof, computed callees, selector mismatches,
 dependency-broken records, and conflicting evidence stay closed.
 
-Current first-party `LibraryApi` callee coordinates are intentionally specific:
+Current builtin `LibraryApi` callee coordinates are intentionally specific:
 
 - `QualifiedGlobal`-backed coordinates, such as `StaticGlobalMethod` and
   `StaticGlobalFunction`, name an allowed language/API path and depend on
@@ -154,8 +154,13 @@ Current first-party `LibraryApi` callee coordinates are intentionally specific:
 - `JavaUtilStaticMember` names selected Java `java.util` static factory/adaptor
   calls and depends on matching Java import-binding evidence plus source-origin
   local type shadow checks.
-- Python wildcard imports emit `Import::Wildcard` evidence. For current
-  first-party Python free-name API producers, any asserted wildcard import keeps
+- `JavaStaticMember` names selected non-`java.util` Java static factory calls
+  with an explicit module coordinate, currently Guava immutable collection
+  factories under `com.google.common.collect`. It depends on matching imported
+  binding evidence and local type-shadow checks; selector spelling alone stays
+  closed.
+- Python wildcard imports emit `Import::Wildcard` evidence. For current builtin
+  Python free-name API producers, any asserted wildcard import keeps
   unqualified builtin/free-name library occurrence evidence closed because a
   provider module may supply a same-named binding.
 - `JavaUtilConstructor` names selected Java `java.util` constructors and depends
@@ -572,7 +577,10 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   plus unshadowed `require` and `Set` proof; Java `java.util` static
   factories/adapters including `List.of`, `Set.of`, and `Arrays.asList` with
   `nose.java.stdlib.collection_factories` provenance, `Map.of`/`Map.ofEntries`
-  with `nose.java.stdlib.map_factories` provenance, `Map.entry` with
+  with `nose.java.stdlib.map_factories` provenance, Guava `ImmutableList.of`,
+  `ImmutableSet.of`, and `ImmutableMap.of` with
+  `nose.java.ecosystem.guava.immutable_collection_factories` provenance,
+  `Map.entry` with
   `nose.java.stdlib.map_entries` provenance, `Arrays.stream` with
   `nose.java.stdlib.static_collection_adapters` provenance, plus selected empty
   `new ArrayList<>()`/`new LinkedList<>()` constructors with
