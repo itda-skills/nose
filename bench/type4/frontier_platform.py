@@ -812,9 +812,11 @@ TARGET_PACKETS = [
         "owner_route": "proof-fact-prerequisite",
         "owner_issue": None,
         "why_now": "A genuine machine-checked semantic under-merge (formal/obligations/normalize/value_graph/clamp/Proof.lean) that is "
-        "broad and generalizing — present in all 7 corpus primary languages on both the dev and "
-        "held-out splits. The initial proof-backed min/max slice is implemented; the remaining "
-        "value is identifying the next real-corpus bound-order proof and surface-bridge work "
+        "broad and generalizing — present in 7 of the 8 corpus primary-language buckets, "
+        "with hits in both the dev and held-out splits. The proof-backed min/max plus "
+        "controlled two-comparison/library "
+        "bridge slices are implemented; the remaining value is identifying the next "
+        "real-corpus bound-order proof "
         "without weakening the hard-negative boundary.",
         "blocked_by": [
             "real-corpus bound-order / guarded-range proof fact that `lo <= hi` (formal/obligations/normalize/value_graph/clamp/Counterexamples.lean proves "
@@ -823,11 +825,11 @@ TARGET_PACKETS = [
             "float-NaN domain exclusion (min/max builtins vs comparison chains can diverge on "
             "NaN, by language)",
         ],
-        "notes": "The initial proof-backed integer min/max Clamp canon has landed for sources "
-        "with literal or exiting-guard bound-order evidence. The remaining packet is still routed "
-        "proof-fact-prerequisite / successor bridge work: parameter naming such as fzf "
-        "`Constrain(val, minimum, maximum)` is not a proof, and two-comparison/library bridge "
-        "forms are not part of the landed slice.",
+        "notes": "The proof-backed integer Clamp canon now covers min/max composition plus "
+        "controlled two-comparison and library method bridge surfaces when literal or "
+        "exiting-guard evidence proves lo<=hi. The remaining packet is still routed "
+        "proof-fact-prerequisite: parameter naming such as fzf "
+        "`Constrain(val, minimum, maximum)` is not a proof.",
         # Representative corpus locations (repo-explicit; split/primary-language enriched below).
         "locations": [
             {"repo": "boltons", "path": "boltons/mathutils.py", "span": "40-69",
@@ -878,6 +880,10 @@ def build_packets(platform_result: dict, real_frontier: Path, corpus_path: Path)
             }
             for loc in spec["locations"]
         ]
+        breadth = dict(axis.get("breadth") or {})
+        breadth["primary_language_total"] = len(
+            platform_result["identity"].get("corpus_primary_languages", [])
+        )
         packets.append(
             {
                 "packet_id": spec["packet_id"],
@@ -896,7 +902,7 @@ def build_packets(platform_result: dict, real_frontier: Path, corpus_path: Path)
                 "blocked_by": spec["blocked_by"],
                 "notes": spec["notes"],
                 # Platform context.
-                "breadth": axis.get("breadth"),
+                "breadth": breadth,
                 "evidence_tier": axis.get("evidence_tier"),
                 "curated": axis.get("curated"),
             }
@@ -954,9 +960,13 @@ def packets_markdown(packet_doc: dict) -> str:
     ]
     if not packet_doc["packets"]:
         lines.append("_No implementation-ready packet this pass — see the platform audit conclusion._")
-        return "\n".join(lines) + "\n"
+        return "\n".join(lines).rstrip() + "\n"
     for p in packet_doc["packets"]:
         b = p["breadth"] or {}
+        primary_total = b.get("primary_language_total") or round(
+            b.get("primary_language_presence", 0)
+            / max(b.get("primary_language_breadth", 0), 0.0001)
+        )
         lines += [
             f"## `{p['packet_id']}` — axis `{p['candidate_axis']}`",
             "",
@@ -965,7 +975,7 @@ def packets_markdown(packet_doc: dict) -> str:
             f"`{p['curated']['soundness_risk']}` · substrate `{p['curated']['substrate_required']}`",
             f"- **breadth**: repo {b.get('repo_breadth', 0):.0%} · primary-language "
             f"{b.get('primary_language_breadth', 0):.0%} ({b.get('primary_language_presence', 0)}/"
-            f"{len(b.get('primary_languages', []) or [])}) · dev {b.get('dev_presence', 0)} · "
+            f"{primary_total}) · dev {b.get('dev_presence', 0)} · "
             f"held-out {b.get('heldout_presence', 0)} · {b.get('generalization', '?')}",
             f"- **semantic claim**: {p['semantic_claim']}",
             f"- **proof invariant**: {p['proof_invariant']}",
@@ -992,7 +1002,7 @@ def packets_markdown(packet_doc: dict) -> str:
             f"- **notes**: {p['notes']}",
             "",
         ]
-    return "\n".join(lines) + "\n"
+    return "\n".join(lines).rstrip() + "\n"
 
 
 # ---------------------------------------------------------------------------
@@ -1114,7 +1124,7 @@ def markdown_report(result: dict) -> str:
                 "(suggestion only; not a finalized status)"
             )
         lines.append("")
-    return "\n".join(lines) + "\n"
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def selftest() -> int:

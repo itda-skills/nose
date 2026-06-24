@@ -236,7 +236,8 @@ The tool-assisted manual audit produced **one implementation-ready packet**: `nu
   abs idiom, which it DOES canonicalize. Confirmed on the current binary: a controlled scan
   merges `absTern`/`absBuilt` but not `clampTern`/`clampBuilt`, and boltons `clamp` (min(max))
   and fzf `Constrain` (max(min)) do not merge across files.
-- Broad and generalizing: present in 26 repos across all 7 primary languages on both splits
+- Broad and generalizing: present in 26 repos across 7 of the current 8 primary-language buckets,
+  with hits on both splits
   (dev 14 / held-out 12). The identity and its hard negatives (swapped bound order, wrong
   nesting, the `lo ≤ hi` precondition) are machine-checked in `formal/obligations/normalize/value_graph/clamp/Proof.lean`.
 - Recorded as a `real-miss` in `real_frontier.v1.json` (existing schema/status) and linked by
@@ -263,6 +264,22 @@ Added the prerequisite only, not clamp canonicalization:
 
 The `numeric_clamp` packet therefore remains an implementation follow-up. This change makes a
 narrow proof-backed slice visible internally without merging clamp forms.
+
+### 2026-06-25 narrowing
+
+Re-audited the packet after the controlled bridge slices landed. The current boundary is now
+narrower:
+
+- Proof-backed integer `Clamp` covers min/max composition plus controlled two-comparison and
+  supported library method surfaces when literal or exiting-guard evidence proves `lo <= hi`.
+- Focused adversarial evidence records `clamp_ternary_minmax_bridge` and
+  `clamp_library_method_bridge` as positives, with swapped/unproven/custom-method and float
+  boundaries still split.
+- The remaining real miss is the boltons/fzf cross-language pair: fzf's
+  `Constrain(val, minimum, maximum)` names the bound roles but does not prove their order.
+
+The packet stays routed to `proof-fact-prerequisite`, but no longer lists controlled
+two-comparison/library surface bridging as open work.
 
 ## Contract-Migration Expansion (issue #55)
 

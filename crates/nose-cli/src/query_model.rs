@@ -101,9 +101,10 @@ pub(super) fn family_existing_helper(f: &nose_detect::RefactorFamily) -> Option<
 }
 
 /// The aggregate value-class of a near family's varying spots, from the #315 graded witness:
-/// `leaf-only` (every hole is a clean value-leaf — a parameterize/extract candidate) vs
-/// `structural` (at least one hole is a shape/arity/unmodeled/decorator divergence, or a
-/// referent mismatch — genuinely different logic, not just parameters). `None` until the
+/// `leaf-only` (every hole is a clean value-leaf and the witness remains equal modulo
+/// those holes — a parameterize/extract candidate) vs `structural` (a demoted witness,
+/// shape/arity/unmodeled/decorator divergence, or referent mismatch — genuinely
+/// different logic, not just parameters). `None` until the
 /// graded witness is attached (near families only, and only when the query asks for it —
 /// the enrichment is the dominant cost, so `query` runs it on demand; see `run_query_cmd`).
 pub(super) fn family_spotclass(f: &nose_detect::RefactorFamily) -> Option<&'static str> {
@@ -114,7 +115,10 @@ pub(super) fn family_spotclass(f: &nose_detect::RefactorFamily) -> Option<&'stat
             "arity" | "shape" | "unmodeled" | "extra-sink" | "decorator"
         )
     };
-    if !g.referent_mismatches.is_empty() || g.spots.iter().any(|s| is_structural(s.class)) {
+    if !g.equal_modulo_holes
+        || !g.referent_mismatches.is_empty()
+        || g.spots.iter().any(|s| is_structural(s.class))
+    {
         Some("structural")
     } else {
         Some("leaf-only")
@@ -356,12 +360,31 @@ pub(super) fn query_family_json_with_counts(
     if let Some(sc) = family_spotclass(f) {
         obj["spotclass"] = serde_json::Value::from(sc);
     }
+    if let Some(graded) = f.witness.as_ref().and_then(|w| w.graded.as_ref()) {
+        obj["graded"] = serde_json::to_value(graded).expect("graded witness is JSON serializable");
+    }
+    if let Some(pair) = graded_pair_json(f) {
+        obj["graded_pair"] = pair;
+    }
     if full {
         if let Some(skeleton) = family_skeleton(f) {
             obj["skeleton"] = serde_json::Value::from(skeleton);
         }
     }
     obj
+}
+
+fn graded_pair_json(f: &nose_detect::RefactorFamily) -> Option<serde_json::Value> {
+    let (a_idx, b_idx) = f.witness.as_ref()?.graded_pair?;
+    let (Some(a), Some(b)) = (f.locations.get(a_idx), f.locations.get(b_idx)) else {
+        return None;
+    };
+    Some(serde_json::json!({
+        "a_index": a_idx,
+        "b_index": b_idx,
+        "a_member_id": baseline::member_id(a),
+        "b_member_id": baseline::member_id(b),
+    }))
 }
 
 pub(super) fn query_removable_lines(f: &nose_detect::RefactorFamily, shared: u32) -> u32 {

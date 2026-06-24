@@ -227,12 +227,17 @@ pub struct EquivalenceWitness {
     /// For `structural-similarity`: mean shape Jaccard vs the first member.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mean_shape_jaccard: Option<f64>,
-    /// For `structural-similarity` (near) families: the anti-unification grade of the
+    /// For same-language near/shared-core families: the anti-unification grade of the
     /// two representative copies — "equal except these k holes", with each hole's value
     /// class and a referent check (#315). Computed by the presentation layer, which has
-    /// source access; `None` for non-near witnesses and until that layer runs.
+    /// source access; `None` for exact/copy-paste witnesses and until that layer runs.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub graded: Option<GradedWitness>,
+    /// Internal presentation-layer indices of the two locations compared for `graded`.
+    /// Query JSON maps these to stable member ids; raw witness serialization omits them
+    /// to keep the detect-report contract unchanged.
+    #[serde(skip_serializing)]
+    pub graded_pair: Option<(usize, usize)>,
 }
 
 #[derive(Serialize)]

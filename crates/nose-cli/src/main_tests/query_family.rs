@@ -147,6 +147,7 @@ fn query_family_json_carries_proof_depth() {
         mean_value_jaccard: None,
         mean_shape_jaccard: None,
         graded: None,
+        graded_pair: None,
     });
     let je = query_family_json(&exact, &ov, &empty, false, None, None);
     assert_eq!(
@@ -269,6 +270,7 @@ fn spotclass_grades_near_family_holes() {
                 equal_modulo_holes: true,
                 modeled_caveat: false,
             }),
+            graded_pair: None,
         });
         f
     };
@@ -287,6 +289,17 @@ fn spotclass_grades_near_family_holes() {
         family_spotclass(&graded(vec![hole("literal")], vec!["equals".into()])),
         Some("structural")
     );
+    // A transformation twin may have leaf-shaped holes, but if the witness is demoted
+    // it is not a clean parameterize/extract candidate.
+    let mut demoted = graded(vec![hole("call")], vec![]);
+    let g = demoted
+        .witness
+        .as_mut()
+        .and_then(|w| w.graded.as_mut())
+        .unwrap();
+    g.equal_modulo_holes = false;
+    g.patterns.push("async-mirror");
+    assert_eq!(family_spotclass(&demoted), Some("structural"));
     // No graded witness (not enriched / not a near family) → no class.
     assert!(family_spotclass(&fam(1, 1, &[Some("a"), Some("b")])).is_none());
 }
@@ -421,6 +434,7 @@ fn summary_names_the_equivalence_evidence() {
         mean_value_jaccard: None,
         mean_shape_jaccard: None,
         graded: None,
+        graded_pair: None,
     });
     assert!(
         family_summary(&f).contains("· exact behavior match"),
