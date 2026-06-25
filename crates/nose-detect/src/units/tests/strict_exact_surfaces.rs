@@ -429,3 +429,126 @@ fn strict_exact_contains_does_not_use_result_domain_as_exact_tree_proof() {
         "ambiguous LibraryApi dependency must close strict exact receiver proof"
     );
 }
+
+#[test]
+fn strict_exact_object_keys_key_view_uses_object_argument_proof() {
+    for (name, source) in [
+        (
+            "inline static object literal",
+            "function f(key: string) { return Object.keys({ red: 1, blue: 2 }).includes(key); }\n",
+        ),
+        (
+            "unique local static object binding",
+            "function f(key: string) { const values = { red: 1, blue: 2 }; return Object.keys(values).includes(key); }\n",
+        ),
+    ] {
+        assert!(
+            lowered_ts_function_exact_safe(source),
+            "{name} should make Object.keys an exact map-key view"
+        );
+    }
+
+    for (name, source) in [
+        (
+            "shadowed Object",
+            "function f(Object: any, key: string) { const values = { red: 1, blue: 2 }; return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "__proto__ object-literal prototype syntax",
+            "function f(key: string) { const values = { __proto__: null, red: 1 }; return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "escaped __proto__ object-literal prototype syntax",
+            "function f(key: string) { const values = { \\u005f\\u005fproto__: null, red: 1 }; return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "numeric object-literal key",
+            "function f(key: string) { const values = { 1.0: true, red: 1 }; return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "mutation before Object.keys",
+            "function f(key: string) { const values = { red: 1, blue: 2 }; values.green = 3; return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "delete before Object.keys",
+            "function f(key: string) { const values = { red: 1, blue: 2 }; delete values.red; return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "aliasing before Object.keys",
+            "function f(key: string) { const values = { red: 1, blue: 2 }; const alias = values; alias.green = 3; return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "receiver call before Object.keys",
+            "function f(key: string) { const values = { red: 1, blue: 2 }; values.clear(); return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "nested mutator before Object.keys",
+            "function f(key: string) { const values = { red: 1, blue: 2 }; mutate(); return Object.keys(values).includes(key); function mutate() { values.green = 3; } }\n",
+        ),
+        (
+            "direct eval before Object.keys",
+            "function f(key: string) { const values = { red: 1, blue: 2 }; eval(\"values.green = 3\"); return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "with scope over the object before Object.keys",
+            "function f(key: string) { const values = { red: 1, blue: 2 }; with (values) { delete red; } return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "Object.keys inside with scope",
+            "function f(key: string) { const values = { values: { red: 1 }, blue: 2 }; with (values) { return Object.keys(values).includes(key); } }\n",
+        ),
+        (
+            "for-in target write before Object.keys",
+            "function f(key: string) { const values = { red: 1, blue: 2 }; for (values.green in { green: 1 }) {} return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "for-of target write before Object.keys",
+            "function f(key: string) { const values = { red: 1, blue: 2 }; for (values.green of [\"green\"]) {} return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "non-dominating conditional object initializer",
+            "function f(flag: boolean, key: string) { if (flag) { var values = { red: 1, blue: 2 }; } return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "parameter shadowing a module static object",
+            "const values = { red: 1, blue: 2 }; function f(values: Record<string, number>, key: string) { return Object.keys(values).includes(key); }\n",
+        ),
+        (
+            "Object.values",
+            "function f(key: string) { const values = { red: 1, blue: 2 }; return Object.values(values).includes(key); }\n",
+        ),
+        (
+            "unsafe object value expression",
+            "function f(key: string) { return Object.keys({ red: sideEffect() }).includes(key); }\n",
+        ),
+    ] {
+        assert!(
+            !lowered_ts_function_exact_safe(source),
+            "{name} must close the Object.keys object-argument proof"
+        );
+    }
+}
+
+fn lowered_ts_function_exact_safe(source: &str) -> bool {
+    let interner = Interner::new();
+    let raw = nose_frontend::lower_source(
+        FileId(0),
+        "object_keys.ts",
+        source.as_bytes(),
+        Lang::TypeScript,
+        &interner,
+    )
+    .expect("lower TypeScript");
+    let il = nose_normalize::normalize(
+        &raw,
+        &interner,
+        &nose_normalize::NormalizeOptions::default(),
+    );
+    let facts = StrictFacts::collect(&il, &interner);
+    let function = il
+        .units
+        .iter()
+        .find(|unit| unit.kind == UnitKind::Function)
+        .expect("function unit");
+    strict_exact_safe_tree(&il, &interner, &facts, function.root)
+}

@@ -1,4 +1,5 @@
 use super::*;
+use crate::PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID;
 
 pub(super) fn assert_group() {
     let receiver_membership = builtin_pack_descriptor(RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID)
@@ -68,7 +69,7 @@ pub(super) fn assert_group() {
     );
     assert_eq!(
         map_key_view.supported_packages,
-        &["dict", "Hash", "Map", "java.util"]
+        &["dict", "Hash", "Map", "Object", "java.util"]
     );
     assert_eq!(
         map_key_view.evidence_producer_ids,
@@ -84,8 +85,8 @@ pub(super) fn assert_group() {
     );
     assert_eq!(map_key_view.counts().evidence_producers, 1);
     assert_eq!(map_key_view.counts().contracts, 2);
-    assert_eq!(map_key_view.counts().positive_fixtures, 4);
-    assert_eq!(map_key_view.counts().hard_negatives, 2);
+    assert_eq!(map_key_view.counts().positive_fixtures, 5);
+    assert_eq!(map_key_view.counts().hard_negatives, 6);
     assert!(map_key_view
         .conformance_refs()
         .contains(&"map-key-view-non-map-receiver-hard-negative"));

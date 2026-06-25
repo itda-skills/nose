@@ -1,7 +1,9 @@
 use super::*;
 
 mod swift;
+mod type_domains;
 pub(super) use swift::*;
+pub(super) use type_domains::*;
 
 pub(super) const C_LANGUAGE: &[&str] = &["c"];
 pub(super) const C_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["c", "h"];
@@ -171,7 +173,8 @@ pub(super) const RECEIVER_MEMBERSHIP_PROTOCOL_PACKAGES: &[&str] = &[
     "java.util",
     "std::collections",
 ];
-pub(super) const MAP_KEY_VIEW_PROTOCOL_PACKAGES: &[&str] = &["dict", "Hash", "Map", "java.util"];
+pub(super) const MAP_KEY_VIEW_PROTOCOL_PACKAGES: &[&str] =
+    &["dict", "Hash", "Map", "Object", "java.util"];
 pub(super) const PROPERTY_BUILTIN_PROTOCOL_PACKAGES: &[&str] =
     &["Array", "Collection", "Swift.Collection", "java.lang"];
 pub(super) const BUILTIN_METHOD_CALL_PROTOCOL_PACKAGES: &[&str] =
@@ -431,8 +434,13 @@ pub(super) const MAP_KEY_VIEW_PROTOCOL_CONFORMANCE_REFS: &[&str] = &[
     "map-key-view-ruby-keys-positive",
     "map-key-view-java-keyset-positive",
     "map-key-view-js-keys-positive",
+    "map-key-view-js-object-keys-positive",
     "map-key-view-non-map-receiver-hard-negative",
     "map-key-view-unsupported-arity-hard-negative",
+    "map-key-view-js-object-keys-shadowed-hard-negative",
+    "map-key-view-js-object-keys-proto-hard-negative",
+    "map-key-view-js-object-keys-mutated-hard-negative",
+    "map-key-view-js-object-keys-delete-hard-negative",
 ];
 pub(super) const PROPERTY_BUILTIN_PROTOCOL_PRODUCER_IDS: &[&str] =
     &[PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID];
@@ -587,10 +595,3 @@ pub(super) const RUST_STDLIB_VEC_CONFORMANCE_REFS: &[&str] = &[
     "rust-vec-macro-shadowed-hard-negative",
     "rust-vec-new-shadowed-hard-negative",
 ];
-pub(super) const PYTHON_STDLIB_TYPE_DOMAIN_CONTRACT_IDS: &[&str] =
-    &["python.stdlib.type-domain-alias.contract"];
-pub(super) const PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_IDS: &[&str] =
-    &[PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID];
-pub(super) const PYTHON_STDLIB_TYPE_DOMAIN_HARD_NEGATIVE_REFS: &[&str] =
-    &["python-typing-domain-wrong-module-hard-negative"];
-pub(super) const NO_TYPE_DOMAIN_ALIAS_CONTRACTS: &[BuiltinTypeDomainAliasContract] = &[];

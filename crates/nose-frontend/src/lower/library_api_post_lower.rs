@@ -1,8 +1,10 @@
 use super::post_lower_evidence::*;
 use super::*;
 
+mod object_key_views;
 mod receiver_methods;
 mod swift_factories;
+use object_key_views::record_post_lower_object_key_view_library_api;
 use receiver_methods::record_post_lower_receiver_method_library_api;
 use swift_factories::post_lower_record_swift_map_factory_result_domain;
 
@@ -66,6 +68,9 @@ pub(super) fn record_post_lower_library_api_evidence(il: &mut Il, interner: &Int
             continue;
         }
         if record_post_lower_java_collection_constructor_library_api(il, interner, call) {
+            continue;
+        }
+        if record_post_lower_object_key_view_library_api(il, interner, call) {
             continue;
         }
         record_post_lower_receiver_method_library_api(il, interner, call, &mut dependency_cache);
