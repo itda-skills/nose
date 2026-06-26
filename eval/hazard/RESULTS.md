@@ -77,6 +77,33 @@ known low-precision bug-fix proxy described below, not a validated harm target.
 > v4 now carries `locations[].{start,end}` plus a documented `metrics` object, and
 > `mine.py` reads both the v4 and legacy shapes.
 
+## Refresh — 0.16.0 release candidate (re-mined 2026-06-26)
+
+Re-ran the full hazard release checklist because 0.16.0 changes semantic detection
+output through the standard-library semantic-pack expansion. Every event carries
+`nose_ver = "nose 0.16.0"`.
+
+The **formula still holds**. The shipped v5 formula remains the best formula we are
+willing to ship: `v7` is only +0.003 AUC on clean G1 and still depends on a parameter
+dampener that has not justified a formula change. No re-calibration; `hazard()` is
+untouched for 0.16.0.
+
+| | 0.14.0 refresh | 0.16.0 refresh | Δ |
+|---|---|---|---|
+| events | 432,113 | 432,284 | +171 |
+| families | 14,712 | 14,714 | +2 |
+| ever-G1 | 29.0% | 29.1% | +0.1 pp |
+| ever-G2 proxy | — | 3.4% | informational only |
+| **v5 (shipped) G1 AUC** | **0.691** | **0.691** | +0.000 |
+| v7 G1 AUC | 0.693 | 0.694 | +0.001 |
+| logistic G1 AUC | 0.658 | 0.659 | +0.001 |
+
+Core weight directions are unchanged: line/edit surface, invisibility, and dispersion
+remain positive, while semantic size remains anti-predictive for G1 (`mean_lines` +0.586,
+`invisibility` +0.321, `modules` +0.268, `mean_sem` -0.148). `params` is positive in the
+logistic refresh (+0.155), but the only formula using it is still a dampener and only
+nudges G1 AUC by 0.003 over shipped v5; keep params out of `hazard()`.
+
 ## Headline finding — the literature-derived formula was mis-specified
 
 Leave-one-repo-out logistic weights (stable, low variance across 12 held-out repos):

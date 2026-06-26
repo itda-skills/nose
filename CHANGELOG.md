@@ -6,6 +6,8 @@ break.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-06-26
+
 ### Added
 - Added query JSON `graded` and `graded_pair` evidence for on-demand `spotclass`
   enrichment, including same-language shared-core (`subdag`) families that expose
@@ -16,6 +18,33 @@ break.
   boundaries for `copyOf`, missing imports, wrong packages, local type shadows,
   static null elements/key-values, duplicate static map keys, and unsupported
   `ImmutableMap.of` arities.
+- Added Java stdlib `Collections` factory contracts for `emptyList`,
+  `emptySet`, `singleton`, `singletonList`, `emptyMap`, and `singletonMap`,
+  moving those surfaces behind pack-owned factory evidence and fixed-arity
+  fail-closed result-domain checks.
+- Added Swift stdlib collection factory semantics for `Array(sequence)`,
+  `Set(sequence)`, and `Dictionary(uniqueKeysWithValues:)`, with pack-owned
+  provenance and hard negatives for shadowed types, wrong labels, tuple-entry
+  shape, and duplicate static keys.
+- Added Go `strings.Contains` as a string-containment semantic capability
+  distinguished from `slices.Contains` by imported namespace proof.
+- Added JS/TS `Object.keys` map-key-view semantics for proven static objects,
+  sharing the map-key-view capability while keeping dynamic objects, unsafe
+  mutation, wrong globals, and unsupported wrappers closed.
+- Added Rust `Result` channel capability for `Ok`/`Err` constructor provenance
+  and exact-Result `is_ok`/`is_err` predicates, without opening callback,
+  defaulting, or panic-like Result APIs.
+- Added the sequence-HOF and iterator-materialization capability tranche:
+  Rust iterator HOFs, Python iterator builtins, JS/TS Array HOFs, Swift
+  Sequence HOFs, and Ruby Enumerable HOFs now use pack/protocol-owned evidence,
+  receiver/source proof, callback demand/effect boundaries, and adjacent hard
+  negatives. The tranche moved builtin packs 46 -> 48, exact-capable packs
+  36 -> 38, positive fixtures 150 -> 177, hard negatives 102 -> 139, and
+  conformance refs 252 -> 316.
+- Added durable semantic-pack closeout requirements and #533 closeout evidence,
+  including linked independent review artifacts, query-regression evidence
+  requirements, per-leaf before/after metrics, and explicit process-gap
+  labeling for historical missing pre-merge review evidence.
 
 ### Changed
 - Tightened `spotclass=leaf-only` to require `graded.equal_modulo_holes=true`, so
@@ -26,6 +55,27 @@ break.
   as the remaining blocker.
 - Strengthened clamp min/max proof so branch-local positive bound-order guards
   can prove the safe `lo <= hi` path while keeping the inverse guard scoped.
+- Hardened Swift factory mutation boundaries so mutation-sensitive factory
+  evidence stays closed unless the required place/effect proof is present.
+- Tightened semantic-pack review discipline: future behavior-changing
+  semantic-pack leaf or migration PRs must preserve two durable independent
+  review artifacts, resolve blocking findings before merge, and keep product
+  query-regression evidence out of scratch-only `/tmp` state.
+
+### Fixed
+- Resolved the Rust `Result` API evidence runtime trigger by caching repeated
+  proof work around existing pack evidence while preserving clone output; the
+  focused `serde_json` comparison stayed at 0 query-regression triggers.
+
+### Performance
+- Re-ran product query-regression for the sequence-HOF tranche across the
+  selected Rust, Python, JS/TS, Swift, and Ruby representatives. All five leaf
+  comparisons recorded 0 investigation triggers. JS/TS `axios` showed a small
+  in-budget median wall-time increase (167.22 ms -> 171.97 ms), while the Swift
+  and Ruby representatives improved on their saved comparisons.
+- Re-ran the hazard release refresh on the 12-repo calibration corpus for
+  `nose 0.16.0`. The shipped hazard formula stayed stable (`v5` G1 AUC 0.691,
+  logistic G1 AUC 0.659), so no `hazard()` recalibration was needed.
 
 ## [0.15.0] - 2026-06-22
 
