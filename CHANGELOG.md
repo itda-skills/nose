@@ -19,6 +19,15 @@ break.
   protocol pack while preserving imported `strings` namespace proof and keeping
   `strings.Contains` in the Go namespace-call pack as substring containment.
 
+### Fixed
+- Hardened JS/TS string-affix receiver proof so TypeScript `String` object
+  wrappers, optional/nullable receivers, and module-scope
+  `String.prototype.startsWith`/`endsWith` patching no longer enter primitive
+  string prefix/suffix families; added explicit hard negatives for untyped
+  JavaScript receivers, borrowed prototype calls, custom same-name methods,
+  wrappers, offsets, conditional prototype writes, nested/block-scope shadow
+  names, and `Object.defineProperty` prototype writes.
+
 ## [0.16.0] - 2026-06-26
 
 ### Added
