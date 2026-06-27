@@ -36,6 +36,11 @@ break.
   for semantic-kernel work that combines hard soundness gate numbers,
   under-merged behavior groups, oracle exclusions, and structured exact-admission
   rejection buckets without including raw source snippets by default.
+- Added import-snapshot census data to local recall-loss reports. The JSON now
+  includes successful imported-literal snapshot counts plus unresolved
+  binding-import miss reasons such as missing provider modules/exports,
+  importer mutation, provider mutation/escape, missing provider `LibraryApi`
+  proof, and provider aggregate shapes that are not export-safe.
 - Split recall-loss exact-admission rejections into capability-oriented buckets
   for callee identity, receiver domain, library API occurrence, HOF
   demand/effect, source surface, mutation/effect, unsupported runtime
@@ -82,6 +87,23 @@ break.
   39/83`, and hard gates remain at zero false merges and zero
   canon-preservation violations; the remaining blocker is cross-file
   field/constant domain provenance.
+- Added JS/TS constructor-backed imported immutable snapshots for `new Map(...)`
+  and `new Set(...)`. Provider export safety now reuses the existing
+  `JsLikeMapConstructor`/`JsLikeSetConstructor` `LibraryApi` proof before
+  copying provider evidence into importers, so imported JS/TS Map defaults and
+  Set membership converge with their local constructor-backed forms while
+  missing constructor evidence, provider-local `Map`/`Set` shadows,
+  provider/importer mutations, wrong contents, and raw import-coordinate
+  sequences stay closed.
+- Expanded imported immutable provider snapshots to existing collection factory
+  contracts for Python builtin/imported factories and Java collection factories.
+  Python `set([...])` and `collections.deque([...])`, plus Java static-imported
+  `List.of(...)`/`Set.of(...)` provider bindings, now converge with equivalent
+  local collection-membership code only when the provider factory call carries
+  admitted `LibraryApi` evidence and exact-safe literal arguments. Missing API
+  proof, provider-local shadows, provider/importer mutations, wrong contents,
+  and ambiguous single-argument `Arrays.asList(...)` provider snapshots stay
+  closed.
 
 ### Fixed
 - Hardened JS/TS string-affix receiver proof so TypeScript `String` object
