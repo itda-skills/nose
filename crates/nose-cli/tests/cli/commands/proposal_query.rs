@@ -129,16 +129,31 @@ fn query_json_grades_async_mirror_shared_core_families() {
     let families = json["families"]
         .as_array()
         .expect("query JSON should carry a families array");
-    let async_mirror_subdag: Vec<_> = families
+    let family_has_files = |family: &serde_json::Value, suffixes: &[&str]| {
+        let locations = family["locations"].as_array().expect("locations");
+        suffixes.iter().all(|suffix| {
+            locations.iter().any(|loc| {
+                loc["file"]
+                    .as_str()
+                    .is_some_and(|file| file.ends_with(suffix))
+            })
+        })
+    };
+    let async_mirror_families: Vec<_> = families
         .iter()
         .filter(|family| {
-            family["witness"] == "subdag"
-                && family["spotclass"] == "structural"
+            family["spotclass"] == "structural"
                 && family["graded"]["equal_modulo_holes"] == false
-                && json_array_strings(&family["graded"], "patterns").contains(&"async-mirror")
+                && family["graded"]["patterns"]
+                    .as_array()
+                    .is_some_and(|patterns| {
+                        patterns
+                            .iter()
+                            .any(|pattern| pattern.as_str() == Some("async-mirror"))
+                    })
         })
         .collect();
-    for family in &async_mirror_subdag {
+    for family in &async_mirror_families {
         let locations = family["locations"].as_array().unwrap();
         let pair = &family["graded_pair"];
         let a_idx = pair["a_index"].as_u64().unwrap() as usize;
@@ -157,10 +172,41 @@ fn query_json_grades_async_mirror_shared_core_families() {
             "graded_pair should identify the concrete representatives behind the witness: {family}"
         );
     }
-    assert_eq!(
-        async_mirror_subdag.len(),
-        5,
-        "all shared-core async/sync fixture families should carry async-mirror evidence: {json}"
+    for expected in [
+        ["t1_handle_async.py", "t1_handle_sync.py"],
+        ["t3_aggregate_async.py", "t3_aggregate_sync.py"],
+        ["t4_collect_async.ts", "t4_collect_sync.ts"],
+        ["t6_retry_async.ts", "t6_retry_sync.ts"],
+    ] {
+        assert!(
+            async_mirror_families
+                .iter()
+                .any(|family| family_has_files(family, &expected)),
+            "async/sync family {expected:?} should carry async-mirror evidence: {json}"
+        );
+    }
+    assert!(
+        async_mirror_families.iter().any(|family| {
+            family["witness"] == "subdag"
+                && family["locations"].as_array().is_some_and(|locations| {
+                    locations.len() > 2
+                        && family_has_files(
+                            family,
+                            &["hn1_a.py", "t1_handle_async.py", "t1_handle_sync.py"],
+                        )
+                })
+        }),
+        "multi-member shared-core family should choose the async/sync pair over the decoy: {json}"
+    );
+    assert!(
+        [
+            ["hn1_a.py", "hn1_b.py"],
+            ["hn2_a.ts", "hn2_b.ts"],
+            ["hn3_a.py", "hn3_b.py"],
+        ]
+        .iter()
+        .all(|pair| !families.iter().any(|family| family_has_files(family, pair))),
+        "async/sync hard-negative pairs must not merge: {json}"
     );
 }
 

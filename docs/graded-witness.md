@@ -109,7 +109,10 @@ not folded into nose's deterministic order on a neutral signal.
   sub-function fragments and pathological (generated/minified) files. Multi-member
   shared-core families keep the historical first representative pair unless another
   sampled pair exposes the specific async/sync `async-mirror` transformation that would
-  otherwise be hidden by a decoy member.
+  otherwise be hidden by a decoy member. The `async-mirror` label is emitted when the
+  alignment reaches a one-sided `await` wrapper; lossy or opaque control regions can
+  still surface as structural `modeled_caveat` witnesses before that wrapper is
+  alignable.
 - **The unit body, plus decorators by source — not the full signature.** The witness
   compares the two units' *value graphs* (the modeled body), augmented by the
   source-level decorator/attribute check above. What it does not model is the parameter

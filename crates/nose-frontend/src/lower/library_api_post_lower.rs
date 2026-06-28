@@ -2,21 +2,27 @@ use super::post_lower_evidence::*;
 use super::*;
 
 mod free_name_vars;
+mod java_collection_constructors;
 mod object_key_views;
+mod properties;
 mod python_iterator_builtins;
 mod receiver_methods;
 mod result_bindings;
+mod ruby_static_members;
 mod rust_option;
 mod rust_result;
 mod swift_factories;
 use free_name_vars::record_post_lower_free_name_var_library_api;
+use java_collection_constructors::record_post_lower_java_collection_constructor_library_api;
 use object_key_views::record_post_lower_object_key_view_library_api;
+use properties::record_post_lower_property_library_api;
 use python_iterator_builtins::{
     post_lower_add_iterator_source_dependencies, post_lower_free_function_builtin_api_contract,
     post_lower_free_function_hof_api_contract,
 };
 use receiver_methods::record_post_lower_receiver_method_library_api;
 use result_bindings::post_lower_record_assignment_binding_domain_from_call_result;
+use ruby_static_members::record_post_lower_ruby_static_member_library_api;
 use rust_option::{
     record_post_lower_rust_option_none_library_api,
     record_post_lower_rust_option_some_pattern_library_api,
@@ -459,196 +465,4 @@ fn post_lower_rust_sum_type_selector_candidate(il: &Il, interner: &Interner, nod
             | "std::result::Result::Err"
             | "core::result::Result::Err"
     )
-}
-
-fn record_post_lower_property_library_api(
-    il: &mut Il,
-    interner: &Interner,
-    field: NodeId,
-    dependency_cache: &mut LibraryApiDependencyCache,
-) -> bool {
-    if il.kind(field) != NodeKind::Field {
-        return false;
-    }
-    let Payload::Name(property) = il.node(field).payload else {
-        return false;
-    };
-    let Some(contract) =
-        library_property_builtin_contract(il.meta.lang, interner.resolve(property))
-    else {
-        return false;
-    };
-    let Some(dependencies) = library_api_property_dependencies_for_field_with_cache(
-        il,
-        interner,
-        field,
-        contract.callee,
-        dependency_cache,
-    ) else {
-        return false;
-    };
-    post_lower_library_api_node_evidence_with_pack_id(
-        il,
-        field,
-        contract.id,
-        contract.callee,
-        0,
-        contract.pack_id,
-        PROPERTY_BUILTIN_PROTOCOL_PRODUCER_ID,
-        dependencies,
-    );
-    true
-}
-
-fn record_post_lower_ruby_static_member_library_api(
-    il: &mut Il,
-    interner: &Interner,
-    call: NodeId,
-) -> bool {
-    let kids = il.children(call);
-    let Some((&callee, args)) = kids.split_first() else {
-        return false;
-    };
-    let arg_count = args.len();
-    if il.kind(callee) != NodeKind::Field {
-        return false;
-    }
-    let Payload::Name(method) = il.node(callee).payload else {
-        return false;
-    };
-    let method = interner.resolve(method);
-    let Some(&receiver) = il.children(callee).first() else {
-        return false;
-    };
-    let Some(receiver_name) = post_lower_var_name(il, interner, receiver) else {
-        return false;
-    };
-    let Some(contract) =
-        library_ruby_set_factory_contract(il.meta.lang, receiver_name, method, arg_count)
-    else {
-        return false;
-    };
-    let LibraryApiCalleeContract::RubyRequireStaticMember {
-        receiver: expected_receiver,
-        required_module,
-        shadow_root,
-        ..
-    } = contract.callee
-    else {
-        return false;
-    };
-    if post_lower_file_defines_name_visible_at(il, interner, shadow_root, il.node(receiver).span) {
-        return false;
-    }
-    let Some(receiver_dependency) =
-        post_lower_unshadowed_symbol_evidence_id(il, receiver, expected_receiver)
-    else {
-        return false;
-    };
-    let Some(require_dependency) =
-        post_lower_required_module_evidence_id(il, interner, required_module, il.node(call).span)
-    else {
-        return false;
-    };
-    let api = post_lower_library_api_evidence_with_pack_id(
-        il,
-        call,
-        contract.id,
-        contract.callee,
-        arg_count,
-        RUBY_STDLIB_SET_PACK_ID,
-        RUBY_STDLIB_SET_PRODUCER_ID,
-        vec![receiver_dependency, require_dependency],
-    );
-    post_lower_record_library_api_result_domain(
-        il,
-        call,
-        library_collection_factory_result_domain_for_arity(contract, arg_count),
-        api,
-    );
-    true
-}
-
-fn record_post_lower_java_collection_constructor_library_api(
-    il: &mut Il,
-    interner: &Interner,
-    call: NodeId,
-) -> bool {
-    let kids = il.children(call);
-    let Some((&callee, args)) = kids.split_first() else {
-        return false;
-    };
-    let arg_count = args.len();
-    let Some(type_name) = post_lower_var_name(il, interner, callee) else {
-        return false;
-    };
-    let Some(contract) =
-        library_java_collection_constructor_contract(il.meta.lang, type_name, arg_count)
-    else {
-        return false;
-    };
-    let LibraryApiCalleeContract::JavaUtilConstructor {
-        simple_type,
-        qualified_type,
-        module,
-        requires_import_for_simple_type,
-        requires_no_local_type_shadow,
-    } = contract.callee
-    else {
-        return false;
-    };
-    let Some(source_dependency) =
-        post_lower_source_call_evidence_id(il, call, SourceCallKind::Construct)
-    else {
-        return false;
-    };
-    let mut dependencies = vec![source_dependency];
-    if type_name == simple_type {
-        if requires_no_local_type_shadow
-            && post_lower_unit_defines_name(il, interner, simple_type, il.node(callee).span)
-        {
-            return false;
-        }
-        if requires_import_for_simple_type {
-            if let Some(dependency) = post_lower_imported_binding_symbol_evidence_id(
-                il,
-                interner,
-                callee,
-                module,
-                simple_type,
-            ) {
-                dependencies.push(dependency);
-            } else {
-                let Some(dependency) = post_lower_java_wildcard_import_evidence_id(
-                    il,
-                    interner,
-                    module,
-                    simple_type,
-                    il.node(call).span,
-                ) else {
-                    return false;
-                };
-                dependencies.push(dependency);
-            }
-        }
-    } else if type_name != qualified_type {
-        return false;
-    }
-    let api = post_lower_library_api_evidence_with_pack_id(
-        il,
-        call,
-        contract.id,
-        contract.callee,
-        arg_count,
-        JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID,
-        JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
-        dependencies,
-    );
-    post_lower_record_library_api_result_domain(
-        il,
-        call,
-        library_collection_factory_result_domain_for_arity(contract, arg_count),
-        api,
-    );
-    true
 }

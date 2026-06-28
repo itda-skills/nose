@@ -172,6 +172,13 @@ fn recall_loss_report_ratchets_representative_admission_buckets() {
         "crates/nose-frontend/src/js_ts/globals.rs",
     ];
     let report_dir = TempProject::new("recall_loss_bucket_ratchet");
+    report_dir.write(
+        "hof_callback_member_call.rs",
+        "use std::path::PathBuf;\n\n\
+fn command_paths(paths: &[PathBuf]) -> Vec<String> {\n\
+    paths.iter().map(|p| p.display().to_string()).collect()\n\
+}\n",
+    );
     let report_path = report_dir.path().join("recall-loss.json");
     let mut args = vec!["verify"];
     let path_strings = paths
@@ -179,6 +186,12 @@ fn recall_loss_report_ratchets_representative_admission_buckets() {
         .map(|path| workspace.join(path).display().to_string())
         .collect::<Vec<_>>();
     args.extend(path_strings.iter().map(String::as_str));
+    let hof_callback_path = report_dir
+        .path()
+        .join("hof_callback_member_call.rs")
+        .display()
+        .to_string();
+    args.push(hof_callback_path.as_str());
     args.extend([
         "--max-violations",
         "0",
@@ -193,7 +206,11 @@ fn recall_loss_report_ratchets_representative_admission_buckets() {
         serde_json::from_str(&report_text).expect("recall-loss report JSON");
     assert_eq!(report["soundness_gate"]["false_merges"], 0);
     assert_eq!(report["soundness_gate"]["canon_preservation_violations"], 0);
+    assert_representative_admission_buckets(&report);
+    assert_representative_obligation_buckets(&report);
+}
 
+fn assert_representative_admission_buckets(report: &serde_json::Value) {
     let reasons = report["by_reason"]
         .as_array()
         .expect("by_reason should be an array");
@@ -211,6 +228,15 @@ fn recall_loss_report_ratchets_representative_admission_buckets() {
             "expected representative bucket {expected}: {report}"
         );
     }
+    assert!(
+        reasons
+            .iter()
+            .all(|item| item["reason"] != "unattributed-strict-exact-unsafe"),
+        "bucket ratchet should not leave opaque strict-exact rejections: {report}"
+    );
+}
+
+fn assert_representative_obligation_buckets(report: &serde_json::Value) {
     let obligations = report["by_obligation"]
         .as_array()
         .expect("by_obligation should be an array");
@@ -251,12 +277,6 @@ fn recall_loss_report_ratchets_representative_admission_buckets() {
                             .iter()
                             .any(|value| value == "hof-callback-member-call-effect-proof"))),
         "expected HOF rejections to include generic and member callback call-effect missing evidence: {report}"
-    );
-    assert!(
-        reasons
-            .iter()
-            .all(|item| item["reason"] != "unattributed-strict-exact-unsafe"),
-        "bucket ratchet should not leave opaque strict-exact rejections: {report}"
     );
 }
 
@@ -402,17 +422,16 @@ function callPromise(x) { return Promise(x); }\n",
             "expected Promise missing evidence label {expected}: {report}"
         );
     }
-    for generic in ["promise-rejection-channel-contract"] {
-        assert!(
-            !rejections
-                .iter()
-                .any(|item| item["reason"] == "unsupported-runtime-boundary"
-                    && item["missing_evidence"]
-                        .as_array()
-                        .is_some_and(|items| items.iter().any(|value| value == generic))),
-            "generic Promise rejection evidence label should stay split: {report}"
-        );
-    }
+    let generic = "promise-rejection-channel-contract";
+    assert!(
+        !rejections
+            .iter()
+            .any(|item| item["reason"] == "unsupported-runtime-boundary"
+                && item["missing_evidence"]
+                    .as_array()
+                    .is_some_and(|items| items.iter().any(|value| value == generic))),
+        "generic Promise rejection evidence label should stay split: {report}"
+    );
 }
 
 #[test]

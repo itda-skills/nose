@@ -172,6 +172,22 @@ binding/library/import/sequence provenance shape. These remain reviewed
 plumbing/span-noise families, not new avoidable duplication. The reviewed
 default-surface count remains 54; no budget increase is accepted.
 
+The 2026-06-29 CI repair splits overlong recall-loss reporting,
+exact-admission attribution, library-API idiom tests, strict-exact factory
+tests, and post-lower LibraryApi dispatch into file-length-compliant modules.
+That moves five already reviewed representatives without increasing the
+default-surface count: the reporting/oracle overlap moves from
+`190f0a721624d635` to `1f785cf0498fe78d`; the semantic-kernel
+language-core provenance helper family moves from `40de0ff958ad1b55` to
+`475fa037b992d31d`; the guard/static-import/library-API semantic query
+harness moves from `84df147de864f719` to `e91ec2b8c9d99c30`; the
+`eleven_entry_payloads` fixture family moves from `678befa6db9e5c5d` to
+`f2646ca6f31a0c0b`; and the Guava map factory IL builder family moves from
+`8a02be14d3980cd3` to `6b3b0c88a12efe80`. A newly surfaced
+`verify_admission` attribution-helper family was deduped by extracting the
+shared `visit_subtree` traversal, so the reviewed default-surface count
+remains 54; no budget increase is accepted.
+
 ## Verdict by candidate (critically)
 
 | family | what it is | judgment | action |

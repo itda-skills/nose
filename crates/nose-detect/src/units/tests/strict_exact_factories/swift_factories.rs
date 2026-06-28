@@ -2,7 +2,10 @@ use super::*;
 use crate::strict_exact::{
     strict_exact_swift_collection_factory_safe, strict_exact_swift_map_factory_safe,
 };
-use nose_semantics::library_swift_map_factory_contract;
+use nose_normalize::{normalize, NormalizeOptions};
+use nose_semantics::{
+    library_free_name_collection_factory_contract, library_swift_map_factory_contract,
+};
 
 #[test]
 fn strict_exact_swift_factories_use_library_api_evidence_and_shape_boundaries() {

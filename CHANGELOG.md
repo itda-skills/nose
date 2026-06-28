@@ -6,6 +6,13 @@ break.
 
 ## [Unreleased]
 
+### Fixed
+- Fixed repository CI by splitting the latest recall-loss, exact-admission,
+  strict-exact factory, semantic-idiom, and post-lower library API files back
+  under the Rust file-length ratchet, and by updating the async-mirror query JSON
+  test to assert the documented near/shared-core witness contract instead of a
+  stale shared-core family count.
+
 ### Added
 - Added the builtin `nose.protocols.string_affix_predicates` protocol pack for
   case-sensitive receiver-method prefix/suffix predicates, moving those rows out

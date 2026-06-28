@@ -102,8 +102,15 @@ and behavior easier to reason about:
 - keep deprecated `nose scan` report rendering and gate output outside the
   dispatcher; the JSON/markdown/human/SARIF format switch, hotspots, and
   reinvented-helper report section now live in `nose-cli/src/scan_report.rs`;
-- keep post-lower Library API recognition out of the shared lowering context;
-  the first pass lives in `nose-frontend/src/lower/library_api_post_lower.rs`;
+- keep local recall-loss reporting split by responsibility; the JSON model and
+  obligation rollups now live under `nose-cli/src/recall_loss_report/` instead
+  of growing the report writer root;
+- keep exact-admission rejection attribution split by proof surface; runtime
+  boundary, HOF demand/effect, and callee-identity labels now live under
+  `nose-cli/src/verify_admission/`;
+- keep post-lower Library API recognition out of the shared lowering context and
+  split by semantic surface; the dispatch root plus focused handlers live under
+  `nose-frontend/src/lower/library_api_post_lower/`;
 - keep shared frontend control-flow lowering out of the shared lowering context;
   `switch`, `if`, `while`, block-wrapping, and C-style `for` helpers now live in
   `nose-frontend/src/lower/control_flow.rs`;
