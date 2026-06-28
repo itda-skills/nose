@@ -7,8 +7,7 @@ duplication has **one entry point** (`nose query`); markdown is surfaced there e
 CSS/HTML declarative track is, not as a separate command.
 
 It is a deliberately **separate engine** from the code-clone pipeline: prose is not code, so it does
-not go through the value-graph IL. Instead it runs the character-n-gram pipeline validated by the
-[algorithm survey](markdown-dup-detection-algorithm-survey-2026-06-18.md).
+not go through the value-graph IL. Instead it runs the character-n-gram pipeline validated by the [algorithm survey](markdown-dup-detection-algorithm-survey-2026-06-18.md).
 
 Scope (fixed): **same-language only.** Cross-lingual / translation duplication is out of scope (it
 needs an LLM). Paraphrase / Type-4 semantic equivalence is also out of scope for the same reason.

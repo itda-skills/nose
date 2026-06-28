@@ -179,13 +179,11 @@ tranches:
 - #167 shipped the first compiled LawPack pilot and family-level value-law
   provenance.
 
-The #109 closeout is recorded in
-[semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).
+The #109 closeout is recorded in [semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).
 
 ## See also
 
 Back to [semantic-kernel](semantic-kernel.md). Current implementation status is
 in [semantic-kernel-snapshot](semantic-kernel-snapshot.md); remaining work is
 tracked in [semantic-kernel-roadmap](semantic-kernel-roadmap.md). The later
-closeout for the #150-#157 foundation tranche is in
-[semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).
+closeout for the #150-#157 foundation tranche is in [semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).

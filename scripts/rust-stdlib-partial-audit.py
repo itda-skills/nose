@@ -21,7 +21,8 @@ from typing import Any
 
 DEFAULT_MANIFEST = "bench/goldens/corpus.json"
 DEFAULT_REPOS_ROOT = "bench/repos"
-DEFAULT_OUTPUT = "target/rust-stdlib-partial-audit.v1.json"
+DEFAULT_OUTPUT = "target/rust-stdlib-partial-audit.v2.json"
+HIGH_VOLUME_PROCESSING_THRESHOLD = 5000
 
 SKIP_DIRS = {
     ".git",
@@ -299,6 +300,12 @@ SUPPORTED_PARTIAL_METHODS: dict[str, tuple[str, str, str, str]] = {
         "option-result-channel",
         "Result predicate needs exact Result receiver proof",
     ),
+    "is_none": (
+        "rust.stdlib.option",
+        "option-predicate-proof",
+        "option-result-channel",
+        "Option absence predicate has generic method-call support with exact Option receiver proof",
+    ),
     "is_some": (
         "rust.stdlib.option",
         "option-predicate-proof",
@@ -323,6 +330,60 @@ SUPPORTED_PARTIAL_METHODS: dict[str, tuple[str, str, str, str]] = {
         "iterator-hof-materialization",
         "iterator HOF needs receiver, callback, and demand/effect proof",
     ),
+    "count": (
+        "rust.stdlib.iterators",
+        "iterator-terminal-count",
+        "iterator-hof-materialization",
+        "terminal iterator count has method-call support with explicit protocol receiver proof",
+    ),
+    "extend": (
+        "rust.stdlib.mutation",
+        "mutation-effect",
+        "effect-preserving-contracts",
+        "receiver mutation evidence exists; exact value admission stays closed after mutation",
+    ),
+    "insert": (
+        "rust.stdlib.mutation",
+        "mutation-effect",
+        "effect-preserving-contracts",
+        "receiver mutation evidence exists; exact value admission stays closed after mutation",
+    ),
+    "push": (
+        "rust.stdlib.mutation",
+        "mutation-effect",
+        "effect-preserving-contracts",
+        "builder append and receiver mutation evidence exist under effect-gated proof",
+    ),
+    "remove": (
+        "rust.stdlib.mutation",
+        "mutation-effect",
+        "effect-preserving-contracts",
+        "receiver mutation evidence exists; exact value admission stays closed after mutation",
+    ),
+    "sort": (
+        "rust.stdlib.ordering",
+        "mutation-effect",
+        "effect-preserving-contracts",
+        "receiver mutation evidence exists; sortedness semantics remain closed",
+    ),
+    "sort_by": (
+        "rust.stdlib.ordering",
+        "mutation-callback",
+        "effect-preserving-contracts",
+        "receiver mutation evidence exists; comparator semantics remain closed",
+    ),
+    "sort_by_key": (
+        "rust.stdlib.ordering",
+        "mutation-callback",
+        "effect-preserving-contracts",
+        "receiver mutation evidence exists; key/comparator semantics remain closed",
+    ),
+    "sort_unstable": (
+        "rust.stdlib.ordering",
+        "mutation-effect",
+        "effect-preserving-contracts",
+        "receiver mutation evidence exists; sortedness semantics remain closed",
+    ),
     "to_vec": (
         "rust.stdlib.iterators",
         "collection-result-domain",
@@ -341,6 +402,99 @@ SUPPORTED_PARTIAL_METHODS: dict[str, tuple[str, str, str, str]] = {
         "option-result-channel",
         "unwrap_or_else is admitted only through exact Option or nested map-get proof",
     ),
+}
+
+PROCESSING_DECISIONS: dict[str, dict[str, Any]] = {
+    "rust-iterator-domain-proof": {
+        "sequence": 2,
+        "status": "processed-existing-contract",
+        "semantic_admission_delta": 0,
+        "strictness_effect": "unchanged",
+        "decision": (
+            "Keep iter/into_iter/iter_mut/copied/cloned/to_vec on the existing "
+            "IteratorIdentityAdapter row and require receiver-domain proof."
+        ),
+        "closed_boundary": (
+            "collect remains type-directed and does not assert collection result "
+            "domain without caller-selected result-type proof."
+        ),
+        "next_metric": (
+            "Track how many iterator adapter calls materialize Domain(Iterator) or "
+            "Domain(Collection) evidence, and how many fail receiver-domain proof."
+        ),
+    },
+    "rust-option-result-channel": {
+        "sequence": 3,
+        "status": "processed-contract-alignment",
+        "semantic_admission_delta": 0,
+        "strictness_effect": "unchanged",
+        "decision": (
+            "Align the audit with existing Option/Result channel contracts: "
+            "is_some/is_none/is_ok/is_err/and_then/default helpers stay exact-receiver gated."
+        ),
+        "closed_boundary": (
+            "Option-producing iterator APIs such as find still require callback and "
+            "result-channel proof before admission."
+        ),
+        "next_metric": (
+            "Split channel misses by exact Option receiver, exact Result receiver, "
+            "default argument, callback, and option-producing iterator source."
+        ),
+    },
+    "rust-hof-callback-proof": {
+        "sequence": 4,
+        "status": "processed-existing-contract",
+        "semantic_admission_delta": 0,
+        "strictness_effect": "unchanged",
+        "decision": (
+            "Keep Rust iterator HOFs on the sequence-HOF protocol row with explicit "
+            "protocol receiver and callback demand/effect proof."
+        ),
+        "closed_boundary": (
+            "Selector-only map/filter/any/all evidence, eager callback assumptions, "
+            "and missing terminal proof remain closed."
+        ),
+        "next_metric": (
+            "Track HOF misses by receiver proof, callback identity, callback effect, "
+            "and terminal materialization proof."
+        ),
+    },
+    "rust-iterator-view-lifecycle": {
+        "sequence": 6,
+        "status": "processed-boundary-split",
+        "semantic_admission_delta": 0,
+        "strictness_effect": "unchanged",
+        "decision": (
+            "Separate type-directed materializers, slice views, index views, zip views, "
+            "terminal count, chain, and partition instead of admitting a broad iterator-view API."
+        ),
+        "closed_boundary": (
+            "Views with lifecycle/cardinality obligations remain closed until the kernel "
+            "can represent one-shot consumption, ordering, and result shape."
+        ),
+        "next_metric": (
+            "Track each view subtype separately and require a fixture before moving any "
+            "subtype from closed boundary to admitted contract."
+        ),
+    },
+    "rust-mutation-effect-contracts": {
+        "sequence": 7,
+        "status": "processed-effect-contract-alignment",
+        "semantic_admission_delta": 0,
+        "strictness_effect": "stricter",
+        "decision": (
+            "Treat collection/map mutations as effect evidence, not pure value APIs; "
+            "add the missing Rust sort_by_key receiver-mutation row."
+        ),
+        "closed_boundary": (
+            "Mutating calls still do not produce exact value equivalence; they only "
+            "mark receiver mutation so later strict receiver use can close safely."
+        ),
+        "next_metric": (
+            "Track mutation/effect misses by covered receiver-mutation rows, builder "
+            "append rows, callback-effect rows, and unsupported ordering callbacks."
+        ),
+    },
 }
 
 UNSUPPORTED_METHODS: dict[str, tuple[str, str, str, str]] = {
@@ -768,6 +922,33 @@ def next_work_group(status: str, boundary: str, capability: str) -> tuple[str, s
     )
 
 
+def processed_high_volume_groups(ranked_next_work: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    processed: list[dict[str, Any]] = []
+    for group in ranked_next_work:
+        if group["occurrences"] < HIGH_VOLUME_PROCESSING_THRESHOLD:
+            continue
+        decision = PROCESSING_DECISIONS.get(group["id"])
+        if decision is None:
+            decision = {
+                "status": "unprocessed-high-volume-group",
+                "semantic_admission_delta": 0,
+                "strictness_effect": "unchanged",
+                "decision": "No processing decision is recorded for this high-volume group yet.",
+                "next_metric": "Add a processing decision before using this group for implementation.",
+            }
+        processed.append(
+            {
+                "id": group["id"],
+                "capability": group["capability"],
+                "occurrences": group["occurrences"],
+                "repos": group["repos"],
+                "top_surfaces": group["top_surfaces"],
+                **decision,
+            }
+        )
+    return sorted(processed, key=lambda group: group.get("sequence", 999))
+
+
 def main() -> int:
     args = parse_args()
     repos_root = Path(args.repos_root)
@@ -844,9 +1025,25 @@ def main() -> int:
         next_surfaces[group][f"{surface}.{operation}:{boundary}"] += occurrences
         next_repos[group].update(row_repos[key].keys())
 
+    ranked_next_work = [
+        {
+            "id": group_id,
+            "capability": capability,
+            "occurrences": count,
+            "repos": len(next_repos[group]),
+            "policy": policy,
+            "top_surfaces": [
+                {"surface": surface, "occurrences": surface_count}
+                for surface, surface_count in next_surfaces[group].most_common(8)
+            ],
+        }
+        for group, count in sorted(next_counts.items(), key=lambda item: (-item[1], item[0][0]))
+        for group_id, capability, policy in [group]
+    ]
+
     report = {
         "report_kind": "rust-stdlib-partial-audit",
-        "schema_version": 1,
+        "schema_version": 2,
         "manifest": args.manifest,
         "repos_root": args.repos_root,
         "scanned_rust_repos": len(rust_repos(Path(args.manifest))),
@@ -861,23 +1058,9 @@ def main() -> int:
         "status_counts": dict(sorted(status_counts.items())),
         "surface_counts": dict(sorted(surface_counts.items())),
         "boundary_counts": dict(sorted(boundary_counts.items())),
-        "ranked_next_work": [
-            {
-                "id": group_id,
-                "capability": capability,
-                "occurrences": count,
-                "repos": len(next_repos[group]),
-                "policy": policy,
-                "top_surfaces": [
-                    {"surface": surface, "occurrences": surface_count}
-                    for surface, surface_count in next_surfaces[group].most_common(8)
-                ],
-            }
-            for group, count in sorted(
-                next_counts.items(), key=lambda item: (-item[1], item[0][0])
-            )
-            for group_id, capability, policy in [group]
-        ],
+        "ranked_next_work": ranked_next_work,
+        "processing_threshold_occurrences": HIGH_VOLUME_PROCESSING_THRESHOLD,
+        "processed_high_volume_groups": processed_high_volume_groups(ranked_next_work),
         "operations": report_rows,
     }
     output = Path(args.output)

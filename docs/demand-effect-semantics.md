@@ -141,7 +141,8 @@ work includes:
 
 ## See also
 
-- [semantic-kernel](semantic-kernel.md)
+- [semantic-kernel](semantic-kernel.md) defines the exact-admission boundary that
+  consumes demand and effect evidence.
 - The implemented code shape is summarized in
   [semantic-kernel-snapshot](semantic-kernel-snapshot.md); remaining work is
   tracked in [semantic-kernel-roadmap](semantic-kernel-roadmap.md).

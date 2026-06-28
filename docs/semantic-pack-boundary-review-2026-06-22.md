@@ -22,14 +22,22 @@ No release-blocking kernel/pack boundary issue was found.
 
 Docs reviewed:
 
-- [semantic-kernel](semantic-kernel.md)
-- [semantic-pack-architecture](semantic-pack-architecture.md)
-- [semantic-pack-adoption](semantic-pack-adoption.md)
-- [semantic-pack-compatibility](semantic-pack-compatibility.md)
-- [semantic-pack-conformance](semantic-pack-conformance.md)
-- [semantic-pack-loading](semantic-pack-loading.md)
-- [capabilities](capabilities.md)
-- [semantic-pack-ecosystem-candidates](semantic-pack-ecosystem-candidates.md)
+- [semantic-kernel](semantic-kernel.md) was reviewed for exact-admission
+  ownership.
+- [semantic-pack-architecture](semantic-pack-architecture.md) was reviewed for
+  the builtin-first operating model.
+- [semantic-pack-adoption](semantic-pack-adoption.md) was reviewed for promotion
+  and rollback gates.
+- [semantic-pack-compatibility](semantic-pack-compatibility.md) was reviewed for
+  version and output-compatibility policy.
+- [semantic-pack-conformance](semantic-pack-conformance.md) was reviewed for
+  local provider/user validation behavior.
+- [semantic-pack-loading](semantic-pack-loading.md) was reviewed for manifest
+  discovery and metadata-only external loading.
+- [capabilities](capabilities.md) was reviewed for the capability-over-feature
+  framing.
+- [semantic-pack-ecosystem-candidates](semantic-pack-ecosystem-candidates.md) was
+  reviewed for candidate scope discipline.
 
 Code reviewed:
 
@@ -135,8 +143,7 @@ before broad ecosystem work or external influence:
 - Expand the builtin inventory audit from pack-level fixture counts to row-level
   fixture coverage in a future schema version.
 - Run the release query-regression and corpus-verify gates on the final release
-  candidate. If detection output changes, follow the
-  [hazard-release-checklist](hazard-release-checklist.md).
+  candidate. If detection output changes, follow the [hazard-release-checklist](hazard-release-checklist.md).
 
 ## Release Readiness Checklist
 
@@ -171,8 +178,13 @@ review and should still be re-run on the final release candidate.
 
 ## Related
 
-- [semantic-pack-architecture](semantic-pack-architecture.md)
-- [semantic-pack-adoption](semantic-pack-adoption.md)
-- [semantic-pack-compatibility](semantic-pack-compatibility.md)
-- [semantic-pack-conformance](semantic-pack-conformance.md)
-- [semantic-pack-ecosystem-candidates](semantic-pack-ecosystem-candidates.md)
+- [semantic-pack-architecture](semantic-pack-architecture.md) defines the
+  boundary reviewed here.
+- [semantic-pack-adoption](semantic-pack-adoption.md) defines promotion gates
+  for future boundary changes.
+- [semantic-pack-compatibility](semantic-pack-compatibility.md) defines
+  compatibility expectations for descriptor and behavior changes.
+- [semantic-pack-conformance](semantic-pack-conformance.md) defines the local
+  validation workflow used by providers and users.
+- [semantic-pack-ecosystem-candidates](semantic-pack-ecosystem-candidates.md) keeps
+  future pack work scoped to concrete ecosystems.

@@ -4,9 +4,12 @@ Status: issue #511 R4 implementation record.
 
 Source artifacts:
 
-- [external_authorability_matrix.v1.json](../bench/semantic_pack/external_authorability_matrix.v1.json)
-- [external-guava-immutable-collections-pack.json](examples/semantic-packs/v0/external-guava-immutable-collections-pack.json)
-- [kernel_capability_matrix.v4.json](../bench/semantic_pack/kernel_capability_matrix.v4.json)
+- Matrix [external_authorability_matrix.v1.json](../bench/semantic_pack/external_authorability_matrix.v1.json)
+  records the external-authorability decision matrix.
+- Example [external-guava-immutable-collections-pack.json](examples/semantic-packs/v0/external-guava-immutable-collections-pack.json)
+  is the dry-run external pack used to test schema authorability.
+- Matrix [kernel_capability_matrix.v4.json](../bench/semantic_pack/kernel_capability_matrix.v4.json)
+  records the builtin capability baseline that R4 tried to expose safely.
 
 ## Goal
 
@@ -24,8 +27,7 @@ The answer is partial but useful:
 
 ## Dry-Run Pack
 
-The dry-run pack is
-[`com.example.java-guava-immutable-collections`](examples/semantic-packs/v0/external-guava-immutable-collections-pack.json).
+The dry-run pack is [`com.example.java-guava-immutable-collections`](examples/semantic-packs/v0/external-guava-immutable-collections-pack.json).
 It models a realistic Guava slice from the blocker corpus:
 `ImmutableList.of(...)` and `ImmutableSet.of(...)` as fixed `Collection`
 result-domain factory calls.
@@ -107,7 +109,6 @@ R4 is complete enough to move #511 to R5:
 R5 should focus on narrow HOF, demand, and materialization boundaries. It should
 not admit broad generic HOF result domains. The R5 result is recorded in
 [semantic-kernel-hof-demand-511](semantic-kernel-hof-demand-511.md), and the
-issue closeout is recorded in
-[semantic-kernel-expansion-closeout-511](semantic-kernel-expansion-closeout-511.md).
+issue closeout is recorded in [semantic-kernel-expansion-closeout-511](semantic-kernel-expansion-closeout-511.md).
 
 Back to [semantic-kernel](semantic-kernel.md).

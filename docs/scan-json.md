@@ -64,8 +64,7 @@ The top-level value is always an object:
 }
 ```
 
-A checked-in example lives at
-[crates/nose-cli/tests/fixtures/scan-json-v1.json](../crates/nose-cli/tests/fixtures/scan-json-v1.json)
+A checked-in example lives at [crates/nose-cli/tests/fixtures/scan-json-v1.json](../crates/nose-cli/tests/fixtures/scan-json-v1.json)
 and is read by the CLI test suite. `tool_version` is shown above as the `<version>`
 placeholder: it always reports the installed binary's own version, so the example does not
 pin a release. Semantic-pack metadata is query-only in

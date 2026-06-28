@@ -6,8 +6,7 @@ blow-by-blow (every intermediate baseline and rejected parameter sweep) lives in
 history; this page keeps the lessons. Sections are lettered chronologically (A…BF);
 other docs and code comments cite them as `§<letter>`, so the letters are stable anchors.
 The methodology and headline numbers are summarized in [benchmark](benchmark.md); the passes
-these experiments shaped are in [normalization](normalization.md) and
-[architecture](architecture.md).
+these experiments shaped are in [normalization](normalization.md) and [architecture](architecture.md).
 
 The current user-facing `nose query` command has three channels (`syntax`, `semantic`,
 `near`), described in [usage](usage.md); they share one lower → normalize → feature
@@ -2575,8 +2574,7 @@ it, no further. Issue #329.
 The triage-noise feedback ([#263](https://github.com/corca-ai/nose/issues/263) TS/React,
 [#264](https://github.com/corca-ai/nose/issues/264) Go-CLI, [#11](https://github.com/corca-ai/nose/issues/11)
 reason codes) was re-judged against the current binary on two public unseen repos
-(goreleaser, excalidraw) — the §2c fresh-repo head-of-ranking instrument. Full record:
-[default-surface-noise-audit-2026-06-14](default-surface-noise-audit-2026-06-14.md).
+(goreleaser, excalidraw) — the §2c fresh-repo head-of-ranking instrument. Full record: [default-surface-noise-audit-2026-06-14](default-surface-noise-audit-2026-06-14.md).
 
 **Both complaints reproduce**: the bare-default head is 60–76% test scope and 74–83%
 `copy-paste-run`; the proven moat is 4–5% of the default surface. A 206-family

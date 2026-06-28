@@ -48,8 +48,7 @@ The conformance command validates manifest structure, trust policy, dependency
 references, exact-capable contract obligations, conformance fixture references,
 fixture expectation labels, executable fixture-expectation gates, and fixture
 file existence. It does not execute external producers, provider commands, or
-fixture contents, and it does not certify semantic correctness. See
-[semantic-pack-conformance](semantic-pack-conformance.md).
+fixture contents, and it does not certify semantic correctness. See [semantic-pack-conformance](semantic-pack-conformance.md).
 
 ## Trust policy
 
@@ -223,7 +222,11 @@ code execution, parser/lowering plugins, or manifest presence alone.
 
 ## See also
 
-- [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md)
-- [semantic-pack-conformance](semantic-pack-conformance.md)
-- [semantic-pack-compatibility](semantic-pack-compatibility.md)
-- [semantic-kernel](semantic-kernel.md)
+- [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md) defines
+  the manifest schema that loading consumes.
+- [semantic-pack-conformance](semantic-pack-conformance.md) describes validation
+  before manifests are trusted for reporting.
+- [semantic-pack-compatibility](semantic-pack-compatibility.md) records version
+  and output compatibility policy for loaded packs.
+- [semantic-kernel](semantic-kernel.md) owns the exact-admission boundary that
+  loaded external manifests cannot bypass.

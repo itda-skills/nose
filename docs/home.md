@@ -22,12 +22,10 @@ The pages are grouped by what you're here to do.
   `nose query <path>` to explore interactively (follow the suggested next-commands), or
   `nose query <path> --format markdown` for a one-shot ranked report.
 - **Automating triage:** run `nose query <path>` for the human-readable loop, or
-  `nose query <path> --format json` for tooling. Agent-specific guidance is in
-  [agent-recipe](agent-recipe.md).
+  `nose query <path> --format json` for tooling. Agent-specific guidance is in [agent-recipe](agent-recipe.md).
 - **Adding a repo gate:** pin the detection surface and the size budget, for example
   `nose query <path> --mode syntax --min-size 80 'dup>80' --fail-on any`; see
-  [continuous integration](continuous-integration.md), then commit shared defaults from
-  [configuration](configuration.md).
+  [continuous integration](continuous-integration.md), then commit shared defaults from [configuration](configuration.md).
 - **Building an integration:** use [capabilities](capabilities.md) before invoking a binary
   and parse [query JSON](query-json.md), not human output.
 
@@ -136,5 +134,4 @@ fundamentals; the rest is grouped by area.
 - [default-surface-noise-audit-2026-06-14](default-surface-noise-audit-2026-06-14.md) — re-judging the #263/#264/#11/#353 triage-noise feedback on fresh repos: the default-surface noise is two populations (decidable-shape vs judgment-deep AAA scaffolding), and the principle-respecting lever.
 
 The contributor workflow and quality gates live in
-[CONTRIBUTING](../CONTRIBUTING.md); release history is in
-[CHANGELOG](../CHANGELOG.md).
+[CONTRIBUTING](../CONTRIBUTING.md); release history is in [CHANGELOG](../CHANGELOG.md).

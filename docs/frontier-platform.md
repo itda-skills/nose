@@ -85,8 +85,7 @@ metadata. Two staleness guards run on every build and `--selftest`: the #44
 conclusion cannot silently drift when an axis is added or removed.
 
 The first extra axis is `numeric_clamp` — `min(max(x, lo), hi)` clamp composition, a real
-frontier packet whose identity and hard negatives are machine-checked in
-[formal/obligations/normalize/value_graph/clamp/Proof.lean](../formal/obligations/normalize/value_graph/clamp/Proof.lean).
+frontier packet whose identity and hard negatives are machine-checked in [formal/obligations/normalize/value_graph/clamp/Proof.lean](../formal/obligations/normalize/value_graph/clamp/Proof.lean).
 The proof-backed integer min/max composition slice now canonicalizes when `lo <= hi` is
 established by literal bounds, an exiting inverse guard, or a branch-local positive
 guard. The surface bridge also covers

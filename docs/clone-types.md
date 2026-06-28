@@ -187,16 +187,14 @@ out-of-scope list live in [languages](languages.md); the taxonomy mapping is:
   family even when values are spelled differently, and two markup blocks that render the
   same DOM are one exact family. The canonicalization and cascade rules that keep this
   sound — and where it deliberately refuses to merge — are in
-  [languages › declarative CSS](languages.md#declarative-languages-css) and
-  [HTML markup](languages.md#declarative-languages-html-markup).
+  [languages › declarative CSS](languages.md#declarative-languages-css) and [HTML markup](languages.md#declarative-languages-html-markup).
 
 **Soundness** is by construction plus adversarial batteries (the mechanism, value
 canonicalization, and cascade rules are in the [languages](languages.md) links above); the
 taxonomy-relevant consequence is that the CSS, HTML, and imperative fingerprints are
 domain-disjoint, so the language-blind exact channel can never merge across them. What
 declarative detection does **not** do — SCSS/Less, cross-file `var()` resolution, full
-Svelte block grammar — is in
-[languages › cross-dialect markup](languages.md#cross-dialect-markup-htmlvuesveltejsxtsx).
+Svelte block grammar — is in [languages › cross-dialect markup](languages.md#cross-dialect-markup-htmlvuesveltejsxtsx).
 
 ## Detection modes, and cross-language
 

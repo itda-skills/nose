@@ -324,8 +324,7 @@ downstream value-graph.
   inline stack), arity mismatches, and bodies past a size ceiling never inline.
   Helpers that pass the shape walk but never inline are still seeded with a
   content-keyed identity, so two same-named helpers with different bodies keep
-  distinct fingerprints at their call sites. This substrate also powers the
-  [reinvented-helper containment channel](reinvented-helpers.md).
+  distinct fingerprints at their call sites. This substrate also powers the [reinvented-helper containment channel](reinvented-helpers.md).
 
 ## Track 2 — Algebraic expression canonicalization (E-graph)
 
@@ -390,10 +389,8 @@ enclosing function unit. A raw callee spelling is not enough. Anything else is
 left untouched. Broader call-target records such as `DirectMethod`,
 `ImportedFunction`, `ImportedMember`, and `DynamicDispatch` are available to exact
 callee-identity consumers, but they do not currently authorize recursion rewrites.
-The proof obligations
-[normalize.recursion.tail](../formal/obligations/normalize/recursion/tail/Proof.lean)
-and
-[normalize.recursion.structural_fold](../formal/obligations/normalize/recursion/structural_fold/Proof.lean)
+The proof obligations [normalize.recursion.tail](../formal/obligations/normalize/recursion/tail/Proof.lean)
+and [normalize.recursion.structural_fold](../formal/obligations/normalize/recursion/structural_fold/Proof.lean)
 record the tail-loop equivalence, the numeric `+`/`*` fold laws, and boundary
 counterexamples for cyclic tail-call bindings, subtraction, and wrong identities.
 **Soundness** is checked, not assumed: the interpreter

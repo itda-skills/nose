@@ -7,10 +7,14 @@ expansion.
 
 Source artifacts:
 
-- [candidate_pricing.v1.json](../bench/semantic_pack/candidate_pricing.v1.json)
-- [kernel_capability_matrix.v1.json](../bench/semantic_pack/kernel_capability_matrix.v1.json)
-- [blocker_packet.v2.json](../bench/semantic_pack/blocker_packet.v2.json)
-- [kernel_capability_matrix.v2.json](../bench/semantic_pack/kernel_capability_matrix.v2.json)
+- Artifact [candidate_pricing.v1.json](../bench/semantic_pack/candidate_pricing.v1.json)
+  records the #507 priced candidate input that shaped this expansion.
+- Matrix [kernel_capability_matrix.v1.json](../bench/semantic_pack/kernel_capability_matrix.v1.json)
+  records the #507 capability baseline before this pass.
+- Packet [blocker_packet.v2.json](../bench/semantic_pack/blocker_packet.v2.json)
+  records the #509 probe packet used to choose builtin work.
+- Matrix [kernel_capability_matrix.v2.json](../bench/semantic_pack/kernel_capability_matrix.v2.json)
+  records the accepted/rejected capability decisions for this pass.
 
 ## Goal
 
@@ -28,8 +32,8 @@ packs, without adding speculative primitives. The rule for this pass:
 
 ## Probe Packet
 
-[`blocker_packet.v2.json`](../bench/semantic_pack/blocker_packet.v2.json)
-records 20 probes over Guava, Rails, Go maps, Rust iterators, Python itertools,
+The [`blocker_packet.v2.json`](../bench/semantic_pack/blocker_packet.v2.json)
+artifact records 20 probes over Guava, Rails, Go maps, Rust iterators, Python itertools,
 RxJS, Lodash, NumPy, pandas, Java streams, Rust options, JS promises, map key
 views, integer APIs, and one generic map-value counterexample.
 
@@ -102,19 +106,16 @@ fixed property of the admitted API row:
 | NumPy/pandas dtype or series rows | safe type/domain producers are still absent |
 | RxJS/lifecycle rows | scheduler and observable lifecycle proof are still absent |
 
-These are recorded in
-[`kernel_capability_matrix.v2.json`](../bench/semantic_pack/kernel_capability_matrix.v2.json)
+These are recorded in [`kernel_capability_matrix.v2.json`](../bench/semantic_pack/kernel_capability_matrix.v2.json)
 so future pack rows can reuse the blocker taxonomy instead of reopening the same
 argument from memory.
 
 ## Implementation
 
-The result-domain table lives with receiver-method API rows in
-[`receiver.rs`](../crates/nose-semantics/src/library_api/rows/methods/receiver.rs).
+The result-domain table lives with receiver-method API rows in [`receiver.rs`](../crates/nose-semantics/src/library_api/rows/methods/receiver.rs).
 The registry exposes the same result-domain lookup for contract consumers in
 [`registry.rs`](../crates/nose-semantics/src/library_api/registry.rs). The
-normalizer emits dependency-backed call-node domain evidence in
-[`recording.rs`](../crates/nose-normalize/src/library_api_evidence/recording.rs).
+normalizer emits dependency-backed call-node domain evidence in [`recording.rs`](../crates/nose-normalize/src/library_api_evidence/recording.rs).
 
 Focused tests cover both the safe rows and the hard negatives:
 

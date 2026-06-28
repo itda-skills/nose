@@ -68,8 +68,7 @@ and the local loader rejects unknown fields and enum values. Adding fields,
 adding enum values, removing fields, changing the meaning of an existing field,
 or changing exact-channel admission rules requires a new API version.
 The loader also compares `compatibility.nose` with the installed nose binary
-version and rejects manifests whose range does not include that version. See
-[semantic-pack-compatibility](semantic-pack-compatibility.md).
+version and rejects manifests whose range does not include that version. See [semantic-pack-compatibility](semantic-pack-compatibility.md).
 
 ## Manifest Shape
 
@@ -640,10 +639,17 @@ in [source-facts](source-facts.md).
 
 Schema artifacts:
 
-- [semantic-pack-v0 schema](schemas/semantic-pack-v0.schema.json)
-- [language-pack example](examples/semantic-packs/v0/language-pack.json)
-- [library-pack example](examples/semantic-packs/v0/library-pack.json)
-- [law-pack example](examples/semantic-packs/v0/law-pack.json)
-- [Python stdlib type-domain pack example](examples/semantic-packs/v0/python-typing-domain-pack.json)
-- [semantic-pack-conformance](semantic-pack-conformance.md)
-- [semantic-pack-loading](semantic-pack-loading.md)
+- [semantic-pack-v0 schema](schemas/semantic-pack-v0.schema.json) is the
+  machine-validated v0 manifest schema.
+- [language-pack example](examples/semantic-packs/v0/language-pack.json) shows a
+  language-level descriptor.
+- [library-pack example](examples/semantic-packs/v0/library-pack.json) shows a
+  library-level descriptor.
+- [law-pack example](examples/semantic-packs/v0/law-pack.json) shows a law-level
+  descriptor.
+- Example [Python stdlib type-domain pack example](examples/semantic-packs/v0/python-typing-domain-pack.json)
+  shows a stdlib type-domain descriptor.
+- [semantic-pack-conformance](semantic-pack-conformance.md) documents local
+  validation against this schema.
+- [semantic-pack-loading](semantic-pack-loading.md) documents how validated
+  manifests are loaded and reported.

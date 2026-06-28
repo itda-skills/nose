@@ -148,8 +148,7 @@ across languages, held to the same rubric.
 > Python rarely converges to one value-fingerprint. So the S/X balance goal is reported
 > as a **measured limit**: tag a repo X only after confirming it yields cross-language
 > families (`languages > 1`) — and expect very few. Define the stratum **per family**
-> (`languages > 1`), never per repo (a polyglot repo is ~98% same-language clones). See
-> [eval/hazard/RESULTS.md](../eval/hazard/RESULTS.md).
+> (`languages > 1`), never per repo (a polyglot repo is ~98% same-language clones). See [eval/hazard/RESULTS.md](../eval/hazard/RESULTS.md).
 
 ### How much is enough — quantitative sufficiency
 
@@ -256,8 +255,7 @@ The dataset is built from detection output + git, **never from ranking**, so cha
 Refresh is a fast, automated re-run (cached clones; the optimized miner re-scans and
 re-labels in minutes), not a rebuild — the same harness *detects* whether a release
 needs re-tuning by comparing weights across `nose_ver`. The **step-by-step release
-procedure, decision table, and acceptance criteria** live in one place:
-[hazard-release-checklist](hazard-release-checklist.md).
+procedure, decision table, and acceptance criteria** live in one place: [hazard-release-checklist](hazard-release-checklist.md).
 
 ## Threats to validity
 

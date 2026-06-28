@@ -125,8 +125,7 @@ experiments §T for the throughput work.
 Current corpus speed budget: a 2026-06-19 release-build pass over the checked-out
 `bench/repos` corpus (`target/release/nose query bench/repos/<repo>`, one repo at a time)
 completed **150/150 repos successfully**, **0 repos at or above 4s**, **82.063s total**, max
-**3.989s** (`sympy`). The saved run is `target/corpus-query-speed-release-0.13.3/summary.tsv`; see
-[experiments §CZ](experiments.md#cz-corpus-query-speed-budget-pass-2026-06-19).
+**3.989s** (`sympy`). The saved run is `target/corpus-query-speed-release-0.13.3/summary.tsv`; see [experiments §CZ](experiments.md#cz-corpus-query-speed-budget-pass-2026-06-19).
 
 ## The research commands
 

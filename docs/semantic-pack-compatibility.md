@@ -117,8 +117,13 @@ product output is unchanged except for additive metadata.
 
 ## Related
 
-- [semantic-pack-architecture](semantic-pack-architecture.md)
-- [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md)
-- [semantic-pack-conformance](semantic-pack-conformance.md)
-- [semantic-pack-loading](semantic-pack-loading.md)
-- [capabilities](capabilities.md)
+- [semantic-pack-architecture](semantic-pack-architecture.md) defines the
+  behavior boundary compatibility changes must preserve.
+- [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md) defines
+  the versioned schema surface.
+- [semantic-pack-conformance](semantic-pack-conformance.md) defines validation
+  checks for provider and user packs.
+- [semantic-pack-loading](semantic-pack-loading.md) describes how compatible
+  manifests are discovered.
+- [capabilities](capabilities.md) frames compatibility around durable
+  capabilities rather than feature count.

@@ -29,8 +29,8 @@ approximation. This is enforced by, in layers:
 - a **static** safety gate (`strict_exact_safe_tree`,
   `crates/nose-detect/src/strict_exact/`) on the accept path — no interpreter
   in the hot path, fully deterministic;
-- **per-rule Lean obligations** for the proof-sensitive canonicalizations
-  ([formal soundness](formal-soundness.md));
+- **per-rule Lean obligations** for the proof-sensitive canonicalizations,
+  tracked through [formal soundness](formal-soundness.md);
 - an **offline** interpreter oracle (`nose verify`) used as a differential-testing harness —
   *not* a runtime acceptance gate;
 - **adversarial per-rule batteries** that defend the guarantee as the rule set grows (this is

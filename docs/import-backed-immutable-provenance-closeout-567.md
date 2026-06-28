@@ -6,10 +6,8 @@ exact admission may use an imported value only when import/export identity,
 provider value shape, LibraryApi or domain proof, and provider/importer mutation
 exclusion are all proven.
 
-The durable metric artifact is
-[issue-567-closeout.v1.json](../bench/recall_loss/issue-567-closeout.v1.json).
-The phase artifacts are linked from
-[recall-loss-recovery-loop](recall-loss-recovery-loop.md).
+The durable metric artifact is [issue-567-closeout.v1.json](../bench/recall_loss/issue-567-closeout.v1.json).
+The phase artifacts are linked from [recall-loss-recovery-loop](recall-loss-recovery-loop.md).
 
 ## What changed
 
@@ -86,13 +84,17 @@ relaxing imported literal admission.
 
 That milestone is
 [#587](https://github.com/corca-ai/nose/issues/587). Its checked-in starting
-census is
-[issue-587-module-export-census.v1.json](../bench/recall_loss/issue-587-module-export-census.v1.json).
+census is [issue-587-module-export-census.v1.json](../bench/recall_loss/issue-587-module-export-census.v1.json).
 
 ## See also
 
-- [recall-loss-diagnostics](recall-loss-diagnostics.md)
-- [recall-loss-recovery-loop](recall-loss-recovery-loop.md)
-- [semantic-kernel-snapshot](semantic-kernel-snapshot.md)
-- [evidence-records](evidence-records.md)
-- [source-facts](source-facts.md)
+- [recall-loss-diagnostics](recall-loss-diagnostics.md) explains the bucket
+  taxonomy used to find the #567 import-backed gaps.
+- [recall-loss-recovery-loop](recall-loss-recovery-loop.md) defines the ongoing
+  strictness-preserving process that #567 fed back into.
+- [semantic-kernel-snapshot](semantic-kernel-snapshot.md) records the
+  implementation surface after the closeout.
+- [evidence-records](evidence-records.md) describes the evidence records that
+  import-backed provenance must satisfy.
+- [source-facts](source-facts.md) documents the source-origin facts consumed by
+  the provenance path.

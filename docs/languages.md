@@ -59,8 +59,7 @@ flags are source-surface facts: component-cased JSX tags carry `component-tag`, 
 rendered attributes carry `bound-attributes`, and only rendered static attributes carry
 `static-attrs-only`. Unknown origin is normal; it falls back to the legacy hint and never
 changes actionability, baselines, family ids, or structured ignores. Machine consumers can
-read the additive `locations[].origin` object in [query-JSON](query-json.md) and
-[scan-JSON](scan-json.md).
+read the additive `locations[].origin` object in [query-JSON](query-json.md) and [scan-JSON](scan-json.md).
 
 ## Declarative languages: CSS
 
@@ -213,8 +212,6 @@ object-surface, C type/preprocessor recovery, and CSS extension-surface tranches
 [experiments](experiments.md). The log records the
 full sequence of gap closures (Java records, Rust `async` blocks, Go/JS/TS/C/Java/Ruby/Swift
 `switch`/`case` shapes, and more); the
-convergence-test discipline that keeps each one honest is in
-[`CONTRIBUTING`](../CONTRIBUTING.md).
+convergence-test discipline that keeps each one honest is in [`CONTRIBUTING`](../CONTRIBUTING.md).
 
-For the planned pack-based language onboarding model, see
-[semantic-kernel-roadmap](semantic-kernel-roadmap.md).
+For the planned pack-based language onboarding model, see [semantic-kernel-roadmap](semantic-kernel-roadmap.md).

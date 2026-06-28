@@ -85,8 +85,7 @@ project paths do not depend on where `nose` was invoked. This applies to
 `semantic-packs` is additive with repeated `--semantic-pack` flags. Each entry is
 an explicit local opt-in to a semantic-pack v0 manifest file or a directory of
 direct `*.json` manifests. Loaded external packs are reported as `metadata-only`;
-they do not emit evidence or enable exact contracts yet. See
-[semantic-pack-loading](semantic-pack-loading.md).
+they do not emit evidence or enable exact contracts yet. See [semantic-pack-loading](semantic-pack-loading.md).
 
 ## Excludes
 
@@ -116,8 +115,7 @@ directory if it exists. Pass `--ignore-file <file>` to override the config for o
 run. Ignored families are hidden from the active report and from `--fail-on any` /
 `--fail-on new`.
 
-The file format, selector semantics, and expiry behavior are documented in
-[structured-ignores](structured-ignores.md).
+The file format, selector semantics, and expiry behavior are documented in [structured-ignores](structured-ignores.md).
 
 ## Inline suppression
 

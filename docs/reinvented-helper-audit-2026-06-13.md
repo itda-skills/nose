@@ -60,5 +60,4 @@ consumer model (§2), the calling agent prices the type adaptation cheaply; nose
 the witness, not the verdict. The [docs caveat](reinvented-helpers.md) on type-checking
 the suggested call stands.
 
-*See also: [reinvented-helpers](reinvented-helpers.md) · [design §2c](design.md) ·
-[field-evaluation](field-evaluation.md).*
+*See also: [reinvented-helpers](reinvented-helpers.md) · [design §2c](design.md) · [field-evaluation](field-evaluation.md).*

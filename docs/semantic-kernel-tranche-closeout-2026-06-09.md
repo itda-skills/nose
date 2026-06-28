@@ -85,5 +85,4 @@ large-file cleanup track rather than a semantic-kernel behavior migration.
 Back to [semantic-kernel](semantic-kernel.md). Current implementation status is
 in [semantic-kernel-snapshot](semantic-kernel-snapshot.md); long-range phases
 and history are in [semantic-kernel-roadmap](semantic-kernel-roadmap.md). This
-closeout updates the post-PR #147 audit recorded in
-[semantic-kernel-audit-2026-06-09](semantic-kernel-audit-2026-06-09.md).
+closeout updates the post-PR #147 audit recorded in [semantic-kernel-audit-2026-06-09](semantic-kernel-audit-2026-06-09.md).

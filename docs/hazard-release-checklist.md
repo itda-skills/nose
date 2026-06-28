@@ -8,15 +8,13 @@
 **Why this exists.** `hazard()`'s weights are *calibrated against mined data whose
 features (`mean_lines`, `modules`, `mean_sem`, `params`, …) are produced by nose*. A
 change to detection can silently invalidate those weights. The **labels** (G0/G1/G2) come
-from git history and are version-independent — see
-[hazard-benchmark › Versioning and refresh](hazard-benchmark.md#versioning-and-refresh-coupling-to-nose)
+from git history and are version-independent — see [hazard-benchmark › Versioning and refresh](hazard-benchmark.md#versioning-and-refresh-coupling-to-nose)
 for the full coupling model. This checklist makes the re-calibration step impossible to
 miss.
 
 > Status: `hazard()` is implemented as opt-in `--sort hazard` and calibrated as a
 > divergence-propensity signal ([eval/hazard/RESULTS.md](../eval/hazard/RESULTS.md)).
-> It is **not** the default and is **not** a validated harm ranker; see
-> [hazard-ranking](hazard-ranking.md).
+> It is **not** the default and is **not** a validated harm ranker; see [hazard-ranking](hazard-ranking.md).
 
 ## TL;DR — does this release change detection *output*?
 
@@ -48,8 +46,7 @@ feature value moved, refresh — it costs minutes (cached clones).
 
 ## The refresh procedure
 
-Tooling lives in [eval/hazard/](../eval/hazard/); methodology in
-[hazard-benchmark](hazard-benchmark.md).
+Tooling lives in [eval/hazard/](../eval/hazard/); methodology in [hazard-benchmark](hazard-benchmark.md).
 
 ```sh
 # 1. Build the new detector
@@ -69,12 +66,10 @@ python3 eval/hazard/tune.py "$WORK/all-events.jsonl"
 
 ## Reading the result — does the formula still hold?
 
-Compare `tune.py` output against the previous `nose_ver` recorded in
-[RESULTS.md](../eval/hazard/RESULTS.md):
+Compare `tune.py` output against the previous `nose_ver` recorded in [RESULTS.md](../eval/hazard/RESULTS.md):
 
 - **Weights stable** (same signs, similar relative magnitudes; best candidate-formula AUC
-  unchanged) → the formula still holds. Just bump the `nose_ver` line in
-  [RESULTS.md](../eval/hazard/RESULTS.md).
+  unchanged) → the formula still holds. Just bump the `nose_ver` line in [RESULTS.md](../eval/hazard/RESULTS.md).
 - **Weights drift** (a sign flips, or a different candidate formula now wins) → **re-calibrate**:
   1. Pick the new best candidate formula (or add one) in `tune.py`.
   2. Update the formula constants in `crates/nose-detect/src/report/model.rs` (`hazard()`).

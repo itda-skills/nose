@@ -27,7 +27,8 @@ warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 DEFAULT_MANIFEST = "bench/goldens/corpus.json"
 DEFAULT_REPOS_ROOT = "bench/repos"
-DEFAULT_OUTPUT = "target/python-hof-runtime-audit.v2.json"
+DEFAULT_OUTPUT = "target/python-hof-runtime-audit.v3.json"
+HIGH_VOLUME_PROCESSING_THRESHOLD = 5000
 
 SKIP_DIRS = {
     ".git",
@@ -136,6 +137,49 @@ MODULE_METHOD_BOUNDARIES: dict[tuple[str, str], tuple[str, str]] = {
     ("itertools", "takewhile"): ("predicate-iterator", "callback predicate iterator"),
     ("itertools", "tee"): ("iterator-lifecycle", "shared iterator buffering/lifecycle"),
     ("itertools", "zip_longest"): ("zip-variant", "zip with fill value"),
+}
+
+PROCESSING_DECISIONS: dict[str, dict[str, Any]] = {
+    "python-materializer-domain-proof": {
+        "sequence": 1,
+        "status": "processed-boundary-split",
+        "semantic_admission_delta": 0,
+        "strictness_effect": "unchanged",
+        "decision": (
+            "Keep Python materializers gated by existing LibraryApi occurrence, "
+            "unshadowed builtin proof, source-iterator provenance, and result-domain proof."
+        ),
+        "closed_boundary": (
+            "Lexical list/set/tuple/frozenset frequency alone is not semantic proof; "
+            "shadowed names, non-iterator inputs, and missing materializer evidence stay closed."
+        ),
+        "next_metric": (
+            "Measure admitted materializer calls by result domain and the remaining "
+            "source-iterator-provenance misses in recall-loss reports."
+        ),
+        "subgroups": [
+            {
+                "surface": "builtins.list",
+                "result_domain": "Collection",
+                "admission_policy": "unshadowed builtin plus admitted source iterator",
+            },
+            {
+                "surface": "builtins.set",
+                "result_domain": "Set",
+                "admission_policy": "unshadowed builtin plus admitted source iterator",
+            },
+            {
+                "surface": "builtins.tuple",
+                "result_domain": "Collection",
+                "admission_policy": "unshadowed builtin plus admitted source iterator",
+            },
+            {
+                "surface": "builtins.frozenset",
+                "result_domain": "Set",
+                "admission_policy": "unshadowed builtin plus admitted source iterator",
+            },
+        ],
+    },
 }
 
 
@@ -508,6 +552,33 @@ def next_work_group(
     )
 
 
+def processed_high_volume_groups(ranked_next_work: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    processed: list[dict[str, Any]] = []
+    for group in ranked_next_work:
+        if group["occurrences"] < HIGH_VOLUME_PROCESSING_THRESHOLD:
+            continue
+        decision = PROCESSING_DECISIONS.get(group["id"])
+        if decision is None:
+            decision = {
+                "status": "unprocessed-high-volume-group",
+                "semantic_admission_delta": 0,
+                "strictness_effect": "unchanged",
+                "decision": "No processing decision is recorded for this high-volume group yet.",
+                "next_metric": "Add a processing decision before using this group for implementation.",
+            }
+        processed.append(
+            {
+                "id": group["id"],
+                "capability": group["capability"],
+                "occurrences": group["occurrences"],
+                "repos": group["repos"],
+                "top_surfaces": group["top_surfaces"],
+                **decision,
+            }
+        )
+    return sorted(processed, key=lambda group: group.get("sequence", 999))
+
+
 def main() -> int:
     args = parse_args()
     repos_root = Path(args.repos_root)
@@ -591,7 +662,7 @@ def main() -> int:
     ]
     report = {
         "report_kind": "python-hof-runtime-audit",
-        "schema_version": 2,
+        "schema_version": 3,
         "manifest": args.manifest,
         "repos_root": args.repos_root,
         "scanned_python_repos": len(python_repos(Path(args.manifest))),
@@ -617,6 +688,8 @@ def main() -> int:
         "module_counts": dict(sorted(module_counts.items())),
         "boundary_counts": dict(sorted(boundary_counts.items())),
         "ranked_next_work": ranked_next_work,
+        "processing_threshold_occurrences": HIGH_VOLUME_PROCESSING_THRESHOLD,
+        "processed_high_volume_groups": processed_high_volume_groups(ranked_next_work),
         "calls": rows,
         "parse_errors": parse_errors[:50],
     }

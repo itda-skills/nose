@@ -5,8 +5,7 @@ the last piece of the [#283](https://github.com/corca-ai/nose/issues/283) C-floa
 after the syntactic and typed cases shipped (#339/#340).
 
 Companion to [oracle-value-model §3.3 / §6](oracle-value-model.md) (the cluster scope),
-[design §1 (the sound core is the moat)](design.md), and
-[formal-soundness](formal-soundness.md).
+[design §1 (the sound core is the moat)](design.md), and [formal-soundness](formal-soundness.md).
 
 > **Bottom line — SHIPPED.** The recall objection that kept this NO-GO was **refuted by
 > measurement**: holding untyped `+`/`*` chains costs **0 families on the full 105-repo
@@ -193,5 +192,4 @@ the oracle witnesses; none is a known false merge today.
 ---
 
 *See also: [oracle-value-model](oracle-value-model.md) · [design](design.md) ·
-[formal-soundness](formal-soundness.md) · [normalization](normalization.md) ·
-[adversarial co-evolution](adversarial-coevolution.md)*
+[formal-soundness](formal-soundness.md) · [normalization](normalization.md) · [adversarial co-evolution](adversarial-coevolution.md)*

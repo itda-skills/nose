@@ -55,16 +55,14 @@ and pack ecosystem.
     output except intentional metadata. Implementation PRs should run product
     query-regression output/runtime comparison and must follow the gates in
     [semantic-pack-architecture](semantic-pack-architecture.md) and the
-    closeout requirements in
-    [semantic-pack-adoption](semantic-pack-adoption.md).
+    closeout requirements in [semantic-pack-adoption](semantic-pack-adoption.md).
 
 ## Active migration tranche
 
 Issue [#473](https://github.com/corca-ai/nose/issues/473) moves builtin and
 external language/library support onto one semantic-pack architecture. The target
 shape, terminology, trust-lane compatibility, contributor rule, product behavior
-gate, performance gate, and phase order live in
-[semantic-pack-architecture](semantic-pack-architecture.md).
+gate, performance gate, and phase order live in [semantic-pack-architecture](semantic-pack-architecture.md).
 
 The next code slices are intentionally incremental:
 
@@ -1577,8 +1575,7 @@ repeated registry walks on hot paths. Binary size changed 20,181,712 ->
   ms -> 16.1 ms. The corpus-free HoF budget smoke stayed under budget
   (`features` 9.83 ms, semantic query 9.65 ms; deep chain 592 tokens / 152
   value-fingerprint nodes, wide chain 1455 / 324).
-  Durable closeout evidence for the #533 sequence-HOF tranche is recorded in
-  [semantic-kernel-closeout-533](semantic-kernel-closeout-533.md).
+  Durable closeout evidence for the #533 sequence-HOF tranche is recorded in [semantic-kernel-closeout-533](semantic-kernel-closeout-533.md).
 - The static API occurrence slice moved Java empty collection constructors and
   JS-like static `indexOf`/`findIndex` membership behind the same
   dependency-backed occurrence boundary. `new ArrayList<>()`/
@@ -1858,8 +1855,7 @@ repeated registry walks on hot paths. Binary size changed 20,181,712 ->
   a first-party language row could prove append semantics. Remaining raw-looking
   pockets are first-party evidence producers, test fixtures, migrated
   admitted-resolver consumers, intentionally opaque call identity policy, or
-  future pack surfaces. The detailed classification is in
-  [semantic-kernel-audit-2026-06-09](semantic-kernel-audit-2026-06-09.md).
+  future pack surfaces. The detailed classification is in [semantic-kernel-audit-2026-06-09](semantic-kernel-audit-2026-06-09.md).
 - The v0 pack extension API defined the first provider-facing manifest shape for
   language/library packs, including evidence producers, contract rows, anchors,
   dependencies, channel eligibility, trust/default status, provider/user
@@ -2168,11 +2164,7 @@ the available evidence.
 ## See also
 
 - Back to [semantic-kernel](semantic-kernel.md).
-- Current code shape is recorded in
-  [semantic-kernel-snapshot](semantic-kernel-snapshot.md).
-- The post-PR #147 audit of remaining raw/local semantic pockets is in
-  [semantic-kernel-audit-2026-06-09](semantic-kernel-audit-2026-06-09.md).
-- The provider-facing v0 extension API is in
-  [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md).
-- The closeout for the #109 semantic-kernel migration is in
-  [semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).
+- Current code shape is recorded in [semantic-kernel-snapshot](semantic-kernel-snapshot.md).
+- The post-PR #147 audit of remaining raw/local semantic pockets is in [semantic-kernel-audit-2026-06-09](semantic-kernel-audit-2026-06-09.md).
+- The provider-facing v0 extension API is in [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md).
+- The closeout for the #109 semantic-kernel migration is in [semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).

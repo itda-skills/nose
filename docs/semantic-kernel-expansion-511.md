@@ -4,14 +4,22 @@ Status: issue #511 implementation record, cycles 1 and 2 of the R1-R3 loop.
 
 Source artifacts:
 
-- [blocker_packet.v4.json](../bench/semantic_pack/blocker_packet.v4.json)
-- [kernel_capability_matrix.v4.json](../bench/semantic_pack/kernel_capability_matrix.v4.json)
-- [hof_demand_materialization_matrix.v1.json](../bench/semantic_pack/hof_demand_materialization_matrix.v1.json)
-- [kernel_expansion_closeout.v1.json](../bench/semantic_pack/kernel_expansion_closeout.v1.json)
-- [blocker_packet.v3.json](../bench/semantic_pack/blocker_packet.v3.json)
-- [kernel_capability_matrix.v3.json](../bench/semantic_pack/kernel_capability_matrix.v3.json)
-- [blocker_packet.v2.json](../bench/semantic_pack/blocker_packet.v2.json)
-- [kernel_capability_matrix.v2.json](../bench/semantic_pack/kernel_capability_matrix.v2.json)
+- Packet [blocker_packet.v4.json](../bench/semantic_pack/blocker_packet.v4.json)
+  records the cycle 2 R1 probe packet.
+- Matrix [kernel_capability_matrix.v4.json](../bench/semantic_pack/kernel_capability_matrix.v4.json)
+  records the cycle 2 capability decisions.
+- Matrix [hof_demand_materialization_matrix.v1.json](../bench/semantic_pack/hof_demand_materialization_matrix.v1.json)
+  records the R5 HOF demand/materialization review.
+- Snapshot [kernel_expansion_closeout.v1.json](../bench/semantic_pack/kernel_expansion_closeout.v1.json)
+  records the R6 closeout snapshot.
+- Packet [blocker_packet.v3.json](../bench/semantic_pack/blocker_packet.v3.json)
+  records the cycle 1 R1 probe packet.
+- Matrix [kernel_capability_matrix.v3.json](../bench/semantic_pack/kernel_capability_matrix.v3.json)
+  records the cycle 1 capability decisions.
+- Packet [blocker_packet.v2.json](../bench/semantic_pack/blocker_packet.v2.json)
+  keeps the previous #509 packet visible for comparison.
+- Matrix [kernel_capability_matrix.v2.json](../bench/semantic_pack/kernel_capability_matrix.v2.json)
+  keeps the previous #509 matrix visible for comparison.
 
 ## Goal
 
@@ -31,8 +39,8 @@ largest remaining authoring blocker without opening external influence.
 
 ## Cycle 1 R1 Blocker Packet
 
-[`blocker_packet.v3.json`](../bench/semantic_pack/blocker_packet.v3.json)
-records 20 probes. The dominant proof shape is
+The [`blocker_packet.v3.json`](../bench/semantic_pack/blocker_packet.v3.json)
+artifact records 20 probes. The dominant proof shape is
 `admitted_api_record_materialized_result_domain`: a `LibraryApi` occurrence is
 already admitted and has a fixed safe result domain, but the kernel needs a
 single path that materializes that fact as call-node `DomainEvidence`.
@@ -150,8 +158,8 @@ capabilities that external packs still cannot express.
 
 ## Cycle 2 R1 Blocker Packet
 
-[`blocker_packet.v4.json`](../bench/semantic_pack/blocker_packet.v4.json)
-records the second 20-probe R1-R3 cycle. The packet is biased toward the
+The [`blocker_packet.v4.json`](../bench/semantic_pack/blocker_packet.v4.json)
+artifact records the second 20-probe R1-R3 cycle. The packet is biased toward the
 authoring gap left by cycle 1: external packs could see the vocabulary but could
 not yet declare fixed result-domain contracts in a validated, dependency-backed
 shape.
@@ -219,8 +227,7 @@ artifacts only. No query, normalize, value-graph, fragment, oracle, or detection
 hot path reads external result-domain rows. Product output is therefore expected
 to be unchanged except for additive semantic-pack check/loading metadata.
 
-The cycle records this as a descriptor/validation-only change in
-[`kernel_capability_matrix.v4.json`](../bench/semantic_pack/kernel_capability_matrix.v4.json):
+The cycle records this as a descriptor/validation-only change in [`kernel_capability_matrix.v4.json`](../bench/semantic_pack/kernel_capability_matrix.v4.json):
 no hot-path measurement is required for the 10% runtime gate, and any later PR
 that opens external influence must run the normal product-output and runtime
 measurement gates.
@@ -240,8 +247,7 @@ The R1-R3 loop has now met the threshold for moving to R4:
 - external influence is still blocked by explicit data-only and
   dependency-backed-evidence gates.
 
-R4 is recorded separately in
-[semantic-kernel-external-authorability-511](semantic-kernel-external-authorability-511.md).
+R4 is recorded separately in [semantic-kernel-external-authorability-511](semantic-kernel-external-authorability-511.md).
 It focuses on external pack authorability and conformance: proving that a
 provider can write useful manifests, fixture gates, and unsupported-boundary
 metadata for the capabilities already rehearsed by builtin rows, while exact
@@ -249,8 +255,7 @@ analysis continues to ignore external rows until the later influence gates
 exist.
 
 R5 and R6 are recorded in
-[semantic-kernel-hof-demand-511](semantic-kernel-hof-demand-511.md) and
-[semantic-kernel-expansion-closeout-511](semantic-kernel-expansion-closeout-511.md).
+[semantic-kernel-hof-demand-511](semantic-kernel-hof-demand-511.md) and [semantic-kernel-expansion-closeout-511](semantic-kernel-expansion-closeout-511.md).
 They keep broad HOF/materialization influence closed, record the minimal
 capability set, and close the issue after the final validation PR.
 

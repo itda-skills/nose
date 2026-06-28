@@ -2,8 +2,7 @@
 
 This page describes the small focused-case library that supports the Type-4 target-packet
 workflow. The cross-axis generalization of this adversarial method (attacker → assessor →
-defender over every claim nose makes, not just Type-4 recall) is the
-[adversarial co-evolution runbook](adversarial-coevolution.md).
+defender over every claim nose makes, not just Type-4 recall) is the [adversarial co-evolution runbook](adversarial-coevolution.md).
 
 ## Current role
 

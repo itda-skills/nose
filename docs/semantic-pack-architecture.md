@@ -135,14 +135,11 @@ defined by [semantic-pack-adoption](semantic-pack-adoption.md). Promotion change
 ownership, trust, default enablement, CI gates, and rollback responsibility; it
 does not create a separate semantic vocabulary.
 Compatibility policy for manifest API versions, nose version ranges, kernel
-vocabulary migration, and fail-closed external influence is defined by
-[semantic-pack-compatibility](semantic-pack-compatibility.md).
-Future large-ecosystem work is tracked as narrow builtin candidates in
-[semantic-pack-ecosystem-candidates](semantic-pack-ecosystem-candidates.md),
+vocabulary migration, and fail-closed external influence is defined by [semantic-pack-compatibility](semantic-pack-compatibility.md).
+Future large-ecosystem work is tracked as narrow builtin candidates in [semantic-pack-ecosystem-candidates](semantic-pack-ecosystem-candidates.md),
 not as broad default-enabled ecosystem packs.
 
-The current pre-release boundary review is recorded in
-[semantic-pack-boundary-review-2026-06-22](semantic-pack-boundary-review-2026-06-22.md).
+The current pre-release boundary review is recorded in [semantic-pack-boundary-review-2026-06-22](semantic-pack-boundary-review-2026-06-22.md).
 That review found no release-blocking kernel/pack split issue, with the explicit
 caveat that builtin packs are still compiled Rust descriptors and in-tree
 evidence producers rather than an external plugin runtime.
@@ -419,9 +416,15 @@ previous semantic-kernel tranches.
 
 ## See also
 
-- [semantic-kernel](semantic-kernel.md)
-- [semantic-kernel-roadmap](semantic-kernel-roadmap.md)
-- [semantic-pack-adoption](semantic-pack-adoption.md)
-- [semantic-pack-ecosystem-candidates](semantic-pack-ecosystem-candidates.md)
-- [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md)
-- [semantic-pack-loading](semantic-pack-loading.md)
+- [semantic-kernel](semantic-kernel.md) owns the exact-admission semantics that
+  packs must not bypass.
+- [semantic-kernel-roadmap](semantic-kernel-roadmap.md) records kernel work that
+  should precede wider pack influence.
+- [semantic-pack-adoption](semantic-pack-adoption.md) defines promotion gates
+  from experimental rows to builtin defaults.
+- [semantic-pack-ecosystem-candidates](semantic-pack-ecosystem-candidates.md) lists
+  ecosystem slices that may become scoped packs.
+- [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md) defines
+  the versioned external schema boundary.
+- [semantic-pack-loading](semantic-pack-loading.md) describes manifest loading
+  and the current metadata-only external behavior.

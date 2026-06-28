@@ -39,8 +39,7 @@ for compatibility.
   place/effect records cover the first exact-fragment substrate plus
   conservative binding-write, receiver-mutation, and opaque-argument-escape risk
   facts needed to keep binding/import safety fail-closed. The current
-  demand/effect model is described in
-  [demand-effect-semantics](demand-effect-semantics.md).
+  demand/effect model is described in [demand-effect-semantics](demand-effect-semantics.md).
 
 ## Record Shape
 

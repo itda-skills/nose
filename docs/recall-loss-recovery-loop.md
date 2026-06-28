@@ -12,16 +12,14 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 
 - [crates baseline](../bench/recall_loss/crates.baseline.v1.json) records the
   current `crates` surface.
-- [corpus-slice baseline](../bench/recall_loss/corpus-slice.baseline.v1.json)
-  records a small mixed-language slice across Go, Python, Ruby, TypeScript,
+- [corpus-slice baseline](../bench/recall_loss/corpus-slice.baseline.v1.json) records a small mixed-language slice across Go, Python, Ruby, TypeScript,
   Rust, and Swift.
 - [#570 cycle log](../bench/recall_loss/issue-570-cycles.v1.json) records the
   first five top-bucket cycles and the unsupported runtime boundary decision.
 - [#572 cycle log](../bench/recall_loss/issue-572-cycle.v1.json) records the
   first post-#570 refinement cycle, which splits expression-statement effect
   boundaries and Rust macro source surfaces out of the callee-identity bucket.
-- [#574 callee census](../bench/recall_loss/issue-574-callee-census.v1.json)
-  records the remaining callee-identity bucket by language and call-target
+- [#574 callee census](../bench/recall_loss/issue-574-callee-census.v1.json) records the remaining callee-identity bucket by language and call-target
   surface for the #567 import-backed immutable provenance epic.
 - [#576 cycle log](../bench/recall_loss/issue-576-cycle.v1.json) records the
   first recovery slice after the census: Rust brace `use` declarations now emit
@@ -38,29 +36,22 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
   receiver-domain recovery slice: iterator-adapter result domains,
   dependency-backed literal binding domains, normalized binding proof-chain
   admission, and mutation-closed strict exact receiver use.
-- [#567 phase 1 JS/TS constructor log](../bench/recall_loss/issue-567-phase1-js-ts-constructors.v1.json)
-  records imported immutable provider snapshots for JS/TS `new Map(...)` and
+- [#567 phase 1 JS/TS constructor log](../bench/recall_loss/issue-567-phase1-js-ts-constructors.v1.json) records imported immutable provider snapshots for JS/TS `new Map(...)` and
   `new Set(...)`, reusing existing constructor `LibraryApi` proof across the
   import boundary.
-- [#567 phase 2 collection factory log](../bench/recall_loss/issue-567-phase2-collection-factories.v1.json)
-  records imported immutable provider snapshots for existing Python and Java
+- [#567 phase 2 collection factory log](../bench/recall_loss/issue-567-phase2-collection-factories.v1.json) records imported immutable provider snapshots for existing Python and Java
   collection factory contracts, reusing `LibraryApi` proof and exact-safe
   provider arguments across the import boundary.
-- [#567 phase 3 import-snapshot census log](../bench/recall_loss/issue-567-phase3-import-snapshot-census.v1.json)
-  records the reporting closeout: local recall-loss reports now expose
+- [#567 phase 3 import-snapshot census log](../bench/recall_loss/issue-567-phase3-import-snapshot-census.v1.json) records the reporting closeout: local recall-loss reports now expose
   successful snapshot counts plus unresolved binding-import miss reasons, so the
   next imported-value slice can be selected from corpus evidence.
-- [#567 phase 4 aggregate-boundary triage log](../bench/recall_loss/issue-567-phase4-aggregate-boundary-triage.v1.json)
-  records the first census-driven triage pass: the broad provider-aggregate miss
+- [#567 phase 4 aggregate-boundary triage log](../bench/recall_loss/issue-567-phase4-aggregate-boundary-triage.v1.json) records the first census-driven triage pass: the broad provider-aggregate miss
   bucket is split into non-import-literal sequence surfaces and child reference
   boundaries without admitting new snapshots.
-- [#567 closeout log](../bench/recall_loss/issue-567-closeout.v1.json)
-  records the epic-level audit: requirement coverage, exact-safe imported
+- [#567 closeout log](../bench/recall_loss/issue-567-closeout.v1.json) records the epic-level audit: requirement coverage, exact-safe imported
   coordinate families, hard-negative inventory, hard-gate status, and runtime
-  measurements. The narrative closeout is
-  [import-backed immutable provenance closeout](import-backed-immutable-provenance-closeout-567.md).
-- [#587 module/export census](../bench/recall_loss/issue-587-module-export-census.v1.json)
-  records the starting point for the follow-up import-snapshot milestone:
+  measurements. The narrative closeout is [import-backed immutable provenance closeout](import-backed-immutable-provenance-closeout-567.md).
+- [#587 module/export census](../bench/recall_loss/issue-587-module-export-census.v1.json) records the starting point for the follow-up import-snapshot milestone:
   provider module/export miss counts by reason, crate, import surface, top
   files, and recommended implementation order.
 - [post-#587 census](../bench/recall_loss/post-587-census.v1.json) records the
@@ -68,8 +59,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
   provider-module misses are gone on the checked surface, and the next
   capability targets are receiver-domain proof, callee identity, and
   mutation/effect contracts.
-- [full corpus priority census](../bench/recall_loss/corpus-priority-census-2026-06-28.v1.json)
-  records the first 120-repo follow-up: it combines per-repo recall-loss reports
+- [full corpus priority census](../bench/recall_loss/corpus-priority-census-2026-06-28.v1.json) records the first 120-repo follow-up: it combines per-repo recall-loss reports
   with lexical stdlib/API source prevalence so the next semantic-kernel work is
   selected from the pinned corpus instead of from `crates` alone.
 
@@ -313,8 +303,7 @@ crate imports now have separate census reasons. On `crates`, the generic
 module/export target moved `378 -> 139` (`provider-module-missing` `255 -> 130`,
 `provider-export-missing` `123 -> 9`) while successful imported snapshot records
 move `0 -> 1`; hard gates remain at `false_merges == 0` and
-`canon_preservation_violations == 0`. The checked-in measurement is
-[`issue-587-module-resolution-1-3.v1.json`](../bench/recall_loss/issue-587-module-resolution-1-3.v1.json).
+`canon_preservation_violations == 0`. The checked-in measurement is [`issue-587-module-resolution-1-3.v1.json`](../bench/recall_loss/issue-587-module-resolution-1-3.v1.json).
 
 The #587 direct re-export slice adds proof for public Rust `pub use` bindings
 without treating re-export syntax as value proof. The lowerer now emits
@@ -330,8 +319,7 @@ rows move `139 -> 91`, `provider-module-missing` moves `130 -> 89`, and
 `provider-export-missing` moves `9 -> 2`, with direct re-export targets priced
 as `provider-reexport-*` boundary reasons. Hard gates remain at
 `false_merges == 0` and `canon_preservation_violations == 0`. The checked-in
-measurement is
-[`issue-587-reexport-pricing.v1.json`](../bench/recall_loss/issue-587-reexport-pricing.v1.json).
+measurement is [`issue-587-reexport-pricing.v1.json`](../bench/recall_loss/issue-587-reexport-pricing.v1.json).
 
 The #587 residual census checks whether another same-repo provider-resolution
 slice is warranted before widening implementation. After the re-export slice
@@ -345,8 +333,7 @@ rows and `2` local export misses. The next
 implementation slice should therefore split external/std/workspace residuals
 out of `provider-module-missing` as explicit closed boundaries before deciding
 whether the relative-`super` tail is worth opening. The checked-in measurement
-is
-[`issue-587-residual-census.v1.json`](../bench/recall_loss/issue-587-residual-census.v1.json).
+is [`issue-587-residual-census.v1.json`](../bench/recall_loss/issue-587-residual-census.v1.json).
 
 The #587 residual boundary split implements that diagnostics-only step. Known
 external crate imports now report as `provider-external-crate-boundary`,
@@ -358,8 +345,7 @@ it only prices closed boundaries more accurately. On `crates`,
 move `92 -> 13`, and the residual set including the re-export target-export tail
 moves `93 -> 14`. Successful imported snapshot records stay `1`; hard gates
 remain at `false_merges == 0` and `canon_preservation_violations == 0`. The
-checked-in measurement is
-[`issue-587-residual-boundary-split.v1.json`](../bench/recall_loss/issue-587-residual-boundary-split.v1.json).
+checked-in measurement is [`issue-587-residual-boundary-split.v1.json`](../bench/recall_loss/issue-587-residual-boundary-split.v1.json).
 
 The #587 relative-`super` closeout handles the last generic Rust
 `provider-module-missing` rows. Importer-relative provider lookup already knew
@@ -374,8 +360,7 @@ remain closed as non-value boundaries (`provider-callable-export-boundary`,
 than becoming snapshot values; successful imported snapshot records stay `1`,
 with `false_merges == 0` and `canon_preservation_violations == 0`. The remaining
 tail is export-only (`2` local export misses and `1` re-export target export
-miss), so #587's module-missing work is complete. The checked-in measurement is
-[`issue-587-relative-super-closeout.v1.json`](../bench/recall_loss/issue-587-relative-super-closeout.v1.json).
+miss), so #587's module-missing work is complete. The checked-in measurement is [`issue-587-relative-super-closeout.v1.json`](../bench/recall_loss/issue-587-relative-super-closeout.v1.json).
 
 The post-#587 census confirms that import-snapshot module/provider-missing work
 is no longer the leading recall-loss surface on `crates`. The current checked
@@ -390,8 +375,7 @@ external crates (`76`), type exports (`69`), Rust stdlib (`50`), workspace
 crates (`48`), module namespaces (`20`), small re-export tails, mutation, and
 two local export misses. The next milestone should therefore move to reusable
 receiver-domain or member-call identity proof before more import-snapshot
-resolution work. The checked-in measurement is
-[`post-587-census.v1.json`](../bench/recall_loss/post-587-census.v1.json).
+resolution work. The checked-in measurement is [`post-587-census.v1.json`](../bench/recall_loss/post-587-census.v1.json).
 
 The 2026-06-28 full corpus priority census broadens that view from `crates` to
 all 120 pinned repos. The hard gate remains closed (`false_merges == 0` and
@@ -411,8 +395,7 @@ Arrays/Collections partial-coverage audit, Go `sort`/`slices`/`maps`, and
 Python HOF/runtime attribution before widening `itertools`/`functools`. This is
 still a pricing result, not semantic proof; every slice must add fixtures,
 before/after recall-loss counts, and the same hard gate evidence. The checked
-summary is
-[`corpus-priority-census-2026-06-28.v1.json`](../bench/recall_loss/corpus-priority-census-2026-06-28.v1.json).
+summary is [`corpus-priority-census-2026-06-28.v1.json`](../bench/recall_loss/corpus-priority-census-2026-06-28.v1.json).
 
 The first concrete slice from that order admits Go `strings.Join` only through
 imported namespace proof and reuses the existing ordered `Join` builtin instead
@@ -440,7 +423,7 @@ unclassified. The leading buckets are mutation/effect (`600`),
 mutation+callback (`341`), copy-result domain (`82`), ordering preconditions
 (`60`), and collection equality (`33`).
 
-The Python HOF/runtime audit now has a v2 decision report that parses broader
+The Python HOF/runtime audit now has a v3 decision report that parses broader
 AST scope bindings, function decorators/defaults, and call shapes. It classifies
 `21,384` calls across builtins, `itertools`, and `functools`: `18,369` are
 supported or partially supported, `2,947` are unsupported, `68` need stricter
@@ -450,21 +433,25 @@ domain proof (`8,432`), ordering/key/comparator semantics (`2,182`), HOF
 callback and iterable-source proof (`668`), `itertools` lifecycle/view contracts
 (`242`), callable/decorator runtime identity (`225`), combinatoric iterator
 shape contracts (`178`), callback reduction (`120`), and runtime attribution
-(`68`). The checked summary is
-[`python-hof-runtime-audit-2026-06-28.v2.json`](../bench/recall_loss/python-hof-runtime-audit-2026-06-28.v2.json).
+(`68`). The v3 report processes the `8,432` materializer-domain occurrences as
+a boundary split: `list`/`set`/`tuple`/`frozenset` stay gated by existing
+LibraryApi occurrence, unshadowed builtin proof, source-iterator provenance,
+and result-domain proof. The checked summary report is [`python-hof-runtime-audit-2026-06-28.v3.json`](../bench/recall_loss/python-hof-runtime-audit-2026-06-28.v3.json).
 
 The Rust stdlib partial-coverage audit masks comments/strings and classifies
 `104,133` Rust stdlib-shaped operations across `Option`, `Result`, iterator
 adapters/HOFs, `Vec`, membership/map lookup, `std::collections` factories,
 mutation, ordering, and allocation surfaces. Already admitted constructors and
 `Vec` factories account for `65,514` occurrences, supported-partial rows account
-for `26,387`, unsupported rows account for `12,232`, and no classified row is
-left unknown. The leading next-work groups are iterator HOF callback proof
-(`6,960`), mutation/effect contracts (`6,882`), iterator adapter/result-domain
-proof (`6,661`), Option/Result channel proof (`6,651`), iterator lifecycle and
-shape contracts (`5,207`), and receiver-domain proof (`4,822`). The checked
-summary is
-[`rust-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/rust-stdlib-partial-audit-2026-06-28.v1.json).
+for `34,670`, unsupported rows account for `3,949`, and no classified row is
+left unknown. The v2 report processes five 5,000+ groups covering `32,361`
+occurrences: iterator HOF callback proof, mutation/effect contracts, iterator
+adapter/result-domain proof, Option/Result channel proof, and iterator lifecycle
+and shape contracts. All keep `semantic_admission_delta = 0`; mutation/effect
+contracts become stricter by adding missing Rust `sort_by_key` receiver-mutation
+evidence. The largest remaining next-work group is receiver-domain proof
+(`4,822`), followed by ordering, factory-domain, allocation/lifetime, and
+reduction contracts. The checked summary report is [`rust-stdlib-partial-audit-2026-06-28.v2.json`](../bench/recall_loss/rust-stdlib-partial-audit-2026-06-28.v2.json).
 
 The Swift stdlib partial-coverage audit masks comments/strings and classifies
 `17,754` Swift stdlib-shaped operations across cardinality properties,
@@ -476,14 +463,31 @@ row is left unknown. The leading next-work groups are cardinality receiver proof
 (`1,302`), collection/map factory domain proof (`1,289`), sequence view
 lifecycle contracts (`1,218`), sequence HOF receiver/callback proof (`859`),
 ordering semantics (`585`), reductions (`324`), and `Array(repeating:count:)`
-repeat-factory shape contracts (`162`). The checked summary is
-[`swift-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/swift-stdlib-partial-audit-2026-06-28.v1.json).
+repeat-factory shape contracts (`162`). The v2 report processes the `7,633`
+cardinality receiver-proof occurrences as an existing-contract group:
+`count`/`isEmpty` stay gated by property/method occurrence evidence and
+ExactCollection receiver proof, with selector-only uses still closed. The
+checked summary report is [`swift-stdlib-partial-audit-2026-06-28.v2.json`](../bench/recall_loss/swift-stdlib-partial-audit-2026-06-28.v2.json).
+
+The 5,000+ follow-up pass processes seven high-volume groups across the Python,
+Rust, and Swift reports, covering `48,426` occurrences. The important outcome is
+not broader admission by frequency: every processed group records
+`semantic_admission_delta = 0`, six groups keep strictness unchanged, and the
+Rust mutation/effect group is stricter because `sort_by_key` now marks receiver
+mutation before later exact receiver use.
 
 ## See Also
 
-- [recall-loss-diagnostics](recall-loss-diagnostics.md)
-- [import-backed immutable provenance closeout](import-backed-immutable-provenance-closeout-567.md)
-- [semantic-pack-architecture](semantic-pack-architecture.md)
-- [source-facts](source-facts.md)
-- [evidence-records](evidence-records.md)
-- [demand-effect-semantics](demand-effect-semantics.md)
+- [recall-loss-diagnostics](recall-loss-diagnostics.md) defines the report
+  format and bucket taxonomy that feed this loop.
+- The [import-backed immutable provenance closeout](import-backed-immutable-provenance-closeout-567.md)
+  milestone turned import-backed recall loss into closed
+  provenance evidence.
+- [semantic-pack-architecture](semantic-pack-architecture.md) defines how
+  semantic-pack changes must preserve exact-channel admission boundaries.
+- [source-facts](source-facts.md) describes source-origin facts used by
+  recall-loss fixes that depend on provenance.
+- [evidence-records](evidence-records.md) defines the shared evidence substrate
+  used by diagnostics and kernel admission.
+- [demand-effect-semantics](demand-effect-semantics.md) explains the demand and
+  effect contracts that make stricter stdlib matching safe.

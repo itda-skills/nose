@@ -175,8 +175,7 @@ still being migrated toward it.
   cross-surface constructor boundary cases remain hard negatives. Imported
   provider snapshots reuse these occurrence proofs only for exact-safe provider
   arguments; ambiguous single-argument `Arrays.asList(...)` providers remain
-  closed at the export boundary. The corpus audit
-  [`java-arrays-collections-audit-2026-06-28.v1.json`](../bench/recall_loss/java-arrays-collections-audit-2026-06-28.v1.json)
+  closed at the export boundary. The corpus audit [`java-arrays-collections-audit-2026-06-28.v1.json`](../bench/recall_loss/java-arrays-collections-audit-2026-06-28.v1.json)
   tracks the remaining Java `Arrays`/`Collections` method-level boundary mix so
   future work can choose capability slices rather than one-off API rows. The
   `nose.java.ecosystem.guava.immutable_collection_factories` descriptor owns
@@ -263,8 +262,7 @@ still being migrated toward it.
   lowers to the separate `StringContains` semantic so substring membership does
   not reuse collection membership. `strings.Join` reuses the ordered `Join`
   builtin with separator and collection arguments normalized into the same shape
-  as other join producers. The corpus audit
-  [`go-stdlib-collections-audit-2026-06-28.v1.json`](../bench/recall_loss/go-stdlib-collections-audit-2026-06-28.v1.json)
+  as other join producers. The corpus audit [`go-stdlib-collections-audit-2026-06-28.v1.json`](../bench/recall_loss/go-stdlib-collections-audit-2026-06-28.v1.json)
   keeps the rest of Go `sort`/`slices`/`maps` separated into mutation, ordering,
   callback, iterator, copy, and equality capability buckets. The
   `nose.protocols.iterator_identity_adapters` descriptor owns Rust
@@ -576,7 +574,8 @@ migrated.
   with `Domain(Collection)` still does not make the variable generally
   exact-safe. The current mutation-risk producers are conservative and
   language-scoped; they invalidate exact assumptions but do not prove exact
-  library semantics.
+  library semantics. Rust `sort_by_key` is now included in the receiver-mutation
+  row so later receiver uses close before exact equivalence is considered.
 - C byte-buffer and unsigned-cast alias proof is now evidence-backed. Local
   typedefs and direct quote includes emit `Type(CTypeAlias)` evidence for the
   currently supported exact-spelling `unsigned char` and unsigned 32-bit
@@ -605,11 +604,10 @@ migrated.
   evidence with `nose.protocols.iterator_identity_adapters` provenance. Java
   `.stream()` uses the same protocol pack. Normalize's exact protocol receiver
   admission consumes this same contract instead of accepting same-named methods
-  from other languages. The Rust corpus audit
-  [`rust-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/rust-stdlib-partial-audit-2026-06-28.v1.json)
-  splits the remaining partial coverage into mutation/effect, Option/Result
-  channel, HOF callback, iterator-domain, iterator-lifecycle, receiver-domain,
-  ordering, factory-domain, allocation/lifetime, and reduction groups.
+  from other languages. The Rust corpus audit [`rust-stdlib-partial-audit-2026-06-28.v2.json`](../bench/recall_loss/rust-stdlib-partial-audit-2026-06-28.v2.json)
+  processes the 5,000+ HOF callback, mutation/effect, iterator-domain,
+  Option/Result channel, and iterator-lifecycle groups without widening semantic
+  admission, leaving receiver-domain proof as the largest remaining group.
 - Java `Math.abs`, `Math.min`, and `Math.max` scalar integer APIs are language-,
   arity-, receiver-, and integer-domain constrained through admitted
   `LibraryApi` occurrence evidence with `nose.java.stdlib.math` provenance.
@@ -773,10 +771,10 @@ migrated.
   `map`/`filter`/`flatMap` same-span occurrences use the same pack only when
   their receiver proof is Array/Collection rather than arbitrary `Sequence`,
   `Set`, or `Dictionary`, so chained Swift HOFs can reuse pack-backed receiver
-  proof without opening one-shot or ordering assumptions. The Swift corpus audit
-  [`swift-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/swift-stdlib-partial-audit-2026-06-28.v1.json)
-  splits cardinality, factory, membership, sequence-HOF, view/lifecycle,
-  mutation/effect, ordering, and reduction surfaces before any widening. Ruby
+  proof without opening one-shot or ordering assumptions. The Swift corpus audit [`swift-stdlib-partial-audit-2026-06-28.v2.json`](../bench/recall_loss/swift-stdlib-partial-audit-2026-06-28.v2.json)
+  processes the 5,000+ cardinality receiver-proof group as existing-contract
+  coverage, keeping selector-only `count`/`isEmpty` closed without
+  ExactCollection proof. Ruby
   `map`/`collect`/`select`/`filter`/`reject` same-span occurrences use the same
   pack only when their receiver proof is Array/Collection rather than Hash,
   Set, lazy Enumerator, or framework relation; chained Ruby HOFs can reuse
@@ -900,13 +898,10 @@ migrated.
   terminal identity. Shadowed builtins, wildcard-import ambiguity, missing source
   proof, callable-but-not-lambda callbacks, missing materializer proof, invalid
   nested producer evidence, multi-iterable `map`, and `sorted`/`reversed` remain
-  closed. The corpus audit
-  [`python-hof-runtime-audit-2026-06-28.v2.json`](../bench/recall_loss/python-hof-runtime-audit-2026-06-28.v2.json)
-  tracks supported builtin iterator/HOF calls, lexical builtin shadowing that
-  needs runtime attribution, call-shape/top-repo prevalence, and ranked
-  remaining work for materializer domain proof, ordering semantics, HOF callback
-  proof, `itertools` lifecycle, callable runtime identity, combinatoric
-  iterators, and callback reductions.
+  closed. The corpus audit [`python-hof-runtime-audit-2026-06-28.v3.json`](../bench/recall_loss/python-hof-runtime-audit-2026-06-28.v3.json)
+  processes the 5,000+ materializer-domain group as a boundary split, keeping
+  `list`/`set`/`tuple`/`frozenset` gated by existing LibraryApi occurrence,
+  unshadowed builtin proof, source-iterator provenance, and result-domain proof.
 - Opaque exact callee identity remains separate from library/API admission. A
   parameter callee or proof-backed immutable/imported callee may keep an exact
   same-callee call comparable as an opaque value operation. Same-spelled
@@ -1308,8 +1303,7 @@ Remaining migration targets are tracked in
 [semantic-kernel-roadmap](semantic-kernel-roadmap.md). The post-PR #147
 classification snapshot is in
 [semantic-kernel-audit-2026-06-09](semantic-kernel-audit-2026-06-09.md), and
-the completed #109 foundation and follow-up tranche is in
-[semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).
+the completed #109 foundation and follow-up tranche is in [semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).
 
 ## See also
 
@@ -1323,5 +1317,5 @@ v0 provider-facing extension API is defined in
 [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md), and the
 local provider/user conformance workflow is in
 [semantic-pack-conformance](semantic-pack-conformance.md). The closeout for the
-#109 semantic-kernel migration is in
-[semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).
+#109 semantic-kernel migration is in the [semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md)
+tranche note.

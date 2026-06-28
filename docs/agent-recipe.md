@@ -32,8 +32,7 @@ an MCP server (a Skill is the intended packaging).
 Do not start an agent workflow with the CI gate surface. The exploratory default intentionally
 combines `syntax`, `semantic`, and `near` so the agent sees copy-paste, exact semantic clones,
 and near-duplicates before applying judgment. A CI gate should instead pin the channel and
-budget, usually `--mode syntax` with explicit size filters; see
-[continuous integration](continuous-integration.md#jscpd-style-size-budgets).
+budget, usually `--mode syntax` with explicit size filters; see [continuous integration](continuous-integration.md#jscpd-style-size-budgets).
 
 ## Inputs for the batch / gate path
 

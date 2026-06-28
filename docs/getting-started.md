@@ -185,8 +185,7 @@ nose query src --mode syntax --min-size 80 'dup>80' --baseline .nose-baseline.js
 nose query src --mode syntax --min-size 80 'dup>80' --baseline .nose-baseline.json --fail-on new
 ```
 
-The full gate, baselines, SARIF, and fast re-runs are in
-[continuous-integration](continuous-integration.md).
+The full gate, baselines, SARIF, and fast re-runs are in [continuous-integration](continuous-integration.md).
 
 ## Where to go next
 

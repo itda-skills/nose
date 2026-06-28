@@ -125,8 +125,7 @@ that share *no* invariant lines (a language idiom, or two unrelated type literal
 of the same shape) now sink instead of topping the list. `--sort value` retains
 the raw-volume ranking. This is not the abstractness re-rank §AU/§AV rejected:
 the historical §AZ run recorded a held-out lift for extractability. The current
-reproducible v5 evaluator and its confidence intervals are summarized in
-[benchmark](benchmark.md).
+reproducible v5 evaluator and its confidence intervals are summarized in [benchmark](benchmark.md).
 
 The same pass drove four detector fixes (all landed): the contiguous copy-paste
 channel is same-language by construction (no cross-language false merges), a
@@ -244,8 +243,7 @@ integration contract now makes that explicit by documenting
 The Java/Python hidden/review volume was sampled rather than tuned by guesswork. A
 three-reviewer audit of 20 exact-fragment candidates is recorded in
 [fragment-quality-audit-2026-06-10](fragment-quality-audit-2026-06-10.md), with the
-machine-readable votes in
-[bench/labels/fragment_quality_audit_2026_06_10.json](../bench/labels/fragment_quality_audit_2026_06_10.json).
+machine-readable votes in [bench/labels/fragment_quality_audit_2026_06_10.json](../bench/labels/fragment_quality_audit_2026_06_10.json).
 
 The result was mostly validating for the semantic kernel: 17/20 candidates were
 consensus correct diagnostic substrate, but 15/20 were too small or scaffold-like to be

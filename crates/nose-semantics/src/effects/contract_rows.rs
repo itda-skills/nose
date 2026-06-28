@@ -151,6 +151,7 @@ const RECEIVER_MUTATION_METHOD_EFFECTS: &[MethodEffectContractSet] = &[
             "reverse",
             "sort",
             "sort_by",
+            "sort_by_key",
             "sort_unstable",
         ],
         arity: MethodEffectArity::Any,

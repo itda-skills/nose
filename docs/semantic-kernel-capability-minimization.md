@@ -8,10 +8,14 @@ brings evidence, fixtures, and a performance budget.
 
 Source artifacts:
 
-- [candidate_pricing.v1.json](../bench/semantic_pack/candidate_pricing.v1.json)
-- [candidate_pricing.md](../bench/semantic_pack/candidate_pricing.md)
-- [loop_reviews.v1.json](../bench/semantic_pack/loop_reviews.v1.json)
-- [kernel_capability_matrix.v1.json](../bench/semantic_pack/kernel_capability_matrix.v1.json)
+- Artifact [candidate_pricing.v1.json](../bench/semantic_pack/candidate_pricing.v1.json)
+  records the raw priced candidates for the minimization pass.
+- Report [candidate_pricing.md](../bench/semantic_pack/candidate_pricing.md)
+  records the human-readable pricing notes.
+- Artifact [loop_reviews.v1.json](../bench/semantic_pack/loop_reviews.v1.json)
+  records the repeated-loop review decisions.
+- Matrix [kernel_capability_matrix.v1.json](../bench/semantic_pack/kernel_capability_matrix.v1.json)
+  records the accepted/rejected primitive capability matrix.
 
 ## Goal
 
@@ -53,8 +57,7 @@ symbol/import occurrence proof, library API occurrence contracts, call-target
 identity proof, demand/effect profiles, sequence-surface proof, manifest
 package/version metadata, and conformance fixture gates.
 
-The machine-readable census in
-[`kernel_capability_matrix.v1.json`](../bench/semantic_pack/kernel_capability_matrix.v1.json)
+The machine-readable census in [`kernel_capability_matrix.v1.json`](../bench/semantic_pack/kernel_capability_matrix.v1.json)
 also records the primitive-level rows that were checked before accepting or
 rejecting changes:
 
@@ -139,8 +142,7 @@ producer. `Rejected` means adding vocabulary now would be speculative.
 
 ## Implementation
 
-The accepted reduction is implemented in
-[`crates/nose-semantics/src/evidence/domain.rs`](../crates/nose-semantics/src/evidence/domain.rs).
+The accepted reduction is implemented in [`crates/nose-semantics/src/evidence/domain.rs`](../crates/nose-semantics/src/evidence/domain.rs).
 Built-in consumers in `nose-semantics`, `nose-normalize`, and `nose-detect` now
 use named domain-requirement aliases backed by `Exact` or `AnyOf`.
 

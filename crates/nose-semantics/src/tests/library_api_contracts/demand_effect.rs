@@ -20,6 +20,14 @@ fn receiver_mutation_contracts_are_language_scoped_rows() {
     assert!(module_binding_mutating_method_contract(Lang::JavaScript, "addAll", 1).is_none());
     assert!(module_binding_mutating_method_contract(Lang::Java, "addAll", 1).is_some());
     assert!(module_binding_mutating_method_contract(Lang::Python, "append", 1).is_some());
+    let rust_sort_by_key = module_binding_mutating_method_contract(Lang::Rust, "sort_by_key", 1)
+        .expect("rust sort_by_key receiver mutation contract");
+    assert_eq!(rust_sort_by_key.pack_id, RUST_LANGUAGE_PACK_ID);
+    assert_eq!(rust_sort_by_key.lang, Lang::Rust);
+    assert_eq!(
+        rust_sort_by_key.effect,
+        EffectEvidenceKind::ReceiverMutation
+    );
     let swift_append = module_binding_mutating_method_contract(Lang::Swift, "append", 1)
         .expect("swift append receiver mutation contract");
     assert_eq!(swift_append.pack_id, SWIFT_LANGUAGE_PACK_ID);

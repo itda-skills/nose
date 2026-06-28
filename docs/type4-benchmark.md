@@ -1,8 +1,7 @@
 # Type-4 benchmark factory
 
 The executable benchmark factory for nose's exact semantic goal. It complements the product
-quality [benchmark](benchmark.md) and exercises the engine described in
-[architecture](architecture.md).
+quality [benchmark](benchmark.md) and exercises the engine described in [architecture](architecture.md).
 
 ## Goal
 
@@ -322,8 +321,7 @@ The stable roles are:
   `real_frontier.v1.json`, `frontier_target_packets.v1.json`, `frontier_platform.py`, and
   `frontier_axes.py`, summarized in [frontier-platform](frontier-platform.md);
 - focused adversarial cases and verifier-lead draft tooling:
-  `adversarial/`, summarized in
-  [type4-adversarial-coverage](type4-adversarial-coverage.md);
+  `adversarial/`, summarized in [type4-adversarial-coverage](type4-adversarial-coverage.md);
 - product semantic-query regression:
   `query_regression/`, which guards runtime, output drift, fragment/reason-code/surface
   buckets, enclosing-unit recovery, and HoF value-graph budget behavior.

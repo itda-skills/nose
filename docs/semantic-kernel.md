@@ -22,8 +22,7 @@ external producer runtime.
 The external API design starts at
 [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md): it narrows
 the current internal evidence and contract vocabulary into a manifest shape for
-future language/library packs. The provider/user conformance workflow is in
-[semantic-pack-conformance](semantic-pack-conformance.md).
+future language/library packs. The provider/user conformance workflow is in [semantic-pack-conformance](semantic-pack-conformance.md).
 
 Evidence records are one kernel input at that boundary. They preserve facts that
 the IL deliberately abstracts away, but they do not approve semantic equivalence
@@ -228,8 +227,7 @@ requirement language, not one primitive per domain combination:
 collection-or-map or array-collection-or-set. Builtin aliases keep current
 contracts readable, but new pack blockers should first try to compose these
 requirements before adding vocabulary. The #507 audit and implementation record
-is in
-[semantic-kernel-capability-minimization](semantic-kernel-capability-minimization.md).
+is in [semantic-kernel-capability-minimization](semantic-kernel-capability-minimization.md).
 
 Admitted API result domains use the same rule. A receiver-method API may emit
 call-node `DomainEvidence` only after its `LibraryApi` occurrence is admitted and
@@ -237,26 +235,22 @@ only when the API row has a fixed safe result domain. That lets existing
 receiver-domain consumers admit chains such as Java `keySet().contains(...)`,
 Rust `abs().max(...)`, Rust `and_then(...).and_then(...)`, and JavaScript
 `then(...).then(...)` without adding a primitive per chain. The #509 blocker
-packet, hard boundaries, and builtin rollout are recorded in
-[semantic-kernel-builtin-expansion-509](semantic-kernel-builtin-expansion-509.md).
+packet, hard boundaries, and builtin rollout are recorded in [semantic-kernel-builtin-expansion-509](semantic-kernel-builtin-expansion-509.md).
 The #511 R1-R3 cycles generalize the same primitive from receiver-only emission
 to a shared admitted-API materializer for fixed-result call rows such as
 collection/map factories, `Array.from`, `Promise.resolve`, and Rust `Some(...)`,
 then validate the matching metadata-only external authoring surface through
 `semantics.result_domain`. HOF and `Map.get` result domains remain closed, and
 external rows still do not influence exact analysis. The cycle record and R4
-transition assessment are in
-[semantic-kernel-expansion-511](semantic-kernel-expansion-511.md).
+transition assessment are in [semantic-kernel-expansion-511](semantic-kernel-expansion-511.md).
 The R4 authorability pass then uses a Guava fixed-domain dry-run pack to show
 which capabilities are authorable as external metadata, which remain
-intentionally builtin-only, and which blockers move to R5. That record is in
-[semantic-kernel-external-authorability-511](semantic-kernel-external-authorability-511.md).
+intentionally builtin-only, and which blockers move to R5. That record is in [semantic-kernel-external-authorability-511](semantic-kernel-external-authorability-511.md).
 R5 then keeps broad HOF result domains closed and records the narrow admitted
 demand/materialization lanes in
 [semantic-kernel-hof-demand-511](semantic-kernel-hof-demand-511.md). The #511 R6
 closeout records the minimal capability set, builtin expansion, external
-authorability, remaining blockers, and validation gates in
-[semantic-kernel-expansion-closeout-511](semantic-kernel-expansion-closeout-511.md).
+authorability, remaining blockers, and validation gates in [semantic-kernel-expansion-closeout-511](semantic-kernel-expansion-closeout-511.md).
 
 ### Effects and observations
 
@@ -363,8 +357,7 @@ This does not require a flag-day rewrite. The migration can start with wrappers
 around existing behavior: replace `Lang` checks with semantic predicates, then
 move duplicated library recognizers and strict gates behind shared contracts.
 The current #473 phase plan, contributor rule, product behavior gate, and
-performance gate are defined in
-[semantic-pack-architecture](semantic-pack-architecture.md).
+performance gate are defined in [semantic-pack-architecture](semantic-pack-architecture.md).
 
 ## Design rule
 
@@ -385,8 +378,8 @@ Back to [home](home.md). Current implementation status is in
 work are tracked in [semantic-kernel-roadmap](semantic-kernel-roadmap.md). The
 post-PR #147 raw/local pocket audit is recorded in
 [semantic-kernel-audit-2026-06-09](semantic-kernel-audit-2026-06-09.md), and the
-#109 closeout is recorded in
-[semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md).
+#109 closeout is recorded in the [semantic-kernel-tranche-closeout-2026-06-09](semantic-kernel-tranche-closeout-2026-06-09.md)
+tranche note.
 The versioned provider-facing extension surface is defined in
 [semantic-pack-extension-api-v0](semantic-pack-extension-api-v0.md). Source
 origin evidence is detailed in [source-facts](source-facts.md); the shared

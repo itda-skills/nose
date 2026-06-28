@@ -109,8 +109,7 @@ Rotate campaigns across these; each entry names what to read and what claim to a
 ## Target packet format — executable, self-verified (series 3)
 
 Reuse the [frontier platform](frontier-platform.md) evidence shape
-(`real_frontier.v1.json`) and the task-card style of
-[type4-adversarial-coverage](type4-adversarial-coverage.md):
+(`real_frontier.v1.json`) and the task-card style of [type4-adversarial-coverage](type4-adversarial-coverage.md):
 
 - `case_id`, `surface` (one of the list above), `claim` (the exact sentence/invariant
   attacked, with code/doc pointer);

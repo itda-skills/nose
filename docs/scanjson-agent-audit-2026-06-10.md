@@ -8,8 +8,7 @@
 (LLM agents calling nose): the output "should carry *why* two units are equivalent,
 *what* differs, exact locations, and the behavior contract, so the agent can decide and
 act without re-deriving the analysis." This audit measured, for the first time, whether
-that loop actually closes ([#216]). The checked-in data artifact is
-[bench/labels/scanjson_agent_audit_2026_06_10.json](../bench/labels/scanjson_agent_audit_2026_06_10.json).
+that loop actually closes ([#216]). The checked-in data artifact is [bench/labels/scanjson_agent_audit_2026_06_10.json](../bench/labels/scanjson_agent_audit_2026_06_10.json).
 
 ## Protocol
 

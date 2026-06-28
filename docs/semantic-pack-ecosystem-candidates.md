@@ -54,8 +54,7 @@ implemented builtin slice is intentionally only `ImmutableList.of`,
 collectors, wildcard/static-method imports, and dependency/version occurrence
 proof are still outside this row.
 
-The candidate priced as `priced-ready` in the current
-[`candidate_pricing.v1.json`](../bench/semantic_pack/candidate_pricing.v1.json)
+The candidate priced as `priced-ready` in the current [`candidate_pricing.v1.json`](../bench/semantic_pack/candidate_pricing.v1.json)
 artifact. The current artifact records the implemented builtin-default pack id,
 2,649 `of`-factory corpus occurrences across three Java repositories, and a
 sample product-query overlay where the Guava pack is present in query
@@ -86,7 +85,11 @@ initial issue scoped to one pack id and one support boundary.
 
 ## Related
 
-- [semantic-pack-architecture](semantic-pack-architecture.md)
-- [semantic-pack-adoption](semantic-pack-adoption.md)
-- [semantic-pack-compatibility](semantic-pack-compatibility.md)
-- [semantic-pack-candidate-pricing](semantic-pack-candidate-pricing.md)
+- [semantic-pack-architecture](semantic-pack-architecture.md) defines how a
+  candidate becomes a bounded pack slice.
+- [semantic-pack-adoption](semantic-pack-adoption.md) defines promotion gates
+  once a candidate slice is implemented.
+- [semantic-pack-compatibility](semantic-pack-compatibility.md) defines version
+  and output constraints for candidate changes.
+- [semantic-pack-candidate-pricing](semantic-pack-candidate-pricing.md) defines
+  the pricing loop used to rank candidate slices.

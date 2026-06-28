@@ -76,21 +76,21 @@ Build the Python HOF/runtime attribution audit with:
 
 ```sh
 python3 scripts/python-hof-runtime-audit.py \
-  --output target/python-hof-runtime-audit.v2.json
+  --output target/python-hof-runtime-audit.v3.json
 ```
 
 Build the Rust stdlib partial-coverage audit with:
 
 ```sh
 python3 scripts/rust-stdlib-partial-audit.py \
-  --output target/rust-stdlib-partial-audit.v1.json
+  --output target/rust-stdlib-partial-audit.v2.json
 ```
 
 Build the Swift stdlib partial-coverage audit with:
 
 ```sh
 python3 scripts/swift-stdlib-partial-audit.py \
-  --output target/swift-stdlib-partial-audit.v1.json
+  --output target/swift-stdlib-partial-audit.v2.json
 ```
 
 ## Files
@@ -119,16 +119,30 @@ python3 scripts/swift-stdlib-partial-audit.py \
   materializer domain proof, ordering semantics, HOF callback proof,
   `itertools` lifecycle, callable runtime identity, combinatoric iterators, and
   runtime attribution.
+- [python-hof-runtime-audit-2026-06-28.v3.json](python-hof-runtime-audit-2026-06-28.v3.json)
+  records the first high-volume candidate processing decision: the
+  `8,432`-occurrence Python materializer-domain group is split into strict
+  materializer subgroups without widening semantic admission.
 - [rust-stdlib-partial-audit-2026-06-28.v1.json](rust-stdlib-partial-audit-2026-06-28.v1.json)
   records comment/string-masked lexical prevalence and support/boundary
   classification for Rust `Option`, `Result`, iterator adapters/HOFs, `Vec`,
   membership/map lookup, `std::collections` factories, mutation, ordering, and
   allocation/lifetime surfaces.
+- [rust-stdlib-partial-audit-2026-06-28.v2.json](rust-stdlib-partial-audit-2026-06-28.v2.json)
+  aligns the Rust audit with existing generic method/effect contracts and
+  records high-volume processing decisions for iterator-domain, Option/Result
+  channel, HOF callback, iterator-view lifecycle, and mutation/effect groups.
+  Unsupported attribution moves `12,232 -> 3,949` while semantic admission stays
+  closed and `sort_by_key` gains receiver-mutation evidence.
 - [swift-stdlib-partial-audit-2026-06-28.v1.json](swift-stdlib-partial-audit-2026-06-28.v1.json)
   records comment/string-masked lexical prevalence and support/boundary
   classification for Swift cardinality properties, collection/map factories,
   sequence HOFs, membership, sequence views, mutation/effect, ordering, and
   reduction surfaces.
+- [swift-stdlib-partial-audit-2026-06-28.v2.json](swift-stdlib-partial-audit-2026-06-28.v2.json)
+  records the high-volume Swift cardinality processing decision: `count` and
+  `isEmpty` remain on existing `ExactCollection` receiver-gated property and
+  method contracts.
 - [issue-570-cycles.v1.json](issue-570-cycles.v1.json) records the five focused
   top-bucket cycles and the explicit unsupported/fail-closed boundary decision.
 - [issue-572-cycle.v1.json](issue-572-cycle.v1.json) records the first

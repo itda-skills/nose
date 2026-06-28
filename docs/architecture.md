@@ -53,8 +53,7 @@ source ──tree-sitter──▶ raw IL ──normalize──▶ canonical IL �
    **Declarative languages** ([CSS and HTML markup](languages.md)) branch off after
    desugar and skip the imperative phase entirely: their exact fingerprint is a
    domain-specific *computed-style* / *rendered-DOM* canonicalization, dispatched by the
-   unit-root kind rather than the GVN — see
-   [normalization › declarative (CSS/HTML)](normalization.md).
+   unit-root kind rather than the GVN — see [normalization › declarative (CSS/HTML)](normalization.md).
 3. **Extract units & features**: frontend units are augmented with bounded
    sub-function units: control-flow blocks (`loop` / statement `if` / `try`) and
    exact-safe statement fragments whose whole value subtree stays inside the reported
@@ -76,8 +75,7 @@ source ──tree-sitter──▶ raw IL ──normalize──▶ canonical IL �
    exact claim. Same-language `near` and shared-core families can be additionally graded
    by anti-unifying representative copies' value graphs — "equal except *k* holes", each
    a candidate parameter or named transformation such as `async-mirror`, with a
-   soundness-relevant referent check
-   ([graded-witness](graded-witness.md)).
+   soundness-relevant referent check ([graded-witness](graded-witness.md)).
 6. **Cluster & rank**: union-find over accepted pairs/runs forms clone groups, which
    are grouped into **families** and sorted by refactoring value (removable lines
    × similarity × cross-directory/-file/-language spread). See [usage](usage.md) for how the
@@ -99,8 +97,7 @@ A Cargo workspace; data flows left-to-right through them.
 | `nose-markdown` | self-contained same-language Markdown prose near-duplicate domain (char-n-gram MinHash-LSH + winnowing + containment → TF-IDF rank → span witness), distinct from the value-graph code engine — see [markdown-duplication](markdown-duplication.md) |
 | `nose-cli` | the `nose` binary, config loading, baselines, caching |
 
-The current semantic assumptions these crates share are summarized in
-[semantic-kernel-snapshot](semantic-kernel-snapshot.md).
+The current semantic assumptions these crates share are summarized in [semantic-kernel-snapshot](semantic-kernel-snapshot.md).
 
 ## Design choices worth knowing
 
@@ -113,8 +110,7 @@ The current semantic assumptions these crates share are summarized in
   enclosing scope, span → nodes, scope → assignments, and the evidence anchor
   index (span buckets, binding-hash buckets, id resolution). Per-node helpers
   must query these instead of scanning `il.nodes`/`il.evidence`; the raw scans
-  were the dominant scan cost until they were indexed
-  ([experiments §BQ](experiments.md)).
+  were the dominant scan cost until they were indexed ([experiments §BQ](experiments.md)).
 - **Interner-independent features.** A unit's features are content-derived
   hashes, not interner ids, so they're portable across runs — the basis for the
   content-hash cache.

@@ -138,8 +138,7 @@ that share less literal text — even within one language (renamed / restructure
 near-misses) — are harder to recognize as siblings, so are edited inconsistently more
 often. (An earlier draft pinned this as a *cross-language* effect; that was a repo-level
 mislabel — true cross-language clones are structurally rare, 37 of 15,199 families, so
-the signal is general, not cross-language-specific. See
-[eval/hazard/RESULTS.md](../eval/hazard/RESULTS.md).)
+the signal is general, not cross-language-specific. See [eval/hazard/RESULTS.md](../eval/hazard/RESULTS.md).)
 
 This is implemented as **opt-in `--sort hazard`**, not the default. The weights are
 calibrated on divergence *propensity* (the clean **G1** label, leave-one-repo-out AUC
@@ -150,8 +149,7 @@ pre-divergence signals rank actual harm only weakly, around the ~0.60 AUC ceilin
 
 **Phase 2 — git-history and post-divergence harm signals.** Because nose matches Type-4,
 it can link siblings across revisions where textual tools (NiCad/CCFinder/iClones) lose
-them. The pipeline now exists in [eval/hazard](../eval/hazard/) and is summarized in
-[RESULTS.md](../eval/hazard/RESULTS.md):
+them. The pipeline now exists in [eval/hazard](../eval/hazard/) and is summarized in [RESULTS.md](../eval/hazard/RESULTS.md):
 
 - the original automatic G2 bug-linked label was audited and rejected as only ~11% precise;
 - a larger LLM-gold harm set plus git-history features still capped pre-divergence ranking
@@ -176,8 +174,7 @@ The measured building blocks are:
 Intentional vs. accidental cannot be classified perfectly (Juergens needed
 developer interviews). Use **divergence magnitude** as a proxy (small, subtle diff
 = flag; large, structural diff = suppress) and the **RESYNC** signal (a divergence
-later converged was probably unintended), and let users dismiss false positives via
-[structured ignores](structured-ignores.md).
+later converged was probably unintended), and let users dismiss false positives via [structured ignores](structured-ignores.md).
 
 ## Implementation plan
 
@@ -188,8 +185,7 @@ later converged was probably unintended), and let users dismiss false positives 
    (`0.3 + 0.7·(1 − tightness)`, `tightness = shared_weight / mean_lines`) and
    `scope_weight` (prod 1.0 / mixed 0.5 / test 0.25) inline. Magnitude is `mean_lines`
    — **not** `mean_sem` (the data showed semantic size is anti-predictive; this also
-   softly demotes the tiny dense functions the `min-size` gate cannot, see
-   [normalization](normalization.md)).
+   softly demotes the tiny dense functions the `min-size` gate cannot, see [normalization](normalization.md)).
 2. ✅ `SortKey::Hazard` in `crates/nose-cli/src/scan_options.rs`, wired into `score()`,
    `sort_name()`, the `--sort` value list, and `capabilities`. It remains opt-in via
    `--sort hazard`; `extractability` is the default.

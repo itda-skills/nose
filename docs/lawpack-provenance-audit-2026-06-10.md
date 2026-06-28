@@ -4,8 +4,7 @@ This audit closes [#186](https://github.com/corca-ai/nose/issues/186): run
 targeted real-corpus scans for the first-party LawPack pilot and decide whether
 `semantic_laws` provenance is showing up as actionable signal.
 
-The checked-in data artifact is
-[bench/labels/lawpack_provenance_audit_2026_06_10.json](../bench/labels/lawpack_provenance_audit_2026_06_10.json).
+The checked-in data artifact is [bench/labels/lawpack_provenance_audit_2026_06_10.json](../bench/labels/lawpack_provenance_audit_2026_06_10.json).
 
 ## What Was Tested
 

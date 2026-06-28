@@ -3,8 +3,7 @@
 The complete command and flag reference for `nose`. New here? Start with
 [getting-started](getting-started.md) — it walks through a first run and how to
 read the report. For settings you'd commit to a repo see
-[configuration](configuration.md); for CI use see
-[continuous integration](continuous-integration.md).
+[configuration](configuration.md); for CI use see [continuous integration](continuous-integration.md).
 
 Throughout, **IL** is nose's *intermediate language*: every source language is lowered into
 one normalized representation, so clones match within and across languages, and unit sizes are
@@ -114,8 +113,7 @@ drops structured-ignored families. The gate follows the untruncated family selec
 by the query terms (`top=N` only limits display), so `nose query <path> path~api --fail-on any`
 fails only on reportable `path~api` families. See [continuous-integration](continuous-integration.md).
 For jscpd-style copy-paste gates, pin `--mode syntax` and add size terms such as
-`'lines>25'`, `'shared>20'`, or `'dup>80'`; see
-[continuous integration › jscpd-style size budgets](continuous-integration.md#jscpd-style-size-budgets).
+`'lines>25'`, `'shared>20'`, or `'dup>80'`; see [continuous integration › jscpd-style size budgets](continuous-integration.md#jscpd-style-size-budgets).
 The `base=` view is the exception: it reuses only detection flags (`--mode`, `--min-size`,
 advanced `--min-lines`, `--exclude`, `--config`), `--ignore-file`, `--format`, `top=N`, and
 `--fail-on any`; report-shaping and baseline flags are rejected instead of ignored.
@@ -126,8 +124,7 @@ files warns on stderr and reports an empty result. This holds for `nose query` a
 `nose stats`.
 
 How to read the resulting dashboard — the scope line, the confidence breakdown,
-the per-family economics, scope tags, and the `→` hint — is covered in
-[getting-started → How to read the report](getting-started.md#how-to-read-the-report).
+the per-family economics, scope tags, and the `→` hint — is covered in [getting-started → How to read the report](getting-started.md#how-to-read-the-report).
 
 ### The default surface
 
@@ -261,8 +258,7 @@ Use terms for report shaping: `sort=KEY`, `top=N`, `scope=prod|test|mixed`, `gro
 [query-json](query-json.md) contract.
 
 **Workflow** (`--baseline`, `--write-baseline`, `--fail-on any|new`, `--ignore-file`, `--cache-dir`, `--config`, `--semantic-pack`) is covered in
-[continuous-integration](continuous-integration.md), [configuration](configuration.md), and
-[semantic-pack-loading](semantic-pack-loading.md).
+[continuous-integration](continuous-integration.md), [configuration](configuration.md), and [semantic-pack-loading](semantic-pack-loading.md).
 Structured suppressions are covered in [structured-ignores](structured-ignores.md).
 
 ## Integrating with nose
@@ -279,8 +275,7 @@ commands, supported detection modes and output formats such as SARIF, JSON schem
 versions, config keys, and query capability flags such as baselines, caching,
 and structured ignores. Do not scrape `nose --help`; help text is for humans
 and may change to improve readability. The stable contract is documented in
-[capabilities](capabilities.md); the structured result JSON is in
-[query-json](query-json.md).
+[capabilities](capabilities.md); the structured result JSON is in [query-json](query-json.md).
 
 ## Other commands
 
@@ -294,8 +289,7 @@ and may change to improve readability. The stable contract is documented in
   Use it to spot a language/construct that isn't lowering well; see [languages](languages.md).
 - `nose semantic-pack check <file-or-dir> [--format human|json]` — validate local
   semantic-pack v0 manifest structure and declared fixture assets. It is a
-  pack-author/user workflow, not external pack certification; see
-  [semantic-pack-conformance](semantic-pack-conformance.md).
+  pack-author/user workflow, not external pack certification; see [semantic-pack-conformance](semantic-pack-conformance.md).
 - `nose semantic-pack inventory [--format human|json]` — inspect compiled
   builtin pack declarations, conformance refs, exact-capable coverage status,
   and coverage gaps without running a query.

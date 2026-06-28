@@ -21,7 +21,8 @@ from typing import Any
 
 DEFAULT_MANIFEST = "bench/goldens/corpus.json"
 DEFAULT_REPOS_ROOT = "bench/repos"
-DEFAULT_OUTPUT = "target/swift-stdlib-partial-audit.v1.json"
+DEFAULT_OUTPUT = "target/swift-stdlib-partial-audit.v2.json"
+HIGH_VOLUME_PROCESSING_THRESHOLD = 5000
 
 SKIP_DIRS = {
     ".build",
@@ -153,6 +154,39 @@ SUPPORTED_PARTIAL_PROPERTIES: dict[str, tuple[str, str, str, str]] = {
         "collection-cardinality",
         "isEmpty is admitted only with collection/array receiver proof",
     ),
+}
+
+PROCESSING_DECISIONS: dict[str, dict[str, Any]] = {
+    "swift-cardinality-receiver-proof": {
+        "sequence": 5,
+        "status": "processed-existing-contract",
+        "semantic_admission_delta": 0,
+        "strictness_effect": "unchanged",
+        "decision": (
+            "Keep Swift count/isEmpty on the existing property-builtin and generic "
+            "method-call contracts with ExactCollection receiver proof."
+        ),
+        "closed_boundary": (
+            "Selector-only count/isEmpty on custom, optional, scalar, or otherwise "
+            "unproven receivers remains closed."
+        ),
+        "next_metric": (
+            "Track cardinality misses by property occurrence, method-call occurrence, "
+            "collection receiver proof, and shadow/typealias boundary."
+        ),
+        "subgroups": [
+            {
+                "surface": "swift.stdlib.cardinality.count",
+                "semantic": "Builtin::Len",
+                "receiver": "ExactCollection",
+            },
+            {
+                "surface": "swift.stdlib.cardinality.isEmpty",
+                "semantic": "Builtin::IsEmpty",
+                "receiver": "ExactCollection",
+            },
+        ],
+    },
 }
 
 UNSUPPORTED_METHODS: dict[str, tuple[str, str, str, str]] = {
@@ -449,6 +483,33 @@ def next_work_group(status: str, boundary: str, capability: str) -> tuple[str, s
     )
 
 
+def processed_high_volume_groups(ranked_next_work: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    processed: list[dict[str, Any]] = []
+    for group in ranked_next_work:
+        if group["occurrences"] < HIGH_VOLUME_PROCESSING_THRESHOLD:
+            continue
+        decision = PROCESSING_DECISIONS.get(group["id"])
+        if decision is None:
+            decision = {
+                "status": "unprocessed-high-volume-group",
+                "semantic_admission_delta": 0,
+                "strictness_effect": "unchanged",
+                "decision": "No processing decision is recorded for this high-volume group yet.",
+                "next_metric": "Add a processing decision before using this group for implementation.",
+            }
+        processed.append(
+            {
+                "id": group["id"],
+                "capability": group["capability"],
+                "occurrences": group["occurrences"],
+                "repos": group["repos"],
+                "top_surfaces": group["top_surfaces"],
+                **decision,
+            }
+        )
+    return sorted(processed, key=lambda group: group.get("sequence", 999))
+
+
 def main() -> int:
     args = parse_args()
     repos_root = Path(args.repos_root)
@@ -531,9 +592,25 @@ def main() -> int:
         next_surfaces[group][f"{surface}.{operation}:{boundary}"] += occurrences
         next_repos[group].update(row_repos[key].keys())
 
+    ranked_next_work = [
+        {
+            "id": group_id,
+            "capability": capability,
+            "occurrences": count,
+            "repos": len(next_repos[group]),
+            "policy": policy,
+            "top_surfaces": [
+                {"surface": surface, "occurrences": surface_count}
+                for surface, surface_count in next_surfaces[group].most_common(8)
+            ],
+        }
+        for group, count in sorted(next_counts.items(), key=lambda item: (-item[1], item[0][0]))
+        for group_id, capability, policy in [group]
+    ]
+
     report = {
         "report_kind": "swift-stdlib-partial-audit",
-        "schema_version": 1,
+        "schema_version": 2,
         "manifest": args.manifest,
         "repos_root": args.repos_root,
         "scanned_swift_repos": len(swift_repos(Path(args.manifest))),
@@ -548,23 +625,9 @@ def main() -> int:
         "status_counts": dict(sorted(status_counts.items())),
         "surface_counts": dict(sorted(surface_counts.items())),
         "boundary_counts": dict(sorted(boundary_counts.items())),
-        "ranked_next_work": [
-            {
-                "id": group_id,
-                "capability": capability,
-                "occurrences": count,
-                "repos": len(next_repos[group]),
-                "policy": policy,
-                "top_surfaces": [
-                    {"surface": surface, "occurrences": surface_count}
-                    for surface, surface_count in next_surfaces[group].most_common(8)
-                ],
-            }
-            for group, count in sorted(
-                next_counts.items(), key=lambda item: (-item[1], item[0][0])
-            )
-            for group_id, capability, policy in [group]
-        ],
+        "ranked_next_work": ranked_next_work,
+        "processing_threshold_occurrences": HIGH_VOLUME_PROCESSING_THRESHOLD,
+        "processed_high_volume_groups": processed_high_volume_groups(ranked_next_work),
         "operations": report_rows,
     }
     output = Path(args.output)

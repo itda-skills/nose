@@ -4,9 +4,12 @@ Status: issue #511 R5 implementation record.
 
 Source artifacts:
 
-- [hof_demand_materialization_matrix.v1.json](../bench/semantic_pack/hof_demand_materialization_matrix.v1.json)
-- [external_authorability_matrix.v1.json](../bench/semantic_pack/external_authorability_matrix.v1.json)
-- [kernel_capability_matrix.v4.json](../bench/semantic_pack/kernel_capability_matrix.v4.json)
+- Matrix [hof_demand_materialization_matrix.v1.json](../bench/semantic_pack/hof_demand_materialization_matrix.v1.json)
+  records the R5 demand/materialization review.
+- Matrix [external_authorability_matrix.v1.json](../bench/semantic_pack/external_authorability_matrix.v1.json)
+  records the R4 authorability boundary that R5 builds on.
+- Matrix [kernel_capability_matrix.v4.json](../bench/semantic_pack/kernel_capability_matrix.v4.json)
+  records the builtin capability baseline available to R5.
 
 ## Goal
 

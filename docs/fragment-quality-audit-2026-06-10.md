@@ -6,8 +6,7 @@ hidden/review exact-fragment families. The question was whether those fragments 
 useful diagnostic substrate, acceptable low-value noise for the default surface, or
 detector output that should be pruned.
 
-The checked-in data artifact is
-[bench/labels/fragment_quality_audit_2026_06_10.json](../bench/labels/fragment_quality_audit_2026_06_10.json).
+The checked-in data artifact is [bench/labels/fragment_quality_audit_2026_06_10.json](../bench/labels/fragment_quality_audit_2026_06_10.json).
 
 ## Sample
 

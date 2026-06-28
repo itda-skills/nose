@@ -199,11 +199,13 @@ and must be explicitly enabled by the user.
 
 ## See also
 
-- [semantic-kernel](semantic-kernel.md)
-- [recall-loss-diagnostics](recall-loss-diagnostics.md)
-- [recall-loss-recovery-loop](recall-loss-recovery-loop.md)
+- [semantic-kernel](semantic-kernel.md) consumes source facts as part of
+  exact-admission evidence.
+- [recall-loss-diagnostics](recall-loss-diagnostics.md) uses source-fact gaps to
+  classify missed semantic opportunities.
+- [recall-loss-recovery-loop](recall-loss-recovery-loop.md) uses source facts to
+  recover recall without weakening strictness.
 - Current implementation status is recorded in
   [semantic-kernel-snapshot](semantic-kernel-snapshot.md); history and remaining
   work are tracked in [semantic-kernel-roadmap](semantic-kernel-roadmap.md).
-- The shared internal record shape for all semantic evidence is described in
-  [evidence-records](evidence-records.md).
+- The shared internal record shape for all semantic evidence is described in [evidence-records](evidence-records.md).

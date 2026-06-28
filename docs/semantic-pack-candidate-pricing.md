@@ -66,32 +66,25 @@ consistency.
 
 The tool emits:
 
-- [`candidate_pricing.v1.json`](../bench/semantic_pack/candidate_pricing.v1.json)
-- [`candidate_pricing.md`](../bench/semantic_pack/candidate_pricing.md)
-- [`loop_reviews.v1.json`](../bench/semantic_pack/loop_reviews.v1.json)
+- Artifact [`candidate_pricing.v1.json`](../bench/semantic_pack/candidate_pricing.v1.json)
+  records the machine-readable priced candidates.
+- Report [`candidate_pricing.md`](../bench/semantic_pack/candidate_pricing.md)
+  records the human-readable pricing report.
+- Artifact [`loop_reviews.v1.json`](../bench/semantic_pack/loop_reviews.v1.json)
+  records the repeated-loop review decisions.
 
 The follow-up primitive census, blocker taxonomy, and accept/reject matrix for
-issue #507 are recorded in
-[semantic-kernel-capability-minimization](semantic-kernel-capability-minimization.md)
+issue #507 are recorded in [semantic-kernel-capability-minimization](semantic-kernel-capability-minimization.md)
 and [`kernel_capability_matrix.v1.json`](../bench/semantic_pack/kernel_capability_matrix.v1.json).
 The larger issue #509 expansion uses the same pricing discipline with a second
-blocker packet and capability matrix:
-[`blocker_packet.v2.json`](../bench/semantic_pack/blocker_packet.v2.json),
-[`kernel_capability_matrix.v2.json`](../bench/semantic_pack/kernel_capability_matrix.v2.json),
-and
-[semantic-kernel-builtin-expansion-509](semantic-kernel-builtin-expansion-509.md).
+blocker packet and capability matrix: [`blocker_packet.v2.json`](../bench/semantic_pack/blocker_packet.v2.json), [`kernel_capability_matrix.v2.json`](../bench/semantic_pack/kernel_capability_matrix.v2.json),
+and [semantic-kernel-builtin-expansion-509](semantic-kernel-builtin-expansion-509.md).
 Issue #511 continues the same loop through repeated R1-R3 cycles before external
-pack influence is opened. Its current artifacts are
-[`blocker_packet.v3.json`](../bench/semantic_pack/blocker_packet.v3.json),
-[`kernel_capability_matrix.v3.json`](../bench/semantic_pack/kernel_capability_matrix.v3.json),
-[`blocker_packet.v4.json`](../bench/semantic_pack/blocker_packet.v4.json), and
-[`kernel_capability_matrix.v4.json`](../bench/semantic_pack/kernel_capability_matrix.v4.json).
-The R4 external authorability pass is recorded in
-[`external_authorability_matrix.v1.json`](../bench/semantic_pack/external_authorability_matrix.v1.json).
-The R5/R6 closeout artifacts are
-[`hof_demand_materialization_matrix.v1.json`](../bench/semantic_pack/hof_demand_materialization_matrix.v1.json)
-and
-[`kernel_expansion_closeout.v1.json`](../bench/semantic_pack/kernel_expansion_closeout.v1.json).
+pack influence is opened. Its current artifacts are [`blocker_packet.v3.json`](../bench/semantic_pack/blocker_packet.v3.json), [`kernel_capability_matrix.v3.json`](../bench/semantic_pack/kernel_capability_matrix.v3.json),
+[`blocker_packet.v4.json`](../bench/semantic_pack/blocker_packet.v4.json), and [`kernel_capability_matrix.v4.json`](../bench/semantic_pack/kernel_capability_matrix.v4.json).
+The R4 external authorability pass is recorded in [`external_authorability_matrix.v1.json`](../bench/semantic_pack/external_authorability_matrix.v1.json).
+The R5/R6 closeout artifacts are [`hof_demand_materialization_matrix.v1.json`](../bench/semantic_pack/hof_demand_materialization_matrix.v1.json)
+and [`kernel_expansion_closeout.v1.json`](../bench/semantic_pack/kernel_expansion_closeout.v1.json).
 
 The current artifact records 20 candidate iterations. It starts from a curated
 seed list instead of attempting automatic API discovery. The scanner uses
@@ -151,13 +144,17 @@ implementation still needs the normal semantic-pack adoption gates:
 - `nose semantic-pack inventory`, `adoption-gates`, and `compatibility` checks;
 - product query-regression output and runtime notes;
 - docs and rollback path.
-- the implementation PR closeout gate in
-  [semantic-pack-adoption](semantic-pack-adoption.md).
+- the implementation PR closeout gate in [semantic-pack-adoption](semantic-pack-adoption.md).
 
 ## Related
 
-- [semantic-pack-ecosystem-candidates](semantic-pack-ecosystem-candidates.md)
-- [semantic-pack-architecture](semantic-pack-architecture.md)
-- [semantic-pack-adoption](semantic-pack-adoption.md)
-- [frontier-platform](frontier-platform.md)
-- [adversarial-coevolution](adversarial-coevolution.md)
+- [semantic-pack-ecosystem-candidates](semantic-pack-ecosystem-candidates.md) lists
+  candidate ecosystems that pricing may turn into scoped issues.
+- [semantic-pack-architecture](semantic-pack-architecture.md) defines the
+  builtin-first boundary that priced candidates must respect.
+- [semantic-pack-adoption](semantic-pack-adoption.md) defines promotion gates
+  after a candidate is implemented.
+- [frontier-platform](frontier-platform.md) explains how product value shapes
+  frontier work selection.
+- [adversarial-coevolution](adversarial-coevolution.md) explains why accepted
+  semantic rows need adversarial hard negatives.

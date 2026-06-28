@@ -5,8 +5,7 @@ The [2026-06-10 audit](scanjson-agent-audit-2026-06-10.md) measured whether an L
 **14 of 18** families decidable — with a ranked list of five evidence gaps behind the four
 failures. Since then those gaps have been filled, most recently by the
 [graded witness](graded-witness.md) (#315, which targeted gaps 1–2). This re-validation
-asks: **do the fixes actually close the gaps?** The data artifact is
-[bench/labels/scanjson_agent_revalidate_2026_06_13.json](../bench/labels/scanjson_agent_revalidate_2026_06_13.json).
+asks: **do the fixes actually close the gaps?** The data artifact is [bench/labels/scanjson_agent_revalidate_2026_06_13.json](../bench/labels/scanjson_agent_revalidate_2026_06_13.json).
 
 ## Protocol
 
@@ -63,5 +62,4 @@ instrument; this confirms the #315 evidence investment paid off against the gaps
 targeted.
 
 *See also: [scanjson-agent-audit-2026-06-10](scanjson-agent-audit-2026-06-10.md) ·
-[graded-witness](graded-witness.md) · [scan JSON](scan-json.md) · [design](design.md) ·
-[agent-recipe](agent-recipe.md).*
+[graded-witness](graded-witness.md) · [scan JSON](scan-json.md) · [design](design.md) · [agent-recipe](agent-recipe.md).*

@@ -203,6 +203,15 @@ break.
   HOFs, membership, sequence views, mutation/effect, ordering, and reduction
   surfaces; the checked-in report shows cardinality receiver proof and
   mutation/effect contracts as the largest next Swift capability targets.
+- Processed the first seven 5,000+ stdlib capability candidates across the
+  Python, Rust, and Swift corpus audits. The latest reports now include
+  `processed_high_volume_groups` with sequence, status, strictness effect, and
+  next metrics for Python materializer domain proof; Rust iterator-domain,
+  Option/Result channel, HOF callback, iterator-lifecycle, and mutation/effect
+  proof; and Swift cardinality receiver proof. Rust audit attribution now
+  aligns `is_none`, terminal `count`, and covered mutation methods with existing
+  generic method/effect contracts, moving `8,283` occurrences from unsupported
+  to supported-partial without widening semantic admission.
 
 ### Fixed
 - Hardened JS/TS string-affix receiver proof so TypeScript `String` object
@@ -234,6 +243,11 @@ break.
   the release binary stayed byte-identical to the post-Java-audit baseline.
 - Confirmed the Python HOF/runtime audit is product-code neutral: the release
   binary stayed byte-identical to the post-Go-audit baseline.
+- Checked the Python/Rust/Swift high-volume stdlib audit processing path. The
+  audit scripts compile and regenerate their checked-in JSON summaries; the only
+  product-code change is the stricter Rust `sort_by_key` mutation-risk evidence
+  row, covered by the existing `module_binding_mutating_method_contract` test
+  surface.
 - Compared the #567 import-backed immutable provenance change against
   the pre-#567 baseline `dbb688e7` with release `nose query crates all top=0
   --mode semantic --format json` and `NOSE_TIME` over five paired runs. Median

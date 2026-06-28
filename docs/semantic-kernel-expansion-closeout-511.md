@@ -4,11 +4,16 @@ Status: issue #511 R6 closeout record.
 
 Source artifacts:
 
-- [kernel_expansion_closeout.v1.json](../bench/semantic_pack/kernel_expansion_closeout.v1.json)
-- [hof_demand_materialization_matrix.v1.json](../bench/semantic_pack/hof_demand_materialization_matrix.v1.json)
-- [external_authorability_matrix.v1.json](../bench/semantic_pack/external_authorability_matrix.v1.json)
-- [kernel_capability_matrix.v4.json](../bench/semantic_pack/kernel_capability_matrix.v4.json)
-- [kernel_capability_matrix.v3.json](../bench/semantic_pack/kernel_capability_matrix.v3.json)
+- Snapshot [kernel_expansion_closeout.v1.json](../bench/semantic_pack/kernel_expansion_closeout.v1.json)
+  records the R6 closeout decisions and performance gate.
+- Matrix [hof_demand_materialization_matrix.v1.json](../bench/semantic_pack/hof_demand_materialization_matrix.v1.json)
+  records the R5 HOF demand/materialization boundary.
+- Matrix [external_authorability_matrix.v1.json](../bench/semantic_pack/external_authorability_matrix.v1.json)
+  records the R4 external-authorability dry-run.
+- Matrix [kernel_capability_matrix.v4.json](../bench/semantic_pack/kernel_capability_matrix.v4.json)
+  records the final cycle 2 capability matrix.
+- Matrix [kernel_capability_matrix.v3.json](../bench/semantic_pack/kernel_capability_matrix.v3.json)
+  records the cycle 1 capability matrix used for comparison.
 
 ## Goal
 
