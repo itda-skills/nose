@@ -230,6 +230,11 @@ python3 scripts/cross-language-boundary-census.py \
   channels, rejection continuations, settlement continuations, and callback
   demand/effect obligations while exact Promise continuation admission remains
   closed.
+- [promise-then-obligation-diagnostics-2026-06-28.v1.json](promise-then-obligation-diagnostics-2026-06-28.v1.json)
+  records the reporting-only `.then` split. Selector-only and custom receivers
+  now report PromiseLike receiver proof separately from fulfillment
+  continuation, rejection continuation, and callback demand/effect labels; exact
+  Promise continuation admission remains closed.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

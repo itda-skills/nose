@@ -454,6 +454,24 @@ fn runtime_boundary_obligation(missing_evidence: &[&'static str]) -> (&'static s
             "promise-executor-callback-effect-contract-missing",
         );
     }
+    if missing_evidence.contains(&"promise-then-promise-like-receiver-proof") {
+        return (
+            "ambiguous-selector-boundary",
+            "promise-then-promise-like-receiver-proof-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-then-fulfillment-continuation-contract") {
+        return (
+            "success-error-result-channel",
+            "promise-then-fulfillment-continuation-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-then-rejection-continuation-contract") {
+        return (
+            "rejection-channel",
+            "promise-then-rejection-continuation-contract-missing",
+        );
+    }
     if missing_evidence.contains(&"promise-then-callback-demand-effect-contract") {
         return (
             "callback-demand-effect",
@@ -554,6 +572,55 @@ fn runtime_boundary_obligation(missing_evidence: &[&'static str]) -> (&'static s
         "scheduling-boundary",
         "runtime-protocol-boundary-contract-missing",
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn promise_then_receiver_obligation_is_primary_for_selector_only_then() {
+        let labels = [
+            "lowered-runtime-boundary-contract",
+            "promise-then-promise-like-receiver-proof",
+            "promise-then-fulfillment-continuation-contract",
+            "promise-then-rejection-continuation-contract",
+            "promise-then-callback-demand-effect-contract",
+        ];
+
+        assert_eq!(
+            runtime_boundary_obligation(&labels),
+            (
+                "ambiguous-selector-boundary",
+                "promise-then-promise-like-receiver-proof-missing",
+            )
+        );
+    }
+
+    #[test]
+    fn promise_then_continuation_and_callback_labels_have_standalone_obligations() {
+        assert_eq!(
+            runtime_boundary_obligation(&["promise-then-fulfillment-continuation-contract"]),
+            (
+                "success-error-result-channel",
+                "promise-then-fulfillment-continuation-contract-missing",
+            )
+        );
+        assert_eq!(
+            runtime_boundary_obligation(&["promise-then-rejection-continuation-contract"]),
+            (
+                "rejection-channel",
+                "promise-then-rejection-continuation-contract-missing",
+            )
+        );
+        assert_eq!(
+            runtime_boundary_obligation(&["promise-then-callback-demand-effect-contract"]),
+            (
+                "callback-demand-effect",
+                "promise-then-callback-demand-effect-contract-missing",
+            )
+        );
+    }
 }
 
 fn hof_demand_effect_obligation_subreason(missing_evidence: &[&'static str]) -> &'static str {

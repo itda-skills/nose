@@ -75,15 +75,15 @@ They do not change exact admission.
 
 | obligation family | typical subreason | meaning |
 |---|---|---|
-| `callback-demand-effect` | `callback-member-call-effect-proof-missing`, `callback-rust-macro-call-effect-proof-missing`, `callback-direct-function-call-effect-contract-missing`, `callback-imported-function-call-effect-contract-missing`, `callback-assignment-effect-proof-missing`, `callback-runtime-boundary-proof-missing`, `callback-identity-or-shape-proof-missing`, `mapping-callback-demand-effect-profile-missing`, `predicate-callback-demand-effect-profile-missing`, `flattening-callback-demand-effect-profile-missing`, `optional-callback-demand-effect-profile-missing`, or `reduction-callback-demand-effect-profile-missing` | A HOF/callback surface lacks timing, callback identity, effect visibility, result role, call-shape proof, or materialization proof. |
+| `callback-demand-effect` | `callback-member-call-effect-proof-missing`, `callback-rust-macro-call-effect-proof-missing`, `callback-direct-function-call-effect-contract-missing`, `callback-imported-function-call-effect-contract-missing`, `callback-assignment-effect-proof-missing`, `callback-runtime-boundary-proof-missing`, `callback-identity-or-shape-proof-missing`, `promise-then-callback-demand-effect-contract-missing`, `mapping-callback-demand-effect-profile-missing`, `predicate-callback-demand-effect-profile-missing`, `flattening-callback-demand-effect-profile-missing`, `optional-callback-demand-effect-profile-missing`, or `reduction-callback-demand-effect-profile-missing` | A HOF/callback surface lacks timing, callback identity, effect visibility, result role, call-shape proof, or materialization proof. |
 | `executor-callback` | `promise-executor-callback-effect-contract-missing` | A Promise/Future-like constructor callback needs executor timing, thrown-to-rejected outcome, and callback-effect proof before exact use. |
 | `receiver-mutation` | `effect-preserving-contract-missing` | A mutation/place/effect boundary blocks exact admission. |
-| `rejection-channel` | `promise-reject-rejected-value-channel-contract-missing`, `promise-catch-rejection-continuation-contract-missing`, `promise-finally-settlement-continuation-contract-missing`, legacy `promise-rejection-channel-contract-missing`/`promise-rejection-continuation-contract-missing`, or `exception-channel-contract-missing` | Rejection, catch/finally settlement, throw, rescue, or non-local error flow must remain distinct from ordinary return values. |
-| `success-error-result-channel` | `promise-factory-settled-value-contract-missing`, `promise-aggregate-result-channel-contract-missing` | Success, empty/default, error/rejection, and aggregate result channels need explicit result-shape proof. |
+| `rejection-channel` | `promise-reject-rejected-value-channel-contract-missing`, `promise-catch-rejection-continuation-contract-missing`, `promise-finally-settlement-continuation-contract-missing`, `promise-then-rejection-continuation-contract-missing`, legacy `promise-rejection-channel-contract-missing`/`promise-rejection-continuation-contract-missing`, or `exception-channel-contract-missing` | Rejection, catch/finally settlement, throw, rescue, or non-local error flow must remain distinct from ordinary return values. |
+| `success-error-result-channel` | `promise-factory-settled-value-contract-missing`, `promise-aggregate-result-channel-contract-missing`, or `promise-then-fulfillment-continuation-contract-missing` | Success, empty/default, error/rejection, and aggregate result channels need explicit result-shape proof. |
 | `scheduling-boundary` | `promise-await-scheduling-contract-missing`, `promise-async-function-scheduling-contract-missing`, `promise-non-construct-call-boundary-contract-missing`, or `runtime-protocol-boundary-contract-missing` | A lowered runtime/protocol construct needs scheduling or protocol semantics before exact use. |
 | `channel-boundary` | `channel-protocol-contract-missing` | Channel send/receive/select semantics need protocol evidence before exact use. |
 | `exception-channel` | `exception-channel-contract-missing` | Try/throw/error propagation is an explicit channel boundary, not a scheduling boundary. |
-| `ambiguous-selector-boundary` | `receiver-domain-proof-missing`, `library-api-occurrence-evidence-missing`, or a call-target proof label | Selector, receiver, library API, or callee identity proof is missing. |
+| `ambiguous-selector-boundary` | `receiver-domain-proof-missing`, `promise-then-promise-like-receiver-proof-missing`, `library-api-occurrence-evidence-missing`, or a call-target proof label | Selector, receiver, library API, or callee identity proof is missing. |
 | `source-protocol-boundary` | `source-surface-contract-missing`, `rust-macro-expansion-contract-missing` | A source/protocol syntax distinction is required but not proven. |
 | `non-degenerate-fingerprint-floor` | `non-degenerate-value-fingerprint` | The unit is otherwise exact-safe but too small for a non-degenerate exact claim. |
 | `unattributed-boundary` | `strict-exact-safe-tree-missing` | A strict-exact rejection still lacks a more specific capability attribution. |
@@ -141,6 +141,11 @@ then split the former rejection-channel catch-all into `Promise.reject`
 rejected-value channels, `.catch` rejection continuations, and `.finally`
 settlement continuations. `.catch` and `.finally` also carry callback
 demand/effect labels, but exact Promise continuation admission remains closed.
+The follow-up [promise then obligation diagnostics](../bench/recall_loss/promise-then-obligation-diagnostics-2026-06-28.v1.json)
+does the same for `.then`: selector-only or custom receivers report
+`promise-then-promise-like-receiver-proof`, while fulfillment continuation,
+rejection continuation, and callback demand/effect stay visible as distinct
+missing-evidence labels.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

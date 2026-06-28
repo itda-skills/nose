@@ -260,42 +260,48 @@ fn push_promise_protocol_call_missing_evidence(
     let Some(callee) = il.children(call).first().copied() else {
         return false;
     };
-    let Some(path) = callee_path(il, interner, callee) else {
-        return false;
-    };
-    if promise_construct_call(il, call, &path) {
+    let path = callee_path(il, interner, callee);
+    let method = callee_field_method(il, interner, callee);
+    if path
+        .as_deref()
+        .is_some_and(|path| promise_construct_call(il, call, path))
+    {
         push_unique(labels, "promise-executor-callback-effect-contract");
         return true;
     }
-    match path.as_str() {
-        "Promise" => {
+    match path.as_deref() {
+        Some("Promise") => {
             push_unique(labels, "promise-non-construct-call-boundary-contract");
             true
         }
-        "Promise.resolve" => {
+        Some("Promise.resolve") => {
             push_unique(labels, "promise-factory-settled-value-contract");
             true
         }
-        "Promise.reject" => {
+        Some("Promise.reject") => {
             push_unique(labels, "promise-reject-rejected-value-channel-contract");
             true
         }
-        "Promise.all" | "Promise.allSettled" | "Promise.any" | "Promise.race" => {
+        Some("Promise.all" | "Promise.allSettled" | "Promise.any" | "Promise.race") => {
             push_unique(labels, "promise-aggregate-result-channel-contract");
             true
         }
-        _ if path.ends_with(".then") => {
-            push_unique(labels, "promise-then-callback-demand-effect-contract");
-            push_unique(labels, "promise-like-receiver-proof");
+        _ if method == Some("then") => {
+            push_unique(labels, "promise-then-promise-like-receiver-proof");
+            push_unique(labels, "promise-then-fulfillment-continuation-contract");
+            push_unique(labels, "promise-then-rejection-continuation-contract");
+            if promise_then_has_callback_slot(il, call) {
+                push_unique(labels, "promise-then-callback-demand-effect-contract");
+            }
             true
         }
-        _ if path.ends_with(".catch") => {
+        _ if method == Some("catch") => {
             push_unique(labels, "promise-catch-rejection-continuation-contract");
             push_unique(labels, "promise-catch-callback-demand-effect-contract");
             push_unique(labels, "promise-like-receiver-proof");
             true
         }
-        _ if path.ends_with(".finally") => {
+        _ if method == Some("finally") => {
             push_unique(labels, "promise-finally-settlement-continuation-contract");
             push_unique(labels, "promise-finally-callback-demand-effect-contract");
             push_unique(labels, "promise-like-receiver-proof");
@@ -303,6 +309,10 @@ fn push_promise_protocol_call_missing_evidence(
         }
         _ => false,
     }
+}
+
+fn promise_then_has_callback_slot(il: &nose_il::Il, call: NodeId) -> bool {
+    il.children(call).len() > 1
 }
 
 fn js_like_runtime_lang(lang: nose_il::Lang) -> bool {
@@ -337,6 +347,20 @@ fn callee_path(il: &nose_il::Il, interner: &Interner, node: NodeId) -> Option<St
         }
         _ => None,
     }
+}
+
+fn callee_field_method<'a>(
+    il: &nose_il::Il,
+    interner: &'a Interner,
+    node: NodeId,
+) -> Option<&'a str> {
+    if il.kind(node) != nose_il::NodeKind::Field {
+        return None;
+    }
+    let nose_il::Payload::Name(method) = il.node(node).payload else {
+        return None;
+    };
+    Some(interner.resolve(method))
 }
 
 fn hof_missing_evidence(il: &nose_il::Il, interner: &Interner, root: NodeId) -> Vec<&'static str> {
@@ -722,15 +746,55 @@ mod tests {
             .map(|idx| NodeId(idx as u32))
             .find(|&node| {
                 il.kind(node) == nose_il::NodeKind::Call
-                    && il
-                        .children(node)
-                        .first()
-                        .and_then(|&callee| callee_path(&il, &interner, callee))
-                        .is_some_and(|path| path.ends_with(callee_suffix))
+                    && call_matches_callee_surface(&il, &interner, node, callee_suffix)
             })
             .unwrap_or_else(|| panic!("expected call ending in {callee_suffix}"));
         runtime_boundary_missing_evidence(&il, &interner, call)
             .unwrap_or_else(|| panic!("expected runtime boundary evidence for {callee_suffix}"))
+    }
+
+    fn call_matches_callee_surface(
+        il: &nose_il::Il,
+        interner: &Interner,
+        call: NodeId,
+        callee_suffix: &str,
+    ) -> bool {
+        let Some(&callee) = il.children(call).first() else {
+            return false;
+        };
+        if callee_path(il, interner, callee).is_some_and(|path| path.ends_with(callee_suffix)) {
+            return true;
+        }
+        callee_suffix
+            .strip_prefix('.')
+            .is_some_and(|method| callee_field_method(il, interner, callee) == Some(method))
+    }
+
+    #[test]
+    fn promise_then_missing_evidence_splits_receiver_fulfillment_rejection_and_callback() {
+        let labels = missing_evidence_for_call(
+            "function thenIt(p, f, r) { return p.then(f, r); }\n",
+            ".then",
+        );
+
+        assert!(labels.contains(&"promise-then-promise-like-receiver-proof"));
+        assert!(labels.contains(&"promise-then-fulfillment-continuation-contract"));
+        assert!(labels.contains(&"promise-then-rejection-continuation-contract"));
+        assert!(labels.contains(&"promise-then-callback-demand-effect-contract"));
+        assert!(!labels.contains(&"promise-like-receiver-proof"));
+    }
+
+    #[test]
+    fn promise_then_on_expression_receiver_still_reports_receiver_obligation() {
+        let labels = missing_evidence_for_call(
+            "function thenIt(db, id, f) { return db.get(id).then(f); }\n",
+            ".then",
+        );
+
+        assert!(labels.contains(&"promise-then-promise-like-receiver-proof"));
+        assert!(labels.contains(&"promise-then-fulfillment-continuation-contract"));
+        assert!(labels.contains(&"promise-then-rejection-continuation-contract"));
+        assert!(labels.contains(&"promise-then-callback-demand-effect-contract"));
     }
 
     #[test]

@@ -281,6 +281,12 @@ break.
   distinct rejected-value, rejection-continuation, settlement-continuation, and
   callback-demand/effect missing-evidence labels instead of collapsing into the
   older generic rejection-channel labels.
+- Split Promise `.then` recall-loss reporting into receiver, fulfillment,
+  rejection, and callback obligations. Selector-only `.then` calls, including
+  expression receivers such as `db.get(id).then(f)`, now report missing
+  PromiseLike receiver proof separately from fulfillment/rejection continuation
+  and callback demand/effect labels, without opening exact continuation
+  admission.
 
 ### Fixed
 - Made `scripts/check-docs.sh` compatible with both awiki versions that support

@@ -567,6 +567,13 @@ keep exact admission closed while splitting the rejection-channel catch-all into
 `.finally` settlement continuations. `.catch` and `.finally` also carry callback
 demand/effect evidence labels so future oracle-visible rows do not collapse into
 one generic continuation bucket.
+The [promise then obligation diagnostics](../bench/recall_loss/promise-then-obligation-diagnostics-2026-06-28.v1.json)
+complete the next reporting-only split for `.then`: receiver proof is the
+primary rollup, and fulfillment continuation, rejection continuation, and
+callback demand/effect stay visible as separate missing-evidence labels. The
+slice also detects expression receivers such as `db.get(id).then(f)`, which
+keeps selector-only thenables visible without treating them as admitted Promise
+continuations.
 
 ## See Also
 
