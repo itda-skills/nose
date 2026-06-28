@@ -224,6 +224,12 @@ python3 scripts/cross-language-boundary-census.py \
   non-thenable-safe literal/nullish/scalar value; sync payloads, possible
   thenables, explicit PromiseLike values, custom receivers, executors,
   aggregate channels, and rejection channels remain closed.
+- [promise-rejection-continuation-diagnostics-2026-06-28.v1.json](promise-rejection-continuation-diagnostics-2026-06-28.v1.json)
+  records a reporting-only Promise rejection split. `Promise.reject`, `.catch`,
+  and `.finally` now emit distinct missing-evidence labels for rejected-value
+  channels, rejection continuations, settlement continuations, and callback
+  demand/effect obligations while exact Promise continuation admission remains
+  closed.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

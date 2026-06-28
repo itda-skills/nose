@@ -276,6 +276,11 @@ break.
   non-thenable-safe literal/nullish/scalar arguments; sync payloads, untyped or
   explicit thenables, custom receivers, executors, aggregate channels, and
   rejection channels remain closed.
+- Split Promise rejection/continuation recall-loss reporting without opening
+  exact admission. `Promise.reject`, `.catch`, and `.finally` now produce
+  distinct rejected-value, rejection-continuation, settlement-continuation, and
+  callback-demand/effect missing-evidence labels instead of collapsing into the
+  older generic rejection-channel labels.
 
 ### Fixed
 - Made `scripts/check-docs.sh` compatible with both awiki versions that support

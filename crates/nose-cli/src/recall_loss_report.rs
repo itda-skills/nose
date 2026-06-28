@@ -460,6 +460,36 @@ fn runtime_boundary_obligation(missing_evidence: &[&'static str]) -> (&'static s
             "promise-then-callback-demand-effect-contract-missing",
         );
     }
+    if missing_evidence.contains(&"promise-catch-rejection-continuation-contract") {
+        return (
+            "rejection-channel",
+            "promise-catch-rejection-continuation-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-finally-settlement-continuation-contract") {
+        return (
+            "rejection-channel",
+            "promise-finally-settlement-continuation-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-reject-rejected-value-channel-contract") {
+        return (
+            "rejection-channel",
+            "promise-reject-rejected-value-channel-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-catch-callback-demand-effect-contract") {
+        return (
+            "callback-demand-effect",
+            "promise-catch-callback-demand-effect-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-finally-callback-demand-effect-contract") {
+        return (
+            "callback-demand-effect",
+            "promise-finally-callback-demand-effect-contract-missing",
+        );
+    }
     if missing_evidence.contains(&"promise-rejection-continuation-contract") {
         return (
             "rejection-channel",

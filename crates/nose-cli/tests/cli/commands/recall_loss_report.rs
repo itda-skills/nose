@@ -365,7 +365,7 @@ function callPromise(x) { return Promise(x); }\n",
         ),
         (
             "rejection-channel",
-            "promise-rejection-channel-contract-missing",
+            "promise-reject-rejected-value-channel-contract-missing",
         ),
         (
             "scheduling-boundary",
@@ -389,7 +389,7 @@ function callPromise(x) { return Promise(x); }\n",
         "promise-executor-callback-effect-contract",
         "promise-factory-settled-value-contract",
         "promise-aggregate-result-channel-contract",
-        "promise-rejection-channel-contract",
+        "promise-reject-rejected-value-channel-contract",
         "promise-non-construct-call-boundary-contract",
     ] {
         assert!(
@@ -400,6 +400,17 @@ function callPromise(x) { return Promise(x); }\n",
                         .as_array()
                         .is_some_and(|items| items.iter().any(|value| value == expected))),
             "expected Promise missing evidence label {expected}: {report}"
+        );
+    }
+    for generic in ["promise-rejection-channel-contract"] {
+        assert!(
+            !rejections
+                .iter()
+                .any(|item| item["reason"] == "unsupported-runtime-boundary"
+                    && item["missing_evidence"]
+                        .as_array()
+                        .is_some_and(|items| items.iter().any(|value| value == generic))),
+            "generic Promise rejection evidence label should stay split: {report}"
         );
     }
 }

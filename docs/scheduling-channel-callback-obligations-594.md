@@ -70,6 +70,11 @@ lets dependency-closed `Promise.resolve(value)` enter exact semantic matching on
 when `value` is proven non-thenable-safe, so the Promise factory boundary is
 retained and broader scheduling, executor, aggregate, and rejection channels stay
 closed.
+The follow-up [promise-rejection-continuation-diagnostics-2026-06-28.v1.json](../bench/recall_loss/promise-rejection-continuation-diagnostics-2026-06-28.v1.json)
+is reporting-only: `Promise.reject`, `.catch`, and `.finally` now have separate
+missing-evidence labels for rejected-value channels, rejection continuations,
+settlement continuations, and callback demand/effect obligations. It does not
+admit Promise continuation equivalence.
 
 ## Minimal Vocabulary
 
@@ -83,7 +88,7 @@ closed.
 | executor callback | source/API occurrence plus async/protocol demand profile | executor timing and thrown/rejected outcomes must be represented before any producer/factory convergence |
 | success/error result channel | `Domain(Option/Result/FutureLike/PromiseLike)`, constructor/predicate rows, default contracts | success, empty, default, error, panic, and rejection channels must remain distinct |
 | exception channel | `Source::Protocol`, static-error control, effect-free throw checks | thrown/rescued/non-local control must not be collapsed into ordinary return values |
-| rejection channel | Promise/Future-like contracts and async demand profiles | rejection, catch/finally, aggregate rejection, and thenable assimilation stay closed until proven |
+| rejection channel | Promise/Future-like contracts and async demand profiles | rejected values, catch continuations, finally settlement, aggregate rejection, and thenable assimilation stay closed until proven |
 | scheduling boundary | `DemandOperation::AsyncContinuation`, `GeneratorSuspension`, `ChannelOperation`, `ProtocolBoundary` | task/thread/goroutine/microtask timing is not synchronous equivalence proof |
 | cancellation/early exit | short-circuit demand profiles and future protocol facts | cancellation, stop, break, first-settled, and early-exit behavior must be explicit |
 | lifecycle/materialization | `SequenceSurface`, `Domain`, iterator adapter/materializer rows | one-shot views, reusable collections, type-directed materializers, and allocation/lifetime are separate |

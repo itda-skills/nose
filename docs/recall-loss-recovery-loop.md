@@ -561,6 +561,12 @@ stays fail-closed instead of looking like an ordinary synchronous body. The
 `crates` gate remains `false_merges == 0` and
 `canon_preservation_violations == 0`; local Promise fixture rows demonstrate
 executor, rejection, aggregate, factory, and non-construct subreasons.
+The later [promise rejection/continuation diagnostics](../bench/recall_loss/promise-rejection-continuation-diagnostics-2026-06-28.v1.json)
+keep exact admission closed while splitting the rejection-channel catch-all into
+`Promise.reject` rejected-value channels, `.catch` rejection continuations, and
+`.finally` settlement continuations. `.catch` and `.finally` also carry callback
+demand/effect evidence labels so future oracle-visible rows do not collapse into
+one generic continuation bucket.
 
 ## See Also
 

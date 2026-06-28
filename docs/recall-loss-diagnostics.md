@@ -78,7 +78,7 @@ They do not change exact admission.
 | `callback-demand-effect` | `callback-member-call-effect-proof-missing`, `callback-rust-macro-call-effect-proof-missing`, `callback-direct-function-call-effect-contract-missing`, `callback-imported-function-call-effect-contract-missing`, `callback-assignment-effect-proof-missing`, `callback-runtime-boundary-proof-missing`, `callback-identity-or-shape-proof-missing`, `mapping-callback-demand-effect-profile-missing`, `predicate-callback-demand-effect-profile-missing`, `flattening-callback-demand-effect-profile-missing`, `optional-callback-demand-effect-profile-missing`, or `reduction-callback-demand-effect-profile-missing` | A HOF/callback surface lacks timing, callback identity, effect visibility, result role, call-shape proof, or materialization proof. |
 | `executor-callback` | `promise-executor-callback-effect-contract-missing` | A Promise/Future-like constructor callback needs executor timing, thrown-to-rejected outcome, and callback-effect proof before exact use. |
 | `receiver-mutation` | `effect-preserving-contract-missing` | A mutation/place/effect boundary blocks exact admission. |
-| `rejection-channel` | `promise-rejection-channel-contract-missing`, `promise-rejection-continuation-contract-missing`, or `exception-channel-contract-missing` | Rejection, catch/finally, throw, rescue, or non-local error flow must remain distinct from ordinary return values. |
+| `rejection-channel` | `promise-reject-rejected-value-channel-contract-missing`, `promise-catch-rejection-continuation-contract-missing`, `promise-finally-settlement-continuation-contract-missing`, legacy `promise-rejection-channel-contract-missing`/`promise-rejection-continuation-contract-missing`, or `exception-channel-contract-missing` | Rejection, catch/finally settlement, throw, rescue, or non-local error flow must remain distinct from ordinary return values. |
 | `success-error-result-channel` | `promise-factory-settled-value-contract-missing`, `promise-aggregate-result-channel-contract-missing` | Success, empty/default, error/rejection, and aggregate result channels need explicit result-shape proof. |
 | `scheduling-boundary` | `promise-await-scheduling-contract-missing`, `promise-async-function-scheduling-contract-missing`, `promise-non-construct-call-boundary-contract-missing`, or `runtime-protocol-boundary-contract-missing` | A lowered runtime/protocol construct needs scheduling or protocol semantics before exact use. |
 | `channel-boundary` | `channel-protocol-contract-missing` | Channel send/receive/select semantics need protocol evidence before exact use. |
@@ -136,6 +136,11 @@ It opens only dependency-closed `Promise.resolve(value)` factories whose
 argument is proven non-thenable-safe, while preserving the same hard negatives
 for sync payloads, possible thenables, explicit PromiseLike values, executors,
 aggregate channels, and rejection channels.
+The reporting-only [promise rejection/continuation diagnostics](../bench/recall_loss/promise-rejection-continuation-diagnostics-2026-06-28.v1.json)
+then split the former rejection-channel catch-all into `Promise.reject`
+rejected-value channels, `.catch` rejection continuations, and `.finally`
+settlement continuations. `.catch` and `.finally` also carry callback
+demand/effect labels, but exact Promise continuation admission remains closed.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

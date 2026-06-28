@@ -277,7 +277,7 @@ fn push_promise_protocol_call_missing_evidence(
             true
         }
         "Promise.reject" => {
-            push_unique(labels, "promise-rejection-channel-contract");
+            push_unique(labels, "promise-reject-rejected-value-channel-contract");
             true
         }
         "Promise.all" | "Promise.allSettled" | "Promise.any" | "Promise.race" => {
@@ -289,8 +289,15 @@ fn push_promise_protocol_call_missing_evidence(
             push_unique(labels, "promise-like-receiver-proof");
             true
         }
-        _ if path.ends_with(".catch") || path.ends_with(".finally") => {
-            push_unique(labels, "promise-rejection-continuation-contract");
+        _ if path.ends_with(".catch") => {
+            push_unique(labels, "promise-catch-rejection-continuation-contract");
+            push_unique(labels, "promise-catch-callback-demand-effect-contract");
+            push_unique(labels, "promise-like-receiver-proof");
+            true
+        }
+        _ if path.ends_with(".finally") => {
+            push_unique(labels, "promise-finally-settlement-continuation-contract");
+            push_unique(labels, "promise-finally-callback-demand-effect-contract");
             push_unique(labels, "promise-like-receiver-proof");
             true
         }
@@ -689,4 +696,75 @@ fn rust_macro_invocation_call(il: &nose_il::Il, node: NodeId) -> bool {
                 ))
             )
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nose_il::{FileId, Lang};
+
+    fn lowered_js(src: &str) -> (nose_il::Il, Interner) {
+        let interner = Interner::new();
+        let il = nose_frontend::lower_source(
+            FileId(0),
+            "promise.js",
+            src.as_bytes(),
+            Lang::JavaScript,
+            &interner,
+        )
+        .expect("lower JavaScript fixture");
+        (il, interner)
+    }
+
+    fn missing_evidence_for_call(src: &str, callee_suffix: &str) -> Vec<&'static str> {
+        let (il, interner) = lowered_js(src);
+        let call = (0..il.nodes.len())
+            .map(|idx| NodeId(idx as u32))
+            .find(|&node| {
+                il.kind(node) == nose_il::NodeKind::Call
+                    && il
+                        .children(node)
+                        .first()
+                        .and_then(|&callee| callee_path(&il, &interner, callee))
+                        .is_some_and(|path| path.ends_with(callee_suffix))
+            })
+            .unwrap_or_else(|| panic!("expected call ending in {callee_suffix}"));
+        runtime_boundary_missing_evidence(&il, &interner, call)
+            .unwrap_or_else(|| panic!("expected runtime boundary evidence for {callee_suffix}"))
+    }
+
+    #[test]
+    fn promise_reject_missing_evidence_is_rejection_value_channel_specific() {
+        let labels = missing_evidence_for_call(
+            "function rejectIt(e) { return Promise.reject(e); }\n",
+            "Promise.reject",
+        );
+
+        assert!(labels.contains(&"promise-reject-rejected-value-channel-contract"));
+        assert!(!labels.contains(&"promise-rejection-channel-contract"));
+    }
+
+    #[test]
+    fn promise_catch_missing_evidence_splits_continuation_from_callback_effect() {
+        let labels =
+            missing_evidence_for_call("function catchIt(p, h) { return p.catch(h); }\n", ".catch");
+
+        assert!(labels.contains(&"promise-catch-rejection-continuation-contract"));
+        assert!(labels.contains(&"promise-catch-callback-demand-effect-contract"));
+        assert!(labels.contains(&"promise-like-receiver-proof"));
+        assert!(!labels.contains(&"promise-rejection-continuation-contract"));
+    }
+
+    #[test]
+    fn promise_finally_missing_evidence_splits_settlement_from_callback_effect() {
+        let labels = missing_evidence_for_call(
+            "function finallyIt(p, h) { return p.finally(h); }\n",
+            ".finally",
+        );
+
+        assert!(labels.contains(&"promise-finally-settlement-continuation-contract"));
+        assert!(labels.contains(&"promise-finally-callback-demand-effect-contract"));
+        assert!(labels.contains(&"promise-like-receiver-proof"));
+        assert!(!labels.contains(&"promise-rejection-continuation-contract"));
+    }
 }
