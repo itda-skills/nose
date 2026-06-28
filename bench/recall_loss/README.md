@@ -114,3 +114,8 @@ slice.
   records the #587 relative-super closeout: imports that name the parent module
   itself now resolve to callable/type boundaries, moving
   `provider-module-missing` `11 -> 0` without admitting new snapshots.
+- [post-587-census.v1.json](post-587-census.v1.json) records the current
+  post-#587 `crates` recall-loss census: module/provider-missing import
+  snapshot work is complete on the checked surface, and the next largest
+  capability buckets are receiver-domain proof, callee identity, and
+  mutation/effect contracts.

@@ -218,10 +218,12 @@ fn read_cids(il: &Il, node: NodeId, out: &mut FxHashSet<u32>) {
 
 /// Record `idx` as the owning statement for every node in `node`'s subtree, and collect into
 /// `lazy` the nodes whose evaluation is CONDITIONAL or REPEATED relative to that statement —
-/// a lambda body (run 0+ times), a non-condition branch of an `If`/ternary, or anything under
-/// a `Loop`. Inlining a possibly-raising temp into such a position would change *when* (or
-/// whether) it evaluates: e.g. inlining `t = nodes[node_ind]` into a comprehension filter
-/// elides its `Err` when the iterable is empty. Such uses are skipped by the inliner.
+/// a lambda body (run 0+ times), a non-condition branch of an `If`/ternary, anything under
+/// a `Loop`, or anything under a `Try`. Inlining a possibly-raising temp into such a
+/// position would change *when* (or whether) it evaluates, or which handler can catch its
+/// `Err`: e.g. inlining `t = nodes[node_ind]` into a comprehension filter elides its `Err`
+/// when the iterable is empty, while inlining a pre-`try` temp into the `try` body moves its
+/// `Err` into the catch region. Such uses are skipped by the inliner.
 fn mark_owner(
     il: &Il,
     node: NodeId,
@@ -239,6 +241,7 @@ fn mark_owner(
         let child_lazy = in_lazy
             || kind == NodeKind::Lambda
             || kind == NodeKind::Loop
+            || kind == NodeKind::Try
             || (kind == NodeKind::If && ci > 0);
         mark_owner(il, c, idx, child_lazy, owner, lazy);
     }
@@ -323,4 +326,77 @@ impl Rebuilder<'_> {
     }
 
     crate::rebuild_generic!();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nose_il::{FileId, FileMeta, Lang, Op, Span};
+
+    fn test_file_meta() -> FileMeta {
+        FileMeta {
+            path: "dataflow-test".into(),
+            lang: Lang::Python,
+        }
+    }
+
+    #[test]
+    fn does_not_inline_pre_try_temp_into_try_body() {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let param = b.add(NodeKind::Param, Payload::Cid(0), sp, &[]);
+        let tmp_lhs = b.add(NodeKind::Var, Payload::Cid(1), sp, &[]);
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let x = b.add(NodeKind::Var, Payload::Cid(0), sp, &[]);
+        let div = b.add(NodeKind::BinOp, Payload::Op(Op::Div), sp, &[one, x]);
+        let assign = b.add(NodeKind::Assign, Payload::None, sp, &[tmp_lhs, div]);
+        let tmp_use = b.add(NodeKind::Var, Payload::Cid(1), sp, &[]);
+        let body_ret = b.add(NodeKind::Return, Payload::None, sp, &[tmp_use]);
+        let body = b.add(NodeKind::Block, Payload::None, sp, &[body_ret]);
+        let seven = b.add(NodeKind::Lit, Payload::LitInt(7), sp, &[]);
+        let handler_ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
+        let handler = b.add(NodeKind::Block, Payload::None, sp, &[handler_ret]);
+        let try_node = b.add(NodeKind::Try, Payload::None, sp, &[body, handler]);
+        let block = b.add(NodeKind::Block, Payload::None, sp, &[assign, try_node]);
+        let func = b.add(NodeKind::Func, Payload::None, sp, &[param, block]);
+        let il = b.finish(func, test_file_meta(), Vec::new(), Vec::new());
+
+        let out = run(&il);
+        let func_children = out.children(out.root);
+        let outer_block = *func_children.last().expect("function body");
+        let outer_stmts = out.children(outer_block);
+        assert_eq!(outer_stmts.len(), 2);
+        assert_eq!(out.kind(outer_stmts[0]), NodeKind::Assign);
+        assert_eq!(out.kind(outer_stmts[1]), NodeKind::Try);
+    }
+
+    #[test]
+    fn still_inlines_temp_within_same_try_body_block() {
+        let sp = Span::synthetic(FileId(0));
+        let mut b = IlBuilder::new(FileId(0));
+        let param = b.add(NodeKind::Param, Payload::Cid(0), sp, &[]);
+        let tmp_lhs = b.add(NodeKind::Var, Payload::Cid(1), sp, &[]);
+        let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp, &[]);
+        let x = b.add(NodeKind::Var, Payload::Cid(0), sp, &[]);
+        let add = b.add(NodeKind::BinOp, Payload::Op(Op::Add), sp, &[one, x]);
+        let assign = b.add(NodeKind::Assign, Payload::None, sp, &[tmp_lhs, add]);
+        let tmp_use = b.add(NodeKind::Var, Payload::Cid(1), sp, &[]);
+        let body_ret = b.add(NodeKind::Return, Payload::None, sp, &[tmp_use]);
+        let body = b.add(NodeKind::Block, Payload::None, sp, &[assign, body_ret]);
+        let seven = b.add(NodeKind::Lit, Payload::LitInt(7), sp, &[]);
+        let handler_ret = b.add(NodeKind::Return, Payload::None, sp, &[seven]);
+        let handler = b.add(NodeKind::Block, Payload::None, sp, &[handler_ret]);
+        let try_node = b.add(NodeKind::Try, Payload::None, sp, &[body, handler]);
+        let block = b.add(NodeKind::Block, Payload::None, sp, &[try_node]);
+        let func = b.add(NodeKind::Func, Payload::None, sp, &[param, block]);
+        let il = b.finish(func, test_file_meta(), Vec::new(), Vec::new());
+
+        let out = run(&il);
+        let outer_block = *out.children(out.root).last().expect("function body");
+        let try_node = out.children(outer_block)[0];
+        let try_body = out.children(try_node)[0];
+        let body_stmts = out.children(try_body);
+        assert_eq!(body_stmts.len(), 1);
+        assert_eq!(out.kind(body_stmts[0]), NodeKind::Return);
+    }
 }

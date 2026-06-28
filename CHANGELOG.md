@@ -153,6 +153,11 @@ break.
   move `13 -> 2`, imported snapshot records stay `1`, and the moved rows close
   as callable/type/re-export type boundaries with zero false merges and zero
   canon-preservation violations.
+- Added the post-#587 recall-loss census. On the current `crates` surface,
+  import-snapshot provider-module misses are gone, hard gates remain at zero
+  false merges and zero canon-preservation violations, and the next largest
+  capability buckets are receiver-domain proof (`244`), callee identity (`231`),
+  and mutation/effect contracts (`134`).
 
 ### Fixed
 - Hardened JS/TS string-affix receiver proof so TypeScript `String` object
@@ -162,6 +167,10 @@ break.
   JavaScript receivers, borrowed prototype calls, custom same-name methods,
   wrappers, offsets, conditional prototype writes, nested/block-scope shadow
   names, and `Object.defineProperty` prototype writes.
+- Fixed dataflow normalization across `try` boundaries. Single-use temporary
+  inlining no longer moves a potentially erroring RHS from before a `try` into
+  the catch region, restoring the pinned `netty` corpus-verify gate to
+  `0` false merges and `0` canon-preservation changes.
 
 ### Performance
 - Compared the #567 import-backed immutable provenance change against

@@ -63,6 +63,11 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
   records the starting point for the follow-up import-snapshot milestone:
   provider module/export miss counts by reason, crate, import surface, top
   files, and recommended implementation order.
+- [post-#587 census](../bench/recall_loss/post-587-census.v1.json) records the
+  current `crates` recall-loss shape after the #587 closeout: generic
+  provider-module misses are gone on the checked surface, and the next
+  capability targets are receiver-domain proof, callee identity, and
+  mutation/effect contracts.
 
 Regenerate the full local reports with:
 
@@ -354,6 +359,22 @@ with `false_merges == 0` and `canon_preservation_violations == 0`. The remaining
 tail is export-only (`2` local export misses and `1` re-export target export
 miss), so #587's module-missing work is complete. The checked-in measurement is
 [`issue-587-relative-super-closeout.v1.json`](../bench/recall_loss/issue-587-relative-super-closeout.v1.json).
+
+The post-#587 census confirms that import-snapshot module/provider-missing work
+is no longer the leading recall-loss surface on `crates`. The current checked
+run has `0` false merges and `0` canon-preservation violations, `726`
+structured exact-admission rejections, and `39/83` behavior-equal pairs
+converged by exact fingerprints. The largest buckets are
+`receiver-domain-proof-missing` (`244`), `import-symbol-callee-identity-proof-missing`
+(`231`), and `mutation-effect-boundary` (`134`). The import snapshot census now
+has `1` successful Rust snapshot and `388` unresolved binding imports, but the
+remaining rows are explicit closed boundaries: callable exports (`110`),
+external crates (`76`), type exports (`69`), Rust stdlib (`50`), workspace
+crates (`48`), module namespaces (`20`), small re-export tails, mutation, and
+two local export misses. The next milestone should therefore move to reusable
+receiver-domain or member-call identity proof before more import-snapshot
+resolution work. The checked-in measurement is
+[`post-587-census.v1.json`](../bench/recall_loss/post-587-census.v1.json).
 
 ## See Also
 
