@@ -48,6 +48,12 @@ predicate callback profile.
 
 The follow-up [callback-demand-effect-diagnostics-2026-06-28.v2.json](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v2.json) splits callback-effect proof further into callback call effects, callback assignment effects, and callback runtime boundaries.
 
+The next [callback-demand-effect-diagnostics-2026-06-28.v3.json](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v3.json)
+keeps the same exact-admission boundary and splits callback call effects by
+producer-facing call shape: member calls (`10`), Rust macro calls (`8`),
+direct-function effect contracts (`3`), and imported-function effect contracts
+(`1`) on `crates`.
+
 ## Minimal Vocabulary
 
 | obligation | existing substrate | exact-channel rule |

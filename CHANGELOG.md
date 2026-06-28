@@ -250,6 +250,12 @@ break.
   The same `crates` HOF demand/effect rows now split callback effects into
   call-effect proof (`22`) and assignment-effect proof (`5`), with runtime
   callback boundaries currently at `0`; exact admission stays closed.
+- Split callback call-effect recall-loss diagnostics by producer-facing call
+  shape. The former `22` call-effect rows now surface member call proof (`10`),
+  Rust macro call proof (`8`), direct-function effect contracts (`3`), and
+  imported-function effect contracts (`1`), while assignment (`5`),
+  identity/shape (`2`), and predicate-profile (`1`) rows remain separate and
+  exact admission remains closed.
 
 ### Fixed
 - Made `scripts/check-docs.sh` compatible with both awiki versions that support

@@ -74,6 +74,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [#600 channel/scheduling obligation slice](../bench/recall_loss/issue-600-channel-scheduling-obligation-slice-2026-06-28.v1.json) records channel and scheduling-boundary reporting coverage while broad async/channel convergence remains closed.
 - [#601 first-slice closeout](../bench/recall_loss/issue-601-first-slice-closeout-2026-06-28.v1.json) records the quantified decision to keep the first exact #594 slice closed rather than force unsafe async/callback/channel admission.
 - [#594 closeout](../bench/recall_loss/issue-594-closeout-2026-06-28.v1.json) records the epic-level artifact coverage, validation commands, quantitative summary, and remaining closed boundaries.
+- [callback demand/effect diagnostics v3](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v3.json) records the post-#594 callback-call refinement: member call proof, Rust macro call proof, and direct/imported function effect-contract buckets are now visible without opening exact admission.
 
 Regenerate the full local reports with:
 
@@ -537,6 +538,16 @@ callback-effect bucket itself. The [v2 callback-demand/effect diagnostics](../be
 callback call-effect rows, `5` callback assignment-effect rows, `2` callback
 identity/shape rows, and `1` predicate callback profile row; runtime-boundary
 callback rows are currently `0`.
+
+The third callback diagnostics pass keeps the same hard gate and splits the
+call-effect rows by producer-facing call shape. The [v3 callback-demand/effect diagnostics](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v3.json)
+report member call proof (`10`), Rust macro call proof (`8`),
+direct-function effect contracts (`3`), and imported-function effect contracts
+(`1`) as row-level subreasons. The underlying evidence counts also show member
+call proof (`22`), Rust macro call proof (`8`), direct-function effect proof
+(`5`), scoped-path call proof (`4`), imported-member call proof (`3`),
+imported-function call proof (`2`), local-or-parameter call proof (`2`), and
+builtin call proof (`1`), giving the next producer slice a measured queue.
 
 ## See Also
 

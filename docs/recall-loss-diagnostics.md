@@ -75,7 +75,7 @@ They do not change exact admission.
 
 | obligation family | typical subreason | meaning |
 |---|---|---|
-| `callback-demand-effect` | `callback-call-effect-proof-missing`, `callback-assignment-effect-proof-missing`, `callback-runtime-boundary-proof-missing`, `callback-identity-or-shape-proof-missing`, `mapping-callback-demand-effect-profile-missing`, `predicate-callback-demand-effect-profile-missing`, `flattening-callback-demand-effect-profile-missing`, `optional-callback-demand-effect-profile-missing`, or `reduction-callback-demand-effect-profile-missing` | A HOF/callback surface lacks timing, callback identity, effect visibility, result role, or materialization proof. |
+| `callback-demand-effect` | `callback-member-call-effect-proof-missing`, `callback-rust-macro-call-effect-proof-missing`, `callback-direct-function-call-effect-contract-missing`, `callback-imported-function-call-effect-contract-missing`, `callback-assignment-effect-proof-missing`, `callback-runtime-boundary-proof-missing`, `callback-identity-or-shape-proof-missing`, `mapping-callback-demand-effect-profile-missing`, `predicate-callback-demand-effect-profile-missing`, `flattening-callback-demand-effect-profile-missing`, `optional-callback-demand-effect-profile-missing`, or `reduction-callback-demand-effect-profile-missing` | A HOF/callback surface lacks timing, callback identity, effect visibility, result role, call-shape proof, or materialization proof. |
 | `receiver-mutation` | `effect-preserving-contract-missing` | A mutation/place/effect boundary blocks exact admission. |
 | `scheduling-boundary` | `runtime-protocol-boundary-contract-missing` | A lowered runtime/protocol construct needs scheduling or protocol semantics before exact use. |
 | `ambiguous-selector-boundary` | `receiver-domain-proof-missing`, `library-api-occurrence-evidence-missing`, or a call-target proof label | Selector, receiver, library API, or callee identity proof is missing. |
@@ -104,6 +104,11 @@ kind-specific and callback-specific `missing_evidence` labels such as
 `hof-callback-runtime-boundary-proof`, and `hof-callback-identity-proof`. The
 checked baselines are [callback-demand-effect-diagnostics-2026-06-28.v1.json](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v1.json)
 and [callback-demand-effect-diagnostics-2026-06-28.v2.json](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v2.json).
+The follow-up [callback-demand-effect-diagnostics-2026-06-28.v3.json](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v3.json)
+keeps exact admission closed but splits callback call-effect proof by
+producer-facing call shape: member calls (`10`), Rust macro calls (`8`),
+direct-function effect contracts (`3`), and imported-function effect contracts
+(`1`) on the local `crates` surface.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

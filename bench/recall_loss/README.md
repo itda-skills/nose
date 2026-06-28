@@ -193,6 +193,13 @@ python3 scripts/cross-language-boundary-census.py \
   callback identity/shape (`2`), and predicate callback profile (`1`).
   Runtime-boundary callback effects are priced at `0` on the current `crates`
   surface, and exact admission remains closed.
+- [callback-demand-effect-diagnostics-2026-06-28.v3.json](callback-demand-effect-diagnostics-2026-06-28.v3.json)
+  refines callback call-effect proof into producer-facing call shapes: member
+  call proof (`10`), Rust macro call proof (`8`), direct-function effect
+  contracts (`3`), and imported-function effect contracts (`1`). Assignment
+  effects (`5`), callback identity/shape (`2`), and predicate callback profile
+  (`1`) remain separate; exact admission still records
+  `semantic_admission_delta = 0`.
 - [issue-600-channel-scheduling-obligation-slice-2026-06-28.v1.json](issue-600-channel-scheduling-obligation-slice-2026-06-28.v1.json)
   records the first channel/scheduling reporting slice: `95,805`
   channel/scheduling-shaped source-prevalence occurrences and `14` `crates`

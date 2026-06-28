@@ -439,6 +439,51 @@ fn hof_demand_effect_obligation_subreason(missing_evidence: &[&'static str]) -> 
     if missing_evidence.contains(&"hof-callback-assignment-effect-proof") {
         return "callback-assignment-effect-proof-missing";
     }
+    if missing_evidence.contains(&"hof-callback-direct-function-call-effect-proof") {
+        return "callback-direct-function-call-effect-contract-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-direct-method-call-effect-proof") {
+        return "callback-direct-method-call-effect-contract-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-imported-function-call-effect-proof") {
+        return "callback-imported-function-call-effect-contract-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-imported-member-call-effect-proof") {
+        return "callback-imported-member-call-effect-contract-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-dynamic-dispatch-call-effect-proof") {
+        return "callback-dynamic-dispatch-call-effect-contract-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-builtin-call-effect-proof") {
+        return "callback-builtin-call-effect-proof-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-rust-macro-call-effect-proof") {
+        return "callback-rust-macro-call-effect-proof-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-scoped-path-call-effect-proof") {
+        return "callback-scoped-path-call-effect-proof-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-imported-binding-call-effect-proof") {
+        return "callback-imported-binding-call-effect-proof-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-qualified-global-call-effect-proof") {
+        return "callback-qualified-global-call-effect-proof-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-unshadowed-global-call-effect-proof") {
+        return "callback-unshadowed-global-call-effect-proof-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-member-call-effect-proof") {
+        return "callback-member-call-effect-proof-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-local-or-parameter-call-effect-proof") {
+        return "callback-local-or-parameter-call-effect-proof-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-rejected-call-target-effect-proof") {
+        return "callback-rejected-call-target-effect-proof-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-unknown-call-effect-proof") {
+        return "callback-unknown-call-effect-proof-missing";
+    }
     if missing_evidence.contains(&"hof-callback-call-effect-proof") {
         return "callback-call-effect-proof-missing";
     }

@@ -232,9 +232,9 @@ fn recall_loss_report_ratchets_representative_admission_buckets() {
         obligations
             .iter()
             .any(|item| item["obligation_family"] == "callback-demand-effect"
-                && item["obligation_subreason"] == "callback-call-effect-proof-missing"
+                && item["obligation_subreason"] == "callback-member-call-effect-proof-missing"
                 && item["count"].as_u64().unwrap_or(0) >= 1),
-        "expected callback-demand/effect rollup to expose callback call-effect proof misses: {report}"
+        "expected callback-demand/effect rollup to expose callback member call-effect proof misses: {report}"
     );
     assert!(
         report["admission_rejections"]
@@ -246,8 +246,11 @@ fn recall_loss_report_ratchets_representative_admission_buckets() {
                     .as_array()
                     .is_some_and(|items| items
                         .iter()
-                        .any(|value| value == "hof-callback-call-effect-proof"))),
-        "expected HOF rejections to include callback call-effect missing evidence: {report}"
+                        .any(|value| value == "hof-callback-call-effect-proof")
+                        && items
+                            .iter()
+                            .any(|value| value == "hof-callback-member-call-effect-proof"))),
+        "expected HOF rejections to include generic and member callback call-effect missing evidence: {report}"
     );
     assert!(
         reasons

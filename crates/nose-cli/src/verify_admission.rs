@@ -224,7 +224,7 @@ fn hof_missing_evidence(il: &nose_il::Il, interner: &Interner, root: NodeId) -> 
                     ) {
                         push_unique(&mut labels, "hof-callback-identity-proof");
                     }
-                    push_callback_effect_evidence_labels(il, callback, &mut labels);
+                    push_callback_effect_evidence_labels(il, interner, callback, &mut labels);
                 }
             }
         }
@@ -246,6 +246,7 @@ fn hof_kind_demand_effect_evidence(kind: HoFKind) -> &'static str {
 
 fn push_callback_effect_evidence_labels(
     il: &nose_il::Il,
+    interner: &Interner,
     callback: NodeId,
     labels: &mut Vec<&'static str>,
 ) {
@@ -255,6 +256,7 @@ fn push_callback_effect_evidence_labels(
             nose_il::NodeKind::Call => {
                 push_unique(labels, "hof-callback-effect-proof");
                 push_unique(labels, "hof-callback-call-effect-proof");
+                push_callback_call_effect_evidence_labels(il, interner, node, labels);
             }
             nose_il::NodeKind::Assign => {
                 push_unique(labels, "hof-callback-effect-proof");
@@ -267,6 +269,57 @@ fn push_callback_effect_evidence_labels(
             _ => {}
         }
         stack.extend(il.children(node).iter().copied());
+    }
+}
+
+fn push_callback_call_effect_evidence_labels(
+    il: &nose_il::Il,
+    interner: &Interner,
+    call: NodeId,
+    labels: &mut Vec<&'static str>,
+) {
+    if builtin_call_node(il, call) {
+        push_unique(labels, "hof-callback-builtin-call-effect-proof");
+        return;
+    }
+    if rust_macro_invocation_call(il, call) {
+        push_unique(labels, "hof-callback-rust-macro-call-effect-proof");
+        return;
+    }
+    push_unique(
+        labels,
+        callback_call_effect_evidence(callee_identity_call_evidence(il, interner, call)),
+    );
+}
+
+fn callback_call_effect_evidence(call_target_label: &'static str) -> &'static str {
+    match call_target_label {
+        "call-target-evidence-rejected" => "hof-callback-rejected-call-target-effect-proof",
+        "direct-function-target-present-call-contract-proof" => {
+            "hof-callback-direct-function-call-effect-proof"
+        }
+        "direct-method-target-present-call-contract-proof" => {
+            "hof-callback-direct-method-call-effect-proof"
+        }
+        "imported-function-target-present-call-contract-proof" => {
+            "hof-callback-imported-function-call-effect-proof"
+        }
+        "imported-member-target-present-call-contract-proof" => {
+            "hof-callback-imported-member-call-effect-proof"
+        }
+        "dynamic-dispatch-target-present-concrete-target-proof" => {
+            "hof-callback-dynamic-dispatch-call-effect-proof"
+        }
+        "scoped-path-call-target-proof" => "hof-callback-scoped-path-call-effect-proof",
+        "imported-binding-call-target-proof" => "hof-callback-imported-binding-call-effect-proof",
+        "imported-member-call-target-proof" => "hof-callback-imported-member-call-effect-proof",
+        "qualified-global-call-target-proof" => "hof-callback-qualified-global-call-effect-proof",
+        "unshadowed-global-call-target-proof" => "hof-callback-unshadowed-global-call-effect-proof",
+        "member-call-target-proof" => "hof-callback-member-call-effect-proof",
+        "local-or-parameter-call-target-proof" => {
+            "hof-callback-local-or-parameter-call-effect-proof"
+        }
+        _ => "hof-callback-unknown-call-effect-proof",
     }
 }
 
