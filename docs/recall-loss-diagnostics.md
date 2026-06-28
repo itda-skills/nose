@@ -76,8 +76,13 @@ They do not change exact admission.
 | obligation family | typical subreason | meaning |
 |---|---|---|
 | `callback-demand-effect` | `callback-member-call-effect-proof-missing`, `callback-rust-macro-call-effect-proof-missing`, `callback-direct-function-call-effect-contract-missing`, `callback-imported-function-call-effect-contract-missing`, `callback-assignment-effect-proof-missing`, `callback-runtime-boundary-proof-missing`, `callback-identity-or-shape-proof-missing`, `mapping-callback-demand-effect-profile-missing`, `predicate-callback-demand-effect-profile-missing`, `flattening-callback-demand-effect-profile-missing`, `optional-callback-demand-effect-profile-missing`, or `reduction-callback-demand-effect-profile-missing` | A HOF/callback surface lacks timing, callback identity, effect visibility, result role, call-shape proof, or materialization proof. |
+| `executor-callback` | `promise-executor-callback-effect-contract-missing` | A Promise/Future-like constructor callback needs executor timing, thrown-to-rejected outcome, and callback-effect proof before exact use. |
 | `receiver-mutation` | `effect-preserving-contract-missing` | A mutation/place/effect boundary blocks exact admission. |
-| `scheduling-boundary` | `runtime-protocol-boundary-contract-missing` | A lowered runtime/protocol construct needs scheduling or protocol semantics before exact use. |
+| `rejection-channel` | `promise-rejection-channel-contract-missing`, `promise-rejection-continuation-contract-missing`, or `exception-channel-contract-missing` | Rejection, catch/finally, throw, rescue, or non-local error flow must remain distinct from ordinary return values. |
+| `success-error-result-channel` | `promise-factory-settled-value-contract-missing`, `promise-aggregate-result-channel-contract-missing` | Success, empty/default, error/rejection, and aggregate result channels need explicit result-shape proof. |
+| `scheduling-boundary` | `promise-await-scheduling-contract-missing`, `promise-async-function-scheduling-contract-missing`, `promise-non-construct-call-boundary-contract-missing`, or `runtime-protocol-boundary-contract-missing` | A lowered runtime/protocol construct needs scheduling or protocol semantics before exact use. |
+| `channel-boundary` | `channel-protocol-contract-missing` | Channel send/receive/select semantics need protocol evidence before exact use. |
+| `exception-channel` | `exception-channel-contract-missing` | Try/throw/error propagation is an explicit channel boundary, not a scheduling boundary. |
 | `ambiguous-selector-boundary` | `receiver-domain-proof-missing`, `library-api-occurrence-evidence-missing`, or a call-target proof label | Selector, receiver, library API, or callee identity proof is missing. |
 | `source-protocol-boundary` | `source-surface-contract-missing`, `rust-macro-expansion-contract-missing` | A source/protocol syntax distinction is required but not proven. |
 | `non-degenerate-fingerprint-floor` | `non-degenerate-value-fingerprint` | The unit is otherwise exact-safe but too small for a non-degenerate exact claim. |
@@ -109,6 +114,17 @@ keeps exact admission closed but splits callback call-effect proof by
 producer-facing call shape: member calls (`10`), Rust macro calls (`8`),
 direct-function effect contracts (`3`), and imported-function effect contracts
 (`1`) on the local `crates` surface.
+
+Promise protocol diagnostics keep exact admission closed while splitting
+runtime-boundary evidence by scheduling, executor callback, rejection channel,
+and aggregate-result obligations. The checked [promise-protocol diagnostics](../bench/recall_loss/promise-protocol-diagnostics-2026-06-28.v1.json)
+connect the JS/TS source-prevalence group (`29,094` Promise/async occurrences)
+to report labels such as `promise-await-scheduling-contract`,
+`promise-async-function-scheduling-contract`,
+`promise-executor-callback-effect-contract`,
+`promise-aggregate-result-channel-contract`,
+`promise-rejection-channel-contract`, and
+`promise-non-construct-call-boundary-contract`.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

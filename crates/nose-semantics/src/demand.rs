@@ -472,6 +472,13 @@ pub fn source_protocol_demand_effect_profile(protocol: SourceProtocolKind) -> De
             callback: None,
             effect_visibility: EffectVisibility::AsyncBoundary,
         },
+        SourceProtocolKind::AsyncFunction => DemandEffectProfile {
+            operation: DemandOperation::AsyncContinuation,
+            order: EvaluationOrder::RuntimeScheduled,
+            child_demand: ChildDemand::AsyncContinuation,
+            callback: None,
+            effect_visibility: EffectVisibility::AsyncBoundary,
+        },
         SourceProtocolKind::Yield => DemandEffectProfile {
             operation: DemandOperation::GeneratorSuspension,
             order: EvaluationOrder::DeferredUntilObserved,

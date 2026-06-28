@@ -54,6 +54,13 @@ producer-facing call shape: member calls (`10`), Rust macro calls (`8`),
 direct-function effect contracts (`3`), and imported-function effect contracts
 (`1`) on `crates`.
 
+The [promise-protocol-diagnostics-2026-06-28.v1.json](../bench/recall_loss/promise-protocol-diagnostics-2026-06-28.v1.json)
+slice keeps Promise exact admission closed while making the JS/TS Promise/async
+source-prevalence group (`29,094` occurrences) reportable as scheduling,
+executor callback, rejection-channel, aggregate-result, factory, and
+non-construct call obligations. JS/TS async functions now emit a fail-closed
+`Source::Protocol(AsyncFunction)` boundary even when the body has no `await`.
+
 ## Minimal Vocabulary
 
 | obligation | existing substrate | exact-channel rule |
@@ -78,9 +85,9 @@ direct-function effect contracts (`3`), and imported-function effect contracts
 - `DemandEffectProfile` already carries eager, fold, short-circuit, lazy HOF,
   async continuation, generator, channel, and protocol-boundary timing. This is
   the contract side of the vocabulary.
-- `Source` facts anchor syntax/protocol distinctions such as await, yield,
-  casts, calls, comprehensions, ranges, and patterns. They do not approve exact
-  clones by themselves.
+- `Source` facts anchor syntax/protocol distinctions such as await, async
+  functions, yield, casts, calls, comprehensions, ranges, and patterns. They do
+  not approve exact clones by themselves.
 - `Effect` facts cover builder append, binding writes, receiver mutation, fixed
   self-field writes, non-overloadable index writes, and opaque argument escape
   risks. They are used to close unsafe paths or prove narrow place/effect

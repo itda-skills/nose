@@ -396,10 +396,7 @@ fn rejection_obligation(
             hof_demand_effect_obligation_subreason(missing_evidence),
         ),
         "mutation-effect-boundary" => ("receiver-mutation", "effect-preserving-contract-missing"),
-        "unsupported-runtime-boundary" => (
-            "scheduling-boundary",
-            "runtime-protocol-boundary-contract-missing",
-        ),
+        "unsupported-runtime-boundary" => runtime_boundary_obligation(missing_evidence),
         "receiver-domain-proof-missing" => (
             "ambiguous-selector-boundary",
             "receiver-domain-proof-missing",
@@ -430,6 +427,103 @@ fn rejection_obligation(
         }
         _ => ("unattributed-boundary", first_missing),
     }
+}
+
+fn runtime_boundary_obligation(missing_evidence: &[&'static str]) -> (&'static str, &'static str) {
+    if missing_evidence.contains(&"promise-await-scheduling-contract") {
+        return (
+            "scheduling-boundary",
+            "promise-await-scheduling-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-async-function-scheduling-contract") {
+        return (
+            "scheduling-boundary",
+            "promise-async-function-scheduling-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"future-async-block-scheduling-contract") {
+        return (
+            "scheduling-boundary",
+            "future-async-block-scheduling-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-executor-callback-effect-contract") {
+        return (
+            "executor-callback",
+            "promise-executor-callback-effect-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-then-callback-demand-effect-contract") {
+        return (
+            "callback-demand-effect",
+            "promise-then-callback-demand-effect-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-rejection-continuation-contract") {
+        return (
+            "rejection-channel",
+            "promise-rejection-continuation-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-rejection-channel-contract") {
+        return (
+            "rejection-channel",
+            "promise-rejection-channel-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-aggregate-result-channel-contract") {
+        return (
+            "success-error-result-channel",
+            "promise-aggregate-result-channel-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-factory-settled-value-contract") {
+        return (
+            "success-error-result-channel",
+            "promise-factory-settled-value-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-non-construct-call-boundary-contract") {
+        return (
+            "scheduling-boundary",
+            "promise-non-construct-call-boundary-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"promise-like-receiver-proof") {
+        return (
+            "ambiguous-selector-boundary",
+            "promise-like-receiver-proof-missing",
+        );
+    }
+    if missing_evidence.contains(&"channel-protocol-contract") {
+        return ("channel-boundary", "channel-protocol-contract-missing");
+    }
+    if missing_evidence.contains(&"exception-channel-contract") {
+        return ("exception-channel", "exception-channel-contract-missing");
+    }
+    if missing_evidence.contains(&"generator-yield-protocol-contract") {
+        return (
+            "lifecycle-materialization-boundary",
+            "generator-yield-protocol-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"concurrency-scheduling-contract") {
+        return (
+            "scheduling-boundary",
+            "concurrency-scheduling-contract-missing",
+        );
+    }
+    if missing_evidence.contains(&"runtime-call-shape-contract") {
+        return (
+            "source-protocol-boundary",
+            "runtime-call-shape-contract-missing",
+        );
+    }
+    (
+        "scheduling-boundary",
+        "runtime-protocol-boundary-contract-missing",
+    )
 }
 
 fn hof_demand_effect_obligation_subreason(missing_evidence: &[&'static str]) -> &'static str {

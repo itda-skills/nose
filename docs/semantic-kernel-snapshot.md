@@ -16,15 +16,18 @@ capabilities across the import boundary for JS/TS `new Map(...)`/`new Set(...)`,
 Python builtin/imported collection factories, and Java collection/map
 factories; provider-local shadows, mutation facts, raw coordinate sequences, and
 ambiguous provider factory shapes stay closed.
-JS/TS, Python, and Rust `await` expressions are preserved as raw async protocol
-boundaries with `Source::Protocol(Await)` evidence instead of being erased into
-their operand. JS/TS and Python `yield` expressions are preserved as generator
-protocol boundaries with `Source::Protocol(Yield)`. Rust `async {}` and `?` are
-likewise preserved as protocol boundaries with `Source::Protocol(AsyncBlock)` and
-`Source::Protocol(TryPropagation)`. Go goroutine spawn, deferred calls, channel
-send/receive, receive-status projections, and `select` boundaries are also
-preserved as raw source-backed protocol anchors rather than ordinary calls,
-values, or sequence tags. Python comprehension lowering now records whether a
+JS/TS async functions are preserved as raw Promise-producing protocol
+boundaries with `Source::Protocol(AsyncFunction)` evidence, even when the body
+has no `await`. JS/TS, Python, and Rust `await` expressions are preserved as raw
+async protocol boundaries with `Source::Protocol(Await)` evidence instead of
+being erased into their operand. JS/TS and Python `yield` expressions are
+preserved as generator protocol boundaries with `Source::Protocol(Yield)`. Rust
+`async {}` and `?` are likewise preserved as protocol boundaries with
+`Source::Protocol(AsyncBlock)` and `Source::Protocol(TryPropagation)`. Go
+goroutine spawn, deferred calls, channel send/receive, receive-status
+projections, and `select` boundaries are also preserved as raw source-backed
+protocol anchors rather than ordinary calls, values, or sequence tags. Python
+comprehension lowering now records whether a
 HOF came from a list comprehension, set comprehension, dict comprehension, or
 generator expression, and exact/value consumers use that surface evidence before
 applying materialization or demand-sensitive laws. Admitted builtin and HOF
@@ -49,7 +52,10 @@ missing or ambiguous receiver proof stay closed.
 The JS/TS corpus audit [`js-ts-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/js-ts-stdlib-partial-audit-2026-06-28.v1.json)
 confirms this is the largest JS/TS builtin-shaped surface in the pinned corpus:
 `29,094` Promise/async occurrences are tracked as a processed closed boundary
-with zero semantic-admission delta.
+with zero semantic-admission delta. The follow-up [promise protocol diagnostics](../bench/recall_loss/promise-protocol-diagnostics-2026-06-28.v1.json)
+split that closed boundary into await scheduling, async function scheduling,
+executor callback, factory, aggregate result, rejection channel, and
+non-construct Promise-call labels for recall-loss reporting.
 Library/API identity is consolidated through internal `LibraryApiContract` rows
 for factory, constructor, selected property/non-factory method/view surfaces,
 and selected non-call sentinels, with occurrence evidence covering selected

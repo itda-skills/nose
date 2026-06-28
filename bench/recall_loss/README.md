@@ -205,6 +205,12 @@ python3 scripts/cross-language-boundary-census.py \
   channel/scheduling-shaped source-prevalence occurrences and `14` `crates`
   scheduling-boundary recall-loss rows, with Promise/Future/async/channel
   admission still closed.
+- [promise-protocol-diagnostics-2026-06-28.v1.json](promise-protocol-diagnostics-2026-06-28.v1.json)
+  records the Promise/async diagnostics split. The JS/TS source-prevalence group
+  stays at `29,094` occurrences, but runtime-boundary report labels now separate
+  await scheduling, async function scheduling, Promise executor callbacks,
+  Promise factories, aggregate result channels, rejection channels, and
+  non-construct Promise calls without opening exact admission.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

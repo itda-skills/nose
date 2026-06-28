@@ -36,22 +36,13 @@ fn strict_exact_rejection_reason(
     interner: &Interner,
     root: NodeId,
 ) -> ExactAdmissionRejectionDiagnostic {
-    if subtree_has(il, root, |il, node| {
-        matches!(
-            il.kind(node),
-            nose_il::NodeKind::Raw
-                | nose_il::NodeKind::Try
-                | nose_il::NodeKind::Throw
-                | nose_il::NodeKind::Splat
-                | nose_il::NodeKind::KwArg
-        )
-    }) {
+    if let Some(missing_evidence) = runtime_boundary_missing_evidence(il, interner, root) {
         return ExactAdmissionRejectionDiagnostic {
             reason: "unsupported-runtime-boundary",
             admission_gate: "strict-exact-safety",
             capability_id: "runtime-boundary-model",
             pack_id: None,
-            missing_evidence: vec!["lowered-runtime-boundary-contract"],
+            missing_evidence,
         };
     }
 
@@ -181,6 +172,163 @@ fn callee_identity_missing_evidence(
 fn push_unique(labels: &mut Vec<&'static str>, label: &'static str) {
     if !labels.contains(&label) {
         labels.push(label);
+    }
+}
+
+fn runtime_boundary_missing_evidence(
+    il: &nose_il::Il,
+    interner: &Interner,
+    root: NodeId,
+) -> Option<Vec<&'static str>> {
+    let mut labels = vec!["lowered-runtime-boundary-contract"];
+    let mut found = false;
+    let mut stack = vec![root];
+    while let Some(node) = stack.pop() {
+        if push_runtime_node_missing_evidence(il, node, &mut labels) {
+            found = true;
+        }
+        if il.kind(node) == nose_il::NodeKind::Call {
+            found |= push_promise_protocol_call_missing_evidence(il, interner, node, &mut labels);
+        }
+        stack.extend(il.children(node).iter().copied());
+    }
+    found.then_some(labels)
+}
+
+fn push_runtime_node_missing_evidence(
+    il: &nose_il::Il,
+    node: NodeId,
+    labels: &mut Vec<&'static str>,
+) -> bool {
+    match il.kind(node) {
+        nose_il::NodeKind::Raw => {
+            match nose_semantics::source_protocol_at_node(il, node) {
+                Some(nose_il::SourceProtocolKind::Await) => {
+                    push_unique(labels, "promise-await-scheduling-contract");
+                }
+                Some(nose_il::SourceProtocolKind::AsyncFunction) => {
+                    push_unique(labels, "promise-async-function-scheduling-contract");
+                }
+                Some(nose_il::SourceProtocolKind::AsyncBlock) => {
+                    push_unique(labels, "future-async-block-scheduling-contract");
+                }
+                Some(nose_il::SourceProtocolKind::Yield) => {
+                    push_unique(labels, "generator-yield-protocol-contract");
+                }
+                Some(
+                    nose_il::SourceProtocolKind::ChannelReceive
+                    | nose_il::SourceProtocolKind::ChannelSelect
+                    | nose_il::SourceProtocolKind::ChannelSelectCase
+                    | nose_il::SourceProtocolKind::ChannelSelectDefault
+                    | nose_il::SourceProtocolKind::ChannelSend,
+                ) => {
+                    push_unique(labels, "channel-protocol-contract");
+                }
+                Some(
+                    nose_il::SourceProtocolKind::Defer | nose_il::SourceProtocolKind::GoRoutine,
+                ) => {
+                    push_unique(labels, "concurrency-scheduling-contract");
+                }
+                Some(nose_il::SourceProtocolKind::TryPropagation) => {
+                    push_unique(labels, "exception-channel-contract");
+                }
+                None => {}
+            }
+            true
+        }
+        nose_il::NodeKind::Try | nose_il::NodeKind::Throw => {
+            push_unique(labels, "exception-channel-contract");
+            true
+        }
+        nose_il::NodeKind::Splat | nose_il::NodeKind::KwArg => {
+            push_unique(labels, "runtime-call-shape-contract");
+            true
+        }
+        _ => false,
+    }
+}
+
+fn push_promise_protocol_call_missing_evidence(
+    il: &nose_il::Il,
+    interner: &Interner,
+    call: NodeId,
+    labels: &mut Vec<&'static str>,
+) -> bool {
+    if !js_like_runtime_lang(il.meta.lang) {
+        return false;
+    }
+    let Some(callee) = il.children(call).first().copied() else {
+        return false;
+    };
+    let Some(path) = callee_path(il, interner, callee) else {
+        return false;
+    };
+    if promise_construct_call(il, call, &path) {
+        push_unique(labels, "promise-executor-callback-effect-contract");
+        return true;
+    }
+    match path.as_str() {
+        "Promise" => {
+            push_unique(labels, "promise-non-construct-call-boundary-contract");
+            true
+        }
+        "Promise.resolve" => {
+            push_unique(labels, "promise-factory-settled-value-contract");
+            true
+        }
+        "Promise.reject" => {
+            push_unique(labels, "promise-rejection-channel-contract");
+            true
+        }
+        "Promise.all" | "Promise.allSettled" | "Promise.any" | "Promise.race" => {
+            push_unique(labels, "promise-aggregate-result-channel-contract");
+            true
+        }
+        _ if path.ends_with(".then") => {
+            push_unique(labels, "promise-then-callback-demand-effect-contract");
+            push_unique(labels, "promise-like-receiver-proof");
+            true
+        }
+        _ if path.ends_with(".catch") || path.ends_with(".finally") => {
+            push_unique(labels, "promise-rejection-continuation-contract");
+            push_unique(labels, "promise-like-receiver-proof");
+            true
+        }
+        _ => false,
+    }
+}
+
+fn js_like_runtime_lang(lang: nose_il::Lang) -> bool {
+    matches!(
+        lang,
+        nose_il::Lang::JavaScript
+            | nose_il::Lang::TypeScript
+            | nose_il::Lang::Vue
+            | nose_il::Lang::Svelte
+            | nose_il::Lang::Html
+    )
+}
+
+fn promise_construct_call(il: &nose_il::Il, call: NodeId, callee_path: &str) -> bool {
+    callee_path == "Promise"
+        && nose_semantics::source_call_at_node(il, call) == Some(nose_il::SourceCallKind::Construct)
+}
+
+fn callee_path(il: &nose_il::Il, interner: &Interner, node: NodeId) -> Option<String> {
+    match il.kind(node) {
+        nose_il::NodeKind::Var => match il.node(node).payload {
+            nose_il::Payload::Name(name) => Some(interner.resolve(name).to_string()),
+            _ => None,
+        },
+        nose_il::NodeKind::Field => {
+            let nose_il::Payload::Name(method) = il.node(node).payload else {
+                return None;
+            };
+            let receiver = il.children(node).first().copied()?;
+            let receiver = callee_path(il, interner, receiver)?;
+            Some(format!("{}.{}", receiver, interner.resolve(method)))
+        }
+        _ => None,
     }
 }
 

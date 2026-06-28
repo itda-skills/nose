@@ -323,6 +323,88 @@ pub fn format_key(key: u64) -> String {\n\
 }
 
 #[test]
+fn recall_loss_report_splits_promise_protocol_boundaries() {
+    let project = TempProject::new("recall_loss_promise_protocol_boundaries");
+    project.write(
+        "promise.js",
+        "function makePromise(x) { return new Promise(x); }\n\
+function resolveIt(x) { return Promise.resolve(x); }\n\
+function allIt(xs) { return Promise.all(xs); }\n\
+function rejectIt(e) { return Promise.reject(e); }\n\
+function callPromise(x) { return Promise(x); }\n",
+    );
+    let report_path = project.path().join("recall-loss.json");
+    let out = run_raw(&[
+        "verify",
+        project.path().to_str().unwrap(),
+        "--max-violations",
+        "0",
+        "--recall-loss-report",
+        report_path.to_str().unwrap(),
+    ]);
+    assert!(out.contains("GATE: 0"));
+
+    let report_text = fs::read_to_string(&report_path).expect("recall-loss report");
+    let report: serde_json::Value =
+        serde_json::from_str(&report_text).expect("recall-loss report JSON");
+    let obligations = report["by_obligation"]
+        .as_array()
+        .expect("by_obligation should be an array");
+    for (family, subreason) in [
+        (
+            "executor-callback",
+            "promise-executor-callback-effect-contract-missing",
+        ),
+        (
+            "success-error-result-channel",
+            "promise-factory-settled-value-contract-missing",
+        ),
+        (
+            "success-error-result-channel",
+            "promise-aggregate-result-channel-contract-missing",
+        ),
+        (
+            "rejection-channel",
+            "promise-rejection-channel-contract-missing",
+        ),
+        (
+            "scheduling-boundary",
+            "promise-non-construct-call-boundary-contract-missing",
+        ),
+    ] {
+        assert!(
+            obligations
+                .iter()
+                .any(|item| item["obligation_family"] == family
+                    && item["obligation_subreason"] == subreason
+                    && item["count"].as_u64().unwrap_or(0) >= 1),
+            "expected Promise obligation {family}/{subreason}: {report}"
+        );
+    }
+
+    let rejections = report["admission_rejections"]
+        .as_array()
+        .expect("admission_rejections should be an array");
+    for expected in [
+        "promise-executor-callback-effect-contract",
+        "promise-factory-settled-value-contract",
+        "promise-aggregate-result-channel-contract",
+        "promise-rejection-channel-contract",
+        "promise-non-construct-call-boundary-contract",
+    ] {
+        assert!(
+            rejections
+                .iter()
+                .any(|item| item["reason"] == "unsupported-runtime-boundary"
+                    && item["missing_evidence"]
+                        .as_array()
+                        .is_some_and(|items| items.iter().any(|value| value == expected))),
+            "expected Promise missing evidence label {expected}: {report}"
+        );
+    }
+}
+
+#[test]
 fn recall_loss_report_classifies_callee_identity_surfaces() {
     let project = TempProject::new("recall_loss_callee_identity_surfaces");
     project.write(

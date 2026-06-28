@@ -256,6 +256,14 @@ break.
   imported-function effect contracts (`1`), while assignment (`5`),
   identity/shape (`2`), and predicate-profile (`1`) rows remain separate and
   exact admission remains closed.
+- Split Promise/async protocol recall-loss diagnostics without opening exact
+  admission. JS/TS async functions now emit a fail-closed
+  `Source::Protocol(AsyncFunction)` boundary even when the body has no `await`,
+  and runtime-boundary missing evidence now separates Promise await scheduling,
+  async function scheduling, executor callbacks, factories, aggregate result
+  channels, rejection channels, and non-construct Promise calls. The checked
+  Promise artifact keeps the `29,094`-occurrence JS/TS Promise/async group
+  closed with `semantic_admission_delta = 0`.
 
 ### Fixed
 - Made `scripts/check-docs.sh` compatible with both awiki versions that support

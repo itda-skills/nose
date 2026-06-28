@@ -4,13 +4,27 @@ use super::{lower_block, lower_stmt};
 use crate::lower::Lowering;
 use nose_il::{
     LitClass, NodeId, NodeKind, Payload, RegionKind, SourceBindingKind, SourceFactKind,
-    SourceGranularity, Span, UnitBodyKind, UnitDomain, UnitDomains, UnitEvidenceFlag, UnitKind,
-    UnitOrigin, UnitSubkind,
+    SourceGranularity, SourceProtocolKind, Span, UnitBodyKind, UnitDomain, UnitDomains,
+    UnitEvidenceFlag, UnitKind, UnitOrigin, UnitSubkind,
 };
 use tree_sitter::Node as TsNode;
 
 pub(super) fn lower_func(lo: &mut Lowering, node: TsNode, method: bool) -> NodeId {
-    crate::lower::function_unit(lo, node, method, lower_params, lower_func_body)
+    let span = lo.span(node);
+    let is_async = node_has_async_modifier(node);
+    crate::lower::function_unit(lo, node, method, lower_params, |lo, body| {
+        let lowered = lower_func_body(lo, body);
+        if is_async {
+            lo.protocol_boundary(
+                span,
+                SourceProtocolKind::AsyncFunction,
+                "async_function",
+                &[lowered],
+            )
+        } else {
+            lowered
+        }
+    })
 }
 
 /// A function body is normally a `statement_block`, but arrow functions may have
@@ -292,6 +306,13 @@ fn is_func_value(kind: &str) -> bool {
     )
 }
 
+fn node_has_async_modifier(node: TsNode) -> bool {
+    (0..node.child_count()).any(|index| {
+        node.child(index)
+            .is_some_and(|child| child.kind() == "async")
+    })
+}
+
 /// Lower a function-valued expression as a named `Func` unit (params + body),
 /// registering it for detection. Mirrors `lower_func`/`lower_arrow` but takes the
 /// binding name explicitly (arrow/function expressions have no own name).
@@ -301,6 +322,7 @@ pub(super) fn lower_func_value(
     name: Option<nose_il::Symbol>,
 ) -> NodeId {
     let span = lo.span(node);
+    let is_async = node_has_async_modifier(node);
     let mut kids = Vec::new();
     if let Some(params) = node
         .child_by_field_name("parameters")
@@ -312,7 +334,16 @@ pub(super) fn lower_func_value(
         Some(b) => lower_func_body(lo, b),
         None => lo.empty_block(span),
     };
-    kids.push(body);
+    if is_async {
+        kids.push(lo.protocol_boundary(
+            span,
+            SourceProtocolKind::AsyncFunction,
+            "async_function",
+            &[body],
+        ));
+    } else {
+        kids.push(body);
+    }
     let func = lo.add(NodeKind::Func, Payload::None, span, &kids);
     lo.push_unit(func, UnitKind::Function, name);
     func
@@ -320,6 +351,7 @@ pub(super) fn lower_func_value(
 
 pub(super) fn lower_arrow(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
+    let is_async = node_has_async_modifier(node);
     let mut kids = Vec::new();
     if let Some(params) = node
         .child_by_field_name("parameters")
@@ -331,6 +363,15 @@ pub(super) fn lower_arrow(lo: &mut Lowering, node: TsNode) -> NodeId {
         Some(b) => lower_func_body(lo, b),
         None => lo.empty_block(span),
     };
-    kids.push(body);
+    if is_async {
+        kids.push(lo.protocol_boundary(
+            span,
+            SourceProtocolKind::AsyncFunction,
+            "async_function",
+            &[body],
+        ));
+    } else {
+        kids.push(body);
+    }
     lo.add(NodeKind::Lambda, Payload::None, span, &kids)
 }

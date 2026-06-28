@@ -78,7 +78,7 @@ The pack-facing vocabulary should cover at least these classes.
 | Range | Rust half-open range expression, Rust inclusive range expression, future language-specific range surfaces |
 | Pattern | Rust tuple-struct single-wildcard pattern, future language-specific pattern surfaces |
 | Literal and surface | regex literal, string literal, map/object literal, tuple/list/array surface, computed property key |
-| Call/protocol shape | constructor call, ordinary function call, method call, property access, macro-like call, async `await` boundary, generator `yield` boundary, Rust `?` error propagation, Go goroutine/defer/channel/select boundaries |
+| Call/protocol shape | constructor call, ordinary function call, method call, property access, macro-like call, JS/TS async function boundary, async `await` boundary, generator `yield` boundary, Rust `?` error propagation, Go goroutine/defer/channel/select boundaries |
 | Comprehension surface | Python list comprehension, set comprehension, dict comprehension, generator expression |
 | Sequence and aggregate | collection surface, map-entry surface, iterator surface, exported literal surface |
 | Place and mutation | receiver field, index assignment, builder append, immutable binding, direct write, opaque escape |
@@ -102,10 +102,10 @@ fall back to a side-table mirror when source evidence is missing.
   evidence for supported immutable JS/TS constructor-backed values plus Python
   and Java collection/map factory values after export safety proves exact-safe
   provider arguments.
-- JS/TS lowering emits source facts for construct syntax, async `await`
-  boundaries, generator `yield` boundaries, regex literals, strict equality,
-  strict inequality, loose equality, loose inequality, unary `typeof`, and
-  `instanceof`.
+- JS/TS lowering emits source facts for construct syntax, async function
+  boundaries, async `await` boundaries, generator `yield` boundaries, regex
+  literals, strict equality, strict inequality, loose equality, loose
+  inequality, unary `typeof`, and `instanceof`.
 - Python lowering emits source facts for async `await` boundaries, generator
   `yield` boundaries, list/set/dict/generator comprehension surfaces, value
   equality/inequality, and identity equality/inequality.
@@ -125,8 +125,10 @@ fall back to a side-table mirror when source evidence is missing.
   syntax provenance only: recall-loss diagnostics attribute unmodeled Rust
   macros such as `format!` to `source-surface-proof-missing` until a library or
   macro-expansion contract proves their behavior.
-- JS/TS, Python, and Rust `await` lowering preserves `Raw("await", value)`
-  instead of erasing the source operation. JS/TS and Python `yield` preserves
+- JS/TS async functions preserve `Raw("async_function", body)`, so a Promise
+  producer without an `await` expression is still fail-closed. JS/TS, Python,
+  and Rust `await` lowering preserves `Raw("await", value)` instead of erasing
+  the source operation. JS/TS and Python `yield` preserves
   `Raw("yield", value)`. Rust `async {}` and `?` are preserved as
   `Raw("async_block", body)` and `Raw("try", value)`. Exact async/sync,
   generator, and error-propagation convergence stays closed until a future
