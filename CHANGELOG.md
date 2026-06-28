@@ -177,6 +177,10 @@ break.
   `scripts/java-arrays-collections-audit.py` scanner records corpus method
   prevalence, current support status, and explicit unsupported boundary
   categories for the Java stdlib collection surface.
+- Added the Go `sort`/`slices`/`maps` partial-coverage audit. The new
+  `scripts/go-stdlib-collections-audit.py` scanner resolves simple import
+  aliases before classifying corpus calls into admitted membership, mutation,
+  ordering, callback, iterator, copy, and equality capability buckets.
 
 ### Fixed
 - Hardened JS/TS string-affix receiver proof so TypeScript `String` object
@@ -204,6 +208,8 @@ break.
 - Confirmed the Java `Arrays`/`Collections` audit is product-code neutral:
   `target/release/nose` stayed byte-identical to the post-Java-Optional
   baseline binary, so there is no query-time degradation from this slice.
+- Confirmed the Go `sort`/`slices`/`maps` audit is also product-code neutral:
+  the release binary stayed byte-identical to the post-Java-audit baseline.
 - Compared the #567 import-backed immutable provenance change against
   the pre-#567 baseline `dbb688e7` with release `nose query crates all top=0
   --mode semantic --format json` and `NOSE_TIME` over five paired runs. Median

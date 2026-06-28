@@ -124,6 +124,49 @@
           "passes_gate": true
         }
       ]
+    },
+    {
+      "id": "go_sort_slices_maps_partial_coverage_audit",
+      "priority": 4,
+      "capability": "Alias-aware corpus audit separates admitted Go slices.Contains membership from sort/slices/maps mutation, ordering, callback, iterator, copy, and equality boundaries.",
+      "changes": [
+        "Added scripts/go-stdlib-collections-audit.py.",
+        "Generated a checked-in Go sort/slices/maps audit report across the pinned Go corpus.",
+        "Resolved simple import aliases before counting package calls, keeping the report closer to future namespace-proof behavior."
+      ],
+      "audit_report": "bench/recall_loss/go-stdlib-collections-audit-2026-06-28.v1.json",
+      "audit_totals": {
+        "occurrences": 1339,
+        "supported_occurrences": 121,
+        "unsupported_occurrences": 1218,
+        "unknown_boundary_occurrences": 0
+      },
+      "top_unsupported_boundaries": [
+        {"boundary": "mutation-effect", "occurrences": 600},
+        {"boundary": "mutation-callback", "occurrences": 341},
+        {"boundary": "copy-result-domain", "occurrences": 82},
+        {"boundary": "ordering-precondition", "occurrences": 60},
+        {"boundary": "collection-equality", "occurrences": 33}
+      ],
+      "unsupported_boundaries": [
+        "sort.Sort/Strings/Slice and slices.Sort* are in-place ordering mutations.",
+        "sort.Search* and BinarySearch* need sortedness or monotonic predicate preconditions.",
+        "slices.ContainsFunc/IndexFunc and SortFunc/CompareFunc need callback identity and effect proof.",
+        "maps.Clone/slices.Clone/slices.Concat need copy-result domain and alias/lifetime proof.",
+        "maps.Equal/slices.Equal need collection equality laws."
+      ],
+      "tests": [
+        "python3 -m py_compile scripts/go-stdlib-collections-audit.py",
+        "python3 scripts/go-stdlib-collections-audit.py --output bench/recall_loss/go-stdlib-collections-audit-2026-06-28.v1.json",
+        "jq empty bench/recall_loss/go-stdlib-collections-audit-2026-06-28.v1.json"
+      ],
+      "performance": [
+        {
+          "check": "cmp -s target/perf-baselines/nose-after-java-arrays-collections-audit target/release/nose",
+          "product_binary_changed": false,
+          "passes_gate": true
+        }
+      ]
     }
   ]
 }

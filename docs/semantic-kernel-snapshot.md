@@ -263,7 +263,10 @@ still being migrated toward it.
   lowers to the separate `StringContains` semantic so substring membership does
   not reuse collection membership. `strings.Join` reuses the ordered `Join`
   builtin with separator and collection arguments normalized into the same shape
-  as other join producers. The
+  as other join producers. The corpus audit
+  [`go-stdlib-collections-audit-2026-06-28.v1.json`](../bench/recall_loss/go-stdlib-collections-audit-2026-06-28.v1.json)
+  keeps the rest of Go `sort`/`slices`/`maps` separated into mutation, ordering,
+  callback, iterator, copy, and equality capability buckets. The
   `nose.protocols.iterator_identity_adapters` descriptor owns Rust
   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
   `.stream()` iterator identity adapter contract and occurrence producer ids,

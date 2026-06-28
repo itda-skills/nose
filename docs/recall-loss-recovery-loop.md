@@ -433,6 +433,13 @@ copy-result domain proof (`586`), mutation/effect contracts (`886`), array
 content equality (`329`), representation strings (`264`), and wrapper aliasing
 (`266`).
 
+The Go `sort`/`slices`/`maps` audit resolves simple import aliases and
+classifies `1,339` corpus calls: `121` `slices.Contains` calls are already
+supported, `1,218` remain unsupported, and no observed method is left
+unclassified. The leading buckets are mutation/effect (`600`),
+mutation+callback (`341`), copy-result domain (`82`), ordering preconditions
+(`60`), and collection equality (`33`).
+
 ## See Also
 
 - [recall-loss-diagnostics](recall-loss-diagnostics.md)
