@@ -229,6 +229,27 @@ fn recall_loss_report_ratchets_representative_admission_buckets() {
         );
     }
     assert!(
+        obligations
+            .iter()
+            .any(|item| item["obligation_family"] == "callback-demand-effect"
+                && item["obligation_subreason"] == "callback-effect-proof-missing"
+                && item["count"].as_u64().unwrap_or(0) >= 1),
+        "expected callback-demand/effect rollup to expose callback-effect proof misses: {report}"
+    );
+    assert!(
+        report["admission_rejections"]
+            .as_array()
+            .expect("admission_rejections should be an array")
+            .iter()
+            .any(|item| item["reason"] == "hof-demand-effect-proof-missing"
+                && item["missing_evidence"]
+                    .as_array()
+                    .is_some_and(|items| items
+                        .iter()
+                        .any(|value| value == "hof-callback-effect-proof"))),
+        "expected HOF rejections to include callback-effect missing evidence: {report}"
+    );
+    assert!(
         reasons
             .iter()
             .all(|item| item["reason"] != "unattributed-strict-exact-unsafe"),

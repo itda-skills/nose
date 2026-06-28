@@ -75,7 +75,7 @@ They do not change exact admission.
 
 | obligation family | typical subreason | meaning |
 |---|---|---|
-| `callback-demand-effect` | `hof-demand-effect-profile-missing` | A HOF/callback surface lacks timing, demand, effect, or materialization proof. |
+| `callback-demand-effect` | `callback-effect-proof-missing`, `callback-identity-or-shape-proof-missing`, `mapping-callback-demand-effect-profile-missing`, `predicate-callback-demand-effect-profile-missing`, `flattening-callback-demand-effect-profile-missing`, `optional-callback-demand-effect-profile-missing`, or `reduction-callback-demand-effect-profile-missing` | A HOF/callback surface lacks timing, callback identity, effect visibility, result role, or materialization proof. |
 | `receiver-mutation` | `effect-preserving-contract-missing` | A mutation/place/effect boundary blocks exact admission. |
 | `scheduling-boundary` | `runtime-protocol-boundary-contract-missing` | A lowered runtime/protocol construct needs scheduling or protocol semantics before exact use. |
 | `ambiguous-selector-boundary` | `receiver-domain-proof-missing`, `library-api-occurrence-evidence-missing`, or a call-target proof label | Selector, receiver, library API, or callee identity proof is missing. |
@@ -95,6 +95,13 @@ reason but splits its `missing_evidence` labels by call-target surface, such as
 `member-call-target-proof`, imported/global target proof labels, and admitted
 target-present call-contract proof labels. Build the checked-in census with
 `scripts/recall-loss-callee-census.py`.
+
+The post-#594 callback diagnostics refinement keeps the same
+`hof-demand-effect-proof-missing` reason, but HOF rejections now also expose
+kind-specific and callback-specific `missing_evidence` labels such as
+`hof-map-callback-demand-effect-profile`, `hof-filter-callback-demand-effect-profile`,
+`hof-callback-effect-proof`, and `hof-callback-identity-proof`. The checked
+baseline is [callback-demand-effect-diagnostics-2026-06-28.v1.json](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v1.json).
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

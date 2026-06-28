@@ -526,6 +526,12 @@ source-prevalence occurrences are classified, `18,637` callback-shaped
 occurrences and `95,805` channel/scheduling-shaped occurrences are priced, but
 first exact-slice admissions remain `0`.
 
+The first post-#594 callback diagnostics refinement turns the local `crates`
+callback-demand/effect bucket into producer-facing subreasons. The broad
+`hof-demand-effect-proof-missing` reason stays at `30`, but the checked [callback-demand-effect diagnostics](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v1.json) split its `by_obligation` rows into callback-effect proof (`27`), callback identity/shape proof (`2`), and predicate callback profile (`1`). Exact admission remains unchanged:
+`semantic_admission_delta = 0`, with `false_merges == 0` and
+`canon_preservation_violations == 0`.
+
 ## See Also
 
 - [recall-loss-diagnostics](recall-loss-diagnostics.md) defines the report

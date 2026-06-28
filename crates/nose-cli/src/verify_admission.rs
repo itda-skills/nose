@@ -1,4 +1,4 @@
-use nose_il::{Interner, NodeId};
+use nose_il::{HoFKind, Interner, NodeId};
 
 #[derive(Clone)]
 pub(crate) struct ExactAdmissionRejectionDiagnostic {
@@ -61,7 +61,7 @@ fn strict_exact_rejection_reason(
             admission_gate: "strict-exact-hof-demand-effect",
             capability_id: "hof-demand-effect-materialization",
             pack_id: None,
-            missing_evidence: vec!["hof-demand-effect-profile"],
+            missing_evidence: hof_missing_evidence(il, interner, root),
         };
     }
 
@@ -182,6 +182,79 @@ fn push_unique(labels: &mut Vec<&'static str>, label: &'static str) {
     if !labels.contains(&label) {
         labels.push(label);
     }
+}
+
+fn hof_missing_evidence(il: &nose_il::Il, interner: &Interner, root: NodeId) -> Vec<&'static str> {
+    let mut labels = vec!["hof-demand-effect-profile"];
+    let mut stack = vec![root];
+    while let Some(node) = stack.pop() {
+        if let nose_il::Payload::HoF(kind) = il.node(node).payload {
+            push_unique(&mut labels, hof_kind_demand_effect_evidence(kind));
+            if nose_semantics::admitted_hof_demand_effect_profile_at_node_with_interner(
+                il,
+                Some(interner),
+                node,
+                kind,
+            )
+            .is_none()
+            {
+                if nose_semantics::source_comprehension_at_node(il, node).is_some() {
+                    push_unique(
+                        &mut labels,
+                        "hof-source-comprehension-demand-effect-profile",
+                    );
+                } else if nose_semantics::admitted_hof_api_at_node_with_interner(
+                    il,
+                    Some(interner),
+                    node,
+                    kind,
+                ) {
+                    push_unique(&mut labels, "hof-library-demand-effect-profile");
+                } else {
+                    push_unique(&mut labels, "hof-source-or-library-api-occurrence-proof");
+                }
+            }
+            let children = il.children(node);
+            match children.get(1).copied() {
+                None => push_unique(&mut labels, "hof-callback-arity-shape-proof"),
+                Some(callback) => {
+                    if !matches!(
+                        il.kind(callback),
+                        nose_il::NodeKind::Func | nose_il::NodeKind::Lambda
+                    ) {
+                        push_unique(&mut labels, "hof-callback-identity-proof");
+                    }
+                    if callback_needs_effect_proof(il, callback) {
+                        push_unique(&mut labels, "hof-callback-effect-proof");
+                    }
+                }
+            }
+        }
+        stack.extend(il.children(node).iter().copied());
+    }
+    labels
+}
+
+fn hof_kind_demand_effect_evidence(kind: HoFKind) -> &'static str {
+    match kind {
+        HoFKind::Map => "hof-map-callback-demand-effect-profile",
+        HoFKind::Filter => "hof-filter-callback-demand-effect-profile",
+        HoFKind::Reduce => "hof-reduce-callback-demand-effect-profile",
+        HoFKind::FlatMap => "hof-flat-map-callback-demand-effect-profile",
+        HoFKind::FilterMap => "hof-filter-map-callback-demand-effect-profile",
+        HoFKind::Reject => "hof-reject-callback-demand-effect-profile",
+    }
+}
+
+fn callback_needs_effect_proof(il: &nose_il::Il, callback: NodeId) -> bool {
+    subtree_has(il, callback, |il, node| {
+        il.kind(node) == nose_il::NodeKind::Call
+            || il.kind(node) == nose_il::NodeKind::Assign
+            || matches!(
+                il.kind(node),
+                nose_il::NodeKind::Throw | nose_il::NodeKind::Try | nose_il::NodeKind::Raw
+            )
+    })
 }
 
 fn callee_identity_call_evidence(

@@ -239,6 +239,13 @@ break.
   per-rejection `obligation_family` and `obligation_subreason` fields so future
   semantic-kernel work can measure stricter admission gates without losing
   recall-loss visibility.
+- Refined callback demand/effect recall-loss diagnostics after #594. HOF
+  exact-admission rejections now keep the broad
+  `hof-demand-effect-proof-missing` reason while adding kind-specific and
+  callback-specific missing evidence labels; the local `crates`
+  `by_obligation` callback rollup now separates callback-effect proof (`27`),
+  callback identity/shape proof (`2`), and predicate callback profile (`1`)
+  with `semantic_admission_delta = 0`.
 
 ### Fixed
 - Made `scripts/check-docs.sh` compatible with both awiki versions that support

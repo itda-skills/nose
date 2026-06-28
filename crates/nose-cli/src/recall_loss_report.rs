@@ -393,7 +393,7 @@ fn rejection_obligation(
     match reason {
         "hof-demand-effect-proof-missing" => (
             "callback-demand-effect",
-            "hof-demand-effect-profile-missing",
+            hof_demand_effect_obligation_subreason(missing_evidence),
         ),
         "mutation-effect-boundary" => ("receiver-mutation", "effect-preserving-contract-missing"),
         "unsupported-runtime-boundary" => (
@@ -430,6 +430,38 @@ fn rejection_obligation(
         }
         _ => ("unattributed-boundary", first_missing),
     }
+}
+
+fn hof_demand_effect_obligation_subreason(missing_evidence: &[&'static str]) -> &'static str {
+    if missing_evidence.contains(&"hof-callback-effect-proof") {
+        return "callback-effect-proof-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-identity-proof")
+        || missing_evidence.contains(&"hof-callback-arity-shape-proof")
+    {
+        return "callback-identity-or-shape-proof-missing";
+    }
+    if missing_evidence.contains(&"hof-reduce-callback-demand-effect-profile") {
+        return "reduction-callback-demand-effect-profile-missing";
+    }
+    if missing_evidence.contains(&"hof-filter-map-callback-demand-effect-profile") {
+        return "optional-callback-demand-effect-profile-missing";
+    }
+    if missing_evidence.contains(&"hof-flat-map-callback-demand-effect-profile") {
+        return "flattening-callback-demand-effect-profile-missing";
+    }
+    if missing_evidence.contains(&"hof-filter-callback-demand-effect-profile")
+        || missing_evidence.contains(&"hof-reject-callback-demand-effect-profile")
+    {
+        return "predicate-callback-demand-effect-profile-missing";
+    }
+    if missing_evidence.contains(&"hof-map-callback-demand-effect-profile") {
+        return "mapping-callback-demand-effect-profile-missing";
+    }
+    if missing_evidence.contains(&"hof-source-or-library-api-occurrence-proof") {
+        return "hof-source-or-library-api-occurrence-proof-missing";
+    }
+    "hof-demand-effect-profile-missing"
 }
 
 fn pair_admission_reasons(a: &VerifyRec, b: &VerifyRec) -> Vec<String> {

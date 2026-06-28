@@ -181,6 +181,12 @@ python3 scripts/cross-language-boundary-census.py \
   records the first callback demand/effect reporting slice: `18,637`
   callback-shaped source-prevalence occurrences and `30` `crates`
   callback-demand/effect recall-loss rows, with no exact admission changes.
+- [callback-demand-effect-diagnostics-2026-06-28.v1.json](callback-demand-effect-diagnostics-2026-06-28.v1.json)
+  records the first post-#594 callback diagnostics refinement. The broad
+  `hof-demand-effect-profile-missing` rollup stays at `30`, but its
+  `by_obligation` subreasons split into callback-effect proof (`27`),
+  callback identity/shape proof (`2`), and predicate callback profile (`1`)
+  without opening exact admission.
 - [issue-600-channel-scheduling-obligation-slice-2026-06-28.v1.json](issue-600-channel-scheduling-obligation-slice-2026-06-28.v1.json)
   records the first channel/scheduling reporting slice: `95,805`
   channel/scheduling-shaped source-prevalence occurrences and `14` `crates`

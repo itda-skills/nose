@@ -41,6 +41,11 @@ no slice is opened in this milestone because the measured candidates still lack
 the complete callback, channel, scheduling, or aggregate-result obligations
 needed for exact convergence.
 
+The first follow-up diagnostics artifact is [callback-demand-effect-diagnostics-2026-06-28.v1.json](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v1.json).
+It keeps exact admission closed but splits the local `crates` HOF
+demand/effect rows by callback-effect proof, callback identity/shape proof, and
+predicate callback profile.
+
 ## Minimal Vocabulary
 
 | obligation | existing substrate | exact-channel rule |
