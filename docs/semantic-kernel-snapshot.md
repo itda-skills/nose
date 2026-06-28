@@ -605,7 +605,11 @@ migrated.
   evidence with `nose.protocols.iterator_identity_adapters` provenance. Java
   `.stream()` uses the same protocol pack. Normalize's exact protocol receiver
   admission consumes this same contract instead of accepting same-named methods
-  from other languages.
+  from other languages. The Rust corpus audit
+  [`rust-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/rust-stdlib-partial-audit-2026-06-28.v1.json)
+  splits the remaining partial coverage into mutation/effect, Option/Result
+  channel, HOF callback, iterator-domain, iterator-lifecycle, receiver-domain,
+  ordering, factory-domain, allocation/lifetime, and reduction groups.
 - Java `Math.abs`, `Math.min`, and `Math.max` scalar integer APIs are language-,
   arity-, receiver-, and integer-domain constrained through admitted
   `LibraryApi` occurrence evidence with `nose.java.stdlib.math` provenance.

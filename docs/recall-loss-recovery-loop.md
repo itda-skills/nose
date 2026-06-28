@@ -453,6 +453,19 @@ shape contracts (`178`), callback reduction (`120`), and runtime attribution
 (`68`). The checked summary is
 [`python-hof-runtime-audit-2026-06-28.v2.json`](../bench/recall_loss/python-hof-runtime-audit-2026-06-28.v2.json).
 
+The Rust stdlib partial-coverage audit masks comments/strings and classifies
+`104,133` Rust stdlib-shaped operations across `Option`, `Result`, iterator
+adapters/HOFs, `Vec`, membership/map lookup, `std::collections` factories,
+mutation, ordering, and allocation surfaces. Already admitted constructors and
+`Vec` factories account for `65,514` occurrences, supported-partial rows account
+for `26,387`, unsupported rows account for `12,232`, and no classified row is
+left unknown. The leading next-work groups are iterator HOF callback proof
+(`6,960`), mutation/effect contracts (`6,882`), iterator adapter/result-domain
+proof (`6,661`), Option/Result channel proof (`6,651`), iterator lifecycle and
+shape contracts (`5,207`), and receiver-domain proof (`4,822`). The checked
+summary is
+[`rust-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/rust-stdlib-partial-audit-2026-06-28.v1.json).
+
 ## See Also
 
 - [recall-loss-diagnostics](recall-loss-diagnostics.md)

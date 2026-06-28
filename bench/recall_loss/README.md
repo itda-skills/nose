@@ -79,6 +79,13 @@ python3 scripts/python-hof-runtime-audit.py \
   --output target/python-hof-runtime-audit.v2.json
 ```
 
+Build the Rust stdlib partial-coverage audit with:
+
+```sh
+python3 scripts/rust-stdlib-partial-audit.py \
+  --output target/rust-stdlib-partial-audit.v1.json
+```
+
 ## Files
 
 - [crates.baseline.v1.json](crates.baseline.v1.json) records the current
@@ -105,6 +112,11 @@ python3 scripts/python-hof-runtime-audit.py \
   materializer domain proof, ordering semantics, HOF callback proof,
   `itertools` lifecycle, callable runtime identity, combinatoric iterators, and
   runtime attribution.
+- [rust-stdlib-partial-audit-2026-06-28.v1.json](rust-stdlib-partial-audit-2026-06-28.v1.json)
+  records comment/string-masked lexical prevalence and support/boundary
+  classification for Rust `Option`, `Result`, iterator adapters/HOFs, `Vec`,
+  membership/map lookup, `std::collections` factories, mutation, ordering, and
+  allocation/lifetime surfaces.
 - [issue-570-cycles.v1.json](issue-570-cycles.v1.json) records the five focused
   top-bucket cycles and the explicit unsupported/fail-closed boundary decision.
 - [issue-572-cycle.v1.json](issue-572-cycle.v1.json) records the first

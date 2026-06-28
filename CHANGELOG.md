@@ -191,6 +191,12 @@ break.
   ranked next-work groups for materializer domain proof, ordering semantics,
   HOF callback proof, `itertools` lifecycle, callable runtime identity,
   combinatoric iterators, callback reduction, and runtime attribution.
+- Added the Rust stdlib partial-coverage audit. The new
+  `scripts/rust-stdlib-partial-audit.py` scanner masks comments/strings before
+  classifying Rust `Option`, `Result`, iterator adapters/HOFs, `Vec`,
+  membership/map lookup, `std::collections` factories, mutation, ordering, and
+  allocation/lifetime surfaces into supported, supported-partial, and explicit
+  unsupported capability buckets.
 
 ### Fixed
 - Hardened JS/TS string-affix receiver proof so TypeScript `String` object
