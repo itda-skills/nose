@@ -197,6 +197,12 @@ break.
   membership/map lookup, `std::collections` factories, mutation, ordering, and
   allocation/lifetime surfaces into supported, supported-partial, and explicit
   unsupported capability buckets.
+- Added the Swift stdlib partial-coverage audit. The new
+  `scripts/swift-stdlib-partial-audit.py` scanner masks comments/strings before
+  classifying Swift cardinality properties, collection/map factories, sequence
+  HOFs, membership, sequence views, mutation/effect, ordering, and reduction
+  surfaces; the checked-in report shows cardinality receiver proof and
+  mutation/effect contracts as the largest next Swift capability targets.
 
 ### Fixed
 - Hardened JS/TS string-affix receiver proof so TypeScript `String` object

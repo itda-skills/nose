@@ -466,6 +466,19 @@ shape contracts (`5,207`), and receiver-domain proof (`4,822`). The checked
 summary is
 [`rust-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/rust-stdlib-partial-audit-2026-06-28.v1.json).
 
+The Swift stdlib partial-coverage audit masks comments/strings and classifies
+`17,754` Swift stdlib-shaped operations across cardinality properties,
+collection/map factories, sequence HOFs, membership, sequence views, mutation,
+ordering, and reductions. Supported-partial rows account for `11,083`
+occurrences, unsupported rows account for `6,671`, and no observed classified
+row is left unknown. The leading next-work groups are cardinality receiver proof
+(`7,633`), mutation/effect contracts (`4,382`), membership receiver proof
+(`1,302`), collection/map factory domain proof (`1,289`), sequence view
+lifecycle contracts (`1,218`), sequence HOF receiver/callback proof (`859`),
+ordering semantics (`585`), reductions (`324`), and `Array(repeating:count:)`
+repeat-factory shape contracts (`162`). The checked summary is
+[`swift-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/swift-stdlib-partial-audit-2026-06-28.v1.json).
+
 ## See Also
 
 - [recall-loss-diagnostics](recall-loss-diagnostics.md)

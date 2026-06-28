@@ -773,7 +773,10 @@ migrated.
   `map`/`filter`/`flatMap` same-span occurrences use the same pack only when
   their receiver proof is Array/Collection rather than arbitrary `Sequence`,
   `Set`, or `Dictionary`, so chained Swift HOFs can reuse pack-backed receiver
-  proof without opening one-shot or ordering assumptions. Ruby
+  proof without opening one-shot or ordering assumptions. The Swift corpus audit
+  [`swift-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/swift-stdlib-partial-audit-2026-06-28.v1.json)
+  splits cardinality, factory, membership, sequence-HOF, view/lifecycle,
+  mutation/effect, ordering, and reduction surfaces before any widening. Ruby
   `map`/`collect`/`select`/`filter`/`reject` same-span occurrences use the same
   pack only when their receiver proof is Array/Collection rather than Hash,
   Set, lazy Enumerator, or framework relation; chained Ruby HOFs can reuse

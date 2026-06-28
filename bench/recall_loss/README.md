@@ -86,6 +86,13 @@ python3 scripts/rust-stdlib-partial-audit.py \
   --output target/rust-stdlib-partial-audit.v1.json
 ```
 
+Build the Swift stdlib partial-coverage audit with:
+
+```sh
+python3 scripts/swift-stdlib-partial-audit.py \
+  --output target/swift-stdlib-partial-audit.v1.json
+```
+
 ## Files
 
 - [crates.baseline.v1.json](crates.baseline.v1.json) records the current
@@ -117,6 +124,11 @@ python3 scripts/rust-stdlib-partial-audit.py \
   classification for Rust `Option`, `Result`, iterator adapters/HOFs, `Vec`,
   membership/map lookup, `std::collections` factories, mutation, ordering, and
   allocation/lifetime surfaces.
+- [swift-stdlib-partial-audit-2026-06-28.v1.json](swift-stdlib-partial-audit-2026-06-28.v1.json)
+  records comment/string-masked lexical prevalence and support/boundary
+  classification for Swift cardinality properties, collection/map factories,
+  sequence HOFs, membership, sequence views, mutation/effect, ordering, and
+  reduction surfaces.
 - [issue-570-cycles.v1.json](issue-570-cycles.v1.json) records the five focused
   top-bucket cycles and the explicit unsupported/fail-closed boundary decision.
 - [issue-572-cycle.v1.json](issue-572-cycle.v1.json) records the first
