@@ -198,6 +198,41 @@ fn strict_exact_promise_resolve_requires_non_thenable_safe_arg() {
 }
 
 #[test]
+fn strict_exact_promise_continuations_remain_closed_for_reporting() {
+    let interner = Interner::new();
+    for (method, src) in [
+        (
+            "then",
+            "function f(p, ok, err) { return p.then(ok, err); }\n",
+        ),
+        ("catch", "function f(p, h) { return p.catch(h); }\n"),
+        ("finally", "function f(p, h) { return p.finally(h); }\n"),
+        (
+            "then",
+            "function f(db, id, h) { return db.get(id).then(h); }\n",
+        ),
+    ] {
+        let il = normalized_source("t.js", src, Lang::JavaScript, &interner);
+        let call = method_call(&il, &interner, method);
+        let facts = StrictFacts::collect(&il, &interner);
+
+        assert!(
+            !strict_exact_safe_tree(&il, &interner, &facts, call),
+            "Promise continuation selector {method} should remain closed until receiver, channel, and callback obligations are proven"
+        );
+        let root = il
+            .units
+            .iter()
+            .find_map(|unit| (il.kind(unit.root) == NodeKind::Func).then_some(unit.root))
+            .expect("function root");
+        assert!(
+            !strict_exact_safe_tree(&il, &interner, &facts, root),
+            "function containing Promise continuation selector {method} should produce recall-loss admission rejection"
+        );
+    }
+}
+
+#[test]
 fn strict_exact_java_collection_factory_uses_library_api_evidence() {
     let interner = Interner::new();
     let mut b = IlBuilder::new(FileId(0));
@@ -479,6 +514,23 @@ fn normalized_source(path: &str, src: &str, lang: Lang, interner: &Interner) -> 
 
 fn promise_resolve_call(il: &Il, interner: &Interner) -> NodeId {
     promise_resolve_call_matching(il, interner, |_| true)
+}
+
+fn method_call(il: &Il, interner: &Interner, method: &str) -> NodeId {
+    il.nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, node)| (node.kind == NodeKind::Call).then_some(NodeId(idx as u32)))
+        .find(|&call| {
+            il.children(call).first().is_some_and(|&callee| {
+                il.kind(callee) == NodeKind::Field
+                    && matches!(
+                        il.node(callee).payload,
+                        Payload::Name(name) if interner.resolve(name) == method
+                    )
+            })
+        })
+        .unwrap_or_else(|| panic!("method call {method}"))
 }
 
 fn promise_resolve_call_with_arg_kind(il: &Il, interner: &Interner, arg_kind: NodeKind) -> NodeId {

@@ -81,11 +81,21 @@ pub(super) fn strict_exact_safe_call(
     if strict_exact_iterator_identity_adapter_call_safe(il, interner, facts, node, callee, method) {
         return true;
     }
+    if strict_exact_js_like_promise_continuation_selector(il, method) {
+        return false;
+    }
     // Opaque exact method identity: this keeps same-callee calls eligible as exact clones
     // without assigning semantic meaning to the method name. Cross-language/builtin
     // convergence still has to pass the proof-backed contracts above or in normalization.
     strict_exact_callee_identity(il, interner, facts, node, callee)
         && strict_exact_call_args_safe(il, interner, facts, node)
+}
+
+fn strict_exact_js_like_promise_continuation_selector(il: &Il, method: &str) -> bool {
+    matches!(
+        il.meta.lang,
+        Lang::JavaScript | Lang::TypeScript | Lang::Vue | Lang::Svelte | Lang::Html
+    ) && matches!(method, "then" | "catch" | "finally")
 }
 
 fn strict_exact_factory_call_safe(

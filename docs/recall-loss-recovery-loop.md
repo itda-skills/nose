@@ -574,6 +574,13 @@ callback demand/effect stay visible as separate missing-evidence labels. The
 slice also detects expression receivers such as `db.get(id).then(f)`, which
 keeps selector-only thenables visible without treating them as admitted Promise
 continuations.
+The [promise continuation report-row slice](../bench/recall_loss/promise-continuation-report-rows-2026-06-28.v1.json)
+then moves the split from label-only diagnostics into actual recall-loss rows:
+focused `.then`, `.catch`, and `.finally` fixtures produce `3/3`
+oracle-interpretable admission rejections with zero oracle exclusions. The
+current recovery priority is therefore quantified as receiver proof first:
+`.then` has `36/39` unhinted receivers and `.catch` has `32/34`, so PromiseLike
+receiver producer proof is the next dependency before exact continuation work.
 
 ## See Also
 

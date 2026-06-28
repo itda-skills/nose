@@ -235,6 +235,11 @@ python3 scripts/cross-language-boundary-census.py \
   now report PromiseLike receiver proof separately from fulfillment
   continuation, rejection continuation, and callback demand/effect labels; exact
   Promise continuation admission remains closed.
+- [promise-continuation-report-rows-2026-06-28.v1.json](promise-continuation-report-rows-2026-06-28.v1.json)
+  records the focused row-visibility follow-up. `.then`, `.catch`, and
+  `.finally` now appear as oracle-interpretable recall-loss
+  `admission_rejections`, and the next recovery queue is quantified as
+  receiver-first across `68` unhinted `.then`/`.catch` occurrences.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

@@ -80,6 +80,12 @@ splits `.then` itself into receiver proof, fulfillment continuation, rejection
 continuation, and callback demand/effect obligations. Receiver proof is the
 primary rollup because the JS/TS audit has `36/39` `.then` occurrences with
 unhinted receivers.
+The [promise-continuation-report-rows-2026-06-28.v1.json](../bench/recall_loss/promise-continuation-report-rows-2026-06-28.v1.json)
+slice makes `.then`, `.catch`, and `.finally` visible as focused
+`admission_rejections` while keeping exact continuation admission closed. Its
+next recovery queue is receiver-first: `68` unhinted `.then`/`.catch` receiver
+occurrences must be attributed before fulfillment, rejection, or callback
+continuation recovery can be considered.
 
 ## Minimal Vocabulary
 

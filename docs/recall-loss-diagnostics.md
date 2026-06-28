@@ -146,6 +146,11 @@ does the same for `.then`: selector-only or custom receivers report
 `promise-then-promise-like-receiver-proof`, while fulfillment continuation,
 rejection continuation, and callback demand/effect stay visible as distinct
 missing-evidence labels.
+The checked [promise continuation report-row fixture](../bench/recall_loss/promise-continuation-report-rows-2026-06-28.v1.json)
+turns those labels into actual local `admission_rejections`: focused
+`.then`, `.catch`, and `.finally` units are all oracle-interpretable, have zero
+oracle exclusions, and report three fail-closed Promise continuation rows without
+opening exact admission.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

@@ -287,6 +287,10 @@ break.
   PromiseLike receiver proof separately from fulfillment/rejection continuation
   and callback demand/effect labels, without opening exact continuation
   admission.
+- Made Promise `.then`, `.catch`, and `.finally` continuation diagnostics
+  visible as local recall-loss `admission_rejections`. Focused fixtures now
+  report three oracle-interpretable Promise continuation rows with no oracle
+  exclusions, while exact continuation admission stays closed.
 
 ### Fixed
 - Made `scripts/check-docs.sh` compatible with both awiki versions that support
