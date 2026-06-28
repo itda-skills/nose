@@ -119,6 +119,73 @@ fn query_mode_semantic_rejects_unproven_js_await_sync_convergence() {
     );
 }
 
+/// `async function` itself is a Promise-producing protocol boundary even when
+/// its body has no explicit `await`. Scheduling, rejection, and thenable
+/// assimilation obligations must be proven before it can converge with a
+/// synchronous return.
+#[test]
+fn query_mode_semantic_rejects_unproven_js_async_function_sync_convergence() {
+    let project = TempProject::new("js_async_function_boundary");
+    project.write("sync.js", "function id(x) {\n  return x + 1;\n}\n");
+    project.write(
+        "async_function.js",
+        "async function id(x) {\n  return x + 1;\n}\n",
+    );
+
+    let json = project.query_semantic_min_json();
+    assert!(
+        !family_contains_all(&json, &["sync.js", "async_function.js"]),
+        "async functions must not merge with sync returns without Promise protocol evidence: {json}"
+    );
+}
+
+/// Promise protocol surfaces stay closed across producer, continuation, and
+/// aggregate shapes until the kernel has dependency-closed scheduling,
+/// rejection-channel, settled-value, and receiver/callback demand/effect proof.
+#[test]
+fn query_mode_semantic_rejects_unproven_js_promise_protocol_convergence() {
+    let project = TempProject::new("js_promise_protocol_boundary");
+    project.write("sync_value.js", "function value(x) {\n  return x + 1;\n}\n");
+    project.write(
+        "promise_executor.js",
+        "function value(x) {\n  return new Promise(resolve => resolve(x + 1));\n}\n",
+    );
+    project.write(
+        "promise_resolve.js",
+        "function value(x) {\n  return Promise.resolve(x + 1);\n}\n",
+    );
+    project.write(
+        "promise_then.js",
+        "function value(x) {\n  return Promise.resolve(x).then(v => v + 1);\n}\n",
+    );
+    project.write(
+        "custom_then.js",
+        "function value(p) {\n  return p.then(v => v + 1);\n}\n",
+    );
+    project.write(
+        "promise_all.js",
+        "function aggregate(xs) {\n  return Promise.all(xs);\n}\n",
+    );
+    project.write(
+        "promise_race.js",
+        "function aggregate(xs) {\n  return Promise.race(xs);\n}\n",
+    );
+
+    let json = project.query_semantic_min_json();
+    for pair in [
+        ["sync_value.js", "promise_executor.js"],
+        ["sync_value.js", "promise_resolve.js"],
+        ["sync_value.js", "promise_then.js"],
+        ["promise_then.js", "custom_then.js"],
+        ["promise_all.js", "promise_race.js"],
+    ] {
+        assert!(
+            !family_contains_all(&json, &pair),
+            "Promise protocol boundary must not form an exact semantic family for {pair:?}: {json}"
+        );
+    }
+}
+
 /// Same async protocol boundary for Python: `await x` is a coroutine protocol
 /// operation, not a plain value read unless a future contract proves it.
 #[test]

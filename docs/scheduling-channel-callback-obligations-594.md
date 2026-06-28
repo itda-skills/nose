@@ -60,6 +60,11 @@ source-prevalence group (`29,094` occurrences) reportable as scheduling,
 executor callback, rejection-channel, aggregate-result, factory, and
 non-construct call obligations. JS/TS async functions now emit a fail-closed
 `Source::Protocol(AsyncFunction)` boundary even when the body has no `await`.
+The follow-up [promise-protocol-hard-negatives-2026-06-28.v1.json](../bench/recall_loss/promise-protocol-hard-negatives-2026-06-28.v1.json)
+pins the Promise-specific hard negatives before any recovery slice opens:
+async-function/sync, Promise executor/sync, Promise.resolve/sync,
+Promise.then/custom receiver, possible or explicit thenable assimilation, and
+Promise.all/Promise.race convergence all remain closed.
 
 ## Minimal Vocabulary
 

@@ -80,6 +80,52 @@ fn promise_resolve_then_call_il(literal_arg: bool) -> (Il, Interner, NodeId, Nod
     )
 }
 
+fn promise_like_receiver_then_call_il() -> (Il, Interner, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let receiver = b.add(NodeKind::Var, Payload::Cid(0), sp(110), &[]);
+    let then_callee = b.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("then")),
+        sp(111),
+        &[receiver],
+    );
+    let param = b.add(NodeKind::Param, Payload::Cid(1), sp(112), &[]);
+    let param_ref = b.add(NodeKind::Var, Payload::Cid(1), sp(113), &[]);
+    let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp(114), &[]);
+    let callback_body = b.add(
+        NodeKind::BinOp,
+        Payload::Op(Op::Add),
+        sp(115),
+        &[param_ref, one],
+    );
+    let callback = b.add(
+        NodeKind::Lambda,
+        Payload::None,
+        sp(116),
+        &[param, callback_body],
+    );
+    let then_call = b.add(
+        NodeKind::Call,
+        Payload::None,
+        sp(117),
+        &[then_callee, callback],
+    );
+    (
+        finish_test_il(b, then_call, Lang::TypeScript),
+        interner,
+        then_call,
+    )
+}
+
+fn push_domain_evidence(il: &mut Il, node: NodeId, id: u32, domain: DomainEvidence) {
+    il.evidence.push(evidence(
+        id,
+        EvidenceAnchor::node(il.node(node).span, il.kind(node)),
+        EvidenceKind::Domain(domain),
+    ));
+}
+
 fn push_promise_resolve_evidence(il: &mut Il, call: NodeId, base_id: u32) {
     let [callee, _arg] = il.children(call) else {
         panic!("Promise.resolve test call must have one argument");
@@ -199,6 +245,35 @@ fn promise_then_over_possible_thenable_resolve_arg_stays_opaque() {
     let resolve_call = il.children(il.children(then_call)[0])[0];
     push_promise_resolve_evidence(&mut il, resolve_call, 0);
     push_promise_then_evidence(&mut il, &interner, then_call, 5);
+
+    assert!(!matches!(
+        eval_op(&il, &interner, then_call),
+        ValOp::Call(code) if code == PROMISE_RESOLVED_CODE
+    ));
+}
+
+#[test]
+fn promise_then_over_explicit_thenable_resolve_arg_stays_opaque() {
+    let (mut il, interner, then_call, _sync_add) = promise_resolve_then_call_il(false);
+    let resolve_call = il.children(il.children(then_call)[0])[0];
+    let resolve_arg = il.children(resolve_call)[1];
+    push_domain_evidence(&mut il, resolve_arg, 20, DomainEvidence::PromiseLike);
+    push_promise_resolve_evidence(&mut il, resolve_call, 0);
+    push_promise_then_evidence(&mut il, &interner, then_call, 5);
+
+    assert!(!matches!(
+        eval_op(&il, &interner, then_call),
+        ValOp::Call(code) if code == PROMISE_RESOLVED_CODE
+    ));
+}
+
+#[test]
+fn promise_like_receiver_without_supported_settled_producer_stays_opaque() {
+    let (mut il, interner, then_call) = promise_like_receiver_then_call_il();
+    let then_callee = il.children(then_call)[0];
+    let receiver = il.children(then_callee)[0];
+    push_domain_evidence(&mut il, receiver, 0, DomainEvidence::PromiseLike);
+    push_promise_then_evidence(&mut il, &interner, then_call, 1);
 
     assert!(!matches!(
         eval_op(&il, &interner, then_call),

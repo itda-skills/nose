@@ -125,6 +125,12 @@ to report labels such as `promise-await-scheduling-contract`,
 `promise-aggregate-result-channel-contract`,
 `promise-rejection-channel-contract`, and
 `promise-non-construct-call-boundary-contract`.
+The follow-up [promise-protocol hard negatives](../bench/recall_loss/promise-protocol-hard-negatives-2026-06-28.v1.json)
+keep `semantic_admission_delta = 0` and pin the closed boundaries that must
+hold before any Promise recovery slice opens: async-function/sync convergence,
+executor or factory/sync convergence, Promise chain/custom receiver
+convergence, thenable assimilation, unsupported settled producers, and
+aggregate first-settled/result-channel differences.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

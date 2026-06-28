@@ -264,6 +264,12 @@ break.
   channels, rejection channels, and non-construct Promise calls. The checked
   Promise artifact keeps the `29,094`-occurrence JS/TS Promise/async group
   closed with `semantic_admission_delta = 0`.
+- Added Promise protocol hard negatives for the next recovery slice. Query-level
+  tests now pin async-function/sync, Promise executor/sync,
+  Promise.resolve/sync, Promise.then/custom receiver, and
+  Promise.all/Promise.race boundaries closed, while value-graph tests pin
+  possible and explicit thenable assimilation plus PromiseLike receivers without
+  supported settled producers.
 
 ### Fixed
 - Made `scripts/check-docs.sh` compatible with both awiki versions that support

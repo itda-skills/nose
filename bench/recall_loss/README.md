@@ -211,6 +211,12 @@ python3 scripts/cross-language-boundary-census.py \
   await scheduling, async function scheduling, Promise executor callbacks,
   Promise factories, aggregate result channels, rejection channels, and
   non-construct Promise calls without opening exact admission.
+- [promise-protocol-hard-negatives-2026-06-28.v1.json](promise-protocol-hard-negatives-2026-06-28.v1.json)
+  records the follow-up Promise hard-negative slice. It keeps exact admission
+  closed while pinning async-function/sync, Promise executor/sync,
+  Promise.resolve/sync, Promise.then/custom receiver, thenable assimilation, and
+  Promise.all/Promise.race boundaries with `4` new tests and `8` fail-closed
+  assertions.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel
