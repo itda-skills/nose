@@ -167,6 +167,51 @@
           "passes_gate": true
         }
       ]
+    },
+    {
+      "id": "python_hof_runtime_attribution_audit",
+      "priority": 5,
+      "capability": "AST-based corpus audit separates supported Python builtin iterator/HOF calls from lexical builtin shadowing and itertools/functools runtime-boundary buckets.",
+      "changes": [
+        "Added scripts/python-hof-runtime-audit.py.",
+        "Generated a checked-in Python HOF/runtime attribution audit report across the pinned Python corpus.",
+        "Used AST scope bindings to count bare builtin calls that need runtime attribution before future widening."
+      ],
+      "audit_report": "bench/recall_loss/python-hof-runtime-audit-2026-06-28.v1.json",
+      "audit_totals": {
+        "occurrences": 21176,
+        "supported_or_partial_occurrences": 18263,
+        "unsupported_occurrences": 2845,
+        "runtime_attribution_required_occurrences": 68,
+        "unknown_boundary_occurrences": 0,
+        "parse_error_count": 7
+      },
+      "top_unsupported_boundaries": [
+        {"boundary": "ordering-reduction", "occurrences": 999},
+        {"boundary": "ordering-materializer", "occurrences": 912},
+        {"boundary": "ordering-view", "occurrences": 262},
+        {"boundary": "combinatoric-iterator", "occurrences": 169},
+        {"boundary": "reduction-callback", "occurrences": 119}
+      ],
+      "unsupported_boundaries": [
+        "sorted/reversed/min/max need ordering, key, or sequence proof before admission.",
+        "functools.reduce needs callback demand/effect proof.",
+        "functools.partial and update_wrapper/wraps are runtime callable/decorator surfaces.",
+        "itertools product/combinations/chain/islice/tee need iterator lifecycle and shape contracts.",
+        "Bare builtin names with lexical bindings need stricter runtime attribution before widening."
+      ],
+      "tests": [
+        "python3 -m py_compile scripts/python-hof-runtime-audit.py",
+        "python3 scripts/python-hof-runtime-audit.py --output bench/recall_loss/python-hof-runtime-audit-2026-06-28.v1.json",
+        "jq empty bench/recall_loss/python-hof-runtime-audit-2026-06-28.v1.json"
+      ],
+      "performance": [
+        {
+          "check": "cmp -s target/perf-baselines/nose-after-go-stdlib-collections-audit target/release/nose",
+          "product_binary_changed": false,
+          "passes_gate": true
+        }
+      ]
     }
   ]
 }

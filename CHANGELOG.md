@@ -181,6 +181,10 @@ break.
   `scripts/go-stdlib-collections-audit.py` scanner resolves simple import
   aliases before classifying corpus calls into admitted membership, mutation,
   ordering, callback, iterator, copy, and equality capability buckets.
+- Added the Python HOF/runtime attribution audit. The new
+  `scripts/python-hof-runtime-audit.py` scanner uses Python AST scopes to
+  separate supported builtin iterator/HOF calls, lexical builtin shadowing that
+  needs runtime attribution, and `itertools`/`functools` boundary buckets.
 
 ### Fixed
 - Hardened JS/TS string-affix receiver proof so TypeScript `String` object
@@ -210,6 +214,8 @@ break.
   baseline binary, so there is no query-time degradation from this slice.
 - Confirmed the Go `sort`/`slices`/`maps` audit is also product-code neutral:
   the release binary stayed byte-identical to the post-Java-audit baseline.
+- Confirmed the Python HOF/runtime audit is product-code neutral: the release
+  binary stayed byte-identical to the post-Go-audit baseline.
 - Compared the #567 import-backed immutable provenance change against
   the pre-#567 baseline `dbb688e7` with release `nose query crates all top=0
   --mode semantic --format json` and `NOSE_TIME` over five paired runs. Median

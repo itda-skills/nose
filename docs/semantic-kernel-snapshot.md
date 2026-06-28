@@ -893,7 +893,11 @@ migrated.
   terminal identity. Shadowed builtins, wildcard-import ambiguity, missing source
   proof, callable-but-not-lambda callbacks, missing materializer proof, invalid
   nested producer evidence, multi-iterable `map`, and `sorted`/`reversed` remain
-  closed.
+  closed. The corpus audit
+  [`python-hof-runtime-audit-2026-06-28.v1.json`](../bench/recall_loss/python-hof-runtime-audit-2026-06-28.v1.json)
+  tracks supported builtin iterator/HOF calls, lexical builtin shadowing that
+  needs runtime attribution, and the remaining `itertools`/`functools`
+  capability buckets.
 - Opaque exact callee identity remains separate from library/API admission. A
   parameter callee or proof-backed immutable/imported callee may keep an exact
   same-callee call comparable as an opaque value operation. Same-spelled

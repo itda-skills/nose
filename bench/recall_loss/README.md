@@ -72,6 +72,13 @@ python3 scripts/go-stdlib-collections-audit.py \
   --output target/go-stdlib-collections-audit.v1.json
 ```
 
+Build the Python HOF/runtime attribution audit with:
+
+```sh
+python3 scripts/python-hof-runtime-audit.py \
+  --output target/python-hof-runtime-audit.v1.json
+```
+
 ## Files
 
 - [crates.baseline.v1.json](crates.baseline.v1.json) records the current
@@ -89,6 +96,9 @@ python3 scripts/go-stdlib-collections-audit.py \
 - [go-stdlib-collections-audit-2026-06-28.v1.json](go-stdlib-collections-audit-2026-06-28.v1.json)
   records alias-aware corpus prevalence and support/boundary classification for
   Go `sort`, `slices`, and `maps`.
+- [python-hof-runtime-audit-2026-06-28.v1.json](python-hof-runtime-audit-2026-06-28.v1.json)
+  records AST-based Python builtin/HOF, `itertools`, and `functools`
+  attribution and boundary classification.
 - [issue-570-cycles.v1.json](issue-570-cycles.v1.json) records the five focused
   top-bucket cycles and the explicit unsupported/fail-closed boundary decision.
 - [issue-572-cycle.v1.json](issue-572-cycle.v1.json) records the first
