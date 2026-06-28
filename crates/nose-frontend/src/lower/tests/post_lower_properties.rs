@@ -5,6 +5,7 @@ fn post_lowering_emits_property_and_rust_option_occurrences() {
     let interner = Interner::new();
     assert_ts_length_property_occurrences(&interner);
     assert_ts_promise_then_occurrences(&interner);
+    assert_ts_promise_resolve_occurrences(&interner);
     assert_rust_option_occurrences(&interner);
     assert_rust_result_occurrences(&interner);
 }
@@ -87,6 +88,52 @@ fn assert_ts_promise_then_occurrences(interner: &Interner) {
         DomainEvidence::PromiseLike,
         &then_api,
     ));
+}
+
+fn assert_ts_promise_resolve_occurrences(interner: &Interner) {
+    let ts = lower_fixture(
+        "t.ts",
+        b"function f(value: number) { return Promise.resolve(value); }\n",
+        Lang::TypeScript,
+        interner,
+    );
+    let contract = library_promise_resolve_contract(Lang::TypeScript, "Promise", "resolve", 1)
+        .expect("Promise.resolve contract");
+    let resolve_records = contract_api_records(&ts.evidence, contract.id, contract.callee);
+    assert_eq!(
+        resolve_records.len(),
+        1,
+        "Promise.resolve should regain LibraryApi occurrence evidence after post-lower normalization"
+    );
+    assert_js_like_promise_record_provenance(resolve_records[0]);
+    let resolve_call = call_span_with_field_callee_named(&ts, interner, "resolve")
+        .expect("Promise.resolve call should be lowered");
+    let resolve_api = library_api_evidence_ids_at(
+        &ts.evidence,
+        resolve_call,
+        library_api_contract_id_hash(contract.id),
+        library_api_callee_contract_hash(contract.callee),
+        1,
+    );
+    assert_eq!(resolve_api.len(), 1);
+    assert!(result_domain_depends_on_api(
+        &ts.evidence,
+        resolve_call,
+        DomainEvidence::PromiseLike,
+        &resolve_api,
+    ));
+
+    let shadowed = lower_fixture(
+        "t.ts",
+        b"function f(Promise: { resolve(value: number): number }, value: number) { return Promise.resolve(value); }\n",
+        Lang::TypeScript,
+        interner,
+    );
+    assert_eq!(
+        contract_api_count(&shadowed.evidence, contract.id, contract.callee),
+        0,
+        "shadowed Promise must not regain Promise.resolve LibraryApi evidence"
+    );
 }
 
 fn assert_rust_option_occurrences(interner: &Interner) {

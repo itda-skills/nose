@@ -98,6 +98,48 @@ pub(super) fn strict_exact_rust_vec_new_safe(il: &Il, interner: &Interner, node:
     admitted_rust_vec_new_factory_at_call(il, interner, node).is_some()
 }
 
+/// `Promise.resolve(value)` is exact-safe only for the same non-thenable inputs
+/// that the value graph can keep behind a Promise boundary. This lets equivalent
+/// Promise factory shapes converge without erasing the Promise boundary or
+/// assimilating arbitrary thenables.
+pub(crate) fn strict_exact_promise_resolve_factory_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    node: NodeId,
+) -> bool {
+    if il.kind(node) != NodeKind::Call {
+        return false;
+    }
+    let Some(occurrence) = admitted_promise_resolve_at_call(il, interner, node) else {
+        return false;
+    };
+    if occurrence.arg_count != 1 {
+        return false;
+    }
+    let [_, value] = il.children(node) else {
+        return false;
+    };
+    strict_exact_promise_resolve_arg_safe(il, interner, facts, *value)
+}
+
+fn strict_exact_promise_resolve_arg_safe(
+    il: &Il,
+    interner: &Interner,
+    facts: &StrictFacts,
+    value: NodeId,
+) -> bool {
+    if il.kind(value) == NodeKind::Lit {
+        return exact_literal_safe(il, value);
+    }
+    if strict_exact_nullish_global_safe(il, interner, value) {
+        return true;
+    }
+    strict_exact_safe_tree(il, interner, facts, value)
+        && domain_evidence_for_receiver(il, interner, value)
+            .is_some_and(|domain| domain.is_integer_or_number() || domain.is_string())
+}
+
 pub(super) fn strict_exact_rust_std_collection_factory_safe(
     il: &Il,
     interner: &Interner,

@@ -133,11 +133,7 @@ fn lowered_swift_set_factory_exact_safe(source: &[u8]) -> bool {
         &interner,
     )
     .expect("lower Swift");
-    let il = nose_normalize::normalize(
-        &raw,
-        &interner,
-        &nose_normalize::NormalizeOptions::default(),
-    );
+    let il = normalize(&raw, &interner, &NormalizeOptions::default());
     let set_factory = il
         .nodes
         .iter()

@@ -186,6 +186,46 @@ fn query_mode_semantic_rejects_unproven_js_promise_protocol_convergence() {
     }
 }
 
+/// A narrow Promise recovery is allowed only where the Promise factory boundary
+/// stays explicit. `Promise.resolve` over a proven non-thenable scalar can
+/// converge with the same Promise factory shape, but the Promise boundary itself
+/// must remain visible so synchronous payload code does not join the family.
+#[test]
+fn query_mode_semantic_matches_safe_promise_resolve_factories_only_inside_promise_boundary() {
+    let project = TempProject::new("js_promise_resolve_safe_boundary");
+    project.write(
+        "promise_a.ts",
+        "function value(x: number) {\n  return [Promise.resolve(x), Promise.resolve(1)];\n}\n",
+    );
+    project.write(
+        "promise_b.ts",
+        "function value(y: number) {\n  return [Promise.resolve(y), Promise.resolve(1)];\n}\n",
+    );
+    project.write(
+        "sync_value.ts",
+        "function value(z: number) {\n  return [z, 1];\n}\n",
+    );
+    project.write(
+        "possible_thenable.js",
+        "function value(p) {\n  return [Promise.resolve(p), Promise.resolve(1)];\n}\n",
+    );
+
+    let json = project.query_semantic_min_json();
+    assert!(
+        family_contains_all(&json, &["promise_a.ts", "promise_b.ts"]),
+        "Promise.resolve over proven non-thenable scalar arguments should form an exact family that preserves Promise factory boundaries: {json}"
+    );
+    for pair in [
+        ["promise_a.ts", "sync_value.ts"],
+        ["promise_a.ts", "possible_thenable.js"],
+    ] {
+        assert!(
+            !family_contains_all(&json, &pair),
+            "safe Promise.resolve recovery must not erase Promise boundaries or admit possible thenables for {pair:?}: {json}"
+        );
+    }
+}
+
 /// Same async protocol boundary for Python: `await x` is a coroutine protocol
 /// operation, not a plain value read unless a future contract proves it.
 #[test]

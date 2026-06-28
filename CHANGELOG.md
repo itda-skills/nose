@@ -270,6 +270,12 @@ break.
   Promise.all/Promise.race boundaries closed, while value-graph tests pin
   possible and explicit thenable assimilation plus PromiseLike receivers without
   supported settled producers.
+- Added the first narrow Promise recovery slice. Dependency-closed
+  `Promise.resolve(value)` now regains LibraryApi evidence after lower and
+  normalize rebuilds and can enter strict exact semantic families only for
+  non-thenable-safe literal/nullish/scalar arguments; sync payloads, untyped or
+  explicit thenables, custom receivers, executors, aggregate channels, and
+  rejection channels remain closed.
 
 ### Fixed
 - Made `scripts/check-docs.sh` compatible with both awiki versions that support
@@ -319,6 +325,10 @@ break.
   output stayed stable (`31 -> 31` families, 67,200 JSON bytes unchanged) and
   median wall time improved `488.03ms -> 445.77ms` (-8.7%); `import-resolve`
   remained within budget at `69.6ms -> 72.0ms` (+3.4%).
+- Sanity-checked the Promise.resolve recovery slice with release `nose query
+  crates all top=0 --mode semantic --format json` and `NOSE_TIME`. Current
+  three-run wall times were `0.39s`, `0.47s`, and `0.43s` with stable 67,200
+  byte JSON output; no paired baseline was rebuilt for this slice.
 
 ## [0.16.0] - 2026-06-26
 

@@ -217,6 +217,13 @@ python3 scripts/cross-language-boundary-census.py \
   Promise.resolve/sync, Promise.then/custom receiver, thenable assimilation, and
   Promise.all/Promise.race boundaries with `4` new tests and `8` fail-closed
   assertions.
+- [promise-resolve-recovery-2026-06-28.v1.json](promise-resolve-recovery-2026-06-28.v1.json)
+  records the first narrow Promise recovery slice. Dependency-closed
+  `Promise.resolve(value)` can now enter exact semantic families only when the
+  receiver is proven as the global `Promise.resolve` and the argument is a
+  non-thenable-safe literal/nullish/scalar value; sync payloads, possible
+  thenables, explicit PromiseLike values, custom receivers, executors,
+  aggregate channels, and rejection channels remain closed.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

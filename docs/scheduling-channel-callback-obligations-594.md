@@ -65,6 +65,11 @@ pins the Promise-specific hard negatives before any recovery slice opens:
 async-function/sync, Promise executor/sync, Promise.resolve/sync,
 Promise.then/custom receiver, possible or explicit thenable assimilation, and
 Promise.all/Promise.race convergence all remain closed.
+The first narrow recovery slice, [promise-resolve-recovery-2026-06-28.v1.json](../bench/recall_loss/promise-resolve-recovery-2026-06-28.v1.json),
+lets dependency-closed `Promise.resolve(value)` enter exact semantic matching only
+when `value` is proven non-thenable-safe, so the Promise factory boundary is
+retained and broader scheduling, executor, aggregate, and rejection channels stay
+closed.
 
 ## Minimal Vocabulary
 

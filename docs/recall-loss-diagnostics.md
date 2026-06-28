@@ -131,6 +131,11 @@ hold before any Promise recovery slice opens: async-function/sync convergence,
 executor or factory/sync convergence, Promise chain/custom receiver
 convergence, thenable assimilation, unsupported settled producers, and
 aggregate first-settled/result-channel differences.
+The first recovery slice is [promise-resolve-recovery-2026-06-28.v1.json](../bench/recall_loss/promise-resolve-recovery-2026-06-28.v1.json).
+It opens only dependency-closed `Promise.resolve(value)` factories whose
+argument is proven non-thenable-safe, while preserving the same hard negatives
+for sync payloads, possible thenables, explicit PromiseLike values, executors,
+aggregate channels, and rejection channels.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

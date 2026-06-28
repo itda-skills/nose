@@ -35,6 +35,53 @@ pub(super) fn post_lower_unshadowed_symbol_evidence_id(
     )
 }
 
+pub(super) fn post_lower_qualified_global_symbol_evidence_id(
+    il: &Il,
+    node: NodeId,
+    path: &str,
+) -> Option<EvidenceId> {
+    il.evidence.iter().find_map(|record| {
+        (record.anchor == EvidenceAnchor::node(il.node(node).span, il.kind(node))
+            && record.kind
+                == EvidenceKind::Symbol(SymbolEvidenceKind::QualifiedGlobal {
+                    path_hash: stable_symbol_hash(path),
+                })
+            && record.status == EvidenceStatus::Asserted
+            && il.evidence_dependencies_asserted(record))
+        .then_some(record.id)
+    })
+}
+
+pub(super) fn post_lower_static_global_call_parts<'a>(
+    il: &Il,
+    interner: &'a Interner,
+    call: NodeId,
+) -> Option<(NodeId, NodeId, &'a str, &'a str, usize)> {
+    if il.kind(call) != NodeKind::Call {
+        return None;
+    }
+    let (&callee, args) = il.children(call).split_first()?;
+    let (receiver_node, receiver, method) =
+        post_lower_static_global_callee_parts(il, interner, callee)?;
+    Some((callee, receiver_node, receiver, method, args.len()))
+}
+
+pub(super) fn post_lower_static_global_callee_parts<'a>(
+    il: &Il,
+    interner: &'a Interner,
+    callee: NodeId,
+) -> Option<(NodeId, &'a str, &'a str)> {
+    if il.kind(callee) != NodeKind::Field {
+        return None;
+    }
+    let Payload::Name(method) = il.node(callee).payload else {
+        return None;
+    };
+    let receiver_node = il.children(callee).first().copied()?;
+    let receiver = post_lower_var_name(il, interner, receiver_node)?;
+    Some((receiver_node, receiver, interner.resolve(method)))
+}
+
 pub(super) fn post_lower_imported_binding_symbol_evidence_id(
     il: &mut Il,
     interner: &Interner,

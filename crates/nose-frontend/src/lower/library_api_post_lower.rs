@@ -102,6 +102,9 @@ pub(super) fn record_post_lower_library_api_evidence(il: &mut Il, interner: &Int
         if record_post_lower_object_key_view_library_api(il, interner, call) {
             continue;
         }
+        if record_post_lower_static_global_method_library_api(il, interner, call) {
+            continue;
+        }
         record_post_lower_receiver_method_library_api(il, interner, call, &mut dependency_cache);
     }
     for field in fields {
@@ -297,6 +300,68 @@ fn post_lower_map_factory_contract(
             },
             result_domain: Some(library_map_factory_result_domain(contract)),
         })
+}
+
+fn record_post_lower_static_global_method_library_api(
+    il: &mut Il,
+    interner: &Interner,
+    call: NodeId,
+) -> bool {
+    let Some((callee, receiver_node, receiver, method, arg_count)) =
+        post_lower_static_global_call_parts(il, interner, call)
+    else {
+        return false;
+    };
+    let Some(contract) = post_lower_static_global_method_library_api_contract(
+        il.meta.lang,
+        receiver,
+        method,
+        arg_count,
+    ) else {
+        return false;
+    };
+    let LibraryApiCalleeContract::StaticGlobalMethod {
+        receiver: expected_receiver,
+        qualified_path,
+        requires_unshadowed_receiver,
+        ..
+    } = contract.callee
+    else {
+        return false;
+    };
+    let Some(qualified) =
+        post_lower_qualified_global_symbol_evidence_id(il, callee, qualified_path)
+    else {
+        return false;
+    };
+    let mut dependencies = vec![qualified];
+    if requires_unshadowed_receiver {
+        let Some(receiver_dependency) =
+            post_lower_unshadowed_symbol_evidence_id(il, receiver_node, expected_receiver)
+        else {
+            return false;
+        };
+        dependencies.push(receiver_dependency);
+    }
+    record_post_lower_library_api_contract(il, interner, call, arg_count, contract, dependencies);
+    true
+}
+
+fn post_lower_static_global_method_library_api_contract(
+    lang: Lang,
+    receiver: &str,
+    method: &str,
+    arg_count: usize,
+) -> Option<PostLowerLibraryApiContract> {
+    library_promise_resolve_contract(lang, receiver, method, arg_count).map(|contract| {
+        PostLowerLibraryApiContract {
+            id: contract.id,
+            callee: contract.callee,
+            pack_id: contract.pack_id,
+            rule: JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
+            result_domain: Some(contract.result.result_domain),
+        }
+    })
 }
 
 fn post_lower_free_name_library_api_dependencies(

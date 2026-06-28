@@ -101,6 +101,7 @@ fn strict_exact_factory_call_safe(
         || strict_exact_rust_std_map_factory_safe(il, interner, facts, node)
         || strict_exact_swift_map_factory_safe(il, interner, facts, node)
         || strict_exact_map_constructor_entries_safe(il, interner, facts, node)
+        || strict_exact_promise_resolve_factory_safe(il, interner, facts, node)
 }
 
 pub(super) fn strict_exact_typeof_operator_safe(
