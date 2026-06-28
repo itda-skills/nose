@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 DEFAULT_MANIFEST = "bench/goldens/corpus.json"
 DEFAULT_REPOS_ROOT = "bench/repos"
-DEFAULT_OUTPUT = "target/python-hof-runtime-audit.v1.json"
+DEFAULT_OUTPUT = "target/python-hof-runtime-audit.v2.json"
 
 SKIP_DIRS = {
     ".git",
@@ -213,6 +213,39 @@ class ScopeBindingCollector(ast.NodeVisitor):
     def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
         if node.name:
             self.info.bound.add(node.name)
+        for stmt in node.body:
+            self.visit(stmt)
+
+    def visit_If(self, node: ast.If) -> None:
+        for stmt in node.body:
+            self.visit(stmt)
+        for stmt in node.orelse:
+            self.visit(stmt)
+
+    def visit_While(self, node: ast.While) -> None:
+        for stmt in node.body:
+            self.visit(stmt)
+        for stmt in node.orelse:
+            self.visit(stmt)
+
+    def visit_Try(self, node: ast.Try) -> None:
+        for stmt in node.body:
+            self.visit(stmt)
+        for handler in node.handlers:
+            self.visit(handler)
+        for stmt in node.orelse:
+            self.visit(stmt)
+        for stmt in node.finalbody:
+            self.visit(stmt)
+
+    def visit_Match(self, node: ast.Match) -> None:
+        for case in node.cases:
+            self._bind_pattern(case.pattern)
+            for stmt in case.body:
+                self.visit(stmt)
+
+    def visit_NamedExpr(self, node: ast.NamedExpr) -> None:
+        self._bind_target(node.target)
 
     def _bind_args(self, node: ast.arguments) -> None:
         args = list(node.posonlyargs) + list(node.args) + list(node.kwonlyargs)
@@ -230,6 +263,29 @@ class ScopeBindingCollector(ast.NodeVisitor):
             for element in target.elts:
                 self._bind_target(element)
 
+    def _bind_pattern(self, pattern: ast.AST) -> None:
+        if isinstance(pattern, ast.MatchAs):
+            if pattern.name:
+                self.info.bound.add(pattern.name)
+            if pattern.pattern is not None:
+                self._bind_pattern(pattern.pattern)
+        elif isinstance(pattern, ast.MatchStar):
+            if pattern.name:
+                self.info.bound.add(pattern.name)
+        elif isinstance(pattern, ast.MatchMapping):
+            if pattern.rest:
+                self.info.bound.add(pattern.rest)
+            for subpattern in pattern.patterns:
+                self._bind_pattern(subpattern)
+        elif isinstance(pattern, ast.MatchClass):
+            for subpattern in pattern.patterns:
+                self._bind_pattern(subpattern)
+            for subpattern in pattern.kwd_patterns:
+                self._bind_pattern(subpattern)
+        elif isinstance(pattern, (ast.MatchSequence, ast.MatchOr)):
+            for subpattern in pattern.patterns:
+                self._bind_pattern(subpattern)
+
 
 class AuditVisitor(ast.NodeVisitor):
     def __init__(self, repo: str, file_path: Path) -> None:
@@ -242,9 +298,11 @@ class AuditVisitor(ast.NodeVisitor):
         self._with_scope(node.body, None)
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._visit_function_prelude(node)
         self._with_scope(node.body, node.args)
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self._visit_function_prelude(node)
         self._with_scope(node.body, node.args)
 
     def visit_Lambda(self, node: ast.Lambda) -> None:
@@ -260,6 +318,17 @@ class AuditVisitor(ast.NodeVisitor):
     def visit_Call(self, node: ast.Call) -> None:
         self._record_call(node)
         self.generic_visit(node)
+
+    def _visit_function_prelude(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        for decorator in node.decorator_list:
+            self.visit(decorator)
+        for default in node.args.defaults:
+            self.visit(default)
+        for default in node.args.kw_defaults:
+            if default is not None:
+                self.visit(default)
+        if node.returns is not None:
+            self.visit(node.returns)
 
     def _with_scope(self, body: list[ast.stmt] | list[ast.expr], args: ast.arguments | None) -> None:
         collector = ScopeBindingCollector()
@@ -365,11 +434,90 @@ def classify(module: str, name: str, shadow: str | None) -> tuple[str, str, str]
     return "unsupported", boundary, note
 
 
+def next_work_group(
+    module: str,
+    name: str,
+    status: str,
+    boundary: str,
+) -> tuple[str, str, str] | None:
+    if status == "runtime-attribution-required":
+        return (
+            "python-runtime-attribution",
+            "builtin runtime attribution",
+            "Do not widen builtin semantics until these lexical shadows stay explicit.",
+        )
+    if status == "supported-partial" and boundary == "hof-lambda":
+        return (
+            "python-hof-lambda-proof",
+            "HOF callback and iterable-source proof",
+            "Existing partial support needs callback identity, demand, and iterable-source proof.",
+        )
+    if status == "supported-partial" and boundary == "materializer":
+        return (
+            "python-materializer-domain-proof",
+            "collection materializer domain proof",
+            "Existing partial support needs source iterator provenance and result-domain proof.",
+        )
+    if boundary in {
+        "ordering-callback",
+        "ordering-materializer",
+        "ordering-reduction",
+        "ordering-view",
+    }:
+        return (
+            "python-ordering-semantics",
+            "ordering/key/comparator semantics",
+            "Sorted, reversed, min, max, and comparator adapters need ordering obligations.",
+        )
+    if boundary in {"reduction-callback", "hof-callback"}:
+        return (
+            "python-callback-reduction",
+            "callback reduction contracts",
+            "Callback reductions need demand/effect and accumulator semantics.",
+        )
+    if boundary in {"callable-binding", "decorator-runtime", "descriptor-runtime"}:
+        return (
+            "python-callable-runtime",
+            "callable/decorator runtime identity",
+            "Callable wrappers and decorators are runtime identity surfaces, not pure value factories.",
+        )
+    if boundary in {"class-decorator", "dispatch-runtime"}:
+        return (
+            "python-dynamic-dispatch-runtime",
+            "dynamic dispatch/class decorator runtime",
+            "Runtime registry or generated-method behavior should remain fail-closed.",
+        )
+    if boundary in {"combinatoric-iterator"}:
+        return (
+            "python-combinatoric-iterators",
+            "combinatoric iterator shape contracts",
+            "Product, permutations, and combinations need iterator shape and cardinality contracts.",
+        )
+    if module == "itertools":
+        return (
+            "python-itertools-lifecycle",
+            "iterator lifecycle and view contracts",
+            "Iterator views need lifecycle, state, and materialization policies before admission.",
+        )
+    if name in SUPPORTED_BUILTINS:
+        return None
+    return (
+        "python-unclassified-runtime-boundary",
+        "unclassified runtime boundary",
+        "Observed calls should stay closed until the audit classifies their capability.",
+    )
+
+
 def main() -> int:
     args = parse_args()
     repos_root = Path(args.repos_root)
     call_counts: Counter[tuple[str, str, str, str, str]] = Counter()
     call_repos: dict[tuple[str, str, str, str, str], set[str]] = defaultdict(set)
+    call_repo_counts: dict[tuple[str, str, str, str, str], Counter[str]] = defaultdict(Counter)
+    call_shape_counts: dict[tuple[str, str, str, str, str], Counter[str]] = defaultdict(Counter)
+    next_work_counts: Counter[tuple[str, str, str]] = Counter()
+    next_work_repos: dict[tuple[str, str, str], set[str]] = defaultdict(set)
+    next_work_surfaces: dict[tuple[str, str, str], Counter[str]] = defaultdict(Counter)
     parse_errors: list[dict[str, str]] = []
     scanned_files = 0
 
@@ -393,6 +541,13 @@ def main() -> int:
                 key = (module, name, status, boundary, note)
                 call_counts[key] += 1
                 call_repos[key].add(repo)
+                call_repo_counts[key][repo] += 1
+                call_shape_counts[key][call_shape] += 1
+                group = next_work_group(module, name, status, boundary)
+                if group is not None:
+                    next_work_counts[group] += 1
+                    next_work_repos[group].add(repo)
+                    next_work_surfaces[group][f"{module}.{name}:{boundary}"] += 1
 
     rows: list[dict[str, Any]] = []
     for key, occurrences in sorted(call_counts.items(), key=lambda item: (-item[1], item[0])):
@@ -406,14 +561,37 @@ def main() -> int:
                 "status": status,
                 "boundary": boundary,
                 "note": note,
+                "call_shape_counts": dict(sorted(call_shape_counts[key].items())),
+                "top_repos": [
+                    {"repo": repo, "occurrences": count}
+                    for repo, count in call_repo_counts[key].most_common(8)
+                ],
             }
         )
 
     status_counts = Counter(row["status"] for row in rows for _ in range(row["occurrences"]))
     boundary_counts = Counter(row["boundary"] for row in rows for _ in range(row["occurrences"]))
     module_counts = Counter(row["module"] for row in rows for _ in range(row["occurrences"]))
+    ranked_next_work = [
+        {
+            "id": group_id,
+            "capability": capability,
+            "occurrences": count,
+            "repos": len(next_work_repos[group]),
+            "policy": policy,
+            "top_surfaces": [
+                {"surface": surface, "occurrences": surface_count}
+                for surface, surface_count in next_work_surfaces[group].most_common(8)
+            ],
+        }
+        for group, count in sorted(
+            next_work_counts.items(), key=lambda item: (-item[1], item[0][0])
+        )
+        for group_id, capability, policy in [group]
+    ]
     report = {
         "report_kind": "python-hof-runtime-audit",
+        "schema_version": 2,
         "manifest": args.manifest,
         "repos_root": args.repos_root,
         "scanned_python_repos": len(python_repos(Path(args.manifest))),
@@ -438,6 +616,7 @@ def main() -> int:
         "status_counts": dict(sorted(status_counts.items())),
         "module_counts": dict(sorted(module_counts.items())),
         "boundary_counts": dict(sorted(boundary_counts.items())),
+        "ranked_next_work": ranked_next_work,
         "calls": rows,
         "parse_errors": parse_errors[:50],
     }

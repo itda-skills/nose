@@ -894,10 +894,12 @@ migrated.
   proof, callable-but-not-lambda callbacks, missing materializer proof, invalid
   nested producer evidence, multi-iterable `map`, and `sorted`/`reversed` remain
   closed. The corpus audit
-  [`python-hof-runtime-audit-2026-06-28.v1.json`](../bench/recall_loss/python-hof-runtime-audit-2026-06-28.v1.json)
+  [`python-hof-runtime-audit-2026-06-28.v2.json`](../bench/recall_loss/python-hof-runtime-audit-2026-06-28.v2.json)
   tracks supported builtin iterator/HOF calls, lexical builtin shadowing that
-  needs runtime attribution, and the remaining `itertools`/`functools`
-  capability buckets.
+  needs runtime attribution, call-shape/top-repo prevalence, and ranked
+  remaining work for materializer domain proof, ordering semantics, HOF callback
+  proof, `itertools` lifecycle, callable runtime identity, combinatoric
+  iterators, and callback reductions.
 - Opaque exact callee identity remains separate from library/API admission. A
   parameter callee or proof-backed immutable/imported callee may keep an exact
   same-callee call comparable as an opaque value operation. Same-spelled

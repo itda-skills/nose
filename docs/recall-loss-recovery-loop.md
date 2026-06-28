@@ -440,14 +440,18 @@ unclassified. The leading buckets are mutation/effect (`600`),
 mutation+callback (`341`), copy-result domain (`82`), ordering preconditions
 (`60`), and collection equality (`33`).
 
-The Python HOF/runtime audit parses Python AST scopes and classifies `21,176`
-calls across builtins, `itertools`, and `functools`: `18,263` are supported or
-partially supported, `2,845` are unsupported, `68` need stricter runtime
-attribution because a bare builtin name is lexically shadowed, and no observed
-boundary is left unknown. The leading unsupported buckets are ordering
-reductions/materializers (`1,911` combined for `min`/`max`/`sorted`), reversed
-ordering views (`262`), combinatoric iterators (`169`), and callback reduction
-(`119`).
+The Python HOF/runtime audit now has a v2 decision report that parses broader
+AST scope bindings, function decorators/defaults, and call shapes. It classifies
+`21,384` calls across builtins, `itertools`, and `functools`: `18,369` are
+supported or partially supported, `2,947` are unsupported, `68` need stricter
+runtime attribution because a bare builtin name is lexically shadowed, and no
+observed boundary is left unknown. The ranked next-work groups are materializer
+domain proof (`8,432`), ordering/key/comparator semantics (`2,182`), HOF
+callback and iterable-source proof (`668`), `itertools` lifecycle/view contracts
+(`242`), callable/decorator runtime identity (`225`), combinatoric iterator
+shape contracts (`178`), callback reduction (`120`), and runtime attribution
+(`68`). The checked summary is
+[`python-hof-runtime-audit-2026-06-28.v2.json`](../bench/recall_loss/python-hof-runtime-audit-2026-06-28.v2.json).
 
 ## See Also
 

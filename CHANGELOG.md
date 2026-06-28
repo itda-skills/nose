@@ -185,6 +185,12 @@ break.
   `scripts/python-hof-runtime-audit.py` scanner uses Python AST scopes to
   separate supported builtin iterator/HOF calls, lexical builtin shadowing that
   needs runtime attribution, and `itertools`/`functools` boundary buckets.
+- Refined the Python HOF/runtime attribution audit into a v2 decision report.
+  The scanner now accounts for decorator/default calls and broader nested-scope
+  bindings, and the checked-in report records call-shape counts, top repos, and
+  ranked next-work groups for materializer domain proof, ordering semantics,
+  HOF callback proof, `itertools` lifecycle, callable runtime identity,
+  combinatoric iterators, callback reduction, and runtime attribution.
 
 ### Fixed
 - Hardened JS/TS string-affix receiver proof so TypeScript `String` object

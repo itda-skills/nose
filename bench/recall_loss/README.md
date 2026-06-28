@@ -76,7 +76,7 @@ Build the Python HOF/runtime attribution audit with:
 
 ```sh
 python3 scripts/python-hof-runtime-audit.py \
-  --output target/python-hof-runtime-audit.v1.json
+  --output target/python-hof-runtime-audit.v2.json
 ```
 
 ## Files
@@ -99,6 +99,12 @@ python3 scripts/python-hof-runtime-audit.py \
 - [python-hof-runtime-audit-2026-06-28.v1.json](python-hof-runtime-audit-2026-06-28.v1.json)
   records AST-based Python builtin/HOF, `itertools`, and `functools`
   attribution and boundary classification.
+- [python-hof-runtime-audit-2026-06-28.v2.json](python-hof-runtime-audit-2026-06-28.v2.json)
+  refines the Python HOF/runtime audit with call-shape counts, top repos,
+  broader lexical binding collection, and ranked next-work groups for
+  materializer domain proof, ordering semantics, HOF callback proof,
+  `itertools` lifecycle, callable runtime identity, combinatoric iterators, and
+  runtime attribution.
 - [issue-570-cycles.v1.json](issue-570-cycles.v1.json) records the five focused
   top-bucket cycles and the explicit unsupported/fail-closed boundary decision.
 - [issue-572-cycle.v1.json](issue-572-cycle.v1.json) records the first
