@@ -414,6 +414,12 @@ before/after recall-loss counts, and the same hard gate evidence. The checked
 summary is
 [`corpus-priority-census-2026-06-28.v1.json`](../bench/recall_loss/corpus-priority-census-2026-06-28.v1.json).
 
+The first concrete slice from that order admits Go `strings.Join` only through
+imported namespace proof and reuses the existing ordered `Join` builtin instead
+of adding a narrower feature-specific semantic. Trim, split, replace, and case
+transforms remain closed until they have equivalent value semantics and hard
+negative fixtures.
+
 ## See Also
 
 - [recall-loss-diagnostics](recall-loss-diagnostics.md)

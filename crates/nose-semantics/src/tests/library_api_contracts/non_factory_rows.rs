@@ -309,6 +309,23 @@ fn library_iterator_adapter_and_method_call_contracts_carry_obligations() {
             },
         ]
     );
+    assert_eq!(
+        library_method_call_contract(Lang::Go, "Join", 2),
+        Some(LibraryMethodCallContract {
+            pack_id: GO_STDLIB_NAMESPACE_CALL_PACK_ID,
+            producer_id: GO_STDLIB_NAMESPACE_CALL_PRODUCER_ID,
+            id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(Builtin::Join,)),
+            callee: LibraryApiCalleeContract::Method {
+                method: "Join",
+                receiver: MethodReceiverContract::ImportedNamespace("strings"),
+            },
+            result: MethodCallContract {
+                semantic: MethodSemanticContract::Builtin(Builtin::Join),
+                receiver: MethodReceiverContract::ImportedNamespace("strings"),
+                args: MethodBuiltinArgs::GoStringJoin,
+            },
+        })
+    );
 }
 
 #[test]

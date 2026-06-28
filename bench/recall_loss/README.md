@@ -66,6 +66,9 @@ slice.
 - [corpus-slice.baseline.v1.json](corpus-slice.baseline.v1.json) records a
   small mixed-language corpus slice across Go, Python, Ruby, TypeScript, Rust,
   and Swift.
+- [stdlib-support-slices-2026-06-28.v1.json](stdlib-support-slices-2026-06-28.v1.json)
+  records the staged corpus-priority stdlib support slices, including focused
+  fixtures, unsupported boundaries, and per-slice performance checks.
 - [issue-570-cycles.v1.json](issue-570-cycles.v1.json) records the five focused
   top-bucket cycles and the explicit unsupported/fail-closed boundary decision.
 - [issue-572-cycle.v1.json](issue-572-cycle.v1.json) records the first

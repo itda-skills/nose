@@ -78,6 +78,7 @@ pub enum MethodBuiltinArgs {
     ReceiverAndFirst,
     FirstThenReceiver,
     GoSliceContains,
+    GoStringJoin,
     MapGetDefault,
     MapGetDefaultOrZeroArgLambda,
     RustMapGetOrOptionDefault,
@@ -337,6 +338,11 @@ pub(super) fn method_namespace_call_contract_shape(
             Builtin::Contains,
             Receiver::ImportedNamespace("slices"),
             Args::GoSliceContains,
+        ),
+        (Lang::Go, "Join", 2) => (
+            Builtin::Join,
+            Receiver::ImportedNamespace("strings"),
+            Args::GoStringJoin,
         ),
         _ => return None,
     };

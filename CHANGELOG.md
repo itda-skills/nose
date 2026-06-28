@@ -165,6 +165,10 @@ break.
   2026-06-28 summary records the next semantic-kernel priority order plus the
   full-corpus hard gate (`false_merges == 0`,
   `canon_preservation_violations == 0`).
+- Added the first stdlib support slice from the corpus priority order. Go
+  `strings.Join(parts, sep)` now reuses the existing ordered `Join` builtin
+  when the callee is proven through an imported `strings` namespace, so import
+  aliases canonicalize while local same-name values remain closed.
 
 ### Fixed
 - Hardened JS/TS string-affix receiver proof so TypeScript `String` object
@@ -180,6 +184,11 @@ break.
   `0` false merges and `0` canon-preservation changes.
 
 ### Performance
+- Measured the Go `strings.Join` stdlib slice with release `nose query
+  <repo> --mode semantic --format json --min-value 100000000` and `NOSE_TIME`.
+  On `bench/repos/chi`, median wall time stayed in budget at `36.4ms ->
+  37.0ms` (+1.6%) after warm reruns; on `bench/repos/gorm`, median wall time
+  stayed flat at `83.7ms -> 83.2ms` (-0.6%).
 - Compared the #567 import-backed immutable provenance change against
   the pre-#567 baseline `dbb688e7` with release `nose query crates all top=0
   --mode semantic --format json` and `NOSE_TIME` over five paired runs. Median

@@ -165,6 +165,10 @@ pub(super) fn apply_method_contract(
             op,
             arg_olds: vec![args[1], args[0]],
         },
+        MethodBuiltinArgs::GoStringJoin => CallCanon::Builtin {
+            op,
+            arg_olds: vec![args[1], args[0]],
+        },
         MethodBuiltinArgs::MapGetDefault => {
             let Some(base) = direct else {
                 return CallCanon::None;

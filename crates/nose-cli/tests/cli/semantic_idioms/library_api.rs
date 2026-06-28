@@ -410,6 +410,63 @@ fn cli_normalized_il_proves_go_strings_contains_namespace_calls() {
 }
 
 #[test]
+fn cli_normalized_il_proves_go_strings_join_namespace_calls() {
+    let dir = std::env::temp_dir().join(format!("nose_go_strings_join_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("join_std.go"),
+        "package p\n\nimport \"strings\"\n\nfunc JoinStd(parts []string) string {\n    return strings.Join(parts, \",\")\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("join_alias.go"),
+        "package p\n\nimport str \"strings\"\n\nfunc JoinAlias(parts []string) string {\n    return str.Join(parts, \",\")\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("join_other_sep.go"),
+        "package p\n\nimport \"strings\"\n\nfunc JoinOtherSep(parts []string) string {\n    return strings.Join(parts, \";\")\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("join_shadow.go"),
+        "package p\n\ntype joiner struct{}\n\nfunc (j joiner) Join(parts []string, sep string) string { return sep }\n\nfunc JoinShadow(strings joiner, parts []string) string {\n    return strings.Join(parts, \",\")\n}\n",
+    )
+    .unwrap();
+
+    let normalized = |name: &str| {
+        run_raw(&[
+            "il",
+            dir.join(name).to_str().unwrap(),
+            "--normalized",
+            "--format",
+            "sexpr",
+        ])
+    };
+    let std = normalized("join_std.go");
+    let alias = normalized("join_alias.go");
+    assert_eq!(
+        std, alias,
+        "Go strings.Join should canonicalize import aliases through namespace evidence"
+    );
+    assert!(
+        std.contains("@Join"),
+        "strings.Join should lower to ordered string join: {std}"
+    );
+
+    let other_sep = normalized("join_other_sep.go");
+    assert_ne!(std, other_sep, "different separators must remain distinct");
+    let shadow = normalized("join_shadow.go");
+    assert!(
+        !shadow.contains("@Join"),
+        "a local value named strings must not prove stdlib Join semantic: {shadow}"
+    );
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn query_mode_semantic_proves_rust_integer_methods() {
     let dir =
         std::env::temp_dir().join(format!("nose_rust_numeric_methods_{}", std::process::id()));

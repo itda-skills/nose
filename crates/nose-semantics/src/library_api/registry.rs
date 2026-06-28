@@ -434,6 +434,7 @@ fn method_call_contract_callees_for_semantic(
         "Abs",
         "HasPrefix",
         "HasSuffix",
+        "Join",
         "hasPrefix",
         "hasSuffix",
         "Contains",

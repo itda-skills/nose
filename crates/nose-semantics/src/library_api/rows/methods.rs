@@ -467,6 +467,10 @@ fn method_call_contract_provenance(
                 MethodReceiverContract::ImportedNamespace("strings"),
                 MethodBuiltinArgs::All,
             ) | (
+                MethodSemanticContract::Builtin(Builtin::Join),
+                MethodReceiverContract::ImportedNamespace("strings"),
+                MethodBuiltinArgs::GoStringJoin,
+            ) | (
                 MethodSemanticContract::Builtin(Builtin::Contains),
                 MethodReceiverContract::ImportedNamespace("slices"),
                 MethodBuiltinArgs::GoSliceContains,

@@ -1,0 +1,46 @@
+{
+  "report_kind": "stdlib-support-slice-log",
+  "generated_on": "2026-06-28",
+  "goal": "Widen stdlib semantic support in corpus-priority order while preserving strict proof boundaries and avoiding material performance regression.",
+  "performance_gate": "Each slice should stay within <=5% median wall-clock growth on focused release query measurements, with NOSE_TIME phase output checked for obvious normalize/extract regressions.",
+  "slices": [
+    {
+      "id": "go_strings_transform_join",
+      "priority": 1,
+      "capability": "Go strings.Join namespace calls canonicalize to the existing ordered Join builtin when the strings package identity is proven by import evidence.",
+      "changes": [
+        "Added the Go strings.Join namespace-call row to nose.go.stdlib.namespace_calls.",
+        "Normalized Go strings.Join(parts, sep) into Join(sep, parts), matching the shared join semantic shape.",
+        "Kept local values named strings and unsupported string transforms closed."
+      ],
+      "unsupported_boundaries": [
+        "strings.Trim, strings.Split, strings.Replace, and case transforms still lack admitted value semantics.",
+        "Unproven receivers or local same-name values do not prove the stdlib namespace-call contract."
+      ],
+      "tests": [
+        "cargo test -p nose-cli cli_normalized_il_proves_go_strings_join_namespace_calls --test cli",
+        "cargo test -p nose-semantics library_iterator_adapter_and_method_call_contracts_carry_obligations",
+        "cargo test -p nose-normalize go_strings_contains_is_substring_not_slice_membership"
+      ],
+      "performance": [
+        {
+          "repo": "bench/repos/chi",
+          "command": "NOSE_TIME=1 target/release/nose query bench/repos/chi --mode semantic --format json --min-value 100000000",
+          "baseline_median_ms": 36.4,
+          "current_median_ms": 37.0,
+          "delta_percent": 1.6,
+          "current_normalize_extract_median_ms": 9.4,
+          "passes_gate": true
+        },
+        {
+          "repo": "bench/repos/gorm",
+          "command": "NOSE_TIME=1 target/release/nose query bench/repos/gorm --mode semantic --format json --min-value 100000000",
+          "baseline_median_ms": 83.7,
+          "current_median_ms": 83.2,
+          "delta_percent": -0.6,
+          "passes_gate": true
+        }
+      ]
+    }
+  ]
+}

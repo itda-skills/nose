@@ -5,6 +5,7 @@ pub(crate) fn library_method_selector_name(name: &str) -> Option<&'static str> {
         "Contains" => "Contains",
         "HasPrefix" => "HasPrefix",
         "HasSuffix" => "HasSuffix",
+        "Join" => "Join",
         "Max" => "Max",
         "Min" => "Min",
         "Print" => "Print",

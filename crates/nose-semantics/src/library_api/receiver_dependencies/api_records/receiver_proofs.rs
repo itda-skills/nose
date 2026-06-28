@@ -64,9 +64,10 @@ pub(super) fn canonical_method_receiver_node(
     args: MethodBuiltinArgs,
 ) -> Option<NodeId> {
     match args {
-        MethodBuiltinArgs::All | MethodBuiltinArgs::First | MethodBuiltinArgs::GoSliceContains => {
-            None
-        }
+        MethodBuiltinArgs::All
+        | MethodBuiltinArgs::First
+        | MethodBuiltinArgs::GoSliceContains
+        | MethodBuiltinArgs::GoStringJoin => None,
         MethodBuiltinArgs::FirstThenReceiver => il.children(call).get(1).copied(),
         MethodBuiltinArgs::Fold => il.children(call).get(1).copied(),
         MethodBuiltinArgs::ReceiverOnly

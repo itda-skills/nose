@@ -250,10 +250,12 @@ still being migrated toward it.
   missing terminal proof, one-shot iterator reuse, `collect_vec`, and `find`
   remain hard negatives or unsupported boundaries. The
   `nose.go.stdlib.namespace_calls` descriptor owns Go `fmt.Print*`,
-  `strings.Contains`, and `slices.Contains` namespace-call API occurrence
-  provenance under imported namespace proof. `strings.Contains` lowers to the
-  separate `StringContains` semantic so substring membership does not reuse
-  collection membership. The
+  `strings.Contains`, `strings.Join`, and `slices.Contains` namespace-call API
+  occurrence provenance under imported namespace proof. `strings.Contains`
+  lowers to the separate `StringContains` semantic so substring membership does
+  not reuse collection membership. `strings.Join` reuses the ordered `Join`
+  builtin with separator and collection arguments normalized into the same shape
+  as other join producers. The
   `nose.protocols.iterator_identity_adapters` descriptor owns Rust
   `iter`/`into_iter`/`iter_mut`/`collect`/`to_vec`/`copied`/`cloned` and Java
   `.stream()` iterator identity adapter contract and occurrence producer ids,
