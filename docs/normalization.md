@@ -96,7 +96,6 @@ experiments that validated these passes are in [experiments](experiments.md).
 > converge the two index forms). Rejected as cross-language-unsound: `x*2≡x+x`
 > doubling and `s[-1]≡s[len(s)-1]` negative-index (§BA).
 
-
 The IL today is a *normalized AST*: it canonicalizes surface syntax (loops,
 idioms, identifiers, commutativity, local control flow). That captures Type-2 and
 shallow Type-3 clones. The genuinely hard, high-value frontier is **semantic**

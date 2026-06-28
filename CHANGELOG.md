@@ -246,6 +246,10 @@ break.
   `by_obligation` callback rollup now separates callback-effect proof (`27`),
   callback identity/shape proof (`2`), and predicate callback profile (`1`)
   with `semantic_admission_delta = 0`.
+- Refined the callback-effect proof bucket into concrete producer obligations.
+  The same `crates` HOF demand/effect rows now split callback effects into
+  call-effect proof (`22`) and assignment-effect proof (`5`), with runtime
+  callback boundaries currently at `0`; exact admission stays closed.
 
 ### Fixed
 - Made `scripts/check-docs.sh` compatible with both awiki versions that support

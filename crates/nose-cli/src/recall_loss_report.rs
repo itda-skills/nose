@@ -433,6 +433,15 @@ fn rejection_obligation(
 }
 
 fn hof_demand_effect_obligation_subreason(missing_evidence: &[&'static str]) -> &'static str {
+    if missing_evidence.contains(&"hof-callback-runtime-boundary-proof") {
+        return "callback-runtime-boundary-proof-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-assignment-effect-proof") {
+        return "callback-assignment-effect-proof-missing";
+    }
+    if missing_evidence.contains(&"hof-callback-call-effect-proof") {
+        return "callback-call-effect-proof-missing";
+    }
     if missing_evidence.contains(&"hof-callback-effect-proof") {
         return "callback-effect-proof-missing";
     }

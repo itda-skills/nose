@@ -187,6 +187,12 @@ python3 scripts/cross-language-boundary-census.py \
   `by_obligation` subreasons split into callback-effect proof (`27`),
   callback identity/shape proof (`2`), and predicate callback profile (`1`)
   without opening exact admission.
+- [callback-demand-effect-diagnostics-2026-06-28.v2.json](callback-demand-effect-diagnostics-2026-06-28.v2.json)
+  refines the callback-effect proof bucket into concrete producer obligations:
+  callback call effects (`22`), callback assignment effects (`5`),
+  callback identity/shape (`2`), and predicate callback profile (`1`).
+  Runtime-boundary callback effects are priced at `0` on the current `crates`
+  surface, and exact admission remains closed.
 - [issue-600-channel-scheduling-obligation-slice-2026-06-28.v1.json](issue-600-channel-scheduling-obligation-slice-2026-06-28.v1.json)
   records the first channel/scheduling reporting slice: `95,805`
   channel/scheduling-shaped source-prevalence occurrences and `14` `crates`

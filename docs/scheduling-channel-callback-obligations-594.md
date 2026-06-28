@@ -46,6 +46,8 @@ It keeps exact admission closed but splits the local `crates` HOF
 demand/effect rows by callback-effect proof, callback identity/shape proof, and
 predicate callback profile.
 
+The follow-up [callback-demand-effect-diagnostics-2026-06-28.v2.json](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v2.json) splits callback-effect proof further into callback call effects, callback assignment effects, and callback runtime boundaries.
+
 ## Minimal Vocabulary
 
 | obligation | existing substrate | exact-channel rule |

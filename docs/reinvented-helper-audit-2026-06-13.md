@@ -28,6 +28,7 @@ is a weak, approximate-site match whose bodies actually differ — it did not re
 isolation (cross-file context artifact). All others are genuine value matches.
 
 ### Actionable (10) — call the helper directly
+
 - **raylib** `CheckCollisionPointCircle` ⟵ `Vector2DistanceSqr`; `QuaternionInvert` ⟵ `Vector4LengthSqr` (Quaternion is a Vector4 typedef).
 - **libgdx** `quadrilateralCentroid`'s `area1` ⟵ `triangleArea`; `nearestSegmentPoint`'s `length2` ⟵ `Vector2.dst2`; `argb8888` ⟵ `rgb888`; `toFloatBits`'s `color` ⟵ `toIntBits`.
 - **prettier** `isAsConstExpression`'s second disjunct ⟵ `isTsAsConstExpression`.
@@ -36,10 +37,12 @@ isolation (cross-file context artifact). All others are genuine value matches.
 - **h2database** `getGarbageCollectionCount` ⟵ `getGarbageCollectionTime` — and this one is a **real upstream bug**: the count loop copy-pasted `getCollectionTime()` (should be `getCollectionCount()`), which is *why* it recomputes the time helper's value.
 
 ### Value-duplication, consumer-judgment (4)
+
 - **raylib** `Vector4DistanceSqr` / `Vector4DotProduct` contain the 2D / 3D subcomputation of `Vector2DistanceSqr` / a vendored `ma_vec3f_dot` — genuine, but the helper's parameter type differs (the value model erases types; the call needs adaptation).
 - **sqlalchemy** `visit_mod_binary` (base compiler) ⟵ the pg8000 dialect override — same code path, but a base cannot call a subclass override.
 
 ### Noise (3) — all TEST code or weak
+
 - **sympy** `test_type_G` asserts `positive_roots()`'s value as a dict literal — calling the helper would make the test circular.
 - **prettier** `bar2` ⟵ `bar` — intentional near-identical flow-test inputs.
 - **poetry** `test_python_installer_install` inlines the `mock_get_download_link` fixture — a genuine test DRY, but test scaffolding (judgment-deep, §2b).

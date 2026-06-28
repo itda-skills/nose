@@ -2497,6 +2497,7 @@ semantics most likely to regress: lambda-local returns stay excluded, and Java
 regression test now completes in `0.93s` in the debug CLI test harness; the release
 reproducer above drops from `71.55s` to `0.56s`; and `./scripts/check-ci-local.sh
 --fast` passes.
+
 ## CK. Adversarial co-evolution, series 9 — the post-#283 operator gaps (shifts, Ruby `*`)
 
 One protocol pass ([adversarial-coevolution](adversarial-coevolution.md)), aimed by the

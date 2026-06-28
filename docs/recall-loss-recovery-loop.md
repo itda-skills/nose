@@ -532,6 +532,12 @@ callback-demand/effect bucket into producer-facing subreasons. The broad
 `semantic_admission_delta = 0`, with `false_merges == 0` and
 `canon_preservation_violations == 0`.
 
+The second callback diagnostics pass keeps those gates unchanged and splits the
+callback-effect bucket itself. The [v2 callback-demand/effect diagnostics](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v2.json) report `22`
+callback call-effect rows, `5` callback assignment-effect rows, `2` callback
+identity/shape rows, and `1` predicate callback profile row; runtime-boundary
+callback rows are currently `0`.
+
 ## See Also
 
 - [recall-loss-diagnostics](recall-loss-diagnostics.md) defines the report

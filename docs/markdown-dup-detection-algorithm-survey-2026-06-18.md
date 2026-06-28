@@ -70,6 +70,7 @@ Three independent literature surveys (IR/set-hash; edit-distance/bioinformatics/
 systems & evaluation methodology) were conducted with primary-source grounding. Condensed:
 
 ### 2.1 IR / lexical
+
 - **Bag-of-words / TF-IDF cosine** (Salton; Stanford IIR). TF-IDF weights term *t* by
   `tf·idf`, `idf=log(N/df)`. Near-dup threshold ~0.9 is folklore. **Order-blind** (a bag), and
   `idf` is a **corpus-global** quantity → no stable per-document fingerprint, breaks
@@ -79,6 +80,7 @@ systems & evaluation methodology) were conducted with primary-source grounding. 
   stats; no witness. Home is ranked retrieval, not dedup.
 
 ### 2.2 Set / hashing fingerprints
+
 - **k-shingling + Jaccard** (Broder 1997). Document = set of k-grams; resemblance = Jaccard.
   Word-shingle k≈3–9 (web near-dup k≈4); **char-gram k≈5** is the de-facto multilingual default
   (RefinedWeb, Japanese web corpora). The shingle intersection **is** a witness.
@@ -95,6 +97,7 @@ systems & evaluation methodology) were conducted with primary-source grounding. 
   is detected; fingerprints carry positions → **exact span witness** *and* inverted-index scale.
 
 ### 2.3 Edit distance, sequence alignment, compression
+
 - **Levenshtein** (1966; Wagner–Fischer 1974). O(n·m), **no strongly sub-quadratic algorithm
   unless SETH fails** (Backurs–Indyk 2015). Edit-script witness. Reorder-rigid. Second-pass only.
 - **Jaro–Winkler** (Jaro 1989; Winkler 1990). Built for short **names/records** (5–30 chars);
@@ -118,6 +121,7 @@ systems & evaluation methodology) were conducted with primary-source grounding. 
   The de-facto **witness renderer** (git/editors). Reorder-rigid; second-pass.
 
 ### 2.4 Systems & evaluation methodology
+
 The standard near-dup pipeline is **candidate generation → verification → span extraction**:
 - **Broder 1997/2000 (AltaVista, ~30M pages, ~29% near-dup):** k-shingle → MinHash sketch →
   **super-shingles** (shingle the sorted sketch — LSH banding at the sketch level) → candidate

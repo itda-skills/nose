@@ -224,9 +224,7 @@ fn hof_missing_evidence(il: &nose_il::Il, interner: &Interner, root: NodeId) -> 
                     ) {
                         push_unique(&mut labels, "hof-callback-identity-proof");
                     }
-                    if callback_needs_effect_proof(il, callback) {
-                        push_unique(&mut labels, "hof-callback-effect-proof");
-                    }
+                    push_callback_effect_evidence_labels(il, callback, &mut labels);
                 }
             }
         }
@@ -246,15 +244,30 @@ fn hof_kind_demand_effect_evidence(kind: HoFKind) -> &'static str {
     }
 }
 
-fn callback_needs_effect_proof(il: &nose_il::Il, callback: NodeId) -> bool {
-    subtree_has(il, callback, |il, node| {
-        il.kind(node) == nose_il::NodeKind::Call
-            || il.kind(node) == nose_il::NodeKind::Assign
-            || matches!(
-                il.kind(node),
-                nose_il::NodeKind::Throw | nose_il::NodeKind::Try | nose_il::NodeKind::Raw
-            )
-    })
+fn push_callback_effect_evidence_labels(
+    il: &nose_il::Il,
+    callback: NodeId,
+    labels: &mut Vec<&'static str>,
+) {
+    let mut stack = vec![callback];
+    while let Some(node) = stack.pop() {
+        match il.kind(node) {
+            nose_il::NodeKind::Call => {
+                push_unique(labels, "hof-callback-effect-proof");
+                push_unique(labels, "hof-callback-call-effect-proof");
+            }
+            nose_il::NodeKind::Assign => {
+                push_unique(labels, "hof-callback-effect-proof");
+                push_unique(labels, "hof-callback-assignment-effect-proof");
+            }
+            nose_il::NodeKind::Throw | nose_il::NodeKind::Try | nose_il::NodeKind::Raw => {
+                push_unique(labels, "hof-callback-effect-proof");
+                push_unique(labels, "hof-callback-runtime-boundary-proof");
+            }
+            _ => {}
+        }
+        stack.extend(il.children(node).iter().copied());
+    }
 }
 
 fn callee_identity_call_evidence(
