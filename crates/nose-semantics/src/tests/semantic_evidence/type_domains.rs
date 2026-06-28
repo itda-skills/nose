@@ -85,6 +85,13 @@ fn type_domain_contracts_cover_java_signatures() {
         "CompletableFuture<String> xs",
         Some(DomainEvidence::FutureLike),
     );
+    assert_type_domain(
+        Lang::Java,
+        "java.util.Optional<String> value",
+        Some(DomainEvidence::Option),
+    );
+    assert_type_domain(Lang::Java, "Optional<String> value", None);
+    assert_type_domain(Lang::Java, "com.example.Optional<String> value", None);
     assert_type_domain(Lang::Java, "boolean value", Some(DomainEvidence::Boolean));
     assert_type_domain(
         Lang::Java,

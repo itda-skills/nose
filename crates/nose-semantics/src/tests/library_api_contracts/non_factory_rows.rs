@@ -326,6 +326,44 @@ fn library_iterator_adapter_and_method_call_contracts_carry_obligations() {
             },
         })
     );
+    assert_eq!(
+        library_method_call_contract(Lang::Java, "isPresent", 0),
+        Some(LibraryMethodCallContract {
+            pack_id: BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+            producer_id: BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+            id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
+                Builtin::IsNotNull,
+            )),
+            callee: LibraryApiCalleeContract::Method {
+                method: "isPresent",
+                receiver: MethodReceiverContract::ExactOption,
+            },
+            result: MethodCallContract {
+                semantic: MethodSemanticContract::Builtin(Builtin::IsNotNull),
+                receiver: MethodReceiverContract::ExactOption,
+                args: MethodBuiltinArgs::ReceiverOnly,
+            },
+        })
+    );
+    assert_eq!(
+        library_method_call_contract(Lang::Java, "orElse", 1),
+        Some(LibraryMethodCallContract {
+            pack_id: BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+            producer_id: BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+            id: LibraryApiContractId::MethodCall(MethodSemanticContract::Builtin(
+                Builtin::ValueOrDefault,
+            )),
+            callee: LibraryApiCalleeContract::Method {
+                method: "orElse",
+                receiver: MethodReceiverContract::ExactOption,
+            },
+            result: MethodCallContract {
+                semantic: MethodSemanticContract::Builtin(Builtin::ValueOrDefault),
+                receiver: MethodReceiverContract::ExactOption,
+                args: MethodBuiltinArgs::ReceiverAndFirst,
+            },
+        })
+    );
 }
 
 #[test]

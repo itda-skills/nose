@@ -169,6 +169,10 @@ break.
   `strings.Join(parts, sep)` now reuses the existing ordered `Join` builtin
   when the callee is proven through an imported `strings` namespace, so import
   aliases canonicalize while local same-name values remain closed.
+- Added the Java `Optional` stdlib slice with a strict first proof boundary.
+  Fully-qualified `java.util.Optional<T>` receivers now admit `isPresent()` as
+  option presence and `orElse(default)` as `ValueOrDefault`; bare
+  `Optional<T>` stays closed until import-backed type-domain proof exists.
 
 ### Fixed
 - Hardened JS/TS string-affix receiver proof so TypeScript `String` object
@@ -189,6 +193,10 @@ break.
   On `bench/repos/chi`, median wall time stayed in budget at `36.4ms ->
   37.0ms` (+1.6%) after warm reruns; on `bench/repos/gorm`, median wall time
   stayed flat at `83.7ms -> 83.2ms` (-0.6%).
+- Measured the Java `Optional` slice with the same release query gate. After
+  paired warm reruns, `bench/repos/commons-lang` stayed flat at `446.8ms ->
+  445.8ms` (-0.2%) and `bench/repos/guava` stayed flat at `2402.0ms ->
+  2359.8ms` (-1.8%).
 - Compared the #567 import-backed immutable provenance change against
   the pre-#567 baseline `dbb688e7` with release `nose query crates all top=0
   --mode semantic --format json` and `NOSE_TIME` over five paired runs. Median

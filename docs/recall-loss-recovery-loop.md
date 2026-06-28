@@ -420,6 +420,11 @@ of adding a narrower feature-specific semantic. Trim, split, replace, and case
 transforms remain closed until they have equivalent value semantics and hard
 negative fixtures.
 
+The Java `Optional` slice starts with fully-qualified `java.util.Optional<T>`
+receiver proof for `isPresent()` and `orElse(default)`. Bare imported
+`Optional<T>` remains closed deliberately; the next capability needed there is
+import-backed Java type-domain proof, not another one-off Optional feature row.
+
 ## See Also
 
 - [recall-loss-diagnostics](recall-loss-diagnostics.md)

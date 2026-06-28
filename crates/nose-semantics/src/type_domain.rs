@@ -163,8 +163,8 @@ fn java_type_domain(text: &str) -> Option<DomainEvidence> {
     if java_array_type(text) {
         return Some(DomainEvidence::Array);
     }
-    let ty = java_type_identifier(text)?;
-    let ty = ty.strip_prefix("java.util.").unwrap_or(&ty);
+    let raw_ty = java_type_identifier(text)?;
+    let ty = raw_ty.strip_prefix("java.util.").unwrap_or(&raw_ty);
     let ty = ty.strip_prefix("java.lang.").unwrap_or(ty);
     match ty {
         "map" | "hashmap" | "linkedhashmap" | "treemap" | "concurrenthashmap" => {
@@ -177,7 +177,7 @@ fn java_type_domain(text: &str) -> Option<DomainEvidence> {
             Some(DomainEvidence::Collection)
         }
         "completablefuture" | "completionstage" | "future" => Some(DomainEvidence::FutureLike),
-        "optional" => Some(DomainEvidence::Option),
+        "optional" if raw_ty == "java.util.optional" => Some(DomainEvidence::Option),
         "record" => Some(DomainEvidence::Record),
         "boolean" => Some(DomainEvidence::Boolean),
         "string" => Some(DomainEvidence::String),

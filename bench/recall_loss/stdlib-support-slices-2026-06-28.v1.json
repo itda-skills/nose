@@ -41,6 +41,47 @@
           "passes_gate": true
         }
       ]
+    },
+    {
+      "id": "java_optional_fully_qualified_value_channel",
+      "priority": 2,
+      "capability": "Fully-qualified java.util.Optional receivers expose option presence and default-value semantics through existing builtin contracts.",
+      "changes": [
+        "Added Java Optional.isPresent() as IsNotNull on exact Option receivers.",
+        "Added Java Optional.orElse(default) as ValueOrDefault on exact Option receivers.",
+        "Restricted Java Optional type-domain evidence to java.util.Optional so local or bare Optional names do not prove stdlib semantics without import-backed type proof."
+      ],
+      "unsupported_boundaries": [
+        "Bare imported Optional<T> remains closed until Java type-domain evidence can depend on import identity.",
+        "Optional.isEmpty(), Optional.of/empty/ofNullable, map, flatMap, filter, orElseGet, and orElseThrow remain unsupported boundaries."
+      ],
+      "tests": [
+        "cargo test -p nose-semantics type_domain_contracts_cover_java_signatures",
+        "cargo test -p nose-semantics library_non_factory_api_contracts_carry_identity_and_result_obligations",
+        "cargo test -p nose-cli cli_normalized_il_proves_java_optional_value_channel --test cli"
+      ],
+      "performance": [
+        {
+          "repo": "bench/repos/commons-lang",
+          "command": "NOSE_TIME=1 target/release/nose query bench/repos/commons-lang --mode semantic --format json --min-value 100000000",
+          "baseline_median_ms": 446.8,
+          "current_median_ms": 445.8,
+          "delta_percent": -0.2,
+          "baseline_normalize_extract_median_ms": 172.9,
+          "current_normalize_extract_median_ms": 177.2,
+          "passes_gate": true
+        },
+        {
+          "repo": "bench/repos/guava",
+          "command": "NOSE_TIME=1 target/release/nose query bench/repos/guava --mode semantic --format json --min-value 100000000",
+          "baseline_median_ms": 2402.0,
+          "current_median_ms": 2359.8,
+          "delta_percent": -1.8,
+          "baseline_normalize_extract_median_ms": 1129.6,
+          "current_normalize_extract_median_ms": 1144.5,
+          "passes_gate": true
+        }
+      ]
     }
   ]
 }

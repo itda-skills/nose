@@ -372,6 +372,11 @@ pub(super) fn method_cardinality_contract_shape(
         (Lang::Ruby, "nil?", 0) | (Lang::Rust, "is_none", 0) => {
             (Builtin::IsNull, Receiver::ExactOption, Args::ReceiverOnly)
         }
+        (Lang::Java, "isPresent", 0) => (
+            Builtin::IsNotNull,
+            Receiver::ExactOption,
+            Args::ReceiverOnly,
+        ),
         (Lang::Rust, "is_some", 0) => (
             Builtin::IsNotNull,
             Receiver::RustMapGetOrExactOption,
@@ -504,6 +509,11 @@ pub(super) fn method_lookup_default_contract_shape(
             Builtin::GetOrDefault,
             Receiver::ExactMap,
             Args::MapGetDefault,
+        ),
+        (Lang::Java, "orElse", 1) => (
+            Builtin::ValueOrDefault,
+            Receiver::ExactOption,
+            Args::ReceiverAndFirst,
         ),
         (Lang::Rust, "unwrap_or", 1) => (
             Builtin::ValueOrDefault,

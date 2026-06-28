@@ -107,7 +107,12 @@ still being migrated toward it.
   roots and shadowed `vec` macros remain hard negatives. The
   `nose.rust.stdlib.option` descriptor owns Rust `Some`, `None`, and
   `and_then` Option API contract and occurrence producer ids, while shadowed
-  Option selectors and non-Option receivers remain hard negatives. The
+  Option selectors and non-Option receivers remain hard negatives. Java
+  `java.util.Optional<T>` receiver proof currently admits `isPresent()` and
+  `orElse(default)` through the generic builtin method-call protocol; bare
+  imported `Optional<T>`, `isEmpty()`, static constructors, and callback-like
+  Optional APIs remain closed until import-backed type-domain and callback
+  obligations are represented. The
   `nose.rust.stdlib.result` descriptor owns Rust `Ok`/`Err` Result constructor
   provenance and exact-Result `is_ok`/`is_err` predicate occurrence producer
   ids, while shadowed selectors, local `Result` type shadows, non-Result
@@ -735,9 +740,10 @@ migrated.
   builtin method-call contracts such as collection/map membership, count methods,
   string/collection predicates, Rust scalar integer methods with
   `nose.rust.stdlib.integer_methods` provenance, Java Math scalar integer
-  methods with `nose.java.stdlib.math` provenance, Rust `Option::and_then`,
-  Rust `zip`, and HOF/reduction methods. Rust iterator HOF and terminal rows
-  use `nose.protocols.sequence_hof_adapters` provenance rather than the generic
+  methods with `nose.java.stdlib.math` provenance, fully-qualified Java
+  `Optional.isPresent`/`orElse`, Rust `Option::and_then`, Rust `zip`, and
+  HOF/reduction methods. Rust iterator HOF and terminal rows use
+  `nose.protocols.sequence_hof_adapters` provenance rather than the generic
   method-call pack. The
   occurrence record is admitted only for the exact language/method/arity row and
   depends on receiver proof: node/binding/parameter `Domain`, `SequenceSurface`,
