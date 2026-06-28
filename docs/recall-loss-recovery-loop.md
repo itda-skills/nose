@@ -68,6 +68,10 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
   provider-module misses are gone on the checked surface, and the next
   capability targets are receiver-domain proof, callee identity, and
   mutation/effect contracts.
+- [full corpus priority census](../bench/recall_loss/corpus-priority-census-2026-06-28.v1.json)
+  records the first 120-repo follow-up: it combines per-repo recall-loss reports
+  with lexical stdlib/API source prevalence so the next semantic-kernel work is
+  selected from the pinned corpus instead of from `crates` alone.
 
 Regenerate the full local reports with:
 
@@ -86,6 +90,19 @@ cargo run -q -p nose-cli -- verify \
   --max-violations 0 \
   --recall-loss-report target/recall-loss.corpus-slice.json
 ```
+
+Regenerate the full corpus priority census with:
+
+```sh
+python3 scripts/corpus-priority-census.py \
+  --jobs 4 \
+  --logs-dir target/corpus-priority-census-full \
+  --output target/corpus-priority-census-full.json
+```
+
+The census has two signals: `recall_loss` is oracle/strict-admission evidence,
+while `source_scan` is lexical source prevalence for pricing stdlib/API
+surfaces. Source prevalence never admits semantics by itself.
 
 Compare two reports with:
 
@@ -375,6 +392,27 @@ two local export misses. The next milestone should therefore move to reusable
 receiver-domain or member-call identity proof before more import-snapshot
 resolution work. The checked-in measurement is
 [`post-587-census.v1.json`](../bench/recall_loss/post-587-census.v1.json).
+
+The 2026-06-28 full corpus priority census broadens that view from `crates` to
+all 120 pinned repos. The hard gate remains closed (`false_merges == 0` and
+`canon_preservation_violations == 0`), but the leading recall-loss buckets are
+different at product scale: mutation/effect contracts (`71,884`), callee
+identity (`50,322`), unsupported runtime boundaries (`20,128`), and value
+fingerprint floor (`16,006`). The first full-corpus run also exposes a process
+gap that `crates` did not show: `unattributed-strict-exact-unsafe` is `1,896`,
+mostly Python (`1,429`), so future cycles must continue reducing that bucket
+while widening exact admission.
+
+The same census adds a separate stdlib/API source-prevalence scan. Raw
+prevalence is led by C string/memory and allocation calls, but those are
+high-risk pointer/effect/lifetime surfaces. The safer initial semantic-kernel
+order is therefore: Go `strings` transforms, Java `Optional`, Java
+Arrays/Collections partial-coverage audit, Go `sort`/`slices`/`maps`, and
+Python HOF/runtime attribution before widening `itertools`/`functools`. This is
+still a pricing result, not semantic proof; every slice must add fixtures,
+before/after recall-loss counts, and the same hard gate evidence. The checked
+summary is
+[`corpus-priority-census-2026-06-28.v1.json`](../bench/recall_loss/corpus-priority-census-2026-06-28.v1.json).
 
 ## See Also
 

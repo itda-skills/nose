@@ -39,6 +39,20 @@ python3 scripts/recall-loss-callee-census.py \
   > target/callee-census.json
 ```
 
+Build the full pinned-corpus priority census with:
+
+```sh
+python3 scripts/corpus-priority-census.py \
+  --jobs 4 \
+  --logs-dir target/corpus-priority-census-full \
+  --output target/corpus-priority-census-full.json
+```
+
+Use `--scan-only` for a source-prevalence-only dry run, and
+`--summarize-only` to rebuild the aggregate from existing per-repo
+`--recall-loss-report` files. The source scan is a lexical pricing signal, not
+semantic proof.
+
 Full reports also include `import_snapshot_census`, which records successful
 imported immutable snapshot counts and unresolved binding-import miss reasons.
 Use that section directly when deciding the next import-backed provider-value
@@ -119,3 +133,7 @@ slice.
   snapshot work is complete on the checked surface, and the next largest
   capability buckets are receiver-domain proof, callee identity, and
   mutation/effect contracts.
+- [corpus-priority-census-2026-06-28.v1.json](corpus-priority-census-2026-06-28.v1.json)
+  records the first full 120-repo corpus priority census after #587, combining
+  per-repo recall-loss reports with lexical stdlib/API source prevalence to
+  choose the next semantic-kernel capability slices from corpus evidence.

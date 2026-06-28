@@ -158,6 +158,13 @@ break.
   false merges and zero canon-preservation violations, and the next largest
   capability buckets are receiver-domain proof (`244`), callee identity (`231`),
   and mutation/effect contracts (`134`).
+- Added the full corpus priority census workflow. The new
+  `scripts/corpus-priority-census.py` runner combines per-repo
+  `nose verify --recall-loss-report` output with a lexical stdlib/API source
+  prevalence scan over the pinned 120-repo corpus, and the checked-in
+  2026-06-28 summary records the next semantic-kernel priority order plus the
+  full-corpus hard gate (`false_merges == 0`,
+  `canon_preservation_violations == 0`).
 
 ### Fixed
 - Hardened JS/TS string-affix receiver proof so TypeScript `String` object
