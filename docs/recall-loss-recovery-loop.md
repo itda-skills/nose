@@ -423,6 +423,20 @@ unclassified. The leading buckets are mutation/effect (`600`),
 mutation+callback (`341`), copy-result domain (`82`), ordering preconditions
 (`60`), and collection equality (`33`).
 
+The JS/TS builtin partial-coverage audit masks comments/strings and scans all
+pinned JavaScript/TypeScript repos, including `.js`, `.ts`, JSX/TSX, and
+embedded Vue/Svelte script surfaces. It classifies `42,619` builtin-shaped
+occurrences: `225` are supported, `10,558` are supported-partial, `31,836` are
+unsupported, and no observed classified row is left unknown. The leading
+next-work groups are Promise async/scheduling boundaries (`29,094`), mutation
+and effect contracts (`3,053`), cardinality receiver proof (`3,007`), Map/Set
+receiver-domain proof (`1,982`), and Array HOF receiver/callback proof
+(`1,279`). The only 5,000+ group is processed as a closed boundary:
+`await`, async functions, Promise combinators, `new Promise`, `catch`/`finally`,
+and unsupported thenables stay closed until scheduling, exception, aggregate
+result, rejection-channel, and callback-effect obligations are modeled. The
+checked summary report is [`js-ts-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/js-ts-stdlib-partial-audit-2026-06-28.v1.json).
+
 The Python HOF/runtime audit now has a v3 decision report that parses broader
 AST scope bindings, function decorators/defaults, and call shapes. It classifies
 `21,384` calls across builtins, `itertools`, and `functools`: `18,369` are
@@ -475,6 +489,11 @@ not broader admission by frequency: every processed group records
 `semantic_admission_delta = 0`, six groups keep strictness unchanged, and the
 Rust mutation/effect group is stricter because `sort_by_key` now marks receiver
 mutation before later exact receiver use.
+
+With the JS/TS audit included, the processed 5,000+ stdlib/builtin audit set is
+eight groups covering `77,520` occurrences. The added JS/TS group also records
+`semantic_admission_delta = 0`: it makes the largest Promise/async surface
+visible for future recall-loss reporting without opening async equivalence.
 
 ## See Also
 

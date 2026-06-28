@@ -72,6 +72,13 @@ python3 scripts/go-stdlib-collections-audit.py \
   --output target/go-stdlib-collections-audit.v1.json
 ```
 
+Build the JS/TS builtin partial-coverage audit with:
+
+```sh
+python3 scripts/js-ts-stdlib-partial-audit.py \
+  --output target/js-ts-stdlib-partial-audit.v1.json
+```
+
 Build the Python HOF/runtime attribution audit with:
 
 ```sh
@@ -110,6 +117,11 @@ python3 scripts/swift-stdlib-partial-audit.py \
 - [go-stdlib-collections-audit-2026-06-28.v1.json](go-stdlib-collections-audit-2026-06-28.v1.json)
   records alias-aware corpus prevalence and support/boundary classification for
   Go `sort`, `slices`, and `maps`.
+- [js-ts-stdlib-partial-audit-2026-06-28.v1.json](js-ts-stdlib-partial-audit-2026-06-28.v1.json)
+  records comment/string-masked JS/TS builtin prevalence across Array HOFs,
+  Map/Set receiver selectors, Object key/reflection APIs, Promise/async
+  protocol surfaces, mutation/effect methods, and simple receiver hints. The
+  only 5,000+ group is the closed Promise/async protocol boundary.
 - [python-hof-runtime-audit-2026-06-28.v1.json](python-hof-runtime-audit-2026-06-28.v1.json)
   records AST-based Python builtin/HOF, `itertools`, and `functools`
   attribution and boundary classification.

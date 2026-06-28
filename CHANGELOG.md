@@ -181,6 +181,14 @@ break.
   `scripts/go-stdlib-collections-audit.py` scanner resolves simple import
   aliases before classifying corpus calls into admitted membership, mutation,
   ordering, callback, iterator, copy, and equality capability buckets.
+- Added the JS/TS builtin partial-coverage audit. The new
+  `scripts/js-ts-stdlib-partial-audit.py` scanner masks comments/strings,
+  records simple receiver hints, and classifies Array HOFs, Map/Set receiver
+  selectors, Object key/reflection APIs, Promise/async surfaces, and
+  mutation/effect methods. The checked-in report classifies `42,619`
+  occurrences and processes the only 5,000+ group, Promise async/scheduling
+  boundaries (`29,094`), as a closed boundary with zero semantic-admission
+  delta.
 - Added the Python HOF/runtime attribution audit. The new
   `scripts/python-hof-runtime-audit.py` scanner uses Python AST scopes to
   separate supported builtin iterator/HOF calls, lexical builtin shadowing that

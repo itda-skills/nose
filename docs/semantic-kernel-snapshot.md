@@ -46,6 +46,10 @@ unshadowed `Promise.resolve` proof and a non-thenable-safe value, plus admitted
 `.then(lambda)` chains over that boundary. Selector-only `.then(...)`, custom
 thenables, shadowed `Promise`, unsafe `Promise.resolve(obj)` arguments, and
 missing or ambiguous receiver proof stay closed.
+The JS/TS corpus audit [`js-ts-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/js-ts-stdlib-partial-audit-2026-06-28.v1.json)
+confirms this is the largest JS/TS builtin-shaped surface in the pinned corpus:
+`29,094` Promise/async occurrences are tracked as a processed closed boundary
+with zero semantic-admission delta.
 Library/API identity is consolidated through internal `LibraryApiContract` rows
 for factory, constructor, selected property/non-factory method/view surfaces,
 and selected non-call sentinels, with occurrence evidence covering selected
@@ -1262,7 +1266,8 @@ this worktree because the required evidence is not yet modeled:
 - JS-like `.then(lambda)` does not converge with `await` code yet. Supported
   `Promise.resolve(...).then(...)` chains can reduce behind a Promise boundary,
   but await scheduling, exception, and effect equivalence are not modeled as the
-  same async protocol.
+  same async protocol. The JS/TS audit counts `18,841` `await` occurrences and
+  `9,569` async-function surfaces in this closed boundary.
 - JS/TS, Python, and Rust `await value` does not converge with plain `value`
   until language/runtime-specific async protocol, demand, scheduling, exception,
   and effect obligations are modeled. Rust `async {}` and `?` are similarly
