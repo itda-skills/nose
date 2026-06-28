@@ -62,6 +62,18 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [full corpus priority census](../bench/recall_loss/corpus-priority-census-2026-06-28.v1.json) records the first 120-repo follow-up: it combines per-repo recall-loss reports
   with lexical stdlib/API source prevalence so the next semantic-kernel work is
   selected from the pinned corpus instead of from `crates` alone.
+- [#594 cross-language boundary census](../bench/recall_loss/cross-language-boundary-census-594-2026-06-28.v1.json) records the starting inventory for scheduling,
+  success/error channel, callback demand/effect, lifecycle/materialization,
+  receiver-mutation, and ambiguous-selector obligations across JS/TS, Python,
+  Rust, Go, Java, Swift, Ruby, and C. It is reporting-only and records
+  `semantic_admission_delta = 0`.
+- [#597 obligation taxonomy report](../bench/recall_loss/issue-597-obligation-taxonomy-2026-06-28.v1.json) records the first `crates` recall-loss run with diagnostics-only
+  obligation families and subreasons attached to admission rejections.
+- [#598 hard-negative inventory](../bench/recall_loss/issue-598-hard-negative-inventory-2026-06-28.v1.json) maps existing cross-language tests and pricing reports to #594 hard-negative families before producer work.
+- [#599 callback obligation slice](../bench/recall_loss/issue-599-callback-obligation-slice-2026-06-28.v1.json) records callback demand/effect reporting coverage without new exact admission.
+- [#600 channel/scheduling obligation slice](../bench/recall_loss/issue-600-channel-scheduling-obligation-slice-2026-06-28.v1.json) records channel and scheduling-boundary reporting coverage while broad async/channel convergence remains closed.
+- [#601 first-slice closeout](../bench/recall_loss/issue-601-first-slice-closeout-2026-06-28.v1.json) records the quantified decision to keep the first exact #594 slice closed rather than force unsafe async/callback/channel admission.
+- [#594 closeout](../bench/recall_loss/issue-594-closeout-2026-06-28.v1.json) records the epic-level artifact coverage, validation commands, quantitative summary, and remaining closed boundaries.
 
 Regenerate the full local reports with:
 
@@ -494,6 +506,25 @@ With the JS/TS audit included, the processed 5,000+ stdlib/builtin audit set is
 eight groups covering `77,520` occurrences. The added JS/TS group also records
 `semantic_admission_delta = 0`: it makes the largest Promise/async surface
 visible for future recall-loss reporting without opening async equivalence.
+
+The #594 cross-language boundary census turns those language-specific audits
+into one obligation matrix and adds conservative Ruby/C pricing. It records
+`207,689` boundary-shaped occurrences across the eight pinned primary-language
+groups. The leading families are success/error result channels (`62,945`),
+lifecycle/materialization boundaries (`42,010`), scheduling boundaries
+(`28,751`), ambiguous selector boundaries (`19,116`), receiver mutation
+(`16,530`), and combined callback families (`18,637`). This does not open
+semantic admission; it selects the next work as vocabulary/reporting, hard
+negatives, then callback/channel producer evidence before any narrow exact
+slice. The design vocabulary is [scheduling-channel-callback-obligations-594](scheduling-channel-callback-obligations-594.md).
+Local `--recall-loss-report` artifacts now also include `by_obligation` and
+per-rejection `obligation_family`/`obligation_subreason` fields, so broad reason
+buckets can be tracked against this vocabulary without changing exact
+admission.
+The #594 closeout keeps the milestone reporting-only: `207,689`
+source-prevalence occurrences are classified, `18,637` callback-shaped
+occurrences and `95,805` channel/scheduling-shaped occurrences are priced, but
+first exact-slice admissions remain `0`.
 
 ## See Also
 

@@ -56,8 +56,21 @@ def custom_call(v):\n    return helper(v)\n",
             .expect("admission_rejections should be an array")
             .iter()
             .any(|item| item["capability_id"] == "callee-identity-evidence"
+                && item["obligation_family"] == "ambiguous-selector-boundary"
+                && item["obligation_subreason"].is_string()
                 && item["oracle_status"] == "interpretable"),
         "expected structured exact-admission rejection: {report}"
+    );
+    assert!(
+        report["by_obligation"]
+            .as_array()
+            .expect("by_obligation should be an array")
+            .iter()
+            .any(
+                |item| item["obligation_family"] == "ambiguous-selector-boundary"
+                    && item["count"].as_u64().unwrap_or(0) >= 1
+            ),
+        "expected obligation rollup for selector/callee proof: {report}"
     );
 
     assert!(!report_text.contains("def custom_call"));
@@ -198,6 +211,23 @@ fn recall_loss_report_ratchets_representative_admission_buckets() {
             "expected representative bucket {expected}: {report}"
         );
     }
+    let obligations = report["by_obligation"]
+        .as_array()
+        .expect("by_obligation should be an array");
+    for expected in [
+        "ambiguous-selector-boundary",
+        "callback-demand-effect",
+        "receiver-mutation",
+        "source-protocol-boundary",
+    ] {
+        assert!(
+            obligations
+                .iter()
+                .any(|item| item["obligation_family"] == expected
+                    && item["count"].as_u64().unwrap_or(0) >= 1),
+            "expected representative obligation family {expected}: {report}"
+        );
+    }
     assert!(
         reasons
             .iter()
@@ -257,6 +287,8 @@ pub fn format_key(key: u64) -> String {\n\
             .expect("admission_rejections should be an array")
             .iter()
             .any(|item| item["reason"] == "source-surface-proof-missing"
+                && item["obligation_family"] == "source-protocol-boundary"
+                && item["obligation_subreason"] == "rust-macro-expansion-contract-missing"
                 && item["missing_evidence"]
                     .as_array()
                     .is_some_and(|items| items
@@ -302,6 +334,7 @@ pub fn call_scoped(x: u64) -> u64 {\n\
         assert!(
             rejections.iter().any(|item| item["reason"]
                 == "import-symbol-callee-identity-proof-missing"
+                && item["obligation_family"] == "ambiguous-selector-boundary"
                 && item["missing_evidence"]
                     .as_array()
                     .is_some_and(|items| items.iter().any(|value| value == expected))),

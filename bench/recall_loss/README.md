@@ -100,6 +100,13 @@ python3 scripts/swift-stdlib-partial-audit.py \
   --output target/swift-stdlib-partial-audit.v2.json
 ```
 
+Build the #594 cross-language scheduling/error/callback boundary census with:
+
+```sh
+python3 scripts/cross-language-boundary-census.py \
+  --output target/cross-language-boundary-census-594.v1.json
+```
+
 ## Files
 
 - [crates.baseline.v1.json](crates.baseline.v1.json) records the current
@@ -155,6 +162,38 @@ python3 scripts/swift-stdlib-partial-audit.py \
   records the high-volume Swift cardinality processing decision: `count` and
   `isEmpty` remain on existing `ExactCollection` receiver-gated property and
   method contracts.
+- [cross-language-boundary-census-594-2026-06-28.v1.json](cross-language-boundary-census-594-2026-06-28.v1.json)
+  records the #594 starting census for scheduling, success/error channel, and
+  callback demand/effect obligations across JS/TS, Python, Rust, Go, Java,
+  Swift, Ruby, and C. It combines existing language audits with conservative
+  Ruby/C lexical pricing and keeps `semantic_admission_delta = 0`.
+- [issue-597-obligation-taxonomy-2026-06-28.v1.json](issue-597-obligation-taxonomy-2026-06-28.v1.json)
+  records the first `--recall-loss-report` obligation-family rollup for #597:
+  broad admission reasons now also expose diagnostics-only
+  `obligation_family` and `obligation_subreason` fields while preserving the
+  hard gate.
+- [issue-598-hard-negative-inventory-2026-06-28.v1.json](issue-598-hard-negative-inventory-2026-06-28.v1.json)
+  maps existing cross-language hard negatives to the #594 obligation vocabulary
+  before producer/admission work starts. It considers JS/TS, Python, Rust, Go,
+  Java, Swift, Ruby, and C, records no omitted languages, and keeps new exact
+  admissions at zero.
+- [issue-599-callback-obligation-slice-2026-06-28.v1.json](issue-599-callback-obligation-slice-2026-06-28.v1.json)
+  records the first callback demand/effect reporting slice: `18,637`
+  callback-shaped source-prevalence occurrences and `30` `crates`
+  callback-demand/effect recall-loss rows, with no exact admission changes.
+- [issue-600-channel-scheduling-obligation-slice-2026-06-28.v1.json](issue-600-channel-scheduling-obligation-slice-2026-06-28.v1.json)
+  records the first channel/scheduling reporting slice: `95,805`
+  channel/scheduling-shaped source-prevalence occurrences and `14` `crates`
+  scheduling-boundary recall-loss rows, with Promise/Future/async/channel
+  admission still closed.
+- [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
+  records the #601 decision to close the first exact-admission slice as a
+  quantified closed boundary instead of forcing unsafe async/callback/channel
+  admission.
+- [issue-594-closeout-2026-06-28.v1.json](issue-594-closeout-2026-06-28.v1.json)
+  records the #594 epic closeout: every child issue's artifact, quantitative
+  summary, validation commands, remaining closed boundaries, and hard-gate
+  status.
 - [issue-570-cycles.v1.json](issue-570-cycles.v1.json) records the five focused
   top-bucket cycles and the explicit unsupported/fail-closed boundary decision.
 - [issue-572-cycle.v1.json](issue-572-cycle.v1.json) records the first

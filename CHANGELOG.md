@@ -220,8 +220,29 @@ break.
   aligns `is_none`, terminal `count`, and covered mutation methods with existing
   generic method/effect contracts, moving `8,283` occurrences from unsupported
   to supported-partial without widening semantic admission.
+- Added the #594 cross-language scheduling/channel/callback obligation census.
+  `scripts/cross-language-boundary-census.py` normalizes the existing JS/TS,
+  Python, Rust, Go, Java, and Swift stdlib audits, adds conservative Ruby/C
+  pricing, and records `207,689` boundary-shaped occurrences across success/error
+  channels, lifecycle/materialization, scheduling, ambiguous selectors, receiver
+  mutation, and callback demand/effect families with
+  `semantic_admission_delta = 0`.
+- Added the #594 obligation vocabulary and reporting closeout artifacts. The new
+  scheduling/channel/callback obligation doc links the census, hard-negative
+  inventory, callback slice, channel/scheduling slice, first-slice closeout, and
+  epic closeout; the milestone deliberately keeps broad async, callback,
+  channel, aggregate-result, cancellation, and lifetime convergence closed until
+  dependency-closed obligations are available.
+- Extended local recall-loss diagnostics with obligation-level attribution.
+  `nose verify --recall-loss-report` still preserves the existing `by_reason`
+  buckets, and now also emits top-level `by_obligation` rollups plus
+  per-rejection `obligation_family` and `obligation_subreason` fields so future
+  semantic-kernel work can measure stricter admission gates without losing
+  recall-loss visibility.
 
 ### Fixed
+- Made `scripts/check-docs.sh` compatible with both awiki versions that support
+  `awiki lint --root docs` and versions that lint the current wiki directory.
 - Hardened JS/TS string-affix receiver proof so TypeScript `String` object
   wrappers, optional/nullable receivers, and module-scope
   `String.prototype.startsWith`/`endsWith` patching no longer enter primitive

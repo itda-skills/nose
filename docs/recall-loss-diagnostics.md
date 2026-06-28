@@ -45,8 +45,9 @@ The current schema is `recall_loss_report.v1.json`:
 | `oracle_under_merges` | Behavior-equal but fingerprint-split pairs, sorted by value-Jaccard nearness. This is the structured form of the `--leads` signal. |
 | `oracle_exclusions` | Fail-closed oracle exclusions by reason and unit location. |
 | `import_snapshot_census` | Corpus-level imported immutable snapshot diagnostics: successful snapshot record counts, unresolved binding-import miss counts by reason/language, and stable hash/location rows for follow-up fixtures. |
-| `admission_rejections` | Interpretable units whose exact semantic claim is closed, with structured reason, gate, capability, missing evidence, oracle status, and stable location. |
+| `admission_rejections` | Interpretable units whose exact semantic claim is closed, with structured reason, gate, capability, missing evidence, #594 obligation family/subreason, oracle status, and stable location. |
 | `by_reason` | Rollups for admission rejections by reason/gate/capability. |
+| `by_obligation` | Rollups for admission rejections by #594 obligation family and stable subreason. |
 | `top_opportunities` | Ranked under-merge opportunities that future capability work can turn into fixtures or focused follow-up issues. |
 
 The current admission-rejection taxonomy is diagnostics-only; it does not widen
@@ -66,6 +67,21 @@ or narrow product admission by itself.
 
 Unknown cases must remain explicit as `unattributed-strict-exact-unsafe`; do not
 guess.
+
+Each admission rejection also carries an `obligation_family` and
+`obligation_subreason`. These fields are diagnostics-only and refine broad
+reason buckets into the cross-language vocabulary from [scheduling-channel-callback-obligations-594](scheduling-channel-callback-obligations-594.md).
+They do not change exact admission.
+
+| obligation family | typical subreason | meaning |
+|---|---|---|
+| `callback-demand-effect` | `hof-demand-effect-profile-missing` | A HOF/callback surface lacks timing, demand, effect, or materialization proof. |
+| `receiver-mutation` | `effect-preserving-contract-missing` | A mutation/place/effect boundary blocks exact admission. |
+| `scheduling-boundary` | `runtime-protocol-boundary-contract-missing` | A lowered runtime/protocol construct needs scheduling or protocol semantics before exact use. |
+| `ambiguous-selector-boundary` | `receiver-domain-proof-missing`, `library-api-occurrence-evidence-missing`, or a call-target proof label | Selector, receiver, library API, or callee identity proof is missing. |
+| `source-protocol-boundary` | `source-surface-contract-missing`, `rust-macro-expansion-contract-missing` | A source/protocol syntax distinction is required but not proven. |
+| `non-degenerate-fingerprint-floor` | `non-degenerate-value-fingerprint` | The unit is otherwise exact-safe but too small for a non-degenerate exact claim. |
+| `unattributed-boundary` | `strict-exact-safe-tree-missing` | A strict-exact rejection still lacks a more specific capability attribution. |
 
 The checked-in baseline summaries and the five-cycle recovery log are described
 in [recall-loss-recovery-loop](recall-loss-recovery-loop.md).

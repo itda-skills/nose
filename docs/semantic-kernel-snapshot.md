@@ -1248,6 +1248,13 @@ language.
   channel/protocol, observable-effect, exact-size/materialization, and
   callback-effect behavior are not represented by a common pack-facing
   demand/effect abstraction.
+- The #594 obligation vocabulary makes scheduling, success/error/rejection
+  channels, callback demand/effect, lifecycle/materialization, receiver
+  mutation, and ambiguous selectors reportable across JS/TS, Python, Rust, Go,
+  Java, Swift, Ruby, and C. This is a reporting and kernel-obligation layer:
+  broad async, channel, callback, aggregate-result, cancellation, and lifetime
+  convergence remain fail-closed until producers can prove dependency-closed
+  obligations.
 - External producer execution does not exist. New languages and libraries that
   affect analysis must still be added inside the main crates.
 - Query JSON now exposes the active builtin/local pack set at top level, but

@@ -20,6 +20,7 @@ struct RecallLossReport {
     import_snapshot_census: nose_frontend::ImportSnapshotCensus,
     admission_rejections: Vec<AdmissionRejection>,
     by_reason: Vec<ReasonRollup>,
+    by_obligation: Vec<ObligationRollup>,
     top_opportunities: Vec<TopOpportunity>,
 }
 
@@ -106,6 +107,8 @@ struct AdmissionRejection {
     capability_id: &'static str,
     pack_id: Option<&'static str>,
     missing_evidence: Vec<&'static str>,
+    obligation_family: &'static str,
+    obligation_subreason: &'static str,
     oracle_status: &'static str,
     loc: Location,
     value_fingerprint_len: usize,
@@ -116,6 +119,14 @@ struct ReasonRollup {
     reason: String,
     admission_gate: String,
     capability_id: String,
+    count: usize,
+    oracle_interpretable: usize,
+}
+
+#[derive(Serialize)]
+struct ObligationRollup {
+    obligation_family: String,
+    obligation_subreason: String,
     count: usize,
     oracle_interpretable: usize,
 }
@@ -168,6 +179,7 @@ fn build_report(
     let (completeness, under_merges) = completeness_report(&oracle.recs);
     let admission_rejections = admission_rejections(&oracle.recs);
     let by_reason = reason_rollups(&admission_rejections);
+    let by_obligation = obligation_rollups(&admission_rejections);
     let top_opportunities = top_opportunities(&under_merges);
 
     RecallLossReport {
@@ -199,6 +211,7 @@ fn build_report(
         import_snapshot_census: nose_frontend::imported_immutable_snapshot_census(corpus),
         admission_rejections,
         by_reason,
+        by_obligation,
         top_opportunities,
     }
 }
@@ -351,18 +364,72 @@ fn admission_rejections(recs: &[VerifyRec]) -> Vec<AdmissionRejection> {
 }
 
 fn unit_admission_rejection(rec: &VerifyRec) -> Option<AdmissionRejection> {
-    rec.admission_rejection
-        .as_ref()
-        .map(|reason| AdmissionRejection {
+    rec.admission_rejection.as_ref().map(|reason| {
+        let (obligation_family, obligation_subreason) =
+            rejection_obligation(reason.reason, &reason.missing_evidence);
+        AdmissionRejection {
             reason: reason.reason,
             admission_gate: reason.admission_gate,
             capability_id: reason.capability_id,
             pack_id: reason.pack_id,
             missing_evidence: reason.missing_evidence.clone(),
+            obligation_family,
+            obligation_subreason,
             oracle_status: "interpretable",
             loc: loc(rec),
             value_fingerprint_len: rec.fp.len(),
-        })
+        }
+    })
+}
+
+fn rejection_obligation(
+    reason: &'static str,
+    missing_evidence: &[&'static str],
+) -> (&'static str, &'static str) {
+    let first_missing = missing_evidence
+        .first()
+        .copied()
+        .unwrap_or("unknown-obligation-proof");
+    match reason {
+        "hof-demand-effect-proof-missing" => (
+            "callback-demand-effect",
+            "hof-demand-effect-profile-missing",
+        ),
+        "mutation-effect-boundary" => ("receiver-mutation", "effect-preserving-contract-missing"),
+        "unsupported-runtime-boundary" => (
+            "scheduling-boundary",
+            "runtime-protocol-boundary-contract-missing",
+        ),
+        "receiver-domain-proof-missing" => (
+            "ambiguous-selector-boundary",
+            "receiver-domain-proof-missing",
+        ),
+        "library-api-occurrence-proof-missing" => (
+            "ambiguous-selector-boundary",
+            "library-api-occurrence-evidence-missing",
+        ),
+        "source-surface-proof-missing" => match first_missing {
+            "rust-macro-expansion-contract" => (
+                "source-protocol-boundary",
+                "rust-macro-expansion-contract-missing",
+            ),
+            _ => (
+                "source-protocol-boundary",
+                "source-surface-contract-missing",
+            ),
+        },
+        "import-symbol-callee-identity-proof-missing" => {
+            ("ambiguous-selector-boundary", first_missing)
+        }
+        "value-fingerprint-too-small" => (
+            "non-degenerate-fingerprint-floor",
+            "non-degenerate-value-fingerprint",
+        ),
+        "unattributed-strict-exact-unsafe" => {
+            ("unattributed-boundary", "strict-exact-safe-tree-missing")
+        }
+        _ => ("unattributed-boundary", first_missing),
+    }
 }
 
 fn pair_admission_reasons(a: &VerifyRec, b: &VerifyRec) -> Vec<String> {
@@ -407,6 +474,33 @@ fn reason_rollups(rejections: &[AdmissionRejection]) -> Vec<ReasonRollup> {
             .cmp(&a.count)
             .then(a.reason.cmp(&b.reason))
             .then(a.admission_gate.cmp(&b.admission_gate))
+    });
+    rollups
+}
+
+fn obligation_rollups(rejections: &[AdmissionRejection]) -> Vec<ObligationRollup> {
+    let mut by_key: HashMap<(&str, &str), usize> = HashMap::new();
+    for rejection in rejections {
+        *by_key
+            .entry((rejection.obligation_family, rejection.obligation_subreason))
+            .or_default() += 1;
+    }
+    let mut rollups: Vec<_> = by_key
+        .into_iter()
+        .map(
+            |((obligation_family, obligation_subreason), count)| ObligationRollup {
+                obligation_family: obligation_family.to_string(),
+                obligation_subreason: obligation_subreason.to_string(),
+                count,
+                oracle_interpretable: count,
+            },
+        )
+        .collect();
+    rollups.sort_by(|a, b| {
+        b.count
+            .cmp(&a.count)
+            .then(a.obligation_family.cmp(&b.obligation_family))
+            .then(a.obligation_subreason.cmp(&b.obligation_subreason))
     });
     rollups
 }

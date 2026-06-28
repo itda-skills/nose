@@ -24,4 +24,8 @@ if ! command -v awiki >/dev/null 2>&1; then
     exit 0
 fi
 
-awiki lint --root docs
+if awiki lint --help 2>&1 | grep -q -- '--root'; then
+    awiki lint --root docs
+else
+    (cd docs && awiki lint)
+fi

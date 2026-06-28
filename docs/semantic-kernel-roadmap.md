@@ -2108,6 +2108,14 @@ different APIs.
   paths; and supported Promise `.then` chains consume the async-continuation
   profile while preserving a Promise boundary. The pack-facing schema and most
   protocol-specific consumers remain open.
+- The #594 scheduling/channel/callback milestone adds a cross-language
+  obligation vocabulary and reporting axis for this phase rather than widening
+  exact admission. The starting census prices `207,689` boundary-shaped
+  occurrences across JS/TS, Python, Rust, Go, Java, Swift, Ruby, and C, and the
+  first closeout keeps exact admissions at `0` while callback demand/effect,
+  success/error/rejection channels, scheduling, lifecycle/materialization,
+  receiver mutation, and ambiguous selector proof are tracked as distinct
+  obligations.
 - Keep expanding lazy iterator/generator/channel hard negatives before enabling
   new exact laws. The first Python generator/list/set and Go channel/goroutine
   hard negatives are now in place, along with hard negatives for pull-lazy
