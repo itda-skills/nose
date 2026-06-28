@@ -425,6 +425,14 @@ receiver proof for `isPresent()` and `orElse(default)`. Bare imported
 `Optional<T>` remains closed deliberately; the next capability needed there is
 import-backed Java type-domain proof, not another one-off Optional feature row.
 
+The Java `Arrays`/`Collections` audit scans all pinned Java repos and classifies
+`7,265` lexical method calls: `4,608` are already supported or partially
+supported, `2,657` remain unsupported, and only `2` stay as lexical
+false-positive/unknown boundaries. The top unsupported capability buckets are
+copy-result domain proof (`586`), mutation/effect contracts (`886`), array
+content equality (`329`), representation strings (`264`), and wrapper aliasing
+(`266`).
+
 ## See Also
 
 - [recall-loss-diagnostics](recall-loss-diagnostics.md)

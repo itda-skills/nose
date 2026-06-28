@@ -82,6 +82,48 @@
           "passes_gate": true
         }
       ]
+    },
+    {
+      "id": "java_arrays_collections_partial_coverage_audit",
+      "priority": 3,
+      "capability": "Corpus-level method audit separates already-admitted Java Arrays/Collections factories from copy, equality, mutation, wrapper, and representation boundaries.",
+      "changes": [
+        "Added scripts/java-arrays-collections-audit.py.",
+        "Generated a checked-in 120-repo Java Arrays/Collections audit report.",
+        "Classified observed unsupported methods by semantic-kernel capability bucket instead of proposing one API row per method."
+      ],
+      "audit_report": "bench/recall_loss/java-arrays-collections-audit-2026-06-28.v1.json",
+      "audit_totals": {
+        "occurrences": 7265,
+        "supported_or_partial_occurrences": 4608,
+        "unsupported_occurrences": 2657,
+        "unknown_boundary_occurrences": 2
+      },
+      "top_unsupported_boundaries": [
+        {"boundary": "mutation-effect", "occurrences": 886},
+        {"boundary": "copy-result-domain", "occurrences": 586},
+        {"boundary": "array-equality", "occurrences": 329},
+        {"boundary": "wrapper-aliasing", "occurrences": 266},
+        {"boundary": "representation-string", "occurrences": 264}
+      ],
+      "unsupported_boundaries": [
+        "Arrays.copyOf/copyOfRange need copy-result domain proof and bounds obligations.",
+        "Arrays.equals/deepEquals need array content equality laws.",
+        "Arrays.fill/sort and Collections.addAll/sort/reverse/shuffle remain mutation/effect surfaces.",
+        "Collections.unmodifiable/synchronized/checked wrappers need alias/lifecycle modeling before admission."
+      ],
+      "tests": [
+        "python3 -m py_compile scripts/java-arrays-collections-audit.py",
+        "python3 scripts/java-arrays-collections-audit.py --output bench/recall_loss/java-arrays-collections-audit-2026-06-28.v1.json",
+        "jq empty bench/recall_loss/java-arrays-collections-audit-2026-06-28.v1.json"
+      ],
+      "performance": [
+        {
+          "check": "cmp -s target/perf-baselines/nose-after-java-optional target/release/nose",
+          "product_binary_changed": false,
+          "passes_gate": true
+        }
+      ]
     }
   ]
 }

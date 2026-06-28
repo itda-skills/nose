@@ -173,6 +173,10 @@ break.
   Fully-qualified `java.util.Optional<T>` receivers now admit `isPresent()` as
   option presence and `orElse(default)` as `ValueOrDefault`; bare
   `Optional<T>` stays closed until import-backed type-domain proof exists.
+- Added the Java `Arrays`/`Collections` partial-coverage audit. The new
+  `scripts/java-arrays-collections-audit.py` scanner records corpus method
+  prevalence, current support status, and explicit unsupported boundary
+  categories for the Java stdlib collection surface.
 
 ### Fixed
 - Hardened JS/TS string-affix receiver proof so TypeScript `String` object
@@ -197,6 +201,9 @@ break.
   paired warm reruns, `bench/repos/commons-lang` stayed flat at `446.8ms ->
   445.8ms` (-0.2%) and `bench/repos/guava` stayed flat at `2402.0ms ->
   2359.8ms` (-1.8%).
+- Confirmed the Java `Arrays`/`Collections` audit is product-code neutral:
+  `target/release/nose` stayed byte-identical to the post-Java-Optional
+  baseline binary, so there is no query-time degradation from this slice.
 - Compared the #567 import-backed immutable provenance change against
   the pre-#567 baseline `dbb688e7` with release `nose query crates all top=0
   --mode semantic --format json` and `NOSE_TIME` over five paired runs. Median

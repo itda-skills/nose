@@ -175,7 +175,10 @@ still being migrated toward it.
   cross-surface constructor boundary cases remain hard negatives. Imported
   provider snapshots reuse these occurrence proofs only for exact-safe provider
   arguments; ambiguous single-argument `Arrays.asList(...)` providers remain
-  closed at the export boundary. The
+  closed at the export boundary. The corpus audit
+  [`java-arrays-collections-audit-2026-06-28.v1.json`](../bench/recall_loss/java-arrays-collections-audit-2026-06-28.v1.json)
+  tracks the remaining Java `Arrays`/`Collections` method-level boundary mix so
+  future work can choose capability slices rather than one-off API rows. The
   `nose.java.ecosystem.guava.immutable_collection_factories` descriptor owns
   Guava `ImmutableList.of`, `ImmutableSet.of`, and `ImmutableMap.of` factory
   contract and occurrence producer ids, while `copyOf`, missing imports,

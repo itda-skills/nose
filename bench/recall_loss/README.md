@@ -58,6 +58,13 @@ imported immutable snapshot counts and unresolved binding-import miss reasons.
 Use that section directly when deciding the next import-backed provider-value
 slice.
 
+Build the Java `Arrays`/`Collections` partial-coverage audit with:
+
+```sh
+python3 scripts/java-arrays-collections-audit.py \
+  --output target/java-arrays-collections-audit.v1.json
+```
+
 ## Files
 
 - [crates.baseline.v1.json](crates.baseline.v1.json) records the current
@@ -69,6 +76,9 @@ slice.
 - [stdlib-support-slices-2026-06-28.v1.json](stdlib-support-slices-2026-06-28.v1.json)
   records the staged corpus-priority stdlib support slices, including focused
   fixtures, unsupported boundaries, and per-slice performance checks.
+- [java-arrays-collections-audit-2026-06-28.v1.json](java-arrays-collections-audit-2026-06-28.v1.json)
+  records method-level corpus prevalence and support/boundary classification
+  for Java `Arrays` and `Collections`.
 - [issue-570-cycles.v1.json](issue-570-cycles.v1.json) records the five focused
   top-bucket cycles and the explicit unsupported/fail-closed boundary decision.
 - [issue-572-cycle.v1.json](issue-572-cycle.v1.json) records the first
