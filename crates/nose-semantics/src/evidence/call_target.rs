@@ -147,6 +147,23 @@ pub fn direct_method_call_target_at_call(
     )
 }
 
+pub fn direct_method_call_target_span_at_call(
+    il: &Il,
+    interner: &Interner,
+    call: NodeId,
+) -> Option<Span> {
+    match call_target_evidence_at_call(il, interner, call) {
+        Some(CallTargetEvidenceKind::DirectMethod { target_span, .. }) => Some(target_span),
+        Some(
+            CallTargetEvidenceKind::DirectFunction { .. }
+            | CallTargetEvidenceKind::ImportedFunction { .. }
+            | CallTargetEvidenceKind::ImportedMember { .. }
+            | CallTargetEvidenceKind::DynamicDispatch { .. },
+        )
+        | None => None,
+    }
+}
+
 fn call_target_matches_call_shape(
     il: &Il,
     interner: &Interner,

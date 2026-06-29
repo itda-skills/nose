@@ -184,6 +184,14 @@ should therefore move those receivers out of
 parameter callees, member/imported call returns, unsafe thenables, constructors,
 `.finally`, aggregate channels, and broad scheduling in their existing
 fail-closed obligations.
+The [direct-method Promise return recovery](../bench/recall_loss/promise-direct-method-return-recovery-2026-06-29.v1.json)
+slice opens the proof-backed subset of member call-return receivers: an existing
+DirectMethod target record plus returned-expression PromiseLike domain proof can
+provide call-result `Domain(PromiseLike)` for non-async single-return methods.
+The value graph evaluates only the returned expression and closes on receiver
+context, so selector-only member calls, dynamic dispatch, imported members,
+receiver-dependent methods, unsafe thenables, constructors, `.finally`,
+aggregate channels, and broad scheduling remain in fail-closed obligations.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

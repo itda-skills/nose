@@ -7,7 +7,7 @@
 use nose_il::{
     stable_symbol_hash, CallTargetEvidenceKind, DomainEvidence, EvidenceAnchor, EvidenceEmitter,
     EvidenceId, EvidenceKind, EvidenceProvenance, EvidenceRecord, EvidenceStatus, Il, Interner,
-    LoopKind, NodeId, NodeKind, Payload, SourceFactKind, SourceProtocolKind, Symbol,
+    LoopKind, NodeId, NodeKind, Payload, SourceFactKind, SourceProtocolKind, Span, Symbol,
     SymbolEvidenceKind, UnitKind,
 };
 use nose_semantics::{
@@ -21,6 +21,7 @@ const DIRECT_ASYNC_FUNCTION_RETURN_DOMAIN_RULE: &str =
     "normalize.call_target.direct_async_function_return_domain";
 const DIRECT_FUNCTION_RETURN_DOMAIN_RULE: &str =
     "normalize.call_target.direct_function_return_domain";
+const DIRECT_METHOD_RETURN_DOMAIN_RULE: &str = "normalize.call_target.direct_method_return_domain";
 const IMPORTED_FUNCTION_RULE: &str = "normalize.call_target.imported_function";
 const IMPORTED_MEMBER_RULE: &str = "normalize.call_target.imported_member";
 const IMPORTED_BINDING_OCCURRENCE_RULE: &str =
@@ -120,6 +121,7 @@ pub(crate) fn run(il: &mut Il, interner: &Interner) {
             &mut imported_occurrence_cache,
         );
     }
+    record_existing_direct_method_return_domains(il, interner, provenance);
 }
 
 fn record_direct_async_function_result_domain(
@@ -169,6 +171,125 @@ fn record_direct_function_return_promise_like_domain(
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::Domain(DomainEvidence::PromiseLike),
         DIRECT_FUNCTION_RETURN_DOMAIN_RULE,
+        provenance,
+        vec![target_evidence, return_domain],
+    ))
+}
+
+fn record_existing_direct_method_return_domains(
+    il: &mut Il,
+    interner: &Interner,
+    provenance: CallTargetEvidenceProvenance,
+) {
+    let targets = existing_direct_method_call_targets(il, interner, provenance.current);
+    for target in targets {
+        let Some(target_root) = unique_method_unit_root_at_span(il, target.target_span) else {
+            continue;
+        };
+        record_direct_method_return_promise_like_domain(
+            il,
+            target.call,
+            target_root,
+            target.evidence,
+            provenance,
+        );
+    }
+}
+
+#[derive(Clone, Copy)]
+struct ExistingDirectMethodCallTarget {
+    call: NodeId,
+    target_span: Span,
+    evidence: EvidenceId,
+}
+
+fn existing_direct_method_call_targets(
+    il: &Il,
+    interner: &Interner,
+    provenance: EvidenceProvenance,
+) -> Vec<ExistingDirectMethodCallTarget> {
+    let mut calls = Vec::new();
+    collect_call_nodes(il, il.root, &mut calls);
+    let mut out = Vec::new();
+    for call in calls {
+        let nose_semantics::CallTargetEvidenceStatus::Admitted(
+            CallTargetEvidenceKind::DirectMethod { target_span, .. },
+        ) = nose_semantics::call_target_evidence_status_at_call(il, interner, call)
+        else {
+            continue;
+        };
+        let Some(evidence) =
+            direct_method_call_target_evidence_id(il, call, target_span, provenance)
+        else {
+            continue;
+        };
+        out.push(ExistingDirectMethodCallTarget {
+            call,
+            target_span,
+            evidence,
+        });
+    }
+    out
+}
+
+fn direct_method_call_target_evidence_id(
+    il: &Il,
+    call: NodeId,
+    target_span: Span,
+    provenance: EvidenceProvenance,
+) -> Option<EvidenceId> {
+    let anchor = EvidenceAnchor::node(il.node(call).span, NodeKind::Call);
+    il.evidence_anchored_at(anchor.span()).find_map(|record| {
+        let EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectMethod {
+            target_span: record_target_span,
+            ..
+        }) = record.kind
+        else {
+            return None;
+        };
+        (record.anchor == anchor
+            && record_target_span == target_span
+            && record.status == EvidenceStatus::Asserted
+            && record.provenance == provenance
+            && il.evidence_dependencies_asserted(record))
+        .then_some(record.id)
+    })
+}
+
+fn unique_method_unit_root_at_span(il: &Il, target_span: Span) -> Option<NodeId> {
+    let mut found = None;
+    for unit in &il.units {
+        if !matches!(unit.kind, UnitKind::Method | UnitKind::Function)
+            || il.kind(unit.root) != NodeKind::Func
+            || il.node(unit.root).span != target_span
+        {
+            continue;
+        }
+        if found.is_some() {
+            return None;
+        }
+        found = Some(unit.root);
+    }
+    found
+}
+
+fn record_direct_method_return_promise_like_domain(
+    il: &mut Il,
+    call: NodeId,
+    target_root: NodeId,
+    target_evidence: EvidenceId,
+    provenance: CallTargetEvidenceProvenance,
+) -> Option<EvidenceId> {
+    if direct_async_function_protocol_boundary(il, target_root).is_some() {
+        return None;
+    }
+    let return_domain =
+        direct_function_return_domain_evidence_id(il, target_root, DomainEvidence::PromiseLike)?;
+    Some(upsert(
+        il,
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+        EvidenceKind::Domain(DomainEvidence::PromiseLike),
+        DIRECT_METHOD_RETURN_DOMAIN_RULE,
         provenance,
         vec![target_evidence, return_domain],
     ))

@@ -131,6 +131,15 @@ fn promise_receiver_state(
                 return Some(state);
             }
         }
+        if let Some(value) =
+            crate::value_graph::inline_direct_method::eval_direct_method_return_call(
+                builder, recv, env,
+            )
+        {
+            if let Some(state) = promise_boundary_state(builder, value) {
+                return Some(state);
+            }
+        }
         let receiver_value = builder.eval(recv, env);
         if let Some(state) = promise_boundary_state(builder, receiver_value) {
             return Some(state);

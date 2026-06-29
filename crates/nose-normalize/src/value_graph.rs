@@ -36,6 +36,7 @@ mod field_state;
 mod index_state;
 mod init;
 mod inline;
+mod inline_direct_method;
 mod model;
 mod ops;
 mod output;

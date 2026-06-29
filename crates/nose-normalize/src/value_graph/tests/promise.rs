@@ -181,3 +181,193 @@ fn promise_like_receiver_without_supported_settled_producer_stays_opaque() {
         ValOp::Call(code) if code == PROMISE_RESOLVED_CODE
     ));
 }
+
+#[test]
+fn direct_method_promise_return_then_recovers_without_sync_erasure() {
+    let DirectMethodPromiseFixture {
+        mut il,
+        interner,
+        method,
+        method_call,
+        method_root,
+        resolve_call,
+        sync_add,
+        then_call,
+    } = direct_method_promise_then_fixture(false);
+    il.evidence.push(language_core_evidence(
+        100,
+        Lang::TypeScript,
+        EvidenceAnchor::node(il.node(method_call).span, NodeKind::Call),
+        EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectMethod {
+            target_span: il.node(method_root).span,
+            receiver_type_hash: stable_symbol_hash("Worker"),
+            method_hash: interner.symbol_hash(method),
+        }),
+    ));
+    push_promise_resolve_evidence(&mut il, resolve_call, 0);
+    crate::call_target_evidence::run(&mut il, &interner);
+    assert_eq!(
+        nose_semantics::domain_evidence_for_receiver(&il, &interner, method_call),
+        Some(DomainEvidence::PromiseLike),
+        "direct method call result should gain PromiseLike receiver proof"
+    );
+    push_promise_then_evidence(&mut il, &interner, then_call, 200);
+
+    let mut builder = Builder::new(&il, &interner);
+    let promise_value = builder.eval(then_call, &FxHashMap::default());
+    let payload = {
+        let node = &builder.nodes[promise_value as usize];
+        assert!(matches!(
+            node.op,
+            ValOp::Call(code) if code == PROMISE_RESOLVED_CODE
+        ));
+        *node.args.first().expect("Promise boundary wraps payload")
+    };
+    let sync_value = builder.eval(sync_add, &FxHashMap::default());
+    assert_eq!(payload, sync_value);
+    assert_ne!(
+        promise_value, sync_value,
+        "direct method Promise return recovery must preserve the Promise boundary"
+    );
+}
+
+#[test]
+fn direct_method_promise_return_stays_closed_when_return_uses_receiver_context() {
+    let DirectMethodPromiseFixture {
+        mut il,
+        interner,
+        method,
+        method_call,
+        method_root,
+        resolve_call,
+        then_call,
+        ..
+    } = direct_method_promise_then_fixture(true);
+    il.evidence.push(language_core_evidence(
+        100,
+        Lang::TypeScript,
+        EvidenceAnchor::node(il.node(method_call).span, NodeKind::Call),
+        EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectMethod {
+            target_span: il.node(method_root).span,
+            receiver_type_hash: stable_symbol_hash("Worker"),
+            method_hash: interner.symbol_hash(method),
+        }),
+    ));
+    let resolve_arg = il.children(resolve_call)[1];
+    push_domain_evidence(&mut il, resolve_arg, 10, DomainEvidence::Number);
+    push_promise_resolve_evidence(&mut il, resolve_call, 0);
+    crate::call_target_evidence::run(&mut il, &interner);
+    push_promise_then_evidence(&mut il, &interner, then_call, 200);
+
+    assert!(
+        !matches!(
+            eval_op(&il, &interner, then_call),
+            ValOp::Call(code) if code == PROMISE_RESOLVED_CODE
+        ),
+        "DirectMethod return recovery must not evaluate methods that depend on receiver context"
+    );
+}
+
+struct DirectMethodPromiseFixture {
+    il: Il,
+    interner: Interner,
+    method: Symbol,
+    method_root: NodeId,
+    method_call: NodeId,
+    resolve_call: NodeId,
+    then_call: NodeId,
+    sync_add: NodeId,
+}
+
+fn direct_method_promise_then_fixture(uses_receiver_context: bool) -> DirectMethodPromiseFixture {
+    let interner = Interner::new();
+    let method = interner.intern("load");
+    let worker = interner.intern("worker");
+    let mut b = IlBuilder::new(FileId(0));
+
+    let promise = b.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern("Promise")),
+        sp(210),
+        &[],
+    );
+    let resolve_callee = b.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("resolve")),
+        sp(211),
+        &[promise],
+    );
+    let resolve_arg = if uses_receiver_context {
+        let this_value = b.add(
+            NodeKind::Var,
+            Payload::Name(interner.intern("this")),
+            sp(212),
+            &[],
+        );
+        b.add(
+            NodeKind::Field,
+            Payload::Name(interner.intern("value")),
+            sp(213),
+            &[this_value],
+        )
+    } else {
+        b.add(NodeKind::Lit, Payload::LitInt(1), sp(212), &[])
+    };
+    let resolve_call = b.add(
+        NodeKind::Call,
+        Payload::None,
+        sp(214),
+        &[resolve_callee, resolve_arg],
+    );
+    let method_ret = b.add(NodeKind::Return, Payload::None, sp(215), &[resolve_call]);
+    let method_body = b.add(NodeKind::Block, Payload::None, sp(216), &[method_ret]);
+    let method_root = b.add(NodeKind::Func, Payload::None, sp(217), &[method_body]);
+
+    let receiver = b.add(NodeKind::Var, Payload::Name(worker), sp(220), &[]);
+    let method_callee = b.add(NodeKind::Field, Payload::Name(method), sp(221), &[receiver]);
+    let method_call = b.add(NodeKind::Call, Payload::None, sp(222), &[method_callee]);
+    let then_callee = b.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("then")),
+        sp(223),
+        &[method_call],
+    );
+    let callback = add_increment_lambda(&mut b, 224, 1);
+    let then_call = b.add(
+        NodeKind::Call,
+        Payload::None,
+        sp(229),
+        &[then_callee, callback],
+    );
+    let sync_add = add_sync_add(&mut b, 230);
+    let root = b.add(
+        NodeKind::Block,
+        Payload::None,
+        sp(233),
+        &[method_root, then_call, sync_add],
+    );
+    let il = b.finish(
+        root,
+        FileMeta {
+            path: "t".into(),
+            lang: Lang::TypeScript,
+        },
+        vec![Unit {
+            root: method_root,
+            kind: UnitKind::Method,
+            name: Some(method),
+            origin: Default::default(),
+        }],
+        Vec::new(),
+    );
+    DirectMethodPromiseFixture {
+        il,
+        interner,
+        method,
+        method_root,
+        method_call,
+        resolve_call,
+        then_call,
+        sync_add,
+    }
+}

@@ -27,7 +27,7 @@ use nose_semantics::direct_function_call_target_span_at_call;
 /// bounded; helpers worth inlining are small.
 const INLINE_MAX_BODY_NODES: u32 = 320;
 /// Nested-inline depth ceiling (cycles are excluded separately by the inline stack).
-const INLINE_MAX_DEPTH: usize = 3;
+pub(in crate::value_graph) const INLINE_MAX_DEPTH: usize = 3;
 
 /// A file-level inline candidate, computed ONCE per file by
 /// [`ValueFingerprintContext`] instead of per unit (the per-unit registry build
@@ -461,7 +461,10 @@ impl<'a> Builder<'a> {
         found
     }
 
-    fn direct_function_single_return_target(&self, root: NodeId) -> Option<InlineFunction> {
+    pub(in crate::value_graph) fn direct_function_single_return_target(
+        &self,
+        root: NodeId,
+    ) -> Option<InlineFunction> {
         let kids = self.il.children(root);
         let &body = kids.last()?;
         if self.il.kind(body) == NodeKind::Raw {
@@ -492,7 +495,7 @@ impl<'a> Builder<'a> {
         self.il.children(ret).first().copied()
     }
 
-    fn direct_function_has_async_protocol(&self, root: NodeId) -> bool {
+    pub(in crate::value_graph) fn direct_function_has_async_protocol(&self, root: NodeId) -> bool {
         let Some(&boundary) = self.il.children(root).last() else {
             return false;
         };

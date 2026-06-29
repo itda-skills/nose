@@ -283,6 +283,15 @@ python3 scripts/cross-language-boundary-census.py \
   feed local `.then`/`.catch` recovery while preserving the Promise boundary.
   Parameter callees, member/imported call returns, unsafe thenables,
   constructors, `.finally`, and aggregate/scheduling paths remain closed.
+- [promise-direct-method-return-recovery-2026-06-29.v1.json](promise-direct-method-return-recovery-2026-06-29.v1.json)
+  records the proof-backed DirectMethod subset of the member Promise
+  call-return queue. Existing DirectMethod target evidence plus returned
+  expression `Domain(PromiseLike)` evidence now derives PromiseLike call-result
+  proof for non-async single-return methods. Value-graph recovery evaluates only
+  the returned expression, closes when it reads receiver context, and preserves
+  the Promise boundary; selector-only member calls, dynamic dispatch, imported
+  members, unsafe thenables, `.finally`, constructors, and aggregate/scheduling
+  paths remain closed.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

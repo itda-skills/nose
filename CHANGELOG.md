@@ -43,6 +43,13 @@ break.
   for semantic-kernel work that combines hard soundness gate numbers,
   under-merged behavior groups, oracle exclusions, and structured exact-admission
   rejection buckets without including raw source snippets by default.
+- Added a proof-backed DirectMethod Promise producer slice for member
+  call-return receivers. Existing DirectMethod call-target evidence plus a
+  returned-expression `Domain(PromiseLike)` record now derives PromiseLike
+  call-result evidence for non-async single-return methods; Promise continuation
+  recovery consumes only that returned expression, closes on receiver-context
+  reads, preserves the Promise boundary, and keeps selector-only member calls
+  reporting-only.
 - Added import-snapshot census data to local recall-loss reports. The JSON now
   includes successful imported-literal snapshot counts plus unresolved
   binding-import miss reasons such as missing provider modules/exports,

@@ -129,6 +129,15 @@ has PromiseLike domain proof. This admits literal and typed non-thenable
 parameter callees, member/imported call returns, unsafe thenables,
 constructors, `.finally`, aggregate channels, and broad scheduling remain
 closed.
+The follow-up [promise-direct-method-return-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-direct-method-return-recovery-2026-06-29.v1.json)
+opens the proof-backed DirectMethod subset inside the `932` member
+call-return candidates from the JS/TS corpus scan. A member call can become a
+PromiseLike receiver only when an existing DirectMethod call-target record
+points to a non-async single-return method and the returned expression already
+has PromiseLike domain proof. The value graph evaluates only that returned
+expression and closes on receiver-context reads, so selector-only member calls,
+dynamic dispatch, imported members, unsafe thenables, constructors, `.finally`,
+aggregate channels, and broad scheduling remain closed.
 
 ## Minimal Vocabulary
 

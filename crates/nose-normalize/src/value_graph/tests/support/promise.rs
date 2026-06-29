@@ -314,7 +314,11 @@ fn promise_static_call(
     )
 }
 
-fn add_increment_lambda(b: &mut IlBuilder, base_line: u32, cid: u32) -> NodeId {
+pub(in crate::value_graph::tests) fn add_increment_lambda(
+    b: &mut IlBuilder,
+    base_line: u32,
+    cid: u32,
+) -> NodeId {
     let param = b.add(NodeKind::Param, Payload::Cid(cid), sp(base_line), &[]);
     let param_ref = b.add(NodeKind::Var, Payload::Cid(cid), sp(base_line + 1), &[]);
     let one = b.add(NodeKind::Lit, Payload::LitInt(1), sp(base_line + 2), &[]);
@@ -332,7 +336,7 @@ fn add_increment_lambda(b: &mut IlBuilder, base_line: u32, cid: u32) -> NodeId {
     )
 }
 
-fn add_sync_add(b: &mut IlBuilder, base_line: u32) -> NodeId {
+pub(in crate::value_graph::tests) fn add_sync_add(b: &mut IlBuilder, base_line: u32) -> NodeId {
     let left = b.add(NodeKind::Lit, Payload::LitInt(1), sp(base_line), &[]);
     let right = b.add(NodeKind::Lit, Payload::LitInt(1), sp(base_line + 1), &[]);
     b.add(

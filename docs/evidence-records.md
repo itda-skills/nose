@@ -901,10 +901,13 @@ callers:
   `nose.java.stdlib.math`, builder append API admission, pack-owned
   Promise `resolve`/`reject`, and Promise `.then`/`.catch` contract lookup.
   Promise continuation reduction additionally requires a recoverable supported
-  fulfilled or rejected value. Same-file direct async and direct Promise-returning
-  function producers can supply that value only through dependency-backed
-  call-result domain evidence, and the reduced value preserves a Promise
-  boundary in the value graph. Value-level CSE paths that only retain source
+  fulfilled or rejected value. Same-file direct async, direct Promise-returning
+  function, and proof-backed DirectMethod producers can supply that value only
+  through dependency-backed call-result domain evidence, and the reduced value
+  preserves a Promise boundary in the value graph. DirectMethod recovery is
+  limited to non-async single-return methods whose returned expression already
+  has asserted `Domain(PromiseLike)` evidence and does not read receiver context.
+  Value-level CSE paths that only retain source
   spans now also go through span-query resolvers for free-name/imported
   collection factories, Java/Ruby/Rust collection factories, Java collection
   constructors, free-name/Java map factories, Java map entries, pack-proven map

@@ -207,6 +207,14 @@ Guiding constraints for every pass:
   multi-statement bodies, missing return-domain proof, member/imported call
   returns, unsafe thenables, and broad helper inlining remain closed. The
   measured slice is recorded in [promise-direct-function-return-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-direct-function-return-recovery-2026-06-29.v1.json).
+  Existing DirectMethod call-target evidence can provide the same proof for the
+  narrow member-call subset: the call-target pass emits `Domain(PromiseLike)` on
+  a non-async single-return method call only when the target body's returned
+  expression already has asserted PromiseLike domain evidence. The value graph
+  evaluates only that returned expression and closes if it reads receiver context
+  (`this`, `super`, or `self`), so selector-only member calls, dynamic dispatch,
+  imported members, receiver-dependent methods, and broad member inference
+  remain closed. The measured slice is recorded in the [Promise direct-method recovery artifact](../bench/recall_loss/promise-direct-method-return-recovery-2026-06-29.v1.json).
   Lowered aggregate surfaces now pass through a `SeqSurfaceContract`: arrays/slices can
   enter collection membership, maps/objects enter map/object value semantics, Go
   `composite_literal` map surfaces are consumed only by the Go zero-map

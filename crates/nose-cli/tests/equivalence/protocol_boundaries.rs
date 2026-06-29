@@ -194,6 +194,25 @@ fn promise_then_chain_stays_opaque_without_receiver_proof() {
 }
 
 #[test]
+fn member_call_return_promise_receiver_stays_closed_without_target_proof() {
+    let i = Interner::new();
+    let member_return = "function f(service) {\n  return service.load().then(x => x + 1);\n}\n";
+    let direct_promise = "function f() {\n  return Promise.resolve(1).then(x => x + 1);\n}\n";
+    let sync_return = "function f() {\n  return 1 + 1;\n}\n";
+
+    assert_ne!(
+        value_fp(&i, member_return, Lang::TypeScript),
+        value_fp(&i, direct_promise, Lang::TypeScript),
+        "member call-return receivers must stay closed without direct method target and return-domain proof"
+    );
+    assert_ne!(
+        value_fp(&i, member_return, Lang::TypeScript),
+        value_fp(&i, sync_return, Lang::TypeScript),
+        "closed member Promise receiver candidates must not erase into sync payloads"
+    );
+}
+
+#[test]
 fn proven_promise_then_chains_converge_without_sync_erasure() {
     let i = Interner::new();
     let chained =
