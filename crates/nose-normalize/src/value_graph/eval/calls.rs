@@ -17,6 +17,9 @@ impl<'a> Builder<'a> {
         if let Some(v) = rules::promise_then::promise_resolve_value(self, expr, env) {
             return v;
         }
+        if let Some(v) = rules::promise_then::promise_aggregate_value(self, expr, env) {
+            return v;
+        }
         if let Payload::Builtin(builtin) = payload {
             if !self.admitted_builtin_call(expr, builtin) {
                 return self.source_salted_opaque(expr, 0x4255_494C);

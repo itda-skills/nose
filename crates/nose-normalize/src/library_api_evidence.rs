@@ -1,5 +1,7 @@
 mod recording;
+mod static_globals;
 use recording::*;
+use static_globals::record_static_global_method_library_api;
 
 use nose_il::{
     stable_symbol_hash, Builtin, DomainEvidence, EvidenceAnchor, EvidenceEmitter, EvidenceId,
@@ -14,9 +16,10 @@ use nose_semantics::{
     library_api_property_dependencies_for_field_with_cache,
     library_api_receiver_dependencies_for_call_with_cache,
     library_imported_promise_factory_contract, library_method_call_contract,
-    library_promise_resolve_contract, library_property_builtin_contract,
-    library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
-    library_rust_result_err_constructor_contract, library_rust_result_ok_constructor_contract,
+    library_promise_aggregate_contract, library_promise_resolve_contract,
+    library_property_builtin_contract, library_rust_option_none_sentinel_contract,
+    library_rust_option_some_constructor_contract, library_rust_result_err_constructor_contract,
+    library_rust_result_ok_constructor_contract,
     proven_receiver_method_api_contract_for_call_with_cache, sequence_surface_kind_for_tag,
     LibraryApiCalleeContract, LibraryApiDependencyCache, LibraryImportedPromiseFactoryContract,
     MethodBuiltinArgs, MethodEffectReceiverContract, MethodReceiverContract,
@@ -213,97 +216,6 @@ fn record_builder_append_method_library_api(
         dependencies,
     );
     true
-}
-
-fn record_static_global_method_library_api(il: &mut Il, interner: &Interner, call: NodeId) -> bool {
-    let Some((callee, receiver, receiver_name, method, arg_count)) =
-        static_global_method_call_parts(il, interner, call)
-    else {
-        return false;
-    };
-    let Some(contract) =
-        library_promise_resolve_contract(il.meta.lang, receiver_name, method, arg_count)
-    else {
-        return false;
-    };
-    let LibraryApiCalleeContract::StaticGlobalMethod {
-        receiver: expected_receiver,
-        qualified_path,
-        requires_unshadowed_receiver,
-        ..
-    } = contract.callee
-    else {
-        return false;
-    };
-    let Some(qualified_dependency) =
-        qualified_global_symbol_evidence_id(il, callee, qualified_path)
-    else {
-        return false;
-    };
-    let mut dependencies = vec![qualified_dependency];
-    if requires_unshadowed_receiver {
-        let Some(receiver_dependency) =
-            unshadowed_symbol_evidence_id(il, receiver, expected_receiver)
-        else {
-            return false;
-        };
-        dependencies.push(receiver_dependency);
-    }
-    upsert_builtin_evidence_with_pack_id(
-        il,
-        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
-        EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
-            contract_hash: library_api_contract_id_hash(contract.id),
-            callee_hash: library_api_callee_contract_hash(contract.callee),
-            arity: arg_count as u16,
-        }),
-        contract.pack_id,
-        JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
-        dependencies,
-    );
-    true
-}
-
-fn static_global_method_call_parts<'a>(
-    il: &Il,
-    interner: &'a Interner,
-    call: NodeId,
-) -> Option<(NodeId, NodeId, &'a str, &'a str, usize)> {
-    let kids = il.children(call);
-    let (&callee, args) = kids.split_first()?;
-    if il.kind(callee) != NodeKind::Field || !matches!(il.node(call).payload, Payload::None) {
-        return None;
-    }
-    let Payload::Name(method) = il.node(callee).payload else {
-        return None;
-    };
-    let receiver = *il.children(callee).first()?;
-    let receiver_name = node_name(il, interner, receiver)?;
-    Some((
-        callee,
-        receiver,
-        receiver_name,
-        interner.resolve(method),
-        args.len(),
-    ))
-}
-
-fn qualified_global_symbol_evidence_id(
-    il: &Il,
-    node: NodeId,
-    expected: &str,
-) -> Option<EvidenceId> {
-    let anchor = EvidenceAnchor::node(il.node(node).span, il.kind(node));
-    il.evidence_anchored_at(anchor.span()).find_map(|record| {
-        (record.anchor == anchor
-            && record.kind
-                == EvidenceKind::Symbol(SymbolEvidenceKind::QualifiedGlobal {
-                    path_hash: stable_symbol_hash(expected),
-                })
-            && record.status == EvidenceStatus::Asserted
-            && il.evidence_dependencies_asserted(record))
-        .then_some(record.id)
-    })
 }
 
 fn record_library_api_call_result_domains(il: &mut Il, interner: &Interner, call: NodeId) {

@@ -4,9 +4,9 @@ use super::contracts::{LibraryApiCalleeContract, LibraryApiContractId};
 use crate::{
     AsyncReceiverContract, ImportedNamespaceFunctionSemantic, IteratorAdapterReceiverContract,
     JavaCollectionConstructorKind, JavaCollectionFactoryKind, JavaMapFactoryKind, MapKeyViewKind,
-    MethodReceiverContract, MethodSemanticContract, PromiseFactoryKind, ScalarIntegerMethod,
-    StaticIndexMembershipKind, StaticIndexMembershipReceiverContract, SwiftCollectionFactoryKind,
-    SwiftMapFactoryKind,
+    MethodReceiverContract, MethodSemanticContract, PromiseAggregateKind, PromiseFactoryKind,
+    ScalarIntegerMethod, StaticIndexMembershipKind, StaticIndexMembershipReceiverContract,
+    SwiftCollectionFactoryKind, SwiftMapFactoryKind,
 };
 
 pub(super) fn library_api_contract_id_key(id: LibraryApiContractId) -> String {
@@ -93,6 +93,12 @@ pub(super) fn library_api_contract_id_key(id: LibraryApiContractId) -> String {
         }
         LibraryApiContractId::PromiseFactory(kind) => {
             format!("js_like.promise.factory.{}", promise_factory_kind_key(kind))
+        }
+        LibraryApiContractId::PromiseAggregate(kind) => {
+            format!(
+                "js_like.promise.aggregate.{}",
+                promise_aggregate_kind_key(kind)
+            )
         }
         LibraryApiContractId::JsImportedPromiseFactory => "js_like.imported.promise_factory".into(),
         LibraryApiContractId::PromiseThen => "js_like.promise.then".into(),
@@ -184,6 +190,12 @@ fn promise_factory_kind_key(kind: PromiseFactoryKind) -> &'static str {
     match kind {
         PromiseFactoryKind::Resolve => "resolve",
         PromiseFactoryKind::Reject => "reject",
+    }
+}
+
+fn promise_aggregate_kind_key(kind: PromiseAggregateKind) -> &'static str {
+    match kind {
+        PromiseAggregateKind::All => "all",
     }
 }
 

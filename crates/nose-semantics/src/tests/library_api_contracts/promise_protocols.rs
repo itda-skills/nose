@@ -74,6 +74,32 @@ fn promise_factory_contract_requires_js_like_static_global_surface() {
 }
 
 #[test]
+fn promise_aggregate_contract_requires_js_like_static_global_surface() {
+    assert_eq!(
+        promise_aggregate_contract(Lang::TypeScript, "Promise", "all", 1),
+        Some(PromiseAggregateContract {
+            receiver: "Promise",
+            method: "all",
+            qualified_path: "Promise.all",
+            kind: PromiseAggregateKind::All,
+            result_domain: DomainEvidence::PromiseLike,
+        })
+    );
+    assert_eq!(
+        promise_aggregate_contract(Lang::TypeScript, "Promise", "allSettled", 1),
+        None
+    );
+    assert_eq!(
+        promise_aggregate_contract(Lang::TypeScript, "Promise", "all", 2),
+        None
+    );
+    assert_eq!(
+        promise_aggregate_contract(Lang::Python, "Promise", "all", 1),
+        None
+    );
+}
+
+#[test]
 fn imported_promise_factory_contract_requires_js_like_import_coordinate() {
     assert_eq!(
         library_imported_promise_factory_contract(

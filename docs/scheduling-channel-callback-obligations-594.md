@@ -197,6 +197,14 @@ the first next-work targets as Promise aggregates, executor timing,
 AbortSignal cancellation, interval lifecycle, Go goroutines, Java
 `CompletableFuture`, and Swift `await`. The local `crates` gate remains
 `false_merges == 0` and `canon_preservation_violations == 0`.
+The first exact #602 follow-up is [Promise.all literal aggregate recovery](../bench/recall_loss/promise-all-literal-aggregate-recovery-2026-06-29.v1.json).
+It satisfies only the all-fulfilled aggregate obligation for unshadowed
+`Promise.all` calls with literal array arguments whose elements already recover
+as fulfilled Promise boundaries. The result remains a Promise boundary carrying
+an ordered sequence payload. First-settled, all-settled, first-fulfilled,
+rejection ordering, dynamic iterable lifecycle, thenable assimilation,
+executor timing, and cancellation/liveness obligations remain named closed
+boundaries.
 
 ## Minimal Vocabulary
 

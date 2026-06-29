@@ -244,6 +244,17 @@ semantic-kernel language-core provenance helper family from
 same, and no new substantial default-surface duplicate family is accepted. The
 reviewed default-surface count remains 53; no budget increase is accepted.
 
+The 2026-06-29 `Promise.all` literal aggregate slice first surfaced one
+avoidable production helper family: the new qualified-global symbol evidence
+lookup repeated the existing asserted-evidence lookup shape. Rewriting that
+lookup as an explicit proof check removed the new family. The remaining drift
+only moves the same reviewed semantic-kernel language-core provenance helper
+family from `46eafe785a6f3517` to `551e7992e1632597`; the members and judgment
+remain the same (`trusted_language_core_record`, sequence-surface provenance
+helpers, and language-core record constructors across frontend, normalize, and
+semantics). The reviewed default-surface count remains 53; no budget increase
+is accepted.
+
 ## Verdict by candidate (critically)
 
 | family | what it is | judgment | action |

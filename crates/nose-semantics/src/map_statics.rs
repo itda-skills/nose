@@ -228,6 +228,7 @@ pub fn qualified_global_symbol_contract(
         }
         "Promise.resolve" => ("Promise.resolve", "Promise"),
         "Promise.reject" => ("Promise.reject", "Promise"),
+        "Promise.all" => ("Promise.all", "Promise"),
         _ => return None,
     };
     Some(QualifiedGlobalSymbolContract {

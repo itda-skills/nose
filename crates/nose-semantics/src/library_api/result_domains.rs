@@ -59,7 +59,9 @@ pub fn library_api_materialized_result_domain_for_arity(
         LibraryApiContractId::RustOptionSomeConstructor => Some(DomainEvidence::Option),
         LibraryApiContractId::RustResultOkConstructor
         | LibraryApiContractId::RustResultErrConstructor => Some(DomainEvidence::Result),
-        LibraryApiContractId::PromiseFactory(_) => Some(DomainEvidence::PromiseLike),
+        LibraryApiContractId::PromiseFactory(_) | LibraryApiContractId::PromiseAggregate(_) => {
+            Some(DomainEvidence::PromiseLike)
+        }
         LibraryApiContractId::JsImportedPromiseFactory => {
             js_imported_promise_factory_materialized_result_domain(callee, arity as usize)
         }

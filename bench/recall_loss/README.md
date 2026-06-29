@@ -119,6 +119,18 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --output target/scheduling-lifecycle-boundary-audit-602.v1.json
 ```
 
+Build the first #602 `Promise.all` exact aggregate slice audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.issue-602-promise-all.crates.json
+
+python3 scripts/promise-all-aggregate-slice-audit.py \
+  --recall-loss-report target/recall-loss.issue-602-promise-all.crates.json \
+  --output target/promise-all-literal-aggregate-recovery.v1.json
+```
+
 ## Files
 
 - [crates.baseline.v1.json](crates.baseline.v1.json) records the current
@@ -375,6 +387,12 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   corpus for scheduling, aggregate, cancellation, channel, executor, lifecycle,
   and exception surfaces, attaches the current local `crates` recall-loss gate,
   and ranks the next safe reporting targets without opening exact admission.
+- [promise-all-literal-aggregate-recovery-2026-06-29.v1.json](promise-all-literal-aggregate-recovery-2026-06-29.v1.json)
+  records the first #602 exact aggregate capability slice. It opens only
+  fulfilled `Promise.all` over literal array arguments whose elements already
+  recover as fulfilled Promise evidence, while dynamic iterables, rejected
+  elements, first-settled/all-settled aggregates, thenables, executor timing,
+  and sync arrays remain closed.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

@@ -14,10 +14,10 @@
 use super::super::{Builder, ConstKind, ValOp, ValueDomain, ValueId};
 use nose_il::{DomainEvidence, NodeId, NodeKind, Payload, PromiseSettlementChannel};
 use nose_semantics::{
-    admitted_promise_catch_at_call, admitted_promise_finally_at_call,
-    admitted_promise_resolve_at_call, admitted_promise_then_at_call,
-    asserted_unshadowed_global_symbol, nullish_global_contract,
-    promise_settled_value_evidence_at_call, PromiseFactoryKind,
+    admitted_promise_aggregate_at_call, admitted_promise_catch_at_call,
+    admitted_promise_finally_at_call, admitted_promise_resolve_at_call,
+    admitted_promise_then_at_call, asserted_unshadowed_global_symbol, nullish_global_contract,
+    promise_settled_value_evidence_at_call, PromiseAggregateKind, PromiseFactoryKind,
 };
 use rustc_hash::FxHashMap;
 
@@ -74,6 +74,14 @@ pub(in super::super) fn promise_resolve_value(
     env: &FxHashMap<u32, ValueId>,
 ) -> Option<ValueId> {
     promise_factory_state(builder, expr, env).map(|state| state.into_value(builder))
+}
+
+pub(in super::super) fn promise_aggregate_value(
+    builder: &mut Builder<'_>,
+    expr: NodeId,
+    env: &FxHashMap<u32, ValueId>,
+) -> Option<ValueId> {
+    promise_aggregate_state(builder, expr, env).map(|state| state.into_value(builder))
 }
 
 fn apply_then_continuation(
@@ -248,6 +256,39 @@ fn promise_factory_state(
         }
         PromiseFactoryKind::Reject => Some(PromiseState::Rejected(builder.eval(arg, env))),
     }
+}
+
+fn promise_aggregate_state(
+    builder: &mut Builder<'_>,
+    expr: NodeId,
+    env: &FxHashMap<u32, ValueId>,
+) -> Option<PromiseState> {
+    let admitted = admitted_promise_aggregate_at_call(builder.il, builder.interner, expr)?;
+    match admitted.contract.result.kind {
+        PromiseAggregateKind::All => promise_all_literal_state(builder, expr, env),
+    }
+}
+
+fn promise_all_literal_state(
+    builder: &mut Builder<'_>,
+    expr: NodeId,
+    env: &FxHashMap<u32, ValueId>,
+) -> Option<PromiseState> {
+    let aggregate_arg = *builder.il.children(expr).get(1)?;
+    if builder.il.kind(aggregate_arg) != NodeKind::Seq {
+        return None;
+    }
+    let elements = builder.il.children(aggregate_arg).to_vec();
+    let mut fulfilled = Vec::with_capacity(elements.len());
+    for element in elements {
+        let state = promise_receiver_state(builder, element, env)?;
+        let PromiseState::Fulfilled(payload) = state else {
+            return None;
+        };
+        fulfilled.push(payload);
+    }
+    let payload = builder.mk(ValOp::Seq(builder.seq_tag(aggregate_arg)), fulfilled);
+    Some(PromiseState::Fulfilled(payload))
 }
 
 fn promise_resolve_arg_is_non_thenable_safe(builder: &Builder<'_>, arg: NodeId) -> bool {

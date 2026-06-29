@@ -36,6 +36,13 @@ break.
 - Added the first #602 reporting-only scheduling/lifecycle audit, including a
   120-repo pricing script and checked artifact for aggregate, executor,
   cancellation, scheduler, channel, lifecycle, and exception boundary surfaces.
+- Added the first #602 exact aggregate capability slice for `Promise.all`: an
+  unshadowed global `Promise.all` over a literal array can recover as an ordered
+  fulfilled Promise aggregate only when every element already has fulfilled
+  Promise evidence. Dynamic iterables, rejected elements, `Promise.race`,
+  `Promise.allSettled`, `Promise.any`, thenable assimilation, executor timing,
+  and sync array equivalence remain closed. The slice includes a checked
+  recall-loss/pricing artifact.
 - Added staged Promise recovery infrastructure: protocol diagnostics and hard
   negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
   continuation recovery; receiver-producer/call-return attribution; and
@@ -118,6 +125,11 @@ break.
 - Confirmed the first #602 reporting slice with the local `crates` recall-loss
   gate at `false_merges = 0` and `canon_preservation_violations = 0`; the
   checked 120-repo pricing artifact records `semantic_admission_delta = 0`.
+- Confirmed the first #602 `Promise.all` exact aggregate slice with the local
+  `crates` recall-loss gate at `false_merges = 0` and
+  `canon_preservation_violations = 0`; the 120-repo slice artifact records
+  `397` broad `Promise.all` occurrences, `201` literal-array boundary
+  occurrences, and `0` direct safe-seed occurrences in the pinned corpus.
 
 ## [0.16.0] - 2026-06-26
 

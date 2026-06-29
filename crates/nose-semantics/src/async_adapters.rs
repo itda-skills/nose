@@ -14,11 +14,25 @@ pub enum PromiseFactoryKind {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PromiseAggregateKind {
+    All,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct PromiseFactoryContract {
     pub receiver: &'static str,
     pub method: &'static str,
     pub qualified_path: &'static str,
     pub kind: PromiseFactoryKind,
+    pub result_domain: DomainEvidence,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct PromiseAggregateContract {
+    pub receiver: &'static str,
+    pub method: &'static str,
+    pub qualified_path: &'static str,
+    pub kind: PromiseAggregateKind,
     pub result_domain: DomainEvidence,
 }
 
@@ -55,6 +69,16 @@ pub fn promise_resolve_contract(
     arg_count: usize,
 ) -> Option<PromiseFactoryContract> {
     library_promise_resolve_contract(lang, receiver, method, arg_count)
+        .map(|contract| contract.result)
+}
+
+pub fn promise_aggregate_contract(
+    lang: Lang,
+    receiver: &str,
+    method: &str,
+    arg_count: usize,
+) -> Option<PromiseAggregateContract> {
+    library_promise_aggregate_contract(lang, receiver, method, arg_count)
         .map(|contract| contract.result)
 }
 

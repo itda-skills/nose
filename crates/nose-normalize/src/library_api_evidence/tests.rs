@@ -9,6 +9,7 @@ use nose_semantics::{
 };
 
 mod call_result_domains;
+mod promise_result_domains;
 mod receiver_method_result_domains;
 
 fn sp(byte: u32) -> Span {

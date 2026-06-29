@@ -2224,6 +2224,9 @@ That epic is tracked as [#602](https://github.com/corca-ai/nose/issues/602).
 2026-06-29 #602 scheduling/lifecycle reporting note:
 The [scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json](../bench/recall_loss/scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json) artifact starts #602 as reporting infrastructure, not exact admission. Runtime-boundary diagnostics now name Promise executor timing, resolve/reject callbacks, throw-to-rejection, Promise aggregate all-fulfilled/first-settled/all-settled/first-fulfilled shapes, scheduler wait/yield timing, interval lifecycle, channel send/select, goroutine scheduling, and defer lifecycle separately where those surfaces reach the strict-admission report. The 120-repo pricing scan keeps `semantic_admission_delta = 0` and ranks the next safe reporting targets from corpus evidence.
 
+2026-06-29 #602 Promise.all exact aggregate note:
+The [promise-all-literal-aggregate-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-all-literal-aggregate-recovery-2026-06-29.v1.json) artifact opens the first exact aggregate subset as a capability, not a selector shortcut. `Promise.all` now has a dependency-backed static-global contract, materializes `Domain(PromiseLike)`, and the value graph recovers only literal-array aggregates whose elements already prove fulfilled Promise state. The result stays behind a Promise boundary with an ordered sequence payload. Rejected elements, dynamic iterables, `Promise.race`, `Promise.allSettled`, `Promise.any`, thenable assimilation, executor timing, and sync array equivalence remain closed. The pinned corpus has `397` broad `Promise.all` occurrences, `201` literal-array boundary occurrences, and `0` direct safe-seed occurrences for this narrow exact subset.
+
 ## See also
 
 - Back to [semantic-kernel](semantic-kernel.md).

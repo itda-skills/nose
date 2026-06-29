@@ -10,12 +10,12 @@ use crate::{
     IteratorAdapterReceiverContract, IteratorIdentityAdapterContract,
     JavaCollectionConstructorKind, JavaCollectionFactoryKind, JavaMapFactoryKind, MapGetContract,
     MapKeyViewContract, MapKeyViewKind, MapKeyViewWrapperContract, MethodCallContract,
-    MethodReceiverContract, MethodSemanticContract, PromiseCatchContract, PromiseFactoryContract,
-    PromiseFactoryKind, PromiseFinallyContract, PromiseThenContract, RegexTestContract,
-    ScalarIntegerMethod, ScalarIntegerMethodContract, StaticCollectionAdapterContract,
-    StaticGlobalFunctionContract, StaticGlobalMethodContract, StaticIndexMembershipContract,
-    StaticIndexMembershipKind, StaticIndexMembershipReceiverContract, SwiftCollectionFactoryKind,
-    SwiftMapFactoryKind,
+    MethodReceiverContract, MethodSemanticContract, PromiseAggregateContract, PromiseAggregateKind,
+    PromiseCatchContract, PromiseFactoryContract, PromiseFactoryKind, PromiseFinallyContract,
+    PromiseThenContract, RegexTestContract, ScalarIntegerMethod, ScalarIntegerMethodContract,
+    StaticCollectionAdapterContract, StaticGlobalFunctionContract, StaticGlobalMethodContract,
+    StaticIndexMembershipContract, StaticIndexMembershipKind,
+    StaticIndexMembershipReceiverContract, SwiftCollectionFactoryKind, SwiftMapFactoryKind,
 };
 use nose_il::{stable_symbol_hash, Builtin, DomainEvidence, HoFKind, Lang, SourceFactKind, Span};
 
@@ -59,6 +59,7 @@ pub enum LibraryApiContractId {
     JsLikeStaticIndexMembership(StaticIndexMembershipKind),
     ImportedNamespaceFunction(ImportedNamespaceFunctionSemantic),
     PromiseFactory(PromiseFactoryKind),
+    PromiseAggregate(PromiseAggregateKind),
     JsImportedPromiseFactory,
     PromiseThen,
     PromiseCatch,
@@ -413,6 +414,14 @@ pub struct LibraryPromiseFactoryContract {
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: PromiseFactoryContract,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct LibraryPromiseAggregateContract {
+    pub pack_id: &'static str,
+    pub id: LibraryApiContractId,
+    pub callee: LibraryApiCalleeContract,
+    pub result: PromiseAggregateContract,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

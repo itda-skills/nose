@@ -105,6 +105,11 @@ set -euo pipefail
 # fixture removed it. The remaining delta is representative-ID churn for the same
 # direct-call-target negative fixture family, now `32ed015840375d04` instead of
 # `727e41b9e3e96f1e`; no new budget is accepted.
+# 53 -> 53 (#602 Promise.all literal aggregate): the first draft surfaced avoidable production
+# duplication in a new qualified-global symbol evidence lookup; rewriting it as an explicit proof
+# check removed that family. The remaining delta is representative-ID churn for the reviewed
+# semantic-kernel language-core provenance helper family, now `551e7992e1632597` instead of
+# `46eafe785a6f3517`; no new budget is accepted.
 BIN="${NOSE_BIN:-./target/release/nose}"
 BASELINE="${NOSE_DUP_BASELINE:-scripts/duplication-baseline.json}"
 

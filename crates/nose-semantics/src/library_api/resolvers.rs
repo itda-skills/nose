@@ -4,9 +4,15 @@ use super::*;
 
 mod admission;
 mod free_names;
+mod promise;
 
 use admission::*;
 pub use free_names::{admitted_free_function_builtin_at_call, admitted_free_function_hof_at_call};
+pub use promise::{
+    admitted_promise_aggregate_at_call, admitted_promise_catch_at_call,
+    admitted_promise_finally_at_call, admitted_promise_resolve_at_call,
+    admitted_promise_then_at_call,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct AdmittedLibraryApiCall<C> {
@@ -455,34 +461,6 @@ receiver_method_contract_resolver!(
     LibraryImportedNamespaceFunctionContract,
     library_imported_namespace_function_contract
 );
-
-receiver_method_contract_resolver!(
-    admitted_promise_then_at_call,
-    LibraryPromiseThenContract,
-    library_promise_then_contract
-);
-
-receiver_method_contract_resolver!(
-    admitted_promise_catch_at_call,
-    LibraryPromiseCatchContract,
-    library_promise_catch_contract
-);
-
-receiver_method_contract_resolver!(
-    admitted_promise_finally_at_call,
-    LibraryPromiseFinallyContract,
-    library_promise_finally_contract
-);
-
-pub fn admitted_promise_resolve_at_call(
-    il: &Il,
-    interner: &Interner,
-    call: NodeId,
-) -> Option<AdmittedLibraryApiCall<LibraryPromiseFactoryContract>> {
-    admitted_named_receiver_method_call(il, interner, call, |receiver_name, method, arg_count| {
-        library_promise_resolve_contract(il.meta.lang, receiver_name, method, arg_count)
-    })
-}
 
 receiver_method_contract_resolver!(
     admitted_iterator_identity_adapter_at_call,
