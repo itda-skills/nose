@@ -54,15 +54,18 @@ fulfilled Promise boundaries, or rejected Promise boundaries. Same-file direct
 async, direct ordinary-function, and proof-backed DirectMethod producers can
 also supply the settled value when dependency-backed call-result domain evidence
 points to supported return paths. Branch-return producers recover only through
-same-channel Promise Phi states. Handler-returned `Promise.resolve` is flattened
-only when the returned value is non-thenable-safe after local substitution;
-handler-returned `Promise.reject` preserves the rejected channel, and a
-rejecting `.finally` handler overrides the original settlement with that
-rejected channel. Selector-only `.then(...)`/`.catch(...)`/`.finally(...)`,
-custom thenables, shadowed `Promise`, unsafe `Promise.resolve(obj)` arguments,
-mixed fulfilled/rejected branch channels, unsafe or parameterized `.finally`
-handlers, aggregate combinators, and missing or ambiguous receiver proof stay
-closed.
+same-channel Promise Phi states. Imported function/member producers can supply
+the settled value only through admitted `PromiseSettledValue` evidence composed
+with imported call-target identity and `PromiseLike` receiver proof; source-level
+imported producers without that contract still stay closed. Handler-returned
+`Promise.resolve` is flattened only when the returned value is non-thenable-safe
+after local substitution; handler-returned `Promise.reject` preserves the
+rejected channel, and a rejecting `.finally` handler overrides the original
+settlement with that rejected channel. Selector-only
+`.then(...)`/`.catch(...)`/`.finally(...)`, custom thenables, shadowed
+`Promise`, unsafe `Promise.resolve(obj)` arguments, mixed fulfilled/rejected
+branch channels, unsafe or parameterized `.finally` handlers, aggregate
+combinators, and missing or ambiguous receiver proof stay closed.
 The JS/TS corpus audit [`js-ts-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/js-ts-stdlib-partial-audit-2026-06-28.v1.json)
 confirms this is the largest JS/TS builtin-shaped surface in the pinned corpus:
 `29,094` Promise/async occurrences are tracked as a processed closed boundary

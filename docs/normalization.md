@@ -224,11 +224,16 @@ Guiding constraints for every pass:
   broad member inference remain closed. The measured slices are recorded in the
   direct-method [Promise recovery artifact](../bench/recall_loss/promise-direct-method-return-recovery-2026-06-29.v1.json)
   and the [Promise branch-return producer artifact](../bench/recall_loss/promise-branch-return-producer-recovery-2026-06-29.v1.json).
-  Imported function/member Promise call-return receivers remain closed even when
-  call-target identity is present: an import coordinate has no local body for the
-  value graph to evaluate, so these receivers now report a missing settled-value
-  contract rather than return-domain proof. That reporting-only boundary is
-  recorded in the [Promise imported call-return boundary artifact](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json).
+  Imported function/member Promise call-return receivers can recover only when
+  imported call-target identity, `Domain(PromiseLike)` receiver proof, admitted
+  continuation API evidence, and a dependency-closed `PromiseSettledValue`
+  contract all point at the same producer call. The contract names the
+  fulfilled or rejected channel and an exact payload node; fulfilled payloads
+  still need non-thenable-safe value proof. Ordinary imported producers without
+  that contract remain closed because an import coordinate has no local body for
+  the value graph to evaluate. See the [Promise imported call-return boundary artifact](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json)
+  for the reporting-only predecessor and the [Promise imported settled-value artifact](../bench/recall_loss/promise-imported-settled-value-contract-2026-06-29.v1.json)
+  for the reusable contract capability.
   The exact-safe `.finally` follow-up is recorded in the [Promise finally settlement recovery artifact](../bench/recall_loss/promise-finally-settlement-recovery-2026-06-29.v1.json).
   Lowered aggregate surfaces now pass through a `SeqSurfaceContract`: arrays/slices can
   enter collection membership, maps/objects enter map/object value semantics, Go

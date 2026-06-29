@@ -9,10 +9,12 @@ use rustc_hash::FxHashMap;
 
 mod call_target;
 mod domain;
+mod promise_settlement;
 mod value_laws;
 
 pub use call_target::*;
 pub use domain::*;
+pub use promise_settlement::*;
 pub use value_laws::*;
 pub struct SourceFactContract {
     pub kind: SourceFactKind,

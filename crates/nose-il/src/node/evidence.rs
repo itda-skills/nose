@@ -256,6 +256,23 @@ pub enum CallTargetEvidenceKind {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
+pub enum PromiseSettlementChannel {
+    Fulfilled,
+    Rejected,
+}
+
+/// Kernel-facing proof that an opaque Promise-like producer call has a known
+/// settled channel and payload expression. This is intentionally separate from
+/// `CallTarget`: target identity says which call was made; this contract says
+/// what value the returned Promise settles with.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
+pub struct PromiseSettledValueEvidenceKind {
+    pub channel: PromiseSettlementChannel,
+    pub payload_span: Span,
+    pub payload_kind: NodeKind,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub enum SequenceSurfaceKind {
     Untagged,
     Collection,
@@ -281,6 +298,7 @@ pub enum EvidenceKind {
     Effect(EffectEvidenceKind),
     LibraryApi(LibraryApiEvidenceKind),
     CallTarget(CallTargetEvidenceKind),
+    PromiseSettledValue(PromiseSettledValueEvidenceKind),
     SequenceSurface(SequenceSurfaceKind),
 }
 

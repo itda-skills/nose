@@ -16,8 +16,8 @@ pub use self::evidence::{
     CTypeTarget, CallTargetEvidenceKind, EffectEvidenceKind, EvidenceAnchor, EvidenceEmitter,
     EvidenceId, EvidenceKind, EvidenceProvenance, EvidenceRecord, EvidenceStatus,
     GuardEvidenceKind, ImportEvidenceKind, JsRecordGuardComparison, JsRecordGuardNullCheck,
-    LibraryApiEvidenceKind, PlaceEvidenceKind, SequenceSurfaceKind, SymbolEvidenceKind,
-    TypeEvidenceKind,
+    LibraryApiEvidenceKind, PlaceEvidenceKind, PromiseSettledValueEvidenceKind,
+    PromiseSettlementChannel, SequenceSurfaceKind, SymbolEvidenceKind, TypeEvidenceKind,
 };
 pub use self::ops::{Builtin, HoFKind, LitClass, LoopKind, Op};
 pub use self::source::{

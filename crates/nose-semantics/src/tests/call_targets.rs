@@ -67,6 +67,28 @@ fn scoped_var_call_il(interner: &Interner, path: &str) -> (Il, NodeId) {
     (finish_il(b, call, Lang::Rust), call)
 }
 
+fn promise_settled_record(
+    id: u32,
+    call: NodeId,
+    payload: NodeId,
+    il: &Il,
+    channel: PromiseSettlementChannel,
+    status: EvidenceStatus,
+    dependencies: &[u32],
+) -> EvidenceRecord {
+    evidence_with_dependencies(
+        id,
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+        EvidenceKind::PromiseSettledValue(PromiseSettledValueEvidenceKind {
+            channel,
+            payload_span: il.node(payload).span,
+            payload_kind: il.kind(payload),
+        }),
+        status,
+        dependencies.iter().copied().map(EvidenceId).collect(),
+    )
+}
+
 #[test]
 fn imported_function_call_target_requires_matching_local_selector() {
     let interner = Interner::new();
@@ -93,6 +115,181 @@ fn imported_function_call_target_requires_matching_local_selector() {
         })
     );
     assert!(imported_function_call_target_at_call(&il, &interner, call));
+}
+
+#[test]
+fn promise_settled_value_contract_admits_only_with_imported_call_target() {
+    let interner = Interner::new();
+    let (mut il, call) = imported_function_call_il(&interner);
+    let payload = il.children(call)[1];
+    assert_eq!(
+        promise_settled_value_evidence_status_at_call(&il, &interner, call),
+        PromiseSettledValueEvidenceStatus::Missing
+    );
+
+    il.evidence.push(promise_settled_record(
+        1,
+        call,
+        payload,
+        &il,
+        PromiseSettlementChannel::Fulfilled,
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    assert_eq!(
+        promise_settled_value_evidence_status_at_call(&il, &interner, call),
+        PromiseSettledValueEvidenceStatus::Rejected
+    );
+
+    il.evidence.push(call_target_record(
+        2,
+        il.node(call).span,
+        Lang::Python,
+        CallTargetEvidenceKind::ImportedFunction {
+            module_hash: stable_symbol_hash("math"),
+            exported_hash: stable_symbol_hash("prod"),
+            local_hash: interner.symbol_hash(interner.intern("prod")),
+        },
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    assert_eq!(
+        promise_settled_value_evidence_at_call(&il, &interner, call),
+        Some(PromiseSettledValueAtCall {
+            channel: PromiseSettlementChannel::Fulfilled,
+            payload,
+        })
+    );
+}
+
+#[test]
+fn promise_settled_value_contract_rejects_direct_targets_and_bad_payload_anchors() {
+    let interner = Interner::new();
+    let (mut il, call) = imported_function_call_il(&interner);
+    let payload = il.children(call)[1];
+    il.evidence.push(call_target_record(
+        0,
+        il.node(call).span,
+        Lang::Python,
+        CallTargetEvidenceKind::DirectFunction {
+            target_span: sp(99),
+            name_hash: interner.symbol_hash(interner.intern("prod")),
+        },
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    il.evidence.push(promise_settled_record(
+        1,
+        call,
+        payload,
+        &il,
+        PromiseSettlementChannel::Fulfilled,
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+
+    assert_eq!(
+        promise_settled_value_evidence_status_at_call(&il, &interner, call),
+        PromiseSettledValueEvidenceStatus::Rejected
+    );
+
+    let (mut il, call) = imported_function_call_il(&interner);
+    il.evidence.push(call_target_record(
+        10,
+        il.node(call).span,
+        Lang::Python,
+        CallTargetEvidenceKind::ImportedFunction {
+            module_hash: stable_symbol_hash("math"),
+            exported_hash: stable_symbol_hash("prod"),
+            local_hash: interner.symbol_hash(interner.intern("prod")),
+        },
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    let payload = il.children(call)[1];
+    il.evidence.push(evidence(
+        11,
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+        EvidenceKind::PromiseSettledValue(PromiseSettledValueEvidenceKind {
+            channel: PromiseSettlementChannel::Fulfilled,
+            payload_span: il.node(payload).span,
+            payload_kind: NodeKind::Var,
+        }),
+        EvidenceStatus::Asserted,
+    ));
+    assert_eq!(
+        promise_settled_value_evidence_status_at_call(&il, &interner, call),
+        PromiseSettledValueEvidenceStatus::Rejected
+    );
+}
+
+#[test]
+fn promise_settled_value_contract_rejects_broken_or_conflicting_evidence() {
+    let interner = Interner::new();
+    let (mut il, call) = imported_function_call_il(&interner);
+    let payload = il.children(call)[1];
+    il.evidence.push(call_target_record(
+        0,
+        il.node(call).span,
+        Lang::Python,
+        CallTargetEvidenceKind::ImportedFunction {
+            module_hash: stable_symbol_hash("math"),
+            exported_hash: stable_symbol_hash("prod"),
+            local_hash: interner.symbol_hash(interner.intern("prod")),
+        },
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    il.evidence.push(promise_settled_record(
+        1,
+        call,
+        payload,
+        &il,
+        PromiseSettlementChannel::Fulfilled,
+        EvidenceStatus::Ambiguous,
+        &[],
+    ));
+    assert_eq!(
+        promise_settled_value_evidence_status_at_call(&il, &interner, call),
+        PromiseSettledValueEvidenceStatus::Rejected
+    );
+
+    let (mut il, call) = imported_function_call_il(&interner);
+    let payload = il.children(call)[1];
+    il.evidence.push(call_target_record(
+        10,
+        il.node(call).span,
+        Lang::Python,
+        CallTargetEvidenceKind::ImportedFunction {
+            module_hash: stable_symbol_hash("math"),
+            exported_hash: stable_symbol_hash("prod"),
+            local_hash: interner.symbol_hash(interner.intern("prod")),
+        },
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    il.evidence.push(promise_settled_record(
+        11,
+        call,
+        payload,
+        &il,
+        PromiseSettlementChannel::Fulfilled,
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    il.evidence.push(promise_settled_record(
+        12,
+        call,
+        payload,
+        &il,
+        PromiseSettlementChannel::Rejected,
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+    assert_eq!(
+        promise_settled_value_evidence_status_at_call(&il, &interner, call),
+        PromiseSettledValueEvidenceStatus::Rejected
+    );
 }
 
 #[test]

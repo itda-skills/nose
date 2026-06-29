@@ -69,6 +69,7 @@ The current implemented kinds are:
 | `Effect` | observable effect and mutation-risk facts currently covering canonical builder append calls, non-overloadable index writes, fixed self-field writes, binding writes, receiver-mutating calls, and opaque argument escapes |
 | `LibraryApi` | proof that a specific API occurrence matches a language/API contract coordinate, currently for selected call, property, and sentinel occurrences across JS-like static/global/static-index APIs, selected Python/Rust/Ruby/Java/Swift/regex APIs, pack-proven Python/Go/Swift free-function builtins, pack-proven Python iterator builtins, pack-proven generic builtin method calls, and selected receiver-method families |
 | `CallTarget` | proof that a specific call occurrence resolves to an explicit function, method, imported function/member, or dispatch-family target identity |
+| `PromiseSettledValue` | proof that an opaque Promise-like producer call settles to a named fulfilled/rejected payload expression, consumed only with separate call-target and PromiseLike proof |
 | `SequenceSurface` | lowered aggregate surface such as collection, tuple, map, pair, import proof, guard surfaces, Go composite map literals/entries, or Rust struct expressions |
 
 Rust `use` producers use the same `Import`/`Symbol` vocabulary as other static
@@ -118,6 +119,19 @@ vocabulary separates concrete exact identity from broader dispatch facts:
   recorded by the [Promise imported call-return boundary](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json).
 - `DynamicDispatch` names a protocol/dispatch family and method selector, but it
   does not by itself prove one concrete implementation target.
+
+`PromiseSettledValue` evidence is the reusable settled-value contract for
+opaque Promise-like producers whose body is not available to the current IL. It
+is anchored to the exact producer `Call` node and records a settlement channel
+(`Fulfilled` or `Rejected`) plus the span and kind of the payload expression.
+The semantic resolver admits this evidence only when the same call also has
+admitted `CallTarget::ImportedFunction` or `CallTarget::ImportedMember` identity,
+the evidence is builtin, dependency-closed, unambiguous, and the payload anchor
+resolves to exactly one node in the current IL. Promise continuation recovery
+then still requires `Domain(PromiseLike)` receiver proof and admitted
+`.then`/`.catch`/`.finally` API evidence; fulfilled payloads additionally remain
+closed unless the value graph can prove them non-thenable-safe. This contract is
+recorded by the [Promise imported settled-value artifact](../bench/recall_loss/promise-imported-settled-value-contract-2026-06-29.v1.json).
 
 The builtin language-core call-target producer emits these records with the
 matching `nose.lang.*` pack provenance for the lowered file language:
@@ -910,6 +924,9 @@ callers:
   preserves a Promise boundary in the value graph. DirectMethod recovery is
   limited to non-async methods whose supported return paths already have
   asserted `Domain(PromiseLike)` evidence and do not read receiver context.
+  Imported function/member producers can supply that value only through admitted
+  `PromiseSettledValue` evidence plus imported call-target identity; ordinary
+  imported calls without that contract remain opaque.
   Value-level CSE paths that only retain source
   spans now also go through span-query resolvers for free-name/imported
   collection factories, Java/Ruby/Rust collection factories, Java collection

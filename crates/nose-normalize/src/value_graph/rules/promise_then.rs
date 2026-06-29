@@ -12,11 +12,12 @@
 //! proof-obligation: normalize.value_graph.promise_then
 
 use super::super::{Builder, ConstKind, ValOp, ValueDomain, ValueId};
-use nose_il::{DomainEvidence, NodeId, NodeKind, Payload};
+use nose_il::{DomainEvidence, NodeId, NodeKind, Payload, PromiseSettlementChannel};
 use nose_semantics::{
     admitted_promise_catch_at_call, admitted_promise_finally_at_call,
     admitted_promise_resolve_at_call, admitted_promise_then_at_call,
-    asserted_unshadowed_global_symbol, nullish_global_contract, PromiseFactoryKind,
+    asserted_unshadowed_global_symbol, nullish_global_contract,
+    promise_settled_value_evidence_at_call, PromiseFactoryKind,
 };
 use rustc_hash::FxHashMap;
 
@@ -201,6 +202,9 @@ fn promise_receiver_state(
                 return Some(state);
             }
         }
+        if let Some(state) = imported_promise_settlement_state(builder, recv, env) {
+            return Some(state);
+        }
         let receiver_value = builder.eval(recv, env);
         if let Some(state) = promise_boundary_state(builder, receiver_value) {
             return Some(state);
@@ -208,6 +212,20 @@ fn promise_receiver_state(
     }
     let chained = apply(builder, recv, env)?;
     promise_boundary_state(builder, chained)
+}
+
+fn imported_promise_settlement_state(
+    builder: &mut Builder<'_>,
+    call: NodeId,
+    env: &FxHashMap<u32, ValueId>,
+) -> Option<PromiseState> {
+    let settled = promise_settled_value_evidence_at_call(builder.il, builder.interner, call)?;
+    let payload = builder.eval(settled.payload, env);
+    match settled.channel {
+        PromiseSettlementChannel::Fulfilled => promise_value_is_non_thenable_safe(builder, payload)
+            .then_some(PromiseState::Fulfilled(payload)),
+        PromiseSettlementChannel::Rejected => Some(PromiseState::Rejected(payload)),
+    }
 }
 
 fn promise_factory_state(

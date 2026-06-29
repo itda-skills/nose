@@ -191,6 +191,108 @@ fn promise_like_receiver_without_supported_settled_producer_stays_opaque() {
 }
 
 #[test]
+fn imported_promise_then_with_fulfilled_contract_recovers_payload_boundary() {
+    let ImportedPromiseFixture {
+        mut il,
+        interner,
+        producer_call,
+        producer_payload,
+        continuation_call,
+        sync_add,
+    } = imported_promise_then_call_il(true);
+    push_imported_function_promise_settlement_evidence(
+        &mut il,
+        &interner,
+        producer_call,
+        producer_payload,
+        PromiseSettlementChannel::Fulfilled,
+        100,
+    );
+    push_promise_then_evidence(&mut il, &interner, continuation_call, 110);
+
+    let mut builder = Builder::new(&il, &interner);
+    let promise_value = builder.eval(continuation_call, &FxHashMap::default());
+    let payload = assert_resolved_promise_boundary(&builder, promise_value);
+    let sync_value = builder.eval(sync_add, &FxHashMap::default());
+    assert_eq!(payload, sync_value);
+    assert_ne!(
+        promise_value, sync_value,
+        "imported Promise recovery must preserve the async boundary"
+    );
+}
+
+#[test]
+fn imported_promise_catch_with_rejected_contract_recovers_payload_boundary() {
+    let ImportedPromiseFixture {
+        mut il,
+        interner,
+        producer_call,
+        producer_payload,
+        continuation_call,
+        sync_add,
+    } = imported_promise_catch_call_il();
+    push_imported_function_promise_settlement_evidence(
+        &mut il,
+        &interner,
+        producer_call,
+        producer_payload,
+        PromiseSettlementChannel::Rejected,
+        100,
+    );
+    push_promise_catch_evidence(&mut il, &interner, continuation_call, 110);
+
+    let mut builder = Builder::new(&il, &interner);
+    let promise_value = builder.eval(continuation_call, &FxHashMap::default());
+    let payload = assert_resolved_promise_boundary(&builder, promise_value);
+    let sync_value = builder.eval(sync_add, &FxHashMap::default());
+    assert_eq!(payload, sync_value);
+}
+
+#[test]
+fn imported_promise_then_without_settled_contract_stays_opaque() {
+    let ImportedPromiseFixture {
+        mut il,
+        interner,
+        producer_call,
+        continuation_call,
+        ..
+    } = imported_promise_then_call_il(true);
+    push_domain_evidence(&mut il, producer_call, 100, DomainEvidence::PromiseLike);
+    push_promise_then_evidence(&mut il, &interner, continuation_call, 110);
+
+    assert!(!matches!(
+        eval_op(&il, &interner, continuation_call),
+        ValOp::Call(code) if code == PROMISE_RESOLVED_CODE || code == PROMISE_REJECTED_CODE
+    ));
+}
+
+#[test]
+fn imported_promise_fulfilled_contract_with_possible_thenable_payload_stays_opaque() {
+    let ImportedPromiseFixture {
+        mut il,
+        interner,
+        producer_call,
+        producer_payload,
+        continuation_call,
+        ..
+    } = imported_promise_then_call_il(false);
+    push_imported_function_promise_settlement_evidence(
+        &mut il,
+        &interner,
+        producer_call,
+        producer_payload,
+        PromiseSettlementChannel::Fulfilled,
+        100,
+    );
+    push_promise_then_evidence(&mut il, &interner, continuation_call, 110);
+
+    assert!(!matches!(
+        eval_op(&il, &interner, continuation_call),
+        ValOp::Call(code) if code == PROMISE_RESOLVED_CODE || code == PROMISE_REJECTED_CODE
+    ));
+}
+
+#[test]
 fn direct_method_promise_return_then_recovers_without_sync_erasure() {
     let DirectMethodPromiseFixture {
         mut il,

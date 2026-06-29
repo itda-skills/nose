@@ -316,6 +316,14 @@ python3 scripts/cross-language-boundary-census.py \
   parameterized handlers, possible thenables, selector-only receivers, imported
   producers without settled-value contracts, constructors, aggregates, and broad
   scheduling remain closed.
+- [promise-imported-settled-value-contract-2026-06-29.v1.json](promise-imported-settled-value-contract-2026-06-29.v1.json)
+  records the reusable settled-value contract capability for imported Promise
+  producers. `PromiseSettledValue` evidence can now compose with imported
+  call-target identity, `Domain(PromiseLike)` receiver proof, and admitted
+  Promise continuation API evidence to recover focused imported `.then`/`.catch`
+  fixtures behind Promise boundaries. Ordinary imported producers without the
+  contract, fulfilled possible-thenable payloads, selector-only members,
+  constructors, aggregates, and broad scheduling remain closed.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

@@ -3,9 +3,10 @@ use nose_il::{
     CallTargetEvidenceKind, EvidenceAnchor, EvidenceEmitter, EvidenceId, EvidenceKind,
     EvidenceProvenance, EvidenceRecord, EvidenceStatus, FileId, FileMeta, GuardEvidenceKind,
     IlBuilder, ImportEvidenceKind, Interner, JsRecordGuardComparison, JsRecordGuardNullCheck,
-    LibraryApiEvidenceKind, ParamSemantic, PlaceEvidenceKind, SequenceSurfaceKind, SourceCastKind,
-    SourceFactKind, SourcePatternKind, SourceRangeKind, Span, Symbol, SymbolEvidenceKind,
-    TypeEvidenceKind, Unit, UnitKind,
+    LibraryApiEvidenceKind, ParamSemantic, PlaceEvidenceKind, PromiseSettledValueEvidenceKind,
+    PromiseSettlementChannel, SequenceSurfaceKind, SourceCastKind, SourceFactKind,
+    SourcePatternKind, SourceRangeKind, Span, Symbol, SymbolEvidenceKind, TypeEvidenceKind, Unit,
+    UnitKind,
 };
 
 mod call_targets;

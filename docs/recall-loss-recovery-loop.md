@@ -83,6 +83,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [Promise imported call-return boundary](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json) records the reporting-only imported function/member follow-up: target-present imported Promise receivers now report missing settled-value contracts instead of return-domain proof, because imported call-target identity has no local body to evaluate.
 - [Promise branch-return producer recovery](../bench/recall_loss/promise-branch-return-producer-recovery-2026-06-29.v1.json) records the branch-return extension for local Promise producers: DirectFunction and DirectMethod return-domain proof can now compose every returned expression on supported paths, while mixed settlement channels, selector-only members, parameter callees, and imported receivers remain closed.
 - [Promise finally settlement recovery](../bench/recall_loss/promise-finally-settlement-recovery-2026-06-29.v1.json) records the safe `.finally` continuation slice: admitted PromiseLike receivers plus absent or zero-argument non-thenable-safe handlers can preserve settlement, while rejecting finally handlers switch to the rejected channel and unsafe handlers remain closed.
+- [Promise imported settled-value contract](../bench/recall_loss/promise-imported-settled-value-contract-2026-06-29.v1.json) records the reusable settled-value evidence capability for imported Promise producers: imported target identity, PromiseLike receiver proof, admitted continuation API evidence, and `PromiseSettledValue` payload/channel proof can now recover focused imported `.then`/`.catch` fixtures while ordinary imported producers without that contract remain closed.
 
 Regenerate the full local reports with:
 
@@ -652,6 +653,15 @@ scan keeps the next imported queue quantified at `105` imported-member
 candidates across `9` repos and `73` imported-binding candidates across `15`
 repos, while focused report/equivalence tests keep import-backed Promise member
 calls distinct from direct Promise forms and synchronous payloads.
+The follow-up [Promise imported settled-value contract](../bench/recall_loss/promise-imported-settled-value-contract-2026-06-29.v1.json)
+adds that reusable contract surface without guessing from import identity. A
+producer call can recover only when builtin `PromiseSettledValue` evidence names
+the settled channel and exact payload node, the same call has admitted imported
+call-target identity, the receiver has `Domain(PromiseLike)` proof, and the
+continuation has admitted Promise API evidence. Focused imported `.then` and
+`.catch` fixtures now recover behind Promise boundaries; contractless imported
+producers, unsafe fulfilled thenable payloads, selector-only members, aggregate
+combinators, constructors, and broad scheduling remain closed.
 
 ## See Also
 

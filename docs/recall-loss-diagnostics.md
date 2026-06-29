@@ -199,6 +199,13 @@ vocabulary: target-present imported Promise receivers now require a
 settled-value contract rather than mere return-domain proof. Imported
 call-target evidence proves a module/export/member coordinate, not a local body
 whose fulfilled or rejected payload can be evaluated.
+The [Promise imported settled-value contract](../bench/recall_loss/promise-imported-settled-value-contract-2026-06-29.v1.json)
+adds that contract as a semantic-kernel capability. Recovery opens only when a
+builtin, dependency-closed `PromiseSettledValue` record names a settled channel
+and exact payload node for the same imported producer call, with separate
+`CallTarget::ImportedFunction`/`ImportedMember`, `Domain(PromiseLike)`, and
+Promise continuation API evidence. Imported producers without the contract still
+report the settled-value missing labels.
 The [branch-return Promise producer recovery](../bench/recall_loss/promise-branch-return-producer-recovery-2026-06-29.v1.json)
 extends the direct-function and DirectMethod slices from single-return bodies to
 supported branch-return bodies. A receiver should move out of
