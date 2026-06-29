@@ -96,6 +96,8 @@ break.
   reviewed direct-call-target test family.
 
 ### Fixed
+- Updated the locked `anyhow` dependency to `1.0.103` to clear
+  `RUSTSEC-2026-0190` in the CI advisory gate.
 - Fixed repository CI ratchets by splitting oversized Rust files back under the
   file-length gate and updating the async-mirror query JSON test to assert the
   documented near/shared-core witness contract.
