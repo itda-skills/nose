@@ -84,8 +84,13 @@ non-thenable-safe after local callback substitution, handler-returned
 handler overrides the original settlement with that rejected channel. Arbitrary
 selector-only `.then(...)`/`.catch(...)`/`.finally(...)`, custom thenables,
 shadowed Promise roots, unsafe `Promise.resolve(obj)` arguments, unsafe or
-parameterized `.finally` handlers, aggregate combinators, and missing receiver
-proof remain closed.
+parameterized `.finally` handlers, unsupported aggregate combinators, and
+missing receiver proof remain closed. Literal `Promise.all` and
+`Promise.allSettled` aggregates can recover only after the aggregate call is
+admitted and every element either has supported Promise settlement evidence or
+proves the same non-thenable-safe raw-input condition used by
+`Promise.resolve`; dynamic iterables, possible thenables, `race`/`any`, executor
+timing, and sync aggregate equivalence stay closed.
 
 Source protocol boundaries have internal profiles for future contracts:
 

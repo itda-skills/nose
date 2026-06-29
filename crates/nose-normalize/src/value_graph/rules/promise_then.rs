@@ -7,10 +7,10 @@
 //! value from a supported Promise producer. Safe `.finally` recovery is narrower still: the handler
 //! must be absent or a zero-argument lambda whose result is non-thenable-safe, a fulfilled Promise
 //! boundary, or a rejected Promise boundary. Aggregate recovery is also intentionally narrow:
-//! literal `Promise.all` and `Promise.allSettled` inputs must already recover to Promise state
-//! before the aggregate can recover. The result stays behind a Promise boundary so
-//! Promise-returning code does not converge with synchronous code that happens to compute the same
-//! payload.
+//! literal `Promise.all` and `Promise.allSettled` inputs must either recover to Promise state or
+//! prove the same non-thenable-safe raw input condition used by `Promise.resolve`. The result stays
+//! behind a Promise boundary so Promise-returning code does not converge with synchronous code that
+//! happens to compute the same payload.
 //!
 //! proof-obligation: normalize.value_graph.promise_then
 
@@ -252,9 +252,7 @@ fn promise_factory_state(
     match admitted.contract.result.kind {
         PromiseFactoryKind::Resolve => {
             let value = builder.eval(arg, env);
-            if !promise_resolve_arg_is_non_thenable_safe(builder, arg)
-                && !promise_value_is_non_thenable_safe(builder, value)
-            {
+            if !promise_input_is_non_thenable_safe(builder, arg, value) {
                 return None;
             }
             Some(PromiseState::Fulfilled(value))
@@ -287,7 +285,7 @@ fn promise_all_literal_state(
     let elements = builder.il.children(aggregate_arg).to_vec();
     let mut fulfilled = Vec::with_capacity(elements.len());
     for element in elements {
-        let state = promise_receiver_state(builder, element, env)?;
+        let state = promise_aggregate_input_state(builder, element, env)?;
         let PromiseState::Fulfilled(payload) = state else {
             return None;
         };
@@ -309,7 +307,7 @@ fn promise_all_settled_literal_state(
     let elements = builder.il.children(aggregate_arg).to_vec();
     let mut settled = Vec::with_capacity(elements.len());
     for element in elements {
-        let record = match promise_receiver_state(builder, element, env)? {
+        let record = match promise_aggregate_input_state(builder, element, env)? {
             PromiseState::Fulfilled(payload) => builder.mk(
                 ValOp::Seq(stable_symbol_hash("promise.allSettled.fulfilled_record")),
                 vec![payload],
@@ -325,7 +323,25 @@ fn promise_all_settled_literal_state(
     Some(PromiseState::Fulfilled(payload))
 }
 
-fn promise_resolve_arg_is_non_thenable_safe(builder: &Builder<'_>, arg: NodeId) -> bool {
+fn promise_aggregate_input_state(
+    builder: &mut Builder<'_>,
+    element: NodeId,
+    env: &FxHashMap<u32, ValueId>,
+) -> Option<PromiseState> {
+    if let Some(state) = promise_receiver_state(builder, element, env) {
+        return Some(state);
+    }
+    let value = builder.eval(element, env);
+    promise_input_is_non_thenable_safe(builder, element, value)
+        .then_some(PromiseState::Fulfilled(value))
+}
+
+fn promise_input_is_non_thenable_safe(builder: &Builder<'_>, arg: NodeId, value: ValueId) -> bool {
+    promise_node_is_non_thenable_safe(builder, arg)
+        || promise_value_is_non_thenable_safe(builder, value)
+}
+
+fn promise_node_is_non_thenable_safe(builder: &Builder<'_>, arg: NodeId) -> bool {
     match builder.il.kind(arg) {
         NodeKind::Lit => true,
         NodeKind::Var if nullish_global_arg_is_safe(builder, arg) => true,

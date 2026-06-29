@@ -194,8 +194,12 @@ Guiding constraints for every pass:
   channel to rejection. The reduced value remains wrapped in a Promise boundary,
   so it does not merge with synchronous code that computes the same payload;
   custom thenables, unsafe `Promise.resolve(obj)` assimilation, selector-only
-  Promise methods, unsafe or parameterized `.finally` handlers, and aggregate
-  combinators stay opaque.
+  Promise methods, unsafe or parameterized `.finally` handlers, and unsupported
+  aggregate combinators stay opaque. Literal `Promise.all` and
+  `Promise.allSettled` aggregates can recover only when the aggregate call is
+  admitted and every element already has supported Promise settlement evidence
+  or non-thenable-safe raw-input proof; raw inputs become fulfilled aggregate
+  elements while the aggregate result remains behind its Promise boundary.
   Same-file direct calls to source-proven async functions can now provide the
   same receiver-domain proof: the call-target pass emits `Domain(PromiseLike)`
   on the call result only when direct callee evidence and async source-protocol

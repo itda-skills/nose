@@ -64,8 +64,14 @@ rejected channel, and a rejecting `.finally` handler overrides the original
 settlement with that rejected channel. Selector-only
 `.then(...)`/`.catch(...)`/`.finally(...)`, custom thenables, shadowed
 `Promise`, unsafe `Promise.resolve(obj)` arguments, mixed fulfilled/rejected
-branch channels, unsafe or parameterized `.finally` handlers, aggregate
-combinators, and missing or ambiguous receiver proof stay closed.
+branch channels, unsafe or parameterized `.finally` handlers, unsupported
+aggregate combinators, and missing or ambiguous receiver proof stay closed.
+Literal `Promise.all` and `Promise.allSettled` aggregates can recover only when
+the static-global aggregate call is admitted and every element already has
+supported Promise settlement evidence or non-thenable-safe raw-input proof. Raw
+inputs become fulfilled aggregate elements; dynamic iterables, possible
+thenables, `Promise.race`, `Promise.any`, executor timing, and sync aggregate
+equivalence stay closed.
 Node `timers/promises` ESM named imports and conservative `const` CommonJS
 destructuring requires are a narrow imported producer slice: admitted
 `LibraryApi` occurrence evidence for `node:timers/promises`/`timers/promises`
@@ -162,10 +168,11 @@ still being migrated toward it.
   missing unshadowed `Math` proof, non-integer value arguments, and unsupported
   arities remain hard negatives. The
   `nose.javascript.builtins.promise` descriptor owns JS/TS `Promise.resolve`,
-  `Promise.reject`, `.then`, `.catch`, and `.finally` Promise API contract and
-  occurrence producer ids, while shadowed `Promise`, missing Promise-like
-  receiver proof, unsafe thenable assimilation, unsafe `.finally` handlers, and
-  aggregate combinators remain hard negatives. The
+  `Promise.reject`, `.then`, `.catch`, `.finally`, `Promise.all`, and
+  `Promise.allSettled` Promise API contract and occurrence producer ids, while
+  shadowed `Promise`, missing Promise-like receiver proof, unsafe thenable
+  assimilation, unsafe `.finally` handlers, `Promise.race`/`Promise.any`, and
+  unsupported aggregate inputs remain hard negatives. The
   `nose.javascript.builtins.array` descriptor owns JS/TS `Array.from`,
   `Array.isArray`, exact-Array receiver `map`/`filter`/`flatMap`, and
   `some`/`every` API contract and occurrence producer ids, while shadowed

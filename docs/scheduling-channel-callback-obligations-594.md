@@ -211,9 +211,15 @@ It satisfies the all-settled aggregate obligation only for unshadowed
 recover as fulfilled or rejected Promise boundaries. The aggregate result is a
 fulfilled Promise carrying ordered settled-record payloads, so fulfilled and
 rejected element channels stay distinct without converging with synchronous
-record arrays. Dynamic iterable lifecycle, raw input/thenable assimilation,
-first-settled, first-fulfilled, executor timing, and cancellation/liveness
-obligations remain closed.
+record arrays. Dynamic iterable lifecycle, first-settled, first-fulfilled,
+executor timing, and cancellation/liveness obligations remain closed.
+The shared [Promise aggregate raw-input assimilation](../bench/recall_loss/promise-aggregate-raw-input-recovery-2026-06-29.v1.json)
+follow-up reuses the existing non-thenable-safe proof from `Promise.resolve`:
+raw literal/scalar elements can become fulfilled aggregate inputs for already
+admitted literal `Promise.all` and `Promise.allSettled` calls. This is still not
+thenable assimilation. Object/function raw inputs, untyped variables, dynamic
+iterables, `Promise.race`, `Promise.any`, executor timing, and sync aggregate
+equivalence remain closed.
 
 ## Minimal Vocabulary
 

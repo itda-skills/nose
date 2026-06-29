@@ -39,11 +39,12 @@ break.
 - Added the first #602 exact aggregate capability slices for `Promise.all` and
   `Promise.allSettled`: unshadowed global aggregate calls over literal arrays
   can recover only when every element already has matching Promise settlement
-  evidence. `Promise.all` opens the all-fulfilled ordered payload channel;
-  `Promise.allSettled` opens the fulfilled-result ordered settled-record
-  channel. Dynamic iterables, raw input assimilation, `Promise.race`,
+  evidence or non-thenable-safe raw input proof. `Promise.all` opens the
+  all-fulfilled ordered payload channel; `Promise.allSettled` opens the
+  fulfilled-result ordered settled-record channel. Dynamic iterables, raw
+  object/function inputs without non-thenable proof, `Promise.race`,
   `Promise.any`, thenable assimilation, executor timing, and sync array
-  equivalence remain closed. Both slices include checked recall-loss/pricing
+  equivalence remain closed. These slices include checked recall-loss/pricing
   artifacts.
 - Added staged Promise recovery infrastructure: protocol diagnostics and hard
   negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
@@ -55,7 +56,8 @@ break.
   imported Promise producers can recover settled `.then`/`.catch` payloads while
   preserving Promise boundaries. Unsafe thenables, imported producers without
   settled-value contracts, mixed fulfilled/rejected branches, unsafe `.finally`
-  handlers, constructors, aggregates, and broad scheduling remain fail-closed.
+  handlers, constructors, unsliced aggregate surfaces, and broad scheduling
+  remain fail-closed.
   Added dependency-backed Node `timers/promises` imported factory evidence for
   `setTimeout`/`setImmediate` as PromiseLike receiver proof, including
   conservative `const` CommonJS destructuring requires with unshadowed
@@ -139,6 +141,12 @@ break.
   `canon_preservation_violations = 0`; the 120-repo slice artifact records
   `17` broad `Promise.allSettled` occurrences, `8` literal-array boundary
   occurrences, and `0` direct safe-seed occurrences in the pinned corpus.
+- Confirmed the #602 Promise aggregate raw-input assimilation slice with the
+  local `crates` recall-loss gate at `false_merges = 0` and
+  `canon_preservation_violations = 0`; the 120-repo slice artifact records
+  `8` `Promise.all` literal arrays and `1` `Promise.allSettled` literal array
+  with a direct raw non-thenable element, with `3` fully lexical direct-safe
+  candidates.
 
 ## [0.16.0] - 2026-06-26
 
