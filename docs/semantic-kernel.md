@@ -244,9 +244,10 @@ then validate the matching metadata-only external authoring surface through
 external rows still do not influence exact analysis. The cycle record and R4
 transition assessment are in [semantic-kernel-expansion-511](semantic-kernel-expansion-511.md).
 The same materializer now also covers dependency-backed JS-like ESM named
-imports from Node `timers/promises` `setTimeout`/`setImmediate` as
-`PromiseLike` receiver proof only; settled payload recovery stays closed until
-scheduling/rejection contracts exist.
+imports and conservative `const` CommonJS destructuring requires from Node
+`timers/promises` `setTimeout`/`setImmediate` as `PromiseLike` receiver proof
+only; settled payload recovery stays closed until scheduling/rejection
+contracts exist.
 The R4 authorability pass then uses a Guava fixed-domain dry-run pack to show
 which capabilities are authorable as external metadata, which remain
 intentionally builtin-only, and which blockers move to R5. That record is in [semantic-kernel-external-authorability-511](semantic-kernel-external-authorability-511.md).

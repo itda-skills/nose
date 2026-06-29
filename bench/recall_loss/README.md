@@ -332,6 +332,15 @@ python3 scripts/cross-language-boundary-census.py \
   No settled payload recovery is opened, and `15` CommonJS destructuring require
   call sites remain closed until lowering emits static imported-binding proof
   for that shape.
+- [promise-node-timers-commonjs-domain-recovery-2026-06-29.v1.json](promise-node-timers-commonjs-domain-recovery-2026-06-29.v1.json)
+  records the CommonJS follow-up for the same domain-only Node timers
+  capability. Conservative `const` destructuring requires with unshadowed
+  `require` now emit dependency-backed `ImportedBinding` proof for
+  `setTimeout`/`setImmediate`, opening the previously priced `15` `jest` call
+  sites and raising the Node timers PromiseLike domain slice from `82` to `97`
+  priced call sites. Settlement, payload recovery, mutable destructuring,
+  dynamic patterns, namespace/default imports, and broad scheduling remain
+  closed.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

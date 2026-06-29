@@ -1,11 +1,13 @@
 use super::expressions::lower_expr;
+use super::globals::{enclosing_function_prefix_has_binding_ident, file_prefix_has_binding_ident};
 use super::syntax::static_string_key;
 use super::{lower_block, lower_stmt};
 use crate::lower::Lowering;
 use nose_il::{
-    LitClass, NodeId, NodeKind, Payload, RegionKind, SourceBindingKind, SourceFactKind,
-    SourceGranularity, SourceProtocolKind, Span, UnitBodyKind, UnitDomain, UnitDomains,
-    UnitEvidenceFlag, UnitKind, UnitOrigin, UnitSubkind,
+    stable_symbol_hash, EvidenceAnchor, EvidenceKind, LitClass, NodeId, NodeKind, Payload,
+    RegionKind, SourceBindingKind, SourceFactKind, SourceGranularity, SourceProtocolKind, Span,
+    SymbolEvidenceKind, UnitBodyKind, UnitDomain, UnitDomains, UnitEvidenceFlag, UnitKind,
+    UnitOrigin, UnitSubkind,
 };
 use tree_sitter::Node as TsNode;
 
@@ -204,7 +206,8 @@ pub(super) fn lower_var_decl(lo: &mut Lowering, node: TsNode) -> NodeId {
         }
         let dspan = lo.span(d);
         let name_node = d.child_by_field_name("name");
-        let rhs = match d.child_by_field_name("value") {
+        let value_node = d.child_by_field_name("value");
+        let rhs = match value_node {
             // `const f = (…) => {…}` / `const f = function(){…}` is a *named function*,
             // not an inline lambda — lower it to a `Func` unit so it is extracted and
             // matched like any function. (Modern JS/TS defines most functions this way;
@@ -218,7 +221,8 @@ pub(super) fn lower_var_decl(lo: &mut Lowering, node: TsNode) -> NodeId {
             Some(v) => lower_expr(lo, v),
             None => lo.add(NodeKind::Lit, Payload::Lit(LitClass::Null), dspan, &[]),
         };
-        if let Some(name) = name_node {
+        if let (Some(name), Some(value)) = (name_node, value_node) {
+            record_commonjs_node_timers_promise_import_bindings(lo, node, name, value, dspan);
             if let Some(mut projected) = lower_static_projection_pattern(lo, name, rhs, dspan) {
                 assigns.append(&mut projected);
                 continue;
@@ -243,18 +247,74 @@ fn lower_static_projection_pattern(
     base: NodeId,
     span: Span,
 ) -> Option<Vec<NodeId>> {
-    if pattern.kind() != "object_pattern" {
-        return None;
-    }
+    let projections = object_pattern_projections(lo, pattern)?;
     let mut assigns = Vec::new();
-    for child in Lowering::named_children(pattern) {
-        let (field, local) = object_pattern_projection(lo, child)?;
+    for (child, field, local) in projections {
         let lhs = lo.var(&local, lo.span(child));
         let key = lo.sym(&field);
         let rhs = lo.add(NodeKind::Field, Payload::Name(key), lo.span(child), &[base]);
         assigns.push(lo.add(NodeKind::Assign, Payload::None, span, &[lhs, rhs]));
     }
-    (!assigns.is_empty()).then_some(assigns)
+    Some(assigns)
+}
+
+fn record_commonjs_node_timers_promise_import_bindings(
+    lo: &mut Lowering,
+    declaration: TsNode,
+    pattern: TsNode,
+    value: TsNode,
+    binding_span: Span,
+) {
+    if !is_const_lexical_declaration(declaration) {
+        return;
+    }
+    let Some(projections) = object_pattern_projections(lo, pattern) else {
+        return;
+    };
+    let Some((module, require_callee)) = static_require_module(lo, value) else {
+        return;
+    };
+    if !is_node_timers_promise_module(&module) || js_require_shadowed_at(lo, require_callee) {
+        return;
+    }
+
+    let require_dependency = lo.record_evidence(
+        EvidenceAnchor::node(lo.span(require_callee), NodeKind::Var),
+        EvidenceKind::Symbol(SymbolEvidenceKind::UnshadowedGlobal {
+            name_hash: stable_symbol_hash("require"),
+        }),
+        "symbol_commonjs_require_unshadowed",
+    );
+    for (_, exported, local) in projections {
+        if !is_node_timers_promise_export(&exported) {
+            continue;
+        }
+        let _ = crate::lower::import_binding_evidence_only_with_dependencies(
+            lo,
+            binding_span,
+            &local,
+            &module,
+            &exported,
+            vec![require_dependency],
+        );
+    }
+}
+
+fn object_pattern_projections<'a>(
+    lo: &Lowering<'a>,
+    pattern: TsNode<'a>,
+) -> Option<Vec<(TsNode<'a>, String, String)>> {
+    if pattern.kind() != "object_pattern" {
+        return None;
+    }
+    let projections: Option<Vec<_>> = Lowering::named_children(pattern)
+        .into_iter()
+        .map(|child| {
+            object_pattern_projection(lo, child).map(|(field, local)| (child, field, local))
+        })
+        .collect();
+    let projections = projections?;
+    (!projections.is_empty()).then_some(projections)
 }
 
 fn object_pattern_projection(lo: &Lowering, node: TsNode) -> Option<(String, String)> {
@@ -293,6 +353,44 @@ fn static_property_key(lo: &Lowering, node: TsNode) -> Option<String> {
         "string" => static_string_key(lo, node),
         _ => None,
     }
+}
+
+fn is_const_lexical_declaration(node: TsNode) -> bool {
+    node.kind() == "lexical_declaration"
+        && (0..node.child_count()).any(|index| {
+            node.child(index)
+                .is_some_and(|child| child.kind() == "const")
+        })
+}
+
+fn static_require_module<'a>(lo: &Lowering<'a>, value: TsNode<'a>) -> Option<(String, TsNode<'a>)> {
+    if value.kind() != "call_expression" {
+        return None;
+    }
+    let callee = value.child_by_field_name("function")?;
+    if callee.kind() != "identifier" || lo.text(callee) != "require" {
+        return None;
+    }
+    let args = value.child_by_field_name("arguments")?;
+    let args = Lowering::named_children(args);
+    let [arg] = args.as_slice() else {
+        return None;
+    };
+    let module = static_string_key(lo, *arg)?;
+    Some((module, callee))
+}
+
+fn js_require_shadowed_at(lo: &Lowering, require_callee: TsNode) -> bool {
+    file_prefix_has_binding_ident(lo, require_callee, "require")
+        || enclosing_function_prefix_has_binding_ident(lo, require_callee, "require")
+}
+
+fn is_node_timers_promise_module(module: &str) -> bool {
+    matches!(module, "node:timers/promises" | "timers/promises")
+}
+
+fn is_node_timers_promise_export(exported: &str) -> bool {
+    matches!(exported, "setTimeout" | "setImmediate")
 }
 
 fn is_func_value(kind: &str) -> bool {

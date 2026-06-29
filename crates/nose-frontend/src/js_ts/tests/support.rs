@@ -171,6 +171,25 @@ pub(super) fn evidence_by_id(il: &Il, id: nose_il::EvidenceId) -> Option<&nose_i
         .or_else(|| il.evidence.iter().find(|record| record.id == id))
 }
 
+pub(super) fn imported_binding_symbol_records<'a>(
+    il: &'a Il,
+    module: &str,
+    exported: &str,
+) -> Vec<&'a nose_il::EvidenceRecord> {
+    let expected = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
+        module_hash: stable_symbol_hash(module),
+        exported_hash: stable_symbol_hash(exported),
+    });
+    il.evidence
+        .iter()
+        .filter(|record| {
+            matches!(record.anchor, EvidenceAnchor::Binding { .. })
+                && record.kind == expected
+                && record.status == EvidenceStatus::Asserted
+        })
+        .collect()
+}
+
 pub(super) fn record_has_source_unshadowed_dependency(
     il: &Il,
     record: &nose_il::EvidenceRecord,

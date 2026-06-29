@@ -78,6 +78,24 @@ pub(crate) fn import_binding_evidence_only(
     )
 }
 
+pub(crate) fn import_binding_evidence_only_with_dependencies(
+    lo: &mut Lowering,
+    span: Span,
+    local: &str,
+    module: &str,
+    exported: &str,
+    dependencies: Vec<EvidenceId>,
+) -> Option<EvidenceId> {
+    record_import_fact_evidence_with_dependencies(
+        lo,
+        span,
+        local,
+        ImportFactKind::Binding,
+        &[module, exported],
+        dependencies,
+    )
+}
+
 pub(crate) fn re_export_binding_evidence_only(
     lo: &mut Lowering,
     span: Span,
@@ -137,6 +155,17 @@ fn record_import_fact_evidence(
     kind: ImportFactKind,
     coords: &[&str],
 ) -> Option<EvidenceId> {
+    record_import_fact_evidence_with_dependencies(lo, span, local, kind, coords, Vec::new())
+}
+
+fn record_import_fact_evidence_with_dependencies(
+    lo: &mut Lowering,
+    span: Span,
+    local: &str,
+    kind: ImportFactKind,
+    coords: &[&str],
+    dependencies: Vec<EvidenceId>,
+) -> Option<EvidenceId> {
     let evidence_kind = match kind {
         ImportFactKind::Binding if coords.len() == 2 => {
             EvidenceKind::Import(ImportEvidenceKind::Binding {
@@ -165,16 +194,23 @@ fn record_import_fact_evidence(
         }
         _ => return None,
     };
-    lo.record_evidence(EvidenceAnchor::sequence(span), evidence_kind, "import_fact");
-    lo.record_evidence(
+    lo.record_evidence_with_dependencies(
+        EvidenceAnchor::sequence(span),
+        evidence_kind,
+        "import_fact",
+        dependencies.clone(),
+    );
+    lo.record_evidence_with_dependencies(
         EvidenceAnchor::binding(span, stable_symbol_hash(local)),
         evidence_kind,
         "import_binding_subject",
+        dependencies.clone(),
     );
-    let symbol_evidence = lo.record_evidence(
+    let symbol_evidence = lo.record_evidence_with_dependencies(
         EvidenceAnchor::binding(span, stable_symbol_hash(local)),
         symbol_kind,
         "symbol_import_identity",
+        dependencies,
     );
     Some(symbol_evidence)
 }

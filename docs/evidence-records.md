@@ -778,7 +778,8 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `Array`; JS-like `Promise.resolve`, `Promise.reject`, admitted Promise
   `.then`, and admitted Promise `.catch` results with
   `nose.javascript.builtins.promise` provenance as `PromiseLike`; ESM named
-  imports from Node `timers/promises` `setTimeout`/`setImmediate` with
+  imports and conservative `const` CommonJS destructuring requires from Node
+  `timers/promises` `setTimeout`/`setImmediate` with
   `nose.javascript.node.timers_promises` provenance as `PromiseLike`; direct calls
   to source-proven async functions as `PromiseLike`; and direct calls to
   non-async functions as `PromiseLike` only when every returned expression on
@@ -929,9 +930,11 @@ callers:
   Imported function/member producers can supply that value only through admitted
   `PromiseSettledValue` evidence plus imported call-target identity; ordinary
   imported calls without that contract remain opaque. Node `timers/promises`
-  imported factories currently supply only `Domain(PromiseLike)`, not settled
-  payload evidence, so timer delay/order and AbortSignal rejection remain
-  fail-closed until scheduling/rejection contracts exist.
+  imported factories, including conservative `const` CommonJS destructuring
+  requires backed by unshadowed `require` proof, currently supply only
+  `Domain(PromiseLike)`, not settled payload evidence, so timer delay/order and
+  AbortSignal rejection remain fail-closed until scheduling/rejection contracts
+  exist.
   Value-level CSE paths that only retain source
   spans now also go through span-query resolvers for free-name/imported
   collection factories, Java/Ruby/Rust collection factories, Java collection

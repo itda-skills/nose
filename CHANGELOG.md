@@ -45,8 +45,9 @@ break.
   settled-value contracts, mixed fulfilled/rejected branches, unsafe `.finally`
   handlers, constructors, aggregates, and broad scheduling remain fail-closed.
   Added dependency-backed Node `timers/promises` imported factory evidence for
-  `setTimeout`/`setImmediate` as PromiseLike receiver proof only; settled
-  payload recovery remains closed.
+  `setTimeout`/`setImmediate` as PromiseLike receiver proof only, including
+  conservative `const` CommonJS destructuring requires with unshadowed
+  `require` proof; settled payload recovery remains closed.
 
 ### Changed
 - Split exact-admission recall-loss attribution into capability-oriented buckets

@@ -267,8 +267,10 @@ pub(super) fn binding_symbol_evidence_id(
     }
     let local_hash = node_name_hash(il, interner, node)?;
     il.evidence_binding_anchored(local_hash).find_map(|record| {
-        (record.kind == EvidenceKind::Symbol(expected) && record.status == EvidenceStatus::Asserted)
-            .then_some(record.id)
+        (record.kind == EvidenceKind::Symbol(expected)
+            && record.status == EvidenceStatus::Asserted
+            && il.evidence_dependencies_asserted(record))
+        .then_some(record.id)
     })
 }
 
