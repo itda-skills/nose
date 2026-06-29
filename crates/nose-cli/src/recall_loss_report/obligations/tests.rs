@@ -1,0 +1,151 @@
+use super::*;
+
+#[test]
+fn promise_then_receiver_obligation_is_primary_for_selector_only_then() {
+    let labels = [
+        "lowered-runtime-boundary-contract",
+        "promise-then-promise-like-receiver-proof",
+        "promise-then-fulfillment-continuation-contract",
+        "promise-then-rejection-continuation-contract",
+        "promise-then-callback-demand-effect-contract",
+    ];
+
+    assert_eq!(
+        runtime_boundary_obligation(&labels),
+        (
+            "ambiguous-selector-boundary",
+            "promise-then-promise-like-receiver-proof-missing",
+        )
+    );
+}
+
+#[test]
+fn promise_receiver_producer_obligations_are_primary_when_present() {
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "promise-executor-callback-effect-contract",
+            "promise-constructor-receiver-producer-proof",
+            "promise-then-promise-like-receiver-proof",
+        ]),
+        (
+            "success-error-result-channel",
+            "promise-constructor-receiver-producer-proof-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "promise-async-function-scheduling-contract",
+            "promise-async-function-return-producer-proof",
+            "promise-then-promise-like-receiver-proof",
+        ]),
+        (
+            "scheduling-boundary",
+            "promise-async-function-return-producer-proof-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "promise-call-return-receiver-producer-proof",
+            "promise-call-return-member-callee-proof",
+            "promise-then-promise-like-receiver-proof",
+        ]),
+        (
+            "ambiguous-selector-boundary",
+            "promise-call-return-member-callee-proof-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "promise-call-return-receiver-producer-proof",
+            "promise-call-return-imported-member-settled-value-contract",
+            "promise-then-promise-like-receiver-proof",
+        ]),
+        (
+            "success-error-result-channel",
+            "promise-call-return-imported-member-settled-value-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "promise-call-return-receiver-producer-proof",
+            "promise-then-promise-like-receiver-proof",
+        ]),
+        (
+            "ambiguous-selector-boundary",
+            "promise-call-return-receiver-producer-proof-missing",
+        )
+    );
+}
+
+#[test]
+fn promise_then_continuation_and_callback_labels_have_standalone_obligations() {
+    assert_eq!(
+        runtime_boundary_obligation(&["promise-then-fulfillment-continuation-contract"]),
+        (
+            "success-error-result-channel",
+            "promise-then-fulfillment-continuation-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["promise-then-rejection-continuation-contract"]),
+        (
+            "rejection-channel",
+            "promise-then-rejection-continuation-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["promise-then-callback-demand-effect-contract"]),
+        (
+            "callback-demand-effect",
+            "promise-then-callback-demand-effect-contract-missing",
+        )
+    );
+}
+
+#[test]
+fn aggregate_executor_scheduler_and_lifecycle_labels_have_specific_obligations() {
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "promise-executor-timing-contract",
+            "promise-executor-callback-effect-contract",
+        ]),
+        (
+            "executor-callback",
+            "promise-executor-timing-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "promise-aggregate-first-settled-contract",
+            "promise-aggregate-result-channel-contract",
+        ]),
+        (
+            "cancellation-liveness-boundary",
+            "promise-aggregate-first-settled-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "promise-aggregate-all-settled-contract",
+            "promise-aggregate-result-channel-contract",
+        ]),
+        (
+            "success-error-result-channel",
+            "promise-aggregate-all-settled-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["scheduler-yield-microtask-order-contract"]),
+        (
+            "scheduling-boundary",
+            "scheduler-yield-microtask-order-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["interval-async-iteration-lifecycle-contract"]),
+        (
+            "lifecycle-materialization-boundary",
+            "interval-async-iteration-lifecycle-contract-missing",
+        )
+    );
+}

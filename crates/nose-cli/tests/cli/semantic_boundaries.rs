@@ -170,6 +170,14 @@ fn query_mode_semantic_rejects_unproven_js_promise_protocol_convergence() {
         "promise_race.js",
         "function aggregate(xs) {\n  return Promise.race(xs);\n}\n",
     );
+    project.write(
+        "promise_all_settled.js",
+        "function aggregate(xs) {\n  return Promise.allSettled(xs);\n}\n",
+    );
+    project.write(
+        "promise_any.js",
+        "function aggregate(xs) {\n  return Promise.any(xs);\n}\n",
+    );
 
     let json = project.query_semantic_min_json();
     for pair in [
@@ -178,6 +186,8 @@ fn query_mode_semantic_rejects_unproven_js_promise_protocol_convergence() {
         ["sync_value.js", "promise_then.js"],
         ["promise_then.js", "custom_then.js"],
         ["promise_all.js", "promise_race.js"],
+        ["promise_all.js", "promise_all_settled.js"],
+        ["promise_race.js", "promise_any.js"],
     ] {
         assert!(
             !family_contains_all(&json, &pair),

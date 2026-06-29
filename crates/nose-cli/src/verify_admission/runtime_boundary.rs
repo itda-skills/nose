@@ -37,20 +37,30 @@ fn push_runtime_node_missing_evidence(
                     push_unique(labels, "future-async-block-scheduling-contract");
                 }
                 Some(nose_il::SourceProtocolKind::Yield) => {
+                    push_unique(labels, "generator-yield-lifecycle-contract");
                     push_unique(labels, "generator-yield-protocol-contract");
                 }
                 Some(
                     nose_il::SourceProtocolKind::ChannelReceive
-                    | nose_il::SourceProtocolKind::ChannelSelect
-                    | nose_il::SourceProtocolKind::ChannelSelectCase
-                    | nose_il::SourceProtocolKind::ChannelSelectDefault
                     | nose_il::SourceProtocolKind::ChannelSend,
                 ) => {
+                    push_unique(labels, "channel-send-receive-protocol-contract");
                     push_unique(labels, "channel-protocol-contract");
                 }
                 Some(
-                    nose_il::SourceProtocolKind::Defer | nose_il::SourceProtocolKind::GoRoutine,
+                    nose_il::SourceProtocolKind::ChannelSelect
+                    | nose_il::SourceProtocolKind::ChannelSelectCase
+                    | nose_il::SourceProtocolKind::ChannelSelectDefault,
                 ) => {
+                    push_unique(labels, "channel-select-protocol-contract");
+                    push_unique(labels, "channel-protocol-contract");
+                }
+                Some(nose_il::SourceProtocolKind::Defer) => {
+                    push_unique(labels, "defer-lifecycle-ordering-contract");
+                    push_unique(labels, "concurrency-scheduling-contract");
+                }
+                Some(nose_il::SourceProtocolKind::GoRoutine) => {
+                    push_unique(labels, "goroutine-scheduling-contract");
                     push_unique(labels, "concurrency-scheduling-contract");
                 }
                 Some(nose_il::SourceProtocolKind::TryPropagation) => {
@@ -90,6 +100,9 @@ fn push_promise_protocol_call_missing_evidence(
         .as_deref()
         .is_some_and(|path| promise_construct_call(il, call, path))
     {
+        push_unique(labels, "promise-executor-timing-contract");
+        push_unique(labels, "promise-executor-resolve-reject-callback-contract");
+        push_unique(labels, "promise-executor-throw-to-rejection-contract");
         push_unique(labels, "promise-executor-callback-effect-contract");
         return true;
     }
@@ -107,7 +120,19 @@ fn push_promise_protocol_call_missing_evidence(
             true
         }
         Some("Promise.all" | "Promise.allSettled" | "Promise.any" | "Promise.race") => {
-            push_unique(labels, "promise-aggregate-result-channel-contract");
+            push_promise_aggregate_missing_evidence(path.as_deref().unwrap(), labels);
+            true
+        }
+        Some("scheduler.wait") => {
+            push_unique(labels, "scheduler-wait-timing-contract");
+            true
+        }
+        Some("scheduler.yield") => {
+            push_unique(labels, "scheduler-yield-microtask-order-contract");
+            true
+        }
+        Some("setInterval") | Some("timers.setInterval") | Some("scheduler.setInterval") => {
+            push_unique(labels, "interval-async-iteration-lifecycle-contract");
             true
         }
         _ if method == Some("then") => {
@@ -145,6 +170,29 @@ fn push_promise_protocol_call_missing_evidence(
         }
         _ => false,
     }
+}
+
+fn push_promise_aggregate_missing_evidence(callee_path: &str, labels: &mut Vec<&'static str>) {
+    match callee_path {
+        "Promise.all" => {
+            push_unique(labels, "promise-aggregate-all-fulfilled-contract");
+            push_unique(labels, "promise-aggregate-ordered-values-contract");
+        }
+        "Promise.race" => {
+            push_unique(labels, "promise-aggregate-first-settled-contract");
+            push_unique(labels, "promise-aggregate-cancellation-liveness-contract");
+        }
+        "Promise.allSettled" => {
+            push_unique(labels, "promise-aggregate-all-settled-contract");
+            push_unique(labels, "promise-aggregate-settled-record-shape-contract");
+        }
+        "Promise.any" => {
+            push_unique(labels, "promise-aggregate-first-fulfilled-contract");
+            push_unique(labels, "promise-aggregate-error-channel-contract");
+        }
+        _ => {}
+    }
+    push_unique(labels, "promise-aggregate-result-channel-contract");
 }
 
 fn promise_receiver_has_promise_like_domain(
@@ -352,166 +400,4 @@ fn callee_field_method<'a>(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use nose_il::{FileId, Lang};
-
-    fn lowered_js(src: &str) -> (nose_il::Il, Interner) {
-        let interner = Interner::new();
-        let il = nose_frontend::lower_source(
-            FileId(0),
-            "promise.js",
-            src.as_bytes(),
-            Lang::JavaScript,
-            &interner,
-        )
-        .expect("lower JavaScript fixture");
-        (il, interner)
-    }
-
-    fn missing_evidence_for_call(src: &str, callee_suffix: &str) -> Vec<&'static str> {
-        let (il, interner) = lowered_js(src);
-        let call = (0..il.nodes.len())
-            .map(|idx| NodeId(idx as u32))
-            .find(|&node| {
-                il.kind(node) == nose_il::NodeKind::Call
-                    && call_matches_callee_surface(&il, &interner, node, callee_suffix)
-            })
-            .unwrap_or_else(|| panic!("expected call ending in {callee_suffix}"));
-        runtime_boundary_missing_evidence(&il, &interner, call)
-            .unwrap_or_else(|| panic!("expected runtime boundary evidence for {callee_suffix}"))
-    }
-
-    fn call_matches_callee_surface(
-        il: &nose_il::Il,
-        interner: &Interner,
-        call: NodeId,
-        callee_suffix: &str,
-    ) -> bool {
-        let Some(&callee) = il.children(call).first() else {
-            return false;
-        };
-        if callee_path(il, interner, callee).is_some_and(|path| path.ends_with(callee_suffix)) {
-            return true;
-        }
-        callee_suffix
-            .strip_prefix('.')
-            .is_some_and(|method| callee_field_method(il, interner, callee) == Some(method))
-    }
-
-    #[test]
-    fn promise_then_missing_evidence_splits_receiver_fulfillment_rejection_and_callback() {
-        let labels = missing_evidence_for_call(
-            "function thenIt(p, f, r) { return p.then(f, r); }\n",
-            ".then",
-        );
-
-        assert!(labels.contains(&"promise-then-promise-like-receiver-proof"));
-        assert!(labels.contains(&"promise-then-fulfillment-continuation-contract"));
-        assert!(labels.contains(&"promise-then-rejection-continuation-contract"));
-        assert!(labels.contains(&"promise-then-callback-demand-effect-contract"));
-        assert!(!labels.contains(&"promise-like-receiver-proof"));
-    }
-
-    #[test]
-    fn promise_then_on_expression_receiver_still_reports_receiver_obligation() {
-        let labels = missing_evidence_for_call(
-            "function thenIt(db, id, f) { return db.get(id).then(f); }\n",
-            ".then",
-        );
-
-        assert!(labels.contains(&"promise-call-return-receiver-producer-proof"));
-        assert!(labels.contains(&"promise-call-return-member-callee-proof"));
-        assert!(labels.contains(&"promise-then-promise-like-receiver-proof"));
-        assert!(labels.contains(&"promise-then-fulfillment-continuation-contract"));
-        assert!(labels.contains(&"promise-then-rejection-continuation-contract"));
-        assert!(labels.contains(&"promise-then-callback-demand-effect-contract"));
-    }
-
-    #[test]
-    fn promise_then_on_local_call_receiver_reports_local_callee_obligation() {
-        let labels = missing_evidence_for_call(
-            "function thenIt(makePromise, f) { return makePromise().then(f); }\n",
-            ".then",
-        );
-
-        assert!(labels.contains(&"promise-call-return-receiver-producer-proof"));
-        assert!(labels.contains(&"promise-call-return-local-or-parameter-callee-proof"));
-        assert!(labels.contains(&"promise-then-promise-like-receiver-proof"));
-    }
-
-    #[test]
-    fn imported_promise_call_return_targets_require_settled_value_contracts() {
-        assert_eq!(
-            promise_call_return_receiver_callee_evidence(
-                "imported-function-target-present-call-contract-proof"
-            ),
-            "promise-call-return-imported-function-settled-value-contract"
-        );
-        assert_eq!(
-            promise_call_return_receiver_callee_evidence(
-                "imported-member-target-present-call-contract-proof"
-            ),
-            "promise-call-return-imported-member-settled-value-contract"
-        );
-    }
-
-    #[test]
-    fn promise_then_constructor_receiver_reports_producer_obligation() {
-        let labels = missing_evidence_for_call(
-            "function thenIt(executor, f) { return new Promise(executor).then(f); }\n",
-            ".then",
-        );
-
-        assert!(labels.contains(&"promise-constructor-receiver-producer-proof"));
-        assert!(!labels.contains(&"promise-call-return-receiver-producer-proof"));
-        assert!(labels.contains(&"promise-then-promise-like-receiver-proof"));
-    }
-
-    #[test]
-    fn promise_then_async_function_receiver_reports_producer_obligation() {
-        let labels = missing_evidence_for_call(
-            "async function load() { return 1; }\nfunction thenIt(f) { return load().then(f); }\n",
-            ".then",
-        );
-
-        assert!(labels.contains(&"promise-async-function-return-producer-proof"));
-        assert!(!labels.contains(&"promise-call-return-receiver-producer-proof"));
-        assert!(labels.contains(&"promise-then-promise-like-receiver-proof"));
-    }
-
-    #[test]
-    fn promise_reject_missing_evidence_is_rejection_value_channel_specific() {
-        let labels = missing_evidence_for_call(
-            "function rejectIt(e) { return Promise.reject(e); }\n",
-            "Promise.reject",
-        );
-
-        assert!(labels.contains(&"promise-reject-rejected-value-channel-contract"));
-        assert!(!labels.contains(&"promise-rejection-channel-contract"));
-    }
-
-    #[test]
-    fn promise_catch_missing_evidence_splits_continuation_from_callback_effect() {
-        let labels =
-            missing_evidence_for_call("function catchIt(p, h) { return p.catch(h); }\n", ".catch");
-
-        assert!(labels.contains(&"promise-catch-rejection-continuation-contract"));
-        assert!(labels.contains(&"promise-catch-callback-demand-effect-contract"));
-        assert!(labels.contains(&"promise-like-receiver-proof"));
-        assert!(!labels.contains(&"promise-rejection-continuation-contract"));
-    }
-
-    #[test]
-    fn promise_finally_missing_evidence_splits_settlement_from_callback_effect() {
-        let labels = missing_evidence_for_call(
-            "function finallyIt(p, h) { return p.finally(h); }\n",
-            ".finally",
-        );
-
-        assert!(labels.contains(&"promise-finally-settlement-continuation-contract"));
-        assert!(labels.contains(&"promise-finally-callback-demand-effect-contract"));
-        assert!(labels.contains(&"promise-like-receiver-proof"));
-        assert!(!labels.contains(&"promise-rejection-continuation-contract"));
-    }
-}
+mod tests;

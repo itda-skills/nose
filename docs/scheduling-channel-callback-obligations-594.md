@@ -189,6 +189,14 @@ timing, cancellation/liveness, scheduler APIs, interval streams, and
 cross-language async/channel/lifecycle models should move to a separate
 capability epic, issue [#602](https://github.com/corca-ai/nose/issues/602),
 instead of continuing as API-by-API Promise expansion.
+The first #602 slice is the reporting-only [scheduling/lifecycle boundary audit](../bench/recall_loss/scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json).
+It adds a 120-repo pricing script for scheduling, aggregate, cancellation,
+channel, executor, lifecycle, and exception surfaces without opening exact
+admission. The scan prices `142,844` source-prevalence occurrences and ranks
+the first next-work targets as Promise aggregates, executor timing,
+AbortSignal cancellation, interval lifecycle, Go goroutines, Java
+`CompletableFuture`, and Swift `await`. The local `crates` gate remains
+`false_merges == 0` and `canon_preservation_violations == 0`.
 
 ## Minimal Vocabulary
 
@@ -265,6 +273,11 @@ the relevant families:
 The current inventory is checked in as [issue-598-hard-negative-inventory-2026-06-28.v1.json](../bench/recall_loss/issue-598-hard-negative-inventory-2026-06-28.v1.json).
 It maps existing tests and checked-in audit reports to these families before any
 new exact admission is opened.
+The #602 reporting slice extends that map in the [scheduling/lifecycle boundary audit](../bench/recall_loss/scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json):
+thenable/custom Promise receivers and Promise aggregate distinctions stay pinned
+by existing semantic-boundary tests, while executor timing, scheduler ordering,
+and interval liveness are reporting-only until behavior-changing hard negatives
+exist.
 
 ## Non-API Statement
 

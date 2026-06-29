@@ -2221,6 +2221,9 @@ The follow-up [promise-node-timers-safe-payload-recovery-2026-06-29.v1.json](../
 The [promise-scheduling-closeout-2026-06-29.v1.json](../bench/recall_loss/promise-scheduling-closeout-2026-06-29.v1.json) artifact closes this recovery cycle at a capability boundary. The landed work composes existing kernel evidence for Promise receiver domains, local producer proof, continuation contracts, imported `PromiseSettledValue`, and Node timers imported factories. It deliberately does not add more selector-specific Promise rows for aggregate combinators, executor timing, cancellation/liveness, scheduler APIs, interval streams, or cross-language async/channel/lifecycle semantics. Those surfaces need a separate capability epic with corpus pricing, hard negatives, exact-gate and performance evidence, and docs before any admission opens.
 That epic is tracked as [#602](https://github.com/corca-ai/nose/issues/602).
 
+2026-06-29 #602 scheduling/lifecycle reporting note:
+The [scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json](../bench/recall_loss/scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json) artifact starts #602 as reporting infrastructure, not exact admission. Runtime-boundary diagnostics now name Promise executor timing, resolve/reject callbacks, throw-to-rejection, Promise aggregate all-fulfilled/first-settled/all-settled/first-fulfilled shapes, scheduler wait/yield timing, interval lifecycle, channel send/select, goroutine scheduling, and defer lifecycle separately where those surfaces reach the strict-admission report. The 120-repo pricing scan keeps `semantic_admission_delta = 0` and ranks the next safe reporting targets from corpus evidence.
+
 ## See also
 
 - Back to [semantic-kernel](semantic-kernel.md).

@@ -107,6 +107,18 @@ python3 scripts/cross-language-boundary-census.py \
   --output target/cross-language-boundary-census-594.v1.json
 ```
 
+Build the #602 scheduling/lifecycle boundary audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.issue-602.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.issue-602.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit-602.v1.json
+```
+
 ## Files
 
 - [crates.baseline.v1.json](crates.baseline.v1.json) records the current
@@ -358,6 +370,11 @@ python3 scripts/cross-language-boundary-census.py \
   streams, and cross-language async/channel/lifecycle models move to issue
   [#602](https://github.com/corca-ai/nose/issues/602) instead of more
   API-by-API expansion.
+- [scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json](scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json)
+  records the first #602 reporting-only pricing slice. It scans the 120-repo
+  corpus for scheduling, aggregate, cancellation, channel, executor, lifecycle,
+  and exception surfaces, attaches the current local `crates` recall-loss gate,
+  and ranks the next safe reporting targets without opening exact admission.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

@@ -350,8 +350,12 @@ fn recall_loss_report_splits_promise_protocol_boundaries() {
         "function makePromise(x) { return new Promise(x); }\n\
 function resolveIt(x) { return Promise.resolve(x); }\n\
 function allIt(xs) { return Promise.all(xs); }\n\
+function raceIt(xs) { return Promise.race(xs); }\n\
+function allSettledIt(xs) { return Promise.allSettled(xs); }\n\
+function anyIt(xs) { return Promise.any(xs); }\n\
 function rejectIt(e) { return Promise.reject(e); }\n\
-function callPromise(x) { return Promise(x); }\n",
+function callPromise(x) { return Promise(x); }\n\
+function intervalIt(f) { return setInterval(f, 10); }\n",
     );
     let report_path = project.path().join("recall-loss.json");
     let out = run_raw(&[
@@ -367,13 +371,10 @@ function callPromise(x) { return Promise(x); }\n",
     let report_text = fs::read_to_string(&report_path).expect("recall-loss report");
     let report: serde_json::Value =
         serde_json::from_str(&report_text).expect("recall-loss report JSON");
-    let obligations = report["by_obligation"]
-        .as_array()
-        .expect("by_obligation should be an array");
     for (family, subreason) in [
         (
             "executor-callback",
-            "promise-executor-callback-effect-contract-missing",
+            "promise-executor-timing-contract-missing",
         ),
         (
             "success-error-result-channel",
@@ -381,7 +382,19 @@ function callPromise(x) { return Promise(x); }\n",
         ),
         (
             "success-error-result-channel",
-            "promise-aggregate-result-channel-contract-missing",
+            "promise-aggregate-all-fulfilled-contract-missing",
+        ),
+        (
+            "cancellation-liveness-boundary",
+            "promise-aggregate-first-settled-contract-missing",
+        ),
+        (
+            "success-error-result-channel",
+            "promise-aggregate-all-settled-contract-missing",
+        ),
+        (
+            "success-error-result-channel",
+            "promise-aggregate-first-fulfilled-contract-missing",
         ),
         (
             "rejection-channel",
@@ -391,38 +404,39 @@ function callPromise(x) { return Promise(x); }\n",
             "scheduling-boundary",
             "promise-non-construct-call-boundary-contract-missing",
         ),
+        (
+            "lifecycle-materialization-boundary",
+            "interval-async-iteration-lifecycle-contract-missing",
+        ),
     ] {
-        assert!(
-            obligations
-                .iter()
-                .any(|item| item["obligation_family"] == family
-                    && item["obligation_subreason"] == subreason
-                    && item["count"].as_u64().unwrap_or(0) >= 1),
-            "expected Promise obligation {family}/{subreason}: {report}"
-        );
+        assert_obligation(&report, family, subreason);
     }
 
-    let rejections = report["admission_rejections"]
-        .as_array()
-        .expect("admission_rejections should be an array");
     for expected in [
+        "promise-executor-timing-contract",
+        "promise-executor-resolve-reject-callback-contract",
+        "promise-executor-throw-to-rejection-contract",
         "promise-executor-callback-effect-contract",
         "promise-factory-settled-value-contract",
+        "promise-aggregate-all-fulfilled-contract",
+        "promise-aggregate-ordered-values-contract",
+        "promise-aggregate-first-settled-contract",
+        "promise-aggregate-cancellation-liveness-contract",
+        "promise-aggregate-all-settled-contract",
+        "promise-aggregate-settled-record-shape-contract",
+        "promise-aggregate-first-fulfilled-contract",
+        "promise-aggregate-error-channel-contract",
         "promise-aggregate-result-channel-contract",
         "promise-reject-rejected-value-channel-contract",
         "promise-non-construct-call-boundary-contract",
+        "interval-async-iteration-lifecycle-contract",
     ] {
-        assert!(
-            rejections
-                .iter()
-                .any(|item| item["reason"] == "unsupported-runtime-boundary"
-                    && item["missing_evidence"]
-                        .as_array()
-                        .is_some_and(|items| items.iter().any(|value| value == expected))),
-            "expected Promise missing evidence label {expected}: {report}"
-        );
+        assert_runtime_missing_evidence(&report, expected);
     }
     let generic = "promise-rejection-channel-contract";
+    let rejections = report["admission_rejections"]
+        .as_array()
+        .expect("admission_rejections should be an array");
     assert!(
         !rejections
             .iter()
@@ -431,6 +445,35 @@ function callPromise(x) { return Promise(x); }\n",
                     .as_array()
                     .is_some_and(|items| items.iter().any(|value| value == generic))),
         "generic Promise rejection evidence label should stay split: {report}"
+    );
+}
+
+fn assert_obligation(report: &serde_json::Value, family: &str, subreason: &str) {
+    let obligations = report["by_obligation"]
+        .as_array()
+        .expect("by_obligation should be an array");
+    assert!(
+        obligations
+            .iter()
+            .any(|item| item["obligation_family"] == family
+                && item["obligation_subreason"] == subreason
+                && item["count"].as_u64().unwrap_or(0) >= 1),
+        "expected Promise obligation {family}/{subreason}: {report}"
+    );
+}
+
+fn assert_runtime_missing_evidence(report: &serde_json::Value, expected: &str) {
+    let rejections = report["admission_rejections"]
+        .as_array()
+        .expect("admission_rejections should be an array");
+    assert!(
+        rejections
+            .iter()
+            .any(|item| item["reason"] == "unsupported-runtime-boundary"
+                && item["missing_evidence"]
+                    .as_array()
+                    .is_some_and(|items| items.iter().any(|value| value == expected))),
+        "expected Promise missing evidence label {expected}: {report}"
     );
 }
 

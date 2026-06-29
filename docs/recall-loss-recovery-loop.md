@@ -88,6 +88,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [Node timers CommonJS domain recovery](../bench/recall_loss/promise-node-timers-commonjs-domain-recovery-2026-06-29.v1.json) records the follow-up that opens conservative `const` CommonJS destructuring requires for the same domain-only proof, moving the priced Node timers call-site coverage from `82` to `97` while mutable/dynamic shapes and scheduling semantics remain closed.
 - [Node timers safe payload recovery](../bench/recall_loss/promise-node-timers-safe-payload-recovery-2026-06-29.v1.json) records the bounded payload follow-up: exactly `setTimeout(delay, value)` and `setImmediate(value)` now emit fulfilled `PromiseSettledValue` evidence, while option-bearing calls, possible thenable payloads, scheduler APIs, and interval streams remain closed. The current pinned corpus has `0` direct safe-payload call sites, so this is a capability and fixture gain rather than an immediate corpus recall delta.
 - [Promise/scheduling closeout](../bench/recall_loss/promise-scheduling-closeout-2026-06-29.v1.json) records the decision to stop this recovery cycle after local Promise producer recovery, imported settled-value evidence, and Node timers slices. Aggregate combinators, executor timing, cancellation/liveness, scheduler APIs, interval streams, and cross-language lifecycle models move to issue [#602](https://github.com/corca-ai/nose/issues/602).
+- [#602 scheduling/lifecycle boundary audit](../bench/recall_loss/scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json) records the first reporting-only #602 slice across the 120-repo corpus. It prices `142,844` source-prevalence occurrences and ranks Promise aggregates, executor timing, AbortSignal cancellation, interval lifecycle, Go goroutines, Java `CompletableFuture`, and Swift `await` as the first actionable reporting targets.
 
 Regenerate the full local reports with:
 
@@ -686,6 +687,17 @@ Promise expansion here. The next work item should be a broader scheduling,
 aggregate, cancellation, and lifecycle capability epic, tracked as
 [#602](https://github.com/corca-ai/nose/issues/602), with its own corpus
 pricing, hard negatives, local gates, performance checks, and docs.
+The first #602 reporting slice is [scheduling/lifecycle boundary audit](../bench/recall_loss/scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json).
+It adds a reusable lexical pricing script for the 120-repo corpus and keeps
+`semantic_admission_delta = 0`. The scan prices `142,844` scheduling,
+aggregate, cancellation, channel, executor, lifecycle, and exception
+occurrences by file language. The first recommended targets are `Promise.all`
+(`397` occurrences), `Promise.race` (`32`), `new Promise` (`795`),
+AbortController/AbortSignal (`260`), `setInterval` (`73`), Go goroutine
+statements (`1,949`), Java `CompletableFuture` (`306`), and Swift `await`
+(`8,689`). The attached current `crates` gate still reports `false_merges == 0`
+and `canon_preservation_violations == 0`; relevant runtime rows are still only
+the existing `14` exception-channel rows.
 
 ## See Also
 

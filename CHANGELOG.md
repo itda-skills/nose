@@ -33,6 +33,9 @@ break.
   and follow-up artifacts, keeping broad async, callback, channel, aggregate,
   cancellation, and lifecycle convergence closed until dependency-closed
   obligations are available.
+- Added the first #602 reporting-only scheduling/lifecycle audit, including a
+  120-repo pricing script and checked artifact for aggregate, executor,
+  cancellation, scheduler, channel, lifecycle, and exception boundary surfaces.
 - Added staged Promise recovery infrastructure: protocol diagnostics and hard
   negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
   continuation recovery; receiver-producer/call-return attribution; and
@@ -68,6 +71,12 @@ break.
   zero canon-preservation violations, and zero Promise/scheduling unsupported
   runtime rows, with the remaining runtime rows attributed to exception-channel
   contracts.
+- Refined #602 runtime-boundary diagnostics so Promise executor timing,
+  resolve/reject callbacks, throw-to-rejection, Promise aggregate
+  all-fulfilled/first-settled/all-settled/first-fulfilled shapes,
+  scheduler wait/yield timing, interval lifecycle, channel send/select,
+  goroutine scheduling, and defer lifecycle can be reported as named
+  obligations without opening exact admission.
 - Refined import-snapshot census reporting to separate missing provider modules,
   missing exports, re-export boundaries, external/stdlib/workspace boundaries,
   provider/importer mutation, missing provider API proof, and aggregate shapes
@@ -106,6 +115,9 @@ break.
   `.finally` settlement recovery gate passed in 1.54s with `false_merges = 0`,
   and the imported settled-value contract gate passed in 1.69s with
   `false_merges = 0`.
+- Confirmed the first #602 reporting slice with the local `crates` recall-loss
+  gate at `false_merges = 0` and `canon_preservation_violations = 0`; the
+  checked 120-repo pricing artifact records `semantic_admission_delta = 0`.
 
 ## [0.16.0] - 2026-06-26
 
