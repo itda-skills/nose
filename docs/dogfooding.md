@@ -227,6 +227,15 @@ direct-call-target negative fixture family moves from `1af33fd980c0e8b9`
 to `5e2b99978272a129`. The reviewed default-surface count remains 53; no
 budget increase is accepted.
 
+The 2026-06-29 Node timers Promise-domain slice adds the dependency-backed
+`JsImportedPromiseFactory` contract and splits LibraryApi occurrence recording
+into a focused helper module. That moves the already reviewed semantic-kernel
+language-core provenance helper family from `475fa037b992d31d` to
+`c67046264486c003`; the members and judgment remain the same
+(`trusted_language_core_record`, sequence-surface provenance helpers, and
+language-core record constructors across frontend, normalize, and semantics).
+The reviewed default-surface count remains 53; no budget increase is accepted.
+
 ## Verdict by candidate (critically)
 
 | family | what it is | judgment | action |
