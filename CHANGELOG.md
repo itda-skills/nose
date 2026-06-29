@@ -6,410 +6,84 @@ break.
 
 ## [Unreleased]
 
-### Fixed
-- Fixed repository CI by splitting the latest recall-loss, exact-admission,
-  strict-exact factory, semantic-idiom, and post-lower library API files back
-  under the Rust file-length ratchet, and by updating the async-mirror query JSON
-  test to assert the documented near/shared-core witness contract instead of a
-  stale shared-core family count.
-
 ### Added
-- Added the builtin `nose.protocols.string_affix_predicates` protocol pack for
-  case-sensitive receiver-method prefix/suffix predicates, moving those rows out
-  of the broad builtin-method provenance path while preserving exact string
-  receiver and prefix/suffix direction boundaries.
-- Expanded the string-affix protocol pack's conformance inventory across
-  Python, Java, Rust, Swift, JavaScript, and TypeScript receiver-method positives,
-  with hard negatives for non-string receivers, wrong producer provenance, and
-  unsupported offset forms.
-- Moved Go `strings.HasPrefix` and `strings.HasSuffix` into the string-affix
-  protocol pack while preserving imported `strings` namespace proof and keeping
-  `strings.Contains` in the Go namespace-call pack as substring containment.
-- Added the Ruby `String#start_with?`/`String#end_with?` proof slice under the
-  same string-affix protocol, admitting literal string receivers while keeping
-  untyped receivers, custom same-name methods, multi-affix calls, wrong
-  receivers, direction mismatches, and same-file `String` monkey patches closed.
-- Pinned string-affix coordinate boundaries with conformance coverage for
-  same-role parameter affixes and immutable literal bindings, while keeping
-  wrong parameters, dynamic affix expressions, mutated bindings, Python tuple
-  affixes, and JS/Java offset forms out of whole-string prefix proof.
-- Added import-backed immutable value provenance for dependency-backed root
-  literals and Go namespace members. Imported exact families now cover the
-  initial #567 product slice: Python/Java/Go map-default values,
-  TypeScript/Rust collection membership, and TypeScript/Java/Rust/Go string
-  affix coordinates, with hard negatives for mutated providers, wrong defaults,
-  consumer namespace shadowing, and dynamic re-export paths.
-- Added `nose verify --recall-loss-report <file>`, a local diagnostics artifact
-  for semantic-kernel work that combines hard soundness gate numbers,
-  under-merged behavior groups, oracle exclusions, and structured exact-admission
-  rejection buckets without including raw source snippets by default.
-- Added a proof-backed DirectMethod Promise producer slice for member
-  call-return receivers. Existing DirectMethod call-target evidence plus a
-  returned-expression `Domain(PromiseLike)` record now derives PromiseLike
-  call-result evidence for non-async single-return methods; Promise continuation
-  recovery consumes only that returned expression, closes on receiver-context
-  reads, preserves the Promise boundary, and keeps selector-only member calls
-  reporting-only.
-- Expanded proof-backed local Promise producer recovery from single-return
-  bodies to supported branch-return bodies. DirectFunction and DirectMethod
-  call-result domain evidence can now depend on every returned expression on the
-  supported paths; value-graph recovery handles same-channel Promise Phi states,
-  keeps mixed fulfilled/rejected branches closed, and still preserves imported
-  call-return receivers behind settled-value contracts.
-- Refined imported function/member Promise call-return diagnostics. Imported
-  target-present receivers now report missing settled-value contracts rather
-  than return-domain proof, because imported call-target identity has no local
-  body from which the value graph can recover a fulfilled or rejected Promise
-  payload; exact admission remains closed with source-level hard negatives.
-- Added import-snapshot census data to local recall-loss reports. The JSON now
-  includes successful imported-literal snapshot counts plus unresolved
-  binding-import miss reasons such as missing provider modules/exports,
-  importer mutation, provider mutation/escape, missing provider `LibraryApi`
-  proof, and provider aggregate shapes that are not export-safe.
-- Refined import-snapshot census aggregate miss attribution without widening
-  imported snapshot admission. Provider aggregates that are proven exact
-  surfaces but not import-literal surfaces now report separately from aggregates
-  whose children are binding references or import-coordinate placeholders.
-- Split recall-loss exact-admission rejections into capability-oriented buckets
+- Added a semantic-kernel recall-loss loop around `nose verify --recall-loss-report`,
+  including obligation rollups, deterministic report diff tooling, checked
+  `crates`/corpus artifacts, and corpus-priority census workflows for deciding
+  the next recovery slices from measured repository data.
+- Added and expanded the `nose.protocols.string_affix_predicates` protocol pack
+  across Python, Java, Rust, Swift, JavaScript, TypeScript, Go, and Ruby, with
+  coordinate hard negatives for receiver type, direction, mutation, shadowing,
+  offset, and dynamic-affix boundaries.
+- Added import-backed immutable provenance and Rust import-snapshot resolution
+  through the #567 and #587 tracks, covering safe provider literals, selected
+  collection factories/constructors, same-crate module lookup, one-hop public
+  re-exports, residual boundary attribution, and relative `super` resolution.
+- Added corpus-driven stdlib audit/prioritization scripts for JS/TS, Python,
+  Rust, Swift, Java, and Go, then processed the first high-volume Python, Rust,
+  and Swift candidate groups without widening exact admission.
+- Added first corpus-prioritized stdlib support slices for Go `strings.Join` and
+  Java `Optional`, while Java `Arrays`/`Collections`, Go `sort`/`slices`/`maps`,
+  Python HOF/runtime, Rust stdlib, Swift stdlib, and JS/TS builtin coverage were
+  recorded as explicit audit artifacts.
+- Added Rust semantic-kernel capabilities for brace-import call targets,
+  import-backed scoped member calls, exact-safe struct-expression sequence
+  surfaces, and receiver-domain recovery for iterator/stream adapter chains.
+- Added the #594 cross-language scheduling/channel/callback obligation census
+  and follow-up artifacts, keeping broad async, callback, channel, aggregate,
+  cancellation, and lifecycle convergence closed until dependency-closed
+  obligations are available.
+- Added staged Promise recovery infrastructure: protocol diagnostics and hard
+  negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
+  continuation recovery; receiver-producer/call-return attribution; and
+  proof-backed async, direct-function, DirectMethod, and branch-return Promise
+  producer recovery. Promise boundaries, unsafe thenables, imported producers
+  without settled-value contracts, mixed fulfilled/rejected branches, `.finally`,
+  constructors, aggregates, and broad scheduling remain fail-closed.
+
+### Changed
+- Split exact-admission recall-loss attribution into capability-oriented buckets
   for callee identity, receiver domain, library API occurrence, HOF
   demand/effect, source surface, mutation/effect, unsupported runtime
-  boundaries, and value-fingerprint floor; added deterministic report diff
-  tooling plus checked-in `crates` and mixed-language corpus-slice baselines for
-  the semantic-kernel recovery loop.
-- Refined recall-loss attribution for expression-statement effect boundaries
-  and unmodeled Rust macro invocations: discarded call results now land in the
-  effect boundary bucket, while `format!`/other uncontracted macros land in the
-  source-surface bucket instead of broad callee-identity loss.
-- Added a recall-loss callee-identity census workflow that splits the remaining
-  callee bucket by call-target surface, including local/parameter calls,
-  member calls, scoped paths, imported/global target proof labels, and already
-  target-present call-contract proof labels.
-- Added Rust brace `use` import binding evidence for static, non-wildcard import
-  lists. The existing imported call-target producer can now prove calls through
-  bindings such as `use crate::m::{f, T}; f(...)`, reducing the `crates`
-  callee-identity recall-loss bucket from 264 to 251 while preserving zero false
-  merges and zero canon-preservation violations.
-- Added import-backed Rust scoped member call-target evidence. Scoped callees
-  such as `Span::new()` now enter exact opaque call identity only when the root
-  has dependency-backed import evidence; raw `crate::...`, `std::...`, and
-  unimported scoped paths stay closed. On `crates`, this reduces the
-  callee-identity recall-loss bucket from 251 to 235 while preserving zero false
-  merges and zero canon-preservation violations.
-- Added exact-safe Rust struct-expression sequence surfaces. Rust struct
-  literals now carry `SequenceSurface(RustStructExpression)` evidence instead of
-  relying on untagged `Seq`, recovering the imported-member target-present
-  follow-ups from the scoped-call slice and reducing `crates` exact-admission
-  rejections from 735 to 707 while preserving zero false merges and zero
-  canon-preservation violations.
-- Added receiver-domain recovery infrastructure for iterator adapter chains.
-  Rust `iter`/`into_iter`/`iter_mut`/`copied`/`cloned` and Java `stream` now
-  materialize `Iterator` result-domain evidence, Rust `to_vec` materializes
-  `Collection`, and Rust `collect` remains closed because its result type is
-  caller-selected. Strict exact receiver gates now consume asserted `Domain`
-  evidence on call receivers; typed `const`/`static`/`let` plus collection
-  literal assignments now emit dependency-backed binding-domain evidence. After
-  normalization inlines a receiver value, canonical builtin admission can follow
-  the original binding proof chain, including static/module map bindings and
-  HOF callbacks that capture typed function parameters, while strict exact still
-  closes mutated receivers through `ReceiverMutation` evidence. On `crates`, the
-  receiver-domain bucket moves `241 -> 239`, completeness improves `38/82 ->
-  39/83`, and hard gates remain at zero false merges and zero
-  canon-preservation violations; the remaining blocker is cross-file
-  field/constant domain provenance.
-- Added JS/TS constructor-backed imported immutable snapshots for `new Map(...)`
-  and `new Set(...)`. Provider export safety now reuses the existing
-  `JsLikeMapConstructor`/`JsLikeSetConstructor` `LibraryApi` proof before
-  copying provider evidence into importers, so imported JS/TS Map defaults and
-  Set membership converge with their local constructor-backed forms while
-  missing constructor evidence, provider-local `Map`/`Set` shadows,
-  provider/importer mutations, wrong contents, and raw import-coordinate
-  sequences stay closed.
-- Expanded imported immutable provider snapshots to existing collection factory
-  contracts for Python builtin/imported factories and Java collection factories.
-  Python `set([...])` and `collections.deque([...])`, plus Java static-imported
-  `List.of(...)`/`Set.of(...)` provider bindings, now converge with equivalent
-  local collection-membership code only when the provider factory call carries
-  admitted `LibraryApi` evidence and exact-safe literal arguments. Missing API
-  proof, provider-local shadows, provider/importer mutations, wrong contents,
-  and ambiguous single-argument `Arrays.asList(...)` provider snapshots stay
-  closed.
-- Added the #567 imported immutable provenance closeout artifact and narrative
-  closeout, tying the phase logs to the epic requirements, admitted coordinate
-  families, hard-negative inventory, import-snapshot census boundaries, and
-  runtime evidence.
-- Added the #587 import-snapshot module/export resolution tracker and starting
-  census artifact. The census selects the remaining module/export miss rows
-  after #567, splits them by reason, crate, import surface, and top files, and
-  points the first implementation slice at same-crate `crate::...` export lookup
-  after unsupported stdlib/external/workspace imports are separated.
-- Added the first #587 Rust import-snapshot module-resolution slice. Rust
-  provider lookup now recognizes `mod.rs`/crate-root ownership and safe
-  importer-relative `self::...`/`super::...` aliases for immutable literal
-  exports, while the census separates callable, type, module namespace, stdlib,
-  and workspace-crate boundaries from generic module/export misses. On `crates`,
-  the generic module/export target moves `378 -> 139`, successful imported
-  snapshot records move `0 -> 1`, and hard gates remain at zero false merges and
-  zero canon-preservation violations.
-- Added the next #587 Rust re-export pricing slice. Direct public `pub use`
-  bindings now emit re-export alias evidence, and imported immutable snapshot
-  lookup follows one same-corpus re-export hop only when the target is already a
-  unique literal-safe provider export. Private uses, wildcard/nested brace
-  re-exports, ambiguous aliases, non-value targets, and raw coordinates remain
-  closed. On `crates`, generic module/export target rows move `139 -> 91`,
-  `provider-export-missing` moves `9 -> 2`, and re-export targets are reported
-  through dedicated `provider-reexport-*` boundary reasons with zero false
-  merges and zero canon-preservation violations.
-- Added the #587 residual module/export census. The remaining generic target is
-  mostly external crate imports rather than same-repo Rust resolution: `76`
-  external crate rows, `1` residual workspace-crate row, and `2` residual
-  `std::cell` rows, leaving a much smaller same-repo tail of `11`
-  relative-`super` rows and `2` local export misses.
-- Added the #587 residual boundary split. Known external dependency imports now
-  report as `provider-external-crate-boundary`, residual `std::cell` imports
-  join the stdlib boundary, and a residual `nose_il::UnitKind` type-namespace
-  import joins the workspace-crate boundary. On `crates`,
-  `provider-module-missing` moves `90 -> 11`, generic module/export target rows
-  move `92 -> 13`, imported snapshot records stay `1`, and hard gates remain at
-  zero false merges and zero canon-preservation violations.
-- Added the #587 relative-super closeout. Rust provider lookup now treats
-  `super` and repeated `super` aliases as the parent module itself when an
-  import names a parent or grandparent module export directly. On `crates`,
-  `provider-module-missing` moves `11 -> 0`, generic module/export target rows
-  move `13 -> 2`, imported snapshot records stay `1`, and the moved rows close
-  as callable/type/re-export type boundaries with zero false merges and zero
-  canon-preservation violations.
-- Added the post-#587 recall-loss census. On the current `crates` surface,
-  import-snapshot provider-module misses are gone, hard gates remain at zero
-  false merges and zero canon-preservation violations, and the next largest
-  capability buckets are receiver-domain proof (`244`), callee identity (`231`),
-  and mutation/effect contracts (`134`).
-- Added the full corpus priority census workflow. The new
-  `scripts/corpus-priority-census.py` runner combines per-repo
-  `nose verify --recall-loss-report` output with a lexical stdlib/API source
-  prevalence scan over the pinned 120-repo corpus, and the checked-in
-  2026-06-28 summary records the next semantic-kernel priority order plus the
-  full-corpus hard gate (`false_merges == 0`,
-  `canon_preservation_violations == 0`).
-- Added the first stdlib support slice from the corpus priority order. Go
-  `strings.Join(parts, sep)` now reuses the existing ordered `Join` builtin
-  when the callee is proven through an imported `strings` namespace, so import
-  aliases canonicalize while local same-name values remain closed.
-- Added the Java `Optional` stdlib slice with a strict first proof boundary.
-  Fully-qualified `java.util.Optional<T>` receivers now admit `isPresent()` as
-  option presence and `orElse(default)` as `ValueOrDefault`; bare
-  `Optional<T>` stays closed until import-backed type-domain proof exists.
-- Added the Java `Arrays`/`Collections` partial-coverage audit. The new
-  `scripts/java-arrays-collections-audit.py` scanner records corpus method
-  prevalence, current support status, and explicit unsupported boundary
-  categories for the Java stdlib collection surface.
-- Added the Go `sort`/`slices`/`maps` partial-coverage audit. The new
-  `scripts/go-stdlib-collections-audit.py` scanner resolves simple import
-  aliases before classifying corpus calls into admitted membership, mutation,
-  ordering, callback, iterator, copy, and equality capability buckets.
-- Added the JS/TS builtin partial-coverage audit. The new
-  `scripts/js-ts-stdlib-partial-audit.py` scanner masks comments/strings,
-  records simple receiver hints, and classifies Array HOFs, Map/Set receiver
-  selectors, Object key/reflection APIs, Promise/async surfaces, and
-  mutation/effect methods. The checked-in report classifies `42,619`
-  occurrences and processes the only 5,000+ group, Promise async/scheduling
-  boundaries (`29,094`), as a closed boundary with zero semantic-admission
-  delta.
-- Added the Python HOF/runtime attribution audit. The new
-  `scripts/python-hof-runtime-audit.py` scanner uses Python AST scopes to
-  separate supported builtin iterator/HOF calls, lexical builtin shadowing that
-  needs runtime attribution, and `itertools`/`functools` boundary buckets.
-- Refined the Python HOF/runtime attribution audit into a v2 decision report.
-  The scanner now accounts for decorator/default calls and broader nested-scope
-  bindings, and the checked-in report records call-shape counts, top repos, and
-  ranked next-work groups for materializer domain proof, ordering semantics,
-  HOF callback proof, `itertools` lifecycle, callable runtime identity,
-  combinatoric iterators, callback reduction, and runtime attribution.
-- Added the Rust stdlib partial-coverage audit. The new
-  `scripts/rust-stdlib-partial-audit.py` scanner masks comments/strings before
-  classifying Rust `Option`, `Result`, iterator adapters/HOFs, `Vec`,
-  membership/map lookup, `std::collections` factories, mutation, ordering, and
-  allocation/lifetime surfaces into supported, supported-partial, and explicit
-  unsupported capability buckets.
-- Added the Swift stdlib partial-coverage audit. The new
-  `scripts/swift-stdlib-partial-audit.py` scanner masks comments/strings before
-  classifying Swift cardinality properties, collection/map factories, sequence
-  HOFs, membership, sequence views, mutation/effect, ordering, and reduction
-  surfaces; the checked-in report shows cardinality receiver proof and
-  mutation/effect contracts as the largest next Swift capability targets.
-- Processed the first seven 5,000+ stdlib capability candidates across the
-  Python, Rust, and Swift corpus audits. The latest reports now include
-  `processed_high_volume_groups` with sequence, status, strictness effect, and
-  next metrics for Python materializer domain proof; Rust iterator-domain,
-  Option/Result channel, HOF callback, iterator-lifecycle, and mutation/effect
-  proof; and Swift cardinality receiver proof. Rust audit attribution now
-  aligns `is_none`, terminal `count`, and covered mutation methods with existing
-  generic method/effect contracts, moving `8,283` occurrences from unsupported
-  to supported-partial without widening semantic admission.
-- Added the #594 cross-language scheduling/channel/callback obligation census.
-  `scripts/cross-language-boundary-census.py` normalizes the existing JS/TS,
-  Python, Rust, Go, Java, and Swift stdlib audits, adds conservative Ruby/C
-  pricing, and records `207,689` boundary-shaped occurrences across success/error
-  channels, lifecycle/materialization, scheduling, ambiguous selectors, receiver
-  mutation, and callback demand/effect families with
-  `semantic_admission_delta = 0`.
-- Added the #594 obligation vocabulary and reporting closeout artifacts. The new
-  scheduling/channel/callback obligation doc links the census, hard-negative
-  inventory, callback slice, channel/scheduling slice, first-slice closeout, and
-  epic closeout; the milestone deliberately keeps broad async, callback,
-  channel, aggregate-result, cancellation, and lifetime convergence closed until
-  dependency-closed obligations are available.
-- Extended local recall-loss diagnostics with obligation-level attribution.
-  `nose verify --recall-loss-report` still preserves the existing `by_reason`
-  buckets, and now also emits top-level `by_obligation` rollups plus
-  per-rejection `obligation_family` and `obligation_subreason` fields so future
-  semantic-kernel work can measure stricter admission gates without losing
-  recall-loss visibility.
-- Refined callback demand/effect recall-loss diagnostics after #594. HOF
-  exact-admission rejections now keep the broad
-  `hof-demand-effect-proof-missing` reason while adding kind-specific and
-  callback-specific missing evidence labels; the local `crates`
-  `by_obligation` callback rollup now separates callback-effect proof (`27`),
-  callback identity/shape proof (`2`), and predicate callback profile (`1`)
-  with `semantic_admission_delta = 0`.
-- Refined the callback-effect proof bucket into concrete producer obligations.
-  The same `crates` HOF demand/effect rows now split callback effects into
-  call-effect proof (`22`) and assignment-effect proof (`5`), with runtime
-  callback boundaries currently at `0`; exact admission stays closed.
-- Split callback call-effect recall-loss diagnostics by producer-facing call
-  shape. The former `22` call-effect rows now surface member call proof (`10`),
-  Rust macro call proof (`8`), direct-function effect contracts (`3`), and
-  imported-function effect contracts (`1`), while assignment (`5`),
-  identity/shape (`2`), and predicate-profile (`1`) rows remain separate and
-  exact admission remains closed.
-- Split Promise/async protocol recall-loss diagnostics without opening exact
-  admission. JS/TS async functions now emit a fail-closed
-  `Source::Protocol(AsyncFunction)` boundary even when the body has no `await`,
-  and runtime-boundary missing evidence now separates Promise await scheduling,
-  async function scheduling, executor callbacks, factories, aggregate result
-  channels, rejection channels, and non-construct Promise calls. The checked
-  Promise artifact keeps the `29,094`-occurrence JS/TS Promise/async group
-  closed with `semantic_admission_delta = 0`.
-- Added Promise protocol hard negatives for the next recovery slice. Query-level
-  tests now pin async-function/sync, Promise executor/sync,
-  Promise.resolve/sync, Promise.then/custom receiver, and
-  Promise.all/Promise.race boundaries closed, while value-graph tests pin
-  possible and explicit thenable assimilation plus PromiseLike receivers without
-  supported settled producers.
-- Added the first narrow Promise recovery slice. Dependency-closed
-  `Promise.resolve(value)` now regains LibraryApi evidence after lower and
-  normalize rebuilds and can enter strict exact semantic families only for
-  non-thenable-safe literal/nullish/scalar arguments; sync payloads, untyped or
-  explicit thenables, custom receivers, executors, aggregate channels, and
-  rejection channels remain closed.
-- Split Promise rejection/continuation recall-loss reporting without opening
-  exact admission. `Promise.reject`, `.catch`, and `.finally` now produce
-  distinct rejected-value, rejection-continuation, settlement-continuation, and
-  callback-demand/effect missing-evidence labels instead of collapsing into the
-  older generic rejection-channel labels.
-- Split Promise `.then` recall-loss reporting into receiver, fulfillment,
-  rejection, and callback obligations. Selector-only `.then` calls, including
-  expression receivers such as `db.get(id).then(f)`, now report missing
-  PromiseLike receiver proof separately from fulfillment/rejection continuation
-  and callback demand/effect labels, without opening exact continuation
-  admission.
-- Made Promise `.then`, `.catch`, and `.finally` continuation diagnostics
-  visible as local recall-loss `admission_rejections`. Focused fixtures now
-  report three oracle-interpretable Promise continuation rows with no oracle
-  exclusions, while exact continuation admission stays closed.
-- Opened a broader local Promise continuation recovery slice without broad
-  async equivalence. `Promise.reject`, `.catch`, and two-argument `.then` now
-  have first-party contract evidence; the value graph tracks fulfilled and
-  rejected Promise states, flattens handler-returned `Promise.resolve` when the
-  returned value is non-thenable-safe after local substitution, preserves
-  handler-returned `Promise.reject` as a rejected channel, and lets
-  `catch` converge with `then(undefined, onRejected)` for dependency-closed
-  rejected producers. Custom receivers, arbitrary thenables, `.finally`,
-  aggregate combinators, and sync payload equivalence remain closed. The checked
-  artifact records `false_merges = 0`, `canon_preservation_violations = 0`, and
-  `promise_runtime_rows = 0` on the repository-local `crates` recall-loss gate.
-- Added reporting-only Promise receiver-producer diagnostics after the local
-  continuation recovery slice. `.then`/`.catch`/`.finally` receivers now split
-  constructor-created promises, async-function returns, and generic call-return
-  receivers into distinct missing-evidence labels without opening exact
-  admission; the checked 120-repo JS/TS scan found `835` generic call-return
-  receivers, `49` same-file async-function call receivers, and only `2`
-  constructor receivers.
-- Split generic Promise call-return receiver diagnostics by callee identity
-  shape. Member, local/parameter, imported binding/member, known direct/imported
-  target, and unknown call-return receivers now get distinct missing-evidence
-  labels while exact admission remains closed; the follow-up 120-repo JS/TS scan
-  found `932` member call-return receiver candidates and `184` local/parameter
-  candidates, so broad member recovery stays deferred behind explicit callee
-  identity plus returned `PromiseLike` domain proof.
-- Opened the same-file async-function Promise producer recovery slice. Direct
-  calls to source-proven async functions now emit dependency-backed
-  `Domain(PromiseLike)` result evidence, and pure non-thenable-safe returned
-  payloads can feed local `.then` fulfillment recovery without merging with
-  synchronous payload code. Await, throw/rejection, possible thenables, opaque
-  call results, constructor receivers, imported/member call-return receivers,
-  `.finally`, and aggregate combinators remain closed.
-- Opened the direct-function Promise producer recovery slice. Same-file direct
-  calls to non-async single-return functions now emit dependency-backed
-  `Domain(PromiseLike)` result evidence when the returned expression already has
-  PromiseLike domain proof. Literal and typed non-thenable `Promise.resolve`
-  helper returns, plus `Promise.reject` helper returns, can now feed local
-  `.then`/`.catch` recovery while preserving the Promise boundary; parameter
-  callees, member/imported call-return receivers, unsafe thenables,
-  constructors, `.finally`, aggregate combinators, and broad scheduling remain
-  closed.
+  boundaries, value-fingerprint floor, and import-snapshot miss reasons.
+- Refined callback and Promise recall-loss diagnostics from broad runtime
+  buckets into producer-, receiver-, continuation-, channel-, and callback-effect
+  obligations, so stricter admission can be measured without hiding recall loss.
+- Refined import-snapshot census reporting to separate missing provider modules,
+  missing exports, re-export boundaries, external/stdlib/workspace boundaries,
+  provider/importer mutation, missing provider API proof, and aggregate shapes
+  that are exact-safe but not import-literal-safe.
+- Kept the duplication ratchet at 53 accepted substantial near-duplicate
+  families after the Promise branch-return work by extracting avoidable test
+  fixture overlap and accepting only representative-ID churn for an existing
+  reviewed direct-call-target test family.
 
 ### Fixed
-- Made `scripts/check-docs.sh` compatible with both awiki versions that support
-  `awiki lint --root docs` and versions that lint the current wiki directory.
-- Hardened JS/TS string-affix receiver proof so TypeScript `String` object
-  wrappers, optional/nullable receivers, and module-scope
-  `String.prototype.startsWith`/`endsWith` patching no longer enter primitive
-  string prefix/suffix families; added explicit hard negatives for untyped
-  JavaScript receivers, borrowed prototype calls, custom same-name methods,
-  wrappers, offsets, conditional prototype writes, nested/block-scope shadow
-  names, and `Object.defineProperty` prototype writes.
-- Fixed dataflow normalization across `try` boundaries. Single-use temporary
-  inlining no longer moves a potentially erroring RHS from before a `try` into
-  the catch region, restoring the pinned `netty` corpus-verify gate to
-  `0` false merges and `0` canon-preservation changes.
+- Fixed repository CI ratchets by splitting oversized Rust files back under the
+  file-length gate and updating the async-mirror query JSON test to assert the
+  documented near/shared-core witness contract.
+- Fixed `scripts/check-docs.sh` for both awiki CLIs that support
+  `awiki lint --root docs` and awiki versions that lint the current wiki
+  directory.
+- Hardened JS/TS string-affix receiver proof so wrappers, untyped receivers,
+  borrowed prototype calls, custom same-name methods, offsets, shadowed names,
+  and `String.prototype` patching stay out of primitive prefix/suffix families.
+- Fixed dataflow normalization across `try` boundaries so temporary inlining no
+  longer moves a potentially erroring RHS from before a `try` into the catch
+  region.
 
 ### Performance
-- Measured the Go `strings.Join` stdlib slice with release `nose query
-  <repo> --mode semantic --format json --min-value 100000000` and `NOSE_TIME`.
-  On `bench/repos/chi`, median wall time stayed in budget at `36.4ms ->
-  37.0ms` (+1.6%) after warm reruns; on `bench/repos/gorm`, median wall time
-  stayed flat at `83.7ms -> 83.2ms` (-0.6%).
-- Measured the Java `Optional` slice with the same release query gate. After
-  paired warm reruns, `bench/repos/commons-lang` stayed flat at `446.8ms ->
-  445.8ms` (-0.2%) and `bench/repos/guava` stayed flat at `2402.0ms ->
-  2359.8ms` (-1.8%).
-- Confirmed the Java `Arrays`/`Collections` audit is product-code neutral:
-  `target/release/nose` stayed byte-identical to the post-Java-Optional
-  baseline binary, so there is no query-time degradation from this slice.
-- Confirmed the Go `sort`/`slices`/`maps` audit is also product-code neutral:
-  the release binary stayed byte-identical to the post-Java-audit baseline.
-- Confirmed the Python HOF/runtime audit is product-code neutral: the release
-  binary stayed byte-identical to the post-Go-audit baseline.
-- Checked the Python/Rust/Swift high-volume stdlib audit processing path. The
-  audit scripts compile and regenerate their checked-in JSON summaries; the only
-  product-code change is the stricter Rust `sort_by_key` mutation-risk evidence
-  row, covered by the existing `module_binding_mutating_method_contract` test
-  surface.
-- Compared the #567 import-backed immutable provenance change against
-  the pre-#567 baseline `dbb688e7` with release `nose query crates all top=0
-  --mode semantic --format json` and `NOSE_TIME` over five paired runs. Median
-  wall time stayed in budget at `0.92s -> 0.95s` (+3.3%), `import-resolve`
-  stayed in budget at `145.4ms -> 151.7ms` (+4.3%), and the rendered JSON size
-  stayed identical at 54,288 bytes.
-- Rechecked the #584/#585 closeout delta against `37027b54` with the same
-  release query over five paired runs on the current `crates` input. Product
-  output stayed stable (`31 -> 31` families, 67,200 JSON bytes unchanged) and
-  median wall time improved `488.03ms -> 445.77ms` (-8.7%); `import-resolve`
-  remained within budget at `69.6ms -> 72.0ms` (+3.4%).
-- Sanity-checked the Promise.resolve recovery slice with release `nose query
-  crates all top=0 --mode semantic --format json` and `NOSE_TIME`. Current
-  three-run wall times were `0.39s`, `0.47s`, and `0.43s` with stable 67,200
-  byte JSON output; no paired baseline was rebuilt for this slice.
+- Preserved zero false merges and zero canon-preservation violations across the
+  checked local `crates` recall-loss gates for the semantic-kernel recovery
+  slices in this cycle.
+- Measured representative query-time slices within budget: Go `strings.Join`
+  stayed at +1.6%/-0.6% on paired repos, Java `Optional` stayed at -0.2%/-1.8%,
+  #567 import-backed immutable provenance stayed at +3.3% wall time and +4.3%
+  import-resolve, and the #584/#585 closeout improved median wall time by 8.7%.
+- Confirmed product-code-neutral audit slices by byte-identical release binaries
+  for Java `Arrays`/`Collections`, Go `sort`/`slices`/`maps`, and Python
+  HOF/runtime attribution; the Promise branch-return producer recovery release
+  verify gate passed on `crates` in 1.50s with `false_merges = 0`.
 
 ## [0.16.0] - 2026-06-26
 
