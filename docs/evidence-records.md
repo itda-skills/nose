@@ -765,8 +765,8 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `.then`, and admitted Promise `.catch` results with
   `nose.javascript.builtins.promise` provenance as `PromiseLike`; direct calls
   to source-proven async functions as `PromiseLike`; and direct calls to
-  non-async single-return functions as `PromiseLike` only when the returned
-  expression already has asserted PromiseLike domain evidence.
+  non-async functions as `PromiseLike` only when every returned expression on
+  the supported paths already has asserted PromiseLike domain evidence.
   `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`,
   `math.prod`, `Arrays.stream`, map `get`, iterator adapters, JS Array HOFs, and
   generic method contracts do not emit `Domain` records because their result
@@ -908,8 +908,8 @@ callers:
   function, and proof-backed DirectMethod producers can supply that value only
   through dependency-backed call-result domain evidence, and the reduced value
   preserves a Promise boundary in the value graph. DirectMethod recovery is
-  limited to non-async single-return methods whose returned expression already
-  has asserted `Domain(PromiseLike)` evidence and does not read receiver context.
+  limited to non-async methods whose supported return paths already have
+  asserted `Domain(PromiseLike)` evidence and do not read receiver context.
   Value-level CSE paths that only retain source
   spans now also go through span-query resolvers for free-name/imported
   collection factories, Java/Ruby/Rust collection factories, Java collection

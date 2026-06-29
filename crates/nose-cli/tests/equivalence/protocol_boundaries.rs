@@ -415,6 +415,47 @@ function f() {\n  return load().catch(e => e + 1);\n}\n";
 }
 
 #[test]
+fn direct_function_branching_promise_returns_recover_fulfilled_channel() {
+    let i = Interner::new();
+    let local_branch = "function load(flag: boolean) {\n  if (flag) return Promise.resolve(1);\n  return Promise.resolve(2);\n}\n\
+function f(flag: boolean) {\n  return load(flag).then(x => x + 1);\n}\n";
+    let direct_conditional =
+        "function f(flag: boolean) {\n  return Promise.resolve(flag ? 1 : 2).then(x => x + 1);\n}\n";
+    let sync_return = "function f(flag: boolean) {\n  return (flag ? 1 : 2) + 1;\n}\n";
+
+    assert_eq!(
+        value_fp_named(&i, local_branch, Lang::TypeScript, "f"),
+        value_fp(&i, direct_conditional, Lang::TypeScript),
+        "direct functions whose branches all return fulfilled Promise producers should recover as one fulfilled Promise channel"
+    );
+    assert_ne!(
+        value_fp_named(&i, local_branch, Lang::TypeScript, "f"),
+        value_fp(&i, sync_return, Lang::TypeScript),
+        "branching Promise return recovery must preserve the Promise boundary"
+    );
+}
+
+#[test]
+fn direct_function_mixed_fulfilled_rejected_branch_stays_closed() {
+    let i = Interner::new();
+    let mixed_branch = "function load(flag: boolean) {\n  if (flag) return Promise.resolve(1);\n  return Promise.reject(2);\n}\n\
+function f(flag: boolean) {\n  return load(flag).then(x => x + 1, e => e + 1);\n}\n";
+    let branch_continuations = "function f(flag: boolean) {\n  if (flag) return Promise.resolve(1).then(x => x + 1, e => e + 1);\n  return Promise.reject(2).then(x => x + 1, e => e + 1);\n}\n";
+    let sync_return = "function f(flag: boolean) {\n  return (flag ? 1 : 2) + 1;\n}\n";
+
+    assert_ne!(
+        value_fp_named(&i, mixed_branch, Lang::TypeScript, "f"),
+        value_fp(&i, branch_continuations, Lang::TypeScript),
+        "mixed fulfilled/rejected producer branches need channel-specific control-flow proof before recovery"
+    );
+    assert_ne!(
+        value_fp_named(&i, mixed_branch, Lang::TypeScript, "f"),
+        value_fp(&i, sync_return, Lang::TypeScript),
+        "closed mixed-channel Promise branches must not erase into sync payloads"
+    );
+}
+
+#[test]
 fn go_slice_literal_converges_with_array_but_struct_stays_distinct() {
     // A Go slice literal `[]int{1,2,3}` is an ordered sequence — it converges with a Python
     // list / JS array. A Go STRUCT literal `Point{1,2,3}` is a record, NOT a collection, and

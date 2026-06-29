@@ -103,3 +103,53 @@ pub(super) fn function_with_call(
     );
     (il, func, call)
 }
+
+pub(super) fn promise_call_expr(
+    builder: &mut IlBuilder,
+    interner: &Interner,
+    base_line: u32,
+) -> NodeId {
+    let producer = interner.intern("producer");
+    let callee = builder.add(NodeKind::Var, Payload::Name(producer), sp(base_line), &[]);
+    builder.add(NodeKind::Call, Payload::None, sp(base_line + 1), &[callee])
+}
+
+pub(super) fn promise_like_domain_record(il: &Il, id: EvidenceId, node: NodeId) -> EvidenceRecord {
+    EvidenceRecord {
+        id,
+        anchor: EvidenceAnchor::node(il.node(node).span, NodeKind::Call),
+        kind: EvidenceKind::Domain(DomainEvidence::PromiseLike),
+        provenance: language_core_provenance(Lang::TypeScript),
+        dependencies: Vec::new(),
+        status: EvidenceStatus::Asserted,
+    }
+}
+
+pub(super) fn direct_method_target_record(
+    il: &Il,
+    interner: &Interner,
+    id: EvidenceId,
+    call: NodeId,
+    target: NodeId,
+    method: Symbol,
+) -> EvidenceRecord {
+    EvidenceRecord {
+        id,
+        anchor: EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+        kind: EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectMethod {
+            target_span: il.node(target).span,
+            receiver_type_hash: stable_symbol_hash("Worker"),
+            method_hash: interner.symbol_hash(method),
+        }),
+        provenance: language_core_provenance(Lang::TypeScript),
+        dependencies: Vec::new(),
+        status: EvidenceStatus::Asserted,
+    }
+}
+
+pub(super) fn promise_like_domain_at_call(il: &Il, call: NodeId) -> Option<&EvidenceRecord> {
+    il.evidence.iter().find(|record| {
+        record.anchor == EvidenceAnchor::node(il.node(call).span, NodeKind::Call)
+            && record.kind == EvidenceKind::Domain(DomainEvidence::PromiseLike)
+    })
+}

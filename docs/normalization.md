@@ -201,20 +201,24 @@ Guiding constraints for every pass:
   Same-file direct calls to ordinary functions can provide the same proof only
   through returned-expression evidence: the call-target pass emits
   `Domain(PromiseLike)` on the call result when direct callee evidence points to
-  a non-async single-return function and that returned expression already has
-  asserted PromiseLike domain evidence. The value graph evaluates only that
-  returned expression for Promise receiver recovery; parameter callees,
-  multi-statement bodies, missing return-domain proof, member/imported call
-  returns, unsafe thenables, and broad helper inlining remain closed. The
-  measured slice is recorded in [promise-direct-function-return-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-direct-function-return-recovery-2026-06-29.v1.json).
+  a non-async function and every returned expression on the supported paths
+  already has asserted PromiseLike domain evidence. The value graph evaluates
+  the supported body for Promise receiver recovery through the existing
+  pure-inline sink fence; parameter callees, missing return-domain proof,
+  member/imported call returns, unsafe thenables, mixed fulfilled/rejected
+  branch channels, and broad helper inlining remain closed. The initial slice is
+  recorded in [promise-direct-function-return-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-direct-function-return-recovery-2026-06-29.v1.json),
+  with the branch-return extension in [promise-branch-return-producer-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-branch-return-producer-recovery-2026-06-29.v1.json).
   Existing DirectMethod call-target evidence can provide the same proof for the
   narrow member-call subset: the call-target pass emits `Domain(PromiseLike)` on
-  a non-async single-return method call only when the target body's returned
-  expression already has asserted PromiseLike domain evidence. The value graph
-  evaluates only that returned expression and closes if it reads receiver context
+  a non-async method call only when every returned expression on the supported
+  target-body paths already has asserted PromiseLike domain evidence. The value
+  graph evaluates the supported body and closes if it reads receiver context
   (`this`, `super`, or `self`), so selector-only member calls, dynamic dispatch,
-  imported members, receiver-dependent methods, and broad member inference
-  remain closed. The measured slice is recorded in the [Promise direct-method recovery artifact](../bench/recall_loss/promise-direct-method-return-recovery-2026-06-29.v1.json).
+  imported members, receiver-dependent methods, mixed settlement channels, and
+  broad member inference remain closed. The measured slices are recorded in the
+  direct-method [Promise recovery artifact](../bench/recall_loss/promise-direct-method-return-recovery-2026-06-29.v1.json)
+  and the [Promise branch-return producer artifact](../bench/recall_loss/promise-branch-return-producer-recovery-2026-06-29.v1.json).
   Imported function/member Promise call-return receivers remain closed even when
   call-target identity is present: an import coordinate has no local body for the
   value graph to evaluate, so these receivers now report a missing settled-value

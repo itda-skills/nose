@@ -15,7 +15,7 @@ pub(in crate::value_graph) fn eval_direct_method_return_call(
     env: &FxHashMap<u32, ValueId>,
 ) -> Option<ValueId> {
     let kids = builder.il.children(call).to_vec();
-    let (root, target) = direct_method_single_return_target_for_call(builder, call)?;
+    let (root, target) = direct_method_return_target_for_call(builder, call)?;
     if target.params.len() != kids.len().saturating_sub(1) {
         return None;
     }
@@ -29,12 +29,12 @@ pub(in crate::value_graph) fn eval_direct_method_return_call(
         fenv.insert(pc, v);
     }
     builder.inline_stack.push(root);
-    let value = builder.eval(target.body, &fenv);
+    let value = builder.inline_eval_pure_body(target.body, &mut fenv);
     builder.inline_stack.pop();
-    Some(value)
+    value
 }
 
-fn direct_method_single_return_target_for_call(
+fn direct_method_return_target_for_call(
     builder: &Builder<'_>,
     call: NodeId,
 ) -> Option<(NodeId, InlineFunction)> {
@@ -50,7 +50,7 @@ fn direct_method_single_return_target_for_call(
         if builder.direct_function_has_async_protocol(unit.root) {
             continue;
         }
-        let Some(function) = direct_method_single_return_target(builder, unit.root) else {
+        let Some(function) = direct_method_return_target(builder, unit.root) else {
             continue;
         };
         if found.is_some() {
@@ -61,11 +61,8 @@ fn direct_method_single_return_target_for_call(
     found
 }
 
-fn direct_method_single_return_target(
-    builder: &Builder<'_>,
-    root: NodeId,
-) -> Option<InlineFunction> {
-    let function = builder.direct_function_single_return_target(root)?;
+fn direct_method_return_target(builder: &Builder<'_>, root: NodeId) -> Option<InlineFunction> {
+    let function = builder.direct_function_return_target(root)?;
     if return_expr_uses_receiver_context(builder, function.body) {
         return None;
     }

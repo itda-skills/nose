@@ -12,40 +12,51 @@ fn emits_promise_like_domain_for_direct_method_returning_promise_like() {
     } = direct_method_return_call_fixture();
     let target_evidence_id = EvidenceId(400);
     let return_domain_id = EvidenceId(500);
-    il.evidence.push(EvidenceRecord {
-        id: target_evidence_id,
-        anchor: EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
-        kind: EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectMethod {
-            target_span: il.node(target).span,
-            receiver_type_hash: stable_symbol_hash("Worker"),
-            method_hash: interner.symbol_hash(method),
-        }),
-        provenance: language_core_provenance(Lang::TypeScript),
-        dependencies: Vec::new(),
-        status: EvidenceStatus::Asserted,
-    });
-    il.evidence.push(EvidenceRecord {
-        id: return_domain_id,
-        anchor: EvidenceAnchor::node(il.node(return_expr).span, NodeKind::Call),
-        kind: EvidenceKind::Domain(DomainEvidence::PromiseLike),
-        provenance: language_core_provenance(Lang::TypeScript),
-        dependencies: Vec::new(),
-        status: EvidenceStatus::Asserted,
-    });
+    let target_evidence =
+        direct_method_target_record(&il, &interner, target_evidence_id, call, target, method);
+    let return_domain = promise_like_domain_record(&il, return_domain_id, return_expr);
+    il.evidence.push(target_evidence);
+    il.evidence.push(return_domain);
 
     run(&mut il, &interner);
 
-    let domain = il
-        .evidence
-        .iter()
-        .find(|record| {
-            record.anchor == EvidenceAnchor::node(il.node(call).span, NodeKind::Call)
-                && record.kind == EvidenceKind::Domain(DomainEvidence::PromiseLike)
-        })
+    let domain = promise_like_domain_at_call(&il, call)
         .expect("PromiseLike domain evidence for direct method call result");
     assert_eq!(
         domain.dependencies,
         vec![target_evidence_id, return_domain_id]
+    );
+}
+
+#[test]
+fn emits_promise_like_domain_for_branching_direct_method_returns() {
+    let BranchingDirectMethodReturnFixture {
+        interner,
+        mut il,
+        target,
+        call,
+        then_expr,
+        else_expr,
+        method,
+    } = branching_direct_method_return_call_fixture();
+    let target_evidence_id = EvidenceId(400);
+    let then_domain_id = EvidenceId(500);
+    let else_domain_id = EvidenceId(501);
+    let target_evidence =
+        direct_method_target_record(&il, &interner, target_evidence_id, call, target, method);
+    il.evidence.push(target_evidence);
+    for (id, expr) in [(then_domain_id, then_expr), (else_domain_id, else_expr)] {
+        let record = promise_like_domain_record(&il, id, expr);
+        il.evidence.push(record);
+    }
+
+    run(&mut il, &interner);
+
+    let domain = promise_like_domain_at_call(&il, call)
+        .expect("PromiseLike domain evidence for branching direct method call result");
+    assert_eq!(
+        domain.dependencies,
+        vec![target_evidence_id, then_domain_id, else_domain_id]
     );
 }
 
@@ -59,18 +70,9 @@ fn direct_method_return_domain_requires_return_expression_domain_proof() {
         method,
         ..
     } = direct_method_return_call_fixture();
-    il.evidence.push(EvidenceRecord {
-        id: EvidenceId(400),
-        anchor: EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
-        kind: EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectMethod {
-            target_span: il.node(target).span,
-            receiver_type_hash: stable_symbol_hash("Worker"),
-            method_hash: interner.symbol_hash(method),
-        }),
-        provenance: language_core_provenance(Lang::TypeScript),
-        dependencies: Vec::new(),
-        status: EvidenceStatus::Asserted,
-    });
+    let target_evidence =
+        direct_method_target_record(&il, &interner, EvidenceId(400), call, target, method);
+    il.evidence.push(target_evidence);
 
     run(&mut il, &interner);
 
@@ -95,19 +97,57 @@ struct DirectMethodReturnFixture {
     method: Symbol,
 }
 
+struct BranchingDirectMethodReturnFixture {
+    interner: Interner,
+    il: Il,
+    target: NodeId,
+    call: NodeId,
+    then_expr: NodeId,
+    else_expr: NodeId,
+    method: Symbol,
+}
+
+fn branching_direct_method_return_call_fixture() -> BranchingDirectMethodReturnFixture {
+    let interner = Interner::new();
+    let method = interner.intern("load");
+    let mut b = IlBuilder::new(FileId(0));
+    let cond = b.add(NodeKind::Var, Payload::Cid(0), sp(20), &[]);
+    let then_expr = promise_call_expr(&mut b, &interner, 21);
+    let then_ret = b.add(NodeKind::Return, Payload::None, sp(23), &[then_expr]);
+    let then_block = b.add(NodeKind::Block, Payload::None, sp(24), &[then_ret]);
+    let else_expr = promise_call_expr(&mut b, &interner, 25);
+    let else_ret = b.add(NodeKind::Return, Payload::None, sp(27), &[else_expr]);
+    let else_block = b.add(NodeKind::Block, Payload::None, sp(28), &[else_ret]);
+    let branch = b.add(
+        NodeKind::If,
+        Payload::None,
+        sp(29),
+        &[cond, then_block, else_block],
+    );
+    let body = b.add(NodeKind::Block, Payload::None, sp(30), &[branch]);
+    let target = b.add(NodeKind::Func, Payload::None, sp(31), &[body]);
+    let call_arg = b.add(NodeKind::Lit, Payload::LitBool(true), sp(34), &[]);
+    let (il, call) = finish_ts_method_call_fixture(b, &interner, target, method, 32, &[call_arg]);
+    BranchingDirectMethodReturnFixture {
+        interner,
+        il,
+        target,
+        call,
+        then_expr,
+        else_expr,
+        method,
+    }
+}
+
 fn direct_method_return_call_fixture() -> DirectMethodReturnFixture {
     let interner = Interner::new();
     let method = interner.intern("load");
-    let worker = interner.intern("worker");
     let mut b = IlBuilder::new(FileId(0));
     let (target, return_expr) = promise_returning_method(&mut b, &interner);
-    let receiver = b.add(NodeKind::Var, Payload::Name(worker), sp(10), &[]);
-    let callee = b.add(NodeKind::Field, Payload::Name(method), sp(11), &[receiver]);
-    let call = b.add(NodeKind::Call, Payload::None, sp(12), &[callee]);
-    let module = b.add(NodeKind::Module, Payload::None, sp(13), &[target, call]);
+    let (il, call) = finish_ts_method_call_fixture(b, &interner, target, method, 10, &[]);
     DirectMethodReturnFixture {
         interner,
-        il: finish_ts_method_fixture(b, module, target, method),
+        il,
         target,
         call,
         return_expr,
@@ -127,6 +167,42 @@ fn promise_returning_method(b: &mut IlBuilder, interner: &Interner) -> (NodeId, 
     (
         b.add(NodeKind::Func, Payload::None, sp(4), &[ret]),
         return_expr,
+    )
+}
+
+fn finish_ts_method_call_fixture(
+    mut builder: IlBuilder,
+    interner: &Interner,
+    target: NodeId,
+    method: Symbol,
+    base_line: u32,
+    args: &[NodeId],
+) -> (Il, NodeId) {
+    let worker = interner.intern("worker");
+    let receiver = builder.add(NodeKind::Var, Payload::Name(worker), sp(base_line), &[]);
+    let callee = builder.add(
+        NodeKind::Field,
+        Payload::Name(method),
+        sp(base_line + 1),
+        &[receiver],
+    );
+    let mut call_children = vec![callee];
+    call_children.extend_from_slice(args);
+    let call = builder.add(
+        NodeKind::Call,
+        Payload::None,
+        sp(base_line + 2),
+        &call_children,
+    );
+    let module = builder.add(
+        NodeKind::Module,
+        Payload::None,
+        sp(base_line + 3),
+        &[target, call],
+    );
+    (
+        finish_ts_method_fixture(builder, module, target, method),
+        call,
     )
 }
 

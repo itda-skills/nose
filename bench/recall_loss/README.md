@@ -299,6 +299,14 @@ python3 scripts/cross-language-boundary-census.py \
   identity has no local body that can recover fulfilled or rejected payloads.
   The `105` imported-member and `73` imported-binding source candidates remain
   closed behind source-level hard negatives.
+- [promise-branch-return-producer-recovery-2026-06-29.v1.json](promise-branch-return-producer-recovery-2026-06-29.v1.json)
+  records the branch-return extension for proof-backed local Promise producers.
+  DirectFunction and DirectMethod call-result `Domain(PromiseLike)` evidence can
+  now depend on every returned expression on the supported paths, and the value
+  graph recovers same-channel Promise Phi states while preserving Promise
+  boundaries. Mixed fulfilled/rejected branches, selector-only members, imported
+  receivers, parameter callees, `.finally`, constructors, and aggregate or broad
+  scheduling paths remain closed.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

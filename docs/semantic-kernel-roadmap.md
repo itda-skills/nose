@@ -2198,6 +2198,9 @@ The follow-up [promise-direct-method-return-recovery-2026-06-29.v1.json](../benc
 2026-06-29 Promise imported call-return boundary note:
 The follow-up [promise-imported-call-return-boundary-2026-06-29.v1.json](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json) keeps exact admission closed but corrects the imported target-present obligation vocabulary. Imported function/member call-target evidence proves only a module/export/member coordinate; unlike DirectFunction or DirectMethod evidence, it does not provide an evaluable local body. These receivers now require a settled-value contract before Promise continuation recovery can open. The prior corpus scan keeps the queue priced at `105` imported-member candidates across `9` repos and `73` imported-binding candidates across `15` repos.
 
+2026-06-29 Promise branch-return producer recovery note:
+The follow-up [promise-branch-return-producer-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-branch-return-producer-recovery-2026-06-29.v1.json) broadens the proof-backed local producer slices without weakening their contracts. DirectFunction and DirectMethod call-result `Domain(PromiseLike)` evidence can depend on every returned expression in supported branch-return bodies, the value graph evaluates those bodies through the existing pure-inline sink fence, and same-channel Promise states recover through Phi values. Mixed fulfilled/rejected branches, selector-only members, parameter callees, imported receivers without settled-value contracts, unsafe thenables, `.finally`, constructors, aggregate combinators, and broad scheduling equivalence remain closed.
+
 ## See also
 
 - Back to [semantic-kernel](semantic-kernel.md).

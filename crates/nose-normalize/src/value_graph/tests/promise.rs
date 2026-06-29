@@ -11,10 +11,14 @@ fn promise_then_over_resolve_reduces_behind_promise_boundary() {
     let promise_value = builder.eval(then_call, &FxHashMap::default());
     let payload = {
         let node = &builder.nodes[promise_value as usize];
-        assert!(matches!(
-            node.op,
-            ValOp::Call(code) if code == PROMISE_RESOLVED_CODE
-        ));
+        assert!(
+            matches!(
+                node.op,
+                ValOp::Call(code) if code == PROMISE_RESOLVED_CODE
+            ),
+            "expected resolved Promise boundary, got {}",
+            val_op_name(&node.op)
+        );
         *node
             .args
             .first()
@@ -83,10 +87,14 @@ fn promise_reject_catch_recovers_rejection_to_fulfilled_boundary() {
     let promise_value = builder.eval(catch_call, &FxHashMap::default());
     let payload = {
         let node = &builder.nodes[promise_value as usize];
-        assert!(matches!(
-            node.op,
-            ValOp::Call(code) if code == PROMISE_RESOLVED_CODE
-        ));
+        assert!(
+            matches!(
+                node.op,
+                ValOp::Call(code) if code == PROMISE_RESOLVED_CODE
+            ),
+            "expected resolved Promise boundary, got {}",
+            val_op_name(&node.op)
+        );
         *node.args.first().expect("Promise boundary wraps payload")
     };
 
@@ -217,10 +225,14 @@ fn direct_method_promise_return_then_recovers_without_sync_erasure() {
     let promise_value = builder.eval(then_call, &FxHashMap::default());
     let payload = {
         let node = &builder.nodes[promise_value as usize];
-        assert!(matches!(
-            node.op,
-            ValOp::Call(code) if code == PROMISE_RESOLVED_CODE
-        ));
+        assert!(
+            matches!(
+                node.op,
+                ValOp::Call(code) if code == PROMISE_RESOLVED_CODE
+            ),
+            "expected resolved Promise boundary, got {}",
+            val_op_name(&node.op)
+        );
         *node.args.first().expect("Promise boundary wraps payload")
     };
     let sync_value = builder.eval(sync_add, &FxHashMap::default());
@@ -268,6 +280,128 @@ fn direct_method_promise_return_stays_closed_when_return_uses_receiver_context()
     );
 }
 
+#[test]
+fn direct_function_branching_promise_returns_recover_fulfilled_channel() {
+    let BranchingPromiseFixture {
+        mut il,
+        interner,
+        resolve_calls,
+        then_call,
+    } = direct_function_branching_promise_then_fixture(false);
+    assert_branch_resolve_evidence_admits(&mut il, &interner, &resolve_calls);
+    crate::call_target_evidence::run(&mut il, &interner);
+    assert_branch_resolve_calls_remain_admitted(&il, &interner, &resolve_calls);
+    let receiver = il.children(il.children(then_call)[0])[0];
+    assert_eq!(
+        nose_semantics::domain_evidence_for_receiver(&il, &interner, receiver),
+        Some(DomainEvidence::PromiseLike),
+        "branching direct function call result should gain PromiseLike receiver proof"
+    );
+    push_promise_then_evidence(&mut il, &interner, then_call, 200);
+    assert!(
+        nose_semantics::admitted_promise_then_at_call(&il, &interner, then_call).is_some(),
+        "branching direct function receiver should admit Promise.then evidence"
+    );
+
+    assert_branching_direct_body_evaluates_to_resolved_phi(&il, &interner, receiver);
+    assert_then_call_recovers_resolved_add_boundary(&il, &interner, then_call);
+}
+
+#[test]
+fn direct_function_mixed_fulfilled_rejected_branch_stays_closed() {
+    let BranchingPromiseFixture {
+        mut il,
+        interner,
+        resolve_calls,
+        then_call,
+    } = direct_function_branching_promise_then_fixture(true);
+    push_promise_resolve_evidence(&mut il, resolve_calls[0], 100);
+    push_promise_reject_evidence(&mut il, resolve_calls[1], 110);
+    crate::call_target_evidence::run(&mut il, &interner);
+    push_promise_then_evidence(&mut il, &interner, then_call, 200);
+
+    assert!(
+        !matches!(
+            eval_op(&il, &interner, then_call),
+            ValOp::Call(code) if code == PROMISE_RESOLVED_CODE || code == PROMISE_REJECTED_CODE
+        ),
+        "mixed fulfilled/rejected producer branches need channel-specific control-flow proof"
+    );
+}
+
+fn assert_branch_resolve_evidence_admits(
+    il: &mut Il,
+    interner: &Interner,
+    resolve_calls: &[NodeId; 2],
+) {
+    for (idx, &resolve_call) in resolve_calls.iter().enumerate() {
+        push_promise_resolve_evidence(il, resolve_call, 100 + 10 * idx as u32);
+        assert!(
+            nose_semantics::admitted_promise_resolve_at_call(il, interner, resolve_call).is_some(),
+            "branch Promise.resolve call should admit factory evidence"
+        );
+    }
+}
+
+fn assert_branch_resolve_calls_remain_admitted(
+    il: &Il,
+    interner: &Interner,
+    resolve_calls: &[NodeId; 2],
+) {
+    for &resolve_call in resolve_calls {
+        assert!(
+            nose_semantics::admitted_promise_resolve_at_call(il, interner, resolve_call).is_some(),
+            "branch Promise.resolve call should remain admitted after call-target evidence"
+        );
+    }
+}
+
+fn assert_branching_direct_body_evaluates_to_resolved_phi(
+    il: &Il,
+    interner: &Interner,
+    receiver: NodeId,
+) {
+    let mut builder = Builder::new(il, interner);
+    let receiver_value = builder
+        .eval_direct_function_return_call(receiver, &FxHashMap::default())
+        .expect("branching direct function body should evaluate behind the sink fence");
+    assert!(
+        matches!(builder.nodes[receiver_value as usize].op, ValOp::Phi),
+        "branching direct function producer should evaluate to a Phi of Promise boundaries"
+    );
+    let branch_values = builder.nodes[receiver_value as usize].args.clone();
+    assert_resolved_promise_boundary(&builder, branch_values[1]);
+    assert_resolved_promise_boundary(&builder, branch_values[2]);
+}
+
+fn assert_then_call_recovers_resolved_add_boundary(
+    il: &Il,
+    interner: &Interner,
+    then_call: NodeId,
+) {
+    let mut builder = Builder::new(il, interner);
+    let promise_value = builder.eval(then_call, &FxHashMap::default());
+    let payload = assert_resolved_promise_boundary(&builder, promise_value);
+    assert!(
+        matches!(builder.nodes[payload as usize].op, ValOp::Bin(op) if op == Op::Add as u32),
+        "fulfilled branch payloads should flow through the continuation"
+    );
+    assert_ne!(
+        promise_value, payload,
+        "branching Promise continuation recovery must preserve the Promise boundary"
+    );
+}
+
+fn assert_resolved_promise_boundary(builder: &Builder<'_>, value: ValueId) -> ValueId {
+    let node = &builder.nodes[value as usize];
+    assert!(
+        matches!(node.op, ValOp::Call(code) if code == PROMISE_RESOLVED_CODE),
+        "expected resolved Promise boundary, got {}",
+        val_op_name(&node.op),
+    );
+    *node.args.first().expect("Promise boundary wraps payload")
+}
+
 struct DirectMethodPromiseFixture {
     il: Il,
     interner: Interner,
@@ -277,6 +411,36 @@ struct DirectMethodPromiseFixture {
     resolve_call: NodeId,
     then_call: NodeId,
     sync_add: NodeId,
+}
+
+fn val_op_name(op: &ValOp) -> &'static str {
+    match op {
+        ValOp::Input(_) => "input",
+        ValOp::Const { .. } => "const",
+        ValOp::Bin(_) => "bin",
+        ValOp::Un(_) => "un",
+        ValOp::Field(_) => "field",
+        ValOp::Index => "index",
+        ValOp::Call(_) => "call",
+        ValOp::KwArg(_) => "kwarg",
+        ValOp::Hof(_) => "hof",
+        ValOp::Clamp => "clamp",
+        ValOp::Seq(_) => "seq",
+        ValOp::ImportNamespace { .. } => "import-namespace",
+        ValOp::ImportBinding { .. } => "import-binding",
+        ValOp::CollectionParam => "collection-param",
+        ValOp::ArrayParam => "array-param",
+        ValOp::StringParam => "string-param",
+        ValOp::Phi => "phi",
+        ValOp::Lambda(_) => "lambda",
+        ValOp::Loop(_) => "loop",
+        ValOp::Elem(_) => "elem",
+        ValOp::Idx(_) => "idx",
+        ValOp::Reduce(_) => "reduce",
+        ValOp::Formula(_) => "formula",
+        ValOp::Recurrence(_) => "recurrence",
+        ValOp::Opaque(_) => "opaque",
+    }
 }
 
 fn direct_method_promise_then_fixture(uses_receiver_context: bool) -> DirectMethodPromiseFixture {

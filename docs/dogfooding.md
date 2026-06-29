@@ -601,3 +601,11 @@ direct-call-target negative fixture family: `727e41b9e3e96f1e` no longer
 reports, and `32ed015840375d04` reports the same three test-scope locations
 (`does_not_emit_*` direct-call-target negatives plus the semantics selector
 shape guard). No new budget is accepted.
+
+The Promise branch-return producer recovery slice also keeps the count at 53.
+The DirectMethod branch-return test initially surfaced a small five-line
+test-fixture family against the semantics DirectMethod selector guard; extracting
+shared Promise-like and DirectMethod fixture helpers removed that new family.
+The remaining delta is the same reviewed direct-call-target negative fixture
+family moving from `32ed015840375d04` to `1af33fd980c0e8b9` after new branch
+fixtures shifted line spans. No new budget is accepted.

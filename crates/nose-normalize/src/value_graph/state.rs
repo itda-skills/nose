@@ -311,6 +311,7 @@ impl<'a> Builder<'a> {
             ValOp::Seq(_) | ValOp::CollectionParam | ValOp::ArrayParam => ValueDomain::Sequence,
             ValOp::Clamp => ValueDomain::Number,
             ValOp::StringParam => ValueDomain::String,
+            ValOp::Phi if args.len() == 3 && at(1) == at(2) => at(1),
             ValOp::Call(tag)
                 if matches!(
                     *tag,

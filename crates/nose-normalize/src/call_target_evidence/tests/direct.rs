@@ -76,14 +76,8 @@ fn emits_promise_like_domain_for_direct_function_returning_promise_like() {
         ..
     } = direct_return_call_fixture(DirectReturnKind::PromiseCall);
     let return_domain_id = EvidenceId(500);
-    il.evidence.push(EvidenceRecord {
-        id: return_domain_id,
-        anchor: EvidenceAnchor::node(il.node(return_expr).span, NodeKind::Call),
-        kind: EvidenceKind::Domain(DomainEvidence::PromiseLike),
-        provenance: language_core_provenance(Lang::TypeScript),
-        dependencies: Vec::new(),
-        status: EvidenceStatus::Asserted,
-    });
+    let return_domain = promise_like_domain_record(&il, return_domain_id, return_expr);
+    il.evidence.push(return_domain);
 
     run(&mut il, &interner);
 
@@ -106,6 +100,90 @@ fn emits_promise_like_domain_for_direct_function_returning_promise_like() {
         })
         .expect("PromiseLike domain evidence for direct function call result");
     assert_eq!(domain.dependencies, vec![call_target.id, return_domain_id]);
+}
+
+#[test]
+fn emits_promise_like_domain_for_branching_direct_function_returns() {
+    let interner = Interner::new();
+    let load = interner.intern("load");
+    let use_value = interner.intern("useValue");
+    let mut b = IlBuilder::new(FileId(0));
+    let param = b.add(NodeKind::Param, Payload::Cid(0), sp(1), &[]);
+    let cond = b.add(NodeKind::Var, Payload::Cid(0), sp(2), &[]);
+    let then_expr = promise_call_expr(&mut b, &interner, 10);
+    let then_ret = b.add(NodeKind::Return, Payload::None, sp(14), &[then_expr]);
+    let then_block = b.add(NodeKind::Block, Payload::None, sp(15), &[then_ret]);
+    let else_expr = promise_call_expr(&mut b, &interner, 20);
+    let else_ret = b.add(NodeKind::Return, Payload::None, sp(24), &[else_expr]);
+    let else_block = b.add(NodeKind::Block, Payload::None, sp(25), &[else_ret]);
+    let branch = b.add(
+        NodeKind::If,
+        Payload::None,
+        sp(26),
+        &[cond, then_block, else_block],
+    );
+    let body = b.add(NodeKind::Block, Payload::None, sp(27), &[branch]);
+    let target = b.add(NodeKind::Func, Payload::None, sp(28), &[param, body]);
+    let callee = b.add(NodeKind::Var, Payload::Name(load), sp(30), &[]);
+    let call_arg = b.add(NodeKind::Lit, Payload::LitBool(true), sp(31), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(32), &[callee, call_arg]);
+    let caller_ret = b.add(NodeKind::Return, Payload::None, sp(33), &[call]);
+    let caller_body = b.add(NodeKind::Block, Payload::None, sp(34), &[caller_ret]);
+    let caller = b.add(NodeKind::Func, Payload::None, sp(35), &[caller_body]);
+    let module = b.add(NodeKind::Module, Payload::None, sp(36), &[target, caller]);
+    let mut il = b.finish(
+        module,
+        FileMeta {
+            path: "t".into(),
+            lang: Lang::TypeScript,
+        },
+        vec![
+            Unit {
+                root: target,
+                kind: UnitKind::Function,
+                name: Some(load),
+                origin: Default::default(),
+            },
+            Unit {
+                root: caller,
+                kind: UnitKind::Function,
+                name: Some(use_value),
+                origin: Default::default(),
+            },
+        ],
+        Vec::new(),
+    );
+    let then_domain_id = EvidenceId(500);
+    let else_domain_id = EvidenceId(501);
+    for (id, expr) in [(then_domain_id, then_expr), (else_domain_id, else_expr)] {
+        let record = promise_like_domain_record(&il, id, expr);
+        il.evidence.push(record);
+    }
+
+    run(&mut il, &interner);
+
+    let call_target = il
+        .evidence
+        .iter()
+        .find(|record| {
+            matches!(
+                record.kind,
+                EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectFunction { .. })
+            )
+        })
+        .expect("direct function call-target evidence");
+    let domain = il
+        .evidence
+        .iter()
+        .find(|record| {
+            record.anchor == EvidenceAnchor::node(il.node(call).span, NodeKind::Call)
+                && record.kind == EvidenceKind::Domain(DomainEvidence::PromiseLike)
+        })
+        .expect("PromiseLike domain evidence for branching direct function call result");
+    assert_eq!(
+        domain.dependencies,
+        vec![call_target.id, then_domain_id, else_domain_id]
+    );
 }
 
 #[test]

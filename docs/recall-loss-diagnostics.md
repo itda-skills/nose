@@ -198,6 +198,15 @@ vocabulary: target-present imported Promise receivers now require a
 settled-value contract rather than mere return-domain proof. Imported
 call-target evidence proves a module/export/member coordinate, not a local body
 whose fulfilled or rejected payload can be evaluated.
+The [branch-return Promise producer recovery](../bench/recall_loss/promise-branch-return-producer-recovery-2026-06-29.v1.json)
+extends the direct-function and DirectMethod slices from single-return bodies to
+supported branch-return bodies. A receiver should move out of
+`promise-call-return-direct-function-return-domain-proof` only when every
+returned expression on the supported paths has PromiseLike domain evidence.
+Same-channel fulfilled/fulfilled or rejected/rejected branches can recover
+through a Promise Phi; mixed fulfilled/rejected branches, imported receivers,
+selector-only members, and missing return-domain proof remain in fail-closed
+obligations.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

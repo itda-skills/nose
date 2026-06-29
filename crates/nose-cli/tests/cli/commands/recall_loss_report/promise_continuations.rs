@@ -12,6 +12,8 @@ async function load() { return 1; }\n\
 function thenAsync(f) { return load().then(f); }\n\
 function makeResolved() { return Promise.resolve(1); }\n\
 function thenLocal(f) { return makeResolved().then(f); }\n\
+function makeBranched(flag) { if (flag) return Promise.resolve(1); return Promise.resolve(2); }\n\
+function thenBranched(flag, f) { return makeBranched(flag).then(f); }\n\
 function thenConstruct(executor, f) { return new Promise(executor).then(f); }\n\
 function thenCall(db, id, f) { return db.get(id).then(f); }\n",
     );
@@ -29,10 +31,10 @@ function thenCall(db, id, f) { return db.get(id).then(f); }\n",
     let report_text = fs::read_to_string(&report_path).expect("recall-loss report");
     let report: serde_json::Value =
         serde_json::from_str(&report_text).expect("recall-loss report JSON");
-    assert_eq!(report["summary"]["total_units"], 9);
-    assert_eq!(report["summary"]["interpretable_units"], 8);
+    assert_eq!(report["summary"]["total_units"], 11);
+    assert_eq!(report["summary"]["interpretable_units"], 10);
     assert_eq!(report["summary"]["excluded_units"], 1);
-    assert_eq!(report["summary"]["admission_rejections"], 8);
+    assert_eq!(report["summary"]["admission_rejections"], 9);
 
     let obligations = report["by_obligation"]
         .as_array()
@@ -56,7 +58,7 @@ function thenCall(db, id, f) { return db.get(id).then(f); }\n",
         (
             "success-error-result-channel",
             "promise-then-fulfillment-continuation-contract-missing",
-            2,
+            3,
         ),
         (
             "success-error-result-channel",

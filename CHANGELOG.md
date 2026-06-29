@@ -50,6 +50,12 @@ break.
   recovery consumes only that returned expression, closes on receiver-context
   reads, preserves the Promise boundary, and keeps selector-only member calls
   reporting-only.
+- Expanded proof-backed local Promise producer recovery from single-return
+  bodies to supported branch-return bodies. DirectFunction and DirectMethod
+  call-result domain evidence can now depend on every returned expression on the
+  supported paths; value-graph recovery handles same-channel Promise Phi states,
+  keeps mixed fulfilled/rejected branches closed, and still preserves imported
+  call-return receivers behind settled-value contracts.
 - Refined imported function/member Promise call-return diagnostics. Imported
   target-present receivers now report missing settled-value contracts rather
   than return-domain proof, because imported call-target identity has no local

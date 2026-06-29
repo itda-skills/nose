@@ -143,6 +143,13 @@ keeps imported function/member receivers closed and renames their target-present
 obligation to settled-value contracts. Import coordinates prove identity, not
 payload recovery; exact Promise continuation recovery for imported producers
 must first model fulfilled/rejected value channels explicitly.
+The follow-up [promise-branch-return-producer-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-branch-return-producer-recovery-2026-06-29.v1.json)
+then broadens the local producer proof from single-return bodies to supported
+branch-return bodies. DirectFunction and DirectMethod result-domain evidence can
+depend on every returned expression on the supported paths, and the value graph
+recovers only same-channel Promise Phi states. Mixed fulfilled/rejected
+branches, selector-only members, parameter callees, imported receivers without
+settled-value contracts, and broad scheduling remain closed.
 
 ## Minimal Vocabulary
 

@@ -81,6 +81,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [Promise direct-function return recovery](../bench/recall_loss/promise-direct-function-return-recovery-2026-06-29.v1.json) records the proof-backed direct-function subset of the local/parameter call-return queue: same-file single-return functions returning proven PromiseLike expressions can now feed local Promise continuation recovery while parameter callees and member/imported call returns remain closed.
 - [Promise direct-method return recovery](../bench/recall_loss/promise-direct-method-return-recovery-2026-06-29.v1.json) records the proof-backed DirectMethod subset of the member call-return queue: existing DirectMethod target evidence plus returned-expression PromiseLike domain proof can feed local Promise continuation recovery while selector-only member calls, receiver-dependent methods, dynamic dispatch, and imported members remain closed.
 - [Promise imported call-return boundary](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json) records the reporting-only imported function/member follow-up: target-present imported Promise receivers now report missing settled-value contracts instead of return-domain proof, because imported call-target identity has no local body to evaluate.
+- [Promise branch-return producer recovery](../bench/recall_loss/promise-branch-return-producer-recovery-2026-06-29.v1.json) records the branch-return extension for local Promise producers: DirectFunction and DirectMethod return-domain proof can now compose every returned expression on supported paths, while mixed settlement channels, selector-only members, parameter callees, and imported receivers remain closed.
 
 Regenerate the full local reports with:
 
@@ -622,6 +623,14 @@ Promise runtime rows, the behavior change is pinned by focused call-target,
 equivalence, and recall-loss-report tests. Parameter callees, member/imported
 call returns, unsafe thenables, constructors, `.finally`, aggregate channels,
 and broad scheduling remain closed.
+The branch-return follow-up [promise-branch-return-producer-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-branch-return-producer-recovery-2026-06-29.v1.json)
+extends that producer proof to supported direct-function and DirectMethod bodies
+where every returned expression carries PromiseLike domain evidence. Same-channel
+fulfilled/fulfilled or rejected/rejected branches recover through Promise Phi
+states; mixed fulfilled/rejected branches stay closed. The local `crates` gate
+still reports `false_merges == 0` and `canon_preservation_violations == 0`,
+with the focused branch-return equivalence and recall-loss fixtures pinning the
+JS/TS behavior.
 The follow-up [imported Promise call-return boundary](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json)
 does not open exact admission. It sharpens the imported target-present labels
 exposed by the call-return diagnostics: imported function/member receivers need

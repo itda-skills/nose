@@ -47,12 +47,17 @@ Promise-like receivers whose settled value can be recovered from supported
 first-party producers: currently JS-like `Promise.resolve(value)` with an
 unshadowed `Promise.resolve` proof and a non-thenable-safe value, JS-like
 `Promise.reject(reason)` as a rejected channel, plus admitted
-`.then(lambda)`/`.catch(lambda)` chains over those boundaries. Handler-returned
-`Promise.resolve` is flattened only when the returned value is non-thenable-safe
-after local substitution; handler-returned `Promise.reject` preserves the
-rejected channel. Selector-only `.then(...)`/`.catch(...)`, custom thenables,
-shadowed `Promise`, unsafe `Promise.resolve(obj)` arguments, `.finally`,
-aggregate combinators, and missing or ambiguous receiver proof stay closed.
+`.then(lambda)`/`.catch(lambda)` chains over those boundaries. Same-file direct
+async, direct ordinary-function, and proof-backed DirectMethod producers can
+also supply the settled value when dependency-backed call-result domain evidence
+points to supported return paths. Branch-return producers recover only through
+same-channel Promise Phi states. Handler-returned `Promise.resolve` is flattened
+only when the returned value is non-thenable-safe after local substitution;
+handler-returned `Promise.reject` preserves the rejected channel. Selector-only
+`.then(...)`/`.catch(...)`, custom thenables, shadowed `Promise`, unsafe
+`Promise.resolve(obj)` arguments, mixed fulfilled/rejected branch channels,
+`.finally`, aggregate combinators, and missing or ambiguous receiver proof stay
+closed.
 The JS/TS corpus audit [`js-ts-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/js-ts-stdlib-partial-audit-2026-06-28.v1.json)
 confirms this is the largest JS/TS builtin-shaped surface in the pinned corpus:
 `29,094` Promise/async occurrences are tracked as a processed closed boundary

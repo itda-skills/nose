@@ -236,7 +236,7 @@ impl<'a> Builder<'a> {
         env: &FxHashMap<u32, ValueId>,
     ) -> Option<ValueId> {
         let kids = self.il.children(call).to_vec();
-        let (root, target) = self.direct_function_single_return_target_for_call(call)?;
+        let (root, target) = self.direct_function_return_target_for_call(call)?;
         if target.params.len() != kids.len().saturating_sub(1) {
             return None;
         }
@@ -250,9 +250,9 @@ impl<'a> Builder<'a> {
             fenv.insert(pc, v);
         }
         self.inline_stack.push(root);
-        let value = self.eval(target.body, &fenv);
+        let value = self.inline_eval_pure_body(target.body, &mut fenv);
         self.inline_stack.pop();
-        Some(value)
+        value
     }
 
     /// Evaluate an admitted callee body in the caller's builder behind a sink fence.
@@ -268,7 +268,7 @@ impl<'a> Builder<'a> {
     /// its value — the attempt rolls back (truncating only state the fence owns; created
     /// value nodes are unreachable and never enter the reachability-filtered fingerprint
     /// or anchors) and the call stays opaque.
-    fn inline_eval_pure_body(
+    pub(in crate::value_graph) fn inline_eval_pure_body(
         &mut self,
         body: NodeId,
         fenv: &mut FxHashMap<u32, ValueId>,
@@ -434,7 +434,7 @@ impl<'a> Builder<'a> {
         found
     }
 
-    fn direct_function_single_return_target_for_call(
+    fn direct_function_return_target_for_call(
         &self,
         call: NodeId,
     ) -> Option<(NodeId, InlineFunction)> {
@@ -450,7 +450,7 @@ impl<'a> Builder<'a> {
             if self.direct_function_has_async_protocol(unit.root) {
                 continue;
             }
-            let Some(function) = self.direct_function_single_return_target(unit.root) else {
+            let Some(function) = self.direct_function_return_target(unit.root) else {
                 continue;
             };
             if found.is_some() {
@@ -461,7 +461,7 @@ impl<'a> Builder<'a> {
         found
     }
 
-    pub(in crate::value_graph) fn direct_function_single_return_target(
+    pub(in crate::value_graph) fn direct_function_return_target(
         &self,
         root: NodeId,
     ) -> Option<InlineFunction> {
@@ -470,7 +470,9 @@ impl<'a> Builder<'a> {
         if self.il.kind(body) == NodeKind::Raw {
             return None;
         }
-        let return_expr = self.single_statement_return_expr(body)?;
+        if !self.branch_returns(body) {
+            return None;
+        }
         let params: Vec<u32> = kids
             .iter()
             .filter_map(|&p| match self.il.node(p).payload {
@@ -478,21 +480,7 @@ impl<'a> Builder<'a> {
                 _ => None,
             })
             .collect();
-        Some(InlineFunction {
-            params,
-            body: return_expr,
-        })
-    }
-
-    fn single_statement_return_expr(&self, body: NodeId) -> Option<NodeId> {
-        let ret = if self.il.kind(body) == NodeKind::Block {
-            let kids = self.il.children(body);
-            (kids.len() == 1).then_some(kids[0])?
-        } else {
-            body
-        };
-        (self.il.kind(ret) == NodeKind::Return).then_some(())?;
-        self.il.children(ret).first().copied()
+        Some(InlineFunction { params, body })
     }
 
     pub(in crate::value_graph) fn direct_function_has_async_protocol(&self, root: NodeId) -> bool {

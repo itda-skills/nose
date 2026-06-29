@@ -164,15 +164,19 @@ fn record_direct_function_return_promise_like_domain(
     if direct_async_function_protocol_boundary(il, target_root).is_some() {
         return None;
     }
-    let return_domain =
-        direct_function_return_domain_evidence_id(il, target_root, DomainEvidence::PromiseLike)?;
+    let mut dependencies = vec![target_evidence];
+    dependencies.extend(direct_function_return_domain_evidence_ids(
+        il,
+        target_root,
+        DomainEvidence::PromiseLike,
+    )?);
     Some(upsert(
         il,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::Domain(DomainEvidence::PromiseLike),
         DIRECT_FUNCTION_RETURN_DOMAIN_RULE,
         provenance,
-        vec![target_evidence, return_domain],
+        dependencies,
     ))
 }
 
@@ -283,23 +287,27 @@ fn record_direct_method_return_promise_like_domain(
     if direct_async_function_protocol_boundary(il, target_root).is_some() {
         return None;
     }
-    let return_domain =
-        direct_function_return_domain_evidence_id(il, target_root, DomainEvidence::PromiseLike)?;
+    let mut dependencies = vec![target_evidence];
+    dependencies.extend(direct_function_return_domain_evidence_ids(
+        il,
+        target_root,
+        DomainEvidence::PromiseLike,
+    )?);
     Some(upsert(
         il,
         EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
         EvidenceKind::Domain(DomainEvidence::PromiseLike),
         DIRECT_METHOD_RETURN_DOMAIN_RULE,
         provenance,
-        vec![target_evidence, return_domain],
+        dependencies,
     ))
 }
 
-fn direct_function_return_domain_evidence_id(
+fn direct_function_return_domain_evidence_ids(
     il: &Il,
     target_root: NodeId,
     domain: DomainEvidence,
-) -> Option<EvidenceId> {
+) -> Option<Vec<EvidenceId>> {
     if il.kind(target_root) != NodeKind::Func {
         return None;
     }
@@ -307,19 +315,104 @@ fn direct_function_return_domain_evidence_id(
     if il.kind(body) == NodeKind::Raw {
         return None;
     }
-    let return_expr = single_statement_return_expr(il, body)?;
-    asserted_domain_evidence_id_at_node(il, return_expr, domain)
+    let mut returns = Vec::new();
+    if !collect_return_exprs_on_all_paths(il, body, &mut returns) || returns.is_empty() {
+        return None;
+    }
+    let mut evidence = Vec::with_capacity(returns.len());
+    for return_expr in returns {
+        evidence.push(asserted_domain_evidence_id_at_node(
+            il,
+            return_expr,
+            domain,
+        )?);
+    }
+    evidence.sort_unstable_by_key(|id| id.0);
+    evidence.dedup();
+    Some(evidence)
 }
 
-fn single_statement_return_expr(il: &Il, body: NodeId) -> Option<NodeId> {
-    let ret = if il.kind(body) == NodeKind::Block {
-        let kids = il.children(body);
-        (kids.len() == 1).then_some(kids[0])?
-    } else {
-        body
-    };
-    (il.kind(ret) == NodeKind::Return).then_some(())?;
-    il.children(ret).first().copied()
+fn collect_return_exprs_on_all_paths(il: &Il, node: NodeId, out: &mut Vec<NodeId>) -> bool {
+    match il.kind(node) {
+        NodeKind::Return => {
+            let Some(&expr) = il.children(node).first() else {
+                return false;
+            };
+            out.push(expr);
+            true
+        }
+        NodeKind::Block => collect_block_return_exprs(il, il.children(node), out),
+        NodeKind::If => {
+            let kids = il.children(node);
+            if kids.len() < 3 {
+                return false;
+            }
+            let base = out.len();
+            if collect_return_exprs_on_all_paths(il, kids[1], out)
+                && collect_return_exprs_on_all_paths(il, kids[2], out)
+            {
+                true
+            } else {
+                out.truncate(base);
+                false
+            }
+        }
+        _ => false,
+    }
+}
+
+fn collect_block_return_exprs(il: &Il, stmts: &[NodeId], out: &mut Vec<NodeId>) -> bool {
+    for &stmt in stmts {
+        let base = out.len();
+        if collect_return_exprs_on_all_paths(il, stmt, out) {
+            return true;
+        }
+        out.truncate(base);
+        collect_conditional_return_exprs(il, stmt, out);
+    }
+    false
+}
+
+fn collect_conditional_return_exprs(il: &Il, node: NodeId, out: &mut Vec<NodeId>) {
+    match il.kind(node) {
+        NodeKind::If => {
+            let kids = il.children(node);
+            for &branch in kids.iter().skip(1).take(2) {
+                collect_any_return_exprs(il, branch, out);
+            }
+        }
+        NodeKind::Block => {
+            for &child in il.children(node) {
+                collect_conditional_return_exprs(il, child, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn collect_any_return_exprs(il: &Il, node: NodeId, out: &mut Vec<NodeId>) {
+    match il.kind(node) {
+        NodeKind::Return => {
+            if let Some(&expr) = il.children(node).first() {
+                out.push(expr);
+            }
+        }
+        NodeKind::Block => {
+            for &stmt in il.children(node) {
+                collect_any_return_exprs(il, stmt, out);
+                if collect_return_exprs_on_all_paths(il, stmt, &mut Vec::new()) {
+                    break;
+                }
+            }
+        }
+        NodeKind::If => {
+            let kids = il.children(node);
+            for &branch in kids.iter().skip(1).take(2) {
+                collect_any_return_exprs(il, branch, out);
+            }
+        }
+        _ => {}
+    }
 }
 
 fn asserted_domain_evidence_id_at_node(

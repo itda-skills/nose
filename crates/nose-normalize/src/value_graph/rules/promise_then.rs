@@ -206,7 +206,7 @@ fn safe_absent_handler(builder: &Builder<'_>, handler: NodeId) -> bool {
 }
 
 fn promise_state_from_handler_result(
-    builder: &Builder<'_>,
+    builder: &mut Builder<'_>,
     value: ValueId,
 ) -> Option<PromiseState> {
     if let Some(state) = promise_boundary_state(builder, value) {
@@ -237,7 +237,7 @@ fn promise_rejection_boundary(builder: &mut Builder<'_>, payload: ValueId) -> Va
     builder.mk(ValOp::Call(PROMISE_REJECTED_CODE), vec![payload])
 }
 
-fn promise_boundary_state(builder: &Builder<'_>, value: ValueId) -> Option<PromiseState> {
+fn promise_boundary_state(builder: &mut Builder<'_>, value: ValueId) -> Option<PromiseState> {
     let node = builder.nodes.get(value as usize)?;
     match &node.op {
         ValOp::Call(code) if *code == PROMISE_RESOLVED_CODE => {
@@ -245,6 +245,30 @@ fn promise_boundary_state(builder: &Builder<'_>, value: ValueId) -> Option<Promi
         }
         ValOp::Call(code) if *code == PROMISE_REJECTED_CODE => {
             node.args.first().copied().map(PromiseState::Rejected)
+        }
+        ValOp::Phi => {
+            let args = node.args.clone();
+            let [cond, then_value, else_value] = args.as_slice() else {
+                return None;
+            };
+            let then_state = promise_boundary_state(builder, *then_value)?;
+            let else_state = promise_boundary_state(builder, *else_value)?;
+            match (then_state, else_state) {
+                (PromiseState::Fulfilled(then_payload), PromiseState::Fulfilled(else_payload)) => {
+                    Some(PromiseState::Fulfilled(
+                        builder.mk(ValOp::Phi, vec![*cond, then_payload, else_payload]),
+                    ))
+                }
+                (PromiseState::Rejected(then_reason), PromiseState::Rejected(else_reason)) => {
+                    Some(PromiseState::Rejected(
+                        builder.mk(ValOp::Phi, vec![*cond, then_reason, else_reason]),
+                    ))
+                }
+                (
+                    PromiseState::Fulfilled(_) | PromiseState::Rejected(_),
+                    PromiseState::Fulfilled(_) | PromiseState::Rejected(_),
+                ) => None,
+            }
         }
         _ => None,
     }
