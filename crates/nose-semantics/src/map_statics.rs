@@ -227,6 +227,7 @@ pub fn qualified_global_symbol_contract(
             ("Object.prototype.hasOwnProperty.call", "Object")
         }
         "Promise.resolve" => ("Promise.resolve", "Promise"),
+        "Promise.reject" => ("Promise.reject", "Promise"),
         _ => return None,
     };
     Some(QualifiedGlobalSymbolContract {

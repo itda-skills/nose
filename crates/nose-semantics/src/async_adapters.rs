@@ -10,6 +10,7 @@ pub enum AsyncReceiverContract {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PromiseFactoryKind {
     Resolve,
+    Reject,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -23,6 +24,12 @@ pub struct PromiseFactoryContract {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct PromiseThenContract {
+    pub receiver: AsyncReceiverContract,
+    pub demand: DemandEffectProfile,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct PromiseCatchContract {
     pub receiver: AsyncReceiverContract,
     pub demand: DemandEffectProfile,
 }
@@ -43,6 +50,14 @@ pub fn promise_resolve_contract(
 ) -> Option<PromiseFactoryContract> {
     library_promise_resolve_contract(lang, receiver, method, arg_count)
         .map(|contract| contract.result)
+}
+
+pub fn promise_catch_contract(
+    lang: Lang,
+    method: &str,
+    arg_count: usize,
+) -> Option<PromiseCatchContract> {
+    library_promise_catch_contract(lang, method, arg_count).map(|contract| contract.result)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

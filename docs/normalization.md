@@ -182,12 +182,15 @@ Guiding constraints for every pass:
   pattern source evidence for pattern surfaces. Unqualified `Result<T, E>`
   receiver proofs close when the current Rust module defines its own `Result`
   type; lazy/defaulting and panic-like Result helpers remain opaque.
-  Supported JS-like `Promise.resolve(...).then(...)` continuations can reduce in
-  the value graph only after admitted Promise API evidence and PromiseLike
-  receiver proof. The reduced value remains wrapped in a Promise boundary, so it
+  Supported JS-like local Promise continuations can reduce in the value graph
+  only after admitted Promise API evidence and PromiseLike receiver proof.
+  `Promise.resolve(...).then(...)`, handler-returned `Promise.resolve`,
+  `Promise.reject(...).catch(...)`, and
+  `Promise.reject(...).then(undefined, ...)` are modeled as fulfilled/rejected
+  Promise states. The reduced value remains wrapped in a Promise boundary, so it
   does not merge with synchronous code that computes the same payload; custom
-  thenables, unsafe `Promise.resolve(obj)` assimilation, and selector-only
-  `.then` calls stay opaque.
+  thenables, unsafe `Promise.resolve(obj)` assimilation, selector-only Promise
+  methods, `.finally`, and aggregate combinators stay opaque.
   Lowered aggregate surfaces now pass through a `SeqSurfaceContract`: arrays/slices can
   enter collection membership, maps/objects enter map/object value semantics, Go
   `composite_literal` map surfaces are consumed only by the Go zero-map

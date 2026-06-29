@@ -160,7 +160,9 @@ fn js_like_library_api_contract_provenance_ids(
 ) -> Option<(&'static str, &'static str)> {
     match id {
         LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve)
-        | LibraryApiContractId::PromiseThen => Some((
+        | LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Reject)
+        | LibraryApiContractId::PromiseThen
+        | LibraryApiContractId::PromiseCatch => Some((
             JS_LIKE_BUILTIN_PROMISE_PACK_ID,
             JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
         )),

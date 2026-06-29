@@ -163,6 +163,41 @@ fn library_coercion_regex_namespace_and_promise_contracts_carry_obligations() {
             },
         })
     );
+    assert_eq!(
+        library_promise_resolve_contract(Lang::TypeScript, "Promise", "reject", 1),
+        Some(LibraryPromiseFactoryContract {
+            pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
+            id: LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Reject),
+            callee: LibraryApiCalleeContract::StaticGlobalMethod {
+                receiver: "Promise",
+                method: "reject",
+                qualified_path: "Promise.reject",
+                requires_unshadowed_receiver: true,
+            },
+            result: PromiseFactoryContract {
+                receiver: "Promise",
+                method: "reject",
+                qualified_path: "Promise.reject",
+                kind: PromiseFactoryKind::Reject,
+                result_domain: DomainEvidence::PromiseLike,
+            },
+        })
+    );
+    assert_eq!(
+        library_promise_catch_contract(Lang::TypeScript, "catch", 1),
+        Some(LibraryPromiseCatchContract {
+            pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
+            id: LibraryApiContractId::PromiseCatch,
+            callee: LibraryApiCalleeContract::AsyncMethod {
+                method: "catch",
+                receiver: AsyncReceiverContract::ExactPromiseLike,
+            },
+            result: PromiseCatchContract {
+                receiver: AsyncReceiverContract::ExactPromiseLike,
+                demand: promise_then_demand_effect_profile(),
+            },
+        })
+    );
 }
 
 #[test]
@@ -414,7 +449,11 @@ fn library_promise_adapter_and_method_contracts_reject_raw_name_only_matches() {
     );
     assert_eq!(library_promise_then_contract(Lang::Python, "then", 1), None);
     assert_eq!(
-        library_promise_then_contract(Lang::TypeScript, "then", 2),
+        library_promise_then_contract(Lang::TypeScript, "then", 3),
+        None
+    );
+    assert_eq!(
+        library_promise_catch_contract(Lang::TypeScript, "catch", 2),
         None
     );
     assert_eq!(

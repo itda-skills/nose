@@ -95,6 +95,7 @@ pub(super) fn library_api_contract_id_key(id: LibraryApiContractId) -> String {
             format!("js_like.promise.factory.{}", promise_factory_kind_key(kind))
         }
         LibraryApiContractId::PromiseThen => "js_like.promise.then".into(),
+        LibraryApiContractId::PromiseCatch => "js_like.promise.catch".into(),
         LibraryApiContractId::IteratorIdentityAdapter => "iterator.identity_adapter".into(),
         LibraryApiContractId::StaticCollectionAdapter => "static.collection_adapter".into(),
         LibraryApiContractId::MethodCall(semantic) => {
@@ -180,6 +181,7 @@ fn imported_namespace_function_semantic_key(semantic: ImportedNamespaceFunctionS
 fn promise_factory_kind_key(kind: PromiseFactoryKind) -> &'static str {
     match kind {
         PromiseFactoryKind::Resolve => "resolve",
+        PromiseFactoryKind::Reject => "reject",
     }
 }
 

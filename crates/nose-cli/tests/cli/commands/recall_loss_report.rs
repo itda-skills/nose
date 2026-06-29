@@ -441,7 +441,11 @@ fn recall_loss_report_surfaces_promise_continuation_rows() {
         "promise.js",
         "function thenIt(p, f, r) { return p.then(f, r); }\n\
 function catchIt(p, h) { return p.catch(h); }\n\
-function finallyIt(p, h) { return p.finally(h); }\n",
+function finallyIt(p, h) { return p.finally(h); }\n\
+async function load() { return 1; }\n\
+function thenAsync(f) { return load().then(f); }\n\
+function thenConstruct(executor, f) { return new Promise(executor).then(f); }\n\
+function thenCall(db, id, f) { return db.get(id).then(f); }\n",
     );
     let report_path = project.path().join("recall-loss.json");
     let out = run_raw(&[
@@ -457,10 +461,10 @@ function finallyIt(p, h) { return p.finally(h); }\n",
     let report_text = fs::read_to_string(&report_path).expect("recall-loss report");
     let report: serde_json::Value =
         serde_json::from_str(&report_text).expect("recall-loss report JSON");
-    assert_eq!(report["summary"]["total_units"], 3);
-    assert_eq!(report["summary"]["interpretable_units"], 3);
-    assert_eq!(report["summary"]["excluded_units"], 0);
-    assert_eq!(report["summary"]["admission_rejections"], 3);
+    assert_eq!(report["summary"]["total_units"], 7);
+    assert_eq!(report["summary"]["interpretable_units"], 6);
+    assert_eq!(report["summary"]["excluded_units"], 1);
+    assert_eq!(report["summary"]["admission_rejections"], 6);
 
     let obligations = report["by_obligation"]
         .as_array()
@@ -477,6 +481,18 @@ function finallyIt(p, h) { return p.finally(h); }\n",
         (
             "rejection-channel",
             "promise-finally-settlement-continuation-contract-missing",
+        ),
+        (
+            "scheduling-boundary",
+            "promise-async-function-return-producer-proof-missing",
+        ),
+        (
+            "success-error-result-channel",
+            "promise-constructor-receiver-producer-proof-missing",
+        ),
+        (
+            "ambiguous-selector-boundary",
+            "promise-call-return-member-callee-proof-missing",
         ),
     ] {
         assert!(
@@ -501,6 +517,10 @@ function finallyIt(p, h) { return p.finally(h); }\n",
         "promise-catch-callback-demand-effect-contract",
         "promise-finally-settlement-continuation-contract",
         "promise-finally-callback-demand-effect-contract",
+        "promise-async-function-return-producer-proof",
+        "promise-constructor-receiver-producer-proof",
+        "promise-call-return-receiver-producer-proof",
+        "promise-call-return-member-callee-proof",
     ] {
         assert!(
             rejections

@@ -151,6 +151,23 @@ turns those labels into actual local `admission_rejections`: focused
 `.then`, `.catch`, and `.finally` units are all oracle-interpretable, have zero
 oracle exclusions, and report three fail-closed Promise continuation rows without
 opening exact admission.
+The follow-up [promise local continuation recovery](../bench/recall_loss/promise-local-continuation-recovery-2026-06-29.v1.json)
+opens a narrow exact slice for first-party local Promise continuations while
+preserving the recall-loss vocabulary for everything still closed. It admits
+`Promise.reject`, `.catch`, two-argument `.then`, handler-returned
+`Promise.resolve` flattening, and `catch`/`then(undefined, onRejected)`
+convergence only when the receiver, producer, and callback are dependency-closed.
+Custom thenables, `.finally`, aggregate combinators, broad async scheduling, and
+sync payload equivalence remain reportable under the existing obligation
+buckets.
+The reporting follow-ups [promise receiver-producer diagnostics](../bench/recall_loss/promise-receiver-producer-diagnostics-2026-06-29.v1.json)
+and [promise call-return callee diagnostics](../bench/recall_loss/promise-call-return-callee-diagnostics-2026-06-29.v1.json)
+keep those remaining receivers fail-closed but make the next capability gaps
+specific: constructor-created promises, async-function returns, generic
+call-return receivers, and then member/local/imported call-return callee shapes
+all have named missing-evidence labels. These labels are attribution only; exact
+admission still requires explicit callee identity plus returned `PromiseLike`
+domain proof.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

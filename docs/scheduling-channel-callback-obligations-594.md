@@ -86,6 +86,31 @@ slice makes `.then`, `.catch`, and `.finally` visible as focused
 next recovery queue is receiver-first: `68` unhinted `.then`/`.catch` receiver
 occurrences must be attributed before fulfillment, rejection, or callback
 continuation recovery can be considered.
+The first behavior-changing follow-up, [promise-local-continuation-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-local-continuation-recovery-2026-06-29.v1.json),
+opens only local first-party Promise continuations. It adds contract evidence
+for `Promise.reject`, `.catch`, and two-argument `.then`; represents
+fulfilled/rejected Promise states in the value graph; flattens handler-returned
+`Promise.resolve`; and lets `Promise.reject(...).catch(handler)` converge with
+`Promise.reject(...).then(undefined, handler)` when the producer and handler are
+dependency-closed. Async/await scheduling, arbitrary thenables, custom
+receivers, `.finally`, aggregate combinators, and sync payload equivalence stay
+closed.
+The next reporting-only follow-up, [promise-receiver-producer-diagnostics-2026-06-29.v1.json](../bench/recall_loss/promise-receiver-producer-diagnostics-2026-06-29.v1.json),
+splits Promise continuation receiver producers without opening exact admission:
+constructor receivers map to settlement-channel proof, async-function returns
+map to scheduling proof, and generic call-return receivers remain ambiguous
+callee/selector proof. The 120-repo JS/TS scan found `835` generic call-return
+receivers, `49` same-file async-function call receivers, and only `2`
+constructor receivers, so constructor exact semantics should not be the next
+priority.
+The follow-up [promise-call-return-callee-diagnostics-2026-06-29.v1.json](../bench/recall_loss/promise-call-return-callee-diagnostics-2026-06-29.v1.json)
+splits the generic call-return bucket by callee shape. The revised 120-repo
+scan found `932` member call-return candidates, `184` local/parameter
+candidates, `105` imported-member candidates, `73` imported-binding candidates,
+and `79` same-file async-function call candidates. Broad member recovery is the
+largest surface but remains the riskiest; exact recovery should require both
+callee identity and returned `PromiseLike` domain proof, with narrower
+async/direct-return slices priced first.
 
 ## Minimal Vocabulary
 

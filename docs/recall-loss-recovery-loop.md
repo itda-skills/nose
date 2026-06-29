@@ -76,6 +76,8 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [#601 first-slice closeout](../bench/recall_loss/issue-601-first-slice-closeout-2026-06-28.v1.json) records the quantified decision to keep the first exact #594 slice closed rather than force unsafe async/callback/channel admission.
 - [#594 closeout](../bench/recall_loss/issue-594-closeout-2026-06-28.v1.json) records the epic-level artifact coverage, validation commands, quantitative summary, and remaining closed boundaries.
 - [callback demand/effect diagnostics v3](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v3.json) records the post-#594 callback-call refinement: member call proof, Rust macro call proof, and direct/imported function effect-contract buckets are now visible without opening exact admission.
+- [Promise receiver-producer diagnostics](../bench/recall_loss/promise-receiver-producer-diagnostics-2026-06-29.v1.json) records the reporting-only follow-up after local Promise continuation recovery: `.then`/`.catch`/`.finally` receiver producers now split into constructor, async-function-return, and generic call-return obligations while exact admission remains closed.
+- [Promise call-return callee diagnostics](../bench/recall_loss/promise-call-return-callee-diagnostics-2026-06-29.v1.json) records the next reporting-only split inside generic call-return receivers: member, local/parameter, imported binding/member, known-target return-domain, and unknown callee shapes now have separate missing-evidence labels while exact admission remains closed.
 
 Regenerate the full local reports with:
 
@@ -581,6 +583,16 @@ oracle-interpretable admission rejections with zero oracle exclusions. The
 current recovery priority is therefore quantified as receiver proof first:
 `.then` has `36/39` unhinted receivers and `.catch` has `32/34`, so PromiseLike
 receiver producer proof is the next dependency before exact continuation work.
+The first recovery pass, [promise local continuation recovery](../bench/recall_loss/promise-local-continuation-recovery-2026-06-29.v1.json),
+opens that dependency-closed local subset instead of broad async equivalence:
+`Promise.reject`, `.catch`, two-argument `.then`, fulfilled/rejected value-graph
+states, handler-returned `Promise.resolve` flattening, and
+`catch`/`then(undefined, onRejected)` convergence. The `crates` recall-loss gate
+still has `false_merges == 0` and `canon_preservation_violations == 0`; the
+repo-local crates surface has no JS/TS Promise continuation runtime rows, so the
+behavior-changing signal is pinned by focused value-graph and CLI equivalence
+tests. The next measured queue remains producer proof for non-local Promise
+receivers, then settlement/aggregate channels.
 
 ## See Also
 

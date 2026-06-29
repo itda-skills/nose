@@ -465,6 +465,12 @@ receiver_method_contract_resolver!(
     library_promise_then_contract
 );
 
+receiver_method_contract_resolver!(
+    admitted_promise_catch_at_call,
+    LibraryPromiseCatchContract,
+    library_promise_catch_contract
+);
+
 pub fn admitted_promise_resolve_at_call(
     il: &Il,
     interner: &Interner,

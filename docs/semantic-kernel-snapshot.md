@@ -45,10 +45,14 @@ Promise `.then` carries an async-continuation demand/effect profile in its
 contract row. Exact value-graph reduction is open only for admitted
 Promise-like receivers whose settled value can be recovered from supported
 first-party producers: currently JS-like `Promise.resolve(value)` with an
-unshadowed `Promise.resolve` proof and a non-thenable-safe value, plus admitted
-`.then(lambda)` chains over that boundary. Selector-only `.then(...)`, custom
-thenables, shadowed `Promise`, unsafe `Promise.resolve(obj)` arguments, and
-missing or ambiguous receiver proof stay closed.
+unshadowed `Promise.resolve` proof and a non-thenable-safe value, JS-like
+`Promise.reject(reason)` as a rejected channel, plus admitted
+`.then(lambda)`/`.catch(lambda)` chains over those boundaries. Handler-returned
+`Promise.resolve` is flattened only when the returned value is non-thenable-safe
+after local substitution; handler-returned `Promise.reject` preserves the
+rejected channel. Selector-only `.then(...)`/`.catch(...)`, custom thenables,
+shadowed `Promise`, unsafe `Promise.resolve(obj)` arguments, `.finally`,
+aggregate combinators, and missing or ambiguous receiver proof stay closed.
 The JS/TS corpus audit [`js-ts-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/js-ts-stdlib-partial-audit-2026-06-28.v1.json)
 confirms this is the largest JS/TS builtin-shaped surface in the pinned corpus:
 `29,094` Promise/async occurrences are tracked as a processed closed boundary
@@ -135,10 +139,11 @@ still being migrated toward it.
   `Math.max` scalar integer API contract and occurrence producer ids, while
   missing unshadowed `Math` proof, non-integer value arguments, and unsupported
   arities remain hard negatives. The
-  `nose.javascript.builtins.promise` descriptor owns JS/TS `Promise.resolve`
-  and `.then` Promise API contract and occurrence producer ids, while shadowed
-  `Promise`, missing Promise-like receiver proof, and unsafe thenable
-  assimilation remain hard negatives. The
+  `nose.javascript.builtins.promise` descriptor owns JS/TS `Promise.resolve`,
+  `Promise.reject`, `.then`, and `.catch` Promise API contract and occurrence
+  producer ids, while shadowed `Promise`, missing Promise-like receiver proof,
+  unsafe thenable assimilation, `.finally`, and aggregate combinators remain
+  hard negatives. The
   `nose.javascript.builtins.array` descriptor owns JS/TS `Array.from`,
   `Array.isArray`, exact-Array receiver `map`/`filter`/`flatMap`, and
   `some`/`every` API contract and occurrence producer ids, while shadowed

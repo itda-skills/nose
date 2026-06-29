@@ -335,12 +335,19 @@ fn library_api_member_callee_contracts_for_id(
             .filter(|contract| contract.result.kind == kind)
             .map(|contract| contract.callee)
             .collect(),
-        LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve) => {
-            library_promise_resolve_contract(lang, "Promise", "resolve", 1)
+        LibraryApiContractId::PromiseFactory(kind) => {
+            let method = match kind {
+                PromiseFactoryKind::Resolve => "resolve",
+                PromiseFactoryKind::Reject => "reject",
+            };
+            library_promise_resolve_contract(lang, "Promise", method, 1)
                 .map(|contract| vec![contract.callee])
                 .unwrap_or_default()
         }
         LibraryApiContractId::PromiseThen => library_promise_then_contract(lang, "then", 1)
+            .map(|contract| vec![contract.callee])
+            .unwrap_or_default(),
+        LibraryApiContractId::PromiseCatch => library_promise_catch_contract(lang, "catch", 1)
             .map(|contract| vec![contract.callee])
             .unwrap_or_default(),
         LibraryApiContractId::IteratorIdentityAdapter => {

@@ -133,14 +133,25 @@ fn receiver_promise_api_contract(
     method: &str,
     arg_count: usize,
 ) -> Option<LibraryReceiverMethodApiContract> {
-    library_promise_then_contract(lang, method, arg_count).map(|contract| {
-        receiver_method_api_contract(
-            contract.pack_id,
-            contract.id,
-            contract.callee,
-            JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
-        )
-    })
+    library_promise_then_contract(lang, method, arg_count)
+        .map(|contract| {
+            receiver_method_api_contract(
+                contract.pack_id,
+                contract.id,
+                contract.callee,
+                JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
+            )
+        })
+        .or_else(|| {
+            library_promise_catch_contract(lang, method, arg_count).map(|contract| {
+                receiver_method_api_contract(
+                    contract.pack_id,
+                    contract.id,
+                    contract.callee,
+                    JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
+                )
+            })
+        })
 }
 
 fn receiver_map_get_default_api_contract(

@@ -99,8 +99,8 @@ Trust is separate from channel eligibility.
   `abs`/`min`/`max`/`clamp` method API occurrence provenance;
   `nose.java.stdlib.math` owns Java `Math.abs`, `Math.min`, and `Math.max`
   scalar integer API occurrence provenance;
-  `nose.javascript.builtins.promise` owns JS/TS `Promise.resolve` and `.then`
-  Promise API occurrence provenance;
+  `nose.javascript.builtins.promise` owns JS/TS `Promise.resolve`,
+  `Promise.reject`, `.then`, and `.catch` Promise API occurrence provenance;
   `nose.javascript.builtins.array` owns JS/TS `Array.from`, `Array.isArray`,
   exact-Array receiver `map`/`filter`/`flatMap`, and `some`/`every` API
   occurrence provenance;

@@ -140,6 +140,14 @@ fn js_static_builtin_contracts_are_language_and_arity_constrained() {
             requires_unshadowed_root: true,
         })
     );
+    assert_eq!(
+        qualified_global_symbol_contract(Lang::JavaScript, "Promise.reject"),
+        Some(QualifiedGlobalSymbolContract {
+            path: "Promise.reject",
+            root: "Promise",
+            requires_unshadowed_root: true,
+        })
+    );
     assert_eq!(static_global_symbol_contract(Lang::Python, "Math"), None);
     assert_eq!(
         static_global_symbol_contract(Lang::JavaScript, "WeakMap"),

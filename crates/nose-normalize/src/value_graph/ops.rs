@@ -9,6 +9,7 @@ use nose_semantics::{semantics, ValueDomain};
 use rustc_hash::FxHashSet;
 
 pub(super) const PROMISE_RESOLVED_CODE: u32 = 0x5052_4F4D;
+pub(super) const PROMISE_REJECTED_CODE: u32 = 0x5052_454A;
 
 pub(super) fn collect_assigned(il: &Il, node: NodeId, out: &mut FxHashSet<u32>) {
     if il.kind(node) == NodeKind::Assign {

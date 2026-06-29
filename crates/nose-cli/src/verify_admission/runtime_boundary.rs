@@ -1,4 +1,4 @@
-use super::{push_unique, visit_subtree};
+use super::{callee_identity::callee_identity_call_evidence, push_unique, visit_subtree};
 use nose_il::{Interner, NodeId};
 
 pub(super) fn runtime_boundary_missing_evidence(
@@ -111,6 +111,7 @@ fn push_promise_protocol_call_missing_evidence(
             true
         }
         _ if method == Some("then") => {
+            push_promise_receiver_producer_missing_evidence(il, interner, callee, labels);
             push_unique(labels, "promise-then-promise-like-receiver-proof");
             push_unique(labels, "promise-then-fulfillment-continuation-contract");
             push_unique(labels, "promise-then-rejection-continuation-contract");
@@ -120,12 +121,14 @@ fn push_promise_protocol_call_missing_evidence(
             true
         }
         _ if method == Some("catch") => {
+            push_promise_receiver_producer_missing_evidence(il, interner, callee, labels);
             push_unique(labels, "promise-catch-rejection-continuation-contract");
             push_unique(labels, "promise-catch-callback-demand-effect-contract");
             push_unique(labels, "promise-like-receiver-proof");
             true
         }
         _ if method == Some("finally") => {
+            push_promise_receiver_producer_missing_evidence(il, interner, callee, labels);
             push_unique(labels, "promise-finally-settlement-continuation-contract");
             push_unique(labels, "promise-finally-callback-demand-effect-contract");
             push_unique(labels, "promise-like-receiver-proof");
@@ -133,6 +136,144 @@ fn push_promise_protocol_call_missing_evidence(
         }
         _ => false,
     }
+}
+
+fn push_promise_receiver_producer_missing_evidence(
+    il: &nose_il::Il,
+    interner: &Interner,
+    callee: NodeId,
+    labels: &mut Vec<&'static str>,
+) {
+    let Some(receiver) = method_receiver(il, callee) else {
+        return;
+    };
+    if receiver_is_promise_constructor_call(il, interner, receiver) {
+        push_unique(labels, "promise-constructor-receiver-producer-proof");
+        return;
+    }
+    if receiver_is_async_function_return(il, receiver) {
+        push_unique(labels, "promise-async-function-return-producer-proof");
+        return;
+    }
+    if il.kind(receiver) == nose_il::NodeKind::Call {
+        push_promise_call_return_receiver_missing_evidence(il, interner, receiver, labels);
+    }
+}
+
+fn push_promise_call_return_receiver_missing_evidence(
+    il: &nose_il::Il,
+    interner: &Interner,
+    receiver: NodeId,
+    labels: &mut Vec<&'static str>,
+) {
+    push_unique(labels, "promise-call-return-receiver-producer-proof");
+    push_unique(
+        labels,
+        promise_call_return_receiver_callee_evidence(callee_identity_call_evidence(
+            il, interner, receiver,
+        )),
+    );
+}
+
+fn promise_call_return_receiver_callee_evidence(callee_evidence: &'static str) -> &'static str {
+    match callee_evidence {
+        "direct-function-target-present-call-contract-proof" => {
+            "promise-call-return-direct-function-return-domain-proof"
+        }
+        "direct-method-target-present-call-contract-proof" => {
+            "promise-call-return-direct-method-return-domain-proof"
+        }
+        "imported-function-target-present-call-contract-proof" => {
+            "promise-call-return-imported-function-return-domain-proof"
+        }
+        "imported-member-target-present-call-contract-proof" => {
+            "promise-call-return-imported-member-return-domain-proof"
+        }
+        "dynamic-dispatch-target-present-concrete-target-proof" => {
+            "promise-call-return-dynamic-dispatch-return-domain-proof"
+        }
+        "call-target-evidence-rejected" => "promise-call-return-rejected-call-target-proof",
+        "scoped-path-call-target-proof" => "promise-call-return-scoped-path-callee-proof",
+        "local-or-parameter-call-target-proof" => {
+            "promise-call-return-local-or-parameter-callee-proof"
+        }
+        "imported-binding-call-target-proof" => "promise-call-return-imported-binding-callee-proof",
+        "imported-member-call-target-proof" => "promise-call-return-imported-member-callee-proof",
+        "qualified-global-call-target-proof" => "promise-call-return-qualified-global-callee-proof",
+        "unshadowed-global-call-target-proof" => {
+            "promise-call-return-unshadowed-global-callee-proof"
+        }
+        "member-call-target-proof" => "promise-call-return-member-callee-proof",
+        _ => "promise-call-return-unknown-callee-proof",
+    }
+}
+
+fn method_receiver(il: &nose_il::Il, callee: NodeId) -> Option<NodeId> {
+    if il.kind(callee) != nose_il::NodeKind::Field {
+        return None;
+    }
+    il.children(callee).first().copied()
+}
+
+fn receiver_is_promise_constructor_call(
+    il: &nose_il::Il,
+    interner: &Interner,
+    receiver: NodeId,
+) -> bool {
+    if il.kind(receiver) != nose_il::NodeKind::Call {
+        return false;
+    }
+    let Some(&callee) = il.children(receiver).first() else {
+        return false;
+    };
+    callee_path(il, interner, callee)
+        .as_deref()
+        .is_some_and(|path| promise_construct_call(il, receiver, path))
+}
+
+fn receiver_is_async_function_return(il: &nose_il::Il, receiver: NodeId) -> bool {
+    if subtree_has_source_protocol(il, receiver, nose_il::SourceProtocolKind::AsyncFunction) {
+        return true;
+    }
+    if il.kind(receiver) != nose_il::NodeKind::Call {
+        return false;
+    }
+    let Some(&callee) = il.children(receiver).first() else {
+        return false;
+    };
+    let Some(callee_name) = callee_var_symbol(il, callee) else {
+        return false;
+    };
+    il.units.iter().any(|unit| {
+        unit.name == Some(callee_name)
+            && subtree_has_source_protocol(
+                il,
+                unit.root,
+                nose_il::SourceProtocolKind::AsyncFunction,
+            )
+    })
+}
+
+fn callee_var_symbol(il: &nose_il::Il, callee: NodeId) -> Option<nose_il::Symbol> {
+    if il.kind(callee) != nose_il::NodeKind::Var {
+        return None;
+    }
+    match il.node(callee).payload {
+        nose_il::Payload::Name(name) => Some(name),
+        _ => None,
+    }
+}
+
+fn subtree_has_source_protocol(
+    il: &nose_il::Il,
+    root: NodeId,
+    protocol: nose_il::SourceProtocolKind,
+) -> bool {
+    let mut found = false;
+    visit_subtree(il, root, |node| {
+        found |= nose_semantics::source_protocol_at_node(il, node) == Some(protocol);
+    });
+    found
 }
 
 fn promise_then_has_callback_slot(il: &nose_il::Il, call: NodeId) -> bool {
@@ -256,10 +397,48 @@ mod tests {
             ".then",
         );
 
+        assert!(labels.contains(&"promise-call-return-receiver-producer-proof"));
+        assert!(labels.contains(&"promise-call-return-member-callee-proof"));
         assert!(labels.contains(&"promise-then-promise-like-receiver-proof"));
         assert!(labels.contains(&"promise-then-fulfillment-continuation-contract"));
         assert!(labels.contains(&"promise-then-rejection-continuation-contract"));
         assert!(labels.contains(&"promise-then-callback-demand-effect-contract"));
+    }
+
+    #[test]
+    fn promise_then_on_local_call_receiver_reports_local_callee_obligation() {
+        let labels = missing_evidence_for_call(
+            "function thenIt(makePromise, f) { return makePromise().then(f); }\n",
+            ".then",
+        );
+
+        assert!(labels.contains(&"promise-call-return-receiver-producer-proof"));
+        assert!(labels.contains(&"promise-call-return-local-or-parameter-callee-proof"));
+        assert!(labels.contains(&"promise-then-promise-like-receiver-proof"));
+    }
+
+    #[test]
+    fn promise_then_constructor_receiver_reports_producer_obligation() {
+        let labels = missing_evidence_for_call(
+            "function thenIt(executor, f) { return new Promise(executor).then(f); }\n",
+            ".then",
+        );
+
+        assert!(labels.contains(&"promise-constructor-receiver-producer-proof"));
+        assert!(!labels.contains(&"promise-call-return-receiver-producer-proof"));
+        assert!(labels.contains(&"promise-then-promise-like-receiver-proof"));
+    }
+
+    #[test]
+    fn promise_then_async_function_receiver_reports_producer_obligation() {
+        let labels = missing_evidence_for_call(
+            "async function load() { return 1; }\nfunction thenIt(f) { return load().then(f); }\n",
+            ".then",
+        );
+
+        assert!(labels.contains(&"promise-async-function-return-producer-proof"));
+        assert!(!labels.contains(&"promise-call-return-receiver-producer-proof"));
+        assert!(labels.contains(&"promise-then-promise-like-receiver-proof"));
     }
 
     #[test]

@@ -188,6 +188,18 @@ harness moves from `84df147de864f719` to `e91ec2b8c9d99c30`; the
 shared `visit_subtree` traversal, so the reviewed default-surface count
 remains 54; no budget increase is accepted.
 
+The 2026-06-29 Promise local-continuation recovery slice moves the expanded
+Promise value-graph fixtures into `value_graph/tests/support/promise.rs` to
+stay under the file-length ratchet. That changes three already reviewed
+fixture-helper representatives without increasing the default-surface count:
+the tiny shared `sp` helper moves from `016becf550d84d34` to
+`17b5d7672d8502a0`; the language-core evidence helper family moves from
+`1bcf5beffb5c2932` to `60083cfa5d4da06d`; and the cross-crate
+`evidence_with_dependencies` builder family moves from `42cc257ba613ae19`
+to `dec85ed3ec0be74e`. These remain accepted test/helper debt, not new
+production refactoring debt. The reviewed default-surface count remains 54;
+no budget increase is accepted.
+
 ## Verdict by candidate (critically)
 
 | family | what it is | judgment | action |

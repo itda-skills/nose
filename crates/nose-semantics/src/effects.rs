@@ -221,9 +221,14 @@ fn library_api_suppresses_opaque_argument_escape(api: LibraryApiEvidenceKind) ->
         ..
     } = api;
     contract_hash != library_api_contract_id_hash(LibraryApiContractId::PromiseThen)
+        && contract_hash != library_api_contract_id_hash(LibraryApiContractId::PromiseCatch)
         && contract_hash
             != library_api_contract_id_hash(LibraryApiContractId::PromiseFactory(
                 PromiseFactoryKind::Resolve,
+            ))
+        && contract_hash
+            != library_api_contract_id_hash(LibraryApiContractId::PromiseFactory(
+                PromiseFactoryKind::Reject,
             ))
         && library_api_contract_arity_suppresses_opaque_escape(contract_hash, arity as usize)
 }

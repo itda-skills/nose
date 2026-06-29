@@ -286,58 +286,6 @@ pub fn library_imported_namespace_function_contract(
     })
 }
 
-pub fn library_promise_then_contract(
-    lang: Lang,
-    method: &str,
-    arg_count: usize,
-) -> Option<LibraryPromiseThenContract> {
-    if !js_like_lang(lang) || method != "then" || arg_count != 1 {
-        return None;
-    }
-    let result = PromiseThenContract {
-        receiver: AsyncReceiverContract::ExactPromiseLike,
-        demand: promise_then_demand_effect_profile(),
-    };
-    Some(LibraryPromiseThenContract {
-        pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
-        id: LibraryApiContractId::PromiseThen,
-        callee: LibraryApiCalleeContract::AsyncMethod {
-            method: "then",
-            receiver: result.receiver,
-        },
-        result,
-    })
-}
-
-pub fn library_promise_resolve_contract(
-    lang: Lang,
-    receiver: &str,
-    method: &str,
-    arg_count: usize,
-) -> Option<LibraryPromiseFactoryContract> {
-    if !js_like_lang(lang) || receiver != "Promise" || method != "resolve" || arg_count != 1 {
-        return None;
-    }
-    let result = PromiseFactoryContract {
-        receiver: "Promise",
-        method: "resolve",
-        qualified_path: "Promise.resolve",
-        kind: PromiseFactoryKind::Resolve,
-        result_domain: DomainEvidence::PromiseLike,
-    };
-    Some(LibraryPromiseFactoryContract {
-        pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
-        id: LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve),
-        callee: LibraryApiCalleeContract::StaticGlobalMethod {
-            receiver: result.receiver,
-            method: result.method,
-            qualified_path: result.qualified_path,
-            requires_unshadowed_receiver: true,
-        },
-        result,
-    })
-}
-
 pub fn library_iterator_identity_adapter_contract(
     lang: Lang,
     method: &str,
@@ -585,11 +533,15 @@ pub fn library_receiver_membership_contract(
 }
 
 mod classification;
+mod promise;
 mod receiver;
 mod selectors;
 pub(in crate::library_api) use classification::js_like_array_hof_method_call;
 pub(in crate::library_api) use classification::ruby_sequence_hof_method_call;
 use classification::rust_sequence_hof_method_call;
 pub(in crate::library_api) use classification::swift_sequence_hof_method_call;
+pub use promise::{
+    library_promise_catch_contract, library_promise_resolve_contract, library_promise_then_contract,
+};
 pub use receiver::{library_receiver_method_api_contract, library_receiver_method_api_contracts};
 pub(crate) use selectors::library_method_selector_name;

@@ -215,6 +215,50 @@ fn proven_promise_then_chains_converge_without_sync_erasure() {
 }
 
 #[test]
+fn proven_promise_then_flattens_returned_promise_without_sync_erasure() {
+    let i = Interner::new();
+    let direct = "function f() {\n  return Promise.resolve(1).then(x => x + 1);\n}\n";
+    let returned_promise =
+        "function f() {\n  return Promise.resolve(1).then(x => Promise.resolve(x + 1));\n}\n";
+    let sync_return = "function f() {\n  return 1 + 1;\n}\n";
+    assert_eq!(
+        value_fp(&i, direct, Lang::TypeScript),
+        value_fp(&i, returned_promise, Lang::TypeScript),
+        "handler-returned Promise.resolve should flatten through the local Promise continuation model"
+    );
+    assert_ne!(
+        value_fp(&i, returned_promise, Lang::TypeScript),
+        value_fp(&i, sync_return, Lang::TypeScript),
+        "flattening a handler-returned Promise must still preserve the outer Promise boundary"
+    );
+}
+
+#[test]
+fn proven_promise_rejection_recovery_converges_without_channel_erasure() {
+    let i = Interner::new();
+    let catch_form = "function f() {\n  return Promise.reject(1).catch(e => e + 1);\n}\n";
+    let then_reject_form =
+        "function f() {\n  return Promise.reject(1).then(undefined, e => e + 1);\n}\n";
+    let sync_return = "function f() {\n  return 1 + 1;\n}\n";
+    let still_rejected = "function f() {\n  return Promise.reject(1);\n}\n";
+    assert_eq!(
+        value_fp(&i, catch_form, Lang::TypeScript),
+        value_fp(&i, then_reject_form, Lang::TypeScript),
+        "Promise.catch and then(undefined, onRejected) should converge for a proven rejected producer"
+    );
+    assert_ne!(
+        value_fp(&i, catch_form, Lang::TypeScript),
+        value_fp(&i, sync_return, Lang::TypeScript),
+        "recovered Promise rejection must not erase the Promise boundary"
+    );
+    assert_ne!(
+        value_fp(&i, catch_form, Lang::TypeScript),
+        value_fp(&i, still_rejected, Lang::TypeScript),
+        "recovery to fulfillment must stay distinct from an unrecovered rejected channel"
+    );
+}
+
+#[test]
 fn go_slice_literal_converges_with_array_but_struct_stays_distinct() {
     // A Go slice literal `[]int{1,2,3}` is an ordered sequence — it converges with a Python
     // list / JS array. A Go STRUCT literal `Point{1,2,3}` is a record, NOT a collection, and

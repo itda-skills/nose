@@ -72,10 +72,15 @@ Promise `.then` now carries an async-continuation demand/effect profile in its
 contract row. That does not open exact beta-reduction by itself. The value-graph
 rule requires an admitted Promise-like receiver plus a recoverable supported
 settled value. Today that means JS-like `Promise.resolve(value)` with
-unshadowed `Promise.resolve` proof and a non-thenable-safe value, or a chain of
-admitted `.then(lambda)` calls over that supported boundary. Arbitrary
-selector-only `.then(...)`, custom thenables, shadowed Promise roots, unsafe
-`Promise.resolve(obj)` arguments, and missing receiver proof remain closed.
+unshadowed `Promise.resolve` proof and a non-thenable-safe value, JS-like
+`Promise.reject(reason)` as a rejected channel, or a chain of admitted
+`.then(lambda)`/`.catch(lambda)` calls over those supported boundaries.
+Handler-returned `Promise.resolve` is flattened only when its value is
+non-thenable-safe after local callback substitution, and handler-returned
+`Promise.reject` stays in the rejected channel. Arbitrary selector-only
+`.then(...)`/`.catch(...)`, custom thenables, shadowed Promise roots, unsafe
+`Promise.resolve(obj)` arguments, `.finally`, aggregate combinators, and missing
+receiver proof remain closed.
 
 Source protocol boundaries have internal profiles for future contracts:
 

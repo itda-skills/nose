@@ -298,6 +298,31 @@ break.
   visible as local recall-loss `admission_rejections`. Focused fixtures now
   report three oracle-interpretable Promise continuation rows with no oracle
   exclusions, while exact continuation admission stays closed.
+- Opened a broader local Promise continuation recovery slice without broad
+  async equivalence. `Promise.reject`, `.catch`, and two-argument `.then` now
+  have first-party contract evidence; the value graph tracks fulfilled and
+  rejected Promise states, flattens handler-returned `Promise.resolve` when the
+  returned value is non-thenable-safe after local substitution, preserves
+  handler-returned `Promise.reject` as a rejected channel, and lets
+  `catch` converge with `then(undefined, onRejected)` for dependency-closed
+  rejected producers. Custom receivers, arbitrary thenables, `.finally`,
+  aggregate combinators, and sync payload equivalence remain closed. The checked
+  artifact records `false_merges = 0`, `canon_preservation_violations = 0`, and
+  `promise_runtime_rows = 0` on the repository-local `crates` recall-loss gate.
+- Added reporting-only Promise receiver-producer diagnostics after the local
+  continuation recovery slice. `.then`/`.catch`/`.finally` receivers now split
+  constructor-created promises, async-function returns, and generic call-return
+  receivers into distinct missing-evidence labels without opening exact
+  admission; the checked 120-repo JS/TS scan found `835` generic call-return
+  receivers, `49` same-file async-function call receivers, and only `2`
+  constructor receivers.
+- Split generic Promise call-return receiver diagnostics by callee identity
+  shape. Member, local/parameter, imported binding/member, known direct/imported
+  target, and unknown call-return receivers now get distinct missing-evidence
+  labels while exact admission remains closed; the follow-up 120-repo JS/TS scan
+  found `932` member call-return receiver candidates and `184` local/parameter
+  candidates, so broad member recovery stays deferred behind explicit callee
+  identity plus returned `PromiseLike` domain proof.
 
 ### Fixed
 - Made `scripts/check-docs.sh` compatible with both awiki versions that support

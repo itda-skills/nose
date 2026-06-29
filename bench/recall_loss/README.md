@@ -240,6 +240,32 @@ python3 scripts/cross-language-boundary-census.py \
   `.finally` now appear as oracle-interpretable recall-loss
   `admission_rejections`, and the next recovery queue is quantified as
   receiver-first across `68` unhinted `.then`/`.catch` occurrences.
+- [promise-local-continuation-recovery-2026-06-29.v1.json](promise-local-continuation-recovery-2026-06-29.v1.json)
+  records the first broader local Promise continuation recovery slice.
+  First-party `Promise.reject`, `.catch`, and two-argument `.then` now have
+  contract evidence, local fulfilled/rejected Promise states are represented in
+  the value graph, handler-returned `Promise.resolve` is flattened, and
+  `catch` converges with `then(undefined, onRejected)` only for recoverable
+  first-party rejected producers. Broad async scheduling, arbitrary thenables,
+  `.finally`, aggregate combinators, custom receivers, and sync payload
+  equivalence remain closed.
+- [promise-receiver-producer-diagnostics-2026-06-29.v1.json](promise-receiver-producer-diagnostics-2026-06-29.v1.json)
+  records the follow-up reporting-only receiver-producer split for Promise
+  continuations. `new Promise(...).then`, async-function-return `.then`/`.catch`,
+  and generic call-return receivers now have separate missing-evidence labels;
+  a 120-repo JS/TS source scan found `835` generic call-return receivers,
+  `49` same-file async-function call receivers, and only `2` constructor
+  receivers, so exact admission remains closed and the next recovery target is
+  call-return producer attribution rather than constructor semantics.
+- [promise-call-return-callee-diagnostics-2026-06-29.v1.json](promise-call-return-callee-diagnostics-2026-06-29.v1.json)
+  records the next reporting-only split inside generic Promise call-return
+  receivers. Missing evidence now distinguishes member, local/parameter,
+  imported binding/member, known-target return-domain, and unknown callee
+  shapes. The revised 120-repo JS/TS scan found `932` member call-return
+  candidates, `184` local/parameter candidates, `105` imported-member
+  candidates, and `73` imported-binding candidates, so exact admission remains
+  closed until callee identity and returned `PromiseLike` domain proof are both
+  explicit.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

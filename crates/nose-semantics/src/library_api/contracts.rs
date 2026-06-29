@@ -10,10 +10,10 @@ use crate::{
     IteratorAdapterReceiverContract, IteratorIdentityAdapterContract,
     JavaCollectionConstructorKind, JavaCollectionFactoryKind, JavaMapFactoryKind, MapGetContract,
     MapKeyViewContract, MapKeyViewKind, MapKeyViewWrapperContract, MethodCallContract,
-    MethodReceiverContract, MethodSemanticContract, PromiseFactoryContract, PromiseFactoryKind,
-    PromiseThenContract, RegexTestContract, ScalarIntegerMethod, ScalarIntegerMethodContract,
-    StaticCollectionAdapterContract, StaticGlobalFunctionContract, StaticGlobalMethodContract,
-    StaticIndexMembershipContract, StaticIndexMembershipKind,
+    MethodReceiverContract, MethodSemanticContract, PromiseCatchContract, PromiseFactoryContract,
+    PromiseFactoryKind, PromiseThenContract, RegexTestContract, ScalarIntegerMethod,
+    ScalarIntegerMethodContract, StaticCollectionAdapterContract, StaticGlobalFunctionContract,
+    StaticGlobalMethodContract, StaticIndexMembershipContract, StaticIndexMembershipKind,
     StaticIndexMembershipReceiverContract, SwiftCollectionFactoryKind, SwiftMapFactoryKind,
 };
 use nose_il::{stable_symbol_hash, Builtin, DomainEvidence, HoFKind, Lang, SourceFactKind, Span};
@@ -59,6 +59,7 @@ pub enum LibraryApiContractId {
     ImportedNamespaceFunction(ImportedNamespaceFunctionSemantic),
     PromiseFactory(PromiseFactoryKind),
     PromiseThen,
+    PromiseCatch,
     IteratorIdentityAdapter,
     StaticCollectionAdapter,
     MethodCall(MethodSemanticContract),
@@ -328,7 +329,9 @@ pub(in crate::library_api) fn library_receiver_method_api_result_domain(
         LibraryApiContractId::RustResultIsOk | LibraryApiContractId::RustResultIsErr => {
             Some(DomainEvidence::Boolean)
         }
-        LibraryApiContractId::PromiseThen => Some(DomainEvidence::PromiseLike),
+        LibraryApiContractId::PromiseThen | LibraryApiContractId::PromiseCatch => {
+            Some(DomainEvidence::PromiseLike)
+        }
         _ => None,
     }
 }
@@ -415,6 +418,14 @@ pub struct LibraryPromiseThenContract {
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: PromiseThenContract,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct LibraryPromiseCatchContract {
+    pub pack_id: &'static str,
+    pub id: LibraryApiContractId,
+    pub callee: LibraryApiCalleeContract,
+    pub result: PromiseCatchContract,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

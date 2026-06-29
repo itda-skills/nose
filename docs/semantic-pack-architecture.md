@@ -291,8 +291,8 @@ previous semantic-kernel tranches.
    `Math.abs`, `Math.min`, and `Math.max` scalar integer API occurrence
    provenance.
    The current JavaScript builtins Promise slice is
-   `nose.javascript.builtins.promise`, which owns JS/TS `Promise.resolve` and
-   `.then` Promise API occurrence provenance.
+   `nose.javascript.builtins.promise`, which owns JS/TS `Promise.resolve`,
+   `Promise.reject`, `.then`, and `.catch` Promise API occurrence provenance.
    The current JavaScript builtins Array slice is
    `nose.javascript.builtins.array`, which owns JS/TS `Array.from`,
    `Array.isArray`, and exact-Array receiver `map`/`filter`/`flatMap` plus

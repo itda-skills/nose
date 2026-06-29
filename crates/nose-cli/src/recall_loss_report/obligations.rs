@@ -66,6 +66,13 @@ const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
         ),
     },
     RuntimeBoundaryRule {
+        evidence: "promise-async-function-return-producer-proof",
+        obligation: (
+            "scheduling-boundary",
+            "promise-async-function-return-producer-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
         evidence: "promise-async-function-scheduling-contract",
         obligation: (
             "scheduling-boundary",
@@ -80,10 +87,122 @@ const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
         ),
     },
     RuntimeBoundaryRule {
+        evidence: "promise-constructor-receiver-producer-proof",
+        obligation: (
+            "success-error-result-channel",
+            "promise-constructor-receiver-producer-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
         evidence: "promise-executor-callback-effect-contract",
         obligation: (
             "executor-callback",
             "promise-executor-callback-effect-contract-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-direct-function-return-domain-proof",
+        obligation: (
+            "success-error-result-channel",
+            "promise-call-return-direct-function-return-domain-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-direct-method-return-domain-proof",
+        obligation: (
+            "success-error-result-channel",
+            "promise-call-return-direct-method-return-domain-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-imported-function-return-domain-proof",
+        obligation: (
+            "success-error-result-channel",
+            "promise-call-return-imported-function-return-domain-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-imported-member-return-domain-proof",
+        obligation: (
+            "success-error-result-channel",
+            "promise-call-return-imported-member-return-domain-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-dynamic-dispatch-return-domain-proof",
+        obligation: (
+            "ambiguous-selector-boundary",
+            "promise-call-return-dynamic-dispatch-return-domain-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-rejected-call-target-proof",
+        obligation: (
+            "ambiguous-selector-boundary",
+            "promise-call-return-rejected-call-target-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-scoped-path-callee-proof",
+        obligation: (
+            "ambiguous-selector-boundary",
+            "promise-call-return-scoped-path-callee-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-local-or-parameter-callee-proof",
+        obligation: (
+            "ambiguous-selector-boundary",
+            "promise-call-return-local-or-parameter-callee-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-imported-binding-callee-proof",
+        obligation: (
+            "ambiguous-selector-boundary",
+            "promise-call-return-imported-binding-callee-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-imported-member-callee-proof",
+        obligation: (
+            "ambiguous-selector-boundary",
+            "promise-call-return-imported-member-callee-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-qualified-global-callee-proof",
+        obligation: (
+            "ambiguous-selector-boundary",
+            "promise-call-return-qualified-global-callee-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-unshadowed-global-callee-proof",
+        obligation: (
+            "ambiguous-selector-boundary",
+            "promise-call-return-unshadowed-global-callee-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-member-callee-proof",
+        obligation: (
+            "ambiguous-selector-boundary",
+            "promise-call-return-member-callee-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-unknown-callee-proof",
+        obligation: (
+            "ambiguous-selector-boundary",
+            "promise-call-return-unknown-callee-proof-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "promise-call-return-receiver-producer-proof",
+        obligation: (
+            "ambiguous-selector-boundary",
+            "promise-call-return-receiver-producer-proof-missing",
         ),
     },
     RuntimeBoundaryRule {
@@ -335,6 +454,53 @@ mod tests {
             (
                 "ambiguous-selector-boundary",
                 "promise-then-promise-like-receiver-proof-missing",
+            )
+        );
+    }
+
+    #[test]
+    fn promise_receiver_producer_obligations_are_primary_when_present() {
+        assert_eq!(
+            runtime_boundary_obligation(&[
+                "promise-executor-callback-effect-contract",
+                "promise-constructor-receiver-producer-proof",
+                "promise-then-promise-like-receiver-proof",
+            ]),
+            (
+                "success-error-result-channel",
+                "promise-constructor-receiver-producer-proof-missing",
+            )
+        );
+        assert_eq!(
+            runtime_boundary_obligation(&[
+                "promise-async-function-scheduling-contract",
+                "promise-async-function-return-producer-proof",
+                "promise-then-promise-like-receiver-proof",
+            ]),
+            (
+                "scheduling-boundary",
+                "promise-async-function-return-producer-proof-missing",
+            )
+        );
+        assert_eq!(
+            runtime_boundary_obligation(&[
+                "promise-call-return-receiver-producer-proof",
+                "promise-call-return-member-callee-proof",
+                "promise-then-promise-like-receiver-proof",
+            ]),
+            (
+                "ambiguous-selector-boundary",
+                "promise-call-return-member-callee-proof-missing",
+            )
+        );
+        assert_eq!(
+            runtime_boundary_obligation(&[
+                "promise-call-return-receiver-producer-proof",
+                "promise-then-promise-like-receiver-proof",
+            ]),
+            (
+                "ambiguous-selector-boundary",
+                "promise-call-return-receiver-producer-proof-missing",
             )
         );
     }

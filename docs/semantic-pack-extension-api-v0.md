@@ -507,8 +507,8 @@ implicit v0 packs:
   `abs`/`min`/`max`/`clamp` method API occurrence contracts;
 - `nose.java.stdlib.math` owns the current Java `Math.abs`, `Math.min`, and
   `Math.max` scalar integer API occurrence contracts;
-- `nose.javascript.builtins.promise` owns the current JS/TS `Promise.resolve`
-  and `.then` Promise API occurrence contracts;
+- `nose.javascript.builtins.promise` owns the current JS/TS `Promise.resolve`,
+  `Promise.reject`, `.then`, and `.catch` Promise API occurrence contracts;
 - `nose.javascript.builtins.array` owns the current JS/TS `Array.from`,
   `Array.isArray`, exact-Array receiver `map`/`filter`/`flatMap`, and
   `some`/`every` API occurrence contracts;

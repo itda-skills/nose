@@ -2169,6 +2169,23 @@ The next implementation slices should be judged by whether they remove another
 class of scattered semantic knowledge without widening exact acceptance beyond
 the available evidence.
 
+2026-06-29 Promise local continuation recovery note:
+`nose.javascript.builtins.promise` now owns JS/TS `Promise.resolve`,
+`Promise.reject`, `.then`, and `.catch` occurrence contracts. The value graph
+represents local fulfilled/rejected Promise states, flattens handler-returned
+`Promise.resolve` only when the returned value is non-thenable-safe after local
+substitution, preserves handler-returned `Promise.reject` as a rejected channel,
+and lets `Promise.reject(...).catch(h)` converge with
+`Promise.reject(...).then(undefined, h)`. The checked artifact is recorded in [promise-local-continuation-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-local-continuation-recovery-2026-06-29.v1.json), which records the local crates gate and hard-negative cases.
+Broad async/await scheduling, arbitrary thenables, `.finally`, aggregate
+combinators, custom receivers, and sync payload equivalence remain closed.
+
+2026-06-29 Promise receiver-producer diagnostics note:
+The follow-up [promise-receiver-producer-diagnostics-2026-06-29.v1.json](../bench/recall_loss/promise-receiver-producer-diagnostics-2026-06-29.v1.json) keeps exact admission closed but splits `.then`/`.catch`/`.finally` receiver producer obligations into `new Promise(...)`, async-function-return, and generic call-return receivers. The 120-repo JS/TS source scan found `835` generic call-return receivers, `49` same-file async-function call receivers, and `2` constructor receivers, so the next exact recovery candidate is call-return/async producer attribution rather than constructor semantics.
+
+2026-06-29 Promise call-return callee diagnostics note:
+The follow-up [promise-call-return-callee-diagnostics-2026-06-29.v1.json](../bench/recall_loss/promise-call-return-callee-diagnostics-2026-06-29.v1.json) keeps exact admission closed but splits generic Promise call-return receiver evidence by callee shape. The revised 120-repo JS/TS scan found `932` member call-return candidates, `184` local/parameter candidates, `105` imported-member candidates, and `73` imported-binding candidates. This points the next kernel work at reusable callee identity plus returned `PromiseLike` domain proof, not selector-specific Promise exceptions.
+
 ## See also
 
 - Back to [semantic-kernel](semantic-kernel.md).

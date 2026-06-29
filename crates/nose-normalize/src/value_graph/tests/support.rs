@@ -16,17 +16,17 @@ pub(super) use nose_semantics::{
     library_java_collection_constructor_contract, library_java_collection_factory_contract,
     library_java_map_factory_contract, library_js_like_map_constructor_contract,
     library_js_like_set_constructor_contract, library_method_call_contract,
-    library_promise_resolve_contract, library_promise_then_contract,
-    library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
-    library_scalar_integer_method_contract, library_static_index_membership_contract,
-    library_swift_map_factory_contract, DomainEvidence, LibraryApiCalleeContract,
-    LibraryApiContractId, LibraryCollectionFactoryContract, LibraryFreeFunctionBuiltinContract,
-    LibraryFreeFunctionHofContract, LibraryMapFactoryContract, LibraryMethodCallContract,
-    MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract, BUILTIN_COMPAT_PACK_ID,
-    BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
-    C_LANGUAGE_PACK_ID, C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID,
-    FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
-    JAVA_GUAVA_IMMUTABLE_COLLECTION_FACTORY_PACK_ID,
+    library_promise_catch_contract, library_promise_resolve_contract,
+    library_promise_then_contract, library_rust_option_none_sentinel_contract,
+    library_rust_option_some_constructor_contract, library_scalar_integer_method_contract,
+    library_static_index_membership_contract, library_swift_map_factory_contract, DomainEvidence,
+    LibraryApiCalleeContract, LibraryApiContractId, LibraryCollectionFactoryContract,
+    LibraryFreeFunctionBuiltinContract, LibraryFreeFunctionHofContract, LibraryMapFactoryContract,
+    LibraryMethodCallContract, MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract,
+    BUILTIN_COMPAT_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, C_LANGUAGE_PACK_ID,
+    C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID, JAVA_GUAVA_IMMUTABLE_COLLECTION_FACTORY_PACK_ID,
     JAVA_GUAVA_IMMUTABLE_COLLECTION_FACTORY_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID, JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
@@ -48,6 +48,9 @@ pub(super) use nose_semantics::{
     SWIFT_STDLIB_COLLECTION_FACTORY_PACK_ID, SWIFT_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
 };
 pub(super) use rustc_hash::FxHashMap;
+
+mod promise;
+pub(super) use promise::*;
 
 pub(super) fn sp(line: u32) -> Span {
     Span::new(FileId(0), line, line, line, line)
