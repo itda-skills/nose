@@ -2195,6 +2195,9 @@ The follow-up [promise-direct-function-return-recovery-2026-06-29.v1.json](../be
 2026-06-29 Promise direct-method return recovery note:
 The follow-up [promise-direct-method-return-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-direct-method-return-recovery-2026-06-29.v1.json) opens the proof-backed DirectMethod subset of the member call-return queue priced at `932` lexical candidates across `23` repos. The call-target producer now derives `PromiseLike` result-domain evidence only from an existing DirectMethod target record plus the returned expression's asserted `Domain(PromiseLike)` evidence, limited to non-async single-return methods. The value graph evaluates only that returned expression and closes when it reads receiver context (`this`, `super`, or `self`), so selector-only member calls, dynamic dispatch, imported members, receiver-dependent methods, unsafe thenables, constructors, `.finally`, aggregate combinators, and broad scheduling remain closed.
 
+2026-06-29 Promise imported call-return boundary note:
+The follow-up [promise-imported-call-return-boundary-2026-06-29.v1.json](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json) keeps exact admission closed but corrects the imported target-present obligation vocabulary. Imported function/member call-target evidence proves only a module/export/member coordinate; unlike DirectFunction or DirectMethod evidence, it does not provide an evaluable local body. These receivers now require a settled-value contract before Promise continuation recovery can open. The prior corpus scan keeps the queue priced at `105` imported-member candidates across `9` repos and `73` imported-binding candidates across `15` repos.
+
 ## See also
 
 - Back to [semantic-kernel](semantic-kernel.md).

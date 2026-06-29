@@ -50,6 +50,11 @@ break.
   recovery consumes only that returned expression, closes on receiver-context
   reads, preserves the Promise boundary, and keeps selector-only member calls
   reporting-only.
+- Refined imported function/member Promise call-return diagnostics. Imported
+  target-present receivers now report missing settled-value contracts rather
+  than return-domain proof, because imported call-target identity has no local
+  body from which the value graph can recover a fulfilled or rejected Promise
+  payload; exact admission remains closed with source-level hard negatives.
 - Added import-snapshot census data to local recall-loss reports. The JSON now
   includes successful imported-literal snapshot counts plus unresolved
   binding-import miss reasons such as missing provider modules/exports,

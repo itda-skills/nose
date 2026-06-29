@@ -85,6 +85,68 @@ function thenCall(db, id, f) { return db.get(id).then(f); }\n",
     assert_promise_continuation_missing_labels(rejections, &report);
 }
 
+#[test]
+fn recall_loss_report_splits_imported_promise_call_return_receivers() {
+    let project = TempProject::new("recall_loss_imported_promise_call_return_rows");
+    project.write(
+        "promise.js",
+        "import { load, service } from './api';\n\
+import * as client from './client';\n\
+function thenImportedFunction(f) { return load().then(f); }\n\
+function thenImportedBindingMember(f) { return service.load().then(f); }\n\
+function thenImportedNamespaceMember(f) { return client.load().then(f); }\n",
+    );
+    let report_path = project.path().join("recall-loss.json");
+    let out = run_raw(&[
+        "verify",
+        project.path().to_str().unwrap(),
+        "--max-violations",
+        "0",
+        "--recall-loss-report",
+        report_path.to_str().unwrap(),
+    ]);
+    assert!(out.contains("GATE: 0"));
+
+    let report_text = fs::read_to_string(&report_path).expect("recall-loss report");
+    let report: serde_json::Value =
+        serde_json::from_str(&report_text).expect("recall-loss report JSON");
+    let rejections = report["admission_rejections"]
+        .as_array()
+        .expect("admission_rejections should be an array");
+
+    assert!(
+        rejections.iter().any(|item| missing_evidence_contains(
+            item,
+            "promise-call-return-imported-function-settled-value-contract"
+        )),
+        "imported function Promise receivers need settled-value proof, not just target identity: {report}"
+    );
+    assert!(
+        rejections.iter().any(|item| missing_evidence_contains(
+            item,
+            "promise-call-return-imported-member-settled-value-contract"
+        )),
+        "imported member Promise receivers need settled-value proof, not just target identity: {report}"
+    );
+    assert!(
+        !rejections.iter().any(|item| missing_evidence_contains(
+            item,
+            "promise-call-return-imported-member-callee-proof"
+        )),
+        "imported member call-target proof should be present for import-backed receivers: {report}"
+    );
+
+    let obligations = report["by_obligation"]
+        .as_array()
+        .expect("by_obligation should be an array");
+    assert!(
+        obligations.iter().any(|item| item["obligation_family"] == "success-error-result-channel"
+            && item["obligation_subreason"]
+                == "promise-call-return-imported-member-settled-value-contract-missing"),
+        "imported member Promise receiver gaps should roll up under success/error result channel: {report}"
+    );
+}
+
 fn assert_promise_continuation_missing_labels(
     rejections: &[serde_json::Value],
     report: &serde_json::Value,
@@ -133,4 +195,11 @@ fn assert_promise_continuation_missing_labels(
                         == "promise-call-return-direct-function-return-domain-proof"))),
         "same-file direct Promise-returning function proof should not stay reported as missing: {report}"
     );
+}
+
+fn missing_evidence_contains(item: &serde_json::Value, label: &str) -> bool {
+    item["reason"] == "unsupported-runtime-boundary"
+        && item["missing_evidence"]
+            .as_array()
+            .is_some_and(|items| items.iter().any(|value| value == label))
 }

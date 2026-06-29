@@ -80,6 +80,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [Promise call-return callee diagnostics](../bench/recall_loss/promise-call-return-callee-diagnostics-2026-06-29.v1.json) records the next reporting-only split inside generic call-return receivers: member, local/parameter, imported binding/member, known-target return-domain, and unknown callee shapes now have separate missing-evidence labels while exact admission remains closed.
 - [Promise direct-function return recovery](../bench/recall_loss/promise-direct-function-return-recovery-2026-06-29.v1.json) records the proof-backed direct-function subset of the local/parameter call-return queue: same-file single-return functions returning proven PromiseLike expressions can now feed local Promise continuation recovery while parameter callees and member/imported call returns remain closed.
 - [Promise direct-method return recovery](../bench/recall_loss/promise-direct-method-return-recovery-2026-06-29.v1.json) records the proof-backed DirectMethod subset of the member call-return queue: existing DirectMethod target evidence plus returned-expression PromiseLike domain proof can feed local Promise continuation recovery while selector-only member calls, receiver-dependent methods, dynamic dispatch, and imported members remain closed.
+- [Promise imported call-return boundary](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json) records the reporting-only imported function/member follow-up: target-present imported Promise receivers now report missing settled-value contracts instead of return-domain proof, because imported call-target identity has no local body to evaluate.
 
 Regenerate the full local reports with:
 
@@ -621,6 +622,15 @@ Promise runtime rows, the behavior change is pinned by focused call-target,
 equivalence, and recall-loss-report tests. Parameter callees, member/imported
 call returns, unsafe thenables, constructors, `.finally`, aggregate channels,
 and broad scheduling remain closed.
+The follow-up [imported Promise call-return boundary](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json)
+does not open exact admission. It sharpens the imported target-present labels
+exposed by the call-return diagnostics: imported function/member receivers need
+a settled-value or rejection-channel contract, not return-domain proof alone,
+because an import coordinate does not expose an evaluable local body. The source
+scan keeps the next imported queue quantified at `105` imported-member
+candidates across `9` repos and `73` imported-binding candidates across `15`
+repos, while focused report/equivalence tests keep import-backed Promise member
+calls distinct from direct Promise forms and synchronous payloads.
 
 ## See Also
 

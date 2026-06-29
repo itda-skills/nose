@@ -292,6 +292,13 @@ python3 scripts/cross-language-boundary-census.py \
   the Promise boundary; selector-only member calls, dynamic dispatch, imported
   members, unsafe thenables, `.finally`, constructors, and aggregate/scheduling
   paths remain closed.
+- [promise-imported-call-return-boundary-2026-06-29.v1.json](promise-imported-call-return-boundary-2026-06-29.v1.json)
+  records the reporting-only imported function/member Promise call-return
+  boundary. Target-present imported receivers now report missing settled-value
+  contracts instead of return-domain proof, because imported call-target
+  identity has no local body that can recover fulfilled or rejected payloads.
+  The `105` imported-member and `73` imported-binding source candidates remain
+  closed behind source-level hard negatives.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

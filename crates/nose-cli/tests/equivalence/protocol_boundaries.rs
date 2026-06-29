@@ -213,6 +213,26 @@ fn member_call_return_promise_receiver_stays_closed_without_target_proof() {
 }
 
 #[test]
+fn imported_member_call_return_promise_receiver_stays_closed_without_settled_value_proof() {
+    let i = Interner::new();
+    let imported_member_return =
+        "import * as service from './service';\nfunction f() {\n  return service.load().then(x => x + 1);\n}\n";
+    let direct_promise = "function f() {\n  return Promise.resolve(1).then(x => x + 1);\n}\n";
+    let sync_return = "function f() {\n  return 1 + 1;\n}\n";
+
+    assert_ne!(
+        value_fp(&i, imported_member_return, Lang::TypeScript),
+        value_fp(&i, direct_promise, Lang::TypeScript),
+        "import-backed member target identity alone must not recover a Promise receiver without settled-value proof"
+    );
+    assert_ne!(
+        value_fp(&i, imported_member_return, Lang::TypeScript),
+        value_fp(&i, sync_return, Lang::TypeScript),
+        "closed imported member Promise receiver candidates must not erase into sync payloads"
+    );
+}
+
+#[test]
 fn proven_promise_then_chains_converge_without_sync_erasure() {
     let i = Interner::new();
     let chained =

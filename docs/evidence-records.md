@@ -112,7 +112,10 @@ vocabulary separates concrete exact identity from broader dispatch facts:
   same-target identity.
 - `ImportedFunction` and `ImportedMember` name imported function/member
   coordinates. They prove opaque call identity only; standard-library or
-  ecosystem semantics still require `LibraryApi` occurrence evidence.
+  ecosystem semantics still require `LibraryApi` occurrence evidence. For
+  Promise call-return receivers, imported target identity is also not settled
+  payload proof: recovery needs a separate fulfilled/rejected value contract, as
+  recorded by the [Promise imported call-return boundary](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json).
 - `DynamicDispatch` names a protocol/dispatch family and method selector, but it
   does not by itself prove one concrete implementation target.
 

@@ -138,6 +138,11 @@ has PromiseLike domain proof. The value graph evaluates only that returned
 expression and closes on receiver-context reads, so selector-only member calls,
 dynamic dispatch, imported members, unsafe thenables, constructors, `.finally`,
 aggregate channels, and broad scheduling remain closed.
+The follow-up [promise-imported-call-return-boundary-2026-06-29.v1.json](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json)
+keeps imported function/member receivers closed and renames their target-present
+obligation to settled-value contracts. Import coordinates prove identity, not
+payload recovery; exact Promise continuation recovery for imported producers
+must first model fulfilled/rejected value channels explicitly.
 
 ## Minimal Vocabulary
 

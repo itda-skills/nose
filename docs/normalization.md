@@ -215,6 +215,11 @@ Guiding constraints for every pass:
   (`this`, `super`, or `self`), so selector-only member calls, dynamic dispatch,
   imported members, receiver-dependent methods, and broad member inference
   remain closed. The measured slice is recorded in the [Promise direct-method recovery artifact](../bench/recall_loss/promise-direct-method-return-recovery-2026-06-29.v1.json).
+  Imported function/member Promise call-return receivers remain closed even when
+  call-target identity is present: an import coordinate has no local body for the
+  value graph to evaluate, so these receivers now report a missing settled-value
+  contract rather than return-domain proof. That reporting-only boundary is
+  recorded in the [Promise imported call-return boundary artifact](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json).
   Lowered aggregate surfaces now pass through a `SeqSurfaceContract`: arrays/slices can
   enter collection membership, maps/objects enter map/object value semantics, Go
   `composite_literal` map surfaces are consumed only by the Go zero-map

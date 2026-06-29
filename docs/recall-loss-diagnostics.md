@@ -192,6 +192,12 @@ The value graph evaluates only the returned expression and closes on receiver
 context, so selector-only member calls, dynamic dispatch, imported members,
 receiver-dependent methods, unsafe thenables, constructors, `.finally`,
 aggregate channels, and broad scheduling remain in fail-closed obligations.
+The [imported Promise call-return boundary](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json)
+keeps imported function/member receivers closed but sharpens the report
+vocabulary: target-present imported Promise receivers now require a
+settled-value contract rather than mere return-domain proof. Imported
+call-target evidence proves a module/export/member coordinate, not a local body
+whose fulfilled or rejected payload can be evaluated.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

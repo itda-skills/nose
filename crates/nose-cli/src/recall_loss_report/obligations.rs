@@ -115,17 +115,17 @@ const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
         ),
     },
     RuntimeBoundaryRule {
-        evidence: "promise-call-return-imported-function-return-domain-proof",
+        evidence: "promise-call-return-imported-function-settled-value-contract",
         obligation: (
             "success-error-result-channel",
-            "promise-call-return-imported-function-return-domain-proof-missing",
+            "promise-call-return-imported-function-settled-value-contract-missing",
         ),
     },
     RuntimeBoundaryRule {
-        evidence: "promise-call-return-imported-member-return-domain-proof",
+        evidence: "promise-call-return-imported-member-settled-value-contract",
         obligation: (
             "success-error-result-channel",
-            "promise-call-return-imported-member-return-domain-proof-missing",
+            "promise-call-return-imported-member-settled-value-contract-missing",
         ),
     },
     RuntimeBoundaryRule {
@@ -491,6 +491,17 @@ mod tests {
             (
                 "ambiguous-selector-boundary",
                 "promise-call-return-member-callee-proof-missing",
+            )
+        );
+        assert_eq!(
+            runtime_boundary_obligation(&[
+                "promise-call-return-receiver-producer-proof",
+                "promise-call-return-imported-member-settled-value-contract",
+                "promise-then-promise-like-receiver-proof",
+            ]),
+            (
+                "success-error-result-channel",
+                "promise-call-return-imported-member-settled-value-contract-missing",
             )
         );
         assert_eq!(

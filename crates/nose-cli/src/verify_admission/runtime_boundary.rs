@@ -207,10 +207,10 @@ fn promise_call_return_receiver_callee_evidence(callee_evidence: &'static str) -
             "promise-call-return-direct-method-return-domain-proof"
         }
         "imported-function-target-present-call-contract-proof" => {
-            "promise-call-return-imported-function-return-domain-proof"
+            "promise-call-return-imported-function-settled-value-contract"
         }
         "imported-member-target-present-call-contract-proof" => {
-            "promise-call-return-imported-member-return-domain-proof"
+            "promise-call-return-imported-member-settled-value-contract"
         }
         "dynamic-dispatch-target-present-concrete-target-proof" => {
             "promise-call-return-dynamic-dispatch-return-domain-proof"
@@ -438,6 +438,22 @@ mod tests {
         assert!(labels.contains(&"promise-call-return-receiver-producer-proof"));
         assert!(labels.contains(&"promise-call-return-local-or-parameter-callee-proof"));
         assert!(labels.contains(&"promise-then-promise-like-receiver-proof"));
+    }
+
+    #[test]
+    fn imported_promise_call_return_targets_require_settled_value_contracts() {
+        assert_eq!(
+            promise_call_return_receiver_callee_evidence(
+                "imported-function-target-present-call-contract-proof"
+            ),
+            "promise-call-return-imported-function-settled-value-contract"
+        );
+        assert_eq!(
+            promise_call_return_receiver_callee_evidence(
+                "imported-member-target-present-call-contract-proof"
+            ),
+            "promise-call-return-imported-member-settled-value-contract"
+        );
     }
 
     #[test]
