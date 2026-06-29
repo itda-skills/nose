@@ -348,6 +348,8 @@ fn library_api_member_callee_contracts_for_id(
             let method = match kind {
                 PromiseAggregateKind::All => "all",
                 PromiseAggregateKind::AllSettled => "allSettled",
+                PromiseAggregateKind::Race => "race",
+                PromiseAggregateKind::Any => "any",
             };
             library_promise_aggregate_contract(lang, "Promise", method, 1)
                 .map(|contract| vec![contract.callee])

@@ -9,7 +9,7 @@ use nose_semantics::{
     library_api_callee_contract_hash, library_api_contract_id_hash,
     library_js_array_is_array_contract, library_js_like_map_constructor_contract,
     library_js_like_set_constructor_contract, library_map_key_view_wrapper_contract,
-    library_promise_aggregate_contract,
+    library_promise_aggregate_contract, PromiseAggregateKind,
 };
 
 #[test]
@@ -200,4 +200,43 @@ fn js_qualified_global_paths_emit_symbol_evidence() {
         ),
         1
     );
+}
+
+#[test]
+fn js_promise_first_observed_aggregates_emit_symbol_evidence() {
+    let il = lower_js(
+        "function first(values) { return Promise.race(values); }
+         function firstFulfilled(values) { return Promise.any(values); }",
+    );
+
+    for path in ["Promise.race", "Promise.any"] {
+        assert_eq!(
+            qualified_global_evidence_count(&il, path, NodeKind::Field),
+            1
+        );
+        for record in qualified_global_evidence_records(&il, path, NodeKind::Field) {
+            assert!(
+                record_has_source_unshadowed_dependency(&il, record, "Promise"),
+                "{path} evidence should depend on an unshadowed Promise proof"
+            );
+        }
+    }
+
+    for (method, kind) in [
+        ("race", PromiseAggregateKind::Race),
+        ("any", PromiseAggregateKind::Any),
+    ] {
+        let contract =
+            library_promise_aggregate_contract(Lang::JavaScript, "Promise", method, 1).unwrap();
+        assert_eq!(contract.result.kind, kind);
+        assert_eq!(
+            library_api_evidence_count(
+                &il,
+                library_api_contract_id_hash(contract.id),
+                library_api_callee_contract_hash(contract.callee),
+                1,
+            ),
+            1
+        );
+    }
 }

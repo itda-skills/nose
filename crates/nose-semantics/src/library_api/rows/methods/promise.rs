@@ -123,11 +123,15 @@ pub fn library_promise_aggregate_contract(
     let kind = match method {
         "all" => PromiseAggregateKind::All,
         "allSettled" => PromiseAggregateKind::AllSettled,
+        "race" => PromiseAggregateKind::Race,
+        "any" => PromiseAggregateKind::Any,
         _ => return None,
     };
     let (method_name, qualified_path) = match kind {
         PromiseAggregateKind::All => ("all", "Promise.all"),
         PromiseAggregateKind::AllSettled => ("allSettled", "Promise.allSettled"),
+        PromiseAggregateKind::Race => ("race", "Promise.race"),
+        PromiseAggregateKind::Any => ("any", "Promise.any"),
     };
     let result = PromiseAggregateContract {
         receiver: "Promise",

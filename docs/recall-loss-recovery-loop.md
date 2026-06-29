@@ -91,7 +91,8 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [#602 scheduling/lifecycle boundary audit](../bench/recall_loss/scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json) records the first reporting-only #602 slice across the 120-repo corpus. It prices `142,844` source-prevalence occurrences and ranks Promise aggregates, executor timing, AbortSignal cancellation, interval lifecycle, Go goroutines, Java `CompletableFuture`, and Swift `await` as the first actionable reporting targets.
 - [#602 Promise.all literal aggregate recovery](../bench/recall_loss/promise-all-literal-aggregate-recovery-2026-06-29.v1.json) records the first exact aggregate slice. It opens fulfilled-only `Promise.all` over literal arrays whose elements already recover as fulfilled Promise evidence; dynamic iterables, rejected inputs, `race`/`any`, thenables, executor timing, and sync arrays stay closed.
 - [#602 Promise.allSettled literal aggregate recovery](../bench/recall_loss/promise-allsettled-literal-aggregate-recovery-2026-06-29.v1.json) records the next exact aggregate slice. It opens fulfilled-result `Promise.allSettled` over literal arrays whose elements already recover as fulfilled or rejected Promise evidence; dynamic iterables, `all`/`race`/`any`, thenables, executor timing, and sync settled-record arrays stay closed.
-- [#602 Promise aggregate raw-input assimilation](../bench/recall_loss/promise-aggregate-raw-input-recovery-2026-06-29.v1.json) records the shared exact slice for literal `Promise.all` and `Promise.allSettled` raw primitive inputs. It reuses the existing non-thenable-safe proof from `Promise.resolve`; object/function raw inputs, untyped possible thenables, dynamic iterables, `race`/`any`, executor timing, and sync aggregate equivalence stay closed.
+- [#602 Promise aggregate raw-input assimilation](../bench/recall_loss/promise-aggregate-raw-input-recovery-2026-06-29.v1.json) records the shared exact slice for literal `Promise.all` and `Promise.allSettled` raw primitive inputs. It reuses the existing non-thenable-safe proof from `Promise.resolve`; at that slice, object/function raw inputs, untyped possible thenables, dynamic iterables, `race`/`any`, executor timing, and sync aggregate equivalence stayed closed.
+- [#602 Promise.race/Promise.any literal aggregate recovery](../bench/recall_loss/promise-race-any-literal-aggregate-recovery-2026-06-30.v1.json) records the first-observed exact aggregate slice. It opens only non-empty fully closed literal `Promise.race` and fully closed literal `Promise.any` with a fulfilled candidate; dynamic iterables, possible thenables, all-rejected `Promise.any` AggregateError payloads, executor timing, and sync value equivalence stay closed.
 
 Regenerate the full local reports with:
 
@@ -715,9 +716,18 @@ aggregate elements as fulfilled inputs for already-admitted literal
 `Promise.all` and `Promise.allSettled` calls. The corpus scan finds `8`
 `Promise.all` literal arrays and `1` `Promise.allSettled` literal array with a
 direct raw non-thenable element, with `3` fully lexical direct-safe candidates.
-Dynamic iterables, object/function raw inputs, untyped possible thenables,
-`Promise.race`, `Promise.any`, executor timing, and sync aggregate equivalence
-stay closed.
+The [Promise.race/Promise.any literal aggregate recovery](../bench/recall_loss/promise-race-any-literal-aggregate-recovery-2026-06-30.v1.json)
+follow-up opens the first-observed aggregate subset through the same aggregate
+contract family. `Promise.race` recovers only non-empty literal arrays where
+every element has closed settlement or non-thenable-safe raw-input proof, and
+returns the first element's settlement. `Promise.any` recovers only fully closed
+literal arrays with at least one fulfilled candidate, and returns the first
+fulfilled element. The corpus scan finds `32` broad `Promise.race` occurrences,
+`31` `Promise.race` literal arrays, `1` broad/literal `Promise.any` occurrence,
+and `0` fully closed lexical candidates for either opened path in the pinned
+corpus. Dynamic iterables, object/function raw inputs, untyped possible
+thenables, all-rejected `Promise.any` AggregateError payloads, executor timing,
+and sync aggregate equivalence stay closed.
 
 ## See Also
 

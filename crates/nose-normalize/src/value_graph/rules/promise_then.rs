@@ -7,10 +7,10 @@
 //! value from a supported Promise producer. Safe `.finally` recovery is narrower still: the handler
 //! must be absent or a zero-argument lambda whose result is non-thenable-safe, a fulfilled Promise
 //! boundary, or a rejected Promise boundary. Aggregate recovery is also intentionally narrow:
-//! literal `Promise.all` and `Promise.allSettled` inputs must either recover to Promise state or
-//! prove the same non-thenable-safe raw input condition used by `Promise.resolve`. The result stays
-//! behind a Promise boundary so Promise-returning code does not converge with synchronous code that
-//! happens to compute the same payload.
+//! supported literal aggregate inputs must either recover to Promise state or prove the same
+//! non-thenable-safe raw input condition used by `Promise.resolve`. The result stays behind a
+//! Promise boundary so Promise-returning code does not converge with synchronous code that happens
+//! to compute the same payload.
 //!
 //! proof-obligation: normalize.value_graph.promise_then
 
@@ -270,6 +270,8 @@ fn promise_aggregate_state(
     match admitted.contract.result.kind {
         PromiseAggregateKind::All => promise_all_literal_state(builder, expr, env),
         PromiseAggregateKind::AllSettled => promise_all_settled_literal_state(builder, expr, env),
+        PromiseAggregateKind::Race => promise_race_literal_state(builder, expr, env),
+        PromiseAggregateKind::Any => promise_any_literal_state(builder, expr, env),
     }
 }
 
@@ -278,14 +280,9 @@ fn promise_all_literal_state(
     expr: NodeId,
     env: &FxHashMap<u32, ValueId>,
 ) -> Option<PromiseState> {
-    let aggregate_arg = *builder.il.children(expr).get(1)?;
-    if builder.il.kind(aggregate_arg) != NodeKind::Seq {
-        return None;
-    }
-    let elements = builder.il.children(aggregate_arg).to_vec();
-    let mut fulfilled = Vec::with_capacity(elements.len());
-    for element in elements {
-        let state = promise_aggregate_input_state(builder, element, env)?;
+    let (aggregate_arg, states) = promise_literal_aggregate_input_states(builder, expr, env)?;
+    let mut fulfilled = Vec::with_capacity(states.len());
+    for state in states {
         let PromiseState::Fulfilled(payload) = state else {
             return None;
         };
@@ -300,14 +297,10 @@ fn promise_all_settled_literal_state(
     expr: NodeId,
     env: &FxHashMap<u32, ValueId>,
 ) -> Option<PromiseState> {
-    let aggregate_arg = *builder.il.children(expr).get(1)?;
-    if builder.il.kind(aggregate_arg) != NodeKind::Seq {
-        return None;
-    }
-    let elements = builder.il.children(aggregate_arg).to_vec();
-    let mut settled = Vec::with_capacity(elements.len());
-    for element in elements {
-        let record = match promise_aggregate_input_state(builder, element, env)? {
+    let (aggregate_arg, states) = promise_literal_aggregate_input_states(builder, expr, env)?;
+    let mut settled = Vec::with_capacity(states.len());
+    for state in states {
+        let record = match state {
             PromiseState::Fulfilled(payload) => builder.mk(
                 ValOp::Seq(stable_symbol_hash("promise.allSettled.fulfilled_record")),
                 vec![payload],
@@ -321,6 +314,44 @@ fn promise_all_settled_literal_state(
     }
     let payload = builder.mk(ValOp::Seq(builder.seq_tag(aggregate_arg)), settled);
     Some(PromiseState::Fulfilled(payload))
+}
+
+fn promise_race_literal_state(
+    builder: &mut Builder<'_>,
+    expr: NodeId,
+    env: &FxHashMap<u32, ValueId>,
+) -> Option<PromiseState> {
+    let (_aggregate_arg, states) = promise_literal_aggregate_input_states(builder, expr, env)?;
+    states.into_iter().next()
+}
+
+fn promise_any_literal_state(
+    builder: &mut Builder<'_>,
+    expr: NodeId,
+    env: &FxHashMap<u32, ValueId>,
+) -> Option<PromiseState> {
+    let (_aggregate_arg, states) = promise_literal_aggregate_input_states(builder, expr, env)?;
+    states.into_iter().find_map(|state| match state {
+        PromiseState::Fulfilled(payload) => Some(PromiseState::Fulfilled(payload)),
+        PromiseState::Rejected(_) => None,
+    })
+}
+
+fn promise_literal_aggregate_input_states(
+    builder: &mut Builder<'_>,
+    expr: NodeId,
+    env: &FxHashMap<u32, ValueId>,
+) -> Option<(NodeId, Vec<PromiseState>)> {
+    let aggregate_arg = *builder.il.children(expr).get(1)?;
+    if builder.il.kind(aggregate_arg) != NodeKind::Seq {
+        return None;
+    }
+    let elements = builder.il.children(aggregate_arg).to_vec();
+    let mut states = Vec::with_capacity(elements.len());
+    for element in elements {
+        states.push(promise_aggregate_input_state(builder, element, env)?);
+    }
+    Some((aggregate_arg, states))
 }
 
 fn promise_aggregate_input_state(

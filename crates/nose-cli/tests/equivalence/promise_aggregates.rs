@@ -82,6 +82,115 @@ fn promise_all_literal_aggregate_stays_closed_for_rejection_and_dynamic_iterable
 }
 
 #[test]
+fn promise_race_literal_aggregate_recovers_first_settled_state() {
+    let i = Interner::new();
+    let direct =
+        "function f() {\n  return Promise.race([Promise.resolve(1), Promise.resolve(2)]);\n}\n";
+    let equivalent = "function f() {\n  return Promise.race([Promise.resolve(1).then(x => x), Promise.resolve(2)]);\n}\n";
+    let rejected_first =
+        "function f() {\n  return Promise.race([Promise.reject(1), Promise.resolve(2)]);\n}\n";
+    let rejected_equivalent = "function f() {\n  return Promise.race([Promise.reject(1).then(x => x), Promise.resolve(2)]);\n}\n";
+    let swapped =
+        "function f() {\n  return Promise.race([Promise.resolve(2), Promise.resolve(1)]);\n}\n";
+    let sync_value = "function f() {\n  return 1;\n}\n";
+    let dynamic_iterable = "function f(xs) {\n  return Promise.race(xs);\n}\n";
+    let empty_race = "function f() {\n  return Promise.race([]);\n}\n";
+    let possible_thenable = "function f(x) {\n  return Promise.race([1, x]);\n}\n";
+    let wrapped_possible =
+        "function f(x) {\n  return Promise.race([Promise.resolve(1), Promise.resolve(x)]);\n}\n";
+
+    assert_eq!(
+        value_fp(&i, direct, Lang::TypeScript),
+        value_fp(&i, equivalent, Lang::TypeScript),
+        "Promise.race should recover first-settled literal aggregates when every element is closed"
+    );
+    assert_eq!(
+        value_fp(&i, rejected_first, Lang::TypeScript),
+        value_fp(&i, rejected_equivalent, Lang::TypeScript),
+        "Promise.race should preserve a first rejected settlement channel"
+    );
+    assert_ne!(
+        value_fp(&i, direct, Lang::TypeScript),
+        value_fp(&i, swapped, Lang::TypeScript),
+        "Promise.race recovery must preserve first-settled element order"
+    );
+    assert_ne!(
+        value_fp(&i, direct, Lang::TypeScript),
+        value_fp(&i, sync_value, Lang::TypeScript),
+        "Promise.race recovery must preserve the Promise boundary"
+    );
+    assert_ne!(
+        value_fp(&i, direct, Lang::TypeScript),
+        value_fp(&i, dynamic_iterable, Lang::TypeScript),
+        "Promise.race over a dynamic iterable must stay closed until iterable lifecycle is modeled"
+    );
+    assert_ne!(
+        value_fp(&i, direct, Lang::TypeScript),
+        value_fp(&i, empty_race, Lang::TypeScript),
+        "Promise.race([]) stays closed because it never settles"
+    );
+    assert_ne!(
+        value_fp(&i, possible_thenable, Lang::TypeScript),
+        value_fp(&i, wrapped_possible, Lang::TypeScript),
+        "Promise.race with possible thenables stays closed despite an earlier literal input"
+    );
+}
+
+#[test]
+fn promise_any_literal_aggregate_recovers_first_fulfilled_state() {
+    let i = Interner::new();
+    let direct = "function f() {\n  return Promise.any([Promise.reject(1), Promise.resolve(2), Promise.resolve(3)]);\n}\n";
+    let equivalent = "function f() {\n  return Promise.any([Promise.reject(1).then(x => x), Promise.resolve(2).then(x => x), Promise.resolve(3)]);\n}\n";
+    let raw = "function f() {\n  return Promise.any([Promise.reject(1), 2]);\n}\n";
+    let wrapped =
+        "function f() {\n  return Promise.any([Promise.reject(1), Promise.resolve(2)]);\n}\n";
+    let swapped = "function f() {\n  return Promise.any([Promise.reject(1), Promise.resolve(3), Promise.resolve(2)]);\n}\n";
+    let sync_value = "function f() {\n  return 2;\n}\n";
+    let all_rejected =
+        "function f() {\n  return Promise.any([Promise.reject(1), Promise.reject(2)]);\n}\n";
+    let aggregate_error_substitute = "function f() {\n  return Promise.reject([1, 2]);\n}\n";
+    let dynamic_iterable = "function f(xs) {\n  return Promise.any(xs);\n}\n";
+    let possible_thenable = "function f(x) {\n  return Promise.any([x, 2]);\n}\n";
+    let wrapped_possible = "function f(x) {\n  return Promise.any([Promise.resolve(x), 2]);\n}\n";
+
+    assert_eq!(
+        value_fp(&i, direct, Lang::TypeScript),
+        value_fp(&i, equivalent, Lang::TypeScript),
+        "Promise.any should recover first-fulfilled literal aggregates when every element is closed"
+    );
+    assert_eq!(
+        value_fp(&i, raw, Lang::TypeScript),
+        value_fp(&i, wrapped, Lang::TypeScript),
+        "Promise.any should assimilate non-thenable raw inputs as fulfilled candidates"
+    );
+    assert_ne!(
+        value_fp(&i, direct, Lang::TypeScript),
+        value_fp(&i, swapped, Lang::TypeScript),
+        "Promise.any recovery must preserve first-fulfilled element order"
+    );
+    assert_ne!(
+        value_fp(&i, direct, Lang::TypeScript),
+        value_fp(&i, sync_value, Lang::TypeScript),
+        "Promise.any recovery must preserve the Promise boundary"
+    );
+    assert_ne!(
+        value_fp(&i, all_rejected, Lang::TypeScript),
+        value_fp(&i, aggregate_error_substitute, Lang::TypeScript),
+        "all-rejected Promise.any stays closed until AggregateError payloads are modeled"
+    );
+    assert_ne!(
+        value_fp(&i, direct, Lang::TypeScript),
+        value_fp(&i, dynamic_iterable, Lang::TypeScript),
+        "Promise.any over a dynamic iterable must stay closed until iterable lifecycle is modeled"
+    );
+    assert_ne!(
+        value_fp(&i, possible_thenable, Lang::TypeScript),
+        value_fp(&i, wrapped_possible, Lang::TypeScript),
+        "Promise.any with possible thenables stays closed despite a later literal input"
+    );
+}
+
+#[test]
 fn promise_all_settled_literal_aggregate_recovers_ordered_settlement_records() {
     let i = Interner::new();
     let direct = "function f() {\n  return Promise.allSettled([Promise.resolve(1), Promise.reject(2)]);\n}\n";

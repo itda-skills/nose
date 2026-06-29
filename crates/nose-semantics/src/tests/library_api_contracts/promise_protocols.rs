@@ -96,6 +96,26 @@ fn promise_aggregate_contract_requires_js_like_static_global_surface() {
         })
     );
     assert_eq!(
+        promise_aggregate_contract(Lang::TypeScript, "Promise", "race", 1),
+        Some(PromiseAggregateContract {
+            receiver: "Promise",
+            method: "race",
+            qualified_path: "Promise.race",
+            kind: PromiseAggregateKind::Race,
+            result_domain: DomainEvidence::PromiseLike,
+        })
+    );
+    assert_eq!(
+        promise_aggregate_contract(Lang::TypeScript, "Promise", "any", 1),
+        Some(PromiseAggregateContract {
+            receiver: "Promise",
+            method: "any",
+            qualified_path: "Promise.any",
+            kind: PromiseAggregateKind::Any,
+            result_domain: DomainEvidence::PromiseLike,
+        })
+    );
+    assert_eq!(
         promise_aggregate_contract(Lang::TypeScript, "Promise", "all", 2),
         None
     );

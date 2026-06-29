@@ -217,9 +217,20 @@ The shared [Promise aggregate raw-input assimilation](../bench/recall_loss/promi
 follow-up reuses the existing non-thenable-safe proof from `Promise.resolve`:
 raw literal/scalar elements can become fulfilled aggregate inputs for already
 admitted literal `Promise.all` and `Promise.allSettled` calls. This is still not
-thenable assimilation. Object/function raw inputs, untyped variables, dynamic
-iterables, `Promise.race`, `Promise.any`, executor timing, and sync aggregate
-equivalence remain closed.
+thenable assimilation. At that slice, object/function raw inputs, untyped
+variables, dynamic iterables, `Promise.race`, `Promise.any`, executor timing,
+and sync aggregate equivalence remained closed.
+
+The [Promise.race/Promise.any literal aggregate recovery](../bench/recall_loss/promise-race-any-literal-aggregate-recovery-2026-06-30.v1.json)
+follow-up opens only the first-observed subset that can be expressed with the
+same aggregate-settlement capability. `Promise.race` admits non-empty literal
+arrays only when every element has closed settlement or non-thenable-safe
+raw-input proof, then preserves the first element's fulfilled/rejected channel.
+`Promise.any` admits fully closed literal arrays only when at least one element
+is fulfilled, then preserves the first fulfilled payload. Dynamic iterables,
+possible thenables, all-rejected `Promise.any` AggregateError payloads,
+executor timing, cancellation/liveness, and sync value equivalence remain
+closed.
 
 ## Minimal Vocabulary
 

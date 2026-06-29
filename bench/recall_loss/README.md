@@ -155,6 +155,19 @@ python3 scripts/promise-aggregate-raw-input-slice-audit.py \
   --output target/promise-aggregate-raw-input-recovery.v1.json
 ```
 
+Build the #602 `Promise.race`/`Promise.any` first-observed aggregate slice audit
+with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.issue-602-promise-race-any.crates.json
+
+python3 scripts/promise-race-any-slice-audit.py \
+  --recall-loss-report target/recall-loss.issue-602-promise-race-any.crates.json \
+  --output target/promise-race-any-literal-aggregate-recovery.v1.json
+```
+
 ## Files
 
 - [crates.baseline.v1.json](crates.baseline.v1.json) records the current
@@ -428,9 +441,17 @@ python3 scripts/promise-aggregate-raw-input-slice-audit.py \
   records the shared #602 raw-input assimilation slice for literal
   `Promise.all` and `Promise.allSettled` aggregates. A raw element may become a
   fulfilled aggregate input only under the same non-thenable-safe proof used by
-  `Promise.resolve`; dynamic iterables, object/function raw inputs, untyped
-  possible thenables, `Promise.race`, `Promise.any`, executor timing, and sync
-  aggregate equivalence remain closed.
+  `Promise.resolve`; at that slice, dynamic iterables, object/function raw
+  inputs, untyped possible thenables, `Promise.race`, `Promise.any`, executor
+  timing, and sync aggregate equivalence remained closed.
+- [promise-race-any-literal-aggregate-recovery-2026-06-30.v1.json](promise-race-any-literal-aggregate-recovery-2026-06-30.v1.json)
+  records the #602 first-observed aggregate slice for literal `Promise.race`
+  and `Promise.any`. `Promise.race` can recover the first-settled element only
+  for non-empty fully closed literal arrays; `Promise.any` can recover the
+  first fulfilled element only for fully closed literal arrays with a fulfilled
+  candidate. Dynamic iterables, possible thenables, all-rejected `Promise.any`
+  AggregateError payloads, executor timing, and sync value equivalence remain
+  closed.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

@@ -37,15 +37,18 @@ break.
   120-repo pricing script and checked artifact for aggregate, executor,
   cancellation, scheduler, channel, lifecycle, and exception boundary surfaces.
 - Added the first #602 exact aggregate capability slices for `Promise.all` and
-  `Promise.allSettled`: unshadowed global aggregate calls over literal arrays
+  `Promise.allSettled`, plus the first-observed `Promise.race`/`Promise.any`
+  literal-array slice: unshadowed global aggregate calls over literal arrays
   can recover only when every element already has matching Promise settlement
   evidence or non-thenable-safe raw input proof. `Promise.all` opens the
   all-fulfilled ordered payload channel; `Promise.allSettled` opens the
-  fulfilled-result ordered settled-record channel. Dynamic iterables, raw
-  object/function inputs without non-thenable proof, `Promise.race`,
-  `Promise.any`, thenable assimilation, executor timing, and sync array
-  equivalence remain closed. These slices include checked recall-loss/pricing
-  artifacts.
+  fulfilled-result ordered settled-record channel; `Promise.race` opens the
+  first-settled channel for non-empty fully closed literal arrays; and
+  `Promise.any` opens the first-fulfilled channel when a fully closed literal
+  array has a fulfilled candidate. Dynamic iterables, raw object/function
+  inputs without non-thenable proof, all-rejected `Promise.any` AggregateError
+  payloads, thenable assimilation, executor timing, and sync array equivalence
+  remain closed. These slices include checked recall-loss/pricing artifacts.
 - Added staged Promise recovery infrastructure: protocol diagnostics and hard
   negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
   continuation recovery; receiver-producer/call-return attribution; and
@@ -147,6 +150,12 @@ break.
   `8` `Promise.all` literal arrays and `1` `Promise.allSettled` literal array
   with a direct raw non-thenable element, with `3` fully lexical direct-safe
   candidates.
+- Confirmed the #602 `Promise.race`/`Promise.any` first-observed aggregate
+  slice with the local `crates` recall-loss gate at `false_merges = 0` and
+  `canon_preservation_violations = 0`; the 120-repo slice artifact records
+  `32` broad `Promise.race` occurrences, `31` `Promise.race` literal arrays,
+  `1` `Promise.any` occurrence, and `0` fully closed lexical candidates in the
+  pinned corpus.
 
 ## [0.16.0] - 2026-06-26
 
