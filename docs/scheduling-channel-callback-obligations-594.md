@@ -243,6 +243,16 @@ future exact slice; even those remain closed until executor timing, callback
 identity, settlement precedence, thrown-error ordering, callback effects, and
 non-thenable payload proof are represented.
 
+The [AbortSignal cancellation boundary audit](../bench/recall_loss/abort-signal-cancellation-boundary-audit-2026-06-30.v1.json)
+is the following reporting-only #602 slice. It adds named runtime-boundary
+labels for `AbortSignal.abort`, `AbortSignal.any`, `AbortSignal.timeout`, and
+`new AbortController()` without admitting cancellation equivalence. The 120-repo
+scan splits `260` Abort mentions into controller lifecycle, direct static
+AbortSignal calls, signal option properties, and signal-aware `fetch`,
+timer, listener, and scheduler surfaces. Exact cancellation remains closed until
+signal identity, abort ordering, abort reasons, rejection/cleanup behavior, and
+controller-signal lifecycle are dependency-closed obligations.
+
 ## Minimal Vocabulary
 
 | obligation | existing substrate | exact-channel rule |
@@ -318,11 +328,13 @@ the relevant families:
 The current inventory is checked in as [issue-598-hard-negative-inventory-2026-06-28.v1.json](../bench/recall_loss/issue-598-hard-negative-inventory-2026-06-28.v1.json).
 It maps existing tests and checked-in audit reports to these families before any
 new exact admission is opened.
-The #602 reporting slice extends that map in the [scheduling/lifecycle boundary audit](../bench/recall_loss/scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json):
+The #602 reporting slices extend that map in the [scheduling/lifecycle boundary audit](../bench/recall_loss/scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json),
+the [Promise executor boundary audit](../bench/recall_loss/promise-executor-boundary-audit-2026-06-30.v1.json),
+and the [AbortSignal cancellation boundary audit](../bench/recall_loss/abort-signal-cancellation-boundary-audit-2026-06-30.v1.json):
 thenable/custom Promise receivers and Promise aggregate distinctions stay pinned
 by existing semantic-boundary tests, while executor timing, scheduler ordering,
-and interval liveness are reporting-only until behavior-changing hard negatives
-exist.
+interval liveness, and cancellation-sensitive AbortSignal forms are
+reporting-only until behavior-changing hard negatives exist.
 
 ## Non-API Statement
 

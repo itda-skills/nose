@@ -367,6 +367,27 @@ const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
         ),
     },
     RuntimeBoundaryRule {
+        evidence: "abort-signal-cancellation-contract",
+        obligation: (
+            "cancellation-liveness-boundary",
+            "abort-signal-cancellation-contract-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "abort-signal-lifecycle-contract",
+        obligation: (
+            "cancellation-liveness-boundary",
+            "abort-signal-lifecycle-contract-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "abort-controller-signal-lifecycle-contract",
+        obligation: (
+            "cancellation-liveness-boundary",
+            "abort-controller-signal-lifecycle-contract-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
         evidence: "promise-factory-settled-value-contract",
         obligation: (
             "success-error-result-channel",

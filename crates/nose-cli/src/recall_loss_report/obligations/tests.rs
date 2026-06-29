@@ -148,4 +148,21 @@ fn aggregate_executor_scheduler_and_lifecycle_labels_have_specific_obligations()
             "interval-async-iteration-lifecycle-contract-missing",
         )
     );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "abort-signal-cancellation-contract",
+            "abort-signal-lifecycle-contract",
+        ]),
+        (
+            "cancellation-liveness-boundary",
+            "abort-signal-cancellation-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["abort-controller-signal-lifecycle-contract"]),
+        (
+            "cancellation-liveness-boundary",
+            "abort-controller-signal-lifecycle-contract-missing",
+        )
+    );
 }

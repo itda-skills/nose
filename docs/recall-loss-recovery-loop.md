@@ -94,6 +94,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [#602 Promise aggregate raw-input assimilation](../bench/recall_loss/promise-aggregate-raw-input-recovery-2026-06-29.v1.json) records the shared exact slice for literal `Promise.all` and `Promise.allSettled` raw primitive inputs. It reuses the existing non-thenable-safe proof from `Promise.resolve`; at that slice, object/function raw inputs, untyped possible thenables, dynamic iterables, `race`/`any`, executor timing, and sync aggregate equivalence stayed closed.
 - [#602 Promise.race/Promise.any literal aggregate recovery](../bench/recall_loss/promise-race-any-literal-aggregate-recovery-2026-06-30.v1.json) records the first-observed exact aggregate slice. It opens only non-empty fully closed literal `Promise.race` and fully closed literal `Promise.any` with a fulfilled candidate; dynamic iterables, possible thenables, all-rejected `Promise.any` AggregateError payloads, executor timing, and sync value equivalence stay closed.
 - [#602 Promise executor boundary audit](../bench/recall_loss/promise-executor-boundary-audit-2026-06-30.v1.json) records the reporting-only `new Promise(...)` readiness slice. It splits `795` constructor occurrences by inline executor shape, settlement calls, timer/scheduler use, multi-settlement, throw-to-rejection, and possible thenable payload risk; exact constructor admission remains closed with `semantic_admission_delta = 0`.
+- [#602 AbortSignal cancellation boundary audit](../bench/recall_loss/abort-signal-cancellation-boundary-audit-2026-06-30.v1.json) records the reporting-only cancellation/liveness readiness slice. It splits `260` Abort mentions, `193` signal option properties, controller lifecycle pairs, direct static AbortSignal calls, and signal-aware fetch/timer/listener use; exact cancellation admission remains closed with `semantic_admission_delta = 0`.
 
 Regenerate the full local reports with:
 
@@ -745,6 +746,19 @@ constructor proof, resolve/reject callback identity, single-settlement
 precedence, throw-to-rejection and throw-after-settlement ordering, explicit
 executor effects, non-thenable payload proof, and preservation of the Promise
 boundary.
+
+The [AbortSignal cancellation boundary audit](../bench/recall_loss/abort-signal-cancellation-boundary-audit-2026-06-30.v1.json)
+is the next reporting-only #602 readiness slice. Runtime-boundary diagnostics
+now name `AbortSignal.abort`, `AbortSignal.any`, `AbortSignal.timeout`, and
+`new AbortController()` as cancellation/lifecycle obligations rather than
+opaque unsupported runtime rows. The pinned corpus has `260` Abort mentions,
+`156` `AbortController` constructors, `175` `.abort()` selector calls, `323`
+`.signal` property reads, `193` `signal` option properties, `6` signal-bearing `fetch`
+calls, `2` signal-bearing timer calls, and `2` signal-bearing
+`addEventListener` calls. The artifact keeps `semantic_admission_delta = 0`;
+future exact cancellation work must prove signal identity, abort ordering,
+abort reason propagation, listener/timer/fetch rejection behavior, and
+controller-signal lifecycle before merging cancellation-sensitive forms.
 
 ## See Also
 

@@ -202,6 +202,33 @@ fn scheduler_and_interval_calls_report_timing_and_lifecycle_obligations() {
 }
 
 #[test]
+fn abort_signal_calls_report_cancellation_liveness_obligations() {
+    let timeout = missing_evidence_for_call(
+        "function timeoutIt() { return AbortSignal.timeout(100); }\n",
+        "AbortSignal.timeout",
+    );
+    let any = missing_evidence_for_call(
+        "function anyIt(signals) { return AbortSignal.any(signals); }\n",
+        "AbortSignal.any",
+    );
+    let aborted = missing_evidence_for_call(
+        "function abortIt(reason) { return AbortSignal.abort(reason); }\n",
+        "AbortSignal.abort",
+    );
+    let controller = missing_evidence_for_call(
+        "function controllerIt() { return new AbortController(); }\n",
+        "AbortController",
+    );
+
+    for labels in [&timeout, &any, &aborted] {
+        assert!(labels.contains(&"abort-signal-cancellation-contract"));
+        assert!(labels.contains(&"abort-signal-lifecycle-contract"));
+    }
+    assert!(controller.contains(&"abort-controller-signal-lifecycle-contract"));
+    assert!(controller.contains(&"abort-signal-cancellation-contract"));
+}
+
+#[test]
 fn promise_catch_missing_evidence_splits_continuation_from_callback_effect() {
     let labels =
         missing_evidence_for_call("function catchIt(p, h) { return p.catch(h); }\n", ".catch");

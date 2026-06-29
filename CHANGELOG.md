@@ -42,6 +42,12 @@ break.
   scalar rejects; exact constructor admission remains closed behind executor
   timing, callback identity, settlement precedence, throw-to-rejection,
   callback-effect, thenable-assimilation, and Promise-boundary obligations.
+- Added a #602 reporting-only AbortSignal cancellation/liveness boundary audit
+  and checked artifact. The pinned corpus has `260` Abort mentions, `193`
+  signal option properties, `156` `AbortController` constructors, `175`
+  `.abort()` selector calls, `323` `.signal` property reads, `6` signal-bearing
+  `fetch` calls, `2` signal-bearing timer calls, and `2` signal-bearing
+  `addEventListener` calls; exact cancellation admission remains closed.
 - Added the first #602 exact aggregate capability slices for `Promise.all` and
   `Promise.allSettled`, plus the first-observed `Promise.race`/`Promise.any`
   literal-array slice: unshadowed global aggregate calls over literal arrays
@@ -95,8 +101,9 @@ break.
   resolve/reject callbacks, throw-to-rejection, Promise aggregate
   all-fulfilled/first-settled/all-settled/first-fulfilled shapes,
   scheduler wait/yield timing, interval lifecycle, channel send/select,
-  goroutine scheduling, and defer lifecycle can be reported as named
-  obligations without opening exact admission.
+  goroutine scheduling, defer lifecycle, and AbortSignal/AbortController
+  cancellation/lifecycle contracts can be reported as named obligations without
+  opening exact admission.
 - Refined import-snapshot census reporting to separate missing provider modules,
   missing exports, re-export boundaries, external/stdlib/workspace boundaries,
   provider/importer mutation, missing provider API proof, and aggregate shapes
@@ -162,6 +169,10 @@ break.
   `32` broad `Promise.race` occurrences, `31` `Promise.race` literal arrays,
   `1` `Promise.any` occurrence, and `0` fully closed lexical candidates in the
   pinned corpus.
+- Confirmed the #602 AbortSignal cancellation/liveness reporting slice with the
+  local `crates` recall-loss gate at `false_merges = 0` and
+  `canon_preservation_violations = 0`; the 120-repo artifact records
+  `semantic_admission_delta = 0`.
 
 ## [0.16.0] - 2026-06-26
 

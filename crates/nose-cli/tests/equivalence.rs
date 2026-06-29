@@ -86,6 +86,8 @@ mod operator_boundaries;
 mod option_boundaries;
 #[path = "equivalence/promise_aggregates.rs"]
 mod promise_aggregates;
+#[path = "equivalence/promise_cancellation.rs"]
+mod promise_cancellation;
 #[path = "equivalence/promise_executors.rs"]
 mod promise_executors;
 #[path = "equivalence/promise_finally.rs"]

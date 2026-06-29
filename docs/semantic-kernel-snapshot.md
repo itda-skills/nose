@@ -83,6 +83,13 @@ side-effect calls, and possible thenable payload risk, but does not open exact
 constructor admission. A future constructor slice must prove callback identity,
 settlement precedence, thrown-error ordering, executor effects, non-thenable
 payload safety, and Promise-boundary preservation.
+AbortSignal/AbortController cancellation recovery also remains reporting-only.
+Runtime-boundary diagnostics name `AbortSignal.abort`, `AbortSignal.any`,
+`AbortSignal.timeout`, and `new AbortController()` as cancellation/lifecycle
+obligations instead of opaque unsupported runtime rows. Exact cancellation stays
+closed until signal identity, abort ordering, abort reason propagation,
+listener/timer/fetch rejection behavior, and controller-signal lifecycle are
+modeled explicitly.
 Node `timers/promises` ESM named imports and conservative `const` CommonJS
 destructuring requires are a narrow imported producer slice: admitted
 `LibraryApi` occurrence evidence for `node:timers/promises`/`timers/promises`

@@ -131,6 +131,16 @@ fn push_promise_protocol_call_missing_evidence(
             push_unique(labels, "scheduler-yield-microtask-order-contract");
             true
         }
+        Some("AbortSignal.abort" | "AbortSignal.any" | "AbortSignal.timeout") => {
+            push_unique(labels, "abort-signal-cancellation-contract");
+            push_unique(labels, "abort-signal-lifecycle-contract");
+            true
+        }
+        Some("AbortController") if construct_call(il, call) => {
+            push_unique(labels, "abort-controller-signal-lifecycle-contract");
+            push_unique(labels, "abort-signal-cancellation-contract");
+            true
+        }
         Some("setInterval") | Some("timers.setInterval") | Some("scheduler.setInterval") => {
             push_unique(labels, "interval-async-iteration-lifecycle-contract");
             true
@@ -363,8 +373,11 @@ fn js_like_runtime_lang(lang: nose_il::Lang) -> bool {
 }
 
 fn promise_construct_call(il: &nose_il::Il, call: NodeId, callee_path: &str) -> bool {
-    callee_path == "Promise"
-        && nose_semantics::source_call_at_node(il, call) == Some(nose_il::SourceCallKind::Construct)
+    callee_path == "Promise" && construct_call(il, call)
+}
+
+fn construct_call(il: &nose_il::Il, call: NodeId) -> bool {
+    nose_semantics::source_call_at_node(il, call) == Some(nose_il::SourceCallKind::Construct)
 }
 
 fn callee_path(il: &nose_il::Il, interner: &Interner, node: NodeId) -> Option<String> {

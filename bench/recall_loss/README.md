@@ -180,6 +180,18 @@ python3 scripts/promise-executor-slice-audit.py \
   --output target/promise-executor-boundary-audit.v1.json
 ```
 
+Build the #602 AbortSignal cancellation boundary audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.issue-602-abort-signal.crates.json
+
+python3 scripts/abort-signal-cancellation-slice-audit.py \
+  --recall-loss-report target/recall-loss.issue-602-abort-signal.crates.json \
+  --output target/abort-signal-cancellation-boundary-audit.v1.json
+```
+
 ## Files
 
 - [crates.baseline.v1.json](crates.baseline.v1.json) records the current
@@ -474,6 +486,14 @@ python3 scripts/promise-executor-slice-audit.py \
   constructor recovery remains closed until executor timing, callback identity,
   settlement precedence, throw-to-rejection, and non-thenable proof are all
   represented.
+- [abort-signal-cancellation-boundary-audit-2026-06-30.v1.json](abort-signal-cancellation-boundary-audit-2026-06-30.v1.json)
+  records the #602 reporting-only AbortSignal cancellation/liveness readiness
+  audit. The pinned corpus has `260` Abort mentions, `156`
+  `AbortController` constructors, `175` `.abort()` selector calls, `323`
+  `.signal` property reads, `193` `signal` option properties, `6` `fetch`
+  calls with signal options, `2` timer calls with signal options, and `2`
+  `addEventListener` calls with signal options. Exact cancellation admission
+  remains closed with `semantic_admission_delta = 0`.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel
