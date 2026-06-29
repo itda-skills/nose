@@ -96,6 +96,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [#602 Promise executor boundary audit](../bench/recall_loss/promise-executor-boundary-audit-2026-06-30.v1.json) records the reporting-only `new Promise(...)` readiness slice. It splits `795` constructor occurrences by inline executor shape, settlement calls, timer/scheduler use, multi-settlement, throw-to-rejection, and possible thenable payload risk; exact constructor admission remains closed with `semantic_admission_delta = 0`.
 - [#602 AbortSignal cancellation boundary audit](../bench/recall_loss/abort-signal-cancellation-boundary-audit-2026-06-30.v1.json) records the reporting-only cancellation/liveness readiness slice. It splits `260` Abort mentions, `193` signal option properties, controller lifecycle pairs, direct static AbortSignal calls, and signal-aware fetch/timer/listener use; exact cancellation admission remains closed with `semantic_admission_delta = 0`.
 - [#602 interval/scheduler lifecycle boundary audit](../bench/recall_loss/interval-scheduler-lifecycle-boundary-audit-2026-06-30.v1.json) records the reporting-only timer, scheduler, interval, and microtask readiness slice. It splits `780` `setTimeout`, `73` bare `setInterval`, `55` `clearInterval`, `133` `clearTimeout`, `14` `queueMicrotask`, `43` `requestAnimationFrame`, and `11` `scheduler.yield` occurrences; exact scheduling/lifecycle admission remains closed with `semantic_admission_delta = 0`.
+- [#602 closeout](../bench/recall_loss/issue-602-closeout-2026-06-30.v1.json) records the epic-level completion audit. Every opened exact aggregate slice has a checked artifact, reporting-only executor/cancellation/scheduling/lifecycle slices keep `semantic_admission_delta = 0`, local `crates` gate remains at `false_merges = 0` and `canon_preservation_violations = 0`, and remaining broad surfaces are named closed obligations.
 
 Regenerate the full local reports with:
 
@@ -776,6 +777,16 @@ keeps `semantic_admission_delta = 0`;
 future exact scheduling work must prove callback identity, callback
 demand/effect, task/microtask/timer ordering, interval cardinality, and
 cancellation/cleanup behavior before merging scheduled operations.
+
+The [#602 closeout](../bench/recall_loss/issue-602-closeout-2026-06-30.v1.json)
+closes this broad boundary milestone at the capability boundary. The opened
+exact work is limited to dependency-backed literal Promise aggregate slices;
+executor, cancellation, scheduler, timer, interval, and cross-language
+lifecycle surfaces remain fail-closed with named obligations. The current local
+`crates` report has `false_merges = 0`, `canon_preservation_violations = 0`,
+and no Promise/scheduling/aggregate/cancellation/lifecycle unsupported-runtime
+rollup rows; the remaining `14` unsupported-runtime boundary rows are named
+`exception-channel-contract-missing` obligations.
 
 ## See Also
 

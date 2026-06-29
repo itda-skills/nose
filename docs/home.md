@@ -108,7 +108,7 @@ fundamentals; the rest is grouped by area.
 - [semantic-pack-loading](semantic-pack-loading.md) — local pack manifest loading, explicit opt-in trust policy, and current metadata-only limits.
 - [evidence-records](evidence-records.md) — the internal pack-facing evidence substrate for source, domain, import, symbol, type, guard, place/effect, library API, and sequence-surface facts.
 - [demand-effect-semantics](demand-effect-semantics.md) — the internal demand/effect contract model for eager, lazy, short-circuit, async, generator, and channel boundaries.
-- [scheduling-channel-callback-obligations-594](scheduling-channel-callback-obligations-594.md) — issue #594's cross-language obligation vocabulary, Promise/scheduling closeout, and #602 census-backed guardrails plus exact Promise aggregate slices and reporting-only executor, AbortSignal cancellation, and interval/scheduler lifecycle readiness slices for scheduling, aggregate, cancellation, error/rejection channels, callback demand/effect, lifecycle, and mutation boundaries.
+- [scheduling-channel-callback-obligations-594](scheduling-channel-callback-obligations-594.md) — issue #594's cross-language obligation vocabulary, Promise/scheduling closeout, and #602 census-backed guardrails, exact Promise aggregate slices, reporting-only executor/cancellation/scheduling lifecycle slices, and closeout for scheduling, aggregate, cancellation, error/rejection channels, callback demand/effect, lifecycle, and mutation boundaries.
 - [source-facts](source-facts.md) — source-origin evidence for semantic contracts: construct syntax, async/generator/error boundaries, literal/operator provenance, pack boundaries, and fail-closed exact admission.
 
 ### Type-4, hazard & measurement

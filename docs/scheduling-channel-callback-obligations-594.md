@@ -350,6 +350,13 @@ by existing semantic-boundary tests, while executor timing, scheduler ordering,
 interval liveness, and cancellation-sensitive AbortSignal forms are
 reporting-only until behavior-changing hard negatives exist.
 
+The [#602 closeout](../bench/recall_loss/issue-602-closeout-2026-06-30.v1.json)
+marks this milestone complete as a broad boundary model rather than an API
+expansion. Literal Promise aggregate slices are the only exact admissions opened
+under #602; executor, cancellation, scheduler, timer, interval, and
+cross-language lifecycle surfaces remain named closed obligations for future
+epics.
+
 ## Non-API Statement
 
 This page does not add a public semantic-pack API. The vocabulary should narrow

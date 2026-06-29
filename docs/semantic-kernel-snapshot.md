@@ -98,6 +98,11 @@ cancellation plus one-shot timer/frame cancellation as structured obligations.
 Exact scheduling stays closed until callback identity, callback demand/effect,
 task/microtask/timer ordering, interval cardinality, and cancellation cleanup
 are modeled explicitly.
+#602 is now closed as a broad boundary milestone, not as an API expansion. The
+checked [#602 closeout](../bench/recall_loss/issue-602-closeout-2026-06-30.v1.json)
+keeps exact admissions limited to literal Promise aggregate slices and leaves
+executor, cancellation, scheduler, timer, interval, and cross-language lifecycle
+protocols as named closed obligations for future priced epics.
 Node `timers/promises` ESM named imports and conservative `const` CommonJS
 destructuring requires are a narrow imported producer slice: admitted
 `LibraryApi` occurrence evidence for `node:timers/promises`/`timers/promises`

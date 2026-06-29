@@ -67,6 +67,12 @@ break.
   inputs without non-thenable proof, all-rejected `Promise.any` AggregateError
   payloads, thenable assimilation, executor timing, and sync array equivalence
   remain closed. These slices include checked recall-loss/pricing artifacts.
+- Added the #602 closeout artifact. The milestone now ends at reusable aggregate,
+  executor, cancellation, scheduling, and lifecycle boundary obligations: exact
+  admissions are limited to checked literal Promise aggregate slices, while
+  executor timing, cancellation/liveness, scheduler/timer/microtask/interval
+  behavior, and cross-language lifecycle protocols stay named closed
+  obligations for future priced epics.
 - Added staged Promise recovery infrastructure: protocol diagnostics and hard
   negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
   continuation recovery; receiver-producer/call-return attribution; and
@@ -185,6 +191,11 @@ break.
   `crates` recall-loss gate at `false_merges = 0` and
   `canon_preservation_violations = 0`; the 120-repo artifact records
   `semantic_admission_delta = 0`.
+- Confirmed the #602 closeout gate with local `crates` at `false_merges = 0`,
+  `canon_preservation_violations = 0`, and `0`
+  Promise/scheduling/aggregate/cancellation/lifecycle unsupported-runtime
+  rollup rows; the remaining `14` unsupported-runtime boundary rows are named
+  `exception-channel-contract-missing` obligations.
 
 ## [0.16.0] - 2026-06-26
 

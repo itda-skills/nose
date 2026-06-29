@@ -514,6 +514,13 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   calls, `43` `requestAnimationFrame` calls, and `11` `scheduler.yield` calls.
   Exact scheduling/lifecycle admission remains closed with
   `semantic_admission_delta = 0`.
+- [issue-602-closeout-2026-06-30.v1.json](issue-602-closeout-2026-06-30.v1.json)
+  records the #602 closeout decision. Every opened exact aggregate slice has a
+  checked artifact, reporting-only executor/cancellation/scheduling/lifecycle
+  slices keep `semantic_admission_delta = 0`, local `crates` gate remains at
+  `false_merges = 0` and `canon_preservation_violations = 0`, and remaining
+  Promise/scheduling/aggregate/cancellation/lifecycle surfaces are named closed
+  obligations rather than opaque runtime rows.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel
