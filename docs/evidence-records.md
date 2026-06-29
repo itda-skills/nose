@@ -758,9 +758,12 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   `nose.javascript.builtins.collection_constructors` provenance as `Map`;
   JS-like
   one-argument `Array.from` with `nose.javascript.builtins.array` provenance as
-  `Array`; and JS-like `Promise.resolve`, `Promise.reject`, admitted Promise
+  `Array`; JS-like `Promise.resolve`, `Promise.reject`, admitted Promise
   `.then`, and admitted Promise `.catch` results with
-  `nose.javascript.builtins.promise` provenance as `PromiseLike`.
+  `nose.javascript.builtins.promise` provenance as `PromiseLike`; direct calls
+  to source-proven async functions as `PromiseLike`; and direct calls to
+  non-async single-return functions as `PromiseLike` only when the returned
+  expression already has asserted PromiseLike domain evidence.
   `Map.entry`, `Array.isArray`, `Boolean`, regex `.test`,
   `math.prod`, `Arrays.stream`, map `get`, iterator adapters, JS Array HOFs, and
   generic method contracts do not emit `Domain` records because their result
@@ -896,10 +899,12 @@ callers:
   static index-membership, Rust scalar integer method calls under
   `nose.rust.stdlib.integer_methods`, Java Math scalar integer calls under
   `nose.java.stdlib.math`, builder append API admission, pack-owned
-  Promise `resolve`/`reject`, and
-  Promise `.then`/`.catch` contract lookup. Promise continuation reduction additionally requires a
-  recoverable supported fulfilled or rejected value and preserves a Promise boundary in the
-  value graph. Value-level CSE paths that only retain source
+  Promise `resolve`/`reject`, and Promise `.then`/`.catch` contract lookup.
+  Promise continuation reduction additionally requires a recoverable supported
+  fulfilled or rejected value. Same-file direct async and direct Promise-returning
+  function producers can supply that value only through dependency-backed
+  call-result domain evidence, and the reduced value preserves a Promise
+  boundary in the value graph. Value-level CSE paths that only retain source
   spans now also go through span-query resolvers for free-name/imported
   collection factories, Java/Ruby/Rust collection factories, Java collection
   constructors, free-name/Java map factories, Java map entries, pack-proven map

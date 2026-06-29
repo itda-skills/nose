@@ -230,6 +230,31 @@ impl<'a> Builder<'a> {
         value
     }
 
+    pub(in crate::value_graph) fn eval_direct_function_return_call(
+        &mut self,
+        call: NodeId,
+        env: &FxHashMap<u32, ValueId>,
+    ) -> Option<ValueId> {
+        let kids = self.il.children(call).to_vec();
+        let (root, target) = self.direct_function_single_return_target_for_call(call)?;
+        if target.params.len() != kids.len().saturating_sub(1) {
+            return None;
+        }
+        if self.inline_stack.len() >= INLINE_MAX_DEPTH || self.inline_stack.contains(&root) {
+            return None;
+        }
+        let plan = crate::call_args::keyword_arg_binding_plan(self.il, &target.params, &kids[1..])?;
+        let mut fenv: FxHashMap<u32, ValueId> = FxHashMap::default();
+        for (pc, arg) in plan {
+            let v = self.eval(arg, env);
+            fenv.insert(pc, v);
+        }
+        self.inline_stack.push(root);
+        let value = self.eval(target.body, &fenv);
+        self.inline_stack.pop();
+        Some(value)
+    }
+
     /// Evaluate an admitted callee body in the caller's builder behind a sink fence.
     ///
     /// The body runs through the SAME statement processor a unit build uses — so builder
@@ -409,12 +434,76 @@ impl<'a> Builder<'a> {
         found
     }
 
+    fn direct_function_single_return_target_for_call(
+        &self,
+        call: NodeId,
+    ) -> Option<(NodeId, InlineFunction)> {
+        let proven_span = direct_function_call_target_span_at_call(self.il, self.interner, call)?;
+        let mut found = None;
+        for unit in &self.il.units {
+            if !matches!(unit.kind, UnitKind::Function)
+                || self.il.kind(unit.root) != NodeKind::Func
+                || self.il.node(unit.root).span != proven_span
+            {
+                continue;
+            }
+            if self.direct_function_has_async_protocol(unit.root) {
+                continue;
+            }
+            let Some(function) = self.direct_function_single_return_target(unit.root) else {
+                continue;
+            };
+            if found.is_some() {
+                return None;
+            }
+            found = Some((unit.root, function));
+        }
+        found
+    }
+
+    fn direct_function_single_return_target(&self, root: NodeId) -> Option<InlineFunction> {
+        let kids = self.il.children(root);
+        let &body = kids.last()?;
+        if self.il.kind(body) == NodeKind::Raw {
+            return None;
+        }
+        let return_expr = self.single_statement_return_expr(body)?;
+        let params: Vec<u32> = kids
+            .iter()
+            .filter_map(|&p| match self.il.node(p).payload {
+                Payload::Cid(c) if self.il.kind(p) == NodeKind::Param => Some(c),
+                _ => None,
+            })
+            .collect();
+        Some(InlineFunction {
+            params,
+            body: return_expr,
+        })
+    }
+
+    fn single_statement_return_expr(&self, body: NodeId) -> Option<NodeId> {
+        let ret = if self.il.kind(body) == NodeKind::Block {
+            let kids = self.il.children(body);
+            (kids.len() == 1).then_some(kids[0])?
+        } else {
+            body
+        };
+        (self.il.kind(ret) == NodeKind::Return).then_some(())?;
+        self.il.children(ret).first().copied()
+    }
+
+    fn direct_function_has_async_protocol(&self, root: NodeId) -> bool {
+        let Some(&boundary) = self.il.children(root).last() else {
+            return false;
+        };
+        nose_semantics::source_protocol_at_node(self.il, boundary)
+            == Some(nose_il::SourceProtocolKind::AsyncFunction)
+    }
+
     fn direct_async_function_target(&self, root: NodeId) -> Option<InlineFunction> {
         let kids = self.il.children(root);
         let &boundary = kids.last()?;
-        if nose_semantics::source_protocol_at_node(self.il, boundary)
-            != Some(nose_il::SourceProtocolKind::AsyncFunction)
-        {
+        if !self.direct_function_has_async_protocol(root) {
             return None;
         }
         let &body = self.il.children(boundary).first()?;

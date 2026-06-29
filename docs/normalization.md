@@ -198,6 +198,15 @@ Guiding constraints for every pass:
   existing pure-inline sink fence and only for non-thenable-safe returned
   payloads, so `await`, throw/rejection paths, possible thenables, and opaque
   returned calls remain closed.
+  Same-file direct calls to ordinary functions can provide the same proof only
+  through returned-expression evidence: the call-target pass emits
+  `Domain(PromiseLike)` on the call result when direct callee evidence points to
+  a non-async single-return function and that returned expression already has
+  asserted PromiseLike domain evidence. The value graph evaluates only that
+  returned expression for Promise receiver recovery; parameter callees,
+  multi-statement bodies, missing return-domain proof, member/imported call
+  returns, unsafe thenables, and broad helper inlining remain closed. The
+  measured slice is recorded in [promise-direct-function-return-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-direct-function-return-recovery-2026-06-29.v1.json).
   Lowered aggregate surfaces now pass through a `SeqSurfaceContract`: arrays/slices can
   enter collection membership, maps/objects enter map/object value semantics, Go
   `composite_literal` map surfaces are consumed only by the Go zero-map

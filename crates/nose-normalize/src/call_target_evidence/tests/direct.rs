@@ -22,55 +22,18 @@ fn emits_direct_function_call_target_for_unique_unshadowed_function() {
 
 #[test]
 fn emits_promise_like_domain_for_direct_async_function_call_result() {
-    let interner = Interner::new();
-    let load = interner.intern("load");
-    let use_value = interner.intern("useValue");
-    let async_tag = interner.intern("async_function");
-    let mut b = IlBuilder::new(FileId(0));
-
-    let payload = b.add(NodeKind::Lit, Payload::LitInt(1), sp(1), &[]);
-    let ret = b.add(NodeKind::Return, Payload::None, sp(2), &[payload]);
-    let body = b.add(NodeKind::Block, Payload::None, sp(3), &[ret]);
-    let async_boundary = b.add(NodeKind::Raw, Payload::Name(async_tag), sp(4), &[body]);
-    let async_func = b.add(NodeKind::Func, Payload::None, sp(5), &[async_boundary]);
-
-    let callee = b.add(NodeKind::Var, Payload::Name(load), sp(10), &[]);
-    let call = b.add(NodeKind::Call, Payload::None, sp(11), &[callee]);
-    let caller_ret = b.add(NodeKind::Return, Payload::None, sp(12), &[call]);
-    let caller_body = b.add(NodeKind::Block, Payload::None, sp(13), &[caller_ret]);
-    let caller = b.add(NodeKind::Func, Payload::None, sp(14), &[caller_body]);
-    let module = b.add(
-        NodeKind::Module,
-        Payload::None,
-        sp(15),
-        &[async_func, caller],
-    );
-    let mut il = b.finish(
-        module,
-        FileMeta {
-            path: "t".into(),
-            lang: Lang::TypeScript,
-        },
-        vec![
-            Unit {
-                root: async_func,
-                kind: UnitKind::Function,
-                name: Some(load),
-                origin: Default::default(),
-            },
-            Unit {
-                root: caller,
-                kind: UnitKind::Function,
-                name: Some(use_value),
-                origin: Default::default(),
-            },
-        ],
-        Vec::new(),
-    );
+    let DirectReturnFixture {
+        interner,
+        mut il,
+        target,
+        call,
+        async_boundary,
+        ..
+    } = direct_return_call_fixture(DirectReturnKind::AsyncLiteral);
     let protocol_id = EvidenceId(500);
     il.evidence.push(EvidenceRecord {
         id: protocol_id,
-        anchor: EvidenceAnchor::source_span(il.node(async_boundary).span),
+        anchor: EvidenceAnchor::source_span(il.node(async_boundary.unwrap()).span),
         kind: EvidenceKind::Source(SourceFactKind::Protocol(SourceProtocolKind::AsyncFunction)),
         provenance: language_core_provenance(Lang::TypeScript),
         dependencies: Vec::new(),
@@ -80,7 +43,7 @@ fn emits_promise_like_domain_for_direct_async_function_call_result() {
     run(&mut il, &interner);
 
     assert!(direct_function_call_target_at_call(
-        &il, &interner, call, async_func,
+        &il, &interner, call, target,
     ));
     let call_target = il
         .evidence
@@ -101,6 +64,158 @@ fn emits_promise_like_domain_for_direct_async_function_call_result() {
         })
         .expect("PromiseLike domain evidence for async function call result");
     assert_eq!(domain.dependencies, vec![call_target.id, protocol_id]);
+}
+
+#[test]
+fn emits_promise_like_domain_for_direct_function_returning_promise_like() {
+    let DirectReturnFixture {
+        interner,
+        mut il,
+        call,
+        return_expr,
+        ..
+    } = direct_return_call_fixture(DirectReturnKind::PromiseCall);
+    let return_domain_id = EvidenceId(500);
+    il.evidence.push(EvidenceRecord {
+        id: return_domain_id,
+        anchor: EvidenceAnchor::node(il.node(return_expr).span, NodeKind::Call),
+        kind: EvidenceKind::Domain(DomainEvidence::PromiseLike),
+        provenance: language_core_provenance(Lang::TypeScript),
+        dependencies: Vec::new(),
+        status: EvidenceStatus::Asserted,
+    });
+
+    run(&mut il, &interner);
+
+    let call_target = il
+        .evidence
+        .iter()
+        .find(|record| {
+            matches!(
+                record.kind,
+                EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectFunction { .. })
+            )
+        })
+        .expect("direct function call-target evidence");
+    let domain = il
+        .evidence
+        .iter()
+        .find(|record| {
+            record.anchor == EvidenceAnchor::node(il.node(call).span, NodeKind::Call)
+                && record.kind == EvidenceKind::Domain(DomainEvidence::PromiseLike)
+        })
+        .expect("PromiseLike domain evidence for direct function call result");
+    assert_eq!(domain.dependencies, vec![call_target.id, return_domain_id]);
+}
+
+#[test]
+fn direct_function_return_domain_requires_return_expression_domain_proof() {
+    let DirectReturnFixture {
+        interner,
+        mut il,
+        target,
+        call,
+        ..
+    } = direct_return_call_fixture(DirectReturnKind::Literal);
+
+    run(&mut il, &interner);
+
+    assert!(direct_function_call_target_at_call(
+        &il, &interner, call, target
+    ));
+    assert!(
+        il.evidence
+            .iter()
+            .find(|record| {
+                record.anchor == EvidenceAnchor::node(il.node(call).span, NodeKind::Call)
+                    && record.kind == EvidenceKind::Domain(DomainEvidence::PromiseLike)
+            })
+            .is_none(),
+        "direct function result domain requires returned expression domain evidence"
+    );
+}
+
+struct DirectReturnFixture {
+    interner: Interner,
+    il: Il,
+    target: NodeId,
+    call: NodeId,
+    return_expr: NodeId,
+    async_boundary: Option<NodeId>,
+}
+
+enum DirectReturnKind {
+    AsyncLiteral,
+    PromiseCall,
+    Literal,
+}
+
+fn direct_return_call_fixture(kind: DirectReturnKind) -> DirectReturnFixture {
+    let interner = Interner::new();
+    let load = interner.intern("load");
+    let use_value = interner.intern("useValue");
+    let mut b = IlBuilder::new(FileId(0));
+    let return_expr = match kind {
+        DirectReturnKind::PromiseCall => {
+            let producer = interner.intern("producer");
+            let promise_callee = b.add(NodeKind::Var, Payload::Name(producer), sp(1), &[]);
+            b.add(NodeKind::Call, Payload::None, sp(2), &[promise_callee])
+        }
+        DirectReturnKind::AsyncLiteral | DirectReturnKind::Literal => {
+            b.add(NodeKind::Lit, Payload::LitInt(1), sp(1), &[])
+        }
+    };
+    let ret = b.add(NodeKind::Return, Payload::None, sp(3), &[return_expr]);
+    let body = b.add(NodeKind::Block, Payload::None, sp(4), &[ret]);
+    let (target, async_boundary) = match kind {
+        DirectReturnKind::AsyncLiteral => {
+            let async_tag = interner.intern("async_function");
+            let boundary = b.add(NodeKind::Raw, Payload::Name(async_tag), sp(5), &[body]);
+            (
+                b.add(NodeKind::Func, Payload::None, sp(6), &[boundary]),
+                Some(boundary),
+            )
+        }
+        DirectReturnKind::PromiseCall | DirectReturnKind::Literal => {
+            (b.add(NodeKind::Func, Payload::None, sp(6), &[body]), None)
+        }
+    };
+    let callee = b.add(NodeKind::Var, Payload::Name(load), sp(10), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(11), &[callee]);
+    let caller_ret = b.add(NodeKind::Return, Payload::None, sp(12), &[call]);
+    let caller_body = b.add(NodeKind::Block, Payload::None, sp(13), &[caller_ret]);
+    let caller = b.add(NodeKind::Func, Payload::None, sp(14), &[caller_body]);
+    let module = b.add(NodeKind::Module, Payload::None, sp(15), &[target, caller]);
+    let il = b.finish(
+        module,
+        FileMeta {
+            path: "t".into(),
+            lang: Lang::TypeScript,
+        },
+        vec![
+            Unit {
+                root: target,
+                kind: UnitKind::Function,
+                name: Some(load),
+                origin: Default::default(),
+            },
+            Unit {
+                root: caller,
+                kind: UnitKind::Function,
+                name: Some(use_value),
+                origin: Default::default(),
+            },
+        ],
+        Vec::new(),
+    );
+    DirectReturnFixture {
+        interner,
+        il,
+        target,
+        call,
+        return_expr,
+        async_boundary,
+    }
 }
 
 #[test]

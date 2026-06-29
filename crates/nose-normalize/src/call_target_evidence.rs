@@ -19,6 +19,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 const DIRECT_FUNCTION_RULE: &str = "normalize.call_target.direct_function";
 const DIRECT_ASYNC_FUNCTION_RETURN_DOMAIN_RULE: &str =
     "normalize.call_target.direct_async_function_return_domain";
+const DIRECT_FUNCTION_RETURN_DOMAIN_RULE: &str =
+    "normalize.call_target.direct_function_return_domain";
 const IMPORTED_FUNCTION_RULE: &str = "normalize.call_target.imported_function";
 const IMPORTED_MEMBER_RULE: &str = "normalize.call_target.imported_member";
 const IMPORTED_BINDING_OCCURRENCE_RULE: &str =
@@ -100,6 +102,13 @@ pub(crate) fn run(il: &mut Il, interner: &Interner) {
             target_evidence,
             provenance,
         );
+        record_direct_function_return_promise_like_domain(
+            il,
+            call,
+            target.root,
+            target_evidence,
+            provenance,
+        );
     }
     let mut imported_occurrence_cache = ImportedOccurrenceValidationCache::default();
     for call in calls {
@@ -141,6 +150,70 @@ fn direct_async_function_protocol_boundary(il: &Il, target_root: NodeId) -> Opti
     (nose_semantics::source_protocol_at_node(il, boundary)
         == Some(SourceProtocolKind::AsyncFunction))
     .then_some(boundary)
+}
+
+fn record_direct_function_return_promise_like_domain(
+    il: &mut Il,
+    call: NodeId,
+    target_root: NodeId,
+    target_evidence: EvidenceId,
+    provenance: CallTargetEvidenceProvenance,
+) -> Option<EvidenceId> {
+    if direct_async_function_protocol_boundary(il, target_root).is_some() {
+        return None;
+    }
+    let return_domain =
+        direct_function_return_domain_evidence_id(il, target_root, DomainEvidence::PromiseLike)?;
+    Some(upsert(
+        il,
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+        EvidenceKind::Domain(DomainEvidence::PromiseLike),
+        DIRECT_FUNCTION_RETURN_DOMAIN_RULE,
+        provenance,
+        vec![target_evidence, return_domain],
+    ))
+}
+
+fn direct_function_return_domain_evidence_id(
+    il: &Il,
+    target_root: NodeId,
+    domain: DomainEvidence,
+) -> Option<EvidenceId> {
+    if il.kind(target_root) != NodeKind::Func {
+        return None;
+    }
+    let &body = il.children(target_root).last()?;
+    if il.kind(body) == NodeKind::Raw {
+        return None;
+    }
+    let return_expr = single_statement_return_expr(il, body)?;
+    asserted_domain_evidence_id_at_node(il, return_expr, domain)
+}
+
+fn single_statement_return_expr(il: &Il, body: NodeId) -> Option<NodeId> {
+    let ret = if il.kind(body) == NodeKind::Block {
+        let kids = il.children(body);
+        (kids.len() == 1).then_some(kids[0])?
+    } else {
+        body
+    };
+    (il.kind(ret) == NodeKind::Return).then_some(())?;
+    il.children(ret).first().copied()
+}
+
+fn asserted_domain_evidence_id_at_node(
+    il: &Il,
+    node: NodeId,
+    domain: DomainEvidence,
+) -> Option<EvidenceId> {
+    let anchor = EvidenceAnchor::node(il.node(node).span, il.kind(node));
+    il.evidence_anchored_at(anchor.span()).find_map(|record| {
+        (record.anchor == anchor
+            && record.kind == EvidenceKind::Domain(domain)
+            && record.status == EvidenceStatus::Asserted
+            && il.evidence_dependencies_asserted(record))
+        .then_some(record.id)
+    })
 }
 
 fn asserted_source_protocol_evidence_id(

@@ -100,6 +100,11 @@ set -euo pipefail
 # an avoidable production family between call-target evidence upsert and LibraryApi evidence
 # recording. Splitting the call-target upsert matcher removed it; the remaining direct-call-target
 # test family is representative-ID churn from inserted fixtures. The budget is tightened.
+# 53 -> 53 (Promise direct-function return recovery): the first draft surfaced avoidable
+# duplication across the new Promise call-target evidence tests; extracting a shared direct-return
+# fixture removed it. The remaining delta is representative-ID churn for the same
+# direct-call-target negative fixture family, now `32ed015840375d04` instead of
+# `727e41b9e3e96f1e`; no new budget is accepted.
 BIN="${NOSE_BIN:-./target/release/nose}"
 BASELINE="${NOSE_DUP_BASELINE:-scripts/duplication-baseline.json}"
 

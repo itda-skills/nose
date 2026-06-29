@@ -592,3 +592,12 @@ spans for an already reviewed direct-call-target fixture family: `0a126db1cbf0fa
 and `cc9936001342542f` no longer report, while `727e41b9e3e96f1e` reports the
 same test-scope call-target negative scaffolding. No new budget is accepted, so
 the baseline budget is tightened to 53.
+
+The Promise direct-function return recovery slice keeps the count at 53. The
+first draft surfaced avoidable duplication across the new Promise call-target
+evidence tests; extracting a shared direct-return fixture removed that family.
+The only remaining delta is representative-ID churn for the same reviewed
+direct-call-target negative fixture family: `727e41b9e3e96f1e` no longer
+reports, and `32ed015840375d04` reports the same three test-scope locations
+(`does_not_emit_*` direct-call-target negatives plus the semantics selector
+shape guard). No new budget is accepted.

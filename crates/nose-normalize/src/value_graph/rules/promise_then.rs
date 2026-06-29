@@ -125,6 +125,17 @@ fn promise_receiver_state(
         return promise_value_is_non_thenable_safe(builder, value)
             .then_some(PromiseState::Fulfilled(value));
     }
+    if builder.domain_evidence_of_expr(recv) == Some(DomainEvidence::PromiseLike) {
+        if let Some(value) = builder.eval_direct_function_return_call(recv, env) {
+            if let Some(state) = promise_boundary_state(builder, value) {
+                return Some(state);
+            }
+        }
+        let receiver_value = builder.eval(recv, env);
+        if let Some(state) = promise_boundary_state(builder, receiver_value) {
+            return Some(state);
+        }
+    }
     let chained = apply(builder, recv, env)?;
     promise_boundary_state(builder, chained)
 }

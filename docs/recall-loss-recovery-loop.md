@@ -78,6 +78,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [callback demand/effect diagnostics v3](../bench/recall_loss/callback-demand-effect-diagnostics-2026-06-28.v3.json) records the post-#594 callback-call refinement: member call proof, Rust macro call proof, and direct/imported function effect-contract buckets are now visible without opening exact admission.
 - [Promise receiver-producer diagnostics](../bench/recall_loss/promise-receiver-producer-diagnostics-2026-06-29.v1.json) records the reporting-only follow-up after local Promise continuation recovery: `.then`/`.catch`/`.finally` receiver producers now split into constructor, async-function-return, and generic call-return obligations while exact admission remains closed.
 - [Promise call-return callee diagnostics](../bench/recall_loss/promise-call-return-callee-diagnostics-2026-06-29.v1.json) records the next reporting-only split inside generic call-return receivers: member, local/parameter, imported binding/member, known-target return-domain, and unknown callee shapes now have separate missing-evidence labels while exact admission remains closed.
+- [Promise direct-function return recovery](../bench/recall_loss/promise-direct-function-return-recovery-2026-06-29.v1.json) records the proof-backed direct-function subset of the local/parameter call-return queue: same-file single-return functions returning proven PromiseLike expressions can now feed local Promise continuation recovery while parameter callees and member/imported call returns remain closed.
 
 Regenerate the full local reports with:
 
@@ -605,6 +606,20 @@ runtime rows, the behavior change is pinned by focused call-target,
 equivalence, and recall-loss-report tests. Await, throw/rejection, possible
 thenables, opaque call results, constructor receivers, imported/member call
 returns, `.finally`, and aggregate channels remain closed.
+The next recovery pass, [direct-function Promise return recovery](../bench/recall_loss/promise-direct-function-return-recovery-2026-06-29.v1.json),
+opens the proof-backed same-file direct-function subset of the `184`
+local/parameter call-return candidates from the prior 120-repo JS/TS scan.
+Direct calls now get `Domain(PromiseLike)` result evidence when their target is
+a non-async single-return function whose returned expression already has
+PromiseLike domain proof. This lets literal `Promise.resolve`, typed
+non-thenable `Promise.resolve`, and `Promise.reject` helper returns converge
+with their direct Promise forms while staying distinct from synchronous
+payloads. The local `crates` gate remains at `false_merges == 0` and
+`canon_preservation_violations == 0`; because `crates` still has no JS/TS
+Promise runtime rows, the behavior change is pinned by focused call-target,
+equivalence, and recall-loss-report tests. Parameter callees, member/imported
+call returns, unsafe thenables, constructors, `.finally`, aggregate channels,
+and broad scheduling remain closed.
 
 ## See Also
 

@@ -274,6 +274,15 @@ python3 scripts/cross-language-boundary-census.py \
   throw/rejection, possible thenables, opaque call results, constructor
   receivers, imported/member call returns, `.finally`, and aggregate
   combinators remain closed.
+- [promise-direct-function-return-recovery-2026-06-29.v1.json](promise-direct-function-return-recovery-2026-06-29.v1.json)
+  records the direct-function subset of the local/parameter Promise call-return
+  queue. Same-file direct calls now receive `Domain(PromiseLike)` result
+  evidence when the target is a non-async single-return function whose returned
+  expression already has PromiseLike domain proof. Literal and typed
+  non-thenable `Promise.resolve` returns, plus `Promise.reject` returns, can
+  feed local `.then`/`.catch` recovery while preserving the Promise boundary.
+  Parameter callees, member/imported call returns, unsafe thenables,
+  constructors, `.finally`, and aggregate/scheduling paths remain closed.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

@@ -119,6 +119,16 @@ This is still a producer proof, not broad scheduling equivalence: `await`,
 throw/rejection paths, possible thenables, opaque call results, constructors,
 imported/member call returns, `.finally`, and aggregate combinators remain
 closed.
+The follow-up [promise-direct-function-return-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-direct-function-return-recovery-2026-06-29.v1.json)
+opens the next producer-proof slice inside the `184` local/parameter
+call-return candidates from the JS/TS corpus scan. A same-file direct function
+call can now become a PromiseLike receiver only when direct callee evidence
+points to a non-async single-return function and the returned expression already
+has PromiseLike domain proof. This admits literal and typed non-thenable
+`Promise.resolve` helper returns plus `Promise.reject` helper returns, while
+parameter callees, member/imported call returns, unsafe thenables,
+constructors, `.finally`, aggregate channels, and broad scheduling remain
+closed.
 
 ## Minimal Vocabulary
 

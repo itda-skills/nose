@@ -330,6 +330,15 @@ break.
   synchronous payload code. Await, throw/rejection, possible thenables, opaque
   call results, constructor receivers, imported/member call-return receivers,
   `.finally`, and aggregate combinators remain closed.
+- Opened the direct-function Promise producer recovery slice. Same-file direct
+  calls to non-async single-return functions now emit dependency-backed
+  `Domain(PromiseLike)` result evidence when the returned expression already has
+  PromiseLike domain proof. Literal and typed non-thenable `Promise.resolve`
+  helper returns, plus `Promise.reject` helper returns, can now feed local
+  `.then`/`.catch` recovery while preserving the Promise boundary; parameter
+  callees, member/imported call-return receivers, unsafe thenables,
+  constructors, `.finally`, aggregate combinators, and broad scheduling remain
+  closed.
 
 ### Fixed
 - Made `scripts/check-docs.sh` compatible with both awiki versions that support

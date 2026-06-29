@@ -175,6 +175,15 @@ only pure non-thenable-safe returned payloads feed local `.then` fulfillment
 recovery. The report should therefore move those receivers out of
 `promise-async-function-return-producer-proof` and leave any still-closed work in
 continuation, rejection, callback, or scheduling obligations.
+The [direct-function Promise return recovery](../bench/recall_loss/promise-direct-function-return-recovery-2026-06-29.v1.json)
+slice opens the next proof-backed direct-call subset: a same-file non-async
+single-return function can provide `PromiseLike` result-domain evidence only
+when the returned expression already has PromiseLike domain proof. The report
+should therefore move those receivers out of
+`promise-call-return-direct-function-return-domain-proof` and leave unproven
+parameter callees, member/imported call returns, unsafe thenables, constructors,
+`.finally`, aggregate channels, and broad scheduling in their existing
+fail-closed obligations.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

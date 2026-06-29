@@ -301,6 +301,81 @@ function f() {\n  return load().catch(e => e + 1);\n}\n";
 }
 
 #[test]
+fn direct_function_promise_return_then_recovers_without_sync_erasure() {
+    let i = Interner::new();
+    let local_return = "function load() {\n  return Promise.resolve(1);\n}\n\
+function f() {\n  return load().then(x => x + 1);\n}\n";
+    let promise_then = "function f() {\n  return Promise.resolve(1).then(x => x + 1);\n}\n";
+    let sync_return = "function f() {\n  return 1 + 1;\n}\n";
+
+    assert_eq!(
+        value_fp_named(&i, local_return, Lang::TypeScript, "f"),
+        value_fp(&i, promise_then, Lang::TypeScript),
+        "direct functions returning proven PromiseLike producers should recover as Promise receivers"
+    );
+    assert_ne!(
+        value_fp_named(&i, local_return, Lang::TypeScript, "f"),
+        value_fp(&i, sync_return, Lang::TypeScript),
+        "direct function Promise return recovery must preserve the Promise boundary"
+    );
+}
+
+#[test]
+fn direct_function_promise_return_recovery_stays_closed_for_thenables() {
+    let i = Interner::new();
+    let local_return = "function load(x) {\n  return Promise.resolve(x);\n}\n\
+function f(x) {\n  return load(x).then(v => v);\n}\n";
+    let direct_promise = "function f(x) {\n  return Promise.resolve(x).then(v => v);\n}\n";
+
+    assert_ne!(
+        value_fp_named(&i, local_return, Lang::TypeScript, "f"),
+        value_fp(&i, direct_promise, Lang::TypeScript),
+        "possible thenable assimilation must remain closed across direct function return recovery"
+    );
+}
+
+#[test]
+fn direct_function_promise_return_recovers_typed_non_thenable_parameter() {
+    let i = Interner::new();
+    let local_return = "function load(x: number) {\n  return Promise.resolve(x);\n}\n\
+function f(x: number) {\n  return load(x).then(v => v + 1);\n}\n";
+    let direct_promise =
+        "function f(x: number) {\n  return Promise.resolve(x).then(v => v + 1);\n}\n";
+    let sync_return = "function f(x: number) {\n  return x + 1;\n}\n";
+
+    assert_eq!(
+        value_fp_named(&i, local_return, Lang::TypeScript, "f"),
+        value_fp(&i, direct_promise, Lang::TypeScript),
+        "direct functions returning Promise.resolve over proven non-thenable parameters should recover"
+    );
+    assert_ne!(
+        value_fp_named(&i, local_return, Lang::TypeScript, "f"),
+        value_fp(&i, sync_return, Lang::TypeScript),
+        "typed parameter recovery must keep the result behind a Promise boundary"
+    );
+}
+
+#[test]
+fn direct_function_promise_rejection_return_recovers_catch_channel() {
+    let i = Interner::new();
+    let local_return = "function load() {\n  return Promise.reject(1);\n}\n\
+function f() {\n  return load().catch(e => e + 1);\n}\n";
+    let direct_reject = "function f() {\n  return Promise.reject(1).catch(e => e + 1);\n}\n";
+    let sync_return = "function f() {\n  return 1 + 1;\n}\n";
+
+    assert_eq!(
+        value_fp_named(&i, local_return, Lang::TypeScript, "f"),
+        value_fp(&i, direct_reject, Lang::TypeScript),
+        "direct functions returning proven rejected Promise producers should recover catch continuations"
+    );
+    assert_ne!(
+        value_fp_named(&i, local_return, Lang::TypeScript, "f"),
+        value_fp(&i, sync_return, Lang::TypeScript),
+        "direct function rejection recovery must keep the result behind a Promise boundary"
+    );
+}
+
+#[test]
 fn go_slice_literal_converges_with_array_but_struct_stays_distinct() {
     // A Go slice literal `[]int{1,2,3}` is an ordered sequence — it converges with a Python
     // list / JS array. A Go STRUCT literal `Point{1,2,3}` is a record, NOT a collection, and
