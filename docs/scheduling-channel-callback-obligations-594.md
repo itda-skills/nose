@@ -232,6 +232,17 @@ possible thenables, all-rejected `Promise.any` AggregateError payloads,
 executor timing, cancellation/liveness, and sync value equivalence remain
 closed.
 
+The [Promise executor boundary audit](../bench/recall_loss/promise-executor-boundary-audit-2026-06-30.v1.json)
+is the next reporting-only #602 slice. It does not admit constructor
+settlement recovery. Instead it prices `795` `new Promise(...)` occurrences and
+splits the executor queue by inline shape, resolve/reject calls,
+timer/scheduler use, multi-settlement, throw-to-rejection, side-effect calls,
+and possible thenable payload risks. Only `27` scalar resolve and `4` scalar
+reject direct single-settlement occurrences are lexical upper bounds for a
+future exact slice; even those remain closed until executor timing, callback
+identity, settlement precedence, thrown-error ordering, callback effects, and
+non-thenable payload proof are represented.
+
 ## Minimal Vocabulary
 
 | obligation | existing substrate | exact-channel rule |

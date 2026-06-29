@@ -168,6 +168,18 @@ python3 scripts/promise-race-any-slice-audit.py \
   --output target/promise-race-any-literal-aggregate-recovery.v1.json
 ```
 
+Build the #602 `new Promise(...)` executor boundary audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.issue-602-promise-executor.crates.json
+
+python3 scripts/promise-executor-slice-audit.py \
+  --recall-loss-report target/recall-loss.issue-602-promise-executor.crates.json \
+  --output target/promise-executor-boundary-audit.v1.json
+```
+
 ## Files
 
 - [crates.baseline.v1.json](crates.baseline.v1.json) records the current
@@ -452,6 +464,16 @@ python3 scripts/promise-race-any-slice-audit.py \
   candidate. Dynamic iterables, possible thenables, all-rejected `Promise.any`
   AggregateError payloads, executor timing, and sync value equivalence remain
   closed.
+- [promise-executor-boundary-audit-2026-06-30.v1.json](promise-executor-boundary-audit-2026-06-30.v1.json)
+  records the #602 reporting-only `new Promise(...)` executor readiness audit.
+  It prices `795` constructor occurrences across the pinned corpus, splits
+  inline/identifier executors, settlement calls, timer/scheduler use,
+  multi-settlement, throw-to-rejection, and possible thenable payload risks,
+  and keeps `semantic_admission_delta = 0`. The lexical direct single-settlement
+  upper bound is `27` scalar resolves plus `4` scalar rejects, but exact
+  constructor recovery remains closed until executor timing, callback identity,
+  settlement precedence, throw-to-rejection, and non-thenable proof are all
+  represented.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

@@ -36,6 +36,12 @@ break.
 - Added the first #602 reporting-only scheduling/lifecycle audit, including a
   120-repo pricing script and checked artifact for aggregate, executor,
   cancellation, scheduler, channel, lifecycle, and exception boundary surfaces.
+- Added a #602 reporting-only `new Promise(...)` executor boundary audit and
+  checked artifact. The pinned corpus has `795` constructor occurrences, with
+  direct single-settlement lexical upper bounds of `27` scalar resolves and `4`
+  scalar rejects; exact constructor admission remains closed behind executor
+  timing, callback identity, settlement precedence, throw-to-rejection,
+  callback-effect, thenable-assimilation, and Promise-boundary obligations.
 - Added the first #602 exact aggregate capability slices for `Promise.all` and
   `Promise.allSettled`, plus the first-observed `Promise.race`/`Promise.any`
   literal-array slice: unshadowed global aggregate calls over literal arrays

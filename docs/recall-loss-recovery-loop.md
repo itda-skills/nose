@@ -93,6 +93,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [#602 Promise.allSettled literal aggregate recovery](../bench/recall_loss/promise-allsettled-literal-aggregate-recovery-2026-06-29.v1.json) records the next exact aggregate slice. It opens fulfilled-result `Promise.allSettled` over literal arrays whose elements already recover as fulfilled or rejected Promise evidence; dynamic iterables, `all`/`race`/`any`, thenables, executor timing, and sync settled-record arrays stay closed.
 - [#602 Promise aggregate raw-input assimilation](../bench/recall_loss/promise-aggregate-raw-input-recovery-2026-06-29.v1.json) records the shared exact slice for literal `Promise.all` and `Promise.allSettled` raw primitive inputs. It reuses the existing non-thenable-safe proof from `Promise.resolve`; at that slice, object/function raw inputs, untyped possible thenables, dynamic iterables, `race`/`any`, executor timing, and sync aggregate equivalence stayed closed.
 - [#602 Promise.race/Promise.any literal aggregate recovery](../bench/recall_loss/promise-race-any-literal-aggregate-recovery-2026-06-30.v1.json) records the first-observed exact aggregate slice. It opens only non-empty fully closed literal `Promise.race` and fully closed literal `Promise.any` with a fulfilled candidate; dynamic iterables, possible thenables, all-rejected `Promise.any` AggregateError payloads, executor timing, and sync value equivalence stay closed.
+- [#602 Promise executor boundary audit](../bench/recall_loss/promise-executor-boundary-audit-2026-06-30.v1.json) records the reporting-only `new Promise(...)` readiness slice. It splits `795` constructor occurrences by inline executor shape, settlement calls, timer/scheduler use, multi-settlement, throw-to-rejection, and possible thenable payload risk; exact constructor admission remains closed with `semantic_admission_delta = 0`.
 
 Regenerate the full local reports with:
 
@@ -728,6 +729,22 @@ and `0` fully closed lexical candidates for either opened path in the pinned
 corpus. Dynamic iterables, object/function raw inputs, untyped possible
 thenables, all-rejected `Promise.any` AggregateError payloads, executor timing,
 and sync aggregate equivalence stay closed.
+
+The [Promise executor boundary audit](../bench/recall_loss/promise-executor-boundary-audit-2026-06-30.v1.json)
+then keeps constructor recovery reporting-only instead of opening a broad
+executor model. The pinned corpus has `795` `new Promise(...)` occurrences
+across `18` repos; `756` use inline arrow executors and `30` use function
+executors, but the high-risk boundaries dominate: `664` have extra executor
+calls, `319` mention timer/scheduler-like constructs, `180` have multiple
+settlement calls, `338` resolved payload sites are possible thenable
+assimilation boundaries, and `9` contain `throw`. The only lexical direct
+single-settlement upper bound is `27` scalar resolves plus `4` scalar rejects.
+This slice therefore records `semantic_admission_delta = 0` and names the next
+admission requirements before any constructor exact recovery: static-global
+constructor proof, resolve/reject callback identity, single-settlement
+precedence, throw-to-rejection and throw-after-settlement ordering, explicit
+executor effects, non-thenable payload proof, and preservation of the Promise
+boundary.
 
 ## See Also
 

@@ -1,6 +1,6 @@
 # Semantic kernel snapshot
 
-Snapshot date: 2026-06-29. The current implementation has an internal
+Snapshot date: 2026-06-30. The current implementation has an internal
 semantic-kernel facade, evidence-gated field state, sequence-surface contracts,
 proof-backed append fragment evidence, operator-law contracts, typed import
 facts, source-fact gates for construct/macro/literal/operator provenance,
@@ -76,6 +76,13 @@ recovers the first settlement for non-empty fully closed literal arrays; and
 arrays with a fulfilled candidate. Dynamic iterables, possible thenables,
 all-rejected `Promise.any` AggregateError payloads, executor timing, and sync
 aggregate equivalence stay closed.
+`new Promise(...)` constructor settlement recovery remains reporting-only. The
+current executor audit prices inline executor shape, resolve/reject callback
+use, timer/scheduler mentions, multiple settlement, throw-to-rejection,
+side-effect calls, and possible thenable payload risk, but does not open exact
+constructor admission. A future constructor slice must prove callback identity,
+settlement precedence, thrown-error ordering, executor effects, non-thenable
+payload safety, and Promise-boundary preservation.
 Node `timers/promises` ESM named imports and conservative `const` CommonJS
 destructuring requires are a narrow imported producer slice: admitted
 `LibraryApi` occurrence evidence for `node:timers/promises`/`timers/promises`
