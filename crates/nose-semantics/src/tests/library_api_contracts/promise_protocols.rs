@@ -90,6 +90,7 @@ fn imported_promise_factory_contract_requires_js_like_import_coordinate() {
                 exported: "setTimeout",
             },
             result_domain: DomainEvidence::PromiseLike,
+            fulfilled_payload_arg: Some(1),
         })
     );
     assert_eq!(
@@ -107,6 +108,7 @@ fn imported_promise_factory_contract_requires_js_like_import_coordinate() {
                 exported: "setImmediate",
             },
             result_domain: DomainEvidence::PromiseLike,
+            fulfilled_payload_arg: Some(0),
         })
     );
     assert_eq!(

@@ -67,12 +67,14 @@ settlement with that rejected channel. Selector-only
 branch channels, unsafe or parameterized `.finally` handlers, aggregate
 combinators, and missing or ambiguous receiver proof stay closed.
 Node `timers/promises` ESM named imports and conservative `const` CommonJS
-destructuring requires are a domain-only imported producer slice: admitted
+destructuring requires are a narrow imported producer slice: admitted
 `LibraryApi` occurrence evidence for `node:timers/promises`/`timers/promises`
 `setTimeout` and `setImmediate` materializes `Domain(PromiseLike)` at
-documented arities, but it does not materialize `PromiseSettledValue` because
-timer scheduling and AbortSignal rejection remain observable and unmodeled.
-Mutable CommonJS bindings and dynamic destructuring patterns stay closed.
+documented arities. Exactly `setTimeout(delay, value)` and
+`setImmediate(value)` also materialize fulfilled `PromiseSettledValue` evidence
+for the safe no-options payload. Option-bearing arities remain domain-only
+because `options.signal` can reject, and scheduler APIs, interval streams,
+mutable CommonJS bindings, and dynamic destructuring patterns stay closed.
 The JS/TS corpus audit [`js-ts-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/js-ts-stdlib-partial-audit-2026-06-28.v1.json)
 confirms this is the largest JS/TS builtin-shaped surface in the pinned corpus:
 `29,094` Promise/async occurrences are tracked as a processed closed boundary
@@ -732,7 +734,9 @@ migrated.
   named imports and conservative `const` CommonJS destructuring requires from
   `node:timers/promises` or `timers/promises` for `setTimeout` and
   `setImmediate` with
-  `nose.javascript.node.timers_promises` provenance; Python builtin
+  `nose.javascript.node.timers_promises` provenance, including fulfilled
+  `PromiseSettledValue` records for exactly `setTimeout(delay, value)` and
+  `setImmediate(value)`; Python builtin
   collection factories such as `list(...)` when the callee is proven as an
   unshadowed free name; Python
   `collections.deque(...)` when the callee is proven through

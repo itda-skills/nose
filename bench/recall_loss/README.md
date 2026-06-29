@@ -329,18 +329,27 @@ python3 scripts/cross-language-boundary-census.py \
   found `82` ESM named-import call sites across `execa`, `ky`, and `pixijs`;
   those calls can now materialize dependency-backed `Domain(PromiseLike)` for
   `setTimeout`/`setImmediate` through admitted `LibraryApi` occurrence evidence.
-  No settled payload recovery is opened, and `15` CommonJS destructuring require
-  call sites remain closed until lowering emits static imported-binding proof
-  for that shape.
+  At that point no settled payload recovery was opened, and `15` CommonJS
+  destructuring require call sites remained closed until lowering emitted static
+  imported-binding proof for that shape.
 - [promise-node-timers-commonjs-domain-recovery-2026-06-29.v1.json](promise-node-timers-commonjs-domain-recovery-2026-06-29.v1.json)
   records the CommonJS follow-up for the same domain-only Node timers
   capability. Conservative `const` destructuring requires with unshadowed
   `require` now emit dependency-backed `ImportedBinding` proof for
   `setTimeout`/`setImmediate`, opening the previously priced `15` `jest` call
   sites and raising the Node timers PromiseLike domain slice from `82` to `97`
-  priced call sites. Settlement, payload recovery, mutable destructuring,
-  dynamic patterns, namespace/default imports, and broad scheduling remain
-  closed.
+  priced call sites. At that point settlement/payload recovery, mutable
+  destructuring, dynamic patterns, namespace/default imports, and broad
+  scheduling remained closed.
+- [promise-node-timers-safe-payload-recovery-2026-06-29.v1.json](promise-node-timers-safe-payload-recovery-2026-06-29.v1.json)
+  records the bounded Node timers settled-payload follow-up. Exactly
+  `setTimeout(delay, value)` and `setImmediate(value)` now emit fulfilled
+  `PromiseSettledValue` evidence through the existing imported Promise producer
+  contract, while option-bearing calls, possible-thenable payloads, scheduler
+  APIs, interval streams, and broad scheduling remain closed. The 120-repo
+  direct named-binding source scan found `0` safe-payload call sites, so the
+  pinned-corpus recall delta is `0`; the covered capability is exercised by
+  focused positive and hard-negative fixtures.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

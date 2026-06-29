@@ -129,6 +129,9 @@ pub fn library_imported_promise_factory_contract(
         id: LibraryApiContractId::JsImportedPromiseFactory,
         callee: LibraryApiCalleeContract::ImportedBinding { module, exported },
         result_domain: DomainEvidence::PromiseLike,
+        fulfilled_payload_arg: js_imported_promise_factory_fulfilled_payload_arg(
+            exported, arg_count,
+        ),
     })
 }
 
@@ -177,5 +180,16 @@ fn js_imported_promise_factory_arity_supported(exported: &str, arg_count: usize)
         "setTimeout" => arg_count <= 3,
         "setImmediate" => arg_count <= 2,
         _ => false,
+    }
+}
+
+fn js_imported_promise_factory_fulfilled_payload_arg(
+    exported: &str,
+    arg_count: usize,
+) -> Option<usize> {
+    match (exported, arg_count) {
+        ("setTimeout", 2) => Some(1),
+        ("setImmediate", 1) => Some(0),
+        _ => None,
     }
 }

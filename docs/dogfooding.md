@@ -236,6 +236,14 @@ language-core provenance helper family from `475fa037b992d31d` to
 language-core record constructors across frontend, normalize, and semantics).
 The reviewed default-surface count remains 53; no budget increase is accepted.
 
+The 2026-06-29 Node timers safe-payload slice reuses the imported Promise
+settled-value kernel for the no-options `setTimeout(delay, value)` and
+`setImmediate(value)` arities. It only moves the same reviewed
+semantic-kernel language-core provenance helper family from
+`c67046264486c003` to `46eafe785a6f3517`; the members and judgment remain the
+same, and no new substantial default-surface duplicate family is accepted. The
+reviewed default-surface count remains 53; no budget increase is accepted.
+
 ## Verdict by candidate (critically)
 
 | family | what it is | judgment | action |

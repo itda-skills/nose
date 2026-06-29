@@ -245,9 +245,12 @@ external rows still do not influence exact analysis. The cycle record and R4
 transition assessment are in [semantic-kernel-expansion-511](semantic-kernel-expansion-511.md).
 The same materializer now also covers dependency-backed JS-like ESM named
 imports and conservative `const` CommonJS destructuring requires from Node
-`timers/promises` `setTimeout`/`setImmediate` as `PromiseLike` receiver proof
-only; settled payload recovery stays closed until scheduling/rejection
-contracts exist.
+`timers/promises` `setTimeout`/`setImmediate` as `PromiseLike` receiver proof.
+It also reuses the existing `PromiseSettledValue` capability for the
+documented safe no-options payload arities, exactly `setTimeout(delay, value)`
+and `setImmediate(value)`. Option-bearing arities, scheduler APIs, interval
+streams, namespace/default imports, and broad scheduling/rejection equivalence
+remain closed.
 The R4 authorability pass then uses a Guava fixed-domain dry-run pack to show
 which capabilities are authorable as external metadata, which remain
 intentionally builtin-only, and which blockers move to R5. That record is in [semantic-kernel-external-authorability-511](semantic-kernel-external-authorability-511.md).

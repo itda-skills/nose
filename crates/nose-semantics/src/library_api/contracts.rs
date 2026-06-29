@@ -421,6 +421,7 @@ pub struct LibraryImportedPromiseFactoryContract {
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result_domain: DomainEvidence,
+    pub fulfilled_payload_arg: Option<usize>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

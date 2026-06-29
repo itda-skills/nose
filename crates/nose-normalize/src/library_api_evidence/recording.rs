@@ -116,7 +116,7 @@ pub(super) fn record_imported_promise_factory_library_api(
     interner: &Interner,
     call: NodeId,
 ) -> bool {
-    let kids = il.children(call);
+    let kids = il.children(call).to_vec();
     let Some((&callee, args)) = kids.split_first() else {
         return false;
     };
@@ -136,12 +136,9 @@ pub(super) fn record_imported_promise_factory_library_api(
         else {
             continue;
         };
-        let Some(contract) = nose_semantics::library_imported_promise_factory_contract(
-            il.meta.lang,
-            module,
-            exported,
-            arg_count,
-        ) else {
+        let Some(contract) =
+            library_imported_promise_factory_contract(il.meta.lang, module, exported, arg_count)
+        else {
             continue;
         };
         let occurrence = upsert_language_core_evidence(
@@ -150,7 +147,7 @@ pub(super) fn record_imported_promise_factory_library_api(
             EvidenceKind::Symbol(expected),
             vec![binding_dependency],
         );
-        upsert_builtin_evidence_with_pack_id(
+        let api = upsert_builtin_evidence_with_pack_id(
             il,
             EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
             EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
@@ -162,9 +159,32 @@ pub(super) fn record_imported_promise_factory_library_api(
             nose_semantics::JS_NODE_TIMERS_PROMISES_PRODUCER_ID,
             vec![occurrence],
         );
+        record_imported_promise_factory_settled_value(il, call, args, contract, api);
         return true;
     }
     false
+}
+
+fn record_imported_promise_factory_settled_value(
+    il: &mut Il,
+    call: NodeId,
+    args: &[NodeId],
+    contract: LibraryImportedPromiseFactoryContract,
+    api: EvidenceId,
+) -> Option<EvidenceId> {
+    let payload = *args.get(contract.fulfilled_payload_arg?)?;
+    Some(upsert_builtin_evidence_with_pack_id(
+        il,
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+        EvidenceKind::PromiseSettledValue(PromiseSettledValueEvidenceKind {
+            channel: PromiseSettlementChannel::Fulfilled,
+            payload_span: il.node(payload).span,
+            payload_kind: il.kind(payload),
+        }),
+        contract.pack_id,
+        nose_semantics::JS_NODE_TIMERS_PROMISES_PRODUCER_ID,
+        vec![api],
+    ))
 }
 
 pub(super) fn record_library_api_result_domain(

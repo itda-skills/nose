@@ -4,21 +4,23 @@ use recording::*;
 use nose_il::{
     stable_symbol_hash, Builtin, DomainEvidence, EvidenceAnchor, EvidenceEmitter, EvidenceId,
     EvidenceKind, EvidenceRecord, EvidenceStatus, Il, Interner, Lang, LibraryApiEvidenceKind,
-    NodeId, NodeKind, Payload, SequenceSurfaceKind, Symbol, SymbolEvidenceKind,
+    NodeId, NodeKind, Payload, PromiseSettledValueEvidenceKind, PromiseSettlementChannel,
+    SequenceSurfaceKind, Symbol, SymbolEvidenceKind,
 };
 use nose_semantics::{
     admitted_library_api_result_domain_for_call_record, builder_append_method_contract,
     language_core_evidence_provenance, library_api_callee_contract_hash,
     library_api_contract_id_hash, library_api_free_name_shadow_safe,
     library_api_property_dependencies_for_field_with_cache,
-    library_api_receiver_dependencies_for_call_with_cache, library_method_call_contract,
+    library_api_receiver_dependencies_for_call_with_cache,
+    library_imported_promise_factory_contract, library_method_call_contract,
     library_promise_resolve_contract, library_property_builtin_contract,
     library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
     library_rust_result_err_constructor_contract, library_rust_result_ok_constructor_contract,
     proven_receiver_method_api_contract_for_call_with_cache, sequence_surface_kind_for_tag,
-    LibraryApiCalleeContract, LibraryApiDependencyCache, MethodBuiltinArgs,
-    MethodEffectReceiverContract, MethodReceiverContract, MethodSemanticContract,
-    BUILTIN_COMPAT_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
+    LibraryApiCalleeContract, LibraryApiDependencyCache, LibraryImportedPromiseFactoryContract,
+    MethodBuiltinArgs, MethodEffectReceiverContract, MethodReceiverContract,
+    MethodSemanticContract, BUILTIN_COMPAT_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
     BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
     RUST_STDLIB_OPTION_PRODUCER_ID, RUST_STDLIB_RESULT_PRODUCER_ID,
 };

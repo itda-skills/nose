@@ -86,6 +86,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [Promise imported settled-value contract](../bench/recall_loss/promise-imported-settled-value-contract-2026-06-29.v1.json) records the reusable settled-value evidence capability for imported Promise producers: imported target identity, PromiseLike receiver proof, admitted continuation API evidence, and `PromiseSettledValue` payload/channel proof can now recover focused imported `.then`/`.catch` fixtures while ordinary imported producers without that contract remain closed.
 - [Node timers Promise domain recovery](../bench/recall_loss/promise-node-timers-domain-recovery-2026-06-29.v1.json) records the ESM named-import domain-only Node `timers/promises` slice: imported `setTimeout`/`setImmediate` calls can now provide `Domain(PromiseLike)` receiver proof without settlement or payload recovery.
 - [Node timers CommonJS domain recovery](../bench/recall_loss/promise-node-timers-commonjs-domain-recovery-2026-06-29.v1.json) records the follow-up that opens conservative `const` CommonJS destructuring requires for the same domain-only proof, moving the priced Node timers call-site coverage from `82` to `97` while mutable/dynamic shapes and scheduling semantics remain closed.
+- [Node timers safe payload recovery](../bench/recall_loss/promise-node-timers-safe-payload-recovery-2026-06-29.v1.json) records the bounded payload follow-up: exactly `setTimeout(delay, value)` and `setImmediate(value)` now emit fulfilled `PromiseSettledValue` evidence, while option-bearing calls, possible thenable payloads, scheduler APIs, and interval streams remain closed. The current pinned corpus has `0` direct safe-payload call sites, so this is a capability and fixture gain rather than an immediate corpus recall delta.
 
 Regenerate the full local reports with:
 
@@ -664,6 +665,17 @@ continuation has admitted Promise API evidence. Focused imported `.then` and
 `.catch` fixtures now recover behind Promise boundaries; contractless imported
 producers, unsafe fulfilled thenable payloads, selector-only members, aggregate
 combinators, constructors, and broad scheduling remain closed.
+The follow-up [Node timers safe payload recovery](../bench/recall_loss/promise-node-timers-safe-payload-recovery-2026-06-29.v1.json)
+applies that same settled-value capability to the Node `timers/promises` subset
+only where the documented API has no options object that can inject
+AbortSignal rejection. Exactly `setTimeout(delay, value)` and
+`setImmediate(value)` can now name the fulfilled payload, while
+`setTimeout(delay, value, options)`, `setImmediate(value, options)`,
+possible-thenable payloads, scheduler APIs, interval streams, and broad
+scheduling equivalence stay closed. The current 120-repo corpus scan found
+`0` direct safe-payload call sites, so the measured pinned-corpus recall delta
+is intentionally `0`; the benefit is that future safe call sites and focused
+fixtures use the shared kernel contract rather than a selector shortcut.
 
 ## See Also
 
