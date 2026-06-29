@@ -201,10 +201,19 @@ The first exact #602 follow-up is [Promise.all literal aggregate recovery](../be
 It satisfies only the all-fulfilled aggregate obligation for unshadowed
 `Promise.all` calls with literal array arguments whose elements already recover
 as fulfilled Promise boundaries. The result remains a Promise boundary carrying
-an ordered sequence payload. First-settled, all-settled, first-fulfilled,
+an ordered sequence payload. First-settled, first-fulfilled,
 rejection ordering, dynamic iterable lifecycle, thenable assimilation,
 executor timing, and cancellation/liveness obligations remain named closed
 boundaries.
+The next exact #602 follow-up is [Promise.allSettled literal aggregate recovery](../bench/recall_loss/promise-allsettled-literal-aggregate-recovery-2026-06-29.v1.json).
+It satisfies the all-settled aggregate obligation only for unshadowed
+`Promise.allSettled` calls with literal array arguments whose elements already
+recover as fulfilled or rejected Promise boundaries. The aggregate result is a
+fulfilled Promise carrying ordered settled-record payloads, so fulfilled and
+rejected element channels stay distinct without converging with synchronous
+record arrays. Dynamic iterable lifecycle, raw input/thenable assimilation,
+first-settled, first-fulfilled, executor timing, and cancellation/liveness
+obligations remain closed.
 
 ## Minimal Vocabulary
 

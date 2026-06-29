@@ -196,6 +196,7 @@ fn promise_factory_kind_key(kind: PromiseFactoryKind) -> &'static str {
 fn promise_aggregate_kind_key(kind: PromiseAggregateKind) -> &'static str {
     match kind {
         PromiseAggregateKind::All => "all",
+        PromiseAggregateKind::AllSettled => "all_settled",
     }
 }
 

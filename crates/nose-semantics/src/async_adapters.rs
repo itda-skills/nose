@@ -16,6 +16,7 @@ pub enum PromiseFactoryKind {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PromiseAggregateKind {
     All,
+    AllSettled,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

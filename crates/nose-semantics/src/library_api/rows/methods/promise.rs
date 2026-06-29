@@ -117,19 +117,28 @@ pub fn library_promise_aggregate_contract(
     method: &str,
     arg_count: usize,
 ) -> Option<LibraryPromiseAggregateContract> {
-    if !js_like_lang(lang) || receiver != "Promise" || method != "all" || arg_count != 1 {
+    if !js_like_lang(lang) || receiver != "Promise" || arg_count != 1 {
         return None;
     }
+    let kind = match method {
+        "all" => PromiseAggregateKind::All,
+        "allSettled" => PromiseAggregateKind::AllSettled,
+        _ => return None,
+    };
+    let (method_name, qualified_path) = match kind {
+        PromiseAggregateKind::All => ("all", "Promise.all"),
+        PromiseAggregateKind::AllSettled => ("allSettled", "Promise.allSettled"),
+    };
     let result = PromiseAggregateContract {
         receiver: "Promise",
-        method: "all",
-        qualified_path: "Promise.all",
-        kind: PromiseAggregateKind::All,
+        method: method_name,
+        qualified_path,
+        kind,
         result_domain: DomainEvidence::PromiseLike,
     };
     Some(LibraryPromiseAggregateContract {
         pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
-        id: LibraryApiContractId::PromiseAggregate(PromiseAggregateKind::All),
+        id: LibraryApiContractId::PromiseAggregate(kind),
         callee: LibraryApiCalleeContract::StaticGlobalMethod {
             receiver: result.receiver,
             method: result.method,

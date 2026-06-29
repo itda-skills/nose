@@ -162,6 +162,7 @@ fn js_like_library_api_contract_provenance_ids(
         LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve)
         | LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Reject)
         | LibraryApiContractId::PromiseAggregate(PromiseAggregateKind::All)
+        | LibraryApiContractId::PromiseAggregate(PromiseAggregateKind::AllSettled)
         | LibraryApiContractId::PromiseThen
         | LibraryApiContractId::PromiseCatch
         | LibraryApiContractId::PromiseFinally => Some((

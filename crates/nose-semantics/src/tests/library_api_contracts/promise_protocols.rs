@@ -87,7 +87,13 @@ fn promise_aggregate_contract_requires_js_like_static_global_surface() {
     );
     assert_eq!(
         promise_aggregate_contract(Lang::TypeScript, "Promise", "allSettled", 1),
-        None
+        Some(PromiseAggregateContract {
+            receiver: "Promise",
+            method: "allSettled",
+            qualified_path: "Promise.allSettled",
+            kind: PromiseAggregateKind::AllSettled,
+            result_domain: DomainEvidence::PromiseLike,
+        })
     );
     assert_eq!(
         promise_aggregate_contract(Lang::TypeScript, "Promise", "all", 2),

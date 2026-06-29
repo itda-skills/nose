@@ -36,13 +36,15 @@ break.
 - Added the first #602 reporting-only scheduling/lifecycle audit, including a
   120-repo pricing script and checked artifact for aggregate, executor,
   cancellation, scheduler, channel, lifecycle, and exception boundary surfaces.
-- Added the first #602 exact aggregate capability slice for `Promise.all`: an
-  unshadowed global `Promise.all` over a literal array can recover as an ordered
-  fulfilled Promise aggregate only when every element already has fulfilled
-  Promise evidence. Dynamic iterables, rejected elements, `Promise.race`,
-  `Promise.allSettled`, `Promise.any`, thenable assimilation, executor timing,
-  and sync array equivalence remain closed. The slice includes a checked
-  recall-loss/pricing artifact.
+- Added the first #602 exact aggregate capability slices for `Promise.all` and
+  `Promise.allSettled`: unshadowed global aggregate calls over literal arrays
+  can recover only when every element already has matching Promise settlement
+  evidence. `Promise.all` opens the all-fulfilled ordered payload channel;
+  `Promise.allSettled` opens the fulfilled-result ordered settled-record
+  channel. Dynamic iterables, raw input assimilation, `Promise.race`,
+  `Promise.any`, thenable assimilation, executor timing, and sync array
+  equivalence remain closed. Both slices include checked recall-loss/pricing
+  artifacts.
 - Added staged Promise recovery infrastructure: protocol diagnostics and hard
   negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
   continuation recovery; receiver-producer/call-return attribution; and
@@ -62,8 +64,8 @@ break.
   `setImmediate(value)`, while option-bearing calls, possible thenables,
   scheduler APIs, interval streams, and broad scheduling remain closed. Recorded
   the Promise/scheduling closeout artifact that stops API-by-API expansion here
-  and moves aggregate, lifecycle, cancellation, and broad scheduling work to a
-  separate capability epic.
+  and moves unsliced aggregate, lifecycle, cancellation, and broad scheduling
+  work to a separate capability epic.
 
 ### Changed
 - Split exact-admission recall-loss attribution into capability-oriented buckets
@@ -129,6 +131,11 @@ break.
   `crates` recall-loss gate at `false_merges = 0` and
   `canon_preservation_violations = 0`; the 120-repo slice artifact records
   `397` broad `Promise.all` occurrences, `201` literal-array boundary
+  occurrences, and `0` direct safe-seed occurrences in the pinned corpus.
+- Confirmed the #602 `Promise.allSettled` exact aggregate slice with the local
+  `crates` recall-loss gate at `false_merges = 0` and
+  `canon_preservation_violations = 0`; the 120-repo slice artifact records
+  `17` broad `Promise.allSettled` occurrences, `8` literal-array boundary
   occurrences, and `0` direct safe-seed occurrences in the pinned corpus.
 
 ## [0.16.0] - 2026-06-26

@@ -55,6 +55,7 @@ fn core_library_api_contract_ids() -> Vec<LibraryApiContractId> {
         LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve),
         LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Reject),
         LibraryApiContractId::PromiseAggregate(PromiseAggregateKind::All),
+        LibraryApiContractId::PromiseAggregate(PromiseAggregateKind::AllSettled),
         LibraryApiContractId::JsImportedPromiseFactory,
         LibraryApiContractId::PromiseThen,
         LibraryApiContractId::PromiseCatch,

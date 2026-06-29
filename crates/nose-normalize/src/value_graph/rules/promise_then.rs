@@ -1,18 +1,23 @@
-//! Promise continuation canonicalization for `.then`, `.catch`, and safe `.finally`.
+//! Promise continuation canonicalization for `.then`, `.catch`, safe `.finally`, and
+//! supported literal Promise aggregates.
 //!
 //! The rule is exact only for admitted JS-like Promise occurrences. A continuation selector alone
 //! is never proof. The receiver must be admitted by the matching `LibraryApi` contract plus
 //! PromiseLike receiver evidence, and this value-graph rule must also be able to recover a settled
 //! value from a supported Promise producer. Safe `.finally` recovery is narrower still: the handler
 //! must be absent or a zero-argument lambda whose result is non-thenable-safe, a fulfilled Promise
-//! boundary, or a rejected Promise boundary. The result stays behind a Promise boundary so
+//! boundary, or a rejected Promise boundary. Aggregate recovery is also intentionally narrow:
+//! literal `Promise.all` and `Promise.allSettled` inputs must already recover to Promise state
+//! before the aggregate can recover. The result stays behind a Promise boundary so
 //! Promise-returning code does not converge with synchronous code that happens to compute the same
 //! payload.
 //!
 //! proof-obligation: normalize.value_graph.promise_then
 
 use super::super::{Builder, ConstKind, ValOp, ValueDomain, ValueId};
-use nose_il::{DomainEvidence, NodeId, NodeKind, Payload, PromiseSettlementChannel};
+use nose_il::{
+    stable_symbol_hash, DomainEvidence, NodeId, NodeKind, Payload, PromiseSettlementChannel,
+};
 use nose_semantics::{
     admitted_promise_aggregate_at_call, admitted_promise_catch_at_call,
     admitted_promise_finally_at_call, admitted_promise_resolve_at_call,
@@ -266,6 +271,7 @@ fn promise_aggregate_state(
     let admitted = admitted_promise_aggregate_at_call(builder.il, builder.interner, expr)?;
     match admitted.contract.result.kind {
         PromiseAggregateKind::All => promise_all_literal_state(builder, expr, env),
+        PromiseAggregateKind::AllSettled => promise_all_settled_literal_state(builder, expr, env),
     }
 }
 
@@ -288,6 +294,34 @@ fn promise_all_literal_state(
         fulfilled.push(payload);
     }
     let payload = builder.mk(ValOp::Seq(builder.seq_tag(aggregate_arg)), fulfilled);
+    Some(PromiseState::Fulfilled(payload))
+}
+
+fn promise_all_settled_literal_state(
+    builder: &mut Builder<'_>,
+    expr: NodeId,
+    env: &FxHashMap<u32, ValueId>,
+) -> Option<PromiseState> {
+    let aggregate_arg = *builder.il.children(expr).get(1)?;
+    if builder.il.kind(aggregate_arg) != NodeKind::Seq {
+        return None;
+    }
+    let elements = builder.il.children(aggregate_arg).to_vec();
+    let mut settled = Vec::with_capacity(elements.len());
+    for element in elements {
+        let record = match promise_receiver_state(builder, element, env)? {
+            PromiseState::Fulfilled(payload) => builder.mk(
+                ValOp::Seq(stable_symbol_hash("promise.allSettled.fulfilled_record")),
+                vec![payload],
+            ),
+            PromiseState::Rejected(reason) => builder.mk(
+                ValOp::Seq(stable_symbol_hash("promise.allSettled.rejected_record")),
+                vec![reason],
+            ),
+        };
+        settled.push(record);
+    }
+    let payload = builder.mk(ValOp::Seq(builder.seq_tag(aggregate_arg)), settled);
     Some(PromiseState::Fulfilled(payload))
 }
 

@@ -359,15 +359,25 @@ fn post_lower_static_global_method_library_api_contract(
     method: &str,
     arg_count: usize,
 ) -> Option<PostLowerLibraryApiContract> {
-    library_promise_resolve_contract(lang, receiver, method, arg_count).map(|contract| {
-        PostLowerLibraryApiContract {
+    library_promise_resolve_contract(lang, receiver, method, arg_count)
+        .map(|contract| PostLowerLibraryApiContract {
             id: contract.id,
             callee: contract.callee,
             pack_id: contract.pack_id,
             rule: JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
             result_domain: Some(contract.result.result_domain),
-        }
-    })
+        })
+        .or_else(|| {
+            library_promise_aggregate_contract(lang, receiver, method, arg_count).map(|contract| {
+                PostLowerLibraryApiContract {
+                    id: contract.id,
+                    callee: contract.callee,
+                    pack_id: contract.pack_id,
+                    rule: JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
+                    result_domain: Some(contract.result.result_domain),
+                }
+            })
+        })
 }
 
 fn post_lower_free_name_library_api_dependencies(

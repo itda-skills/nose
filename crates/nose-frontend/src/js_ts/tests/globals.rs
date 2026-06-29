@@ -9,6 +9,7 @@ use nose_semantics::{
     library_api_callee_contract_hash, library_api_contract_id_hash,
     library_js_array_is_array_contract, library_js_like_map_constructor_contract,
     library_js_like_set_constructor_contract, library_map_key_view_wrapper_contract,
+    library_promise_aggregate_contract,
 };
 
 #[test]
@@ -92,16 +93,22 @@ fn js_static_global_evidence_respects_local_and_destructured_shadows() {
         "function f(Math, value) { return Math.abs(value); }
          function g(scope) { const { Map } = scope; return new Map([]); }
          function h(value, undefined) { return value === undefined; }
-         function i(value) { const Array = { isArray() { return false; } }; return Array.isArray(value); }",
+         function i(value) { const Array = { isArray() { return false; } }; return Array.isArray(value); }
+         function j(Promise, values) { return Promise.allSettled(values); }",
     );
 
-    for name in ["Math", "Map", "undefined", "Array"] {
+    for name in ["Math", "Map", "undefined", "Array", "Promise"] {
         assert_eq!(
             unshadowed_global_evidence_count(&il, name),
             0,
             "shadowed {name} should not get global evidence"
         );
     }
+    assert_eq!(
+        qualified_global_evidence_count(&il, "Promise.allSettled", NodeKind::Field),
+        0,
+        "shadowed Promise.allSettled should not get qualified global evidence"
+    );
 }
 
 #[test]
@@ -119,7 +126,8 @@ fn js_qualified_global_paths_emit_symbol_evidence() {
         "function hasOwn(value) { return Object.hasOwn(value, \"ready\"); }
          function hasOwnCall(value) { return Object.prototype.hasOwnProperty.call(value, \"ready\"); }
          function fromKeys(lookup) { return Array.from(lookup.keys()).includes(\"ready\"); }
-         function isArray(value) { return Array.isArray(value); }",
+         function isArray(value) { return Array.isArray(value); }
+         function settle(values) { return Promise.allSettled(values); }",
     );
 
     assert_eq!(
@@ -138,6 +146,10 @@ fn js_qualified_global_paths_emit_symbol_evidence() {
         qualified_global_evidence_count(&il, "Array.isArray", NodeKind::Field),
         1
     );
+    assert_eq!(
+        qualified_global_evidence_count(&il, "Promise.allSettled", NodeKind::Field),
+        1
+    );
     for (path, kind, root) in [
         ("Object.hasOwn", NodeKind::Seq, "Object"),
         (
@@ -147,6 +159,7 @@ fn js_qualified_global_paths_emit_symbol_evidence() {
         ),
         ("Array.from", NodeKind::Field, "Array"),
         ("Array.isArray", NodeKind::Field, "Array"),
+        ("Promise.allSettled", NodeKind::Field, "Promise"),
     ] {
         for record in qualified_global_evidence_records(&il, path, kind) {
             assert!(
@@ -158,6 +171,8 @@ fn js_qualified_global_paths_emit_symbol_evidence() {
     let from = library_map_key_view_wrapper_contract(Lang::JavaScript, "Array", "from", 1).unwrap();
     let is_array =
         library_js_array_is_array_contract(Lang::JavaScript, "Array", "isArray", 1).unwrap();
+    let all_settled =
+        library_promise_aggregate_contract(Lang::JavaScript, "Promise", "allSettled", 1).unwrap();
     assert_eq!(
         library_api_evidence_count(
             &il,
@@ -172,6 +187,15 @@ fn js_qualified_global_paths_emit_symbol_evidence() {
             &il,
             library_api_contract_id_hash(is_array.id),
             library_api_callee_contract_hash(is_array.callee),
+            1,
+        ),
+        1
+    );
+    assert_eq!(
+        library_api_evidence_count(
+            &il,
+            library_api_contract_id_hash(all_settled.id),
+            library_api_callee_contract_hash(all_settled.callee),
             1,
         ),
         1
