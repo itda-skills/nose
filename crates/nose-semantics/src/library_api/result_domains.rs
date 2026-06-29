@@ -60,6 +60,9 @@ pub fn library_api_materialized_result_domain_for_arity(
         LibraryApiContractId::RustResultOkConstructor
         | LibraryApiContractId::RustResultErrConstructor => Some(DomainEvidence::Result),
         LibraryApiContractId::PromiseFactory(_) => Some(DomainEvidence::PromiseLike),
+        LibraryApiContractId::JsImportedPromiseFactory => {
+            js_imported_promise_factory_materialized_result_domain(callee, arity as usize)
+        }
         LibraryApiContractId::IteratorIdentityAdapter => {
             library_iterator_identity_adapter_result_domain(callee, arity as usize)
         }
@@ -71,6 +74,23 @@ pub fn library_api_materialized_result_domain_for_arity(
         | LibraryApiContractId::PromiseThen
         | LibraryApiContractId::PromiseCatch
         | LibraryApiContractId::PromiseFinally) => library_receiver_method_api_result_domain(id),
+        _ => None,
+    }
+}
+
+fn js_imported_promise_factory_materialized_result_domain(
+    callee: LibraryApiCalleeContract,
+    arity: usize,
+) -> Option<DomainEvidence> {
+    match callee {
+        LibraryApiCalleeContract::ImportedBinding {
+            module: "node:timers/promises" | "timers/promises",
+            exported: "setTimeout",
+        } if arity <= 3 => Some(DomainEvidence::PromiseLike),
+        LibraryApiCalleeContract::ImportedBinding {
+            module: "node:timers/promises" | "timers/promises",
+            exported: "setImmediate",
+        } if arity <= 2 => Some(DomainEvidence::PromiseLike),
         _ => None,
     }
 }

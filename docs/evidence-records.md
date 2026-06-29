@@ -67,7 +67,7 @@ The current implemented kinds are:
 | `Guard` | multi-obligation guard proof facts such as JS/TS record-shape and own-property guard contracts |
 | `Place` | fixed receiver/place facts currently covering `SelfReceiver` and `SelfField` |
 | `Effect` | observable effect and mutation-risk facts currently covering canonical builder append calls, non-overloadable index writes, fixed self-field writes, binding writes, receiver-mutating calls, and opaque argument escapes |
-| `LibraryApi` | proof that a specific API occurrence matches a language/API contract coordinate, currently for selected call, property, and sentinel occurrences across JS-like static/global/static-index APIs, selected Python/Rust/Ruby/Java/Swift/regex APIs, pack-proven Python/Go/Swift free-function builtins, pack-proven Python iterator builtins, pack-proven generic builtin method calls, and selected receiver-method families |
+| `LibraryApi` | proof that a specific API occurrence matches a language/API contract coordinate, currently for selected call, property, and sentinel occurrences across JS-like static/global/static-index APIs, Node `timers/promises` imported Promise factories, selected Python/Rust/Ruby/Java/Swift/regex APIs, pack-proven Python/Go/Swift free-function builtins, pack-proven Python iterator builtins, pack-proven generic builtin method calls, and selected receiver-method families |
 | `CallTarget` | proof that a specific call occurrence resolves to an explicit function, method, imported function/member, or dispatch-family target identity |
 | `PromiseSettledValue` | proof that an opaque Promise-like producer call settles to a named fulfilled/rejected payload expression, consumed only with separate call-target and PromiseLike proof |
 | `SequenceSurface` | lowered aggregate surface such as collection, tuple, map, pair, import proof, guard surfaces, Go composite map literals/entries, or Rust struct expressions |
@@ -777,7 +777,9 @@ First-party frontends now emit these facts as `EvidenceRecord`:
   one-argument `Array.from` with `nose.javascript.builtins.array` provenance as
   `Array`; JS-like `Promise.resolve`, `Promise.reject`, admitted Promise
   `.then`, and admitted Promise `.catch` results with
-  `nose.javascript.builtins.promise` provenance as `PromiseLike`; direct calls
+  `nose.javascript.builtins.promise` provenance as `PromiseLike`; ESM named
+  imports from Node `timers/promises` `setTimeout`/`setImmediate` with
+  `nose.javascript.node.timers_promises` provenance as `PromiseLike`; direct calls
   to source-proven async functions as `PromiseLike`; and direct calls to
   non-async functions as `PromiseLike` only when every returned expression on
   the supported paths already has asserted PromiseLike domain evidence.
@@ -926,7 +928,10 @@ callers:
   asserted `Domain(PromiseLike)` evidence and do not read receiver context.
   Imported function/member producers can supply that value only through admitted
   `PromiseSettledValue` evidence plus imported call-target identity; ordinary
-  imported calls without that contract remain opaque.
+  imported calls without that contract remain opaque. Node `timers/promises`
+  imported factories currently supply only `Domain(PromiseLike)`, not settled
+  payload evidence, so timer delay/order and AbortSignal rejection remain
+  fail-closed until scheduling/rejection contracts exist.
   Value-level CSE paths that only retain source
   spans now also go through span-query resolvers for free-name/imported
   collection factories, Java/Ruby/Rust collection factories, Java collection

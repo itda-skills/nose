@@ -2,12 +2,13 @@ use super::receiver_method_result_domains::receiver_method_result_domain_il;
 use super::*;
 use nose_semantics::{
     admitted_promise_resolve_at_call, library_free_name_collection_factory_contract,
-    library_free_name_map_factory_contract, library_map_get_contract, library_method_call_contract,
-    library_promise_resolve_contract, library_rust_result_ok_constructor_contract,
-    library_rust_result_predicate_contract, library_swift_map_factory_contract,
-    JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID, PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID,
-    RUST_STDLIB_MAP_FACTORY_PRODUCER_ID, RUST_STDLIB_RESULT_PRODUCER_ID,
-    SWIFT_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
+    library_free_name_map_factory_contract, library_imported_promise_factory_contract,
+    library_map_get_contract, library_method_call_contract, library_promise_resolve_contract,
+    library_rust_result_ok_constructor_contract, library_rust_result_predicate_contract,
+    library_swift_map_factory_contract, JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
+    JS_NODE_TIMERS_PROMISES_PACK_ID, JS_NODE_TIMERS_PROMISES_PRODUCER_ID,
+    PYTHON_BUILTIN_COLLECTION_FACTORY_PRODUCER_ID, RUST_STDLIB_MAP_FACTORY_PRODUCER_ID,
+    RUST_STDLIB_RESULT_PRODUCER_ID, SWIFT_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
 };
 
 fn free_name_call_il(lang: Lang, name: &str, arg_count: usize) -> (Il, Interner, NodeId, NodeId) {
@@ -126,6 +127,64 @@ fn promise_resolve_call_il(with_qualified_global: bool) -> (Il, Interner, NodeId
     (il, interner, call, receiver, callee)
 }
 
+fn imported_promise_factory_call_il(
+    local: &str,
+    arg_count: usize,
+) -> (Il, Interner, NodeId, NodeId) {
+    let interner = Interner::new();
+    let mut builder = IlBuilder::new(FileId(0));
+    let callee = builder.add(
+        NodeKind::Var,
+        Payload::Name(interner.intern(local)),
+        sp(50),
+        &[],
+    );
+    let mut children = vec![callee];
+    for idx in 0..arg_count {
+        children.push(builder.add(
+            NodeKind::Var,
+            Payload::Cid(idx as u32),
+            sp(51 + idx as u32),
+            &[],
+        ));
+    }
+    let call = builder.add(NodeKind::Call, Payload::None, sp(60), &children);
+    let root = builder.add(NodeKind::Func, Payload::None, sp(61), &[call]);
+    (
+        builder.finish(
+            root,
+            FileMeta {
+                path: "node-timers-promises".into(),
+                lang: Lang::TypeScript,
+            },
+            Vec::new(),
+            Vec::new(),
+        ),
+        interner,
+        call,
+        callee,
+    )
+}
+
+fn push_imported_binding_symbol(
+    il: &mut Il,
+    local: &str,
+    module: &str,
+    exported: &str,
+) -> EvidenceId {
+    let (pack_id, producer_id) = language_core_evidence_provenance(il.meta.lang);
+    il.find_or_push_builtin_evidence(
+        EvidenceAnchor::binding(sp(49), stable_symbol_hash(local)),
+        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
+            module_hash: stable_symbol_hash(module),
+            exported_hash: stable_symbol_hash(exported),
+        }),
+        pack_id,
+        producer_id,
+        Vec::new(),
+    )
+}
+
 #[test]
 fn preexisting_collection_api_records_materialize_result_domains() {
     for (name, expected_domain) in [
@@ -229,6 +288,89 @@ fn promise_resolve_static_global_materializes_result_domain() {
     assert!(
         node_domain_records(&shadow_closed, call, DomainEvidence::PromiseLike).is_empty(),
         "PromiseLike result domain requires admitted Promise.resolve API evidence"
+    );
+}
+
+#[test]
+fn imported_node_timers_promise_factory_materializes_promise_like_domain() {
+    let (mut il, interner, call, callee) = imported_promise_factory_call_il("delay", 2);
+    let binding =
+        push_imported_binding_symbol(&mut il, "delay", "node:timers/promises", "setTimeout");
+    let contract = library_imported_promise_factory_contract(
+        Lang::TypeScript,
+        "node:timers/promises",
+        "setTimeout",
+        2,
+    )
+    .expect("node:timers/promises setTimeout contract");
+
+    run(&mut il, &interner);
+
+    let api = library_api_records(&il, call)
+        .into_iter()
+        .find(|record| record.status == EvidenceStatus::Asserted)
+        .expect("node timers Promise factory API evidence");
+    assert_eq!(
+        api.provenance,
+        pack_provenance(
+            JS_NODE_TIMERS_PROMISES_PACK_ID,
+            JS_NODE_TIMERS_PROMISES_PRODUCER_ID,
+        )
+    );
+    assert_eq!(
+        api.kind,
+        EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
+            contract_hash: library_api_contract_id_hash(contract.id),
+            callee_hash: library_api_callee_contract_hash(contract.callee),
+            arity: 2,
+        })
+    );
+    let occurrence = il
+        .evidence_record_by_id(api.dependencies[0])
+        .expect("imported binding occurrence dependency");
+    assert_eq!(
+        occurrence.anchor,
+        EvidenceAnchor::node(il.node(callee).span, NodeKind::Var)
+    );
+    assert_eq!(occurrence.dependencies, vec![binding]);
+
+    let result_domains = node_domain_records(&il, call, DomainEvidence::PromiseLike);
+    assert_eq!(result_domains.len(), 1);
+    assert_eq!(
+        result_domains[0].provenance,
+        language_core_provenance(Lang::TypeScript)
+    );
+    assert_eq!(result_domains[0].dependencies, vec![api.id]);
+}
+
+#[test]
+fn imported_node_timers_promise_factory_requires_import_proof_and_supported_arity() {
+    let (mut raw, interner, call, _) = imported_promise_factory_call_il("delay", 2);
+    run(&mut raw, &interner);
+    assert!(
+        library_api_records(&raw, call).is_empty(),
+        "raw delay(...) spelling must not prove node timers Promise factory"
+    );
+    assert!(
+        node_domain_records(&raw, call, DomainEvidence::PromiseLike).is_empty(),
+        "PromiseLike domain requires admitted imported API evidence"
+    );
+
+    let (mut too_many_args, interner, call, _) = imported_promise_factory_call_il("delay", 4);
+    push_imported_binding_symbol(
+        &mut too_many_args,
+        "delay",
+        "node:timers/promises",
+        "setTimeout",
+    );
+    run(&mut too_many_args, &interner);
+    assert!(
+        library_api_records(&too_many_args, call).is_empty(),
+        "unsupported setTimeout arity must stay closed"
+    );
+    assert!(
+        node_domain_records(&too_many_args, call, DomainEvidence::PromiseLike).is_empty(),
+        "unsupported arity must not materialize PromiseLike domain"
     );
 }
 

@@ -72,3 +72,68 @@ fn promise_factory_contract_requires_js_like_static_global_surface() {
         None
     );
 }
+
+#[test]
+fn imported_promise_factory_contract_requires_js_like_import_coordinate() {
+    assert_eq!(
+        library_imported_promise_factory_contract(
+            Lang::TypeScript,
+            "node:timers/promises",
+            "setTimeout",
+            2,
+        ),
+        Some(LibraryImportedPromiseFactoryContract {
+            pack_id: JS_NODE_TIMERS_PROMISES_PACK_ID,
+            id: LibraryApiContractId::JsImportedPromiseFactory,
+            callee: LibraryApiCalleeContract::ImportedBinding {
+                module: "node:timers/promises",
+                exported: "setTimeout",
+            },
+            result_domain: DomainEvidence::PromiseLike,
+        })
+    );
+    assert_eq!(
+        library_imported_promise_factory_contract(
+            Lang::JavaScript,
+            "timers/promises",
+            "setImmediate",
+            1,
+        ),
+        Some(LibraryImportedPromiseFactoryContract {
+            pack_id: JS_NODE_TIMERS_PROMISES_PACK_ID,
+            id: LibraryApiContractId::JsImportedPromiseFactory,
+            callee: LibraryApiCalleeContract::ImportedBinding {
+                module: "timers/promises",
+                exported: "setImmediate",
+            },
+            result_domain: DomainEvidence::PromiseLike,
+        })
+    );
+    assert_eq!(
+        library_imported_promise_factory_contract(
+            Lang::Python,
+            "node:timers/promises",
+            "setTimeout",
+            1,
+        ),
+        None
+    );
+    assert_eq!(
+        library_imported_promise_factory_contract(
+            Lang::TypeScript,
+            "node:timers/promises",
+            "scheduler",
+            1,
+        ),
+        None
+    );
+    assert_eq!(
+        library_imported_promise_factory_contract(
+            Lang::TypeScript,
+            "node:timers/promises",
+            "setImmediate",
+            3,
+        ),
+        None
+    );
+}

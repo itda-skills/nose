@@ -54,6 +54,7 @@ fn core_library_api_contract_ids() -> Vec<LibraryApiContractId> {
         LibraryApiContractId::JsLikeStaticIndexMembership(StaticIndexMembershipKind::FindIndex),
         LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Resolve),
         LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Reject),
+        LibraryApiContractId::JsImportedPromiseFactory,
         LibraryApiContractId::PromiseThen,
         LibraryApiContractId::PromiseCatch,
         LibraryApiContractId::PromiseFinally,

@@ -110,3 +110,72 @@ pub fn library_promise_resolve_contract(
         result,
     })
 }
+
+pub fn library_imported_promise_factory_contract(
+    lang: Lang,
+    module: &str,
+    exported: &str,
+    arg_count: usize,
+) -> Option<LibraryImportedPromiseFactoryContract> {
+    if !js_like_lang(lang) {
+        return None;
+    }
+    let (module, exported) = js_imported_promise_factory_callee(module, exported)?;
+    if !js_imported_promise_factory_arity_supported(exported, arg_count) {
+        return None;
+    }
+    Some(LibraryImportedPromiseFactoryContract {
+        pack_id: JS_NODE_TIMERS_PROMISES_PACK_ID,
+        id: LibraryApiContractId::JsImportedPromiseFactory,
+        callee: LibraryApiCalleeContract::ImportedBinding { module, exported },
+        result_domain: DomainEvidence::PromiseLike,
+    })
+}
+
+pub fn library_imported_promise_factory_contracts(
+    lang: Lang,
+) -> impl Iterator<Item = LibraryImportedPromiseFactoryContract> {
+    [
+        ("node:timers/promises", "setTimeout", 0),
+        ("node:timers/promises", "setImmediate", 0),
+        ("timers/promises", "setTimeout", 0),
+        ("timers/promises", "setImmediate", 0),
+    ]
+    .into_iter()
+    .filter_map(move |(module, exported, arg_count)| {
+        library_imported_promise_factory_contract(lang, module, exported, arg_count)
+    })
+}
+
+fn js_imported_promise_factory_callee(
+    module: &str,
+    exported: &str,
+) -> Option<(&'static str, &'static str)> {
+    match (module, exported) {
+        ("node:timers/promises" | "timers/promises", "setTimeout") => Some((
+            if module == "node:timers/promises" {
+                "node:timers/promises"
+            } else {
+                "timers/promises"
+            },
+            "setTimeout",
+        )),
+        ("node:timers/promises" | "timers/promises", "setImmediate") => Some((
+            if module == "node:timers/promises" {
+                "node:timers/promises"
+            } else {
+                "timers/promises"
+            },
+            "setImmediate",
+        )),
+        _ => None,
+    }
+}
+
+fn js_imported_promise_factory_arity_supported(exported: &str, arg_count: usize) -> bool {
+    match exported {
+        "setTimeout" => arg_count <= 3,
+        "setImmediate" => arg_count <= 2,
+        _ => false,
+    }
+}

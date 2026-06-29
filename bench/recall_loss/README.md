@@ -324,6 +324,14 @@ python3 scripts/cross-language-boundary-census.py \
   fixtures behind Promise boundaries. Ordinary imported producers without the
   contract, fulfilled possible-thenable payloads, selector-only members,
   constructors, aggregates, and broad scheduling remain closed.
+- [promise-node-timers-domain-recovery-2026-06-29.v1.json](promise-node-timers-domain-recovery-2026-06-29.v1.json)
+  records the Node `timers/promises` domain-only slice. A 120-repo JS/TS scan
+  found `82` ESM named-import call sites across `execa`, `ky`, and `pixijs`;
+  those calls can now materialize dependency-backed `Domain(PromiseLike)` for
+  `setTimeout`/`setImmediate` through admitted `LibraryApi` occurrence evidence.
+  No settled payload recovery is opened, and `15` CommonJS destructuring require
+  call sites remain closed until lowering emits static imported-binding proof
+  for that shape.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

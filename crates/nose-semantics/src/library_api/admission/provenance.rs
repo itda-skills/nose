@@ -167,6 +167,10 @@ fn js_like_library_api_contract_provenance_ids(
             JS_LIKE_BUILTIN_PROMISE_PACK_ID,
             JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
         )),
+        LibraryApiContractId::JsImportedPromiseFactory => Some((
+            JS_NODE_TIMERS_PROMISES_PACK_ID,
+            JS_NODE_TIMERS_PROMISES_PRODUCER_ID,
+        )),
         LibraryApiContractId::MapKeyViewWrapper | LibraryApiContractId::JsArrayIsArray => Some((
             JS_LIKE_BUILTIN_ARRAY_PACK_ID,
             JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID,

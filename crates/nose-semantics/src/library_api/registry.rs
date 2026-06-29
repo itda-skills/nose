@@ -344,6 +344,11 @@ fn library_api_member_callee_contracts_for_id(
                 .map(|contract| vec![contract.callee])
                 .unwrap_or_default()
         }
+        LibraryApiContractId::JsImportedPromiseFactory => {
+            library_imported_promise_factory_contracts(lang)
+                .map(|contract| contract.callee)
+                .collect()
+        }
         LibraryApiContractId::PromiseThen => library_promise_then_contract(lang, "then", 1)
             .map(|contract| vec![contract.callee])
             .unwrap_or_default(),

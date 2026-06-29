@@ -94,6 +94,7 @@ pub(super) fn library_api_contract_id_key(id: LibraryApiContractId) -> String {
         LibraryApiContractId::PromiseFactory(kind) => {
             format!("js_like.promise.factory.{}", promise_factory_kind_key(kind))
         }
+        LibraryApiContractId::JsImportedPromiseFactory => "js_like.imported.promise_factory".into(),
         LibraryApiContractId::PromiseThen => "js_like.promise.then".into(),
         LibraryApiContractId::PromiseCatch => "js_like.promise.catch".into(),
         LibraryApiContractId::PromiseFinally => "js_like.promise.finally".into(),

@@ -66,6 +66,12 @@ settlement with that rejected channel. Selector-only
 `Promise`, unsafe `Promise.resolve(obj)` arguments, mixed fulfilled/rejected
 branch channels, unsafe or parameterized `.finally` handlers, aggregate
 combinators, and missing or ambiguous receiver proof stay closed.
+Node `timers/promises` ESM named imports are a domain-only imported producer
+slice: admitted `LibraryApi` occurrence evidence for
+`node:timers/promises`/`timers/promises` `setTimeout` and `setImmediate`
+materializes `Domain(PromiseLike)` at documented arities, but it does not
+materialize `PromiseSettledValue` because timer scheduling and AbortSignal
+rejection remain observable and unmodeled.
 The JS/TS corpus audit [`js-ts-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/js-ts-stdlib-partial-audit-2026-06-28.v1.json)
 confirms this is the largest JS/TS builtin-shaped surface in the pinned corpus:
 `29,094` Promise/async occurrences are tracked as a processed closed boundary
@@ -721,7 +727,10 @@ migrated.
   with `nose.javascript.builtins.regex` provenance, `new Map(...)`,
   `new Set(...)`, and static `indexOf`/`findIndex` membership calls whose
   receiver is a proven static non-float collection literal with
-  `nose.javascript.builtins.static_index_membership` provenance; Python builtin
+  `nose.javascript.builtins.static_index_membership` provenance; JS-like ESM
+  named imports from `node:timers/promises` or `timers/promises` for
+  `setTimeout` and `setImmediate` with
+  `nose.javascript.node.timers_promises` provenance; Python builtin
   collection factories such as `list(...)` when the callee is proven as an
   unshadowed free name; Python
   `collections.deque(...)` when the callee is proven through

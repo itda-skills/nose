@@ -342,6 +342,16 @@ impl LibraryApiContractParts for LibraryPromiseFactoryContract {
     }
 }
 
+impl LibraryApiContractParts for LibraryImportedPromiseFactoryContract {
+    fn contract_id(self) -> LibraryApiContractId {
+        self.id
+    }
+
+    fn callee_contract(self) -> LibraryApiCalleeContract {
+        self.callee
+    }
+}
+
 impl LibraryApiContractParts for LibraryIteratorIdentityAdapterContract {
     fn contract_id(self) -> LibraryApiContractId {
         self.id

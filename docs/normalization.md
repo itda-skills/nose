@@ -234,6 +234,15 @@ Guiding constraints for every pass:
   the value graph to evaluate. See the [Promise imported call-return boundary artifact](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json)
   for the reporting-only predecessor and the [Promise imported settled-value artifact](../bench/recall_loss/promise-imported-settled-value-contract-2026-06-29.v1.json)
   for the reusable contract capability.
+  Node `timers/promises` ESM named imports now provide a narrower domain-only
+  imported producer path: admitted `LibraryApi` evidence for dependency-backed
+  `node:timers/promises` or `timers/promises` `setTimeout`/`setImmediate`
+  calls materializes `Domain(PromiseLike)` at documented arities, which can
+  unblock Promise receiver-method evidence. It does not emit
+  `PromiseSettledValue` or recover payloads because timer scheduling and
+  AbortSignal rejection remain observable. CommonJS destructuring requires,
+  namespace/default imports, unsupported arities, and broad scheduling
+  equivalence remain closed. See the [Node timers Promise domain artifact](../bench/recall_loss/promise-node-timers-domain-recovery-2026-06-29.v1.json).
   The exact-safe `.finally` follow-up is recorded in the [Promise finally settlement recovery artifact](../bench/recall_loss/promise-finally-settlement-recovery-2026-06-29.v1.json).
   Lowered aggregate surfaces now pass through a `SeqSurfaceContract`: arrays/slices can
   enter collection membership, maps/objects enter map/object value semantics, Go

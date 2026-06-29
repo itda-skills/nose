@@ -541,6 +541,7 @@ pub(in crate::library_api) use classification::ruby_sequence_hof_method_call;
 use classification::rust_sequence_hof_method_call;
 pub(in crate::library_api) use classification::swift_sequence_hof_method_call;
 pub use promise::{
+    library_imported_promise_factory_contract, library_imported_promise_factory_contracts,
     library_promise_catch_contract, library_promise_finally_contract,
     library_promise_resolve_contract, library_promise_then_contract,
 };

@@ -59,6 +59,7 @@ pub enum LibraryApiContractId {
     JsLikeStaticIndexMembership(StaticIndexMembershipKind),
     ImportedNamespaceFunction(ImportedNamespaceFunctionSemantic),
     PromiseFactory(PromiseFactoryKind),
+    JsImportedPromiseFactory,
     PromiseThen,
     PromiseCatch,
     PromiseFinally,
@@ -412,6 +413,14 @@ pub struct LibraryPromiseFactoryContract {
     pub id: LibraryApiContractId,
     pub callee: LibraryApiCalleeContract,
     pub result: PromiseFactoryContract,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct LibraryImportedPromiseFactoryContract {
+    pub pack_id: &'static str,
+    pub id: LibraryApiContractId,
+    pub callee: LibraryApiCalleeContract,
+    pub result_domain: DomainEvidence,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

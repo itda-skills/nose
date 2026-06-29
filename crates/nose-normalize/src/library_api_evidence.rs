@@ -75,6 +75,7 @@ pub(crate) fn run(il: &mut Il, interner: &Interner) {
         if !record_rust_variant_constructor_library_api(il, interner, call, &definition_cache)
             && !record_builder_append_method_library_api(il, interner, call)
             && !record_static_global_method_library_api(il, interner, call)
+            && !record_imported_promise_factory_library_api(il, interner, call)
         {
             record_receiver_method_library_api(il, interner, call, &mut dependency_cache);
         }

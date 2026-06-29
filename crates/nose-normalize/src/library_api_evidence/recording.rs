@@ -111,6 +111,62 @@ pub(super) fn record_receiver_method_library_api(
     })
 }
 
+pub(super) fn record_imported_promise_factory_library_api(
+    il: &mut Il,
+    interner: &Interner,
+    call: NodeId,
+) -> bool {
+    let kids = il.children(call);
+    let Some((&callee, args)) = kids.split_first() else {
+        return false;
+    };
+    if il.kind(callee) != NodeKind::Var || !matches!(il.node(call).payload, Payload::None) {
+        return false;
+    }
+    let arg_count = args.len();
+    for contract in nose_semantics::library_imported_promise_factory_contracts(il.meta.lang) {
+        let LibraryApiCalleeContract::ImportedBinding { module, exported } = contract.callee else {
+            continue;
+        };
+        let expected = SymbolEvidenceKind::ImportedBinding {
+            module_hash: stable_symbol_hash(module),
+            exported_hash: stable_symbol_hash(exported),
+        };
+        let Some(binding_dependency) = binding_symbol_evidence_id(il, interner, callee, expected)
+        else {
+            continue;
+        };
+        let Some(contract) = nose_semantics::library_imported_promise_factory_contract(
+            il.meta.lang,
+            module,
+            exported,
+            arg_count,
+        ) else {
+            continue;
+        };
+        let occurrence = upsert_language_core_evidence(
+            il,
+            EvidenceAnchor::node(il.node(callee).span, NodeKind::Var),
+            EvidenceKind::Symbol(expected),
+            vec![binding_dependency],
+        );
+        upsert_builtin_evidence_with_pack_id(
+            il,
+            EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+            EvidenceKind::LibraryApi(LibraryApiEvidenceKind::Contract {
+                contract_hash: library_api_contract_id_hash(contract.id),
+                callee_hash: library_api_callee_contract_hash(contract.callee),
+                arity: arg_count as u16,
+            }),
+            contract.pack_id,
+            nose_semantics::JS_NODE_TIMERS_PROMISES_PRODUCER_ID,
+            vec![occurrence],
+        );
+        return true;
+    }
+    false
+}
+
 pub(super) fn record_library_api_result_domain(
     il: &mut Il,
     call: NodeId,
