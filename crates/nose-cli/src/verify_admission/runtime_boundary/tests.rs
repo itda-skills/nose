@@ -195,10 +195,37 @@ fn scheduler_and_interval_calls_report_timing_and_lifecycle_obligations() {
         "function intervalIt(f) { return setInterval(f, 10); }\n",
         "setInterval",
     );
+    let timeout = missing_evidence_for_call(
+        "function timeoutIt(f) { return setTimeout(f, 10); }\n",
+        "setTimeout",
+    );
+    let microtask = missing_evidence_for_call(
+        "function microtaskIt(f) { return queueMicrotask(f); }\n",
+        "queueMicrotask",
+    );
+    let clear = missing_evidence_for_call(
+        "function clearIt(handle) { return clearInterval(handle); }\n",
+        "clearInterval",
+    );
+    let clear_timeout = missing_evidence_for_call(
+        "function clearTimeoutIt(handle) { return clearTimeout(handle); }\n",
+        "clearTimeout",
+    );
+    let cancel_frame = missing_evidence_for_call(
+        "function cancelFrameIt(handle) { return cancelAnimationFrame(handle); }\n",
+        "cancelAnimationFrame",
+    );
 
     assert!(wait.contains(&"scheduler-wait-timing-contract"));
+    assert!(wait.contains(&"scheduler-wait-cancellation-liveness-contract"));
     assert!(yield_now.contains(&"scheduler-yield-microtask-order-contract"));
     assert!(interval.contains(&"interval-async-iteration-lifecycle-contract"));
+    assert!(interval.contains(&"interval-cancellation-liveness-contract"));
+    assert!(timeout.contains(&"timer-scheduling-contract"));
+    assert!(microtask.contains(&"timer-scheduling-contract"));
+    assert!(clear.contains(&"interval-cancellation-liveness-contract"));
+    assert!(clear_timeout.contains(&"timer-cancellation-liveness-contract"));
+    assert!(cancel_frame.contains(&"timer-cancellation-liveness-contract"));
 }
 
 #[test]

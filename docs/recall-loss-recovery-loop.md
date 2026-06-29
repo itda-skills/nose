@@ -95,6 +95,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [#602 Promise.race/Promise.any literal aggregate recovery](../bench/recall_loss/promise-race-any-literal-aggregate-recovery-2026-06-30.v1.json) records the first-observed exact aggregate slice. It opens only non-empty fully closed literal `Promise.race` and fully closed literal `Promise.any` with a fulfilled candidate; dynamic iterables, possible thenables, all-rejected `Promise.any` AggregateError payloads, executor timing, and sync value equivalence stay closed.
 - [#602 Promise executor boundary audit](../bench/recall_loss/promise-executor-boundary-audit-2026-06-30.v1.json) records the reporting-only `new Promise(...)` readiness slice. It splits `795` constructor occurrences by inline executor shape, settlement calls, timer/scheduler use, multi-settlement, throw-to-rejection, and possible thenable payload risk; exact constructor admission remains closed with `semantic_admission_delta = 0`.
 - [#602 AbortSignal cancellation boundary audit](../bench/recall_loss/abort-signal-cancellation-boundary-audit-2026-06-30.v1.json) records the reporting-only cancellation/liveness readiness slice. It splits `260` Abort mentions, `193` signal option properties, controller lifecycle pairs, direct static AbortSignal calls, and signal-aware fetch/timer/listener use; exact cancellation admission remains closed with `semantic_admission_delta = 0`.
+- [#602 interval/scheduler lifecycle boundary audit](../bench/recall_loss/interval-scheduler-lifecycle-boundary-audit-2026-06-30.v1.json) records the reporting-only timer, scheduler, interval, and microtask readiness slice. It splits `780` `setTimeout`, `73` bare `setInterval`, `55` `clearInterval`, `133` `clearTimeout`, `14` `queueMicrotask`, `43` `requestAnimationFrame`, and `11` `scheduler.yield` occurrences; exact scheduling/lifecycle admission remains closed with `semantic_admission_delta = 0`.
 
 Regenerate the full local reports with:
 
@@ -759,6 +760,22 @@ calls, `2` signal-bearing timer calls, and `2` signal-bearing
 future exact cancellation work must prove signal identity, abort ordering,
 abort reason propagation, listener/timer/fetch rejection behavior, and
 controller-signal lifecycle before merging cancellation-sensitive forms.
+
+The [interval/scheduler lifecycle boundary audit](../bench/recall_loss/interval-scheduler-lifecycle-boundary-audit-2026-06-30.v1.json)
+continues the reporting-only #602 readiness work for timer, interval,
+scheduler, and microtask surfaces. Runtime-boundary diagnostics now name global
+timer scheduling, `scheduler.wait` cancellation/liveness, `scheduler.yield`
+microtask ordering, `setInterval` repeated-emission lifecycle, and
+`clearInterval` plus one-shot timer/frame cancellation lifecycle as structured
+obligations. The pinned
+corpus has `780` `setTimeout` calls, `57` `setImmediate` calls, `73` bare
+`setInterval` calls, `23` member `.setInterval` calls, `55` `clearInterval`
+calls, `133` `clearTimeout` calls, `14` `queueMicrotask` calls, `43`
+`requestAnimationFrame` calls, and `11` `scheduler.yield` calls. The artifact
+keeps `semantic_admission_delta = 0`;
+future exact scheduling work must prove callback identity, callback
+demand/effect, task/microtask/timer ordering, interval cardinality, and
+cancellation/cleanup behavior before merging scheduled operations.
 
 ## See Also
 

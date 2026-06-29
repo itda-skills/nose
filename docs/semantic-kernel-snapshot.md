@@ -90,6 +90,14 @@ obligations instead of opaque unsupported runtime rows. Exact cancellation stays
 closed until signal identity, abort ordering, abort reason propagation,
 listener/timer/fetch rejection behavior, and controller-signal lifecycle are
 modeled explicitly.
+Timer, interval, scheduler, and microtask recovery remains reporting-only as
+well. Runtime-boundary diagnostics name global timer scheduling,
+`scheduler.wait` timing plus cancellation/liveness, `scheduler.yield`
+microtask ordering, `setInterval` repeated-emission lifecycle, and interval
+cancellation plus one-shot timer/frame cancellation as structured obligations.
+Exact scheduling stays closed until callback identity, callback demand/effect,
+task/microtask/timer ordering, interval cardinality, and cancellation cleanup
+are modeled explicitly.
 Node `timers/promises` ESM named imports and conservative `const` CommonJS
 destructuring requires are a narrow imported producer slice: admitted
 `LibraryApi` occurrence evidence for `node:timers/promises`/`timers/promises`

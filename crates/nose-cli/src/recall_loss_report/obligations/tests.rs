@@ -142,10 +142,35 @@ fn aggregate_executor_scheduler_and_lifecycle_labels_have_specific_obligations()
         )
     );
     assert_eq!(
+        runtime_boundary_obligation(&["scheduler-wait-cancellation-liveness-contract"]),
+        (
+            "cancellation-liveness-boundary",
+            "scheduler-wait-cancellation-liveness-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["timer-scheduling-contract"]),
+        ("scheduling-boundary", "timer-scheduling-contract-missing",)
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["timer-cancellation-liveness-contract"]),
+        (
+            "cancellation-liveness-boundary",
+            "timer-cancellation-liveness-contract-missing",
+        )
+    );
+    assert_eq!(
         runtime_boundary_obligation(&["interval-async-iteration-lifecycle-contract"]),
         (
             "lifecycle-materialization-boundary",
             "interval-async-iteration-lifecycle-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["interval-cancellation-liveness-contract"]),
+        (
+            "cancellation-liveness-boundary",
+            "interval-cancellation-liveness-contract-missing",
         )
     );
     assert_eq!(

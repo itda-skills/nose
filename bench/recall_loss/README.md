@@ -192,6 +192,18 @@ python3 scripts/abort-signal-cancellation-slice-audit.py \
   --output target/abort-signal-cancellation-boundary-audit.v1.json
 ```
 
+Build the #602 interval/scheduler lifecycle boundary audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.issue-602-interval-scheduler.crates.json
+
+python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
+  --recall-loss-report target/recall-loss.issue-602-interval-scheduler.crates.json \
+  --output target/interval-scheduler-lifecycle-boundary-audit.v1.json
+```
+
 ## Files
 
 - [crates.baseline.v1.json](crates.baseline.v1.json) records the current
@@ -494,6 +506,14 @@ python3 scripts/abort-signal-cancellation-slice-audit.py \
   calls with signal options, `2` timer calls with signal options, and `2`
   `addEventListener` calls with signal options. Exact cancellation admission
   remains closed with `semantic_admission_delta = 0`.
+- [interval-scheduler-lifecycle-boundary-audit-2026-06-30.v1.json](interval-scheduler-lifecycle-boundary-audit-2026-06-30.v1.json)
+  records the #602 reporting-only interval/scheduler lifecycle readiness audit.
+  The pinned corpus has `780` `setTimeout` calls, `57` `setImmediate` calls,
+  `73` bare `setInterval` calls, `23` member `.setInterval` calls, `55`
+  `clearInterval` calls, `133` `clearTimeout` calls, `14` `queueMicrotask`
+  calls, `43` `requestAnimationFrame` calls, and `11` `scheduler.yield` calls.
+  Exact scheduling/lifecycle admission remains closed with
+  `semantic_admission_delta = 0`.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

@@ -57,6 +57,15 @@ const DEFAULT_RUNTIME_BOUNDARY_OBLIGATION: Obligation = (
     "runtime-protocol-boundary-contract-missing",
 );
 
+macro_rules! runtime_rule {
+    ($evidence:literal => $family:literal, $subreason:literal) => {
+        RuntimeBoundaryRule {
+            evidence: $evidence,
+            obligation: ($family, $subreason),
+        }
+    };
+}
+
 const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
     RuntimeBoundaryRule {
         evidence: "promise-await-scheduling-contract",
@@ -366,27 +375,9 @@ const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
             "promise-aggregate-result-channel-contract-missing",
         ),
     },
-    RuntimeBoundaryRule {
-        evidence: "abort-signal-cancellation-contract",
-        obligation: (
-            "cancellation-liveness-boundary",
-            "abort-signal-cancellation-contract-missing",
-        ),
-    },
-    RuntimeBoundaryRule {
-        evidence: "abort-signal-lifecycle-contract",
-        obligation: (
-            "cancellation-liveness-boundary",
-            "abort-signal-lifecycle-contract-missing",
-        ),
-    },
-    RuntimeBoundaryRule {
-        evidence: "abort-controller-signal-lifecycle-contract",
-        obligation: (
-            "cancellation-liveness-boundary",
-            "abort-controller-signal-lifecycle-contract-missing",
-        ),
-    },
+    runtime_rule!("abort-signal-cancellation-contract" => "cancellation-liveness-boundary", "abort-signal-cancellation-contract-missing"),
+    runtime_rule!("abort-signal-lifecycle-contract" => "cancellation-liveness-boundary", "abort-signal-lifecycle-contract-missing"),
+    runtime_rule!("abort-controller-signal-lifecycle-contract" => "cancellation-liveness-boundary", "abort-controller-signal-lifecycle-contract-missing"),
     RuntimeBoundaryRule {
         evidence: "promise-factory-settled-value-contract",
         obligation: (
@@ -408,27 +399,13 @@ const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
             "promise-like-receiver-proof-missing",
         ),
     },
-    RuntimeBoundaryRule {
-        evidence: "scheduler-wait-timing-contract",
-        obligation: (
-            "scheduling-boundary",
-            "scheduler-wait-timing-contract-missing",
-        ),
-    },
-    RuntimeBoundaryRule {
-        evidence: "scheduler-yield-microtask-order-contract",
-        obligation: (
-            "scheduling-boundary",
-            "scheduler-yield-microtask-order-contract-missing",
-        ),
-    },
-    RuntimeBoundaryRule {
-        evidence: "interval-async-iteration-lifecycle-contract",
-        obligation: (
-            "lifecycle-materialization-boundary",
-            "interval-async-iteration-lifecycle-contract-missing",
-        ),
-    },
+    runtime_rule!("scheduler-wait-timing-contract" => "scheduling-boundary", "scheduler-wait-timing-contract-missing"),
+    runtime_rule!("scheduler-wait-cancellation-liveness-contract" => "cancellation-liveness-boundary", "scheduler-wait-cancellation-liveness-contract-missing"),
+    runtime_rule!("scheduler-yield-microtask-order-contract" => "scheduling-boundary", "scheduler-yield-microtask-order-contract-missing"),
+    runtime_rule!("timer-scheduling-contract" => "scheduling-boundary", "timer-scheduling-contract-missing"),
+    runtime_rule!("timer-cancellation-liveness-contract" => "cancellation-liveness-boundary", "timer-cancellation-liveness-contract-missing"),
+    runtime_rule!("interval-async-iteration-lifecycle-contract" => "lifecycle-materialization-boundary", "interval-async-iteration-lifecycle-contract-missing"),
+    runtime_rule!("interval-cancellation-liveness-contract" => "cancellation-liveness-boundary", "interval-cancellation-liveness-contract-missing"),
     RuntimeBoundaryRule {
         evidence: "channel-send-receive-protocol-contract",
         obligation: (

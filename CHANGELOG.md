@@ -48,6 +48,12 @@ break.
   `.abort()` selector calls, `323` `.signal` property reads, `6` signal-bearing
   `fetch` calls, `2` signal-bearing timer calls, and `2` signal-bearing
   `addEventListener` calls; exact cancellation admission remains closed.
+- Added a #602 reporting-only interval/scheduler lifecycle boundary audit and
+  checked artifact. The pinned corpus has `780` `setTimeout` calls, `57`
+  `setImmediate` calls, `73` bare `setInterval` calls, `55`
+  `clearInterval` calls, `133` `clearTimeout` calls, `14` `queueMicrotask`
+  calls, `43` `requestAnimationFrame` calls, and `11` `scheduler.yield` calls;
+  exact scheduling/lifecycle admission remains closed.
 - Added the first #602 exact aggregate capability slices for `Promise.all` and
   `Promise.allSettled`, plus the first-observed `Promise.race`/`Promise.any`
   literal-array slice: unshadowed global aggregate calls over literal arrays
@@ -103,7 +109,9 @@ break.
   scheduler wait/yield timing, interval lifecycle, channel send/select,
   goroutine scheduling, defer lifecycle, and AbortSignal/AbortController
   cancellation/lifecycle contracts can be reported as named obligations without
-  opening exact admission.
+  opening exact admission. Timer, microtask, scheduler wait liveness, one-shot
+  timer/frame cancellation, and interval cancellation reporting now also have
+  dedicated obligation labels.
 - Refined import-snapshot census reporting to separate missing provider modules,
   missing exports, re-export boundaries, external/stdlib/workspace boundaries,
   provider/importer mutation, missing provider API proof, and aggregate shapes
@@ -171,6 +179,10 @@ break.
   pinned corpus.
 - Confirmed the #602 AbortSignal cancellation/liveness reporting slice with the
   local `crates` recall-loss gate at `false_merges = 0` and
+  `canon_preservation_violations = 0`; the 120-repo artifact records
+  `semantic_admission_delta = 0`.
+- Confirmed the #602 interval/scheduler lifecycle reporting slice with the local
+  `crates` recall-loss gate at `false_merges = 0` and
   `canon_preservation_violations = 0`; the 120-repo artifact records
   `semantic_admission_delta = 0`.
 

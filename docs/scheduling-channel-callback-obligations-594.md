@@ -253,6 +253,19 @@ timer, listener, and scheduler surfaces. Exact cancellation remains closed until
 signal identity, abort ordering, abort reasons, rejection/cleanup behavior, and
 controller-signal lifecycle are dependency-closed obligations.
 
+The [interval/scheduler lifecycle boundary audit](../bench/recall_loss/interval-scheduler-lifecycle-boundary-audit-2026-06-30.v1.json)
+is the next reporting-only #602 slice. It adds named runtime-boundary labels for
+global timer scheduling, `scheduler.wait` timing plus cancellation/liveness,
+`scheduler.yield` microtask ordering, `setInterval` repeated-emission
+lifecycle, interval cancellation, and one-shot timer/frame cancellation. The
+120-repo scan prices `780`
+`setTimeout` calls, `57` `setImmediate` calls, `73` bare `setInterval` calls,
+`55` `clearInterval` calls, `133` `clearTimeout` calls, `14`
+`queueMicrotask` calls, `43` `requestAnimationFrame` calls, and `11`
+`scheduler.yield` calls. Exact
+scheduling remains closed until callback identity, callback effects, ordering,
+cardinality, and cancellation cleanup are dependency-closed obligations.
+
 ## Minimal Vocabulary
 
 | obligation | existing substrate | exact-channel rule |
@@ -330,7 +343,8 @@ It maps existing tests and checked-in audit reports to these families before any
 new exact admission is opened.
 The #602 reporting slices extend that map in the [scheduling/lifecycle boundary audit](../bench/recall_loss/scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json),
 the [Promise executor boundary audit](../bench/recall_loss/promise-executor-boundary-audit-2026-06-30.v1.json),
-and the [AbortSignal cancellation boundary audit](../bench/recall_loss/abort-signal-cancellation-boundary-audit-2026-06-30.v1.json):
+the [AbortSignal cancellation boundary audit](../bench/recall_loss/abort-signal-cancellation-boundary-audit-2026-06-30.v1.json),
+and the [interval/scheduler lifecycle boundary audit](../bench/recall_loss/interval-scheduler-lifecycle-boundary-audit-2026-06-30.v1.json):
 thenable/custom Promise receivers and Promise aggregate distinctions stay pinned
 by existing semantic-boundary tests, while executor timing, scheduler ordering,
 interval liveness, and cancellation-sensitive AbortSignal forms are

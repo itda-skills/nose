@@ -92,6 +92,8 @@ mod promise_cancellation;
 mod promise_executors;
 #[path = "equivalence/promise_finally.rs"]
 mod promise_finally;
+#[path = "equivalence/promise_liveness.rs"]
+mod promise_liveness;
 #[path = "equivalence/protocol_boundaries.rs"]
 mod protocol_boundaries;
 #[path = "equivalence/receiver_membership.rs"]

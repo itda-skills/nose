@@ -106,6 +106,11 @@ fn push_promise_protocol_call_missing_evidence(
         push_unique(labels, "promise-executor-callback-effect-contract");
         return true;
     }
+    if path.as_deref().is_some_and(|path| {
+        push_scheduling_lifecycle_call_missing_evidence(path, construct_call(il, call), labels)
+    }) {
+        return true;
+    }
     match path.as_deref() {
         Some("Promise") => {
             push_unique(labels, "promise-non-construct-call-boundary-contract");
@@ -121,28 +126,6 @@ fn push_promise_protocol_call_missing_evidence(
         }
         Some("Promise.all" | "Promise.allSettled" | "Promise.any" | "Promise.race") => {
             push_promise_aggregate_missing_evidence(path.as_deref().unwrap(), labels);
-            true
-        }
-        Some("scheduler.wait") => {
-            push_unique(labels, "scheduler-wait-timing-contract");
-            true
-        }
-        Some("scheduler.yield") => {
-            push_unique(labels, "scheduler-yield-microtask-order-contract");
-            true
-        }
-        Some("AbortSignal.abort" | "AbortSignal.any" | "AbortSignal.timeout") => {
-            push_unique(labels, "abort-signal-cancellation-contract");
-            push_unique(labels, "abort-signal-lifecycle-contract");
-            true
-        }
-        Some("AbortController") if construct_call(il, call) => {
-            push_unique(labels, "abort-controller-signal-lifecycle-contract");
-            push_unique(labels, "abort-signal-cancellation-contract");
-            true
-        }
-        Some("setInterval") | Some("timers.setInterval") | Some("scheduler.setInterval") => {
-            push_unique(labels, "interval-async-iteration-lifecycle-contract");
             true
         }
         _ if method == Some("then") => {
@@ -176,6 +159,52 @@ fn push_promise_protocol_call_missing_evidence(
             if !receiver_proven {
                 push_unique(labels, "promise-like-receiver-proof");
             }
+            true
+        }
+        _ => false,
+    }
+}
+
+fn push_scheduling_lifecycle_call_missing_evidence(
+    callee_path: &str,
+    is_construct: bool,
+    labels: &mut Vec<&'static str>,
+) -> bool {
+    match callee_path {
+        "scheduler.wait" => {
+            push_unique(labels, "scheduler-wait-timing-contract");
+            push_unique(labels, "scheduler-wait-cancellation-liveness-contract");
+            true
+        }
+        "scheduler.yield" => {
+            push_unique(labels, "scheduler-yield-microtask-order-contract");
+            true
+        }
+        "AbortSignal.abort" | "AbortSignal.any" | "AbortSignal.timeout" => {
+            push_unique(labels, "abort-signal-cancellation-contract");
+            push_unique(labels, "abort-signal-lifecycle-contract");
+            true
+        }
+        "AbortController" if is_construct => {
+            push_unique(labels, "abort-controller-signal-lifecycle-contract");
+            push_unique(labels, "abort-signal-cancellation-contract");
+            true
+        }
+        "setTimeout" | "setImmediate" | "queueMicrotask" | "requestAnimationFrame" => {
+            push_unique(labels, "timer-scheduling-contract");
+            true
+        }
+        "setInterval" | "timers.setInterval" | "scheduler.setInterval" => {
+            push_unique(labels, "interval-async-iteration-lifecycle-contract");
+            push_unique(labels, "interval-cancellation-liveness-contract");
+            true
+        }
+        "clearInterval" => {
+            push_unique(labels, "interval-cancellation-liveness-contract");
+            true
+        }
+        "clearTimeout" | "cancelAnimationFrame" => {
+            push_unique(labels, "timer-cancellation-liveness-contract");
             true
         }
         _ => false,
