@@ -82,30 +82,20 @@ fn language_core_call_target_evidence_at_call(
 ) -> EvidenceResolution<CallTargetEvidenceKind> {
     let call_span = il.node(call).span;
     let expected_provenance = language_core_call_target_provenance(il);
-    let mut found = None;
-    for record in il.evidence_anchored_at(call_span) {
-        if !matches!(
-            record.anchor,
-            EvidenceAnchor::Node { span, kind } if span == call_span && kind == NodeKind::Call
-        ) {
-            continue;
-        }
-        let EvidenceKind::CallTarget(target) = record.kind else {
-            continue;
-        };
-        if record.provenance != expected_provenance {
-            continue;
-        }
-        if record.status != EvidenceStatus::Asserted || !il.evidence_dependencies_asserted(record) {
-            return EvidenceResolution::Ambiguous;
-        }
-        match found {
-            None => found = Some(target),
-            Some(existing) if existing == target => {}
-            Some(_) => return EvidenceResolution::Ambiguous,
-        }
-    }
-    found.map_or(EvidenceResolution::Missing, EvidenceResolution::Found)
+    unique_asserted_record_evidence_at(
+        il,
+        call_span,
+        |anchor| matches!(anchor, EvidenceAnchor::Node { span, kind } if span == call_span && kind == NodeKind::Call),
+        |record| {
+            if record.provenance != expected_provenance {
+                return None;
+            }
+            match record.kind {
+                EvidenceKind::CallTarget(target) => Some(target),
+                _ => None,
+            }
+        },
+    )
 }
 
 fn language_core_call_target_provenance(il: &Il) -> EvidenceProvenance {

@@ -67,42 +67,27 @@ fn builtin_promise_settlement_evidence_at_call(
     call: NodeId,
 ) -> EvidenceResolution<PromiseSettledValueEvidenceKind> {
     let call_span = il.node(call).span;
-    let mut found = None;
-    for record in il.evidence_anchored_at(call_span) {
-        if !matches!(
-            record.anchor,
-            EvidenceAnchor::Node { span, kind } if span == call_span && kind == NodeKind::Call
-        ) {
-            continue;
-        }
-        let EvidenceKind::PromiseSettledValue(settled) = record.kind else {
-            continue;
-        };
-        if record.provenance.emitter != EvidenceEmitter::Builtin {
-            continue;
-        }
-        if record.status != EvidenceStatus::Asserted || !il.evidence_dependencies_asserted(record) {
-            return EvidenceResolution::Ambiguous;
-        }
-        match found {
-            None => found = Some(settled),
-            Some(existing) if existing == settled => {}
-            Some(_) => return EvidenceResolution::Ambiguous,
-        }
-    }
-    found.map_or(EvidenceResolution::Missing, EvidenceResolution::Found)
+    unique_asserted_record_evidence_at(
+        il,
+        call_span,
+        |anchor| matches!(anchor, EvidenceAnchor::Node { span, kind } if span == call_span && kind == NodeKind::Call),
+        |record| {
+            if record.provenance.emitter != EvidenceEmitter::Builtin {
+                return None;
+            }
+            match record.kind {
+                EvidenceKind::PromiseSettledValue(settled) => Some(settled),
+                _ => None,
+            }
+        },
+    )
 }
 
 fn node_at_exact_span_with_kind(il: &Il, span: Span, kind: NodeKind) -> Option<NodeId> {
-    let mut found = None;
-    for id in il.nodes_spanning(span) {
+    let mut matches = il.nodes_spanning(span).filter(|&id| {
         let node = il.node(id);
-        if node.span != span || node.kind != kind {
-            continue;
-        }
-        if found.replace(id).is_some() {
-            return None;
-        }
-    }
-    found
+        node.span == span && node.kind == kind
+    });
+    let found = matches.next()?;
+    matches.next().is_none().then_some(found)
 }

@@ -212,6 +212,21 @@ from `60083cfa5d4da06d` to `fbd1cc4abe27b98d`, and
 `ac51c88919bc3122`. The reviewed default-surface count remains 53; no budget
 increase is accepted.
 
+The 2026-06-29 Promise imported settled-value contract slice first surfaced
+avoidable duplication in the new builtin settled-value evidence scanner and
+Promise settled-value tests. The scanner now reuses the semantic facade's
+unique asserted record resolver, and the tests share the imported-function
+target fixture. The remaining drift is representative churn for reviewed
+families: the `sp` helper moves from `314d2b14120bd2a4` to
+`99f8c8a9192a0930`; language-core evidence helpers move from
+`fbd1cc4abe27b98d` to `8fba27133717de21`; `evidence_with_dependencies`
+moves from `ac51c88919bc3122` to `52cb1ae313158c0c`; the production
+`source_*_at_node` accessor family moves from `56b37252f08a8696` to
+`1b952c1370c4f637` after evidence resolver line movement; and the
+direct-call-target negative fixture family moves from `1af33fd980c0e8b9`
+to `5e2b99978272a129`. The reviewed default-surface count remains 53; no
+budget increase is accepted.
+
 ## Verdict by candidate (critically)
 
 | family | what it is | judgment | action |

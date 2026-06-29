@@ -89,6 +89,21 @@ fn promise_settled_record(
     )
 }
 
+fn push_imported_function_target(il: &mut Il, interner: &Interner, call: NodeId, id: u32) {
+    il.evidence.push(call_target_record(
+        id,
+        il.node(call).span,
+        Lang::Python,
+        CallTargetEvidenceKind::ImportedFunction {
+            module_hash: stable_symbol_hash("math"),
+            exported_hash: stable_symbol_hash("prod"),
+            local_hash: interner.symbol_hash(interner.intern("prod")),
+        },
+        EvidenceStatus::Asserted,
+        &[],
+    ));
+}
+
 #[test]
 fn imported_function_call_target_requires_matching_local_selector() {
     let interner = Interner::new();
@@ -141,18 +156,7 @@ fn promise_settled_value_contract_admits_only_with_imported_call_target() {
         PromiseSettledValueEvidenceStatus::Rejected
     );
 
-    il.evidence.push(call_target_record(
-        2,
-        il.node(call).span,
-        Lang::Python,
-        CallTargetEvidenceKind::ImportedFunction {
-            module_hash: stable_symbol_hash("math"),
-            exported_hash: stable_symbol_hash("prod"),
-            local_hash: interner.symbol_hash(interner.intern("prod")),
-        },
-        EvidenceStatus::Asserted,
-        &[],
-    ));
+    push_imported_function_target(&mut il, &interner, call, 2);
     assert_eq!(
         promise_settled_value_evidence_at_call(&il, &interner, call),
         Some(PromiseSettledValueAtCall {
@@ -194,18 +198,7 @@ fn promise_settled_value_contract_rejects_direct_targets_and_bad_payload_anchors
     );
 
     let (mut il, call) = imported_function_call_il(&interner);
-    il.evidence.push(call_target_record(
-        10,
-        il.node(call).span,
-        Lang::Python,
-        CallTargetEvidenceKind::ImportedFunction {
-            module_hash: stable_symbol_hash("math"),
-            exported_hash: stable_symbol_hash("prod"),
-            local_hash: interner.symbol_hash(interner.intern("prod")),
-        },
-        EvidenceStatus::Asserted,
-        &[],
-    ));
+    push_imported_function_target(&mut il, &interner, call, 10);
     let payload = il.children(call)[1];
     il.evidence.push(evidence(
         11,
@@ -228,18 +221,7 @@ fn promise_settled_value_contract_rejects_broken_or_conflicting_evidence() {
     let interner = Interner::new();
     let (mut il, call) = imported_function_call_il(&interner);
     let payload = il.children(call)[1];
-    il.evidence.push(call_target_record(
-        0,
-        il.node(call).span,
-        Lang::Python,
-        CallTargetEvidenceKind::ImportedFunction {
-            module_hash: stable_symbol_hash("math"),
-            exported_hash: stable_symbol_hash("prod"),
-            local_hash: interner.symbol_hash(interner.intern("prod")),
-        },
-        EvidenceStatus::Asserted,
-        &[],
-    ));
+    push_imported_function_target(&mut il, &interner, call, 0);
     il.evidence.push(promise_settled_record(
         1,
         call,
@@ -256,18 +238,7 @@ fn promise_settled_value_contract_rejects_broken_or_conflicting_evidence() {
 
     let (mut il, call) = imported_function_call_il(&interner);
     let payload = il.children(call)[1];
-    il.evidence.push(call_target_record(
-        10,
-        il.node(call).span,
-        Lang::Python,
-        CallTargetEvidenceKind::ImportedFunction {
-            module_hash: stable_symbol_hash("math"),
-            exported_hash: stable_symbol_hash("prod"),
-            local_hash: interner.symbol_hash(interner.intern("prod")),
-        },
-        EvidenceStatus::Asserted,
-        &[],
-    ));
+    push_imported_function_target(&mut il, &interner, call, 10);
     il.evidence.push(promise_settled_record(
         11,
         call,

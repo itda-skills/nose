@@ -44,24 +44,13 @@ pub(crate) fn unique_evidence_at<T: Copy + Eq>(
     anchor_matches: impl Fn(EvidenceAnchor) -> bool,
     project: impl Fn(EvidenceKind) -> Option<T>,
 ) -> EvidenceResolution<T> {
-    let mut found = None;
-    for record in il.evidence_anchored_at(span) {
-        if !anchor_matches(record.anchor) {
-            continue;
-        }
-        let Some(value) = project(record.kind) else {
-            continue;
-        };
-        if record.status != EvidenceStatus::Asserted {
-            return EvidenceResolution::Ambiguous;
-        }
-        match found {
-            None => found = Some(value),
-            Some(existing) if existing == value => {}
-            Some(_) => return EvidenceResolution::Ambiguous,
-        }
-    }
-    found.map_or(EvidenceResolution::Missing, EvidenceResolution::Found)
+    unique_record_evidence_at(
+        il,
+        span,
+        anchor_matches,
+        |record| project(record.kind),
+        |_, record| record.status == EvidenceStatus::Asserted,
+    )
 }
 
 pub(crate) fn unique_asserted_evidence_at<T: Copy + Eq>(
@@ -70,15 +59,36 @@ pub(crate) fn unique_asserted_evidence_at<T: Copy + Eq>(
     anchor_matches: impl Fn(EvidenceAnchor) -> bool,
     project: impl Fn(EvidenceKind) -> Option<T>,
 ) -> EvidenceResolution<T> {
+    unique_asserted_record_evidence_at(il, span, anchor_matches, |record| project(record.kind))
+}
+
+pub(crate) fn unique_asserted_record_evidence_at<T: Copy + Eq>(
+    il: &Il,
+    span: Span,
+    anchor_matches: impl Fn(EvidenceAnchor) -> bool,
+    project: impl Fn(&EvidenceRecord) -> Option<T>,
+) -> EvidenceResolution<T> {
+    unique_record_evidence_at(il, span, anchor_matches, project, |il, record| {
+        record.status == EvidenceStatus::Asserted && il.evidence_dependencies_asserted(record)
+    })
+}
+
+fn unique_record_evidence_at<T: Copy + Eq>(
+    il: &Il,
+    span: Span,
+    anchor_matches: impl Fn(EvidenceAnchor) -> bool,
+    project: impl Fn(&EvidenceRecord) -> Option<T>,
+    admits_record: impl Fn(&Il, &EvidenceRecord) -> bool,
+) -> EvidenceResolution<T> {
     let mut found = None;
     for record in il.evidence_anchored_at(span) {
         if !anchor_matches(record.anchor) {
             continue;
         }
-        let Some(value) = project(record.kind) else {
+        let Some(value) = project(record) else {
             continue;
         };
-        if record.status != EvidenceStatus::Asserted || !il.evidence_dependencies_asserted(record) {
+        if !admits_record(il, record) {
             return EvidenceResolution::Ambiguous;
         }
         match found {
