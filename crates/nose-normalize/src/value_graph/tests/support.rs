@@ -53,8 +53,10 @@ pub(super) use rustc_hash::FxHashMap;
 
 mod promise;
 mod promise_finally;
+mod promise_imported;
 pub(super) use promise::*;
 pub(super) use promise_finally::*;
+pub(super) use promise_imported::*;
 
 pub(super) fn sp(line: u32) -> Span {
     Span::new(FileId(0), line, line, line, line)
