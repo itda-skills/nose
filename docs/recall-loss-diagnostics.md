@@ -168,6 +168,13 @@ call-return receivers, and then member/local/imported call-return callee shapes
 all have named missing-evidence labels. These labels are attribution only; exact
 admission still requires explicit callee identity plus returned `PromiseLike`
 domain proof.
+The [same-file async-function return recovery](../bench/recall_loss/promise-async-function-return-recovery-2026-06-29.v1.json)
+slice opens the narrow direct-call case behind that requirement. A direct call to
+a source-proven async function now has `PromiseLike` result-domain evidence, and
+only pure non-thenable-safe returned payloads feed local `.then` fulfillment
+recovery. The report should therefore move those receivers out of
+`promise-async-function-return-producer-proof` and leave any still-closed work in
+continuation, rejection, callback, or scheduling obligations.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

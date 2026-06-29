@@ -121,6 +121,10 @@ fn promise_receiver_state(
     if let Some(state) = promise_factory_state(builder, recv, env) {
         return Some(state);
     }
+    if let Some(value) = builder.eval_direct_async_function_fulfillment_call(recv, env) {
+        return promise_value_is_non_thenable_safe(builder, value)
+            .then_some(PromiseState::Fulfilled(value));
+    }
     let chained = apply(builder, recv, env)?;
     promise_boundary_state(builder, chained)
 }

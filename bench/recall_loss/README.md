@@ -266,6 +266,14 @@ python3 scripts/cross-language-boundary-census.py \
   candidates, and `73` imported-binding candidates, so exact admission remains
   closed until callee identity and returned `PromiseLike` domain proof are both
   explicit.
+- [promise-async-function-return-recovery-2026-06-29.v1.json](promise-async-function-return-recovery-2026-06-29.v1.json)
+  records the first same-file async-function producer recovery slice. Direct
+  calls to source-proven async functions now emit `PromiseLike` result-domain
+  evidence, and pure non-thenable-safe returned payloads can feed local `.then`
+  fulfillment recovery while preserving the Promise boundary. Await,
+  throw/rejection, possible thenables, opaque call results, constructor
+  receivers, imported/member call returns, `.finally`, and aggregate
+  combinators remain closed.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

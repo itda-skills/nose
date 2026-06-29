@@ -111,8 +111,11 @@ fn push_promise_protocol_call_missing_evidence(
             true
         }
         _ if method == Some("then") => {
+            let receiver_proven = promise_receiver_has_promise_like_domain(il, interner, callee);
             push_promise_receiver_producer_missing_evidence(il, interner, callee, labels);
-            push_unique(labels, "promise-then-promise-like-receiver-proof");
+            if !receiver_proven {
+                push_unique(labels, "promise-then-promise-like-receiver-proof");
+            }
             push_unique(labels, "promise-then-fulfillment-continuation-contract");
             push_unique(labels, "promise-then-rejection-continuation-contract");
             if promise_then_has_callback_slot(il, call) {
@@ -121,21 +124,38 @@ fn push_promise_protocol_call_missing_evidence(
             true
         }
         _ if method == Some("catch") => {
+            let receiver_proven = promise_receiver_has_promise_like_domain(il, interner, callee);
             push_promise_receiver_producer_missing_evidence(il, interner, callee, labels);
             push_unique(labels, "promise-catch-rejection-continuation-contract");
             push_unique(labels, "promise-catch-callback-demand-effect-contract");
-            push_unique(labels, "promise-like-receiver-proof");
+            if !receiver_proven {
+                push_unique(labels, "promise-like-receiver-proof");
+            }
             true
         }
         _ if method == Some("finally") => {
+            let receiver_proven = promise_receiver_has_promise_like_domain(il, interner, callee);
             push_promise_receiver_producer_missing_evidence(il, interner, callee, labels);
             push_unique(labels, "promise-finally-settlement-continuation-contract");
             push_unique(labels, "promise-finally-callback-demand-effect-contract");
-            push_unique(labels, "promise-like-receiver-proof");
+            if !receiver_proven {
+                push_unique(labels, "promise-like-receiver-proof");
+            }
             true
         }
         _ => false,
     }
+}
+
+fn promise_receiver_has_promise_like_domain(
+    il: &nose_il::Il,
+    interner: &Interner,
+    callee: NodeId,
+) -> bool {
+    method_receiver(il, callee).is_some_and(|receiver| {
+        nose_semantics::domain_evidence_for_receiver(il, interner, receiver)
+            == Some(nose_il::DomainEvidence::PromiseLike)
+    })
 }
 
 fn push_promise_receiver_producer_missing_evidence(
@@ -147,6 +167,9 @@ fn push_promise_receiver_producer_missing_evidence(
     let Some(receiver) = method_receiver(il, callee) else {
         return;
     };
+    if promise_receiver_has_promise_like_domain(il, interner, callee) {
+        return;
+    }
     if receiver_is_promise_constructor_call(il, interner, receiver) {
         push_unique(labels, "promise-constructor-receiver-producer-proof");
         return;

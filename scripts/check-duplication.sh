@@ -96,6 +96,10 @@ set -euo pipefail
 # 54 -> 54 (#587 Rust direct re-exports): one-hop public-use alias evidence moves the accepted
 # context/export representative, the value-graph whole-impl span, and the semantic-kernel
 # provenance-helper representative. Reviewed in docs/dogfooding.md; no new budget is accepted.
+# 54 -> 53 (Promise async return recovery): same-file async DirectFunction recovery first surfaced
+# an avoidable production family between call-target evidence upsert and LibraryApi evidence
+# recording. Splitting the call-target upsert matcher removed it; the remaining direct-call-target
+# test family is representative-ID churn from inserted fixtures. The budget is tightened.
 BIN="${NOSE_BIN:-./target/release/nose}"
 BASELINE="${NOSE_DUP_BASELINE:-scripts/duplication-baseline.json}"
 

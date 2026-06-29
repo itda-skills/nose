@@ -2186,6 +2186,9 @@ The follow-up [promise-receiver-producer-diagnostics-2026-06-29.v1.json](../benc
 2026-06-29 Promise call-return callee diagnostics note:
 The follow-up [promise-call-return-callee-diagnostics-2026-06-29.v1.json](../bench/recall_loss/promise-call-return-callee-diagnostics-2026-06-29.v1.json) keeps exact admission closed but splits generic Promise call-return receiver evidence by callee shape. The revised 120-repo JS/TS scan found `932` member call-return candidates, `184` local/parameter candidates, `105` imported-member candidates, and `73` imported-binding candidates. This points the next kernel work at reusable callee identity plus returned `PromiseLike` domain proof, not selector-specific Promise exceptions.
 
+2026-06-29 Promise same-file async return recovery note:
+The follow-up [promise-async-function-return-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-async-function-return-recovery-2026-06-29.v1.json) opens the narrow same-file async-function producer slice behind that rule. The call-target producer now derives `PromiseLike` result-domain evidence from direct callee identity plus `Source::Protocol(AsyncFunction)` evidence, and the value graph uses the existing pure-inline sink fence before treating a non-thenable-safe returned payload as a fulfilled Promise state. This strengthens the semantic kernel by composing existing evidence capabilities instead of adding a selector-specific API. `await`, throw/rejection paths, possible thenables, opaque call results, constructors, imported/member call returns, `.finally`, aggregate combinators, and sync payload equivalence remain closed.
+
 ## See also
 
 - Back to [semantic-kernel](semantic-kernel.md).

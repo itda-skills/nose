@@ -5,9 +5,10 @@
 //! direct in-file or imported callable target is materialized as evidence.
 
 use nose_il::{
-    stable_symbol_hash, CallTargetEvidenceKind, EvidenceAnchor, EvidenceEmitter, EvidenceId,
-    EvidenceKind, EvidenceProvenance, EvidenceRecord, EvidenceStatus, Il, Interner, LoopKind,
-    NodeId, NodeKind, Payload, Symbol, SymbolEvidenceKind, UnitKind,
+    stable_symbol_hash, CallTargetEvidenceKind, DomainEvidence, EvidenceAnchor, EvidenceEmitter,
+    EvidenceId, EvidenceKind, EvidenceProvenance, EvidenceRecord, EvidenceStatus, Il, Interner,
+    LoopKind, NodeId, NodeKind, Payload, SourceFactKind, SourceProtocolKind, Symbol,
+    SymbolEvidenceKind, UnitKind,
 };
 use nose_semantics::{
     imported_occurrence_symbol_dependencies_valid_with_cache, language_core_evidence_provenance,
@@ -16,6 +17,8 @@ use nose_semantics::{
 use rustc_hash::{FxHashMap, FxHashSet};
 
 const DIRECT_FUNCTION_RULE: &str = "normalize.call_target.direct_function";
+const DIRECT_ASYNC_FUNCTION_RETURN_DOMAIN_RULE: &str =
+    "normalize.call_target.direct_async_function_return_domain";
 const IMPORTED_FUNCTION_RULE: &str = "normalize.call_target.imported_function";
 const IMPORTED_MEMBER_RULE: &str = "normalize.call_target.imported_member";
 const IMPORTED_BINDING_OCCURRENCE_RULE: &str =
@@ -79,7 +82,7 @@ pub(crate) fn run(il: &mut Il, interner: &Interner) {
         );
     }
     for (call, target) in proven {
-        upsert(
+        let target_evidence = upsert(
             il,
             EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
             EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectFunction {
@@ -89,6 +92,13 @@ pub(crate) fn run(il: &mut Il, interner: &Interner) {
             DIRECT_FUNCTION_RULE,
             provenance,
             Vec::new(),
+        );
+        record_direct_async_function_result_domain(
+            il,
+            call,
+            target.root,
+            target_evidence,
+            provenance,
         );
     }
     let mut imported_occurrence_cache = ImportedOccurrenceValidationCache::default();
@@ -103,6 +113,50 @@ pub(crate) fn run(il: &mut Il, interner: &Interner) {
     }
 }
 
+fn record_direct_async_function_result_domain(
+    il: &mut Il,
+    call: NodeId,
+    target_root: NodeId,
+    target_evidence: EvidenceId,
+    provenance: CallTargetEvidenceProvenance,
+) -> Option<EvidenceId> {
+    let boundary = direct_async_function_protocol_boundary(il, target_root)?;
+    let protocol =
+        asserted_source_protocol_evidence_id(il, boundary, SourceProtocolKind::AsyncFunction)?;
+    Some(upsert(
+        il,
+        EvidenceAnchor::node(il.node(call).span, NodeKind::Call),
+        EvidenceKind::Domain(DomainEvidence::PromiseLike),
+        DIRECT_ASYNC_FUNCTION_RETURN_DOMAIN_RULE,
+        provenance,
+        vec![target_evidence, protocol],
+    ))
+}
+
+fn direct_async_function_protocol_boundary(il: &Il, target_root: NodeId) -> Option<NodeId> {
+    if il.kind(target_root) != NodeKind::Func {
+        return None;
+    }
+    let &boundary = il.children(target_root).last()?;
+    (nose_semantics::source_protocol_at_node(il, boundary)
+        == Some(SourceProtocolKind::AsyncFunction))
+    .then_some(boundary)
+}
+
+fn asserted_source_protocol_evidence_id(
+    il: &Il,
+    node: NodeId,
+    protocol: SourceProtocolKind,
+) -> Option<EvidenceId> {
+    let span = il.node(node).span;
+    il.evidence_anchored_at(span).find_map(|record| {
+        (record.kind == EvidenceKind::Source(SourceFactKind::Protocol(protocol))
+            && record.status == EvidenceStatus::Asserted
+            && il.evidence_dependencies_asserted(record))
+        .then_some(record.id)
+    })
+}
+
 fn upsert(
     il: &mut Il,
     anchor: EvidenceAnchor,
@@ -111,26 +165,21 @@ fn upsert(
     provenance: CallTargetEvidenceProvenance,
     dependencies: Vec<EvidenceId>,
 ) -> EvidenceId {
-    let mut current = None;
-    let mut legacy = None;
-    // Index-backed: call-target and imported occurrence refreshes run per call,
-    // so only scan records anchored at this exact node span. In-place migration
-    // avoids broad `nose.first_party` duplicates that can bloat evidence output.
-    for idx in il.evidence_indices_anchored_at(anchor.span()) {
-        let record = &il.evidence[idx as usize];
-        if record.anchor == anchor
-            && record.kind == kind
-            && record.status == EvidenceStatus::Asserted
-            && record.provenance.emitter == EvidenceEmitter::Builtin
-        {
-            if record.provenance.pack_hash == provenance.current.pack_hash {
-                current.get_or_insert(idx);
-            } else if record.provenance.pack_hash == Some(provenance.legacy_pack_hash) {
-                legacy.get_or_insert(idx);
-            }
-        }
-    }
-    if let Some(idx) = current.or(legacy) {
+    let existing = asserted_builtin_record_index_with_pack_hash(
+        il,
+        anchor,
+        &kind,
+        provenance.current.pack_hash,
+    )
+    .or_else(|| {
+        asserted_builtin_record_index_with_pack_hash(
+            il,
+            anchor,
+            &kind,
+            Some(provenance.legacy_pack_hash),
+        )
+    });
+    if let Some(idx) = existing {
         let record = &mut il.evidence[idx as usize];
         record.provenance.pack_hash = provenance.current.pack_hash;
         record.provenance.rule_hash = provenance.current.rule_hash;
@@ -138,6 +187,24 @@ fn upsert(
         return record.id;
     }
     il.find_or_push_builtin_evidence_with_provenance(anchor, kind, provenance.current, dependencies)
+}
+
+fn asserted_builtin_record_index_with_pack_hash(
+    il: &Il,
+    anchor: EvidenceAnchor,
+    kind: &EvidenceKind,
+    pack_hash: Option<u64>,
+) -> Option<u32> {
+    il.evidence_indices_anchored_at(anchor.span())
+        .into_iter()
+        .find(|&idx| {
+            let record = &il.evidence[idx as usize];
+            record.anchor == anchor
+                && &record.kind == kind
+                && record.status == EvidenceStatus::Asserted
+                && record.provenance.emitter == EvidenceEmitter::Builtin
+                && record.provenance.pack_hash == pack_hash
+        })
 }
 
 fn call_target_evidence_provenance(il: &Il) -> CallTargetEvidenceProvenance {

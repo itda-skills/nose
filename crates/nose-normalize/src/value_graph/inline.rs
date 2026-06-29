@@ -205,6 +205,31 @@ impl<'a> Builder<'a> {
         value
     }
 
+    pub(in crate::value_graph) fn eval_direct_async_function_fulfillment_call(
+        &mut self,
+        call: NodeId,
+        env: &FxHashMap<u32, ValueId>,
+    ) -> Option<ValueId> {
+        let kids = self.il.children(call).to_vec();
+        let (root, target) = self.direct_async_function_target_for_call(call)?;
+        if target.params.len() != kids.len().saturating_sub(1) {
+            return None;
+        }
+        if self.inline_stack.len() >= INLINE_MAX_DEPTH || self.inline_stack.contains(&root) {
+            return None;
+        }
+        let plan = crate::call_args::keyword_arg_binding_plan(self.il, &target.params, &kids[1..])?;
+        let mut fenv: FxHashMap<u32, ValueId> = FxHashMap::default();
+        for (pc, arg) in plan {
+            let v = self.eval(arg, env);
+            fenv.insert(pc, v);
+        }
+        self.inline_stack.push(root);
+        let value = self.inline_eval_pure_body(target.body, &mut fenv);
+        self.inline_stack.pop();
+        value
+    }
+
     /// Evaluate an admitted callee body in the caller's builder behind a sink fence.
     ///
     /// The body runs through the SAME statement processor a unit build uses — so builder
@@ -358,6 +383,63 @@ impl<'a> Builder<'a> {
             found = Some((candidate.root, candidate.function.clone()));
         }
         found
+    }
+
+    fn direct_async_function_target_for_call(
+        &self,
+        call: NodeId,
+    ) -> Option<(NodeId, InlineFunction)> {
+        let proven_span = direct_function_call_target_span_at_call(self.il, self.interner, call)?;
+        let mut found = None;
+        for unit in &self.il.units {
+            if !matches!(unit.kind, UnitKind::Function)
+                || self.il.kind(unit.root) != NodeKind::Func
+                || self.il.node(unit.root).span != proven_span
+            {
+                continue;
+            }
+            let Some(function) = self.direct_async_function_target(unit.root) else {
+                continue;
+            };
+            if found.is_some() {
+                return None;
+            }
+            found = Some((unit.root, function));
+        }
+        found
+    }
+
+    fn direct_async_function_target(&self, root: NodeId) -> Option<InlineFunction> {
+        let kids = self.il.children(root);
+        let &boundary = kids.last()?;
+        if nose_semantics::source_protocol_at_node(self.il, boundary)
+            != Some(nose_il::SourceProtocolKind::AsyncFunction)
+        {
+            return None;
+        }
+        let &body = self.il.children(boundary).first()?;
+        let mut required_globals = Vec::new();
+        let mut budget = INLINE_MAX_BODY_NODES;
+        if !self.pure_callable_walk(root, body, &mut required_globals, &mut budget) {
+            return None;
+        }
+        if !self.branch_returns(body) {
+            return None;
+        }
+        if !required_globals
+            .iter()
+            .all(|name| self.inline_env_keys.contains(name))
+        {
+            return None;
+        }
+        let params: Vec<u32> = kids
+            .iter()
+            .filter_map(|&p| match self.il.node(p).payload {
+                Payload::Cid(c) if self.il.kind(p) == NodeKind::Param => Some(c),
+                _ => None,
+            })
+            .collect();
+        Some(InlineFunction { params, body })
     }
 
     /// The straight-line body-safety walk retained for content-keyed identity seeding

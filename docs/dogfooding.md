@@ -582,3 +582,13 @@ for the repeated `eleven_entry_payloads` hard-negative fixture, and
 builder family across detect, normalize, and semantics tests. These remain
 test-scope fixture debt already accepted in the collection-factory capability
 work; no new budget is accepted.
+
+The Promise async-function return recovery slice tightens the count from 54 to
+53. The first draft surfaced an avoidable production family between the new
+call-target evidence `upsert` helper and the existing `LibraryApi` evidence
+recorder; splitting the call-target match lookup removed that production
+family. Adding focused direct-call evidence tests also shifted representative
+spans for an already reviewed direct-call-target fixture family: `0a126db1cbf0faa6`
+and `cc9936001342542f` no longer report, while `727e41b9e3e96f1e` reports the
+same test-scope call-target negative scaffolding. No new budget is accepted, so
+the baseline budget is tightened to 53.

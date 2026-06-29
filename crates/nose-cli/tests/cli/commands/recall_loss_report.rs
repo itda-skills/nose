@@ -483,8 +483,8 @@ function thenCall(db, id, f) { return db.get(id).then(f); }\n",
             "promise-finally-settlement-continuation-contract-missing",
         ),
         (
-            "scheduling-boundary",
-            "promise-async-function-return-producer-proof-missing",
+            "success-error-result-channel",
+            "promise-then-fulfillment-continuation-contract-missing",
         ),
         (
             "success-error-result-channel",
@@ -508,6 +508,13 @@ function thenCall(db, id, f) { return db.get(id).then(f); }\n",
     let rejections = report["admission_rejections"]
         .as_array()
         .expect("admission_rejections should be an array");
+    assert_promise_continuation_missing_labels(rejections, &report);
+}
+
+fn assert_promise_continuation_missing_labels(
+    rejections: &[serde_json::Value],
+    report: &serde_json::Value,
+) {
     for expected in [
         "promise-then-promise-like-receiver-proof",
         "promise-then-fulfillment-continuation-contract",
@@ -517,7 +524,6 @@ function thenCall(db, id, f) { return db.get(id).then(f); }\n",
         "promise-catch-callback-demand-effect-contract",
         "promise-finally-settlement-continuation-contract",
         "promise-finally-callback-demand-effect-contract",
-        "promise-async-function-return-producer-proof",
         "promise-constructor-receiver-producer-proof",
         "promise-call-return-receiver-producer-proof",
         "promise-call-return-member-callee-proof",
@@ -532,6 +538,17 @@ function thenCall(db, id, f) { return db.get(id).then(f); }\n",
             "expected Promise continuation missing evidence label {expected}: {report}"
         );
     }
+    assert!(
+        !rejections
+            .iter()
+            .any(|item| item["reason"] == "unsupported-runtime-boundary"
+                && item["missing_evidence"]
+                    .as_array()
+                    .is_some_and(|items| items
+                        .iter()
+                        .any(|value| value == "promise-async-function-return-producer-proof"))),
+        "same-file async function receiver proof should not stay reported as missing: {report}"
+    );
 }
 
 #[test]

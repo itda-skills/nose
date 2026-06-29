@@ -21,6 +21,89 @@ fn emits_direct_function_call_target_for_unique_unshadowed_function() {
 }
 
 #[test]
+fn emits_promise_like_domain_for_direct_async_function_call_result() {
+    let interner = Interner::new();
+    let load = interner.intern("load");
+    let use_value = interner.intern("useValue");
+    let async_tag = interner.intern("async_function");
+    let mut b = IlBuilder::new(FileId(0));
+
+    let payload = b.add(NodeKind::Lit, Payload::LitInt(1), sp(1), &[]);
+    let ret = b.add(NodeKind::Return, Payload::None, sp(2), &[payload]);
+    let body = b.add(NodeKind::Block, Payload::None, sp(3), &[ret]);
+    let async_boundary = b.add(NodeKind::Raw, Payload::Name(async_tag), sp(4), &[body]);
+    let async_func = b.add(NodeKind::Func, Payload::None, sp(5), &[async_boundary]);
+
+    let callee = b.add(NodeKind::Var, Payload::Name(load), sp(10), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(11), &[callee]);
+    let caller_ret = b.add(NodeKind::Return, Payload::None, sp(12), &[call]);
+    let caller_body = b.add(NodeKind::Block, Payload::None, sp(13), &[caller_ret]);
+    let caller = b.add(NodeKind::Func, Payload::None, sp(14), &[caller_body]);
+    let module = b.add(
+        NodeKind::Module,
+        Payload::None,
+        sp(15),
+        &[async_func, caller],
+    );
+    let mut il = b.finish(
+        module,
+        FileMeta {
+            path: "t".into(),
+            lang: Lang::TypeScript,
+        },
+        vec![
+            Unit {
+                root: async_func,
+                kind: UnitKind::Function,
+                name: Some(load),
+                origin: Default::default(),
+            },
+            Unit {
+                root: caller,
+                kind: UnitKind::Function,
+                name: Some(use_value),
+                origin: Default::default(),
+            },
+        ],
+        Vec::new(),
+    );
+    let protocol_id = EvidenceId(500);
+    il.evidence.push(EvidenceRecord {
+        id: protocol_id,
+        anchor: EvidenceAnchor::source_span(il.node(async_boundary).span),
+        kind: EvidenceKind::Source(SourceFactKind::Protocol(SourceProtocolKind::AsyncFunction)),
+        provenance: language_core_provenance(Lang::TypeScript),
+        dependencies: Vec::new(),
+        status: EvidenceStatus::Asserted,
+    });
+
+    run(&mut il, &interner);
+
+    assert!(direct_function_call_target_at_call(
+        &il, &interner, call, async_func,
+    ));
+    let call_target = il
+        .evidence
+        .iter()
+        .find(|record| {
+            matches!(
+                record.kind,
+                EvidenceKind::CallTarget(CallTargetEvidenceKind::DirectFunction { .. })
+            )
+        })
+        .expect("direct function call-target evidence");
+    let domain = il
+        .evidence
+        .iter()
+        .find(|record| {
+            record.anchor == EvidenceAnchor::node(il.node(call).span, NodeKind::Call)
+                && record.kind == EvidenceKind::Domain(DomainEvidence::PromiseLike)
+        })
+        .expect("PromiseLike domain evidence for async function call result");
+    assert_eq!(domain.dependencies, vec![call_target.id, protocol_id]);
+}
+
+#[test]
 fn updates_legacy_first_party_direct_function_call_target() {
     let interner = Interner::new();
     let (mut il, func, call) = function_with_call(&interner, "f", "f", false);

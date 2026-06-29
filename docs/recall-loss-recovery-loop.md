@@ -593,6 +593,18 @@ repo-local crates surface has no JS/TS Promise continuation runtime rows, so the
 behavior-changing signal is pinned by focused value-graph and CLI equivalence
 tests. The next measured queue remains producer proof for non-local Promise
 receivers, then settlement/aggregate channels.
+The next recovery pass, [same-file async-function return recovery](../bench/recall_loss/promise-async-function-return-recovery-2026-06-29.v1.json),
+opens the smallest measured call-return producer class from the prior scan:
+`79` same-file async-function call receivers across `10` JS/TS corpus repos. A
+direct call to a source-proven async function now carries `PromiseLike`
+result-domain evidence, and a pure non-thenable-safe returned payload can feed
+local `.then` fulfillment recovery without merging with synchronous payload
+code. The local `crates` gate remains at `false_merges == 0` and
+`canon_preservation_violations == 0`; because `crates` has no JS/TS Promise
+runtime rows, the behavior change is pinned by focused call-target,
+equivalence, and recall-loss-report tests. Await, throw/rejection, possible
+thenables, opaque call results, constructor receivers, imported/member call
+returns, `.finally`, and aggregate channels remain closed.
 
 ## See Also
 

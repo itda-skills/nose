@@ -323,6 +323,13 @@ break.
   found `932` member call-return receiver candidates and `184` local/parameter
   candidates, so broad member recovery stays deferred behind explicit callee
   identity plus returned `PromiseLike` domain proof.
+- Opened the same-file async-function Promise producer recovery slice. Direct
+  calls to source-proven async functions now emit dependency-backed
+  `Domain(PromiseLike)` result evidence, and pure non-thenable-safe returned
+  payloads can feed local `.then` fulfillment recovery without merging with
+  synchronous payload code. Await, throw/rejection, possible thenables, opaque
+  call results, constructor receivers, imported/member call-return receivers,
+  `.finally`, and aggregate combinators remain closed.
 
 ### Fixed
 - Made `scripts/check-docs.sh` compatible with both awiki versions that support

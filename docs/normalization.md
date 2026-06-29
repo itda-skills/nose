@@ -191,6 +191,13 @@ Guiding constraints for every pass:
   does not merge with synchronous code that computes the same payload; custom
   thenables, unsafe `Promise.resolve(obj)` assimilation, selector-only Promise
   methods, `.finally`, and aggregate combinators stay opaque.
+  Same-file direct calls to source-proven async functions can now provide the
+  same receiver-domain proof: the call-target pass emits `Domain(PromiseLike)`
+  on the call result only when direct callee evidence and async source-protocol
+  evidence are both present. The value graph unwraps such calls only through the
+  existing pure-inline sink fence and only for non-thenable-safe returned
+  payloads, so `await`, throw/rejection paths, possible thenables, and opaque
+  returned calls remain closed.
   Lowered aggregate surfaces now pass through a `SeqSurfaceContract`: arrays/slices can
   enter collection membership, maps/objects enter map/object value semantics, Go
   `composite_literal` map surfaces are consumed only by the Go zero-map

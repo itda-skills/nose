@@ -259,6 +259,48 @@ fn proven_promise_rejection_recovery_converges_without_channel_erasure() {
 }
 
 #[test]
+fn same_file_async_function_then_recovers_without_sync_erasure() {
+    let i = Interner::new();
+    let async_then = "async function load() {\n  return 1;\n}\n\
+function f() {\n  return load().then(x => x + 1);\n}\n";
+    let promise_then = "function f() {\n  return Promise.resolve(1).then(x => x + 1);\n}\n";
+    let sync_return = "function f() {\n  return 1 + 1;\n}\n";
+
+    assert_eq!(
+        value_fp_named(&i, async_then, Lang::TypeScript, "f"),
+        value_fp(&i, promise_then, Lang::TypeScript),
+        "same-file async function calls with non-thenable returns should recover as Promise producers"
+    );
+    assert_ne!(
+        value_fp_named(&i, async_then, Lang::TypeScript, "f"),
+        value_fp(&i, sync_return, Lang::TypeScript),
+        "async function continuation recovery must preserve the Promise boundary"
+    );
+}
+
+#[test]
+fn same_file_async_function_recovery_stays_closed_for_await_and_throw_paths() {
+    let i = Interner::new();
+    let awaited = "async function load() {\n  return await Promise.resolve(1);\n}\n\
+function f() {\n  return load().then(x => x + 1);\n}\n";
+    let fulfilled = "function f() {\n  return Promise.resolve(1).then(x => x + 1);\n}\n";
+    let throwing = "async function load() {\n  throw 1;\n}\n\
+function f() {\n  return load().catch(e => e + 1);\n}\n";
+    let rejected = "function f() {\n  return Promise.reject(1).catch(e => e + 1);\n}\n";
+
+    assert_ne!(
+        value_fp_named(&i, awaited, Lang::TypeScript, "f"),
+        value_fp(&i, fulfilled, Lang::TypeScript),
+        "awaited async bodies stay closed until scheduling/thenable assimilation is modeled"
+    );
+    assert_ne!(
+        value_fp_named(&i, throwing, Lang::TypeScript, "f"),
+        value_fp(&i, rejected, Lang::TypeScript),
+        "throwing async bodies must not be recovered as Promise rejection without rejection-channel proof"
+    );
+}
+
+#[test]
 fn go_slice_literal_converges_with_array_but_struct_stays_distinct() {
     // A Go slice literal `[]int{1,2,3}` is an ordered sequence — it converges with a Python
     // list / JS array. A Go STRUCT literal `Point{1,2,3}` is a record, NOT a collection, and
