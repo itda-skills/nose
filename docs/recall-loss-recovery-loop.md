@@ -87,6 +87,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [Node timers Promise domain recovery](../bench/recall_loss/promise-node-timers-domain-recovery-2026-06-29.v1.json) records the ESM named-import domain-only Node `timers/promises` slice: imported `setTimeout`/`setImmediate` calls can now provide `Domain(PromiseLike)` receiver proof without settlement or payload recovery.
 - [Node timers CommonJS domain recovery](../bench/recall_loss/promise-node-timers-commonjs-domain-recovery-2026-06-29.v1.json) records the follow-up that opens conservative `const` CommonJS destructuring requires for the same domain-only proof, moving the priced Node timers call-site coverage from `82` to `97` while mutable/dynamic shapes and scheduling semantics remain closed.
 - [Node timers safe payload recovery](../bench/recall_loss/promise-node-timers-safe-payload-recovery-2026-06-29.v1.json) records the bounded payload follow-up: exactly `setTimeout(delay, value)` and `setImmediate(value)` now emit fulfilled `PromiseSettledValue` evidence, while option-bearing calls, possible thenable payloads, scheduler APIs, and interval streams remain closed. The current pinned corpus has `0` direct safe-payload call sites, so this is a capability and fixture gain rather than an immediate corpus recall delta.
+- [Promise/scheduling closeout](../bench/recall_loss/promise-scheduling-closeout-2026-06-29.v1.json) records the decision to stop this recovery cycle after local Promise producer recovery, imported settled-value evidence, and Node timers slices. Aggregate combinators, executor timing, cancellation/liveness, scheduler APIs, interval streams, and cross-language lifecycle models move to issue [#602](https://github.com/corca-ai/nose/issues/602).
 
 Regenerate the full local reports with:
 
@@ -676,6 +677,15 @@ scheduling equivalence stay closed. The current 120-repo corpus scan found
 `0` direct safe-payload call sites, so the measured pinned-corpus recall delta
 is intentionally `0`; the benefit is that future safe call sites and focused
 fixtures use the shared kernel contract rather than a selector shortcut.
+The cycle closeout is recorded in [Promise/scheduling closeout](../bench/recall_loss/promise-scheduling-closeout-2026-06-29.v1.json).
+The current `crates` gate reports `false_merges == 0`,
+`canon_preservation_violations == 0`, and `0` Promise/scheduling unsupported
+runtime rows; the remaining `14` unsupported runtime rows are
+exception-channel contracts. That closeout deliberately stops API-by-API
+Promise expansion here. The next work item should be a broader scheduling,
+aggregate, cancellation, and lifecycle capability epic, tracked as
+[#602](https://github.com/corca-ai/nose/issues/602), with its own corpus
+pricing, hard negatives, local gates, performance checks, and docs.
 
 ## See Also
 

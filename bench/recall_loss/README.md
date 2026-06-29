@@ -350,6 +350,14 @@ python3 scripts/cross-language-boundary-census.py \
   direct named-binding source scan found `0` safe-payload call sites, so the
   pinned-corpus recall delta is `0`; the covered capability is exercised by
   focused positive and hard-negative fixtures.
+- [promise-scheduling-closeout-2026-06-29.v1.json](promise-scheduling-closeout-2026-06-29.v1.json)
+  records the closeout decision for the current Promise/scheduling recovery
+  cycle. Local producer recovery, imported `PromiseSettledValue` evidence, and
+  Node timers slices are treated as complete for this cycle; aggregate
+  combinators, executor timing, cancellation/liveness, scheduler APIs, interval
+  streams, and cross-language async/channel/lifecycle models move to issue
+  [#602](https://github.com/corca-ai/nose/issues/602) instead of more
+  API-by-API expansion.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

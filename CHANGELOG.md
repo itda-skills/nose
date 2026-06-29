@@ -50,7 +50,10 @@ break.
   `require` proof. Safe no-options payload arities now emit fulfilled
   `PromiseSettledValue` evidence for `setTimeout(delay, value)` and
   `setImmediate(value)`, while option-bearing calls, possible thenables,
-  scheduler APIs, interval streams, and broad scheduling remain closed.
+  scheduler APIs, interval streams, and broad scheduling remain closed. Recorded
+  the Promise/scheduling closeout artifact that stops API-by-API expansion here
+  and moves aggregate, lifecycle, cancellation, and broad scheduling work to a
+  separate capability epic.
 
 ### Changed
 - Split exact-admission recall-loss attribution into capability-oriented buckets
@@ -60,6 +63,11 @@ break.
 - Refined callback and Promise recall-loss diagnostics from broad runtime
   buckets into producer-, receiver-, continuation-, channel-, and callback-effect
   obligations, so stricter admission can be measured without hiding recall loss.
+- Closed the current Promise/scheduling recovery cycle as an explicit measured
+  boundary: current local `crates` recall-loss gating reports zero false merges,
+  zero canon-preservation violations, and zero Promise/scheduling unsupported
+  runtime rows, with the remaining runtime rows attributed to exception-channel
+  contracts.
 - Refined import-snapshot census reporting to separate missing provider modules,
   missing exports, re-export boundaries, external/stdlib/workspace boundaries,
   provider/importer mutation, missing provider API proof, and aggregate shapes

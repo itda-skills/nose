@@ -2217,6 +2217,10 @@ The follow-up [promise-node-timers-commonjs-domain-recovery-2026-06-29.v1.json](
 2026-06-29 Node timers/promises safe payload follow-up note:
 The follow-up [promise-node-timers-safe-payload-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-node-timers-safe-payload-recovery-2026-06-29.v1.json) reuses the imported Promise `PromiseSettledValue` capability for only the documented no-options payload arities of Node `timers/promises`: exactly `setTimeout(delay, value)` names argument 1 as the fulfilled payload, and exactly `setImmediate(value)` names argument 0. The current 120-repo direct named-binding source scan found `0` such safe-payload call sites, so the corpus recall delta for this slice is `0`; the change primarily makes future safe call sites and focused fixtures use the shared settlement kernel instead of a selector shortcut. Option-bearing arities remain domain-only because `options.signal` can reject with `AbortError`, and scheduler APIs, interval streams, possible-thenable payloads, namespace/default imports, mutable/dynamic CommonJS shapes, and broad scheduling equivalence remain closed.
 
+2026-06-29 Promise/scheduling closeout note:
+The [promise-scheduling-closeout-2026-06-29.v1.json](../bench/recall_loss/promise-scheduling-closeout-2026-06-29.v1.json) artifact closes this recovery cycle at a capability boundary. The landed work composes existing kernel evidence for Promise receiver domains, local producer proof, continuation contracts, imported `PromiseSettledValue`, and Node timers imported factories. It deliberately does not add more selector-specific Promise rows for aggregate combinators, executor timing, cancellation/liveness, scheduler APIs, interval streams, or cross-language async/channel/lifecycle semantics. Those surfaces need a separate capability epic with corpus pricing, hard negatives, exact-gate and performance evidence, and docs before any admission opens.
+That epic is tracked as [#602](https://github.com/corca-ai/nose/issues/602).
+
 ## See also
 
 - Back to [semantic-kernel](semantic-kernel.md).

@@ -160,6 +160,35 @@ preserve the original settlement, rejecting finally handlers move the result to
 the rejected channel, and parameterized handlers, possible thenables,
 selector-only receivers, imported producers without settled-value contracts,
 aggregates, and broad async scheduling remain closed.
+The follow-up [promise-imported-settled-value-contract-2026-06-29.v1.json](../bench/recall_loss/promise-imported-settled-value-contract-2026-06-29.v1.json)
+adds the imported-producer capability needed after the imported call-return
+boundary split. Imported call-target identity can now compose with admitted
+`Domain(PromiseLike)`, Promise continuation API evidence, and builtin
+`PromiseSettledValue` payload/channel proof. That opens only focused imported
+`.then`/`.catch` fixtures whose fulfilled or rejected payload is explicitly
+contracted; ordinary imported producers, possible fulfilled thenables,
+selector-only members, aggregates, constructors, and broad scheduling remain
+closed.
+The Node `timers/promises` follow-ups reuse that same split. The ESM recovery
+is recorded in the [ESM domain artifact](../bench/recall_loss/promise-node-timers-domain-recovery-2026-06-29.v1.json),
+the [CommonJS domain artifact](../bench/recall_loss/promise-node-timers-commonjs-domain-recovery-2026-06-29.v1.json),
+and the [safe payload artifact](../bench/recall_loss/promise-node-timers-safe-payload-recovery-2026-06-29.v1.json)
+show ESM named imports and conservative `const` CommonJS destructuring requires
+providing PromiseLike receiver-domain proof for `setTimeout`/`setImmediate`,
+raising the priced slice from `82` to `97` call sites. Only the no-options
+payload arities emit fulfilled `PromiseSettledValue`, and the current 120-repo
+direct named-binding scan found `0` such safe-payload call sites. Options
+objects, scheduler APIs, interval streams, namespace/default imports,
+mutable/dynamic CommonJS shapes, possible thenables, and broad scheduling stay
+closed.
+The [promise-scheduling-closeout-2026-06-29.v1.json](../bench/recall_loss/promise-scheduling-closeout-2026-06-29.v1.json)
+artifact closes this recovery cycle. It records that Promise reporting,
+local producer recovery, imported settled-value contracts, and the bounded Node
+timers slices are complete for this tranche. Aggregate combinators, executor
+timing, cancellation/liveness, scheduler APIs, interval streams, and
+cross-language async/channel/lifecycle models should move to a separate
+capability epic, issue [#602](https://github.com/corca-ai/nose/issues/602),
+instead of continuing as API-by-API Promise expansion.
 
 ## Minimal Vocabulary
 
