@@ -82,6 +82,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [Promise direct-method return recovery](../bench/recall_loss/promise-direct-method-return-recovery-2026-06-29.v1.json) records the proof-backed DirectMethod subset of the member call-return queue: existing DirectMethod target evidence plus returned-expression PromiseLike domain proof can feed local Promise continuation recovery while selector-only member calls, receiver-dependent methods, dynamic dispatch, and imported members remain closed.
 - [Promise imported call-return boundary](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json) records the reporting-only imported function/member follow-up: target-present imported Promise receivers now report missing settled-value contracts instead of return-domain proof, because imported call-target identity has no local body to evaluate.
 - [Promise branch-return producer recovery](../bench/recall_loss/promise-branch-return-producer-recovery-2026-06-29.v1.json) records the branch-return extension for local Promise producers: DirectFunction and DirectMethod return-domain proof can now compose every returned expression on supported paths, while mixed settlement channels, selector-only members, parameter callees, and imported receivers remain closed.
+- [Promise finally settlement recovery](../bench/recall_loss/promise-finally-settlement-recovery-2026-06-29.v1.json) records the safe `.finally` continuation slice: admitted PromiseLike receivers plus absent or zero-argument non-thenable-safe handlers can preserve settlement, while rejecting finally handlers switch to the rejected channel and unsafe handlers remain closed.
 
 Regenerate the full local reports with:
 
@@ -623,6 +624,17 @@ Promise runtime rows, the behavior change is pinned by focused call-target,
 equivalence, and recall-loss-report tests. Parameter callees, member/imported
 call returns, unsafe thenables, constructors, `.finally`, aggregate channels,
 and broad scheduling remain closed.
+The next recovery pass, [Promise finally settlement recovery](../bench/recall_loss/promise-finally-settlement-recovery-2026-06-29.v1.json),
+opens the exact-safe local `.finally` subset without widening scheduling or
+thenable assimilation. `Promise.resolve(1).finally(() => 9).then(...)`
+converges with the direct `Promise.resolve(1).then(...)` form, rejected
+producers preserve their rejected channel through safe finally handlers, and
+finally handlers returning `Promise.reject(reason)` move the result to that
+rejected channel. The recall-loss fixture now includes a safe `finallyLocal`
+unit that adds no runtime-boundary rejection. Parameterized handlers, possible
+thenables, selector-only receivers, imported producers without settled-value
+contracts, constructors, aggregate combinators, and broad async scheduling stay
+closed.
 The branch-return follow-up [promise-branch-return-producer-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-branch-return-producer-recovery-2026-06-29.v1.json)
 extends that producer proof to supported direct-function and DirectMethod bodies
 where every returned expression carries PromiseLike domain evidence. Same-channel

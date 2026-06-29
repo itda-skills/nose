@@ -10,3 +10,4 @@ mod method_protocols;
 mod non_factory_rows;
 mod operators_and_guards;
 mod predicates;
+mod promise_protocols;

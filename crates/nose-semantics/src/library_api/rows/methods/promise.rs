@@ -46,6 +46,29 @@ pub fn library_promise_catch_contract(
     })
 }
 
+pub fn library_promise_finally_contract(
+    lang: Lang,
+    method: &str,
+    arg_count: usize,
+) -> Option<LibraryPromiseFinallyContract> {
+    if !js_like_lang(lang) || method != "finally" || arg_count != 1 {
+        return None;
+    }
+    let result = PromiseFinallyContract {
+        receiver: AsyncReceiverContract::ExactPromiseLike,
+        demand: promise_then_demand_effect_profile(),
+    };
+    Some(LibraryPromiseFinallyContract {
+        pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
+        id: LibraryApiContractId::PromiseFinally,
+        callee: LibraryApiCalleeContract::AsyncMethod {
+            method: "finally",
+            receiver: result.receiver,
+        },
+        result,
+    })
+}
+
 pub fn library_promise_resolve_contract(
     lang: Lang,
     receiver: &str,

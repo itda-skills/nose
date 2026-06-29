@@ -2171,14 +2171,15 @@ the available evidence.
 
 2026-06-29 Promise local continuation recovery note:
 `nose.javascript.builtins.promise` now owns JS/TS `Promise.resolve`,
-`Promise.reject`, `.then`, and `.catch` occurrence contracts. The value graph
+`Promise.reject`, `.then`, `.catch`, and `.finally` occurrence contracts. The value graph
 represents local fulfilled/rejected Promise states, flattens handler-returned
 `Promise.resolve` only when the returned value is non-thenable-safe after local
 substitution, preserves handler-returned `Promise.reject` as a rejected channel,
 and lets `Promise.reject(...).catch(h)` converge with
 `Promise.reject(...).then(undefined, h)`. The checked artifact is recorded in [promise-local-continuation-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-local-continuation-recovery-2026-06-29.v1.json), which records the local crates gate and hard-negative cases.
-Broad async/await scheduling, arbitrary thenables, `.finally`, aggregate
-combinators, custom receivers, and sync payload equivalence remain closed.
+Broad async/await scheduling, arbitrary thenables, unsafe `.finally` handlers,
+aggregate combinators, custom receivers, and sync payload equivalence remain
+closed.
 
 2026-06-29 Promise receiver-producer diagnostics note:
 The follow-up [promise-receiver-producer-diagnostics-2026-06-29.v1.json](../bench/recall_loss/promise-receiver-producer-diagnostics-2026-06-29.v1.json) keeps exact admission closed but splits `.then`/`.catch`/`.finally` receiver producer obligations into `new Promise(...)`, async-function-return, and generic call-return receivers. The 120-repo JS/TS source scan found `835` generic call-return receivers, `49` same-file async-function call receivers, and `2` constructor receivers, so the next exact recovery candidate is call-return/async producer attribution rather than constructor semantics.
@@ -2200,6 +2201,9 @@ The follow-up [promise-imported-call-return-boundary-2026-06-29.v1.json](../benc
 
 2026-06-29 Promise branch-return producer recovery note:
 The follow-up [promise-branch-return-producer-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-branch-return-producer-recovery-2026-06-29.v1.json) broadens the proof-backed local producer slices without weakening their contracts. DirectFunction and DirectMethod call-result `Domain(PromiseLike)` evidence can depend on every returned expression in supported branch-return bodies, the value graph evaluates those bodies through the existing pure-inline sink fence, and same-channel Promise states recover through Phi values. Mixed fulfilled/rejected branches, selector-only members, parameter callees, imported receivers without settled-value contracts, unsafe thenables, `.finally`, constructors, aggregate combinators, and broad scheduling equivalence remain closed.
+
+2026-06-29 Promise finally settlement recovery note:
+The follow-up [promise-finally-settlement-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-finally-settlement-recovery-2026-06-29.v1.json) opens the exact-safe `.finally` continuation subset through the same Promise settlement capability rather than a selector-specific shortcut. A `.finally` call can recover only with admitted PromiseLike receiver proof and an absent or zero-argument handler returning a non-thenable-safe value, a fulfilled Promise boundary, or a rejected Promise boundary. Fulfilled handlers preserve the original settlement, rejecting handlers override it with the rejected channel, and parameterized handlers, possible thenables, selector-only receivers, imported producers without settled-value contracts, aggregate combinators, constructors, and broad async scheduling remain closed.
 
 ## See also
 

@@ -56,6 +56,7 @@ fn core_library_api_contract_ids() -> Vec<LibraryApiContractId> {
         LibraryApiContractId::PromiseFactory(PromiseFactoryKind::Reject),
         LibraryApiContractId::PromiseThen,
         LibraryApiContractId::PromiseCatch,
+        LibraryApiContractId::PromiseFinally,
         LibraryApiContractId::IteratorIdentityAdapter,
         LibraryApiContractId::StaticCollectionAdapter,
     ]

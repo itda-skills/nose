@@ -185,12 +185,17 @@ Guiding constraints for every pass:
   Supported JS-like local Promise continuations can reduce in the value graph
   only after admitted Promise API evidence and PromiseLike receiver proof.
   `Promise.resolve(...).then(...)`, handler-returned `Promise.resolve`,
-  `Promise.reject(...).catch(...)`, and
-  `Promise.reject(...).then(undefined, ...)` are modeled as fulfilled/rejected
-  Promise states. The reduced value remains wrapped in a Promise boundary, so it
-  does not merge with synchronous code that computes the same payload; custom
-  thenables, unsafe `Promise.resolve(obj)` assimilation, selector-only Promise
-  methods, `.finally`, and aggregate combinators stay opaque.
+  `Promise.reject(...).catch(...)`,
+  `Promise.reject(...).then(undefined, ...)`, and exact-safe `.finally`
+  continuations are modeled as fulfilled/rejected Promise states. `.finally`
+  recovery is limited to admitted Promise receivers and absent or zero-argument
+  handlers that return a non-thenable-safe value, a fulfilled Promise boundary,
+  or a rejected Promise boundary; a rejecting finally handler changes the result
+  channel to rejection. The reduced value remains wrapped in a Promise boundary,
+  so it does not merge with synchronous code that computes the same payload;
+  custom thenables, unsafe `Promise.resolve(obj)` assimilation, selector-only
+  Promise methods, unsafe or parameterized `.finally` handlers, and aggregate
+  combinators stay opaque.
   Same-file direct calls to source-proven async functions can now provide the
   same receiver-domain proof: the call-target pass emits `Domain(PromiseLike)`
   on the call result only when direct callee evidence and async source-protocol
@@ -224,6 +229,7 @@ Guiding constraints for every pass:
   value graph to evaluate, so these receivers now report a missing settled-value
   contract rather than return-domain proof. That reporting-only boundary is
   recorded in the [Promise imported call-return boundary artifact](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json).
+  The exact-safe `.finally` follow-up is recorded in the [Promise finally settlement recovery artifact](../bench/recall_loss/promise-finally-settlement-recovery-2026-06-29.v1.json).
   Lowered aggregate surfaces now pass through a `SeqSurfaceContract`: arrays/slices can
   enter collection membership, maps/objects enter map/object value semantics, Go
   `composite_literal` map surfaces are consumed only by the Go zero-map

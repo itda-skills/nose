@@ -69,7 +69,8 @@ pub fn library_api_materialized_result_domain_for_arity(
         | LibraryApiContractId::ScalarIntegerMethod(_)
         | LibraryApiContractId::MapKeyView(_)
         | LibraryApiContractId::PromiseThen
-        | LibraryApiContractId::PromiseCatch) => library_receiver_method_api_result_domain(id),
+        | LibraryApiContractId::PromiseCatch
+        | LibraryApiContractId::PromiseFinally) => library_receiver_method_api_result_domain(id),
         _ => None,
     }
 }

@@ -1,7 +1,4 @@
-//! Admitted API occurrence resolvers for semantic consumers.
-//!
-//! Contract row lookup and `LibraryApi` evidence admission are kept together here
-//! so downstream consumers do not recombine raw selector parsing with proof checks.
+//! Admitted API occurrence resolvers.
 
 use super::*;
 
@@ -469,6 +466,12 @@ receiver_method_contract_resolver!(
     admitted_promise_catch_at_call,
     LibraryPromiseCatchContract,
     library_promise_catch_contract
+);
+
+receiver_method_contract_resolver!(
+    admitted_promise_finally_at_call,
+    LibraryPromiseFinallyContract,
+    library_promise_finally_contract
 );
 
 pub fn admitted_promise_resolve_at_call(

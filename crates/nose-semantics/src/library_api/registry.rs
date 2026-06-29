@@ -350,6 +350,11 @@ fn library_api_member_callee_contracts_for_id(
         LibraryApiContractId::PromiseCatch => library_promise_catch_contract(lang, "catch", 1)
             .map(|contract| vec![contract.callee])
             .unwrap_or_default(),
+        LibraryApiContractId::PromiseFinally => {
+            library_promise_finally_contract(lang, "finally", 1)
+                .map(|contract| vec![contract.callee])
+                .unwrap_or_default()
+        }
         LibraryApiContractId::IteratorIdentityAdapter => {
             let methods = [
                 "iter",

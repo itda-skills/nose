@@ -1,5 +1,8 @@
 use super::*;
-use crate::PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID;
+use crate::{
+    JS_LIKE_BUILTIN_PROMISE_CATCH_CONTRACT_ID, JS_LIKE_BUILTIN_PROMISE_FINALLY_CONTRACT_ID,
+    JS_LIKE_BUILTIN_PROMISE_REJECT_CONTRACT_ID, PYTHON_STDLIB_TYPE_DOMAIN_PRODUCER_ID,
+};
 
 pub(super) fn assert_group() {
     let receiver_membership = builtin_pack_descriptor(RECEIVER_MEMBERSHIP_PROTOCOL_PACK_ID)
@@ -141,13 +144,16 @@ pub(super) fn assert_group() {
         js_promise.contract_ids,
         &[
             JS_LIKE_BUILTIN_PROMISE_RESOLVE_CONTRACT_ID,
+            JS_LIKE_BUILTIN_PROMISE_REJECT_CONTRACT_ID,
             JS_LIKE_BUILTIN_PROMISE_THEN_CONTRACT_ID,
+            JS_LIKE_BUILTIN_PROMISE_CATCH_CONTRACT_ID,
+            JS_LIKE_BUILTIN_PROMISE_FINALLY_CONTRACT_ID,
         ]
     );
     assert_eq!(js_promise.counts().evidence_producers, 1);
-    assert_eq!(js_promise.counts().contracts, 2);
-    assert_eq!(js_promise.counts().positive_fixtures, 2);
-    assert_eq!(js_promise.counts().hard_negatives, 3);
+    assert_eq!(js_promise.counts().contracts, 5);
+    assert_eq!(js_promise.counts().positive_fixtures, 4);
+    assert_eq!(js_promise.counts().hard_negatives, 4);
     assert!(js_promise
         .conformance_refs()
         .contains(&"js-promise-resolve-shadowed-hard-negative"));

@@ -16,17 +16,18 @@ pub(super) use nose_semantics::{
     library_java_collection_constructor_contract, library_java_collection_factory_contract,
     library_java_map_factory_contract, library_js_like_map_constructor_contract,
     library_js_like_set_constructor_contract, library_method_call_contract,
-    library_promise_catch_contract, library_promise_resolve_contract,
-    library_promise_then_contract, library_rust_option_none_sentinel_contract,
-    library_rust_option_some_constructor_contract, library_scalar_integer_method_contract,
-    library_static_index_membership_contract, library_swift_map_factory_contract, DomainEvidence,
-    LibraryApiCalleeContract, LibraryApiContractId, LibraryCollectionFactoryContract,
-    LibraryFreeFunctionBuiltinContract, LibraryFreeFunctionHofContract, LibraryMapFactoryContract,
-    LibraryMethodCallContract, MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract,
-    BUILTIN_COMPAT_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID,
-    BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID, C_LANGUAGE_PACK_ID,
-    C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID,
-    FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID, JAVA_GUAVA_IMMUTABLE_COLLECTION_FACTORY_PACK_ID,
+    library_promise_catch_contract, library_promise_finally_contract,
+    library_promise_resolve_contract, library_promise_then_contract,
+    library_rust_option_none_sentinel_contract, library_rust_option_some_constructor_contract,
+    library_scalar_integer_method_contract, library_static_index_membership_contract,
+    library_swift_map_factory_contract, DomainEvidence, LibraryApiCalleeContract,
+    LibraryApiContractId, LibraryCollectionFactoryContract, LibraryFreeFunctionBuiltinContract,
+    LibraryFreeFunctionHofContract, LibraryMapFactoryContract, LibraryMethodCallContract,
+    MethodBuiltinArgs, MethodReceiverContract, MethodSemanticContract, BUILTIN_COMPAT_PACK_ID,
+    BUILTIN_METHOD_CALL_PROTOCOL_PACK_ID, BUILTIN_METHOD_CALL_PROTOCOL_PRODUCER_ID,
+    C_LANGUAGE_PACK_ID, C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID,
+    FREE_FUNCTION_BUILTIN_PROTOCOL_PACK_ID, FREE_FUNCTION_BUILTIN_PROTOCOL_PRODUCER_ID,
+    JAVA_GUAVA_IMMUTABLE_COLLECTION_FACTORY_PACK_ID,
     JAVA_GUAVA_IMMUTABLE_COLLECTION_FACTORY_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PACK_ID, JAVA_STDLIB_COLLECTION_CONSTRUCTOR_PRODUCER_ID,
     JAVA_STDLIB_COLLECTION_FACTORY_PACK_ID, JAVA_STDLIB_COLLECTION_FACTORY_PRODUCER_ID,
@@ -50,7 +51,9 @@ pub(super) use nose_semantics::{
 pub(super) use rustc_hash::FxHashMap;
 
 mod promise;
+mod promise_finally;
 pub(super) use promise::*;
+pub(super) use promise_finally::*;
 
 pub(super) fn sp(line: u32) -> Span {
     Span::new(FileId(0), line, line, line, line)
@@ -66,6 +69,46 @@ pub(super) fn finish_test_il(builder: IlBuilder, root: NodeId, lang: Lang) -> Il
         Vec::new(),
         Vec::new(),
     )
+}
+
+pub(super) fn assert_resolved_promise_boundary(builder: &Builder<'_>, value: ValueId) -> ValueId {
+    let node = &builder.nodes[value as usize];
+    assert!(
+        matches!(node.op, ValOp::Call(code) if code == PROMISE_RESOLVED_CODE),
+        "expected resolved Promise boundary, got {}",
+        val_op_name(&node.op),
+    );
+    *node.args.first().expect("Promise boundary wraps payload")
+}
+
+pub(super) fn val_op_name(op: &ValOp) -> &'static str {
+    match op {
+        ValOp::Input(_) => "input",
+        ValOp::Const { .. } => "const",
+        ValOp::Bin(_) => "bin",
+        ValOp::Un(_) => "un",
+        ValOp::Field(_) => "field",
+        ValOp::Index => "index",
+        ValOp::Call(_) => "call",
+        ValOp::KwArg(_) => "kwarg",
+        ValOp::Hof(_) => "hof",
+        ValOp::Clamp => "clamp",
+        ValOp::Seq(_) => "seq",
+        ValOp::ImportNamespace { .. } => "import-namespace",
+        ValOp::ImportBinding { .. } => "import-binding",
+        ValOp::CollectionParam => "collection-param",
+        ValOp::ArrayParam => "array-param",
+        ValOp::StringParam => "string-param",
+        ValOp::Phi => "phi",
+        ValOp::Lambda(_) => "lambda",
+        ValOp::Loop(_) => "loop",
+        ValOp::Elem(_) => "elem",
+        ValOp::Idx(_) => "idx",
+        ValOp::Reduce(_) => "reduce",
+        ValOp::Formula(_) => "formula",
+        ValOp::Recurrence(_) => "recurrence",
+        ValOp::Opaque(_) => "opaque",
+    }
 }
 
 pub(super) fn evidence(id: u32, anchor: EvidenceAnchor, kind: EvidenceKind) -> EvidenceRecord {

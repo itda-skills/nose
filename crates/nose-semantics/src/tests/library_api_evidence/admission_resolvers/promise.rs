@@ -21,6 +21,27 @@ fn js_promise_then_call_il() -> (Il, Interner, NodeId, NodeId) {
     )
 }
 
+fn js_promise_finally_call_il() -> (Il, Interner, NodeId, NodeId) {
+    let interner = Interner::new();
+    let mut b = IlBuilder::new(FileId(0));
+    let receiver = b.add(NodeKind::Var, Payload::Cid(0), sp(82), &[]);
+    let callee = b.add(
+        NodeKind::Field,
+        Payload::Name(interner.intern("finally")),
+        sp(83),
+        &[receiver],
+    );
+    let callback = b.add(NodeKind::Lambda, Payload::None, sp(84), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(85), &[callee, callback]);
+    let root = b.add(NodeKind::Func, Payload::None, sp(86), &[call]);
+    (
+        finish_il(b, root, Lang::JavaScript),
+        interner,
+        call,
+        receiver,
+    )
+}
+
 fn js_promise_resolve_call_il() -> (Il, Interner, NodeId, NodeId, NodeId) {
     let interner = Interner::new();
     let mut b = IlBuilder::new(FileId(0));
@@ -78,6 +99,48 @@ fn push_promise_resolve_dependencies(il: &mut Il, callee: NodeId, promise: NodeI
         &[],
         Lang::JavaScript,
     ));
+}
+
+fn push_promise_receiver_api_evidence(
+    il: &mut Il,
+    receiver: NodeId,
+    call: NodeId,
+    contract_id: LibraryApiContractId,
+    callee: LibraryApiCalleeContract,
+) {
+    il.evidence.push(evidence_with_dependencies(
+        0,
+        EvidenceAnchor::node(il.node(receiver).span, il.kind(receiver)),
+        EvidenceKind::Domain(DomainEvidence::PromiseLike),
+        EvidenceStatus::Asserted,
+        vec![],
+    ));
+    il.evidence.push(js_like_builtin_promise_record(
+        1,
+        il.node(call).span,
+        contract_id,
+        callee,
+        EvidenceStatus::Asserted,
+        &[0],
+    ));
+}
+
+#[test]
+fn admitted_promise_finally_resolver_requires_future_receiver_proof() {
+    let (il, interner, call, _receiver) = js_promise_finally_call_il();
+    assert!(
+        admitted_promise_finally_at_call(&il, &interner, call).is_none(),
+        "raw JS-like .finally(...) shape alone must not admit promise continuation semantics"
+    );
+
+    let contract = library_promise_finally_contract(Lang::JavaScript, "finally", 1)
+        .expect("Promise.finally contract");
+    let (mut admitted, interner, call, receiver) = js_promise_finally_call_il();
+    push_promise_receiver_api_evidence(&mut admitted, receiver, call, contract.id, contract.callee);
+    let resolved = admitted_promise_finally_at_call(&admitted, &interner, call)
+        .expect("PromiseLike receiver dependency admits Promise.finally");
+    assert_eq!(resolved.contract.id, LibraryApiContractId::PromiseFinally);
+    assert_eq!(resolved.receiver, Some(receiver));
 }
 
 #[test]
@@ -182,21 +245,7 @@ fn admitted_promise_then_resolver_requires_future_receiver_proof() {
     );
 
     let (mut admitted, interner, call, receiver) = js_promise_then_call_il();
-    admitted.evidence.push(evidence_with_dependencies(
-        0,
-        EvidenceAnchor::node(admitted.node(receiver).span, admitted.kind(receiver)),
-        EvidenceKind::Domain(DomainEvidence::PromiseLike),
-        EvidenceStatus::Asserted,
-        vec![],
-    ));
-    admitted.evidence.push(js_like_builtin_promise_record(
-        1,
-        admitted.node(call).span,
-        contract.id,
-        contract.callee,
-        EvidenceStatus::Asserted,
-        &[0],
-    ));
+    push_promise_receiver_api_evidence(&mut admitted, receiver, call, contract.id, contract.callee);
     let resolved = admitted_promise_then_at_call(&admitted, &interner, call)
         .expect("PromiseLike receiver dependency admits Promise.then");
     assert_eq!(resolved.contract.id, LibraryApiContractId::PromiseThen);

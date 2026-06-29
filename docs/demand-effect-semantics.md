@@ -74,13 +74,18 @@ rule requires an admitted Promise-like receiver plus a recoverable supported
 settled value. Today that means JS-like `Promise.resolve(value)` with
 unshadowed `Promise.resolve` proof and a non-thenable-safe value, JS-like
 `Promise.reject(reason)` as a rejected channel, or a chain of admitted
-`.then(lambda)`/`.catch(lambda)` calls over those supported boundaries.
+`.then(lambda)`/`.catch(lambda)` calls over those supported boundaries. Safe
+`.finally(lambda)` passthrough is also modeled when the receiver is admitted and
+the handler is absent or a zero-argument lambda returning a non-thenable-safe
+value, a fulfilled Promise boundary, or a rejected Promise boundary.
 Handler-returned `Promise.resolve` is flattened only when its value is
-non-thenable-safe after local callback substitution, and handler-returned
-`Promise.reject` stays in the rejected channel. Arbitrary selector-only
-`.then(...)`/`.catch(...)`, custom thenables, shadowed Promise roots, unsafe
-`Promise.resolve(obj)` arguments, `.finally`, aggregate combinators, and missing
-receiver proof remain closed.
+non-thenable-safe after local callback substitution, handler-returned
+`Promise.reject` stays in the rejected channel, and a rejecting `.finally`
+handler overrides the original settlement with that rejected channel. Arbitrary
+selector-only `.then(...)`/`.catch(...)`/`.finally(...)`, custom thenables,
+shadowed Promise roots, unsafe `Promise.resolve(obj)` arguments, unsafe or
+parameterized `.finally` handlers, aggregate combinators, and missing receiver
+proof remain closed.
 
 Source protocol boundaries have internal profiles for future contracts:
 

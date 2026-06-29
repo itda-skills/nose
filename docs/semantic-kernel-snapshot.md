@@ -1,6 +1,6 @@
 # Semantic kernel snapshot
 
-Snapshot date: 2026-06-27. The current implementation has an internal
+Snapshot date: 2026-06-29. The current implementation has an internal
 semantic-kernel facade, evidence-gated field state, sequence-surface contracts,
 proof-backed append fragment evidence, operator-law contracts, typed import
 facts, source-fact gates for construct/macro/literal/operator provenance,
@@ -47,16 +47,21 @@ Promise-like receivers whose settled value can be recovered from supported
 first-party producers: currently JS-like `Promise.resolve(value)` with an
 unshadowed `Promise.resolve` proof and a non-thenable-safe value, JS-like
 `Promise.reject(reason)` as a rejected channel, plus admitted
-`.then(lambda)`/`.catch(lambda)` chains over those boundaries. Same-file direct
+`.then(lambda)`/`.catch(lambda)` chains over those boundaries. Safe
+`.finally(lambda)` passthrough is open only for admitted Promise-like receivers
+and absent or zero-argument handlers returning non-thenable-safe values,
+fulfilled Promise boundaries, or rejected Promise boundaries. Same-file direct
 async, direct ordinary-function, and proof-backed DirectMethod producers can
 also supply the settled value when dependency-backed call-result domain evidence
 points to supported return paths. Branch-return producers recover only through
 same-channel Promise Phi states. Handler-returned `Promise.resolve` is flattened
 only when the returned value is non-thenable-safe after local substitution;
-handler-returned `Promise.reject` preserves the rejected channel. Selector-only
-`.then(...)`/`.catch(...)`, custom thenables, shadowed `Promise`, unsafe
-`Promise.resolve(obj)` arguments, mixed fulfilled/rejected branch channels,
-`.finally`, aggregate combinators, and missing or ambiguous receiver proof stay
+handler-returned `Promise.reject` preserves the rejected channel, and a
+rejecting `.finally` handler overrides the original settlement with that
+rejected channel. Selector-only `.then(...)`/`.catch(...)`/`.finally(...)`,
+custom thenables, shadowed `Promise`, unsafe `Promise.resolve(obj)` arguments,
+mixed fulfilled/rejected branch channels, unsafe or parameterized `.finally`
+handlers, aggregate combinators, and missing or ambiguous receiver proof stay
 closed.
 The JS/TS corpus audit [`js-ts-stdlib-partial-audit-2026-06-28.v1.json`](../bench/recall_loss/js-ts-stdlib-partial-audit-2026-06-28.v1.json)
 confirms this is the largest JS/TS builtin-shaped surface in the pinned corpus:
@@ -145,10 +150,10 @@ still being migrated toward it.
   missing unshadowed `Math` proof, non-integer value arguments, and unsupported
   arities remain hard negatives. The
   `nose.javascript.builtins.promise` descriptor owns JS/TS `Promise.resolve`,
-  `Promise.reject`, `.then`, and `.catch` Promise API contract and occurrence
-  producer ids, while shadowed `Promise`, missing Promise-like receiver proof,
-  unsafe thenable assimilation, `.finally`, and aggregate combinators remain
-  hard negatives. The
+  `Promise.reject`, `.then`, `.catch`, and `.finally` Promise API contract and
+  occurrence producer ids, while shadowed `Promise`, missing Promise-like
+  receiver proof, unsafe thenable assimilation, unsafe `.finally` handlers, and
+  aggregate combinators remain hard negatives. The
   `nose.javascript.builtins.array` descriptor owns JS/TS `Array.from`,
   `Array.isArray`, exact-Array receiver `map`/`filter`/`flatMap`, and
   `some`/`every` API contract and occurrence producer ids, while shadowed

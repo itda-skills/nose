@@ -198,6 +198,21 @@ fn library_coercion_regex_namespace_and_promise_contracts_carry_obligations() {
             },
         })
     );
+    assert_eq!(
+        library_promise_finally_contract(Lang::TypeScript, "finally", 1),
+        Some(LibraryPromiseFinallyContract {
+            pack_id: JS_LIKE_BUILTIN_PROMISE_PACK_ID,
+            id: LibraryApiContractId::PromiseFinally,
+            callee: LibraryApiCalleeContract::AsyncMethod {
+                method: "finally",
+                receiver: AsyncReceiverContract::ExactPromiseLike,
+            },
+            result: PromiseFinallyContract {
+                receiver: AsyncReceiverContract::ExactPromiseLike,
+                demand: promise_then_demand_effect_profile(),
+            },
+        })
+    );
 }
 
 #[test]
@@ -454,6 +469,10 @@ fn library_promise_adapter_and_method_contracts_reject_raw_name_only_matches() {
     );
     assert_eq!(
         library_promise_catch_contract(Lang::TypeScript, "catch", 2),
+        None
+    );
+    assert_eq!(
+        library_promise_finally_contract(Lang::TypeScript, "finally", 2),
         None
     );
     assert_eq!(

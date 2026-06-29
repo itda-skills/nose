@@ -84,6 +84,8 @@ mod numeric_scalars;
 mod operator_boundaries;
 #[path = "equivalence/option_boundaries.rs"]
 mod option_boundaries;
+#[path = "equivalence/promise_finally.rs"]
+mod promise_finally;
 #[path = "equivalence/protocol_boundaries.rs"]
 mod protocol_boundaries;
 #[path = "equivalence/receiver_membership.rs"]

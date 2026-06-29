@@ -1,19 +1,22 @@
-//! Promise `.then` continuation canonicalization.
+//! Promise continuation canonicalization for `.then`, `.catch`, and safe `.finally`.
 //!
-//! The rule is exact only for admitted JS-like Promise occurrences. A `.then` selector alone is
-//! never proof. The receiver must be admitted by `LibraryApi(PromiseThen)` plus PromiseLike receiver
-//! evidence, and this value-graph rule must also be able to recover a settled value from a supported
-//! Promise producer. The result stays behind a Promise boundary so Promise-returning code does not
-//! converge with synchronous code that happens to compute the same payload.
+//! The rule is exact only for admitted JS-like Promise occurrences. A continuation selector alone
+//! is never proof. The receiver must be admitted by the matching `LibraryApi` contract plus
+//! PromiseLike receiver evidence, and this value-graph rule must also be able to recover a settled
+//! value from a supported Promise producer. Safe `.finally` recovery is narrower still: the handler
+//! must be absent or a zero-argument lambda whose result is non-thenable-safe, a fulfilled Promise
+//! boundary, or a rejected Promise boundary. The result stays behind a Promise boundary so
+//! Promise-returning code does not converge with synchronous code that happens to compute the same
+//! payload.
 //!
 //! proof-obligation: normalize.value_graph.promise_then
 
 use super::super::{Builder, ConstKind, ValOp, ValueDomain, ValueId};
 use nose_il::{DomainEvidence, NodeId, NodeKind, Payload};
 use nose_semantics::{
-    admitted_promise_catch_at_call, admitted_promise_resolve_at_call,
-    admitted_promise_then_at_call, asserted_unshadowed_global_symbol, nullish_global_contract,
-    PromiseFactoryKind,
+    admitted_promise_catch_at_call, admitted_promise_finally_at_call,
+    admitted_promise_resolve_at_call, admitted_promise_then_at_call,
+    asserted_unshadowed_global_symbol, nullish_global_contract, PromiseFactoryKind,
 };
 use rustc_hash::FxHashMap;
 
@@ -49,6 +52,16 @@ pub(in super::super) fn apply(
         let recv = admitted.receiver?;
         let state = promise_receiver_state(builder, recv, env)?;
         return apply_catch_continuation(builder, &kids, state, env)
+            .map(|state| state.into_value(builder));
+    }
+    if let Some(admitted) = admitted_promise_finally_at_call(builder.il, builder.interner, expr) {
+        let contract = admitted.contract.result;
+        if !contract.demand.is_async_boundary() {
+            return None;
+        }
+        let recv = admitted.receiver?;
+        let state = promise_receiver_state(builder, recv, env)?;
+        return apply_finally_continuation(builder, &kids, state, env)
             .map(|state| state.into_value(builder));
     }
     None
@@ -100,6 +113,22 @@ fn apply_catch_continuation(
     }
 }
 
+fn apply_finally_continuation(
+    builder: &mut Builder<'_>,
+    kids: &[NodeId],
+    state: PromiseState,
+    env: &FxHashMap<u32, ValueId>,
+) -> Option<PromiseState> {
+    let on_finally = *kids.get(1)?;
+    if safe_absent_handler(builder, on_finally) {
+        return Some(state);
+    }
+    match finally_handler_outcome(builder, on_finally, env)? {
+        FinallyHandlerOutcome::PassThrough => Some(state),
+        FinallyHandlerOutcome::Reject(reason) => Some(PromiseState::Rejected(reason)),
+    }
+}
+
 fn apply_handler(
     builder: &mut Builder<'_>,
     handler: NodeId,
@@ -111,6 +140,38 @@ fn apply_handler(
     }
     let body = builder.eval_lambda_body(handler, &[value], env)?;
     promise_state_from_handler_result(builder, body)
+}
+
+enum FinallyHandlerOutcome {
+    PassThrough,
+    Reject(ValueId),
+}
+
+fn finally_handler_outcome(
+    builder: &mut Builder<'_>,
+    handler: NodeId,
+    env: &FxHashMap<u32, ValueId>,
+) -> Option<FinallyHandlerOutcome> {
+    if builder.il.kind(handler) != NodeKind::Lambda || lambda_param_count(builder, handler) != 0 {
+        return None;
+    }
+    let body = builder.eval_lambda_body(handler, &[], env)?;
+    if let Some(state) = promise_boundary_state(builder, body) {
+        return match state {
+            PromiseState::Fulfilled(_) => Some(FinallyHandlerOutcome::PassThrough),
+            PromiseState::Rejected(reason) => Some(FinallyHandlerOutcome::Reject(reason)),
+        };
+    }
+    promise_value_is_non_thenable_safe(builder, body).then_some(FinallyHandlerOutcome::PassThrough)
+}
+
+fn lambda_param_count(builder: &Builder<'_>, lambda: NodeId) -> usize {
+    builder
+        .il
+        .children(lambda)
+        .iter()
+        .filter(|&&child| builder.il.kind(child) == NodeKind::Param)
+        .count()
 }
 
 fn promise_receiver_state(

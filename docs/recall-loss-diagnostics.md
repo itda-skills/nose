@@ -157,9 +157,9 @@ preserving the recall-loss vocabulary for everything still closed. It admits
 `Promise.reject`, `.catch`, two-argument `.then`, handler-returned
 `Promise.resolve` flattening, and `catch`/`then(undefined, onRejected)`
 convergence only when the receiver, producer, and callback are dependency-closed.
-Custom thenables, `.finally`, aggregate combinators, broad async scheduling, and
-sync payload equivalence remain reportable under the existing obligation
-buckets.
+Custom thenables, unsafe `.finally` handlers, aggregate combinators, broad async
+scheduling, and sync payload equivalence remain reportable under the existing
+obligation buckets.
 The reporting follow-ups [promise receiver-producer diagnostics](../bench/recall_loss/promise-receiver-producer-diagnostics-2026-06-29.v1.json)
 and [promise call-return callee diagnostics](../bench/recall_loss/promise-call-return-callee-diagnostics-2026-06-29.v1.json)
 keep those remaining receivers fail-closed but make the next capability gaps
@@ -182,16 +182,17 @@ when the returned expression already has PromiseLike domain proof. The report
 should therefore move those receivers out of
 `promise-call-return-direct-function-return-domain-proof` and leave unproven
 parameter callees, member/imported call returns, unsafe thenables, constructors,
-`.finally`, aggregate channels, and broad scheduling in their existing
-fail-closed obligations.
+unsafe `.finally` handlers, aggregate channels, and broad scheduling in their
+existing fail-closed obligations.
 The [direct-method Promise return recovery](../bench/recall_loss/promise-direct-method-return-recovery-2026-06-29.v1.json)
 slice opens the proof-backed subset of member call-return receivers: an existing
 DirectMethod target record plus returned-expression PromiseLike domain proof can
 provide call-result `Domain(PromiseLike)` for non-async single-return methods.
 The value graph evaluates only the returned expression and closes on receiver
 context, so selector-only member calls, dynamic dispatch, imported members,
-receiver-dependent methods, unsafe thenables, constructors, `.finally`,
-aggregate channels, and broad scheduling remain in fail-closed obligations.
+receiver-dependent methods, unsafe thenables, constructors, unsafe `.finally`
+handlers, aggregate channels, and broad scheduling remain in fail-closed
+obligations.
 The [imported Promise call-return boundary](../bench/recall_loss/promise-imported-call-return-boundary-2026-06-29.v1.json)
 keeps imported function/member receivers closed but sharpens the report
 vocabulary: target-present imported Promise receivers now require a
@@ -207,6 +208,13 @@ Same-channel fulfilled/fulfilled or rejected/rejected branches can recover
 through a Promise Phi; mixed fulfilled/rejected branches, imported receivers,
 selector-only members, and missing return-domain proof remain in fail-closed
 obligations.
+The [Promise finally settlement recovery](../bench/recall_loss/promise-finally-settlement-recovery-2026-06-29.v1.json)
+then opens only the exact-safe local `.finally` subset. A safe local
+`makeResolved().finally(() => 9)` fixture should increase total unit coverage
+without adding a new runtime-boundary rejection, while raw `.finally(p, h)`,
+parameterized handlers, possible thenables, selector-only receivers, imported
+producers without settled-value contracts, aggregate combinators, and broad
+scheduling remain attributed to the existing Promise continuation obligations.
 
 `import_snapshot_census` is also diagnostics-only. It does not make an imported
 value exact-safe. It records why a proven binding import did not become an

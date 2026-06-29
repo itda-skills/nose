@@ -200,6 +200,18 @@ to `dec85ed3ec0be74e`. These remain accepted test/helper debt, not new
 production refactoring debt. The reviewed default-surface count remains 54;
 no budget increase is accepted.
 
+The 2026-06-29 Promise `.finally` settlement recovery slice first surfaced two
+avoidable test-helper families: a copied `promise_static_call` fixture builder
+and parallel Promise continuation admission checks. Both were deduped in the
+same change by sharing the Promise static-call helper and extracting
+`push_promise_receiver_api_evidence`. The remaining drift is representative
+churn for the same reviewed helper families: `sp` moves from
+`17b5d7672d8502a0` to `314d2b14120bd2a4`, language-core evidence helpers move
+from `60083cfa5d4da06d` to `fbd1cc4abe27b98d`, and
+`evidence_with_dependencies` moves from `dec85ed3ec0be74e` to
+`ac51c88919bc3122`. The reviewed default-surface count remains 53; no budget
+increase is accepted.
+
 ## Verdict by candidate (critically)
 
 | family | what it is | judgment | action |

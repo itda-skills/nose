@@ -392,16 +392,6 @@ fn assert_then_call_recovers_resolved_add_boundary(
     );
 }
 
-fn assert_resolved_promise_boundary(builder: &Builder<'_>, value: ValueId) -> ValueId {
-    let node = &builder.nodes[value as usize];
-    assert!(
-        matches!(node.op, ValOp::Call(code) if code == PROMISE_RESOLVED_CODE),
-        "expected resolved Promise boundary, got {}",
-        val_op_name(&node.op),
-    );
-    *node.args.first().expect("Promise boundary wraps payload")
-}
-
 struct DirectMethodPromiseFixture {
     il: Il,
     interner: Interner,
@@ -411,36 +401,6 @@ struct DirectMethodPromiseFixture {
     resolve_call: NodeId,
     then_call: NodeId,
     sync_add: NodeId,
-}
-
-fn val_op_name(op: &ValOp) -> &'static str {
-    match op {
-        ValOp::Input(_) => "input",
-        ValOp::Const { .. } => "const",
-        ValOp::Bin(_) => "bin",
-        ValOp::Un(_) => "un",
-        ValOp::Field(_) => "field",
-        ValOp::Index => "index",
-        ValOp::Call(_) => "call",
-        ValOp::KwArg(_) => "kwarg",
-        ValOp::Hof(_) => "hof",
-        ValOp::Clamp => "clamp",
-        ValOp::Seq(_) => "seq",
-        ValOp::ImportNamespace { .. } => "import-namespace",
-        ValOp::ImportBinding { .. } => "import-binding",
-        ValOp::CollectionParam => "collection-param",
-        ValOp::ArrayParam => "array-param",
-        ValOp::StringParam => "string-param",
-        ValOp::Phi => "phi",
-        ValOp::Lambda(_) => "lambda",
-        ValOp::Loop(_) => "loop",
-        ValOp::Elem(_) => "elem",
-        ValOp::Idx(_) => "idx",
-        ValOp::Reduce(_) => "reduce",
-        ValOp::Formula(_) => "formula",
-        ValOp::Recurrence(_) => "recurrence",
-        ValOp::Opaque(_) => "opaque",
-    }
 }
 
 fn direct_method_promise_then_fixture(uses_receiver_context: bool) -> DirectMethodPromiseFixture {

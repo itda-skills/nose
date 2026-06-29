@@ -385,7 +385,7 @@ pub(in crate::value_graph::tests) fn direct_function_branching_promise_then_fixt
     }
 }
 
-fn promise_static_call(
+pub(super) fn promise_static_call(
     b: &mut IlBuilder,
     interner: &Interner,
     method: &str,

@@ -150,6 +150,16 @@ depend on every returned expression on the supported paths, and the value graph
 recovers only same-channel Promise Phi states. Mixed fulfilled/rejected
 branches, selector-only members, parameter callees, imported receivers without
 settled-value contracts, and broad scheduling remain closed.
+The follow-up [promise-finally-settlement-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-finally-settlement-recovery-2026-06-29.v1.json)
+opens the exact-safe `.finally` subset without changing the broader scheduling
+boundary. `Promise.finally` now has a builtin Promise contract and can recover
+only when the receiver has admitted PromiseLike proof and the handler is absent
+or a zero-argument lambda returning a non-thenable-safe value, a fulfilled
+Promise boundary, or a rejected Promise boundary. Fulfilled finally handlers
+preserve the original settlement, rejecting finally handlers move the result to
+the rejected channel, and parameterized handlers, possible thenables,
+selector-only receivers, imported producers without settled-value contracts,
+aggregates, and broad async scheduling remain closed.
 
 ## Minimal Vocabulary
 

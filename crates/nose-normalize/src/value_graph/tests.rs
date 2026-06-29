@@ -6,6 +6,7 @@ mod guards;
 mod library_api;
 mod membership;
 mod promise;
+mod promise_finally;
 mod sequence_tags;
 mod source_evidence;
 mod support;

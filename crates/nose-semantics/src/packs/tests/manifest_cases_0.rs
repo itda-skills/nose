@@ -443,9 +443,9 @@ fn builtin_compat_pack_hash_matches_evidence_provenance_hash_policy() {
         SemanticPackInfluence::EvidenceAndContracts
     );
     assert_eq!(js_promise.counts.evidence_producers, 1);
-    assert_eq!(js_promise.counts.contracts, 2);
-    assert_eq!(js_promise.counts.positive_fixtures, 2);
-    assert_eq!(js_promise.counts.hard_negatives, 3);
+    assert_eq!(js_promise.counts.contracts, 5);
+    assert_eq!(js_promise.counts.positive_fixtures, 4);
+    assert_eq!(js_promise.counts.hard_negatives, 4);
     let js_array = set
         .packs()
         .iter()

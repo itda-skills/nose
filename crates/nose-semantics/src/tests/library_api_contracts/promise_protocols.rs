@@ -1,0 +1,74 @@
+use super::*;
+
+#[test]
+fn promise_then_contract_requires_js_like_surface_and_receiver_proof() {
+    let expected = Some(PromiseThenContract {
+        receiver: AsyncReceiverContract::ExactPromiseLike,
+        demand: promise_then_demand_effect_profile(),
+    });
+    assert_eq!(promise_then_contract(Lang::TypeScript, "then", 1), expected);
+    assert_eq!(promise_then_contract(Lang::TypeScript, "then", 2), expected);
+    assert_eq!(promise_then_contract(Lang::TypeScript, "then", 3), None);
+    assert_eq!(promise_then_contract(Lang::Python, "then", 1), None);
+}
+
+#[test]
+fn promise_catch_contract_requires_js_like_surface_and_receiver_proof() {
+    assert_eq!(
+        promise_catch_contract(Lang::TypeScript, "catch", 1),
+        Some(PromiseCatchContract {
+            receiver: AsyncReceiverContract::ExactPromiseLike,
+            demand: promise_then_demand_effect_profile(),
+        })
+    );
+    assert_eq!(promise_catch_contract(Lang::TypeScript, "catch", 2), None);
+    assert_eq!(promise_catch_contract(Lang::Python, "catch", 1), None);
+}
+
+#[test]
+fn promise_finally_contract_requires_js_like_surface_and_receiver_proof() {
+    assert_eq!(
+        promise_finally_contract(Lang::TypeScript, "finally", 1),
+        Some(PromiseFinallyContract {
+            receiver: AsyncReceiverContract::ExactPromiseLike,
+            demand: promise_then_demand_effect_profile(),
+        })
+    );
+    assert_eq!(
+        promise_finally_contract(Lang::TypeScript, "finally", 2),
+        None
+    );
+    assert_eq!(promise_finally_contract(Lang::Python, "finally", 1), None);
+}
+
+#[test]
+fn promise_factory_contract_requires_js_like_static_global_surface() {
+    assert_eq!(
+        promise_resolve_contract(Lang::JavaScript, "Promise", "resolve", 1),
+        Some(PromiseFactoryContract {
+            receiver: "Promise",
+            method: "resolve",
+            qualified_path: "Promise.resolve",
+            kind: PromiseFactoryKind::Resolve,
+            result_domain: DomainEvidence::PromiseLike,
+        })
+    );
+    assert_eq!(
+        promise_resolve_contract(Lang::TypeScript, "Promise", "resolve", 2),
+        None
+    );
+    assert_eq!(
+        promise_resolve_contract(Lang::TypeScript, "Promise", "reject", 1),
+        Some(PromiseFactoryContract {
+            receiver: "Promise",
+            method: "reject",
+            qualified_path: "Promise.reject",
+            kind: PromiseFactoryKind::Reject,
+            result_domain: DomainEvidence::PromiseLike,
+        })
+    );
+    assert_eq!(
+        promise_resolve_contract(Lang::Python, "Promise", "resolve", 1),
+        None
+    );
+}

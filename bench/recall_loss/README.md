@@ -307,6 +307,15 @@ python3 scripts/cross-language-boundary-census.py \
   boundaries. Mixed fulfilled/rejected branches, selector-only members, imported
   receivers, parameter callees, `.finally`, constructors, and aggregate or broad
   scheduling paths remain closed.
+- [promise-finally-settlement-recovery-2026-06-29.v1.json](promise-finally-settlement-recovery-2026-06-29.v1.json)
+  records the safe `.finally` settlement recovery slice. `Promise.finally` now
+  has a builtin Promise contract, and the value graph preserves the original
+  fulfilled/rejected settlement only for admitted PromiseLike receivers plus
+  absent or zero-argument non-thenable-safe handlers. A finally handler returning
+  `Promise.reject(reason)` switches the result to that rejected channel, while
+  parameterized handlers, possible thenables, selector-only receivers, imported
+  producers without settled-value contracts, constructors, aggregates, and broad
+  scheduling remain closed.
 - [issue-601-first-slice-closeout-2026-06-28.v1.json](issue-601-first-slice-closeout-2026-06-28.v1.json)
   records the #601 decision to close the first exact-admission slice as a
   quantified closed boundary instead of forcing unsafe async/callback/channel

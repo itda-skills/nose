@@ -152,6 +152,16 @@ fn receiver_promise_api_contract(
                 )
             })
         })
+        .or_else(|| {
+            library_promise_finally_contract(lang, method, arg_count).map(|contract| {
+                receiver_method_api_contract(
+                    contract.pack_id,
+                    contract.id,
+                    contract.callee,
+                    JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID,
+                )
+            })
+        })
 }
 
 fn receiver_map_get_default_api_contract(

@@ -34,6 +34,12 @@ pub struct PromiseCatchContract {
     pub demand: DemandEffectProfile,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct PromiseFinallyContract {
+    pub receiver: AsyncReceiverContract,
+    pub demand: DemandEffectProfile,
+}
+
 pub fn promise_then_contract(
     lang: Lang,
     method: &str,
@@ -58,6 +64,14 @@ pub fn promise_catch_contract(
     arg_count: usize,
 ) -> Option<PromiseCatchContract> {
     library_promise_catch_contract(lang, method, arg_count).map(|contract| contract.result)
+}
+
+pub fn promise_finally_contract(
+    lang: Lang,
+    method: &str,
+    arg_count: usize,
+) -> Option<PromiseFinallyContract> {
+    library_promise_finally_contract(lang, method, arg_count).map(|contract| contract.result)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

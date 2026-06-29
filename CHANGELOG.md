@@ -37,9 +37,12 @@ break.
   negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
   continuation recovery; receiver-producer/call-return attribution; and
   proof-backed async, direct-function, DirectMethod, and branch-return Promise
-  producer recovery. Promise boundaries, unsafe thenables, imported producers
-  without settled-value contracts, mixed fulfilled/rejected branches, `.finally`,
-  constructors, aggregates, and broad scheduling remain fail-closed.
+  producer recovery. Added exact-safe `Promise.finally` settlement passthrough
+  and rejection-channel override for admitted Promise receivers with safe
+  zero-argument handlers. Promise boundaries, unsafe thenables, imported
+  producers without settled-value contracts, mixed fulfilled/rejected branches,
+  unsafe `.finally` handlers, constructors, aggregates, and broad scheduling
+  remain fail-closed.
 
 ### Changed
 - Split exact-admission recall-loss attribution into capability-oriented buckets
@@ -83,7 +86,9 @@ break.
 - Confirmed product-code-neutral audit slices by byte-identical release binaries
   for Java `Arrays`/`Collections`, Go `sort`/`slices`/`maps`, and Python
   HOF/runtime attribution; the Promise branch-return producer recovery release
-  verify gate passed on `crates` in 1.50s with `false_merges = 0`.
+  verify gate passed on `crates` in 1.50s with `false_merges = 0`, and the
+  Promise `.finally` settlement recovery gate passed in 1.54s with
+  `false_merges = 0`.
 
 ## [0.16.0] - 2026-06-26
 

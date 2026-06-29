@@ -1,4 +1,8 @@
 use super::*;
+use crate::{
+    JS_LIKE_BUILTIN_PROMISE_CATCH_CONTRACT_ID, JS_LIKE_BUILTIN_PROMISE_FINALLY_CONTRACT_ID,
+    JS_LIKE_BUILTIN_PROMISE_REJECT_CONTRACT_ID,
+};
 
 mod rust;
 mod sequence_hof;
@@ -250,14 +254,20 @@ pub(super) const JS_LIKE_BUILTIN_PROMISE_PRODUCER_IDS: &[&str] =
     &[JS_LIKE_BUILTIN_PROMISE_PRODUCER_ID];
 pub(super) const JS_LIKE_BUILTIN_PROMISE_CONTRACT_IDS: &[&str] = &[
     JS_LIKE_BUILTIN_PROMISE_RESOLVE_CONTRACT_ID,
+    JS_LIKE_BUILTIN_PROMISE_REJECT_CONTRACT_ID,
     JS_LIKE_BUILTIN_PROMISE_THEN_CONTRACT_ID,
+    JS_LIKE_BUILTIN_PROMISE_CATCH_CONTRACT_ID,
+    JS_LIKE_BUILTIN_PROMISE_FINALLY_CONTRACT_ID,
 ];
 pub(super) const JS_LIKE_BUILTIN_PROMISE_CONFORMANCE_REFS: &[&str] = &[
     "js-promise-resolve-positive",
+    "js-promise-reject-catch-positive",
     "js-promise-then-positive",
+    "js-promise-finally-positive",
     "js-promise-resolve-shadowed-hard-negative",
     "js-promise-then-missing-receiver-hard-negative",
     "js-promise-resolve-thenable-hard-negative",
+    "js-promise-finally-thenable-hard-negative",
 ];
 pub(super) const JS_LIKE_BUILTIN_ARRAY_PRODUCER_IDS: &[&str] = &[JS_LIKE_BUILTIN_ARRAY_PRODUCER_ID];
 pub(super) const JS_LIKE_BUILTIN_ARRAY_CONTRACT_IDS: &[&str] = &[
