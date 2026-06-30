@@ -392,6 +392,12 @@ const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
     runtime_rule!("future-settlement-continuation-contract" => "success-error-result-channel", "future-settlement-continuation-contract-missing"),
     runtime_rule!("future-exception-continuation-contract" => "exception-channel", "future-exception-continuation-contract-missing"),
     runtime_rule!("future-callback-demand-effect-contract" => "callback-demand-effect", "future-callback-demand-effect-contract-missing"),
+    runtime_rule!("channel-select-readiness-contract" => "channel-boundary", "channel-select-readiness-contract-missing"),
+    runtime_rule!("channel-select-case-selection-contract" => "channel-boundary", "channel-select-case-selection-contract-missing"),
+    runtime_rule!("channel-select-default-liveness-contract" => "channel-boundary", "channel-select-default-liveness-contract-missing"),
+    runtime_rule!("channel-send-synchronization-contract" => "channel-boundary", "channel-send-synchronization-contract-missing"),
+    runtime_rule!("channel-receive-status-contract" => "channel-boundary", "channel-receive-status-contract-missing"),
+    runtime_rule!("channel-receive-value-channel-contract" => "channel-boundary", "channel-receive-value-channel-contract-missing"),
     RuntimeBoundaryRule {
         evidence: "channel-send-receive-protocol-contract",
         obligation: (
@@ -443,10 +449,24 @@ const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
         ),
     },
     RuntimeBoundaryRule {
+        evidence: "defer-callback-effect-contract",
+        obligation: (
+            "callback-demand-effect",
+            "defer-callback-effect-contract-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
         evidence: "concurrency-scheduling-contract",
         obligation: (
             "scheduling-boundary",
             "concurrency-scheduling-contract-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "goroutine-callback-effect-contract",
+        obligation: (
+            "callback-demand-effect",
+            "goroutine-callback-effect-contract-missing",
         ),
     },
     RuntimeBoundaryRule {

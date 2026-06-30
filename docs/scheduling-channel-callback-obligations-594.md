@@ -112,6 +112,20 @@ async factories / `4` repos, `10` settlement continuations / `2` repos, and
 closed at `276` occurrences, and exact recovery still requires dependency-closed
 executor timing, callback identity/effects, exceptional completion, and result
 channel contracts.
+The follow-up [Go channel protocol pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json)
+keeps exact admission closed while making Go's source-backed protocol
+boundaries reportable at the same capability level. Channel sends now report
+send synchronization obligations; receives report value-channel obligations;
+comma-ok receives additionally report close/status obligations; `select`
+parents, cases, and defaults report readiness, case-selection, and default
+liveness obligations; goroutines and `defer` report callback-effect
+obligations alongside their scheduling/lifecycle boundaries. The 120-repo
+protocol-node pricing records `4,294` channel receives, `1,525` sends, `155`
+comma-ok receives, `1,920` select parents, `3,590` select cases, `546` select
+defaults, `1,949` goroutines, and `17,521` defers. Exact recovery remains
+closed until channel blocking, close/zero-value behavior, select readiness,
+callback effects, panic/defer ordering, and goroutine scheduling are
+dependency-closed.
 The follow-up [promise-protocol-hard-negatives-2026-06-28.v1.json](../bench/recall_loss/promise-protocol-hard-negatives-2026-06-28.v1.json)
 pins the Promise-specific hard negatives before any recovery slice opens:
 async-function/sync, Promise executor/sync, Promise.resolve/sync,
@@ -368,7 +382,7 @@ to specific obligation buckets.
 | JS/TS | `await`, async functions, Promise executor/combinators/rejection, Array HOFs, mutations | report scheduling/rejection/executor separately; keep broad async convergence closed |
 | Python | builtins `map`/`filter`, `itertools`, `functools`, decorators, materializers, `asyncio` task/timer/aggregate APIs | callback/lifecycle reporting, shared task/aggregate runtime obligations, then narrow producer evidence for already admitted iterator builtins |
 | Rust | iterator HOFs, `Option`/`Result`, mutation/effect, iterator views, async task spawn and `join!`/`select!` macros | reuse lazy callback, channel, task, and aggregate vocabulary; keep type-directed `collect`, mutating APIs, and exact async runtime semantics closed |
-| Go | `sort`/`slices`/`maps`, mutation callbacks, channel/goroutine surfaces for future scans | add effect/callback reporting before exact sort or goroutine/channel semantics |
+| Go | `sort`/`slices`/`maps`, mutation callbacks, channel/goroutine/defer/select protocol obligations | keep exact channel/goroutine/defer semantics closed until blocking, close/status, select readiness, callback effects, panic/defer ordering, and scheduling are proven |
 | Java | `Arrays`/`Collections`, Optional/Future/Stream-shaped domains, `CompletableFuture` static/continuation reporting, mutation/wrapper APIs | keep Java Future exact recovery closed until executor timing, callback/effect, exception-channel, cancellation, wrapper aliasing, and stream lifecycle obligations are proven |
 | Swift | Sequence HOFs, cardinality, mutation, views, reductions, `throws`/`async`, `Task` creation | reuse callback/effect, scheduling, task lifecycle, and cancellation buckets; keep selector-only collection methods and exact task semantics closed |
 | Ruby | Enumerable blocks, `raise`/`rescue`, Thread/Fiber surfaces | block timing and exception-channel reporting before expanding Enumerable support |
@@ -396,11 +410,13 @@ new exact admission is opened.
 The #602 reporting slices extend that map in the [scheduling/lifecycle boundary audit](../bench/recall_loss/scheduling-lifecycle-boundary-audit-602-2026-06-29.v1.json),
 the [Promise executor boundary audit](../bench/recall_loss/promise-executor-boundary-audit-2026-06-30.v1.json),
 the [AbortSignal cancellation boundary audit](../bench/recall_loss/abort-signal-cancellation-boundary-audit-2026-06-30.v1.json),
-and the [interval/scheduler lifecycle boundary audit](../bench/recall_loss/interval-scheduler-lifecycle-boundary-audit-2026-06-30.v1.json):
+the [interval/scheduler lifecycle boundary audit](../bench/recall_loss/interval-scheduler-lifecycle-boundary-audit-2026-06-30.v1.json),
+and the [Go channel protocol pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json):
 thenable/custom Promise receivers and Promise aggregate distinctions stay pinned
 by existing semantic-boundary tests, while executor timing, scheduler ordering,
-interval liveness, and cancellation-sensitive AbortSignal forms are
-reporting-only until behavior-changing hard negatives exist.
+interval liveness, cancellation-sensitive AbortSignal forms, and Go
+channel/goroutine/defer protocol distinctions are reporting-only until
+behavior-changing hard negatives exist.
 
 The [#602 closeout](../bench/recall_loss/issue-602-closeout-2026-06-30.v1.json)
 marks this milestone complete as a broad boundary model rather than an API
