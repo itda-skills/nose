@@ -62,6 +62,12 @@ pub(super) struct VerifyExcludedUnit {
     pub(super) diagnostic: Option<ExactAdmissionRejectionDiagnostic>,
 }
 
+#[derive(Clone, Copy)]
+struct RuntimeDiagnosticSource<'a> {
+    il: &'a nose_il::Il,
+    root: Option<nose_il::NodeId>,
+}
+
 #[derive(Default)]
 pub(super) struct VerifyExclusions {
     pub(super) core_missing: usize,
@@ -200,6 +206,7 @@ pub(super) fn collect_verify_recs(
             let exact_safe_by_span =
                 nose_detect::exact_safe_roots_by_span(&n, &corpus.interner, &exact_safe_roots);
             collect_file_verify_recs(
+                il,
                 &n,
                 &core,
                 value_context.as_ref(),
@@ -282,8 +289,10 @@ fn canon_changed_behavior(
             .any(|(c, f)| !nose_normalize::behavior_equiv(c, f))
 }
 
+#[allow(clippy::too_many_lines)]
 #[allow(clippy::too_many_arguments)]
 fn collect_file_verify_recs(
+    raw: &nose_il::Il,
     n: &nose_il::Il,
     core: &nose_il::Il,
     value_context: Option<&nose_normalize::ValueFingerprintContext>,
@@ -295,6 +304,7 @@ fn collect_file_verify_recs(
     admission_context: &AdmissionContext,
 ) {
     let file_path = &n.meta.path;
+    let raw_func = func_span_index(raw);
     let core_func = func_span_index(core);
     for u in &n.units {
         let root = u.root;
@@ -306,6 +316,10 @@ fn collect_file_verify_recs(
         // The same function in the core IL (by span) — interpret THAT, not `n`.
         let span0 = n.node(root).span;
         let tokens = subtree_node_count(n, root);
+        let raw_source = RuntimeDiagnosticSource {
+            il: raw,
+            root: raw_func.get(&(span0.start_byte, span0.end_byte)).copied(),
+        };
         let Some(&core_root) = core_func.get(&(span0.start_byte, span0.end_byte)) else {
             push_verify_census(oracle, loc, n, root, &[], "no-core-span");
             oracle
@@ -356,8 +370,14 @@ fn collect_file_verify_recs(
                 ("battery-bail", VerifyExclusionReason::Uninterpretable)
             };
             push_verify_census(oracle, loc, core, core_root, &fp, census_reason);
-            let diagnostic =
-                oracle_exclusion_diagnostic(reason, n, interner, root, admission_context);
+            let diagnostic = oracle_exclusion_diagnostic(
+                reason,
+                raw_source,
+                n,
+                interner,
+                root,
+                admission_context,
+            );
             oracle
                 .exclusions
                 .record(reason, file_path, span0, tokens, diagnostic);
@@ -396,8 +416,15 @@ fn collect_file_verify_recs(
             .copied()
             .unwrap_or(true);
         let claimable = nose_detect::exact_claim_eligible_parts(exact_safe, fp.len());
-        let admission_rejection =
-            admission_rejection_for_rec(n, interner, root, exact_safe, fp.len(), admission_context);
+        let admission_rejection = admission_rejection_for_rec(
+            n,
+            interner,
+            root,
+            exact_safe,
+            fp.len(),
+            admission_context,
+            raw_source,
+        );
         oracle.recs.push(VerifyRec {
             fp,
             beh,
@@ -436,7 +463,15 @@ fn admission_rejection_for_rec(
     exact_safe: bool,
     fingerprint_len: usize,
     admission_context: &AdmissionContext,
+    raw_source: RuntimeDiagnosticSource<'_>,
 ) -> Option<ExactAdmissionRejectionDiagnostic> {
+    if !exact_safe {
+        if let Some(diagnostic) =
+            runtime_boundary_diagnostic_from_source(raw_source, interner, admission_context)
+        {
+            return Some(diagnostic);
+        }
+    }
     exact_admission_rejection_with_context(
         il,
         interner,
@@ -449,25 +484,63 @@ fn admission_rejection_for_rec(
 
 fn oracle_exclusion_diagnostic(
     reason: VerifyExclusionReason,
+    raw_source: RuntimeDiagnosticSource<'_>,
     il: &nose_il::Il,
     interner: &Interner,
     root: nose_il::NodeId,
     admission_context: &AdmissionContext,
 ) -> Option<ExactAdmissionRejectionDiagnostic> {
     match reason {
-        VerifyExclusionReason::Uninterpretable => {
-            runtime_boundary_rejection_diagnostic_with_context(
-                il,
-                interner,
-                root,
-                admission_context,
-            )
-        }
+        VerifyExclusionReason::Uninterpretable => runtime_boundary_diagnostic_with_fallback(
+            raw_source,
+            il,
+            root,
+            interner,
+            admission_context,
+        ),
         VerifyExclusionReason::CoreMissing
         | VerifyExclusionReason::BatteryBail
         | VerifyExclusionReason::EmptyFingerprint
         | VerifyExclusionReason::PathBail => None,
     }
+}
+
+fn runtime_boundary_diagnostic_with_fallback(
+    raw_source: RuntimeDiagnosticSource<'_>,
+    normalized: &nose_il::Il,
+    normalized_root: nose_il::NodeId,
+    interner: &Interner,
+    admission_context: &AdmissionContext,
+) -> Option<ExactAdmissionRejectionDiagnostic> {
+    runtime_boundary_diagnostic_from_source(raw_source, interner, admission_context).or_else(|| {
+        runtime_boundary_rejection_diagnostic_with_context(
+            normalized,
+            interner,
+            normalized_root,
+            admission_context,
+        )
+    })
+}
+
+fn runtime_boundary_diagnostic_from_source(
+    raw_source: RuntimeDiagnosticSource<'_>,
+    interner: &Interner,
+    admission_context: &AdmissionContext,
+) -> Option<ExactAdmissionRejectionDiagnostic> {
+    if !matches!(raw_source.il.meta.lang, Lang::Python | Lang::Rust) {
+        return None;
+    }
+    // Python/Rust async-runtime labels rely on source-level import/shadow facts.
+    // Compute them from the raw span-matched unit first so alpha normalization
+    // cannot erase alias shadowing evidence.
+    raw_source.root.and_then(|root| {
+        runtime_boundary_rejection_diagnostic_with_context(
+            raw_source.il,
+            interner,
+            root,
+            admission_context,
+        )
+    })
 }
 
 /// Stable hash of a unit's declared parameter domains (position-sensitive).

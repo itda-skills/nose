@@ -159,6 +159,15 @@ sends, `155` comma-ok receives, `1,920` select parents, `3,590` select cases,
 `546` select defaults, `1,949` goroutines, and `17,521` defers in the pinned
 120-repo corpus. Select parents and arms are counted separately because Go
 lowering preserves them as distinct source-backed protocol boundaries.
+The follow-up [non-JS async runtime scope-shadowing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json)
+keeps the same capability boundary but makes Python/Rust async runtime
+attribution scope-aware. Unrelated local shadows in other functions no longer
+close import-backed `asyncio` or Rust runtime reporting, while same-scope,
+enclosing-scope, and module-level shadows still keep exact admission closed.
+The 120-repo pricing total remains `146,880`, with the release `verify crates`
+gate at `0` false merges. Python/Rust async-runtime diagnostics prefer
+source-preserving unit roots before normalized fallback so alpha-renamed oracle
+units do not misreport Python `asyncio` alias shadows.
 Library/API identity is consolidated through internal `LibraryApiContract` rows
 for factory, constructor, selected property/non-factory method/view surfaces,
 and selected non-call sentinels, with occurrence evidence covering selected

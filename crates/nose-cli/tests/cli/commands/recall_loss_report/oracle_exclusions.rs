@@ -287,6 +287,34 @@ fn recall_loss_report_attributes_non_js_async_runtime_api_exclusions() {
     }
 }
 
+#[test]
+fn recall_loss_report_keeps_python_asyncio_namespace_enclosing_shadows_closed() {
+    let project = TempProject::new("recall_loss_python_asyncio_namespace_enclosing_shadows");
+    project.write(
+        "shadowed_asyncio.py",
+        "import asyncio\n\
+         import asyncio as aio\n\
+         def bare_shadow(asyncio):\n    async def inner():\n        return await asyncio.sleep(1)\n    return inner\n\
+         def alias_shadow(aio):\n    async def inner():\n        return await aio.sleep(1)\n    return inner\n",
+    );
+    let report_path = project.path().join("recall-loss.json");
+    let out = run_raw(&[
+        "verify",
+        project.path().to_str().unwrap(),
+        "--max-violations",
+        "0",
+        "--recall-loss-report",
+        report_path.to_str().unwrap(),
+    ]);
+    assert!(out.contains("GATE: 0"));
+
+    let report_text = fs::read_to_string(&report_path).expect("recall-loss report");
+    let report: serde_json::Value =
+        serde_json::from_str(&report_text).expect("recall-loss report JSON");
+    assert_no_admission_rejection(&report, "python", "timer-scheduling-contract");
+    assert_no_excluded_runtime_unit(&report, "python", "timer-scheduling-contract");
+}
+
 fn report_array<'a>(
     report: &'a serde_json::Value,
     path: &[&str],
@@ -408,5 +436,33 @@ fn assert_admission_rejection(report: &serde_json::Value, language: &str, eviden
                 && item["capability_id"] == "runtime-boundary-model"
                 && missing_evidence_contains(item, evidence)),
         "expected interpretable {language} attribution for {evidence}: {report}"
+    );
+}
+
+fn assert_no_admission_rejection(report: &serde_json::Value, language: &str, evidence: &str) {
+    let rejections = report_array(report, &["admission_rejections"], "admission_rejections");
+    assert!(
+        rejections
+            .iter()
+            .all(|item| item["loc"]["language"] != language
+                || item["capability_id"] != "runtime-boundary-model"
+                || !missing_evidence_contains(item, evidence)),
+        "unexpected interpretable {language} attribution for {evidence}: {report}"
+    );
+}
+
+fn assert_no_excluded_runtime_unit(report: &serde_json::Value, language: &str, evidence: &str) {
+    let units = report_array(
+        report,
+        &["oracle_exclusions", "units"],
+        "oracle_exclusions.units",
+    );
+    assert!(
+        units.iter().all(|item| item["reason"] != "uninterpretable"
+            || item["loc"]["language"] != language
+            || item["attribution"]["oracle_status"] != "excluded"
+            || item["attribution"]["capability_id"] != "runtime-boundary-model"
+            || !attribution_missing_evidence_contains(item, evidence)),
+        "unexpected {language} exclusion attribution for {evidence}: {report}"
     );
 }

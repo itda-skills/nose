@@ -2145,6 +2145,19 @@ different APIs.
   receives, `1,525` sends, `155` comma-ok receives, `1,920` selects, `3,590`
   select cases, `546` select defaults, `1,949` goroutines, and `17,521`
   defers while exact channel/goroutine/defer recovery stays closed.
+- The Python/Rust async runtime scope-shadowing follow-up keeps the non-JS
+  runtime vocabulary capability-oriented. It does not add new runtime API rows:
+  import-backed Python `asyncio` aliases/imported bindings and Rust imported
+  runtime bindings now use lexical scope when deciding whether a local shadow
+  suppresses reporting. Unrelated shadows in other functions no longer cause
+  recall-loss attribution to disappear, but same-scope, enclosing-scope, and
+  module-level shadows remain closed. The checked pricing evidence remains in
+  the [120-repo pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json):
+  it stays at `146,880` source-prevalence occurrences, and the `crates`
+  soundness gate remains at `0` false merges. Python/Rust async-runtime
+  diagnostics now prefer source-preserving unit roots before normalized
+  fallback, so alpha renaming does not make Python `asyncio` alias shadows look
+  unshadowed.
 - Keep expanding lazy iterator/generator/channel hard negatives before enabling
   new exact laws. The first Python generator/list/set and Go channel/goroutine
   hard negatives are now in place, along with hard negatives for pull-lazy
