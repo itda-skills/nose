@@ -196,8 +196,13 @@ keeps exact admission closed and maps qualified/import-backed Rust
 `tokio_test::block_on` calls plus proof-backed tokio runtime receiver chains to
 `future-drive-scheduling-contract` plus the existing
 `future-settled-value-channel-contract`. Selector-only `.block_on` calls and
-typed receiver variables such as `self.rt.block_on(...)` remain closed until
-runtime receiver/type evidence exists. The
+unproven field/parameter receivers such as `self.rt.block_on(...)` remain
+closed until runtime receiver/type evidence exists. The follow-up [Rust local
+runtime provenance artifact](../bench/recall_loss/rust-block-on-local-runtime-provenance-2026-07-01.v1.json)
+adds proof-backed local variables whose last visible assignment is direct
+`Handle::current()`, `Runtime::new().unwrap()/expect/?`, or
+`Builder::new_*().build().unwrap()/expect/?`; function parameters, struct
+fields, wrappers, and `map_err(...)?` construction remain closed. The
 follow-up [Go channel protocol pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json)
 keeps exact admission closed while refining Go protocol-boundary reporting into
 channel send synchronization, receive value, comma-ok receive status, select

@@ -119,6 +119,7 @@ fn rust_tokio_runtime_block_on_receiver(
         return false;
     }
     rust_tokio_runtime_driver_receiver_expr(il, interner, receiver, context)
+        || rust_tokio_runtime_local_binding_receiver_expr(il, interner, receiver, context)
 }
 
 fn rust_tokio_runtime_driver_receiver_expr(
@@ -127,6 +128,9 @@ fn rust_tokio_runtime_driver_receiver_expr(
     receiver: NodeId,
     context: &AdmissionContext,
 ) -> bool {
+    if let Some(inner) = rust_try_propagation_operand(il, receiver) {
+        return rust_tokio_runtime_driver_result_expr(il, interner, inner, context);
+    }
     if il.kind(receiver) != NodeKind::Call {
         return false;
     }
@@ -144,6 +148,13 @@ fn rust_tokio_runtime_driver_receiver_expr(
     }
     method_receiver(il, callee)
         .is_some_and(|inner| rust_tokio_runtime_driver_result_expr(il, interner, inner, context))
+}
+
+fn rust_try_propagation_operand(il: &nose_il::Il, node: NodeId) -> Option<NodeId> {
+    (nose_semantics::source_protocol_at_node(il, node)
+        == Some(nose_il::SourceProtocolKind::TryPropagation))
+    .then(|| il.children(node).first().copied())
+    .flatten()
 }
 
 fn rust_tokio_runtime_driver_result_expr(
@@ -194,6 +205,87 @@ fn rust_tokio_runtime_builder_expr(
     }
     method_receiver(il, callee)
         .is_some_and(|inner| rust_tokio_runtime_builder_expr(il, interner, inner, context))
+}
+
+fn rust_tokio_runtime_local_binding_receiver_expr(
+    il: &nose_il::Il,
+    interner: &Interner,
+    receiver: NodeId,
+    context: &AdmissionContext,
+) -> bool {
+    if il.kind(receiver) != NodeKind::Var {
+        return false;
+    }
+    let Some(local_name) = super::super::super::node_exact_name(il, interner, receiver) else {
+        return false;
+    };
+    rust_last_visible_local_assignment_rhs(il, interner, receiver, local_name)
+        .is_some_and(|rhs| rust_tokio_runtime_driver_receiver_expr(il, interner, rhs, context))
+}
+
+fn rust_last_visible_local_assignment_rhs(
+    il: &nose_il::Il,
+    interner: &Interner,
+    receiver: NodeId,
+    local_name: &str,
+) -> Option<NodeId> {
+    let occurrence_span = il.node(receiver).span;
+    let mut last_assignment = None;
+    for (idx, node) in il.nodes.iter().enumerate() {
+        if node.kind != NodeKind::Assign
+            || node.span.file != occurrence_span.file
+            || occurrence_span.start_byte < node.span.end_byte
+        {
+            continue;
+        }
+        let node_id = NodeId(idx as u32);
+        let Some((lhs, rhs)) = il.assignment_parts(node_id) else {
+            continue;
+        };
+        if il.kind(lhs) != NodeKind::Var
+            || !node_defines_name(il, interner, lhs, local_name)
+            || !rust_local_assignment_visible_at(il, node_id, receiver)
+        {
+            continue;
+        }
+        if last_assignment
+            .map(|(start, _)| start <= node.span.start_byte)
+            .unwrap_or(true)
+        {
+            last_assignment = Some((node.span.start_byte, rhs));
+        }
+    }
+    last_assignment.map(|(_, rhs)| rhs)
+}
+
+fn rust_local_assignment_visible_at(
+    il: &nose_il::Il,
+    assignment: NodeId,
+    occurrence: NodeId,
+) -> bool {
+    let Some(block) = rust_nearest_block_containing_node(il, assignment) else {
+        return false;
+    };
+    let block_span = il.node(block).span;
+    let occurrence_span = il.node(occurrence).span;
+    block_span.file == occurrence_span.file
+        && block_span.start_byte <= occurrence_span.start_byte
+        && occurrence_span.end_byte <= block_span.end_byte
+}
+
+fn rust_nearest_block_containing_node(il: &nose_il::Il, target: NodeId) -> Option<NodeId> {
+    let target_span = il.node(target).span;
+    il.nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, node)| {
+            node.kind == NodeKind::Block
+                && node.span.file == target_span.file
+                && node.span.start_byte <= target_span.start_byte
+                && target_span.end_byte <= node.span.end_byte
+        })
+        .min_by_key(|(_, node)| node.span.end_byte.saturating_sub(node.span.start_byte))
+        .map(|(idx, _)| NodeId(idx as u32))
 }
 
 fn rust_tokio_runtime_unwrap_method(il: &nose_il::Il, interner: &Interner, callee: NodeId) -> bool {

@@ -30,6 +30,12 @@ fn reports_future_drive_obligations_when_runtime_identity_is_proven() {
         Lang::Rust,
         ".block_on",
     );
+    let runtime_new_try_chain = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nfn run() -> Result<(), E> { Runtime::new()?.block_on(work()); Ok(()) }\n",
+        Lang::Rust,
+        ".block_on",
+    );
     let imported_tokio_test_block_on = missing_evidence_for_lang_call(
         "runtime.rs",
         "use tokio_test::block_on;\nfn run() { block_on(work()); }\n",
@@ -42,7 +48,67 @@ fn reports_future_drive_obligations_when_runtime_identity_is_proven() {
         qualified_handle_current,
         imported_runtime_new,
         imported_builder_chain,
+        runtime_new_try_chain,
         imported_tokio_test_block_on,
+    ] {
+        assert!(labels.contains(&"future-drive-scheduling-contract"));
+        assert!(labels.contains(&"future-settled-value-channel-contract"));
+    }
+}
+
+#[test]
+fn reports_future_drive_obligations_when_local_runtime_binding_is_proven() {
+    let local_handle_current = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Handle;\nfn run() { let handle = Handle::current(); handle.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let local_runtime_new = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nfn run() { let rt = Runtime::new().unwrap(); rt.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let parent_block_runtime_new = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nfn run() { let rt = Runtime::new().unwrap(); { rt.block_on(work()); } }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let local_builder_chain = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Builder;\nfn run() { let rt = Builder::new_current_thread().enable_all().build().unwrap(); rt.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let local_runtime_new_try = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nfn run() -> Result<(), E> { let rt = Runtime::new()?; rt.block_on(work()); Ok(()) }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let local_builder_try = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Builder;\nfn run() -> Result<(), E> { let rt = Builder::new_current_thread().enable_all().build()?; rt.block_on(work()); Ok(()) }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let local_try_current = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Handle;\nfn run() { let handle = Handle::try_current().expect(\"runtime\"); handle.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+
+    for labels in [
+        local_handle_current,
+        local_runtime_new,
+        parent_block_runtime_new,
+        local_builder_chain,
+        local_runtime_new_try,
+        local_builder_try,
+        local_try_current,
     ] {
         assert!(labels.contains(&"future-drive-scheduling-contract"));
         assert!(labels.contains(&"future-settled-value-channel-contract"));
@@ -105,7 +171,6 @@ fn requires_proven_runtime_identity() {
         Lang::Rust,
         ".block_on",
     );
-
     for (labels, surface) in [
         (unproven_receiver, "unproven Rust block_on receiver"),
         (local_tokio, "project-local Rust tokio root for block_on"),
@@ -126,6 +191,98 @@ fn requires_proven_runtime_identity() {
         (
             extension_method_changes_receiver_type,
             "Rust extension method changes block_on receiver type",
+        ),
+    ] {
+        assert_missing_evidence_not_contains(labels, "future-drive-scheduling-contract", surface);
+    }
+}
+
+#[test]
+fn requires_proven_local_runtime_binding_identity() {
+    let local_binding_wrapped_runtime = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "fn run() { let rt = make_wrapper(tokio::runtime::Runtime::new().unwrap()); rt.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let local_binding_reassigned_to_local = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nfn run() { let rt = Runtime::new().unwrap(); let rt = make_local(rt); rt.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let local_binding_shadowed_in_inner_block = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nfn run() { let rt = Runtime::new().unwrap(); { let rt = make_local(rt); rt.block_on(work()); } }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let field_assignment_with_same_name_as_receiver = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nfn run(rt: Local, s: S) { s.rt = Runtime::new().unwrap(); rt.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let local_binding_only_visible_in_nested_block = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nfn run() { { let rt = Runtime::new().unwrap(); } rt.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let local_binding_shadowed_runtime_type = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nfn run(Runtime: LocalRuntime) { let rt = Runtime::new().unwrap(); rt.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let local_binding_project_local_tokio = runtime_boundary_evidence_for_corpus_call(
+        &[(
+            "runtime.rs",
+            "mod tokio { pub mod runtime { pub struct Runtime; impl Runtime { pub fn new() -> Result<Runtime, ()> { Ok(Runtime) } } } }\nfn run() { let rt = tokio::runtime::Runtime::new().unwrap(); rt.block_on(work()); }\n",
+            Lang::Rust,
+        )],
+        "runtime.rs",
+        ".block_on",
+    );
+    let local_binding_map_err_try = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nfn run() -> Result<(), E> { let rt = Runtime::new().map_err(convert)?; rt.block_on(work()); Ok(()) }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+
+    for (labels, surface) in [
+        (
+            local_binding_wrapped_runtime,
+            "wrapped Rust runtime local binding receiver",
+        ),
+        (
+            local_binding_reassigned_to_local,
+            "Rust runtime local binding reassigned before block_on",
+        ),
+        (
+            local_binding_shadowed_in_inner_block,
+            "Rust runtime local binding shadowed inside receiver block",
+        ),
+        (
+            field_assignment_with_same_name_as_receiver,
+            "Rust field assignment does not prove same-name local receiver",
+        ),
+        (
+            local_binding_only_visible_in_nested_block,
+            "Rust runtime local binding not visible at block_on",
+        ),
+        (
+            local_binding_shadowed_runtime_type,
+            "Rust local binding with shadowed Runtime import",
+        ),
+        (
+            local_binding_project_local_tokio,
+            "project-local Rust tokio root for local runtime binding",
+        ),
+        (
+            local_binding_map_err_try,
+            "Rust runtime local binding through map_err callback",
         ),
     ] {
         assert_missing_evidence_not_contains(labels, "future-drive-scheduling-contract", surface);
