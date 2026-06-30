@@ -42,26 +42,22 @@
         "obligation_subreason": "async-aggregate-all-completion-contract-missing"
       },
       {
-        "obligation_family": "success-error-result-channel",
-        "obligation_subreason": "async-aggregate-completion-contract-missing"
-      },
-      {
         "obligation_family": "cancellation-liveness-boundary",
         "obligation_subreason": "async-aggregate-first-completion-contract-missing"
       }
     ],
-    "separation_invariant": "Interpretable admission rejections stay under top-level by_obligation; oracle-excluded runtime units stay under oracle_exclusions.by_obligation."
+    "separation_invariant": "Interpretable admission rejections stay under top-level by_obligation; oracle-excluded runtime units stay under oracle_exclusions.by_obligation and must not leak aggregate-only oracle rows into top-level by_obligation."
   },
   "current_crates_gate": {
     "report": "target/recall-loss.non-js-async-runtime.crates.json",
-    "total_units": 6627,
-    "interpretable_units": 903,
-    "excluded_units": 5724,
-    "admission_rejections": 752,
+    "total_units": 6636,
+    "interpretable_units": 908,
+    "excluded_units": 5728,
+    "admission_rejections": 757,
     "false_merges": 0,
     "lossy_fingerprint_collisions": 0,
     "advisory_disagreements": 4,
-    "canon_checked": 83,
+    "canon_checked": 88,
     "canon_preservation_violations": 0,
     "gate_passed": true
   },
@@ -139,8 +135,8 @@
     "cargo test -p nose-cli task_and_async_aggregate_labels_have_specific_obligations -- --nocapture",
     "cargo test -p nose-cli recall_loss_report_attributes_non_js_async_runtime_api_exclusions -- --nocapture",
     "python3 -m py_compile scripts/scheduling-lifecycle-boundary-audit.py",
-    "python3 scripts/scheduling-lifecycle-boundary-audit.py --recall-loss-report target/recall-loss.non-js-async-runtime.crates.json --output target/scheduling-lifecycle-boundary-audit.non-js-async-runtime.json --generated-on 2026-06-30",
-    "cargo run -q -p nose-cli -- verify crates --max-violations 0 --recall-loss-report target/recall-loss.non-js-async-runtime.crates.json"
+    "cargo run -q -p nose-cli -- verify crates --max-violations 0 --recall-loss-report target/recall-loss.non-js-async-runtime.crates.json",
+    "python3 scripts/scheduling-lifecycle-boundary-audit.py --recall-loss-report target/recall-loss.non-js-async-runtime.crates.json --output target/scheduling-lifecycle-boundary-audit.non-js-async-runtime.json --generated-on 2026-06-30"
   ],
   "next_exact_work_policy": {
     "status": "closed_until_evidence",

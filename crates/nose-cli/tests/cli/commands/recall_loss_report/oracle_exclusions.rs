@@ -254,6 +254,13 @@ fn recall_loss_report_attributes_non_js_async_runtime_api_exclusions() {
     for language in ["python", "rust"] {
         assert_admission_rejection(&report, language, "task-spawn-scheduling-contract");
     }
+    for subreason in [
+        "async-aggregate-all-completion-contract-missing",
+        "async-aggregate-first-completion-contract-missing",
+        "async-aggregate-completion-contract-missing",
+    ] {
+        assert_no_admission_obligation(&report, subreason);
+    }
 }
 
 fn report_array<'a>(
@@ -300,6 +307,16 @@ fn assert_admission_obligation(
             minimum
         ),
         "expected interpretable {family}/{subreason} admission rollup: {report}"
+    );
+}
+
+fn assert_no_admission_obligation(report: &serde_json::Value, subreason: &str) {
+    let obligations = report_array(report, &["by_obligation"], "by_obligation");
+    assert!(
+        obligations
+            .iter()
+            .all(|item| item["obligation_subreason"] != subreason),
+        "oracle-excluded rows for {subreason} should not be mixed into interpretable admission rollups: {report}"
     );
 }
 
