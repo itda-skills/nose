@@ -2124,11 +2124,17 @@ different APIs.
   structured-concurrency follow-up then maps `Task.sleep`, `Task.yield`, and
   task-group calls onto the same timer, task-yield, aggregate,
   cancellation/liveness, result-channel, and exception-channel vocabulary. The
-  latest pricing artifact raises source prevalence from `142,847` to `143,178`
-  by adding `326` Swift structured-concurrency occurrences plus `5` corrected
-  `Task.detached(...)` audit occurrences, while exact admission remains closed
-  until scheduling, cancellation, lifecycle, result-channel, exception, and
-  callback/effect contracts are dependency-closed.
+  Java `CompletableFuture` follow-up adds reusable Future settled-value,
+  fulfillment/settlement/exception continuation, and callback-demand/effect
+  obligation labels, then uses Java import and receiver-domain evidence to
+  report proof-backed static Future calls and exact-import-backed
+  CompletionStage-style continuations without opening exact admission. The
+  latest pricing artifact raises source prevalence from `143,178` to `143,188`
+  while splitting `40` lexical Java future reporting candidates out of the broad
+  `CompletableFuture` bucket and leaving `276` broad mentions closed until
+  scheduling, cancellation, lifecycle, result-channel, exception, and
+  callback/effect contracts are
+  dependency-closed.
 - Keep expanding lazy iterator/generator/channel hard negatives before enabling
   new exact laws. The first Python generator/list/set and Go channel/goroutine
   hard negatives are now in place, along with hard negatives for pull-lazy

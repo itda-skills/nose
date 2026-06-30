@@ -145,6 +145,19 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-06-30
 ```
 
+Build the Java `CompletableFuture`/FutureLike obligation audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.java-completablefuture.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --output target/scheduling-lifecycle-boundary-audit.java-completablefuture.json \
+  --generated-on 2026-06-30 \
+  --recall-loss-report target/recall-loss.java-completablefuture.crates.json
+```
+
 Build the first #602 `Promise.all` exact aggregate slice audit with:
 
 ```sh
@@ -423,6 +436,16 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   `161` occurrences in `10` repos, task groups contribute `153` in `9` repos,
   `Task.yield` contributes `12` in `3` repos, and the audit now also counts `5`
   already-supported `Task.detached(...)` spawn occurrences.
+- [java-completablefuture-obligation-reporting-2026-06-30.v1.json](java-completablefuture-obligation-reporting-2026-06-30.v1.json)
+  records the Java Future reporting-only expansion. Proof-backed
+  `CompletableFuture` static calls and exact-import-backed CompletionStage-style
+  receiver continuations now receive shared future, task, aggregate, callback,
+  and exception obligations without opening exact admission.
+- [scheduling-lifecycle-boundary-audit-java-completablefuture-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-java-completablefuture-2026-06-30.v1.json)
+  records the matching 120-repo source-prevalence pricing. It raises total
+  source prevalence from `143,178` to `143,188` while splitting `40` lexical
+  Java future reporting candidates out of the broad
+  `CompletableFuture` bucket and leaving `276` broad mentions closed.
 - [promise-protocol-hard-negatives-2026-06-28.v1.json](promise-protocol-hard-negatives-2026-06-28.v1.json)
   records the follow-up Promise hard-negative slice. It keeps exact admission
   closed while pinning async-function/sync, Promise executor/sync,

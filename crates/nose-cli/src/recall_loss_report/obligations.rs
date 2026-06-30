@@ -66,62 +66,14 @@ macro_rules! runtime_rule {
 }
 
 const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
-    RuntimeBoundaryRule {
-        evidence: "async-await-scheduling-contract",
-        obligation: (
-            "scheduling-boundary",
-            "async-await-scheduling-contract-missing",
-        ),
-    },
-    RuntimeBoundaryRule {
-        evidence: "promise-await-scheduling-contract",
-        obligation: (
-            "scheduling-boundary",
-            "promise-await-scheduling-contract-missing",
-        ),
-    },
-    RuntimeBoundaryRule {
-        evidence: "promise-async-function-return-producer-proof",
-        obligation: (
-            "scheduling-boundary",
-            "promise-async-function-return-producer-proof-missing",
-        ),
-    },
-    RuntimeBoundaryRule {
-        evidence: "async-function-scheduling-contract",
-        obligation: (
-            "scheduling-boundary",
-            "async-function-scheduling-contract-missing",
-        ),
-    },
-    RuntimeBoundaryRule {
-        evidence: "promise-async-function-scheduling-contract",
-        obligation: (
-            "scheduling-boundary",
-            "promise-async-function-scheduling-contract-missing",
-        ),
-    },
-    RuntimeBoundaryRule {
-        evidence: "async-block-scheduling-contract",
-        obligation: (
-            "scheduling-boundary",
-            "async-block-scheduling-contract-missing",
-        ),
-    },
-    RuntimeBoundaryRule {
-        evidence: "future-async-block-scheduling-contract",
-        obligation: (
-            "scheduling-boundary",
-            "future-async-block-scheduling-contract-missing",
-        ),
-    },
-    RuntimeBoundaryRule {
-        evidence: "promise-constructor-receiver-producer-proof",
-        obligation: (
-            "success-error-result-channel",
-            "promise-constructor-receiver-producer-proof-missing",
-        ),
-    },
+    runtime_rule!("async-await-scheduling-contract" => "scheduling-boundary", "async-await-scheduling-contract-missing"),
+    runtime_rule!("promise-await-scheduling-contract" => "scheduling-boundary", "promise-await-scheduling-contract-missing"),
+    runtime_rule!("promise-async-function-return-producer-proof" => "scheduling-boundary", "promise-async-function-return-producer-proof-missing"),
+    runtime_rule!("async-function-scheduling-contract" => "scheduling-boundary", "async-function-scheduling-contract-missing"),
+    runtime_rule!("promise-async-function-scheduling-contract" => "scheduling-boundary", "promise-async-function-scheduling-contract-missing"),
+    runtime_rule!("async-block-scheduling-contract" => "scheduling-boundary", "async-block-scheduling-contract-missing"),
+    runtime_rule!("future-async-block-scheduling-contract" => "scheduling-boundary", "future-async-block-scheduling-contract-missing"),
+    runtime_rule!("promise-constructor-receiver-producer-proof" => "success-error-result-channel", "promise-constructor-receiver-producer-proof-missing"),
     RuntimeBoundaryRule {
         evidence: "promise-executor-timing-contract",
         obligation: (
@@ -435,6 +387,11 @@ const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
     runtime_rule!("async-aggregate-completion-contract" => "success-error-result-channel", "async-aggregate-completion-contract-missing"),
     runtime_rule!("async-aggregate-result-channel-contract" => "success-error-result-channel", "async-aggregate-result-channel-contract-missing"),
     runtime_rule!("async-aggregate-cancellation-liveness-contract" => "cancellation-liveness-boundary", "async-aggregate-cancellation-liveness-contract-missing"),
+    runtime_rule!("future-settled-value-channel-contract" => "success-error-result-channel", "future-settled-value-channel-contract-missing"),
+    runtime_rule!("future-fulfillment-continuation-contract" => "success-error-result-channel", "future-fulfillment-continuation-contract-missing"),
+    runtime_rule!("future-settlement-continuation-contract" => "success-error-result-channel", "future-settlement-continuation-contract-missing"),
+    runtime_rule!("future-exception-continuation-contract" => "exception-channel", "future-exception-continuation-contract-missing"),
+    runtime_rule!("future-callback-demand-effect-contract" => "callback-demand-effect", "future-callback-demand-effect-contract-missing"),
     RuntimeBoundaryRule {
         evidence: "channel-send-receive-protocol-contract",
         obligation: (

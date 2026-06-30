@@ -305,3 +305,42 @@ fn task_and_async_aggregate_labels_have_specific_obligations() {
         )
     );
 }
+
+#[test]
+fn future_channel_and_continuation_labels_have_specific_obligations() {
+    assert_eq!(
+        runtime_boundary_obligation(&["future-settled-value-channel-contract"]),
+        (
+            "success-error-result-channel",
+            "future-settled-value-channel-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["future-fulfillment-continuation-contract"]),
+        (
+            "success-error-result-channel",
+            "future-fulfillment-continuation-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["future-settlement-continuation-contract"]),
+        (
+            "success-error-result-channel",
+            "future-settlement-continuation-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["future-exception-continuation-contract"]),
+        (
+            "exception-channel",
+            "future-exception-continuation-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["future-callback-demand-effect-contract"]),
+        (
+            "callback-demand-effect",
+            "future-callback-demand-effect-contract-missing",
+        )
+    );
+}

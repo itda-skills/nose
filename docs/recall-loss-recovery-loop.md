@@ -102,6 +102,7 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [Cross-language async-function obligation reporting](../bench/recall_loss/cross-language-async-function-obligation-reporting-2026-06-30.v1.json) records the next reporting-only vocabulary migration: JS/TS, Python, Rust, and Swift runtime-body `Source::Protocol(AsyncFunction)` boundaries now report `async-function-scheduling-contract`, and Rust `Source::Protocol(AsyncBlock)` reports `async-block-scheduling-contract`. Legacy Promise/Future label mappings remain readable for old artifacts; exact admission stays closed with `semantic_admission_delta = 0`.
 - [Non-JS async runtime API obligation reporting](../bench/recall_loss/non-js-async-runtime-api-obligation-reporting-2026-06-30.v1.json) records the follow-up reporting-only API slice: Python `asyncio` task/timer/aggregate calls, Rust async spawn and qualified `tokio`/`futures`/`futures_util` `join!`/`select!` macros, and Swift `Task` creation now report shared `task-*` and `async-aggregate-*` obligations while exact admission remains closed.
 - [Non-JS async runtime attribution hardening](../bench/recall_loss/non-js-async-runtime-attribution-hardening-2026-06-30.v1.json) records the safety follow-up: Python `asyncio.*` attribution now requires import-backed namespace evidence with path-visible local module guards, Rust spawn and aggregate attribution require qualified `tokio`/`async_std`/`futures`/`futures_util` paths whose root is not locally defined in the same file, and Swift `Task` attribution requires an unshadowed root with no corpus-visible Swift `Task` definition. Exact admission remains closed.
+- [Java CompletableFuture obligation reporting](../bench/recall_loss/java-completablefuture-obligation-reporting-2026-06-30.v1.json) records the Java Future follow-up: proof-backed `CompletableFuture` static calls and exact-import-backed CompletionStage-style receiver continuations now report reusable future, task, aggregate, callback, and exception obligations. Exact admission remains closed, while the 120-repo lexical audit splits `40` Java future reporting candidates out of the broad `CompletableFuture` bucket and leaves `276` broad mentions closed.
 
 Regenerate the full local reports with:
 
@@ -711,6 +712,14 @@ statements (`1,949`), Java `CompletableFuture` (`306`), and Swift `await`
 (`8,689`). The attached current `crates` gate still reports `false_merges == 0`
 and `canon_preservation_violations == 0`; relevant runtime rows are still only
 the existing `14` exception-channel rows.
+The later [Java CompletableFuture obligation reporting](../bench/recall_loss/java-completablefuture-obligation-reporting-2026-06-30.v1.json)
+slice keeps exact admission closed but splits that Java bucket into reusable
+Future capabilities: `14` settled factories, `12` async factories, `10`
+settlement continuations, and `4` `allOf` calls are now lexical reporting
+candidates, while the runtime reporter only emits obligations for proof-backed
+static calls and exact-import-backed CompletionStage-style receivers. `276`
+broad `CompletableFuture` mentions remain closed behind executor timing,
+callback/effect, exceptional completion, and result-channel contracts.
 The first exact follow-up is [Promise.all literal aggregate recovery](../bench/recall_loss/promise-all-literal-aggregate-recovery-2026-06-29.v1.json).
 It opens only the fulfilled literal-array subset, with `397` broad
 `Promise.all` occurrences, `201` literal-array boundary occurrences, and `0`

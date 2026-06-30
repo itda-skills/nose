@@ -5,6 +5,7 @@ use nose_il::{
     NodeId, NodeKind, SymbolEvidenceKind,
 };
 
+mod java;
 mod rust_imports;
 mod swift;
 
@@ -26,6 +27,9 @@ pub(super) fn push_async_runtime_call_missing_evidence(
             il, interner, callee, &path, context, labels,
         ),
         nose_il::Lang::Rust => push_rust_async_runtime_call_missing_evidence(
+            il, interner, call, callee, &path, context, labels,
+        ),
+        nose_il::Lang::Java => java::push_java_future_runtime_call_missing_evidence(
             il, interner, call, callee, &path, context, labels,
         ),
         nose_il::Lang::Swift => swift::push_swift_async_runtime_call_missing_evidence(
