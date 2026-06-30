@@ -370,6 +370,16 @@ excluded before oracle interpretation. Await-only JS/TS, Python, Rust, and
 Swift fixtures now report under `oracle_exclusions.by_obligation` as
 `scheduling-boundary/async-await-scheduling-contract-missing`; exact admission
 and top-level interpretable `by_obligation` remain unchanged.
+The follow-up [cross-language async-function obligation reporting](../bench/recall_loss/cross-language-async-function-obligation-reporting-2026-06-30.v1.json)
+does the same for async function and block boundaries. Runtime-body async
+functions in JS/TS, Python, Rust, and Swift now preserve and report the shared
+`Source::Protocol(AsyncFunction)` obligation as
+`scheduling-boundary/async-function-scheduling-contract-missing`; Rust async
+blocks preserve `Source::Protocol(AsyncBlock)` and report
+`scheduling-boundary/async-block-scheduling-contract-missing`. This is a kernel
+capability reuse, not a Promise feature: Promise-specific producer labels such
+as `promise-async-function-return-producer-proof` remain tied to JS/TS Promise
+receiver recovery.
 
 ## Non-API Statement
 

@@ -109,6 +109,71 @@ fn await_protocol_missing_evidence_is_language_neutral() {
 }
 
 #[test]
+fn async_function_protocol_missing_evidence_is_language_neutral() {
+    for (path, src, lang) in [
+        (
+            "async-function.js",
+            "async function read(x) { return x; }\n",
+            Lang::JavaScript,
+        ),
+        (
+            "async-function.ts",
+            "async function read(x: number): Promise<number> { return x; }\n",
+            Lang::TypeScript,
+        ),
+        (
+            "async-function.py",
+            "async def read(x):\n    return x\n",
+            Lang::Python,
+        ),
+        (
+            "async-function.rs",
+            "pub async fn read(x: i32) -> i32 { x }\n",
+            Lang::Rust,
+        ),
+        (
+            "async-function.swift",
+            "func read(_ x: Int) async -> Int {\n  return x\n}\n",
+            Lang::Swift,
+        ),
+    ] {
+        let labels = missing_evidence_for_protocol(
+            path,
+            src,
+            lang,
+            nose_il::SourceProtocolKind::AsyncFunction,
+        );
+        assert!(
+            labels.contains(&"async-function-scheduling-contract"),
+            "{path} should report the shared async-function scheduling contract: {labels:?}"
+        );
+        assert!(
+            !labels.contains(&"promise-async-function-scheduling-contract"),
+            "{path} should not report async function scheduling as Promise-specific evidence: {labels:?}"
+        );
+    }
+}
+
+#[test]
+fn async_block_protocol_missing_evidence_is_language_neutral() {
+    let labels = missing_evidence_for_protocol(
+        "async-block.rs",
+        "pub async fn read(x: i32) -> i32 { async move { x }.await }\n",
+        Lang::Rust,
+        nose_il::SourceProtocolKind::AsyncBlock,
+    );
+
+    assert!(
+        labels.contains(&"async-block-scheduling-contract"),
+        "async block should report the shared async-block scheduling contract: {labels:?}"
+    );
+    assert!(
+        !labels.contains(&"future-async-block-scheduling-contract"),
+        "async block should not report scheduling as Future-specific evidence: {labels:?}"
+    );
+}
+
+#[test]
 fn promise_then_missing_evidence_splits_receiver_fulfillment_rejection_and_callback() {
     let labels = missing_evidence_for_call(
         "function thenIt(p, f, r) { return p.then(f, r); }\n",

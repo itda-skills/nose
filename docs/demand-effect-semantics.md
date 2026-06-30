@@ -98,8 +98,9 @@ aggregate equivalence stay closed.
 Source protocol boundaries have internal profiles for future contracts:
 
 - `await` and Promise continuations are async boundaries;
-- JS/TS async functions are Promise-producing async boundaries even when their
-  body has no `await`;
+- JS/TS, Python, Rust, and Swift runtime-body async functions are async
+  boundaries even when their body has no `await`; JS/TS Promise producer proof
+  remains a separate Promise-specific recovery obligation;
 - `async {}` is suspended until observation;
 - `yield` is a generator suspension boundary;
 - Go channel/select surfaces are channel boundaries;

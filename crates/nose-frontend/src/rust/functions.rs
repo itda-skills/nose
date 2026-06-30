@@ -1,7 +1,30 @@
 use super::*;
 
 pub(super) fn lower_func(lo: &mut Lowering, node: TsNode, method: bool) -> NodeId {
-    crate::lower::function_unit(lo, node, method, lower_params, lower_fn_body)
+    let is_async = rust_function_has_async_modifier(node);
+    let span = lo.span(node);
+    crate::lower::function_unit(lo, node, method, lower_params, |lo, body| {
+        let body = lower_fn_body(lo, body);
+        if is_async {
+            lo.protocol_boundary(
+                span,
+                SourceProtocolKind::AsyncFunction,
+                "async_function",
+                &[body],
+            )
+        } else {
+            body
+        }
+    })
+}
+fn rust_function_has_async_modifier(node: TsNode) -> bool {
+    (0..node.child_count()).any(|index| {
+        node.child(index).is_some_and(|child| {
+            child.kind() == "async"
+                || (child.kind() == "function_modifiers"
+                    && crate::lower::node_has_child_kind(child, "async"))
+        })
+    })
 }
 pub(super) fn lower_params(lo: &mut Lowering, params: TsNode, out: &mut Vec<NodeId>) {
     for p in Lowering::named_children(params) {

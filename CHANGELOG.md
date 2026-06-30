@@ -123,6 +123,13 @@ break.
   Swift. Legacy Promise-specific await labels remain readable for old checked
   artifacts, but new reports reserve Promise labels for Promise API and producer
   semantics.
+- Renamed async-function and async-block scheduling diagnostics to shared
+  `async-function-scheduling-contract` and `async-block-scheduling-contract`
+  obligations. Python, Rust, and Swift runtime-body async functions now use the
+  existing `Source::Protocol(AsyncFunction)` boundary alongside JS/TS, while
+  Rust async blocks use `Source::Protocol(AsyncBlock)`. Legacy Promise/Future
+  labels remain readable for old artifacts, and Promise async-function return
+  producer proof remains Promise-specific.
 - Refined recall-loss reports so runtime/protocol units excluded before oracle
   interpretation can still carry diagnostics-only obligation attribution under
   `oracle_exclusions.by_obligation`. The top-level `by_obligation` rollup stays

@@ -119,6 +119,18 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --output target/scheduling-lifecycle-boundary-audit-602.v1.json
 ```
 
+Build the cross-language async function/block obligation audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.async-function-obligation.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --output target/scheduling-lifecycle-boundary-audit.async-function-obligation.json \
+  --generated-on 2026-06-30
+```
+
 Build the first #602 `Promise.all` exact aggregate slice audit with:
 
 ```sh
@@ -323,6 +335,17 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   Rust, and Swift await exclusions roll up to
   `scheduling-boundary/async-await-scheduling-contract-missing`, while
   top-level `by_obligation` stays interpretable-only.
+- [cross-language-async-function-obligation-reporting-2026-06-30.v1.json](cross-language-async-function-obligation-reporting-2026-06-30.v1.json)
+  records the next reporting-only migration: JS/TS, Python, Rust, and Swift
+  runtime-body async functions now share
+  `async-function-scheduling-contract`, and Rust async blocks use
+  `async-block-scheduling-contract`. Exact admission remains closed, and
+  Promise-specific async-function return producer proof remains separate.
+- [scheduling-lifecycle-boundary-audit-async-function-obligation-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-async-function-obligation-2026-06-30.v1.json)
+  records the 120-repo lexical pricing after the async function/block vocabulary
+  migration. It splits Rust `async fn` from Rust async blocks and aligns JS/TS,
+  Python, Rust, and Swift async function rows to the shared scheduling
+  subreason.
 - [promise-protocol-hard-negatives-2026-06-28.v1.json](promise-protocol-hard-negatives-2026-06-28.v1.json)
   records the follow-up Promise hard-negative slice. It keeps exact admission
   closed while pinning async-function/sync, Promise executor/sync,

@@ -20,6 +20,10 @@ pub(crate) fn collect_into(
     lo.add(kind, Payload::None, span, &stmts)
 }
 
+pub(crate) fn node_has_child_kind(node: TsNode, kind: &str) -> bool {
+    (0..node.child_count()).any(|index| node.child(index).is_some_and(|child| child.kind() == kind))
+}
+
 /// Build a `Func` unit from a `name`/`parameters`/`body`-shaped node and register
 /// it for detection (a `Method` when `method`, else a `Function`). Every frontend
 /// shares this skeleton — extract the name, lower the parameters, lower the body,

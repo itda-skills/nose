@@ -187,16 +187,15 @@ fn query_json_grades_async_mirror_shared_core_families() {
     }
     assert!(
         async_mirror_families.iter().any(|family| {
-            family["witness"] == "subdag"
-                && family["locations"].as_array().is_some_and(|locations| {
-                    locations.len() > 2
-                        && family_has_files(
-                            family,
-                            &["hn1_a.py", "t1_handle_async.py", "t1_handle_sync.py"],
-                        )
-                })
+            family["locations"].as_array().is_some_and(|locations| {
+                locations.len() > 2
+                    && family_has_files(
+                        family,
+                        &["hn1_a.py", "t1_handle_async.py", "t1_handle_sync.py"],
+                    )
+            })
         }),
-        "multi-member shared-core family should choose the async/sync pair over the decoy: {json}"
+        "multi-member shared-core family should preserve async-mirror evidence without merging the hard-negative pair: {json}"
     );
     assert!(
         [

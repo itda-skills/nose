@@ -34,7 +34,7 @@ fn promise_receiver_producer_obligations_are_primary_when_present() {
     );
     assert_eq!(
         runtime_boundary_obligation(&[
-            "promise-async-function-scheduling-contract",
+            "async-function-scheduling-contract",
             "promise-async-function-return-producer-proof",
             "promise-then-promise-like-receiver-proof",
         ]),
@@ -103,7 +103,7 @@ fn promise_then_continuation_and_callback_labels_have_standalone_obligations() {
 }
 
 #[test]
-fn aggregate_executor_scheduler_and_lifecycle_labels_have_specific_obligations() {
+fn async_protocol_labels_have_specific_obligations() {
     assert_eq!(
         runtime_boundary_obligation(&["async-await-scheduling-contract"]),
         (
@@ -118,6 +118,38 @@ fn aggregate_executor_scheduler_and_lifecycle_labels_have_specific_obligations()
             "promise-await-scheduling-contract-missing",
         )
     );
+    assert_eq!(
+        runtime_boundary_obligation(&["async-function-scheduling-contract"]),
+        (
+            "scheduling-boundary",
+            "async-function-scheduling-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["async-block-scheduling-contract"]),
+        (
+            "scheduling-boundary",
+            "async-block-scheduling-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["promise-async-function-scheduling-contract"]),
+        (
+            "scheduling-boundary",
+            "promise-async-function-scheduling-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["future-async-block-scheduling-contract"]),
+        (
+            "scheduling-boundary",
+            "future-async-block-scheduling-contract-missing",
+        )
+    );
+}
+
+#[test]
+fn aggregate_executor_scheduler_and_lifecycle_labels_have_specific_obligations() {
     assert_eq!(
         runtime_boundary_obligation(&[
             "promise-executor-timing-contract",

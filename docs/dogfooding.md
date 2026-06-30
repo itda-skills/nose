@@ -673,3 +673,11 @@ shared Promise-like and DirectMethod fixture helpers removed that new family.
 The remaining delta is the same reviewed direct-call-target negative fixture
 family moving from `32ed015840375d04` to `1af33fd980c0e8b9` after new branch
 fixtures shifted line spans. No new budget is accepted.
+
+The cross-language async-function obligation reporting slice tightens the count
+from 53 to 52. The first draft added a third Python protocol-boundary lowering
+test and surfaced avoidable test scaffolding duplication against the existing
+await/yield protocol tests; extracting `expect_python_protocol_boundary` removed
+that new family. After cleanup, accepted representative `57be5bd4067b5967` no
+longer reports and no new default-surface family appears, so the baseline budget
+is tightened.

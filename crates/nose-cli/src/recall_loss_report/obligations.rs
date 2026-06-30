@@ -89,10 +89,24 @@ const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
         ),
     },
     RuntimeBoundaryRule {
+        evidence: "async-function-scheduling-contract",
+        obligation: (
+            "scheduling-boundary",
+            "async-function-scheduling-contract-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
         evidence: "promise-async-function-scheduling-contract",
         obligation: (
             "scheduling-boundary",
             "promise-async-function-scheduling-contract-missing",
+        ),
+    },
+    RuntimeBoundaryRule {
+        evidence: "async-block-scheduling-contract",
+        obligation: (
+            "scheduling-boundary",
+            "async-block-scheduling-contract-missing",
         ),
     },
     RuntimeBoundaryRule {

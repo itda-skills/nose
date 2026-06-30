@@ -4,10 +4,22 @@ pub(super) fn lower_func(lo: &mut Lowering, node: TsNode, method: bool) -> NodeI
     // Collect this function's `global` declarations BEFORE lowering its body, so an
     // assignment to a global-declared name can be recorded as a module rebind (#302).
     // The frame is scoped to this function — nested functions get their own.
+    let is_async = crate::lower::node_has_child_kind(node, "async");
+    let span = lo.span(node);
     let globals = collect_global_declarations(lo, node);
     lo.global_decls.push(globals);
     let func = crate::lower::function_unit(lo, node, method, lower_params, |lo, b| {
-        lower_docstring_block(lo, b, false)
+        let body = lower_docstring_block(lo, b, false);
+        if is_async {
+            lo.protocol_boundary(
+                span,
+                nose_il::SourceProtocolKind::AsyncFunction,
+                "async_function",
+                &[body],
+            )
+        } else {
+            body
+        }
     });
     record_global_rebinds(lo, func);
     lo.global_decls.pop();
