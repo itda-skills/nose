@@ -1,4 +1,5 @@
 use super::{callee_field_method, callee_path, method_receiver, node_defines_name};
+use crate::verify_admission::AdmissionContext;
 use nose_il::{
     stable_symbol_hash, EvidenceAnchor, EvidenceEmitter, EvidenceKind, EvidenceStatus, Interner,
     NodeId, NodeKind, SymbolEvidenceKind,
@@ -8,6 +9,7 @@ pub(super) fn push_async_runtime_call_missing_evidence(
     il: &nose_il::Il,
     interner: &Interner,
     call: NodeId,
+    context: &AdmissionContext,
     labels: &mut Vec<&'static str>,
 ) -> bool {
     let Some(callee) = il.children(call).first().copied() else {
@@ -17,15 +19,15 @@ pub(super) fn push_async_runtime_call_missing_evidence(
         return false;
     };
     match il.meta.lang {
-        nose_il::Lang::Python => {
-            push_python_async_runtime_call_missing_evidence(il, interner, callee, &path, labels)
-        }
+        nose_il::Lang::Python => push_python_async_runtime_call_missing_evidence(
+            il, interner, callee, &path, context, labels,
+        ),
         nose_il::Lang::Rust => {
-            push_rust_async_runtime_call_missing_evidence(il, call, &path, labels)
+            push_rust_async_runtime_call_missing_evidence(il, call, &path, context, labels)
         }
-        nose_il::Lang::Swift => {
-            push_swift_async_runtime_call_missing_evidence(il, interner, callee, &path, labels)
-        }
+        nose_il::Lang::Swift => push_swift_async_runtime_call_missing_evidence(
+            il, interner, callee, &path, context, labels,
+        ),
         _ => false,
     }
 }
@@ -35,8 +37,12 @@ fn push_python_async_runtime_call_missing_evidence(
     interner: &Interner,
     callee: NodeId,
     callee_path: &str,
+    context: &AdmissionContext,
     labels: &mut Vec<&'static str>,
 ) -> bool {
+    if context.python_module_is_local_for_file("asyncio", &il.meta.path) {
+        return false;
+    }
     let Some(receiver) = method_receiver(il, callee) else {
         return false;
     };
@@ -133,8 +139,14 @@ fn push_rust_async_runtime_call_missing_evidence(
     il: &nose_il::Il,
     call: NodeId,
     callee_path: &str,
+    context: &AdmissionContext,
     labels: &mut Vec<&'static str>,
 ) -> bool {
+    if runtime_root(callee_path)
+        .is_some_and(|root| context.rust_runtime_root_is_local_for_file(root, &il.meta.path))
+    {
+        return false;
+    }
     if rust_async_spawn_path(callee_path) {
         push_task_spawn_missing_evidence(labels);
         return true;
@@ -160,8 +172,12 @@ fn push_swift_async_runtime_call_missing_evidence(
     interner: &Interner,
     callee: NodeId,
     callee_path: &str,
+    context: &AdmissionContext,
     labels: &mut Vec<&'static str>,
 ) -> bool {
+    if context.swift_name_is_visible("Task") {
+        return false;
+    }
     match callee_path {
         "Task" | "Task.detached" if swift_task_root_unshadowed(il, interner, callee) => {
             push_task_spawn_missing_evidence(labels);
@@ -169,6 +185,10 @@ fn push_swift_async_runtime_call_missing_evidence(
         }
         _ => false,
     }
+}
+
+fn runtime_root(callee_path: &str) -> Option<&str> {
+    callee_path.split("::").next()
 }
 
 fn rust_async_spawn_path(callee_path: &str) -> bool {

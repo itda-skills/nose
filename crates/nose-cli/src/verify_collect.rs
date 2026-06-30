@@ -1,7 +1,7 @@
 use crate::legacy_prelude::*;
 use crate::verify_admission::{
-    exact_admission_rejection, runtime_boundary_rejection_diagnostic,
-    ExactAdmissionRejectionDiagnostic,
+    exact_admission_rejection_with_context, runtime_boundary_rejection_diagnostic_with_context,
+    AdmissionContext, ExactAdmissionRejectionDiagnostic,
 };
 
 /// One record per interpretable unit.
@@ -156,6 +156,7 @@ pub(super) fn collect_verify_recs(
     battery: &[Vec<nose_normalize::Value>],
     census: bool,
 ) -> VerifyOracle {
+    let admission_context = AdmissionContext::from_corpus(corpus);
     let oracle_opts = nose_normalize::NormalizeOptions {
         oracle: true,
         ..*opts
@@ -207,6 +208,7 @@ pub(super) fn collect_verify_recs(
                 &mut oracle,
                 &exact_safe_by_span,
                 file_idx,
+                &admission_context,
             );
             oracle
         })
@@ -290,6 +292,7 @@ fn collect_file_verify_recs(
     oracle: &mut VerifyOracle,
     exact_safe_by_span: &std::collections::HashMap<(u32, u32), bool>,
     file_idx: usize,
+    admission_context: &AdmissionContext,
 ) {
     let file_path = &n.meta.path;
     let core_func = func_span_index(core);
@@ -353,7 +356,8 @@ fn collect_file_verify_recs(
                 ("battery-bail", VerifyExclusionReason::Uninterpretable)
             };
             push_verify_census(oracle, loc, core, core_root, &fp, census_reason);
-            let diagnostic = oracle_exclusion_diagnostic(reason, n, interner, root);
+            let diagnostic =
+                oracle_exclusion_diagnostic(reason, n, interner, root, admission_context);
             oracle
                 .exclusions
                 .record(reason, file_path, span0, tokens, diagnostic);
@@ -393,7 +397,7 @@ fn collect_file_verify_recs(
             .unwrap_or(true);
         let claimable = nose_detect::exact_claim_eligible_parts(exact_safe, fp.len());
         let admission_rejection =
-            exact_admission_rejection(n, interner, root, exact_safe, fp.len());
+            admission_rejection_for_rec(n, interner, root, exact_safe, fp.len(), admission_context);
         oracle.recs.push(VerifyRec {
             fp,
             beh,
@@ -425,15 +429,39 @@ fn unit_value_fingerprint_and_contracts(
     }
 }
 
+fn admission_rejection_for_rec(
+    il: &nose_il::Il,
+    interner: &Interner,
+    root: nose_il::NodeId,
+    exact_safe: bool,
+    fingerprint_len: usize,
+    admission_context: &AdmissionContext,
+) -> Option<ExactAdmissionRejectionDiagnostic> {
+    exact_admission_rejection_with_context(
+        il,
+        interner,
+        root,
+        exact_safe,
+        fingerprint_len,
+        admission_context,
+    )
+}
+
 fn oracle_exclusion_diagnostic(
     reason: VerifyExclusionReason,
     il: &nose_il::Il,
     interner: &Interner,
     root: nose_il::NodeId,
+    admission_context: &AdmissionContext,
 ) -> Option<ExactAdmissionRejectionDiagnostic> {
     match reason {
         VerifyExclusionReason::Uninterpretable => {
-            runtime_boundary_rejection_diagnostic(il, interner, root)
+            runtime_boundary_rejection_diagnostic_with_context(
+                il,
+                interner,
+                root,
+                admission_context,
+            )
         }
         VerifyExclusionReason::CoreMissing
         | VerifyExclusionReason::BatteryBail

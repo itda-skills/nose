@@ -1,13 +1,25 @@
-use super::{callee_identity::callee_identity_call_evidence, push_unique, visit_subtree};
+use super::{
+    callee_identity::callee_identity_call_evidence, push_unique, visit_subtree, AdmissionContext,
+};
 use async_runtime::push_async_runtime_call_missing_evidence;
 use nose_il::{Interner, NodeId, NodeKind, Payload};
 
 mod async_runtime;
 
+#[cfg(test)]
 pub(super) fn runtime_boundary_missing_evidence(
     il: &nose_il::Il,
     interner: &Interner,
     root: NodeId,
+) -> Option<Vec<&'static str>> {
+    runtime_boundary_missing_evidence_with_context(il, interner, root, &AdmissionContext::default())
+}
+
+pub(super) fn runtime_boundary_missing_evidence_with_context(
+    il: &nose_il::Il,
+    interner: &Interner,
+    root: NodeId,
+    context: &AdmissionContext,
 ) -> Option<Vec<&'static str>> {
     let mut labels = vec!["lowered-runtime-boundary-contract"];
     let mut found = false;
@@ -17,7 +29,8 @@ pub(super) fn runtime_boundary_missing_evidence(
         }
         if il.kind(node) == NodeKind::Call {
             found |= push_promise_protocol_call_missing_evidence(il, interner, node, &mut labels);
-            found |= push_async_runtime_call_missing_evidence(il, interner, node, &mut labels);
+            found |=
+                push_async_runtime_call_missing_evidence(il, interner, node, context, &mut labels);
         }
     });
     found.then_some(labels)

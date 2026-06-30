@@ -363,23 +363,26 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   summary plus separate interpretable and oracle-exclusion obligation rollups.
 - [non-js-async-runtime-api-obligation-reporting-2026-06-30.v1.json](non-js-async-runtime-api-obligation-reporting-2026-06-30.v1.json)
   records the next reporting-only runtime API migration. Python `asyncio`
-  task/timer/aggregate calls, Rust async task spawn plus `join!`/`select!`
-  macros, and Swift `Task` creation now report shared `task-*` and
-  `async-aggregate-*` obligations without opening exact admission.
+  task/timer/aggregate calls, Rust async task spawn plus qualified
+  `tokio`/`futures`/`futures_util` `join!`/`select!` macros, and Swift `Task`
+  creation now report shared `task-*` and `async-aggregate-*` obligations
+  without opening exact admission.
 - [scheduling-lifecycle-boundary-audit-non-js-async-runtime-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-runtime-2026-06-30.v1.json)
   records the 120-repo lexical pricing for that runtime API slice: Rust
   `tokio`/`async-std` spawn (`349` occurrences / `3` repos), Swift `Task`
   (`210` / `12`), Python `asyncio.sleep` (`104` / `6`), qualified Rust
-  `tokio`/`futures` `join!`/`try_join!` (`68` / `2`), Python
+  `tokio`/`futures`/`futures_util` `join!`/`try_join!` (`68` / `2`), Python
   `asyncio.gather` (`17` / `4`), Python `asyncio.create_task`/`ensure_future`
-  (`14` / `3`), qualified Rust `tokio`/`futures` `select!` (`5` / `1`), and
-  Python `asyncio.wait` (`4` / `3`).
+  (`14` / `3`), qualified Rust `tokio`/`futures`/`futures_util` `select!`
+  (`5` / `1`), and Python `asyncio.wait` (`4` / `3`).
 - [non-js-async-runtime-attribution-hardening-2026-06-30.v1.json](non-js-async-runtime-attribution-hardening-2026-06-30.v1.json)
   records the follow-up reporting-only safety hardening. Python `asyncio.*`
-  reporting now requires import-backed namespace evidence, Rust aggregate macro
-  reporting requires qualified `tokio`/`futures` paths, and Swift `Task`
-  reporting requires an unshadowed `Task` root. Exact admission stays closed and
-  the crates gate remains at `0` false merges.
+  reporting now requires import-backed namespace evidence and no path-visible
+  local `asyncio` module, Rust spawn and aggregate reporting require qualified
+  `tokio`/`async_std`/`futures`/`futures_util` paths whose root is not locally
+  defined in the same file, and Swift `Task` reporting requires an unshadowed
+  `Task` root with no corpus-visible Swift `Task` definition. Exact admission
+  stays closed and the crates gate remains at `0` false merges.
 - [promise-protocol-hard-negatives-2026-06-28.v1.json](promise-protocol-hard-negatives-2026-06-28.v1.json)
   records the follow-up Promise hard-negative slice. It keeps exact admission
   closed while pinning async-function/sync, Promise executor/sync,

@@ -63,18 +63,20 @@ non-construct call obligations. JS/TS async functions now emit a fail-closed
 The follow-up [non-js-async-runtime-api-obligation-reporting-2026-06-30.v1.json](../bench/recall_loss/non-js-async-runtime-api-obligation-reporting-2026-06-30.v1.json)
 extends the same reporting-only process to non-JS runtime APIs without adding a
 new kernel enum: Python `asyncio` task/timer/aggregate calls, Rust async spawn
-and qualified `tokio`/`futures` `join!`/`select!` macros, and Swift `Task`
-creation now report shared `task-*` and `async-aggregate-*` obligations. The
-matching 120-repo audit prices
+and qualified `tokio`/`futures`/`futures_util` `join!`/`select!` macros, and
+Swift `Task` creation now report shared `task-*` and `async-aggregate-*`
+obligations. The matching 120-repo audit prices
 Rust async spawn at `349` occurrences / `3` repos, Swift `Task` at `210` / `12`,
-Python `asyncio.sleep` at `104` / `6`, qualified Rust `tokio`/`futures`
-`join!`/`try_join!` at `68` / `2`, Python `asyncio.gather` at `17` / `4`,
-Python `asyncio.create_task`/`ensure_future` at `14` / `3`, qualified Rust
-`tokio`/`futures` `select!` at `5` / `1`, and Python `asyncio.wait` at `4` /
-`3`. The follow-up [non-js-async-runtime-attribution-hardening-2026-06-30.v1.json](../bench/recall_loss/non-js-async-runtime-attribution-hardening-2026-06-30.v1.json)
-keeps exact admission closed while requiring import-backed Python `asyncio`,
-qualified Rust aggregate macros, and unshadowed Swift `Task` roots before those
-shared obligations are attributed.
+Python `asyncio.sleep` at `104` / `6`, qualified Rust
+`tokio`/`futures`/`futures_util` `join!`/`try_join!` at `68` / `2`, Python
+`asyncio.gather` at `17` / `4`, Python `asyncio.create_task`/`ensure_future`
+at `14` / `3`, qualified Rust `tokio`/`futures`/`futures_util` `select!` at
+`5` / `1`, and Python `asyncio.wait` at `4` / `3`. The follow-up [non-js-async-runtime-attribution-hardening-2026-06-30.v1.json](../bench/recall_loss/non-js-async-runtime-attribution-hardening-2026-06-30.v1.json)
+keeps exact admission closed while requiring import-backed Python `asyncio`
+with no path-visible local module, qualified Rust spawn/aggregate paths whose
+root is not locally defined in the same file, and unshadowed Swift `Task` roots
+with no corpus-visible Swift `Task` definition before those shared obligations
+are attributed.
 The follow-up [promise-protocol-hard-negatives-2026-06-28.v1.json](../bench/recall_loss/promise-protocol-hard-negatives-2026-06-28.v1.json)
 pins the Promise-specific hard negatives before any recovery slice opens:
 async-function/sync, Promise executor/sync, Promise.resolve/sync,

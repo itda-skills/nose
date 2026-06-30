@@ -11,11 +11,11 @@
     "relevant_oracle_exclusion_obligations": [
       {
         "attribution_reason": "unsupported-runtime-boundary",
-        "count": 556,
+        "count": 559,
         "exclusion_reason": "uninterpretable",
         "obligation_family": "exception-channel",
         "obligation_subreason": "exception-channel-contract-missing",
-        "oracle_excluded": 556
+        "oracle_excluded": 559
       },
       {
         "attribution_reason": "unsupported-runtime-boundary",
@@ -37,12 +37,12 @@
       "max_violations": 0
     },
     "summary": {
-      "admission_rejections": 756,
-      "canon_checked": 87,
+      "admission_rejections": 763,
+      "canon_checked": 86,
       "canon_preservation_violations": 0,
-      "excluded_units": 5736,
-      "interpretable_units": 907,
-      "total_units": 6643
+      "excluded_units": 5746,
+      "interpretable_units": 914,
+      "total_units": 6660
     }
   },
   "generated_on": "2026-06-30",
@@ -190,7 +190,7 @@
       "obligation_family": "success-error-result-channel",
       "obligation_subreason": "async-aggregate-all-completion-contract-missing",
       "occurrences": 68,
-      "operation": "tokio/futures join/try_join",
+      "operation": "tokio/futures/futures_util join/try_join",
       "rank": 10,
       "repos": 2,
       "why": "High-prevalence boundary surface with reusable obligation vocabulary."
@@ -2537,7 +2537,7 @@
       "obligation_family": "success-error-result-channel",
       "obligation_subreason": "async-aggregate-all-completion-contract-missing",
       "occurrences": 68,
-      "operation": "tokio/futures join/try_join",
+      "operation": "tokio/futures/futures_util join/try_join",
       "repos": 2,
       "status": "closed-boundary",
       "surface": "rust.async.join",
@@ -2973,7 +2973,7 @@
       "obligation_family": "cancellation-liveness-boundary",
       "obligation_subreason": "async-aggregate-first-completion-contract-missing",
       "occurrences": 5,
-      "operation": "tokio/futures select",
+      "operation": "tokio/futures/futures_util select",
       "repos": 1,
       "status": "closed-boundary",
       "surface": "rust.async.select",

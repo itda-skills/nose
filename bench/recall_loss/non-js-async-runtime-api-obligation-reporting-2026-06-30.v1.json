@@ -50,14 +50,14 @@
   },
   "current_crates_gate": {
     "report": "target/recall-loss.non-js-async-runtime.crates.json",
-    "total_units": 6643,
-    "interpretable_units": 907,
-    "excluded_units": 5736,
-    "admission_rejections": 756,
+    "total_units": 6660,
+    "interpretable_units": 914,
+    "excluded_units": 5746,
+    "admission_rejections": 763,
     "false_merges": 0,
     "lossy_fingerprint_collisions": 0,
     "advisory_disagreements": 4,
-    "canon_checked": 87,
+    "canon_checked": 86,
     "canon_preservation_violations": 0,
     "gate_passed": true
   },
@@ -91,7 +91,7 @@
       {
         "language": "rust",
         "surface": "rust.async.join",
-        "operation": "tokio/futures join/try_join",
+        "operation": "tokio/futures/futures_util join/try_join",
         "obligation_subreason": "async-aggregate-all-completion-contract-missing",
         "occurrences": 68,
         "repos": 2
@@ -107,7 +107,7 @@
       {
         "language": "rust",
         "surface": "rust.async.select",
-        "operation": "tokio/futures select",
+        "operation": "tokio/futures/futures_util select",
         "obligation_subreason": "async-aggregate-first-completion-contract-missing",
         "occurrences": 5,
         "repos": 1
