@@ -7,6 +7,7 @@ fn parameter_type_domains_are_dependency_backed_and_not_substring_guesses() {
     assert_python_stdlib_pack_param_domains(&interner);
     assert_ts_and_java_param_domains(&interner);
     assert_rust_result_param_domains(&interner);
+    assert_rust_tokio_runtime_param_domains(&interner);
     assert_rust_binding_type_domains(&interner);
 }
 
@@ -322,6 +323,128 @@ fn assert_rust_result_param_domains(interner: &Interner) {
         param_domain_record_count(&rust_shadowed_result.evidence, DomainEvidence::Result),
         0,
         "a local Rust Result type must close unqualified std Result parameter evidence"
+    );
+}
+
+fn assert_rust_tokio_runtime_param_domains(interner: &Interner) {
+    let runtime_domain = DomainEvidence::Nominal {
+        type_hash: stable_symbol_hash("tokio::runtime::Runtime"),
+    };
+    let handle_domain = DomainEvidence::Nominal {
+        type_hash: stable_symbol_hash("tokio::runtime::Handle"),
+    };
+
+    let imported_runtime = lower_fixture(
+        "tokio_runtime_param.rs",
+        b"use tokio::runtime::Runtime;\npub fn run(rt: Runtime) { rt.block_on(work()); }\n",
+        Lang::Rust,
+        interner,
+    );
+    let runtime_import_ids =
+        imported_binding_symbol_ids(&imported_runtime.evidence, "tokio::runtime", "Runtime");
+    assert_eq!(runtime_import_ids.len(), 1);
+    let runtime_domains = param_domain_records(&imported_runtime.evidence, runtime_domain);
+    assert_eq!(runtime_domains.len(), 1);
+    assert_eq!(
+        runtime_domains[0].dependencies, runtime_import_ids,
+        "Rust tokio Runtime parameter domain evidence should be import-backed"
+    );
+
+    let scoped_imported_runtime = lower_fixture(
+        "tokio_scoped_runtime_param.rs",
+        b"mod local { use tokio::runtime::Runtime; pub fn run(rt: Runtime) { rt.block_on(work()); } }\n",
+        Lang::Rust,
+        interner,
+    );
+    let scoped_runtime_import_ids = imported_binding_symbol_ids(
+        &scoped_imported_runtime.evidence,
+        "tokio::runtime",
+        "Runtime",
+    );
+    assert_eq!(scoped_runtime_import_ids.len(), 1);
+    let scoped_runtime_domains =
+        param_domain_records(&scoped_imported_runtime.evidence, runtime_domain);
+    assert_eq!(scoped_runtime_domains.len(), 1);
+    assert_eq!(
+        scoped_runtime_domains[0].dependencies, scoped_runtime_import_ids,
+        "Rust tokio Runtime parameter evidence should use imports from the parameter module scope"
+    );
+
+    let aliased_handle = lower_fixture(
+        "tokio_handle_alias_param.rs",
+        b"use tokio::runtime::Handle as TokioHandle;\npub fn run(handle: TokioHandle) { handle.block_on(work()); }\n",
+        Lang::Rust,
+        interner,
+    );
+    let handle_import_ids =
+        imported_binding_symbol_ids(&aliased_handle.evidence, "tokio::runtime", "Handle");
+    assert_eq!(handle_import_ids.len(), 1);
+    let handle_domains = param_domain_records(&aliased_handle.evidence, handle_domain);
+    assert_eq!(handle_domains.len(), 1);
+    assert_eq!(
+        handle_domains[0].dependencies, handle_import_ids,
+        "Rust tokio Handle alias parameter domain evidence should be import-backed"
+    );
+
+    let qualified_runtime = lower_fixture(
+        "tokio_qualified_runtime_param.rs",
+        b"pub fn run(rt: tokio::runtime::Runtime) { rt.block_on(work()); }\n",
+        Lang::Rust,
+        interner,
+    );
+    let qualified_domains = param_domain_records(&qualified_runtime.evidence, runtime_domain);
+    assert_eq!(qualified_domains.len(), 1);
+    assert!(
+        qualified_domains[0].dependencies.is_empty(),
+        "fully qualified tokio Runtime parameter evidence does not need an import dependency"
+    );
+
+    let project_local_tokio = lower_fixture(
+        "tokio_project_local_runtime_param.rs",
+        b"mod tokio { pub mod runtime { pub struct Runtime; } }\npub fn run(rt: tokio::runtime::Runtime) { rt.block_on(work()); }\n",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        param_domain_record_count(&project_local_tokio.evidence, runtime_domain),
+        0,
+        "project-local tokio modules must close qualified tokio Runtime parameter evidence"
+    );
+
+    let case_mismatched_tokio = lower_fixture(
+        "tokio_case_mismatched_runtime_param.rs",
+        b"mod Tokio { pub mod runtime { pub struct Runtime; } }\npub fn run(rt: Tokio::runtime::Runtime) { rt.block_on(work()); }\n",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        param_domain_record_count(&case_mismatched_tokio.evidence, runtime_domain),
+        0,
+        "case-mismatched Tokio roots must not prove tokio Runtime parameter evidence"
+    );
+
+    let parent_module_import_not_visible = lower_fixture(
+        "tokio_parent_module_import_param.rs",
+        b"use tokio::runtime::Runtime;\nmod local { pub fn run(rt: Runtime) { rt.block_on(work()); } }\n",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        param_domain_record_count(&parent_module_import_not_visible.evidence, runtime_domain),
+        0,
+        "parent-module imports must not prove child-module Runtime parameter evidence"
+    );
+
+    let wrong_runtime = lower_fixture(
+        "wrong_runtime_param.rs",
+        b"use project::runtime::Runtime;\npub fn run(rt: Runtime) { rt.block_on(work()); }\n",
+        Lang::Rust,
+        interner,
+    );
+    assert_eq!(
+        param_domain_record_count(&wrong_runtime.evidence, runtime_domain),
+        0,
+        "same-named Runtime imports from another module must not prove tokio runtime identity"
     );
 }
 

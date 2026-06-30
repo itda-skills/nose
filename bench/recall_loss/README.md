@@ -450,16 +450,24 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   now receive
   `future-drive-scheduling-contract` and
   `future-settled-value-channel-contract` without opening exact admission.
-  Selector-only `.block_on` and unproven variable/field/parameter receivers
-  remain closed.
+  In that slice, selector-only `.block_on` and unproven variable/field/parameter
+  receivers remained closed.
 - [rust-block-on-local-runtime-provenance-2026-07-01.v1.json](rust-block-on-local-runtime-provenance-2026-07-01.v1.json)
   records the follow-up Rust local receiver-provenance expansion. Local
   variables whose last visible assignment is proof-backed `Handle::current()`,
   `Runtime::new().unwrap()/expect`, direct `Runtime::new()?`, or
   `Builder::new_*().build().unwrap()/expect/?` now receive the same
-  future-drive and future-settled obligations. Exact admission stays closed;
-  function parameters, struct fields, wrapper calls, and `map_err(...)?`
-  construction remain closed.
+  future-drive and future-settled obligations. Exact admission stays closed. In
+  that slice, function parameters, struct fields, wrapper calls, and
+  `map_err(...)?` construction remained closed.
+- [rust-block-on-parameter-runtime-provenance-2026-07-01.v1.json](rust-block-on-parameter-runtime-provenance-2026-07-01.v1.json)
+  records the follow-up Rust parameter receiver-provenance expansion. Nominal
+  `tokio::runtime::Runtime` and `tokio::runtime::Handle` parameters now receive
+  the same future-drive and future-settled obligations when the type is fully
+  qualified or backed by scope-visible exact imported-binding evidence. Exact
+  admission stays closed; struct fields, nested brace-import parameter types,
+  child-module parameters with only parent-module imports, type aliases, wrapper
+  calls, and `map_err(...)?` construction remain closed.
 - [scheduling-lifecycle-boundary-audit-swift-structured-concurrency-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-swift-structured-concurrency-2026-06-30.v1.json)
   records the matching 120-repo source-prevalence pricing. It raises total
   source prevalence from `142,847` to `143,178`: `Task.sleep` contributes

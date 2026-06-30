@@ -1,6 +1,6 @@
 # Semantic kernel snapshot
 
-Snapshot date: 2026-06-30. The current implementation has an internal
+Snapshot date: 2026-07-01. The current implementation has an internal
 semantic-kernel facade, evidence-gated field state, sequence-surface contracts,
 proof-backed append fragment evidence, operator-law contracts, typed import
 facts, source-fact gates for construct/macro/literal/operator provenance,
@@ -165,14 +165,22 @@ inline `Runtime`/`Builder` block-on receiver chains onto
 `future-settled-value-channel-contract`. Tokio spot checks show `4` future-drive
 evidence units in `tokio/tests/rt_handle_block_on.rs`, `2` of them as the
 primary scheduling subreason; selector-only and unproven variable/field/parameter
-`.block_on` receivers remain closed. The follow-up [Rust local runtime provenance
+`.block_on` receivers remained closed in that slice. The follow-up [Rust local runtime provenance
 artifact](../bench/recall_loss/rust-block-on-local-runtime-provenance-2026-07-01.v1.json)
 keeps exact admission closed while following local variables whose last visible
 assignment is direct proof-backed `Handle::current()`,
 `Runtime::new().unwrap()/expect/?`, or
 `Builder::new_*().build().unwrap()/expect/?`. Meilisearch and Tokio spot checks
-show `1` and `2` additional future-drive evidence units respectively, while
-parameters, fields, wrappers, and `map_err(...)?` construction remain closed.
+show `1` and `2` additional future-drive evidence units respectively. The
+follow-up [Rust parameter runtime provenance artifact](../bench/recall_loss/rust-block-on-parameter-runtime-provenance-2026-07-01.v1.json)
+keeps exact admission closed while following nominal
+`tokio::runtime::Runtime`/`Handle` parameter receivers backed by fully
+qualified type text or scope-visible exact imported-binding evidence. Tokio
+spot checks show `2` future-drive evidence units in
+`tokio/tests/fs_uring_read.rs` and `1` in
+`tokio/tests/rt_unstable_eager_driver_handoff.rs`; field receivers, nested brace
+imports, child-module parameters with only parent-module imports, type aliases,
+wrappers, and `map_err(...)?` construction remain closed.
 The follow-up [Go channel protocol pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json)
 keeps exact admission closed while pricing `4,294` channel receives, `1,525`
 sends, `155` comma-ok receives, `1,920` select parents, `3,590` select cases,
@@ -1445,12 +1453,14 @@ this worktree because the required evidence is not yet modeled:
   qualified or imported Rust runtime proof whose root is not locally defined in
   the same file, proof-backed `tokio::runtime` receiver construction for
   Rust `.block_on`, proof-backed local runtime variables whose last visible
-  assignment preserves that construction, and unshadowed Swift `Task` roots with
-  no corpus-visible Swift `Task` definition. Python function-local `asyncio`
+  assignment preserves that construction, nominal scope-visible Rust
+  `tokio::runtime` parameter receiver evidence, and unshadowed Swift `Task` roots with no
+  corpus-visible Swift `Task` definition. Python function-local `asyncio`
   imports remain closed until scope proof exists, the imported-occurrence
   producer keeps Rust block-scoped or other-module runtime imports from proving
-  calls outside that module scope, and `self.rt.block_on(...)` plus parameter
-  receivers stay closed until receiver/type evidence exists.
+  calls outside that module scope, and `self.rt.block_on(...)`, nested brace
+  import parameter types, and type aliases stay closed until stronger
+  receiver/type evidence exists.
 - Java `CompletableFuture.supplyAsync`/`runAsync`, settled factories,
   `allOf`/`anyOf`, and exact-import-backed CompletionStage-style receiver
   continuations now report future settled-value, continuation, callback

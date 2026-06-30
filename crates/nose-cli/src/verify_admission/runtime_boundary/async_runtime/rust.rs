@@ -1,8 +1,8 @@
 use super::{callee_field_method, callee_path, method_receiver, node_defines_name, rust_imports};
 use crate::verify_admission::AdmissionContext;
 use nose_il::{
-    stable_symbol_hash, EvidenceAnchor, EvidenceEmitter, EvidenceKind, EvidenceStatus, Interner,
-    NodeId, NodeKind, SymbolEvidenceKind,
+    stable_symbol_hash, DomainEvidence, EvidenceAnchor, EvidenceEmitter, EvidenceKind,
+    EvidenceStatus, Interner, NodeId, NodeKind, SymbolEvidenceKind,
 };
 
 pub(super) fn push_rust_async_runtime_call_missing_evidence(
@@ -120,6 +120,7 @@ fn rust_tokio_runtime_block_on_receiver(
     }
     rust_tokio_runtime_driver_receiver_expr(il, interner, receiver, context)
         || rust_tokio_runtime_local_binding_receiver_expr(il, interner, receiver, context)
+        || rust_tokio_runtime_parameter_receiver_expr(il, interner, receiver)
 }
 
 fn rust_tokio_runtime_driver_receiver_expr(
@@ -221,6 +222,22 @@ fn rust_tokio_runtime_local_binding_receiver_expr(
     };
     rust_last_visible_local_assignment_rhs(il, interner, receiver, local_name)
         .is_some_and(|rhs| rust_tokio_runtime_driver_receiver_expr(il, interner, rhs, context))
+}
+
+fn rust_tokio_runtime_parameter_receiver_expr(
+    il: &nose_il::Il,
+    interner: &Interner,
+    receiver: NodeId,
+) -> bool {
+    if il.kind(receiver) != NodeKind::Var {
+        return false;
+    }
+    matches!(
+        nose_semantics::domain_evidence_for_receiver(il, interner, receiver),
+        Some(DomainEvidence::Nominal { type_hash })
+            if type_hash == stable_symbol_hash("tokio::runtime::Runtime")
+                || type_hash == stable_symbol_hash("tokio::runtime::Handle")
+    )
 }
 
 fn rust_last_visible_local_assignment_rhs(

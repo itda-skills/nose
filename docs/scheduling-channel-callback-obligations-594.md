@@ -109,8 +109,12 @@ closed without tokio runtime identity proof. The follow-up [Rust local runtime
 provenance artifact](../bench/recall_loss/rust-block-on-local-runtime-provenance-2026-07-01.v1.json)
 extends that capability to local variables whose last visible assignment is a
 proof-backed `Handle::current()`, `Runtime::new().unwrap()/expect/?`, or
-`Builder::new_*().build().unwrap()/expect/?` chain. Parameters, fields,
-wrappers, and `map_err(...)?` construction remain closed.
+`Builder::new_*().build().unwrap()/expect/?` chain. The follow-up [Rust
+parameter runtime provenance artifact](../bench/recall_loss/rust-block-on-parameter-runtime-provenance-2026-07-01.v1.json)
+reuses the same capability for nominal `tokio::runtime::Runtime`/`Handle`
+parameter receivers backed by fully qualified type text or exact
+scope-visible imported-binding evidence. Fields, nested brace imports, type
+aliases, wrappers, and `map_err(...)?` construction remain closed.
 The follow-up [Java CompletableFuture artifact](../bench/recall_loss/java-completablefuture-obligation-reporting-2026-06-30.v1.json)
 keeps exact admission closed and maps proof-backed Java
 `CompletableFuture.supplyAsync`/`runAsync`, settled factories, `allOf`/`anyOf`,

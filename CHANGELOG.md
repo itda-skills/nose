@@ -93,8 +93,10 @@ break.
   `future-settled-value-channel-contract` without opening exact admission;
   proof-backed local variables assigned from `Handle::current()`,
   `Runtime::new().unwrap()/expect`, `Runtime::new()?`, or
-  `Builder::new_*().build().unwrap()/expect/?` now receive the same reporting.
-  Selector-only `.block_on`, function parameters, struct fields, wrapped
+  `Builder::new_*().build().unwrap()/expect/?` now receive the same reporting;
+  nominal parameter receivers proven as scope-visible `tokio::runtime::Runtime`
+  or `tokio::runtime::Handle` now do too. Selector-only `.block_on`, struct
+  fields, nested brace-import parameter types, type aliases, wrapped
   constructors, and `map_err(...)?` runtime construction remain closed.
 - Added Go channel/goroutine/defer obligation refinement. Go source-backed
   protocol boundaries now report channel send synchronization, receive value,
