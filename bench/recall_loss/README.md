@@ -383,6 +383,19 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   defined in the same file, and Swift `Task` reporting requires an unshadowed
   `Task` root with no corpus-visible Swift `Task` definition. Exact admission
   stays closed and the crates gate remains at `0` false merges.
+- [non-js-async-runtime-import-proof-2026-06-30.v1.json](non-js-async-runtime-import-proof-2026-06-30.v1.json)
+  records the next reporting-only import-proof expansion. Python `asyncio`
+  namespace aliases such as `import asyncio as aio; aio.create_task(...)` and
+  Rust imported runtime bindings such as `use tokio::spawn; spawn(...)` now use
+  existing import/symbol evidence before receiving the same shared obligations.
+  Exact admission stays closed.
+- [scheduling-lifecycle-boundary-audit-non-js-async-runtime-import-proof-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-runtime-import-proof-2026-06-30.v1.json)
+  records the matching 120-repo source-prevalence pricing after alias/imported
+  binding support. The new surfaces add `11` priced occurrences over the prior
+  qualified-only audit: Rust imported spawn (`3` / `1` repo) and Rust imported
+  `join!`/`try_join!` (`8` / `1` repo). Python `asyncio` alias and Rust
+  imported `select!` support are exercised by fixtures but have `0` occurrences
+  in the pinned corpus.
 - [promise-protocol-hard-negatives-2026-06-28.v1.json](promise-protocol-hard-negatives-2026-06-28.v1.json)
   records the follow-up Promise hard-negative slice. It keeps exact admission
   closed while pinning async-function/sync, Promise executor/sync,

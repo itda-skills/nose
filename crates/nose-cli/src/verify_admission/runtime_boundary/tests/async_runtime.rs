@@ -120,6 +120,64 @@ fn non_js_async_runtime_calls_report_shared_task_and_aggregate_obligations() {
 }
 
 #[test]
+fn non_js_async_runtime_import_aliases_report_shared_obligations() {
+    let py_alias_task = missing_evidence_for_lang_call(
+        "runtime.py",
+        "import asyncio as aio\nasync def main():\n    return aio.create_task(work())\n",
+        Lang::Python,
+        "aio.create_task",
+    );
+    let py_alias_wait = missing_evidence_for_lang_call(
+        "runtime.py",
+        "import asyncio as aio\nasync def main(task):\n    return await aio.wait([task])\n",
+        Lang::Python,
+        "aio.wait",
+    );
+    let rust_imported_spawn = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::spawn;\nfn run() { spawn(work()); }\n",
+        Lang::Rust,
+        "spawn",
+    );
+    let rust_imported_spawn_alias = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::spawn as tokio_spawn;\nfn run() { tokio_spawn(work()); }\n",
+        Lang::Rust,
+        "tokio_spawn",
+    );
+    let rust_imported_join = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::join;\nasync fn run() { join!(work(), other()); }\n",
+        Lang::Rust,
+        "join",
+    );
+    let rust_imported_select = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use futures::select;\nasync fn run() { select!(a = work() => a); }\n",
+        Lang::Rust,
+        "select",
+    );
+
+    for labels in [
+        &py_alias_task,
+        &rust_imported_spawn,
+        &rust_imported_spawn_alias,
+    ] {
+        assert!(labels.contains(&"task-spawn-scheduling-contract"));
+        assert!(labels.contains(&"task-handle-lifecycle-contract"));
+        assert!(labels.contains(&"task-cancellation-liveness-contract"));
+    }
+    assert!(py_alias_wait.contains(&"async-aggregate-completion-contract"));
+    assert!(py_alias_wait.contains(&"async-aggregate-cancellation-liveness-contract"));
+    assert!(py_alias_wait.contains(&"async-aggregate-result-channel-contract"));
+    assert!(rust_imported_join.contains(&"async-aggregate-all-completion-contract"));
+    assert!(rust_imported_join.contains(&"async-aggregate-result-channel-contract"));
+    assert!(rust_imported_select.contains(&"async-aggregate-first-completion-contract"));
+    assert!(rust_imported_select.contains(&"async-aggregate-cancellation-liveness-contract"));
+    assert!(rust_imported_select.contains(&"async-aggregate-result-channel-contract"));
+}
+
+#[test]
 fn non_js_async_runtime_attribution_requires_runtime_identity() {
     let py_shadowed = runtime_boundary_evidence_for_lang_call(
         "runtime.py",
@@ -145,6 +203,12 @@ fn non_js_async_runtime_attribution_requires_runtime_identity() {
         Lang::Rust,
         "select",
     );
+    let rust_imported_spawn_macro = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::spawn;\nfn run() { spawn!(work()); }\n",
+        Lang::Rust,
+        "spawn",
+    );
     let swift_shadowed_task = runtime_boundary_evidence_for_lang_call(
         "runtime.swift",
         "let Task = makeTask\nfunc run() {\n  Task { work() }\n}\n",
@@ -168,6 +232,17 @@ fn non_js_async_runtime_attribution_requires_runtime_identity() {
         "timer-scheduling-contract",
         "unimported Python asyncio.sleep",
     );
+    let py_shadowed_alias = runtime_boundary_evidence_for_lang_call(
+        "runtime.py",
+        "import asyncio as aio\nasync def main(aio, task):\n    return await aio.gather(task)\n",
+        Lang::Python,
+        "aio.gather",
+    );
+    assert_missing_evidence_not_contains(
+        py_shadowed_alias,
+        "async-aggregate-all-completion-contract",
+        "shadowed Python asyncio alias",
+    );
     assert_missing_evidence_not_contains(
         rust_bare_join,
         "async-aggregate-all-completion-contract",
@@ -178,12 +253,54 @@ fn non_js_async_runtime_attribution_requires_runtime_identity() {
         "async-aggregate-first-completion-contract",
         "unqualified Rust select! macro",
     );
+    assert_missing_evidence_not_contains(
+        rust_imported_spawn_macro,
+        "task-spawn-scheduling-contract",
+        "imported Rust spawn used as macro",
+    );
     for (labels, surface) in [
         (swift_shadowed_task, "shadowed Swift Task"),
         (swift_shadowed_detached, "shadowed Swift Task.detached"),
     ] {
         assert_missing_evidence_not_contains(labels, "task-spawn-scheduling-contract", surface);
     }
+}
+
+#[test]
+fn non_js_async_runtime_imported_runtime_bindings_reject_local_shadows() {
+    let rust_imported_spawn_param_shadow = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::spawn;\nfn run<F>(spawn: F) { spawn(work()); }\n",
+        Lang::Rust,
+        "spawn",
+    );
+    let rust_imported_spawn_let_shadow = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::spawn;\nfn run() { let spawn = local; spawn(work()); }\n",
+        Lang::Rust,
+        "spawn",
+    );
+    let rust_imported_join_macro_shadow = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::join;\nmacro_rules! join { ($a:expr, $b:expr) => { ($a, $b) }; }\nasync fn run() { join!(work(), other()); }\n",
+        Lang::Rust,
+        "join",
+    );
+
+    for (labels, surface) in [
+        (
+            rust_imported_spawn_param_shadow,
+            "Rust spawn parameter shadow",
+        ),
+        (rust_imported_spawn_let_shadow, "Rust spawn let shadow"),
+    ] {
+        assert_missing_evidence_not_contains(labels, "task-spawn-scheduling-contract", surface);
+    }
+    assert_missing_evidence_not_contains(
+        rust_imported_join_macro_shadow,
+        "async-aggregate-all-completion-contract",
+        "Rust imported join shadowed by local macro",
+    );
 }
 
 #[test]
@@ -305,6 +422,62 @@ fn non_js_async_runtime_context_keeps_unrelated_runtime_names_open() {
         rust_unrelated_local_tokio,
         "task-spawn-scheduling-contract",
         "unrelated Rust tokio root",
+    );
+}
+
+#[test]
+fn non_js_async_runtime_context_rejects_project_local_import_aliases() {
+    let py_local_asyncio_alias = runtime_boundary_evidence_for_corpus_call(
+        &[
+            (
+                "asyncio.py",
+                "def create_task(x):\n    return x\n",
+                Lang::Python,
+            ),
+            (
+                "runtime.py",
+                "import asyncio as aio\nasync def main():\n    return aio.create_task(work())\n",
+                Lang::Python,
+            ),
+        ],
+        "runtime.py",
+        "aio.create_task",
+    );
+    let rust_local_tokio_imported_spawn = runtime_boundary_evidence_for_corpus_call(
+        &[(
+            "runtime.rs",
+            "mod tokio { pub fn spawn<T>(task: T) -> T { task } }\nuse tokio::spawn;\nfn run() { spawn(work()); }\n",
+            Lang::Rust,
+        )],
+        "runtime.rs",
+        "spawn",
+    );
+
+    assert_missing_evidence_not_contains(
+        py_local_asyncio_alias,
+        "task-spawn-scheduling-contract",
+        "project-local Python asyncio module through alias",
+    );
+    assert_missing_evidence_not_contains(
+        rust_local_tokio_imported_spawn,
+        "task-spawn-scheduling-contract",
+        "project-local Rust tokio root for imported spawn",
+    );
+}
+
+#[test]
+fn non_js_async_runtime_alias_fallback_requires_top_level_import() {
+    let py_nested_import_alias = runtime_boundary_evidence_for_lang_call(
+        "runtime.py",
+        "async def helper():\n    import asyncio as aio\nasync def main():\n    return await aio.sleep(1)\n",
+        Lang::Python,
+        "aio.sleep",
+    );
+
+    assert_missing_evidence_not_contains(
+        py_nested_import_alias,
+        "timer-scheduling-contract",
+        "Python asyncio alias imported only in another local scope",
     );
 }
 

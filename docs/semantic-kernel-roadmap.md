@@ -2116,6 +2116,13 @@ different APIs.
   success/error/rejection channels, scheduling, lifecycle/materialization,
   receiver mutation, and ambiguous selector proof are tracked as distinct
   obligations.
+- The non-JS async runtime follow-ups keep using that vocabulary instead of
+  adding API-by-API kernel features. Python `asyncio` namespace aliases and
+  Rust imported `tokio`/`async_std`/`futures` runtime bindings now compose
+  existing import/symbol identity proof with shared task and async aggregate
+  obligations, while exact admission remains closed until scheduling,
+  cancellation, lifecycle, result-channel, exception, and callback/effect
+  contracts are dependency-closed.
 - Keep expanding lazy iterator/generator/channel hard negatives before enabling
   new exact laws. The first Python generator/list/set and Go channel/goroutine
   hard negatives are now in place, along with hard negatives for pull-lazy

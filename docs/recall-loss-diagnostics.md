@@ -165,6 +165,14 @@ local `asyncio` module, Rust spawn and aggregate paths must be qualified
 defined in the same file, and Swift `Task` must be unshadowed and not
 corpus-visible as a local Swift definition before task/aggregate obligations are
 attributed. The
+follow-up [non-JS async runtime import proof](../bench/recall_loss/non-js-async-runtime-import-proof-2026-06-30.v1.json)
+keeps exact admission closed but widens attribution to import-backed spellings:
+Python `asyncio` namespace aliases such as `import asyncio as aio; aio.wait(...)`
+and Rust imported runtime bindings such as `use tokio::spawn; spawn(...)`,
+`use tokio::join; join!(...)`, and `use futures::select; select!(...)`. The
+matching [120-repo pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-non-js-async-runtime-import-proof-2026-06-30.v1.json)
+adds `11` Rust imported-binding occurrences over the qualified-only audit and
+finds no Python `asyncio` alias occurrences in the pinned corpus. The
 checked [promise-protocol diagnostics](../bench/recall_loss/promise-protocol-diagnostics-2026-06-28.v1.json)
 connect the JS/TS source-prevalence group (`29,094` Promise/async occurrences)
 to report labels such as legacy `promise-await-scheduling-contract`,

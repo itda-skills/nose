@@ -28,8 +28,9 @@ preserved as protocol boundaries with `Source::Protocol(AsyncBlock)` and
 goroutine spawn, deferred calls, channel send/receive, receive-status
 projections, and `select` boundaries are also preserved as raw source-backed
 protocol anchors rather than ordinary calls, values, or sequence tags. Python
-`asyncio` task/timer/aggregate calls, Rust `tokio`/`async-std` spawn and
-`join!`/`select!` macros, and Swift `Task` creation now report shared
+`asyncio` task/timer/aggregate calls, including import-backed namespace aliases,
+Rust `tokio`/`async-std` spawn and `join!`/`select!` macros, including
+imported runtime bindings, and Swift `Task` creation now report shared
 runtime-boundary obligations without becoming exact recovery evidence. Python
 comprehension lowering now records whether a
 HOF came from a list comprehension, set comprehension, dict comprehension, or
@@ -126,7 +127,11 @@ non-construct Promise-call labels for recall-loss reporting.
 The [non-JS async runtime API reporting artifact](../bench/recall_loss/non-js-async-runtime-api-obligation-reporting-2026-06-30.v1.json)
 extends that attribution capability to Python/Rust/Swift runtime APIs using
 shared `task-*` and `async-aggregate-*` obligations while keeping exact
-admission closed.
+admission closed. The follow-up [non-JS async runtime import-proof artifact](../bench/recall_loss/non-js-async-runtime-import-proof-2026-06-30.v1.json)
+widens that reporting to Python `asyncio` namespace aliases and Rust imported
+runtime bindings by composing existing `ImportedNamespace`/`ImportedMember`
+symbol proof with the same obligations instead of adding a selector-specific
+kernel feature.
 Library/API identity is consolidated through internal `LibraryApiContract` rows
 for factory, constructor, selected property/non-factory method/view surfaces,
 and selected non-call sentinels, with occurrence evidence covering selected

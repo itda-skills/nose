@@ -145,6 +145,12 @@ break.
   `tokio`/`async_std`/`futures`/`futures_util` paths whose root is not locally
   defined in the file, and Swift `Task` reporting requires an unshadowed root
   before shared runtime obligations are attached.
+- Expanded that non-JS async runtime attribution to import-backed spellings:
+  Python `asyncio` aliases such as `import asyncio as aio; aio.wait(...)` and
+  Rust imported runtime bindings such as `use tokio::spawn; spawn(...)`,
+  `use tokio::join; join!(...)`, and `use futures::select; select!(...)` now
+  receive the same reporting-only task/timer/aggregate obligations when their
+  import identity is proven. Exact admission remains closed.
 - Refined import-snapshot census reporting to separate missing provider modules,
   missing exports, re-export boundaries, external/stdlib/workspace boundaries,
   provider/importer mutation, missing provider API proof, and aggregate shapes
