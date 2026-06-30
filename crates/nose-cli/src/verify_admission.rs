@@ -1,11 +1,164 @@
 use nose_il::{Interner, NodeId};
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+};
 
 mod callee_identity;
 mod hof;
 mod runtime_boundary;
 use callee_identity::callee_identity_missing_evidence;
 use hof::hof_missing_evidence;
-use runtime_boundary::runtime_boundary_missing_evidence;
+use runtime_boundary::runtime_boundary_missing_evidence_with_context;
+
+#[derive(Clone, Default)]
+pub(crate) struct AdmissionContext {
+    python_local_modules: Vec<PythonLocalModule>,
+    rust_local_runtime_roots_by_file: HashMap<String, HashSet<String>>,
+    swift_visible_names: HashSet<String>,
+}
+
+#[derive(Clone)]
+struct PythonLocalModule {
+    name: String,
+    import_root: String,
+}
+
+impl AdmissionContext {
+    pub(crate) fn from_corpus(corpus: &nose_il::Corpus) -> Self {
+        let mut context = AdmissionContext::default();
+        for il in &corpus.files {
+            match il.meta.lang {
+                nose_il::Lang::Python => {
+                    context
+                        .python_local_modules
+                        .extend(python_module_names_from_path(&il.meta.path));
+                }
+                nose_il::Lang::Rust => {
+                    context.collect_rust_runtime_root_definitions(il, &corpus.interner);
+                }
+                nose_il::Lang::Swift => {
+                    context.collect_swift_visible_names(il, &corpus.interner);
+                }
+                _ => {}
+            }
+        }
+        context
+    }
+
+    pub(crate) fn python_module_is_local_for_file(&self, module: &str, file_path: &str) -> bool {
+        let file_dir = parent_dir(file_path);
+        self.python_local_modules.iter().any(|local| {
+            local.name == module && path_is_same_or_ancestor(&local.import_root, &file_dir)
+        })
+    }
+
+    pub(crate) fn rust_runtime_root_is_local_for_file(&self, root: &str, file_path: &str) -> bool {
+        self.rust_local_runtime_roots_by_file
+            .get(file_path)
+            .is_some_and(|roots| roots.contains(root))
+    }
+
+    pub(crate) fn swift_name_is_visible(&self, name: &str) -> bool {
+        self.swift_visible_names.contains(name)
+    }
+
+    fn collect_rust_runtime_root_definitions(&mut self, il: &nose_il::Il, interner: &Interner) {
+        const RUNTIME_ROOTS: &[&str] = &["tokio", "async_std", "futures", "futures_util"];
+        for name in names_defined_in_il(il, interner) {
+            if RUNTIME_ROOTS.contains(&name.as_str()) {
+                self.rust_local_runtime_roots_by_file
+                    .entry(il.meta.path.clone())
+                    .or_default()
+                    .insert(name);
+            }
+        }
+    }
+
+    fn collect_swift_visible_names(&mut self, il: &nose_il::Il, interner: &Interner) {
+        self.swift_visible_names
+            .extend(names_defined_in_il(il, interner));
+    }
+}
+
+fn python_module_names_from_path(path: &str) -> Vec<PythonLocalModule> {
+    let path = Path::new(path);
+    if path.file_stem().and_then(|name| name.to_str()) == Some("__init__") {
+        return path
+            .parent()
+            .and_then(|package| {
+                Some(PythonLocalModule {
+                    name: package.file_name()?.to_str()?.to_string(),
+                    import_root: path_to_string(package.parent().unwrap_or_else(|| Path::new(""))),
+                })
+            })
+            .map(|local| vec![local])
+            .unwrap_or_default();
+    }
+    path.file_stem()
+        .and_then(|name| name.to_str())
+        .map(|name| {
+            vec![PythonLocalModule {
+                name: name.to_string(),
+                import_root: parent_dir(path),
+            }]
+        })
+        .unwrap_or_default()
+}
+
+fn parent_dir(path: impl AsRef<Path>) -> String {
+    path.as_ref()
+        .parent()
+        .map(path_to_string)
+        .unwrap_or_default()
+}
+
+fn path_to_string(path: &Path) -> String {
+    path.to_string_lossy().to_string()
+}
+
+fn path_is_same_or_ancestor(ancestor: &str, path: &str) -> bool {
+    ancestor.is_empty() || Path::new(path).starts_with(Path::new(ancestor))
+}
+
+fn names_defined_in_il(il: &nose_il::Il, interner: &Interner) -> HashSet<String> {
+    let mut names = HashSet::new();
+    for unit in &il.units {
+        if let Some(name) = unit.name {
+            names.insert(interner.resolve(name).to_string());
+        }
+    }
+    for (idx, node) in il.nodes.iter().enumerate() {
+        let node_id = NodeId(idx as u32);
+        match node.kind {
+            nose_il::NodeKind::Module | nose_il::NodeKind::Block | nose_il::NodeKind::Param => {
+                if let Some(name) = node_exact_name(il, interner, node_id) {
+                    names.insert(name.to_string());
+                }
+            }
+            nose_il::NodeKind::Assign => {
+                if let Some(lhs) = il.children(node_id).first().copied() {
+                    if let Some(name) = node_exact_name(il, interner, lhs) {
+                        names.insert(name.to_string());
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    names
+}
+
+fn node_exact_name<'a>(il: &nose_il::Il, interner: &'a Interner, node: NodeId) -> Option<&'a str> {
+    match il.node(node).payload {
+        nose_il::Payload::Name(symbol) => Some(interner.resolve(symbol)),
+        nose_il::Payload::Cid(cid) => il
+            .cid_names
+            .get(cid as usize)
+            .map(|symbol| interner.resolve(*symbol)),
+        _ => None,
+    }
+}
 
 #[derive(Clone)]
 pub(crate) struct ExactAdmissionRejectionDiagnostic {
@@ -16,12 +169,13 @@ pub(crate) struct ExactAdmissionRejectionDiagnostic {
     pub(crate) missing_evidence: Vec<&'static str>,
 }
 
-pub(crate) fn exact_admission_rejection(
+pub(crate) fn exact_admission_rejection_with_context(
     il: &nose_il::Il,
     interner: &Interner,
     root: NodeId,
     exact_safe: bool,
     value_len: usize,
+    context: &AdmissionContext,
 ) -> Option<ExactAdmissionRejectionDiagnostic> {
     if exact_safe {
         return (!nose_detect::exact_claim_eligible_parts(true, value_len)).then(|| {
@@ -35,15 +189,18 @@ pub(crate) fn exact_admission_rejection(
         });
     }
 
-    Some(strict_exact_rejection_reason(il, interner, root))
+    Some(strict_exact_rejection_reason(il, interner, root, context))
 }
 
 fn strict_exact_rejection_reason(
     il: &nose_il::Il,
     interner: &Interner,
     root: NodeId,
+    context: &AdmissionContext,
 ) -> ExactAdmissionRejectionDiagnostic {
-    if let Some(diagnostic) = runtime_boundary_rejection_diagnostic(il, interner, root) {
+    if let Some(diagnostic) =
+        runtime_boundary_rejection_diagnostic_with_context(il, interner, root, context)
+    {
         return diagnostic;
     }
 
@@ -130,20 +287,21 @@ fn strict_exact_rejection_reason(
     }
 }
 
-pub(crate) fn runtime_boundary_rejection_diagnostic(
+pub(crate) fn runtime_boundary_rejection_diagnostic_with_context(
     il: &nose_il::Il,
     interner: &Interner,
     root: NodeId,
+    context: &AdmissionContext,
 ) -> Option<ExactAdmissionRejectionDiagnostic> {
-    runtime_boundary_missing_evidence(il, interner, root).map(|missing_evidence| {
-        ExactAdmissionRejectionDiagnostic {
+    runtime_boundary_missing_evidence_with_context(il, interner, root, context).map(
+        |missing_evidence| ExactAdmissionRejectionDiagnostic {
             reason: "unsupported-runtime-boundary",
             admission_gate: "strict-exact-safety",
             capability_id: "runtime-boundary-model",
             pack_id: None,
             missing_evidence,
-        }
-    })
+        },
+    )
 }
 
 fn subtree_has(

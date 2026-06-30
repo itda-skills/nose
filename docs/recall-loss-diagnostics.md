@@ -150,12 +150,21 @@ as `promise-async-function-return-producer-proof` remain Promise-specific. The
 follow-up [non-JS async runtime API obligation reporting](../bench/recall_loss/non-js-async-runtime-api-obligation-reporting-2026-06-30.v1.json)
 keeps exact admission closed while extending the same runtime-boundary
 attribution process to Python `asyncio.create_task`/`sleep`/`gather`/`wait`,
-Rust `tokio`/`async-std` spawn and `join!`/`select!` macros, and Swift `Task`
+Rust `tokio`/`async-std` spawn and qualified
+`tokio`/`futures`/`futures_util` `join!`/`select!` macros, and Swift `Task`
 creation. New reports use shared `task-spawn-scheduling-contract`,
 `task-handle-lifecycle-contract`, `task-cancellation-liveness-contract`, and
 `async-aggregate-*` labels; interpretable rejections stay in top-level
 `by_obligation`, while excluded runtime units stay under
-`oracle_exclusions.by_obligation`. The
+`oracle_exclusions.by_obligation`. The follow-up [non-JS async runtime
+attribution hardening](../bench/recall_loss/non-js-async-runtime-attribution-hardening-2026-06-30.v1.json)
+keeps those labels reporting-only but requires stronger runtime identity proof:
+Python `asyncio.*` needs import-backed namespace evidence with no path-visible
+local `asyncio` module, Rust spawn and aggregate paths must be qualified
+`tokio`/`async_std`/`futures`/`futures_util` paths whose root is not locally
+defined in the same file, and Swift `Task` must be unshadowed and not
+corpus-visible as a local Swift definition before task/aggregate obligations are
+attributed. The
 checked [promise-protocol diagnostics](../bench/recall_loss/promise-protocol-diagnostics-2026-06-28.v1.json)
 connect the JS/TS source-prevalence group (`29,094` Promise/async occurrences)
 to report labels such as legacy `promise-await-scheduling-contract`,
