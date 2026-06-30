@@ -3035,9 +3035,10 @@ the wrapper so `async-mirror` remains explicit and `equal_modulo_holes=false`. T
 Rust `.await`/`async fn` and Swift `await`/`async func` synthetic twins converge in
 `near`/`spotclass=structural` while keeping exact admission closed. The synthetic gold set
 now includes Rust and Swift total-loop pairs, and the focused query JSON regression asserts
-that those pairs carry `async-mirror`/`equal_modulo_holes=false` evidence. The real-frontier
-coverage matrix is not flipped for Rust or Swift until there is hand-verified real-corpus
-evidence comparable to the httpx Python cases.
+that those pairs carry `async-mirror`/`equal_modulo_holes=false` evidence. Rust and Swift
+hard-negative fixture pairs keep unrelated async/sync logic out of the same near family. The
+real-frontier coverage matrix is not flipped for Rust or Swift until there is hand-verified
+real-corpus evidence comparable to the httpx Python cases.
 
 **Gates.** Full suite **1056 pass**; the dual-view broke no existing await test. **Exact-channel
 provably inert:** `verify --max-violations 0` clean (axios/rxjs/trpc/flask/guava), and the

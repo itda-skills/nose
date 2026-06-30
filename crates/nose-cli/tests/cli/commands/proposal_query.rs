@@ -129,16 +129,6 @@ fn query_json_grades_async_mirror_shared_core_families() {
     let families = json["families"]
         .as_array()
         .expect("query JSON should carry a families array");
-    let family_has_files = |family: &serde_json::Value, suffixes: &[&str]| {
-        let locations = family["locations"].as_array().expect("locations");
-        suffixes.iter().all(|suffix| {
-            locations.iter().any(|loc| {
-                loc["file"]
-                    .as_str()
-                    .is_some_and(|file| file.ends_with(suffix))
-            })
-        })
-    };
     let async_mirror_families: Vec<_> = families
         .iter()
         .filter(|family| {
@@ -204,11 +194,24 @@ fn query_json_grades_async_mirror_shared_core_families() {
             ["hn1_a.py", "hn1_b.py"],
             ["hn2_a.ts", "hn2_b.ts"],
             ["hn3_a.py", "hn3_b.py"],
+            ["hn4_a.rs", "hn4_b.rs"],
+            ["hn5_a.swift", "hn5_b.swift"],
         ]
         .iter()
         .all(|pair| !families.iter().any(|family| family_has_files(family, pair))),
         "async/sync hard-negative pairs must not merge: {json}"
     );
+}
+
+fn family_has_files(family: &serde_json::Value, suffixes: &[&str]) -> bool {
+    let locations = family["locations"].as_array().expect("locations");
+    suffixes.iter().all(|suffix| {
+        locations.iter().any(|loc| {
+            loc["file"]
+                .as_str()
+                .is_some_and(|file| file.ends_with(suffix))
+        })
+    })
 }
 
 fn async_mirror_fixture_file(path: &str) -> bool {
