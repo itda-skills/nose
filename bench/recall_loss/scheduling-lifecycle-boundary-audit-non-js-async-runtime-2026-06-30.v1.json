@@ -11,11 +11,11 @@
     "relevant_oracle_exclusion_obligations": [
       {
         "attribution_reason": "unsupported-runtime-boundary",
-        "count": 555,
+        "count": 556,
         "exclusion_reason": "uninterpretable",
         "obligation_family": "exception-channel",
         "obligation_subreason": "exception-channel-contract-missing",
-        "oracle_excluded": 555
+        "oracle_excluded": 556
       },
       {
         "attribution_reason": "unsupported-runtime-boundary",
@@ -37,12 +37,12 @@
       "max_violations": 0
     },
     "summary": {
-      "admission_rejections": 757,
-      "canon_checked": 88,
+      "admission_rejections": 756,
+      "canon_checked": 87,
       "canon_preservation_violations": 0,
-      "excluded_units": 5728,
-      "interpretable_units": 908,
-      "total_units": 6636
+      "excluded_units": 5736,
+      "interpretable_units": 907,
+      "total_units": 6643
     }
   },
   "generated_on": "2026-06-30",
@@ -189,8 +189,8 @@
       "next_action": "reporting-only split and hard-negative expansion before exact admission",
       "obligation_family": "success-error-result-channel",
       "obligation_subreason": "async-aggregate-all-completion-contract-missing",
-      "occurrences": 82,
-      "operation": "join/try_join",
+      "occurrences": 68,
+      "operation": "tokio/futures join/try_join",
       "rank": 10,
       "repos": 2,
       "why": "High-prevalence boundary surface with reusable obligation vocabulary."
@@ -209,21 +209,21 @@
       "javascript-typescript": 45382,
       "python": 6403,
       "ruby": 4884,
-      "rust": 13243,
+      "rust": 13217,
       "swift": 39460
     },
     "obligation_families": {
       "callback-demand-effect": 801,
-      "cancellation-liveness-boundary": 309,
+      "cancellation-liveness-boundary": 297,
       "channel-boundary": 8338,
       "exception-channel": 30631,
       "executor-callback": 795,
       "lifecycle-materialization-boundary": 22469,
       "scheduling-boundary": 78693,
-      "success-error-result-channel": 824
+      "success-error-result-channel": 810
     },
     "repos_in_manifest": 120,
-    "total_source_prevalence": 142860
+    "total_source_prevalence": 142834
   },
   "surfaces": [
     {
@@ -2291,62 +2291,6 @@
       ]
     },
     {
-      "boundary": "future all-completion aggregate",
-      "language": "rust",
-      "note": "join style macros need all-completion result-channel proof",
-      "obligation_family": "success-error-result-channel",
-      "obligation_subreason": "async-aggregate-all-completion-contract-missing",
-      "occurrences": 82,
-      "operation": "join/try_join",
-      "repos": 2,
-      "status": "closed-boundary",
-      "surface": "rust.async.join",
-      "top_files": [
-        {
-          "occurrences": 20,
-          "path": "tokio/tokio/tests/macros_try_join.rs"
-        },
-        {
-          "occurrences": 20,
-          "path": "tokio/tokio/tests/macros_join.rs"
-        },
-        {
-          "occurrences": 6,
-          "path": "tokio/tokio/tests/tcp_connect.rs"
-        },
-        {
-          "occurrences": 6,
-          "path": "tokio/tests-build/tests/fail/macros_try_join.rs"
-        },
-        {
-          "occurrences": 6,
-          "path": "tokio/tests-build/tests/fail/macros_join.rs"
-        },
-        {
-          "occurrences": 3,
-          "path": "tokio/tokio/tests/rt_common.rs"
-        },
-        {
-          "occurrences": 3,
-          "path": "tokio/tokio/src/macros/join.rs"
-        },
-        {
-          "occurrences": 3,
-          "path": "tokio/tokio/src/macros/try_join.rs"
-        }
-      ],
-      "top_repos": [
-        {
-          "occurrences": 81,
-          "repo": "tokio"
-        },
-        {
-          "occurrences": 1,
-          "repo": "meilisearch"
-        }
-      ]
-    },
-    {
       "boundary": "interval lifecycle",
       "language": "javascript-typescript",
       "note": "setInterval and timers interval streams have repeated emission, cancellation, and liveness semantics",
@@ -2587,6 +2531,62 @@
       ]
     },
     {
+      "boundary": "future all-completion aggregate",
+      "language": "rust",
+      "note": "qualified runtime join style macros need all-completion result-channel proof",
+      "obligation_family": "success-error-result-channel",
+      "obligation_subreason": "async-aggregate-all-completion-contract-missing",
+      "occurrences": 68,
+      "operation": "tokio/futures join/try_join",
+      "repos": 2,
+      "status": "closed-boundary",
+      "surface": "rust.async.join",
+      "top_files": [
+        {
+          "occurrences": 20,
+          "path": "tokio/tokio/tests/macros_try_join.rs"
+        },
+        {
+          "occurrences": 20,
+          "path": "tokio/tokio/tests/macros_join.rs"
+        },
+        {
+          "occurrences": 6,
+          "path": "tokio/tests-build/tests/fail/macros_try_join.rs"
+        },
+        {
+          "occurrences": 6,
+          "path": "tokio/tests-build/tests/fail/macros_join.rs"
+        },
+        {
+          "occurrences": 3,
+          "path": "tokio/tokio/tests/rt_common.rs"
+        },
+        {
+          "occurrences": 2,
+          "path": "tokio/tokio/tests/task_id.rs"
+        },
+        {
+          "occurrences": 2,
+          "path": "tokio/tokio/tests/dump.rs"
+        },
+        {
+          "occurrences": 1,
+          "path": "meilisearch/crates/index-scheduler/src/scheduler/enterprise_edition/s3.rs"
+        }
+      ],
+      "top_repos": [
+        {
+          "occurrences": 67,
+          "repo": "tokio"
+        },
+        {
+          "occurrences": 1,
+          "repo": "meilisearch"
+        }
+      ]
+    },
+    {
       "boundary": "first-settled aggregate",
       "language": "javascript-typescript",
       "note": "Promise.race needs first-settled ordering and liveness proof",
@@ -2799,42 +2799,6 @@
       ]
     },
     {
-      "boundary": "future first-completion aggregate",
-      "language": "rust",
-      "note": "select style macros need first-completion, cancellation, and result-channel proof",
-      "obligation_family": "cancellation-liveness-boundary",
-      "obligation_subreason": "async-aggregate-first-completion-contract-missing",
-      "occurrences": 17,
-      "operation": "select",
-      "repos": 1,
-      "status": "closed-boundary",
-      "surface": "rust.async.select",
-      "top_files": [
-        {
-          "occurrences": 12,
-          "path": "tokio/tokio/src/macros/select.rs"
-        },
-        {
-          "occurrences": 3,
-          "path": "tokio/tokio/tests/dump.rs"
-        },
-        {
-          "occurrences": 1,
-          "path": "tokio/examples/dump.rs"
-        },
-        {
-          "occurrences": 1,
-          "path": "tokio/tokio/tests/macros_select.rs"
-        }
-      ],
-      "top_repos": [
-        {
-          "occurrences": 17,
-          "repo": "tokio"
-        }
-      ]
-    },
-    {
       "boundary": "asyncio task spawn",
       "language": "python",
       "note": "asyncio task APIs create scheduler, cancellation, and handle lifecycle boundaries",
@@ -2999,6 +2963,38 @@
         {
           "occurrences": 11,
           "repo": "execa"
+        }
+      ]
+    },
+    {
+      "boundary": "future first-completion aggregate",
+      "language": "rust",
+      "note": "qualified runtime select style macros need first-completion, cancellation, and result-channel proof",
+      "obligation_family": "cancellation-liveness-boundary",
+      "obligation_subreason": "async-aggregate-first-completion-contract-missing",
+      "occurrences": 5,
+      "operation": "tokio/futures select",
+      "repos": 1,
+      "status": "closed-boundary",
+      "surface": "rust.async.select",
+      "top_files": [
+        {
+          "occurrences": 3,
+          "path": "tokio/tokio/tests/dump.rs"
+        },
+        {
+          "occurrences": 1,
+          "path": "tokio/examples/dump.rs"
+        },
+        {
+          "occurrences": 1,
+          "path": "tokio/tokio/tests/macros_select.rs"
+        }
+      ],
+      "top_repos": [
+        {
+          "occurrences": 5,
+          "repo": "tokio"
         }
       ]
     },

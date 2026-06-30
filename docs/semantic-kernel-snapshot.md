@@ -1372,9 +1372,11 @@ this worktree because the required evidence is not yet modeled:
   `yield value` remains closed against plain `value` until generator demand and
   suspension semantics are modeled.
 - Python `asyncio.create_task`/`sleep`/`gather`/`wait`, Rust `tokio`/`async-std`
-  spawn and `join!`/`select!`, and Swift `Task` creation report scheduler,
-  lifecycle, cancellation, and result-channel obligations but do not yet
-  converge with synchronous calls, direct payload values, or each other.
+  spawn and qualified `tokio`/`futures` `join!`/`select!`, and Swift `Task`
+  creation report scheduler, lifecycle, cancellation, and result-channel
+  obligations but do not yet converge with synchronous calls, direct payload
+  values, or each other. These reports require import-backed Python `asyncio`,
+  qualified Rust aggregate macros, and unshadowed Swift `Task` roots.
 - Go `go f(x)`, `defer f(x)`, `<-ch`, `ch <- x`, and `select` do not converge
   with ordinary calls, values, sends, or sequential control-flow variants until
   channel/goroutine/defer/select contracts can prove scheduling, blocking,

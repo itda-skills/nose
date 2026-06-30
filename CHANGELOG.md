@@ -136,8 +136,13 @@ break.
   limited to oracle-interpretable admission rejections.
 - Refined non-JS async runtime API diagnostics so Python `asyncio`
   task/timer/aggregate calls, Rust `tokio`/`async-std` spawn and
-  `join!`/`select!` macros, and Swift `Task` creation report shared
-  `task-*` and `async-aggregate-*` obligations without opening exact admission.
+  qualified `tokio`/`futures` aggregate macros, and Swift `Task` creation
+  report shared `task-*` and `async-aggregate-*` obligations without opening
+  exact admission.
+- Hardened that non-JS async runtime attribution so Python `asyncio.*` requires
+  import-backed namespace evidence, Rust aggregate macro reporting requires
+  qualified `tokio`/`futures` paths, and Swift `Task` reporting requires an
+  unshadowed root before shared runtime obligations are attached.
 - Refined import-snapshot census reporting to separate missing provider modules,
   missing exports, re-export boundaries, external/stdlib/workspace boundaries,
   provider/importer mutation, missing provider API proof, and aggregate shapes

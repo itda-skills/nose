@@ -1,5 +1,8 @@
 use super::{callee_identity::callee_identity_call_evidence, push_unique, visit_subtree};
-use nose_il::{Interner, NodeId};
+use async_runtime::push_async_runtime_call_missing_evidence;
+use nose_il::{Interner, NodeId, NodeKind, Payload};
+
+mod async_runtime;
 
 pub(super) fn runtime_boundary_missing_evidence(
     il: &nose_il::Il,
@@ -12,7 +15,7 @@ pub(super) fn runtime_boundary_missing_evidence(
         if push_runtime_node_missing_evidence(il, node, &mut labels) {
             found = true;
         }
-        if il.kind(node) == nose_il::NodeKind::Call {
+        if il.kind(node) == NodeKind::Call {
             found |= push_promise_protocol_call_missing_evidence(il, interner, node, &mut labels);
             found |= push_async_runtime_call_missing_evidence(il, interner, node, &mut labels);
         }
@@ -26,7 +29,7 @@ fn push_runtime_node_missing_evidence(
     labels: &mut Vec<&'static str>,
 ) -> bool {
     match il.kind(node) {
-        nose_il::NodeKind::Raw => {
+        NodeKind::Raw => {
             match nose_semantics::source_protocol_at_node(il, node) {
                 Some(nose_il::SourceProtocolKind::Await) => {
                     push_unique(labels, "async-await-scheduling-contract");
@@ -71,11 +74,11 @@ fn push_runtime_node_missing_evidence(
             }
             true
         }
-        nose_il::NodeKind::Try | nose_il::NodeKind::Throw => {
+        NodeKind::Try | NodeKind::Throw => {
             push_unique(labels, "exception-channel-contract");
             true
         }
-        nose_il::NodeKind::Splat | nose_il::NodeKind::KwArg => {
+        NodeKind::Splat | NodeKind::KwArg => {
             push_unique(labels, "runtime-call-shape-contract");
             true
         }
@@ -212,147 +215,6 @@ fn push_scheduling_lifecycle_call_missing_evidence(
     }
 }
 
-fn push_async_runtime_call_missing_evidence(
-    il: &nose_il::Il,
-    interner: &Interner,
-    call: NodeId,
-    labels: &mut Vec<&'static str>,
-) -> bool {
-    let Some(callee) = il.children(call).first().copied() else {
-        return false;
-    };
-    let Some(path) = callee_path(il, interner, callee) else {
-        return false;
-    };
-    match il.meta.lang {
-        nose_il::Lang::Python => push_python_async_runtime_call_missing_evidence(&path, labels),
-        nose_il::Lang::Rust => {
-            push_rust_async_runtime_call_missing_evidence(il, call, &path, labels)
-        }
-        nose_il::Lang::Swift => push_swift_async_runtime_call_missing_evidence(&path, labels),
-        _ => false,
-    }
-}
-
-fn push_python_async_runtime_call_missing_evidence(
-    callee_path: &str,
-    labels: &mut Vec<&'static str>,
-) -> bool {
-    match callee_path {
-        "asyncio.create_task" | "asyncio.ensure_future" => {
-            push_task_spawn_missing_evidence(labels);
-            true
-        }
-        "asyncio.sleep" => {
-            push_unique(labels, "timer-scheduling-contract");
-            true
-        }
-        "asyncio.gather" => {
-            push_async_aggregate_all_missing_evidence(labels);
-            true
-        }
-        "asyncio.wait" => {
-            push_async_aggregate_completion_missing_evidence(labels);
-            push_unique(labels, "async-aggregate-cancellation-liveness-contract");
-            true
-        }
-        _ => false,
-    }
-}
-
-fn push_rust_async_runtime_call_missing_evidence(
-    il: &nose_il::Il,
-    call: NodeId,
-    callee_path: &str,
-    labels: &mut Vec<&'static str>,
-) -> bool {
-    if rust_async_spawn_path(callee_path) {
-        push_task_spawn_missing_evidence(labels);
-        return true;
-    }
-    if nose_semantics::source_call_at_node(il, call)
-        != Some(nose_il::SourceCallKind::MacroInvocation)
-    {
-        return false;
-    }
-    if rust_async_join_macro_path(callee_path) {
-        push_async_aggregate_all_missing_evidence(labels);
-        return true;
-    }
-    if rust_async_select_macro_path(callee_path) {
-        push_async_aggregate_first_missing_evidence(labels);
-        return true;
-    }
-    false
-}
-
-fn push_swift_async_runtime_call_missing_evidence(
-    callee_path: &str,
-    labels: &mut Vec<&'static str>,
-) -> bool {
-    match callee_path {
-        "Task" | "Task.detached" => {
-            push_task_spawn_missing_evidence(labels);
-            true
-        }
-        _ => false,
-    }
-}
-
-fn rust_async_spawn_path(callee_path: &str) -> bool {
-    matches!(
-        callee_path,
-        "tokio::spawn"
-            | "tokio::task::spawn"
-            | "tokio::task::spawn_blocking"
-            | "async_std::task::spawn"
-            | "async_std::task::spawn_blocking"
-    )
-}
-
-fn rust_async_join_macro_path(callee_path: &str) -> bool {
-    matches!(
-        callee_path,
-        "join"
-            | "try_join"
-            | "tokio::join"
-            | "tokio::try_join"
-            | "futures::join"
-            | "futures::try_join"
-            | "futures_util::join"
-            | "futures_util::try_join"
-    )
-}
-
-fn rust_async_select_macro_path(callee_path: &str) -> bool {
-    matches!(
-        callee_path,
-        "select" | "tokio::select" | "futures::select" | "futures_util::select"
-    )
-}
-
-fn push_task_spawn_missing_evidence(labels: &mut Vec<&'static str>) {
-    push_unique(labels, "task-spawn-scheduling-contract");
-    push_unique(labels, "task-handle-lifecycle-contract");
-    push_unique(labels, "task-cancellation-liveness-contract");
-}
-
-fn push_async_aggregate_all_missing_evidence(labels: &mut Vec<&'static str>) {
-    push_unique(labels, "async-aggregate-all-completion-contract");
-    push_unique(labels, "async-aggregate-result-channel-contract");
-}
-
-fn push_async_aggregate_first_missing_evidence(labels: &mut Vec<&'static str>) {
-    push_unique(labels, "async-aggregate-first-completion-contract");
-    push_unique(labels, "async-aggregate-cancellation-liveness-contract");
-    push_unique(labels, "async-aggregate-result-channel-contract");
-}
-
-fn push_async_aggregate_completion_missing_evidence(labels: &mut Vec<&'static str>) {
-    push_unique(labels, "async-aggregate-completion-contract");
-    push_unique(labels, "async-aggregate-result-channel-contract");
-}
-
 fn push_promise_aggregate_missing_evidence(callee_path: &str, labels: &mut Vec<&'static str>) {
     match callee_path {
         "Promise.all" => {
@@ -407,7 +269,7 @@ fn push_promise_receiver_producer_missing_evidence(
         push_unique(labels, "promise-async-function-return-producer-proof");
         return;
     }
-    if il.kind(receiver) == nose_il::NodeKind::Call {
+    if il.kind(receiver) == NodeKind::Call {
         push_promise_call_return_receiver_missing_evidence(il, interner, receiver, labels);
     }
 }
@@ -461,10 +323,21 @@ fn promise_call_return_receiver_callee_evidence(callee_evidence: &'static str) -
 }
 
 fn method_receiver(il: &nose_il::Il, callee: NodeId) -> Option<NodeId> {
-    if il.kind(callee) != nose_il::NodeKind::Field {
+    if il.kind(callee) != NodeKind::Field {
         return None;
     }
     il.children(callee).first().copied()
+}
+
+fn node_defines_name(il: &nose_il::Il, interner: &Interner, node: NodeId, expected: &str) -> bool {
+    match il.node(node).payload {
+        Payload::Name(symbol) => interner.resolve(symbol) == expected,
+        Payload::Cid(cid) => il
+            .cid_names
+            .get(cid as usize)
+            .is_some_and(|symbol| interner.resolve(*symbol) == expected),
+        _ => false,
+    }
 }
 
 fn receiver_is_promise_constructor_call(
@@ -472,7 +345,7 @@ fn receiver_is_promise_constructor_call(
     interner: &Interner,
     receiver: NodeId,
 ) -> bool {
-    if il.kind(receiver) != nose_il::NodeKind::Call {
+    if il.kind(receiver) != NodeKind::Call {
         return false;
     }
     let Some(&callee) = il.children(receiver).first() else {
@@ -487,7 +360,7 @@ fn receiver_is_async_function_return(il: &nose_il::Il, receiver: NodeId) -> bool
     if subtree_has_source_protocol(il, receiver, nose_il::SourceProtocolKind::AsyncFunction) {
         return true;
     }
-    if il.kind(receiver) != nose_il::NodeKind::Call {
+    if il.kind(receiver) != NodeKind::Call {
         return false;
     }
     let Some(&callee) = il.children(receiver).first() else {
@@ -507,11 +380,11 @@ fn receiver_is_async_function_return(il: &nose_il::Il, receiver: NodeId) -> bool
 }
 
 fn callee_var_symbol(il: &nose_il::Il, callee: NodeId) -> Option<nose_il::Symbol> {
-    if il.kind(callee) != nose_il::NodeKind::Var {
+    if il.kind(callee) != NodeKind::Var {
         return None;
     }
     match il.node(callee).payload {
-        nose_il::Payload::Name(name) => Some(name),
+        Payload::Name(name) => Some(name),
         _ => None,
     }
 }
@@ -553,12 +426,12 @@ fn construct_call(il: &nose_il::Il, call: NodeId) -> bool {
 
 fn callee_path(il: &nose_il::Il, interner: &Interner, node: NodeId) -> Option<String> {
     match il.kind(node) {
-        nose_il::NodeKind::Var => match il.node(node).payload {
-            nose_il::Payload::Name(name) => Some(interner.resolve(name).to_string()),
+        NodeKind::Var => match il.node(node).payload {
+            Payload::Name(name) => Some(interner.resolve(name).to_string()),
             _ => None,
         },
-        nose_il::NodeKind::Field => {
-            let nose_il::Payload::Name(method) = il.node(node).payload else {
+        NodeKind::Field => {
+            let Payload::Name(method) = il.node(node).payload else {
                 return None;
             };
             let receiver = il.children(node).first().copied()?;
@@ -574,10 +447,10 @@ fn callee_field_method<'a>(
     interner: &'a Interner,
     node: NodeId,
 ) -> Option<&'a str> {
-    if il.kind(node) != nose_il::NodeKind::Field {
+    if il.kind(node) != NodeKind::Field {
         return None;
     }
-    let nose_il::Payload::Name(method) = il.node(node).payload else {
+    let Payload::Name(method) = il.node(node).payload else {
         return None;
     };
     Some(interner.resolve(method))

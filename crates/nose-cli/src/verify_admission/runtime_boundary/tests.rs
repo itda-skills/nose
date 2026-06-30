@@ -33,16 +33,25 @@ fn missing_evidence_for_lang_call(
     lang: Lang,
     callee_suffix: &str,
 ) -> Vec<&'static str> {
+    runtime_boundary_evidence_for_lang_call(path, src, lang, callee_suffix)
+        .unwrap_or_else(|| panic!("expected runtime boundary evidence for {callee_suffix}"))
+}
+
+fn runtime_boundary_evidence_for_lang_call(
+    path: &str,
+    src: &str,
+    lang: Lang,
+    callee_suffix: &str,
+) -> Option<Vec<&'static str>> {
     let (il, interner) = lowered_source(path, src, lang);
     let call = (0..il.nodes.len())
         .map(|idx| NodeId(idx as u32))
         .find(|&node| {
-            il.kind(node) == nose_il::NodeKind::Call
+            il.kind(node) == NodeKind::Call
                 && call_matches_callee_surface(&il, &interner, node, callee_suffix)
         })
         .unwrap_or_else(|| panic!("expected call ending in {callee_suffix}"));
     runtime_boundary_missing_evidence(&il, &interner, call)
-        .unwrap_or_else(|| panic!("expected runtime boundary evidence for {callee_suffix}"))
 }
 
 fn call_matches_callee_surface(
@@ -459,6 +468,86 @@ fn non_js_async_runtime_calls_report_shared_task_and_aggregate_obligations() {
     assert!(rust_select.contains(&"async-aggregate-first-completion-contract"));
     assert!(rust_select.contains(&"async-aggregate-cancellation-liveness-contract"));
     assert!(rust_select.contains(&"async-aggregate-result-channel-contract"));
+}
+
+#[test]
+fn non_js_async_runtime_attribution_requires_runtime_identity() {
+    let py_shadowed = runtime_boundary_evidence_for_lang_call(
+        "runtime.py",
+        "async def main(asyncio, task):\n    return asyncio.gather(task)\n",
+        Lang::Python,
+        "asyncio.gather",
+    );
+    let py_unimported = runtime_boundary_evidence_for_lang_call(
+        "runtime.py",
+        "async def main():\n    return asyncio.sleep(1)\n",
+        Lang::Python,
+        "asyncio.sleep",
+    );
+    let rust_bare_join = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "macro_rules! join { ($a:expr, $b:expr) => { ($a, $b) }; }\nasync fn run() { join!(work(), other()); }\n",
+        Lang::Rust,
+        "join",
+    );
+    let rust_bare_select = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "macro_rules! select { ($($t:tt)*) => { () }; }\nasync fn run() { select!(a = work() => a); }\n",
+        Lang::Rust,
+        "select",
+    );
+    let swift_shadowed_task = runtime_boundary_evidence_for_lang_call(
+        "runtime.swift",
+        "let Task = makeTask\nfunc run() {\n  Task { work() }\n}\n",
+        Lang::Swift,
+        "Task",
+    );
+    let swift_shadowed_detached = runtime_boundary_evidence_for_lang_call(
+        "runtime.swift",
+        "let Task = makeTask\nfunc run() {\n  Task.detached { work() }\n}\n",
+        Lang::Swift,
+        "Task.detached",
+    );
+
+    assert_missing_evidence_not_contains(
+        py_shadowed,
+        "async-aggregate-all-completion-contract",
+        "shadowed Python asyncio.gather",
+    );
+    assert_missing_evidence_not_contains(
+        py_unimported,
+        "timer-scheduling-contract",
+        "unimported Python asyncio.sleep",
+    );
+    assert_missing_evidence_not_contains(
+        rust_bare_join,
+        "async-aggregate-all-completion-contract",
+        "unqualified Rust join! macro",
+    );
+    assert_missing_evidence_not_contains(
+        rust_bare_select,
+        "async-aggregate-first-completion-contract",
+        "unqualified Rust select! macro",
+    );
+    for (labels, surface) in [
+        (swift_shadowed_task, "shadowed Swift Task"),
+        (swift_shadowed_detached, "shadowed Swift Task.detached"),
+    ] {
+        assert_missing_evidence_not_contains(labels, "task-spawn-scheduling-contract", surface);
+    }
+}
+
+fn assert_missing_evidence_not_contains(
+    labels: Option<Vec<&'static str>>,
+    label: &'static str,
+    surface: &str,
+) {
+    if let Some(labels) = labels {
+        assert!(
+            !labels.contains(&label),
+            "{surface} should not report {label}: {labels:?}"
+        );
+    }
 }
 
 #[test]

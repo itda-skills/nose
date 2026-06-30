@@ -1,0 +1,103 @@
+{
+  "report_kind": "non-js-async-runtime-attribution-hardening",
+  "schema_version": 1,
+  "generated_on": "2026-06-30",
+  "scope": {
+    "kind": "reporting-only-safety-hardening",
+    "summary": "Non-JS async runtime obligation attribution now requires stronger runtime identity evidence before Python asyncio, Rust aggregate macro, or Swift Task surfaces receive shared scheduling/task/aggregate labels.",
+    "semantic_admission_delta": 0,
+    "exact_admission_opened": false
+  },
+  "capability_alignment": {
+    "principle": "Capabilities over features",
+    "capability": "runtime API identity proof before obligation attribution",
+    "not_a_feature_list": [
+      "No new SourceProtocolKind, SourceCallKind, or public semantic-pack API was added.",
+      "No exact admission path was opened for Python, Rust, or Swift async runtime APIs.",
+      "Python asyncio aliases remain outside this slice until alias-backed occurrence proof is modeled.",
+      "Rust unqualified join!/try_join!/select! macros are no longer priced or reported as runtime aggregates by name alone."
+    ],
+    "reused_capabilities": [
+      "Python import namespace binding evidence",
+      "Rust macro-invocation source-call evidence",
+      "Swift local definition/shadow detection",
+      "shared task and async aggregate obligation labels",
+      "recall-loss oracle_exclusions.by_obligation"
+    ]
+  },
+  "guarded_surfaces": [
+    {
+      "language": "python",
+      "surface": "asyncio.create_task/ensure_future/sleep/gather/wait",
+      "guard": "The receiver must be the import-backed asyncio namespace, with no same-file asyncio parameter or assignment shadow.",
+      "blocked_false_open_examples": [
+        "def main(asyncio, task): return asyncio.gather(task)",
+        "async def main(): return asyncio.sleep(1)"
+      ]
+    },
+    {
+      "language": "rust",
+      "surface": "join!/try_join!/select!",
+      "guard": "Aggregate macro reporting is limited to qualified tokio/futures/futures_util macro paths.",
+      "blocked_false_open_examples": [
+        "macro_rules! join { ... } join!(a, b)",
+        "macro_rules! select { ... } select!(...)"
+      ]
+    },
+    {
+      "language": "swift",
+      "surface": "Task and Task.detached",
+      "guard": "Task reporting requires the Task root to be unshadowed by a visible same-file definition.",
+      "blocked_false_open_examples": [
+        "let Task = makeTask; Task { work() }",
+        "let Task = makeTask; Task.detached { work() }"
+      ]
+    }
+  ],
+  "focused_fixture": {
+    "test": "non_js_async_runtime_attribution_requires_runtime_identity",
+    "command": "cargo test -p nose-cli non_js_async_runtime_attribution_requires_runtime_identity -- --nocapture",
+    "assertions": [
+      "shadowed Python asyncio.gather does not report async-aggregate-all-completion-contract",
+      "unimported Python asyncio.sleep does not report timer-scheduling-contract",
+      "unqualified Rust join! does not report async-aggregate-all-completion-contract",
+      "unqualified Rust select! does not report async-aggregate-first-completion-contract",
+      "shadowed Swift Task and Task.detached do not report task-spawn-scheduling-contract"
+    ]
+  },
+  "current_crates_gate": {
+    "report": "target/recall-loss.non-js-async-runtime.crates.json",
+    "total_units": 6643,
+    "interpretable_units": 907,
+    "excluded_units": 5736,
+    "admission_rejections": 756,
+    "false_merges": 0,
+    "lossy_fingerprint_collisions": 0,
+    "advisory_disagreements": 4,
+    "canon_checked": 87,
+    "canon_preservation_violations": 0,
+    "gate_passed": true
+  },
+  "corpus_pricing_delta": {
+    "source": "bench/recall_loss/scheduling-lifecycle-boundary-audit-non-js-async-runtime-2026-06-30.v1.json",
+    "total_source_prevalence_before": 142860,
+    "total_source_prevalence_after": 142834,
+    "rust_join_try_join_before": 82,
+    "rust_join_try_join_after": 68,
+    "rust_select_before": 17,
+    "rust_select_after": 5,
+    "reason": "The audit now prices only qualified tokio/futures/futures_util aggregate macros, matching the runtime-boundary reporter."
+  },
+  "validation_commands": [
+    "cargo fmt --check",
+    "cargo test -p nose-cli non_js_async_runtime_calls_report_shared_task_and_aggregate_obligations -- --nocapture",
+    "cargo test -p nose-cli non_js_async_runtime_attribution_requires_runtime_identity -- --nocapture",
+    "python3 -m py_compile scripts/scheduling-lifecycle-boundary-audit.py",
+    "cargo run -q -p nose-cli -- verify crates --max-violations 0 --recall-loss-report target/recall-loss.non-js-async-runtime.crates.json",
+    "python3 scripts/scheduling-lifecycle-boundary-audit.py --recall-loss-report target/recall-loss.non-js-async-runtime.crates.json --output bench/recall_loss/scheduling-lifecycle-boundary-audit-non-js-async-runtime-2026-06-30.v1.json --generated-on 2026-06-30"
+  ],
+  "next_exact_work_policy": {
+    "status": "closed_until_evidence",
+    "summary": "The reporter now rejects common shadowed or unqualified false runtime identities. Exact recovery still requires proof for scheduling, cancellation, lifecycle, result-channel, exception, and runtime-specific callback/effect behavior."
+  }
+}

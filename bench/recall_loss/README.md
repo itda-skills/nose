@@ -369,10 +369,17 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
 - [scheduling-lifecycle-boundary-audit-non-js-async-runtime-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-runtime-2026-06-30.v1.json)
   records the 120-repo lexical pricing for that runtime API slice: Rust
   `tokio`/`async-std` spawn (`349` occurrences / `3` repos), Swift `Task`
-  (`210` / `12`), Python `asyncio.sleep` (`104` / `6`), Rust `join!`/`try_join!`
-  (`82` / `2`), Python `asyncio.gather` (`17` / `4`), Rust `select!`
-  (`17` / `1`), Python `asyncio.create_task`/`ensure_future` (`14` / `3`),
-  and Python `asyncio.wait` (`4` / `3`).
+  (`210` / `12`), Python `asyncio.sleep` (`104` / `6`), qualified Rust
+  `tokio`/`futures` `join!`/`try_join!` (`68` / `2`), Python
+  `asyncio.gather` (`17` / `4`), Python `asyncio.create_task`/`ensure_future`
+  (`14` / `3`), qualified Rust `tokio`/`futures` `select!` (`5` / `1`), and
+  Python `asyncio.wait` (`4` / `3`).
+- [non-js-async-runtime-attribution-hardening-2026-06-30.v1.json](non-js-async-runtime-attribution-hardening-2026-06-30.v1.json)
+  records the follow-up reporting-only safety hardening. Python `asyncio.*`
+  reporting now requires import-backed namespace evidence, Rust aggregate macro
+  reporting requires qualified `tokio`/`futures` paths, and Swift `Task`
+  reporting requires an unshadowed `Task` root. Exact admission stays closed and
+  the crates gate remains at `0` false merges.
 - [promise-protocol-hard-negatives-2026-06-28.v1.json](promise-protocol-hard-negatives-2026-06-28.v1.json)
   records the follow-up Promise hard-negative slice. It keeps exact admission
   closed while pinning async-function/sync, Promise executor/sync,
