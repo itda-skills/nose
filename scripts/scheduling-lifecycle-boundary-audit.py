@@ -117,7 +117,10 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("swift", "swift.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Swift await has task scheduling and actor/lifetime boundaries", re.compile(r"\bawait\b")),
     Pattern("swift", "swift.async.function", "async", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "Swift async surfaces create task/future-like protocol boundaries", re.compile(r"\basync\b")),
     Pattern("swift", "swift.error.throws", "throws/try", "exception-channel", "swift-throws-exception-channel-contract-missing", "throws channel", "Swift throws/try is an explicit error channel", re.compile(r"\b(?:throws|try)\b")),
-    Pattern("swift", "swift.task.spawn", "Task", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "task scheduling", "Task APIs introduce scheduler, cancellation, and handle lifecycle boundaries", re.compile(r"\bTask(?:\s*\.\s*detached)?\s*\{")),
+    Pattern("swift", "swift.task.spawn", "Task/Task.detached", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "task scheduling", "Task APIs introduce scheduler, cancellation, and handle lifecycle boundaries", re.compile(r"\bTask(?:\s*\.\s*detached\s*(?:\{|\()|\s*\{)")),
+    Pattern("swift", "swift.task.sleep", "Task.sleep", "scheduling-boundary", "timer-scheduling-contract-missing", "task sleep timer", "Swift Task.sleep creates a timer-backed scheduling boundary and cancellation/liveness boundary", re.compile(r"\bTask\s*\.\s*sleep\s*\("), "reporting-supported-closed-boundary"),
+    Pattern("swift", "swift.task.yield", "Task.yield", "scheduling-boundary", "task-yield-scheduling-contract-missing", "task yield", "Swift Task.yield yields to the task scheduler and must not collapse into sync value equivalence", re.compile(r"\bTask\s*\.\s*yield\s*\("), "reporting-supported-closed-boundary"),
+    Pattern("swift", "swift.task.group", "withTaskGroup/withThrowingTaskGroup/withDiscardingTaskGroup/withThrowingDiscardingTaskGroup", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "task-group aggregate", "Swift task groups need all-completion, result-channel, cancellation/liveness, and throwing error-channel proof", re.compile(r"\bwith(?:Throwing)?(?:Discarding)?TaskGroup\s*\("), "reporting-supported-closed-boundary"),
     Pattern("ruby", "ruby.thread.fiber", "Thread/Fiber", "scheduling-boundary", "ruby-thread-fiber-scheduling-contract-missing", "thread/fiber scheduling", "Thread/Fiber APIs create scheduler and lifecycle boundaries", re.compile(r"\b(?:Thread|Fiber)\s*\.\s*(?:new|schedule)\b")),
     Pattern("ruby", "ruby.exception", "raise/rescue", "exception-channel", "ruby-exception-channel-contract-missing", "exception channel", "raise/rescue changes error channels and non-local control", re.compile(r"\b(?:raise|rescue)\b")),
     Pattern("ruby", "ruby.generator.yield", "yield", "callback-demand-effect", "ruby-yield-callback-demand-effect-contract-missing", "block callback", "Ruby yield invokes a block with demand/effect obligations", re.compile(r"\byield\b")),
@@ -824,22 +827,22 @@ def hard_negative_inventory() -> list[dict[str, Any]]:
         {
             "class": "first-settled versus all-settled aggregate semantics",
             "evidence": "crates/nose-cli/tests/cli/semantic_boundaries.rs::query_mode_semantic_rejects_unproven_js_promise_protocol_convergence",
-            "status": "expanded-this-slice",
+            "status": "mapped-existing",
         },
         {
             "class": "executor callback timing and thrown executor errors",
             "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary.rs::promise_constructor_missing_evidence_splits_executor_obligations",
-            "status": "reporting-only-this-slice",
+            "status": "mapped-existing",
         },
         {
             "class": "scheduler/microtask ordering versus synchronous evaluation",
             "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary.rs::scheduler_and_interval_calls_report_timing_and_lifecycle_obligations",
-            "status": "reporting-only-this-slice",
+            "status": "mapped-existing",
         },
         {
             "class": "interval stream liveness/cardinality",
             "evidence": "crates/nose-cli/tests/cli/commands/recall_loss_report.rs::recall_loss_report_splits_promise_protocol_boundaries",
-            "status": "reporting-only-this-slice",
+            "status": "mapped-existing",
         },
         {
             "class": "cross-language lifecycle one-shot/reusable/materialized distinctions",
@@ -849,11 +852,16 @@ def hard_negative_inventory() -> list[dict[str, Any]]:
         {
             "class": "Python imported asyncio bindings shadowed by parameters, assignments, nested imports, or project-local asyncio modules",
             "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/imported_bindings.rs::non_js_async_runtime_imported_bindings_reject_local_shadows and ::non_js_async_runtime_context_rejects_project_local_imported_bindings",
-            "status": "expanded-this-slice",
+            "status": "mapped-existing",
         },
         {
             "class": "Rust brace/direct-imported runtime bindings shadowed by parameters, lets, local macros, block scopes, other modules, or project-local runtime roots",
             "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/imported_bindings.rs::non_js_async_runtime_imported_bindings_reject_rust_shadows_and_scopes and ::non_js_async_runtime_context_rejects_project_local_imported_bindings",
+            "status": "mapped-existing",
+        },
+        {
+            "class": "Swift structured-concurrency runtime names shadowed by local Task bindings, Task extensions, same-file task-group functions, or project-visible task-group functions",
+            "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/swift.rs::swift_structured_concurrency_rejects_local_runtime_shadows",
             "status": "expanded-this-slice",
         },
     ]

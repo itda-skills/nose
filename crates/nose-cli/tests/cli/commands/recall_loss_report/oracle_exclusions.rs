@@ -202,7 +202,11 @@ fn recall_loss_report_attributes_non_js_async_runtime_api_exclusions() {
     project.write(
         "swift_task.swift",
         "func schedule() {\n  Task { work() }\n}\n\
-         func detached() {\n  Task.detached { work() }\n}\n",
+         func detached() {\n  Task.detached { work() }\n}\n\
+         func sleepTimer() {\n  Task.sleep(nanoseconds: 1)\n}\n\
+         func yieldNow() {\n  Task.yield()\n}\n\
+         func groupAll() {\n  withTaskGroup(of: Int.self) { group in\n    group.addTask { 1 }\n  }\n}\n\
+         func groupThrowing() {\n  withThrowingTaskGroup(of: Int.self) { group in\n    group.addTask { 1 }\n  }\n}\n",
     );
     let report_path = project.path().join("recall-loss.json");
     let out = run_raw(&[
@@ -223,6 +227,18 @@ fn recall_loss_report_attributes_non_js_async_runtime_api_exclusions() {
         "scheduling-boundary",
         "task-spawn-scheduling-contract-missing",
         2,
+    );
+    assert_admission_obligation(
+        &report,
+        "scheduling-boundary",
+        "task-yield-scheduling-contract-missing",
+        1,
+    );
+    assert_admission_obligation(
+        &report,
+        "scheduling-boundary",
+        "timer-scheduling-contract-missing",
+        1,
     );
     for (family, subreason, minimum) in [
         (
@@ -246,6 +262,8 @@ fn recall_loss_report_attributes_non_js_async_runtime_api_exclusions() {
 
     for (language, evidence) in [
         ("swift", "task-spawn-scheduling-contract"),
+        ("swift", "async-aggregate-all-completion-contract"),
+        ("swift", "exception-channel-contract"),
         ("rust", "async-aggregate-all-completion-contract"),
         ("rust", "async-aggregate-first-completion-contract"),
     ] {
@@ -253,6 +271,12 @@ fn recall_loss_report_attributes_non_js_async_runtime_api_exclusions() {
     }
     for language in ["python", "rust"] {
         assert_admission_rejection(&report, language, "task-spawn-scheduling-contract");
+    }
+    for evidence in [
+        "task-yield-scheduling-contract",
+        "timer-scheduling-contract",
+    ] {
+        assert_admission_rejection(&report, "swift", evidence);
     }
     for subreason in [
         "async-aggregate-all-completion-contract-missing",

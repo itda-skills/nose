@@ -90,6 +90,15 @@ binding evidence. Its matching [120-repo pricing artifact](../bench/recall_loss/
 adds `2` Python imported `asyncio.sleep` occurrences over the prior artifact;
 Rust direct and brace imported runtime rows stay at `11` priced occurrences,
 but brace evidence-only imports are now actionable by the reporter.
+The follow-up [Swift structured-concurrency artifact](../bench/recall_loss/swift-structured-concurrency-obligation-reporting-2026-06-30.v1.json)
+keeps that same capability boundary and maps Swift `Task.sleep`, `Task.yield`,
+and task-group calls onto shared timer, task-yield, aggregate,
+cancellation/liveness, result-channel, and exception-channel obligations. Its
+matching [120-repo pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-swift-structured-concurrency-2026-06-30.v1.json)
+raises total source prevalence from `142,847` to `143,178`: `Task.sleep`
+contributes `161` occurrences / `10` repos, task groups `153` / `9`,
+`Task.yield` `12` / `3`, and the audit now counts `5` already-supported
+`Task.detached(...)` spawn occurrences. Exact admission remains closed.
 The follow-up [promise-protocol-hard-negatives-2026-06-28.v1.json](../bench/recall_loss/promise-protocol-hard-negatives-2026-06-28.v1.json)
 pins the Promise-specific hard negatives before any recovery slice opens:
 async-function/sync, Promise executor/sync, Promise.resolve/sync,

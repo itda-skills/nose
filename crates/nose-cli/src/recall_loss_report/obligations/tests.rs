@@ -259,6 +259,13 @@ fn task_and_async_aggregate_labels_have_specific_obligations() {
         )
     );
     assert_eq!(
+        runtime_boundary_obligation(&["task-yield-scheduling-contract"]),
+        (
+            "scheduling-boundary",
+            "task-yield-scheduling-contract-missing",
+        )
+    );
+    assert_eq!(
         runtime_boundary_obligation(&["task-cancellation-liveness-contract"]),
         (
             "cancellation-liveness-boundary",

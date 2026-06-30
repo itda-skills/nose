@@ -412,6 +412,17 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   `11` priced occurrences because the prior audit already counted direct and
   brace `use` spellings; this slice makes brace evidence-only imports
   actionable in admission.
+- [swift-structured-concurrency-obligation-reporting-2026-06-30.v1.json](swift-structured-concurrency-obligation-reporting-2026-06-30.v1.json)
+  records the Swift structured-concurrency reporting-only expansion.
+  `Task.sleep`, `Task.yield`, and task-group calls now receive shared timer,
+  task-yield, aggregate, cancellation/liveness, result-channel, and
+  exception-channel obligations without opening exact admission.
+- [scheduling-lifecycle-boundary-audit-swift-structured-concurrency-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-swift-structured-concurrency-2026-06-30.v1.json)
+  records the matching 120-repo source-prevalence pricing. It raises total
+  source prevalence from `142,847` to `143,178`: `Task.sleep` contributes
+  `161` occurrences in `10` repos, task groups contribute `153` in `9` repos,
+  `Task.yield` contributes `12` in `3` repos, and the audit now also counts `5`
+  already-supported `Task.detached(...)` spawn occurrences.
 - [promise-protocol-hard-negatives-2026-06-28.v1.json](promise-protocol-hard-negatives-2026-06-28.v1.json)
   records the follow-up Promise hard-negative slice. It keeps exact admission
   closed while pinning async-function/sync, Promise executor/sync,

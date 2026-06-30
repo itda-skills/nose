@@ -44,7 +44,6 @@ pub(super) fn rejection_obligation(
         _ => ("unattributed-boundary", first_missing),
     }
 }
-
 type Obligation = (&'static str, &'static str);
 
 struct RuntimeBoundaryRule {
@@ -428,6 +427,7 @@ const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
     runtime_rule!("interval-async-iteration-lifecycle-contract" => "lifecycle-materialization-boundary", "interval-async-iteration-lifecycle-contract-missing"),
     runtime_rule!("interval-cancellation-liveness-contract" => "cancellation-liveness-boundary", "interval-cancellation-liveness-contract-missing"),
     runtime_rule!("task-spawn-scheduling-contract" => "scheduling-boundary", "task-spawn-scheduling-contract-missing"),
+    runtime_rule!("task-yield-scheduling-contract" => "scheduling-boundary", "task-yield-scheduling-contract-missing"),
     runtime_rule!("task-handle-lifecycle-contract" => "lifecycle-materialization-boundary", "task-handle-lifecycle-contract-missing"),
     runtime_rule!("task-cancellation-liveness-contract" => "cancellation-liveness-boundary", "task-cancellation-liveness-contract-missing"),
     runtime_rule!("async-aggregate-all-completion-contract" => "success-error-result-channel", "async-aggregate-all-completion-contract-missing"),
