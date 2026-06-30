@@ -76,7 +76,13 @@ keeps exact admission closed while requiring import-backed Python `asyncio`
 with no path-visible local module, qualified Rust spawn/aggregate paths whose
 root is not locally defined in the same file, and unshadowed Swift `Task` roots
 with no corpus-visible Swift `Task` definition before those shared obligations
-are attributed.
+are attributed. The next [non-JS async runtime import-proof artifact](../bench/recall_loss/non-js-async-runtime-import-proof-2026-06-30.v1.json)
+keeps the same capability boundary but reuses existing imported namespace and
+imported member proof so Python `asyncio` aliases and Rust imported runtime
+bindings receive the same reporting-only obligations. Its matching [120-repo
+pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-non-js-async-runtime-import-proof-2026-06-30.v1.json)
+adds `11` Rust imported-binding occurrences over the qualified-only pricing and
+records `0` Python `asyncio` alias occurrences in the pinned corpus.
 The follow-up [promise-protocol-hard-negatives-2026-06-28.v1.json](../bench/recall_loss/promise-protocol-hard-negatives-2026-06-28.v1.json)
 pins the Promise-specific hard negatives before any recovery slice opens:
 async-function/sync, Promise executor/sync, Promise.resolve/sync,

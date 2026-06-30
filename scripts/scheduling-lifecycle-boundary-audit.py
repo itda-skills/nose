@@ -126,6 +126,85 @@ PATTERNS: tuple[Pattern, ...] = (
 )
 
 
+PYTHON_ASYNCIO_ALIAS_TASK = Pattern(
+    "python",
+    "python.asyncio.alias.task",
+    "import asyncio as alias; alias.create_task/ensure_future",
+    "scheduling-boundary",
+    "task-spawn-scheduling-contract-missing",
+    "asyncio alias task spawn",
+    "import-backed asyncio aliases create the same scheduler, cancellation, and handle lifecycle boundaries as asyncio.*",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+PYTHON_ASYNCIO_ALIAS_SLEEP = Pattern(
+    "python",
+    "python.asyncio.alias.sleep",
+    "import asyncio as alias; alias.sleep",
+    "scheduling-boundary",
+    "timer-scheduling-contract-missing",
+    "asyncio alias timer",
+    "import-backed asyncio aliases create timer-backed scheduling boundaries",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+PYTHON_ASYNCIO_ALIAS_GATHER = Pattern(
+    "python",
+    "python.asyncio.alias.gather",
+    "import asyncio as alias; alias.gather",
+    "success-error-result-channel",
+    "async-aggregate-all-completion-contract-missing",
+    "asyncio alias all-completion aggregate",
+    "import-backed asyncio aliases need all-completion, result-channel, cancellation, and exception semantics",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+PYTHON_ASYNCIO_ALIAS_WAIT = Pattern(
+    "python",
+    "python.asyncio.alias.wait",
+    "import asyncio as alias; alias.wait",
+    "success-error-result-channel",
+    "async-aggregate-completion-contract-missing",
+    "asyncio alias completion aggregate",
+    "import-backed asyncio aliases need completion-selection, result-channel, cancellation, and exception semantics",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+RUST_IMPORTED_ASYNC_SPAWN = Pattern(
+    "rust",
+    "rust.async.spawn.imported",
+    "use runtime::spawn; spawn",
+    "scheduling-boundary",
+    "task-spawn-scheduling-contract-missing",
+    "imported task spawn",
+    "import-backed tokio/async-std spawn bindings introduce scheduler, cancellation, and join-handle boundaries",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+RUST_IMPORTED_ASYNC_JOIN = Pattern(
+    "rust",
+    "rust.async.join.imported",
+    "use runtime::join; join!",
+    "success-error-result-channel",
+    "async-aggregate-all-completion-contract-missing",
+    "imported future all-completion aggregate",
+    "import-backed tokio/futures/futures_util join-style macros need all-completion result-channel proof",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+RUST_IMPORTED_ASYNC_SELECT = Pattern(
+    "rust",
+    "rust.async.select.imported",
+    "use runtime::select; select!",
+    "cancellation-liveness-boundary",
+    "async-aggregate-first-completion-contract-missing",
+    "imported future first-completion aggregate",
+    "import-backed tokio/futures/futures_util select macros need first-completion, cancellation, and result-channel proof",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", default=DEFAULT_MANIFEST)
@@ -216,7 +295,240 @@ def count_file(text: str, language: str) -> dict[Pattern, int]:
         count = sum(1 for _ in pattern.regex.finditer(masked))
         if count:
             counts[pattern] = count
+    if language == "python":
+        counts.update(python_asyncio_alias_counts(masked))
+    elif language == "rust":
+        counts.update(rust_imported_async_runtime_counts(masked))
     return counts
+
+
+def python_asyncio_alias_counts(text: str) -> dict[Pattern, int]:
+    aliases = python_asyncio_aliases(text)
+    if not aliases:
+        return {}
+    counts: dict[Pattern, int] = {}
+    count_by_methods(
+        counts,
+        PYTHON_ASYNCIO_ALIAS_TASK,
+        text,
+        aliases,
+        ("create_task", "ensure_future"),
+        ".",
+    )
+    count_by_methods(counts, PYTHON_ASYNCIO_ALIAS_SLEEP, text, aliases, ("sleep",), ".")
+    count_by_methods(counts, PYTHON_ASYNCIO_ALIAS_GATHER, text, aliases, ("gather",), ".")
+    count_by_methods(counts, PYTHON_ASYNCIO_ALIAS_WAIT, text, aliases, ("wait",), ".")
+    return counts
+
+
+def python_asyncio_aliases(text: str) -> set[str]:
+    aliases: set[str] = set()
+    for match in re.finditer(r"(?m)^\s*import\s+([^\n]+)", text):
+        for part in match.group(1).split(","):
+            pieces = part.strip().split()
+            if len(pieces) == 3 and pieces[0] == "asyncio" and pieces[1] == "as":
+                alias = pieces[2]
+                if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", alias) and alias != "asyncio":
+                    aliases.add(alias)
+    return aliases
+
+
+def rust_imported_async_runtime_counts(text: str) -> dict[Pattern, int]:
+    bindings = rust_imported_runtime_bindings(text)
+    if not bindings:
+        return {}
+    counts: dict[Pattern, int] = {}
+    spawn_bindings = bindings_for(
+        bindings,
+        {
+            ("tokio", "spawn"),
+            ("tokio::task", "spawn"),
+            ("tokio::task", "spawn_blocking"),
+            ("async_std::task", "spawn"),
+            ("async_std::task", "spawn_blocking"),
+        },
+    )
+    join_bindings = bindings_for(
+        bindings,
+        {
+            ("tokio", "join"),
+            ("tokio", "try_join"),
+            ("futures", "join"),
+            ("futures", "try_join"),
+            ("futures_util", "join"),
+            ("futures_util", "try_join"),
+        },
+    )
+    select_bindings = bindings_for(
+        bindings,
+        {
+            ("tokio", "select"),
+            ("futures", "select"),
+            ("futures_util", "select"),
+        },
+    )
+    count_bindings(counts, RUST_IMPORTED_ASYNC_SPAWN, text, spawn_bindings, "(")
+    count_bindings(counts, RUST_IMPORTED_ASYNC_JOIN, text, join_bindings, "!")
+    count_bindings(counts, RUST_IMPORTED_ASYNC_SELECT, text, select_bindings, "!")
+    return counts
+
+
+def count_by_methods(
+    counts: dict[Pattern, int],
+    pattern: Pattern,
+    text: str,
+    names: set[str],
+    methods: tuple[str, ...],
+    separator: str,
+) -> None:
+    method_pattern = "|".join(re.escape(method) for method in methods)
+    total = 0
+    for name in names:
+        total += len(
+            re.findall(
+                rf"\b{re.escape(name)}\s*{re.escape(separator)}\s*(?:{method_pattern})\s*\(",
+                text,
+            )
+        )
+    if total:
+        counts[pattern] = total
+
+
+def count_bindings(
+    counts: dict[Pattern, int],
+    pattern: Pattern,
+    text: str,
+    bindings: set[str],
+    call_marker: str,
+) -> None:
+    total = 0
+    for binding in bindings:
+        if call_marker == "!":
+            total += len(re.findall(rf"\b{re.escape(binding)}\s*!\s*\(", text))
+        else:
+            total += len(re.findall(rf"\b{re.escape(binding)}\s*\(", text))
+    if total:
+        counts[pattern] = total
+
+
+def bindings_for(
+    bindings: dict[tuple[str, str], set[str]],
+    targets: set[tuple[str, str]],
+) -> set[str]:
+    out: set[str] = set()
+    for target in targets:
+        out.update(bindings.get(target, set()))
+    return out
+
+
+def rust_imported_runtime_bindings(text: str) -> dict[tuple[str, str], set[str]]:
+    bindings: dict[tuple[str, str], set[str]] = defaultdict(set)
+    for match in re.finditer(r"\buse\s+([^;]+);", text, re.DOTALL):
+        body = " ".join(match.group(1).split())
+        if "*" in body:
+            continue
+        for module, exported, local in rust_use_bindings(body):
+            if rust_runtime_import_target(module, exported):
+                bindings[(module, exported)].add(local)
+    return bindings
+
+
+def rust_use_bindings(body: str) -> list[tuple[str, str, str]]:
+    if "{" in body or "}" in body:
+        return rust_brace_use_bindings(body)
+    parsed = parse_rust_use_item(body)
+    if not parsed:
+        return []
+    path, local = parsed
+    split = split_rust_path_for_binding(path)
+    if not split:
+        return []
+    module, exported = split
+    return [(module, exported, local or exported)]
+
+
+def rust_brace_use_bindings(body: str) -> list[tuple[str, str, str]]:
+    open_idx = body.find("{")
+    close_idx = body.rfind("}")
+    if open_idx < 0 or close_idx <= open_idx:
+        return []
+    items = body[open_idx + 1 : close_idx]
+    if "{" in items or "}" in items or body[close_idx + 1 :].strip():
+        return []
+    prefix = body[:open_idx].strip().removesuffix("::").strip()
+    if not prefix or prefix.startswith(("self", "super")):
+        return []
+    bindings: list[tuple[str, str, str]] = []
+    for raw_item in items.split(","):
+        parsed = parse_rust_use_item(raw_item)
+        if not parsed:
+            continue
+        path, local = parsed
+        if path == "self":
+            continue
+        split = split_rust_path_tail(path)
+        if not split:
+            continue
+        path_prefix, exported = split
+        module = f"{prefix}::{path_prefix}" if path_prefix else prefix
+        bindings.append((module, exported, local or exported))
+    return bindings
+
+
+def parse_rust_use_item(item: str) -> tuple[str, str | None] | None:
+    item = item.strip()
+    if not item or any(token in item for token in ("{", "}", "*")):
+        return None
+    if " as " in item:
+        path, local = item.split(" as ", 1)
+        path = path.strip()
+        local = local.strip()
+        if not path or not local:
+            return None
+        return path, local
+    return item, None
+
+
+def split_rust_path_for_binding(path: str) -> tuple[str, str] | None:
+    if "::" not in path:
+        return None
+    module, exported = path.rsplit("::", 1)
+    module = module.strip()
+    exported = exported.strip()
+    if not module or not exported or module.startswith(("self", "super")):
+        return None
+    return module, exported
+
+
+def split_rust_path_tail(path: str) -> tuple[str | None, str] | None:
+    path = path.strip()
+    if not path:
+        return None
+    if "::" not in path:
+        return None, path
+    path_prefix, exported = path.rsplit("::", 1)
+    if not exported:
+        return None
+    return path_prefix, exported
+
+
+def rust_runtime_import_target(module: str, exported: str) -> bool:
+    return (module, exported) in {
+        ("tokio", "spawn"),
+        ("tokio::task", "spawn"),
+        ("tokio::task", "spawn_blocking"),
+        ("async_std::task", "spawn"),
+        ("async_std::task", "spawn_blocking"),
+        ("tokio", "join"),
+        ("tokio", "try_join"),
+        ("futures", "join"),
+        ("futures", "try_join"),
+        ("futures_util", "join"),
+        ("futures_util", "try_join"),
+        ("tokio", "select"),
+        ("futures", "select"),
+        ("futures_util", "select"),
+    }
 
 
 def summarize(args: argparse.Namespace) -> dict[str, Any]:
