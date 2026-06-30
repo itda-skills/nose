@@ -65,38 +65,9 @@ fn rust_import_binding_span_visible_at_call(
     if binding_span.file != occurrence_span.file {
         return false;
     }
-    if rust_span_inside_non_module_block_scope(il, binding_span) {
+    if il.span_inside_local_scope(binding_span) {
         return false;
     }
-    rust_nearest_module_scope_containing_span(il, binding_span)
-        == rust_nearest_module_scope_containing_span(il, occurrence_span)
-}
-
-fn rust_span_inside_non_module_block_scope(il: &nose_il::Il, span: nose_il::Span) -> bool {
-    il.nodes.iter().any(|node| {
-        matches!(
-            node.kind,
-            NodeKind::Block | NodeKind::Func | NodeKind::Lambda
-        ) && node.span.file == span.file
-            && node.span.start_byte <= span.start_byte
-            && span.end_byte <= node.span.end_byte
-            && (node.span.start_byte < span.start_byte || span.end_byte < node.span.end_byte)
-    })
-}
-
-fn rust_nearest_module_scope_containing_span(
-    il: &nose_il::Il,
-    span: nose_il::Span,
-) -> Option<NodeId> {
-    il.nodes
-        .iter()
-        .enumerate()
-        .filter(|(_, node)| {
-            node.kind == NodeKind::Module
-                && node.span.file == span.file
-                && node.span.start_byte <= span.start_byte
-                && span.end_byte <= node.span.end_byte
-        })
-        .min_by_key(|(_, node)| node.span.end_byte.saturating_sub(node.span.start_byte))
-        .map(|(idx, _)| NodeId(idx as u32))
+    il.nearest_module_scope_containing_span(binding_span)
+        == il.nearest_module_scope_containing_span(occurrence_span)
 }

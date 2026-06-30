@@ -93,6 +93,15 @@ break.
   without opening exact admission; the 120-repo audit prices `4,294` channel
   receives, `1,525` sends, `1,920` selects, `3,590` select cases, `546` select
   defaults, `155` comma-ok receives, `1,949` goroutines, and `17,521` defers.
+- Added scope-aware Python/Rust async runtime attribution hardening. Unrelated
+  local shadows in other functions no longer suppress import-backed `asyncio`
+  and Rust runtime reporting, while same-scope, enclosing-scope, and
+  module-level shadows remain closed. Exact admission remains closed; the
+  120-repo pricing total is
+  unchanged at `146,880`, and the checked `crates` gate stays at `0` false
+  merges. Python/Rust async-runtime recall-loss diagnostics now prefer
+  source-preserving unit roots before falling back to normalized roots, so
+  alpha-renamed diagnostics do not reopen Python `asyncio` alias shadows.
 - Added staged Promise recovery infrastructure: protocol diagnostics and hard
   negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
   continuation recovery; receiver-producer/call-return attribution; and

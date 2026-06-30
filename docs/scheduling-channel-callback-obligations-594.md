@@ -126,6 +126,16 @@ defaults, `1,949` goroutines, and `17,521` defers. Exact recovery remains
 closed until channel blocking, close/zero-value behavior, select readiness,
 callback effects, panic/defer ordering, and goroutine scheduling are
 dependency-closed.
+The follow-up [non-JS async runtime scope-shadowing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json)
+keeps the same reporting-only boundary while making Python/Rust runtime
+attribution scope-aware. Python `asyncio` aliases/imported bindings and Rust
+imported runtime bindings now ignore unrelated local shadows in other functions,
+but same-scope, enclosing-scope, and module-level shadows still close reporting.
+The 120-repo pricing total stays unchanged at `146,880`, so this hardens report
+provenance without adding a new API-specific kernel feature or opening exact
+admission. Python/Rust async-runtime diagnostics now prefer source-preserving
+unit roots before normalized fallback, keeping Python `asyncio` alias shadow
+decisions tied to lexical source evidence.
 The follow-up [promise-protocol-hard-negatives-2026-06-28.v1.json](../bench/recall_loss/promise-protocol-hard-negatives-2026-06-28.v1.json)
 pins the Promise-specific hard negatives before any recovery slice opens:
 async-function/sync, Promise executor/sync, Promise.resolve/sync,

@@ -183,6 +183,32 @@ impl Il {
         index.get(node.0 as usize).copied().flatten()
     }
 
+    pub fn span_inside_local_scope(&self, span: Span) -> bool {
+        self.nodes.iter().any(|node| {
+            matches!(
+                node.kind,
+                NodeKind::Block | NodeKind::Func | NodeKind::Lambda
+            ) && node.span.file == span.file
+                && node.span.start_byte <= span.start_byte
+                && span.end_byte <= node.span.end_byte
+                && (node.span.start_byte < span.start_byte || span.end_byte < node.span.end_byte)
+        })
+    }
+
+    pub fn nearest_module_scope_containing_span(&self, span: Span) -> Option<NodeId> {
+        self.nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, node)| {
+                node.kind == NodeKind::Module
+                    && node.span.file == span.file
+                    && node.span.start_byte <= span.start_byte
+                    && span.end_byte <= node.span.end_byte
+            })
+            .min_by_key(|(_, node)| node.span.end_byte.saturating_sub(node.span.start_byte))
+            .map(|(idx, _)| NodeId(idx as u32))
+    }
+
     /// One-pass exact computation of [`Il::nearest_scope`] for every node.
     ///
     /// Scopes are visited in (width asc, id asc) order — the same preference order

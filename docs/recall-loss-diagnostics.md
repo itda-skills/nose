@@ -200,6 +200,16 @@ records `4,294` channel receives, `1,525` sends, `155` comma-ok receives,
 `1,920` select parents, `3,590` select cases, `546` select defaults, `1,949`
 goroutines, and `17,521` defers; select parents and arms are counted separately
 because lowering preserves them as distinct source-backed protocol boundaries.
+The follow-up [non-JS async runtime scope-shadowing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json)
+keeps exact admission closed while making Python/Rust async runtime attribution
+scope-aware: unrelated local shadows in other functions no longer suppress
+import-backed `asyncio` or Rust runtime reporting, but same-scope,
+enclosing-scope, and module-level shadows remain closed. The 120-repo pricing
+total stays unchanged at `146,880`, so the improvement is stricter report
+attribution rather than a new source-prevalence slice. Python/Rust
+async-runtime diagnostics are computed from the source-preserving unit root
+before falling back to the normalized root, so normalized alpha names cannot
+reopen Python `asyncio` alias shadows in the report.
 The
 checked [promise-protocol diagnostics](../bench/recall_loss/promise-protocol-diagnostics-2026-06-28.v1.json)
 connect the JS/TS source-prevalence group (`29,094` Promise/async occurrences)

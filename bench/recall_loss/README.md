@@ -466,6 +466,16 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   parents, `3,590` select cases, `546` select defaults, `1,949` goroutines,
   and `17,521` defers. Select parents and arms are counted separately because
   they are distinct source-backed protocol boundaries in lowering.
+- [scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json)
+  records the Python/Rust async runtime scope-shadowing hardening. It keeps
+  exact admission closed while making unrelated local shadows in other
+  functions stop suppressing import-backed `asyncio` and Rust runtime
+  reporting. Same-scope, enclosing-scope, and module-level shadows remain
+  closed. The 120-repo pricing total stays unchanged at `146,880`, so this is a
+  safety/precision improvement for report attribution rather than a new
+  corpus-prevalence slice. Python/Rust async-runtime diagnostics use
+  source-preserving unit roots before normalized fallback so alpha-renamed
+  oracle units keep the same alias-shadow boundary.
 - [promise-protocol-hard-negatives-2026-06-28.v1.json](promise-protocol-hard-negatives-2026-06-28.v1.json)
   records the follow-up Promise hard-negative slice. It keeps exact admission
   closed while pinning async-function/sync, Promise executor/sync,

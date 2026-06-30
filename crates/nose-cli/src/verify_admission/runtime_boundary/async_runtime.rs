@@ -108,15 +108,14 @@ fn python_asyncio_namespace_receiver_proven(
     if il.kind(receiver) != NodeKind::Var {
         return false;
     }
-    if nose_semantics::imported_namespace_symbol(il, interner, receiver, "asyncio") {
-        return true;
-    }
     let Some(receiver_name) = super::super::node_exact_name(il, interner, receiver) else {
         return false;
     };
     let occurrence_span = il.node(receiver).span;
     let top_level_statements = top_level_statements(il);
-    let mut import_bindings = 0usize;
+    let mut import_bindings = usize::from(nose_semantics::imported_namespace_symbol(
+        il, interner, receiver, "asyncio",
+    ));
     let mut shadow_definitions = 0usize;
     for unit in &il.units {
         if il.node(unit.root).span.file == occurrence_span.file
@@ -149,11 +148,14 @@ fn python_asyncio_namespace_receiver_proven(
                     )
                 {
                     import_bindings += 1;
-                } else {
+                } else if definition_shadows_occurrence(il, node_id, receiver) {
                     shadow_definitions += 1;
                 }
             }
-            NodeKind::Param if node_defines_name(il, interner, node_id, receiver_name) => {
+            NodeKind::Param
+                if node_defines_name(il, interner, node_id, receiver_name)
+                    && definition_shadows_occurrence(il, node_id, receiver) =>
+            {
                 shadow_definitions += 1;
             }
             _ => {}
@@ -196,13 +198,18 @@ fn python_imported_binding_shadowed(
                 if !node_defines_name(il, interner, lhs, local_name) {
                     continue;
                 }
-                if !top_level_statements.contains(&node_id)
-                    || !python_import_binding_at_span(il, node.span, local_name, module, exported)
+                let is_top_level_import_binding = top_level_statements.contains(&node_id)
+                    && python_import_binding_at_span(il, node.span, local_name, module, exported);
+                if !is_top_level_import_binding
+                    && definition_shadows_occurrence(il, node_id, callee)
                 {
                     return true;
                 }
             }
-            NodeKind::Param if node_defines_name(il, interner, node_id, local_name) => {
+            NodeKind::Param
+                if node_defines_name(il, interner, node_id, local_name)
+                    && definition_shadows_occurrence(il, node_id, callee) =>
+            {
                 return true;
             }
             _ => {}
@@ -453,12 +460,15 @@ fn rust_imported_member_shadowed(
                 if !node_defines_name(il, interner, lhs, local_name) {
                     continue;
                 }
-                if !rust_imported_binding_at_span(il, node.span, local_name, module, exported) {
+                if !rust_imported_binding_at_span(il, node.span, local_name, module, exported)
+                    && definition_shadows_occurrence(il, node_id, callee)
+                {
                     return true;
                 }
             }
             NodeKind::Block | NodeKind::Module | NodeKind::Param
-                if node_defines_name(il, interner, node_id, local_name) =>
+                if node_defines_name(il, interner, node_id, local_name)
+                    && definition_shadows_occurrence(il, node_id, callee) =>
             {
                 return true;
             }
@@ -495,6 +505,28 @@ fn push_task_spawn_missing_evidence(labels: &mut Vec<&'static str>) {
     super::super::push_unique(labels, "task-spawn-scheduling-contract");
     super::super::push_unique(labels, "task-handle-lifecycle-contract");
     super::super::push_unique(labels, "task-cancellation-liveness-contract");
+}
+
+fn definition_shadows_occurrence(il: &nose_il::Il, definition: NodeId, occurrence: NodeId) -> bool {
+    let definition_span = il.node(definition).span;
+    let occurrence_span = il.node(occurrence).span;
+    if definition_span.file != occurrence_span.file {
+        return false;
+    }
+    match (il.nearest_scope(definition), il.nearest_scope(occurrence)) {
+        (Some(definition_scope), Some(occurrence_scope)) => {
+            let definition_scope_span = il.node(definition_scope).span;
+            definition_scope == occurrence_scope
+                || (definition_scope_span.file == occurrence_span.file
+                    && definition_scope_span.start_byte <= occurrence_span.start_byte
+                    && occurrence_span.end_byte <= definition_scope_span.end_byte)
+        }
+        (Some(_), None) => false,
+        (None, _) => {
+            il.nearest_module_scope_containing_span(definition_span)
+                == il.nearest_module_scope_containing_span(occurrence_span)
+        }
+    }
 }
 
 fn push_async_aggregate_all_missing_evidence(labels: &mut Vec<&'static str>) {
