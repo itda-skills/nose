@@ -3037,7 +3037,7 @@ Rust `.await`/`async fn` and Swift `await`/`async func` synthetic twins converge
 now includes Rust and Swift total-loop pairs, and the focused query JSON regression asserts
 that those pairs carry `async-mirror`/`equal_modulo_holes=false` evidence. Rust and Swift
 hard-negative fixture pairs keep unrelated async/sync logic out of the same near family. The
-real-frontier coverage matrix is not flipped for Rust or Swift until there is hand-verified
+real-frontier coverage matrix is not flipped for a language until there is hand-verified
 real-corpus evidence comparable to the httpx Python cases.
 
 **Gates.** Full suite **1056 pass**; the dual-view broke no existing await test. **Exact-channel
@@ -3067,9 +3067,19 @@ is flipped none→covered (evidence: the hand-verified httpx `read`/`aread`, `re
 Lesson, the twin of §CU's first: a new recall feature's *real-corpus lift* is also a hypothesis to
 measure, not assume — here it is small.
 
-**Follow-up (not soundness):** real-corpus evidence for the js/ts/rust/swift cells (js/ts libraries
-keep parallel sync/async versions far less often than Python ones, so no clean mined twin yet),
-and then broader protocol boundaries only when their runtime obligations are measurable.
+**2026-06-30 Swift real-corpus follow-up.** Swift now has a hand-audited real-corpus
+`async_sync_twin` item: Swift NIO's `withTemporaryFile` test helper has sync and async overloads
+in both `Tests/NIOHTTP1Tests/TestUtils.swift` and `Tests/NIOPosixTests/TestUtils.swift`. Current
+`nose query ... spotclass=structural --mode near` reports an audited `async-mirror` family with
+those four members; the witness aligns `return try body(fileHandle, path)` with
+`return try await body(fileHandle, path)`, keeps `equal_modulo_holes=false`, and makes no exact
+claim. This is recorded in `real_frontier.v1.json` and flips the `coverage_matrix`
+`async_sync_twin` **swift** cell none→covered. A quick Rust pass found noisy Meilisearch
+`async-mirror` families, but no clean audited async/sync twin yet, so Rust stays `none`.
+
+**Follow-up (not soundness):** real-corpus evidence for the js/ts/rust cells (js/ts libraries keep
+parallel sync/async versions far less often than Python ones, so no clean mined twin yet), and then
+broader protocol boundaries only when their runtime obligations are measurable.
 
 ## CV. Swift lowering gap tranche from app dogfood (#452, 2026-06-18)
 

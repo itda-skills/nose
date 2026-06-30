@@ -8,7 +8,7 @@
       "python": "covered",
       "ruby": "n/a",
       "rust": "none",
-      "swift": "none",
+      "swift": "covered",
       "typescript": "none"
     },
     "c_u16_be_byte_pack": {
@@ -428,7 +428,7 @@
     },
     "swift": {
       "applicable": 25,
-      "covered": 20
+      "covered": 21
     },
     "typescript": {
       "applicable": 27,

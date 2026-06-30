@@ -886,6 +886,53 @@
      "snippet": "def test_sync_auth_reads_response_body(...)"
     }
    ]
+  },
+  {
+   "case_id": "async-sync-swift-nio-with-temporary-file",
+   "status": "closed",
+   "candidate_axis": "async_sync_twin",
+   "repo": "swift-nio",
+   "language": "swift",
+   "locations": [
+    {
+     "path": "Tests/NIOHTTP1Tests/TestUtils.swift",
+     "span": "155-184",
+     "snippet": "func withTemporaryFile<T>(content: String? = nil, _ body: (...) throws -> T) rethrows -> T { ... return try body(fileHandle, path) }"
+    },
+    {
+     "path": "Tests/NIOHTTP1Tests/TestUtils.swift",
+     "span": "186-216",
+     "snippet": "func withTemporaryFile<T>(content: String? = nil, _ body: @escaping (...) async throws -> T) async rethrows -> T { ... return try await body(fileHandle, path) }"
+    },
+    {
+     "path": "Tests/NIOPosixTests/TestUtils.swift",
+     "span": "152-181",
+     "snippet": "func withTemporaryFile<T>(content: String? = nil, _ body: (...) throws -> T) rethrows -> T { ... return try body(fileHandle, path) }"
+    },
+    {
+     "path": "Tests/NIOPosixTests/TestUtils.swift",
+     "span": "183-213",
+     "snippet": "func withTemporaryFile<T>(content: String? = nil, _ body: @escaping (...) async throws -> T) async rethrows -> T { ... return try await body(fileHandle, path) }"
+    }
+   ],
+   "semantic_claim": "The Swift NIO test helpers duplicate the same temporary-file setup, optional content write, cleanup, and body invocation across sync and async overloads. The async overload is a refactoring candidate mirror of the sync overload, not a behavioral-equivalence claim, because the closure call crosses an async protocol boundary.",
+   "evidence": "`nose query bench/repos/swift-nio all spotclass=structural --mode near --min-size 1 --min-lines 1 --format json` reports family 2a20be2e4340141b with four `withTemporaryFile` members across NIOHTTP1Tests and NIOPosixTests. The graded representative pair aligns the async overload at Tests/NIOHTTP1Tests/TestUtils.swift:186-216 with the sync overload at Tests/NIOHTTP1Tests/TestUtils.swift:155-184, reports `patterns:[\"async-mirror\"]`, `holes:2`, and `equal_modulo_holes:false`.",
+   "detector": {
+    "current_detector_miss": false,
+    "binary_path": "/Users/ak/prjs/cc/nose/target/release/nose",
+    "nose_version": "nose 0.16.0",
+    "build_ref": "cb548514675783cd21d0412671b48ffd2f2cbd69",
+    "baseline_command": "target/release/nose query bench/repos/swift-nio all spotclass=structural --mode near --min-size 1 --min-lines 1 --format json",
+    "baseline_result": "The audited Swift NIO withTemporaryFile async-mirror family is 2a20be2e4340141b. No exact semantic claim is made; the witness keeps the async boundary visible. Broader Swift NIO async-mirror candidates are outside this evidence record unless separately audited."
+   },
+   "proof_invariant": "Near-channel candidate formation may look through supported async protocol boundaries for recall, but the witness must keep the async boundary explicit as `async-mirror` and force `equal_modulo_holes=false`; exact admission remains closed behind scheduling, await-point, exception, and effect obligations.",
+   "hard_negative_siblings": [
+    "sync and async overloads whose setup, cleanup, or body-call arguments differ",
+    "an async overload that performs extra effects before or after awaiting the callback",
+    "a sync helper paired with an unrelated async test that only shares temporary-file boilerplate"
+   ],
+   "batch": "2026-06-30-async-protocol-near-mirror",
+   "notes": "Hand-audited after #614 added Swift async protocol near mirrors. This is real-corpus evidence for flipping the `async_sync_twin` Swift coverage cell from `none` to `covered`."
   }
  ]
 }
