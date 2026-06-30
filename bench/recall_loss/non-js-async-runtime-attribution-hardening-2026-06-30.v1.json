@@ -90,9 +90,9 @@
   },
   "current_crates_gate": {
     "report": "target/recall-loss.non-js-async-runtime.crates.json",
-    "total_units": 6660,
-    "interpretable_units": 914,
-    "excluded_units": 5746,
+    "total_units": 6662,
+    "interpretable_units": 915,
+    "excluded_units": 5747,
     "admission_rejections": 763,
     "false_merges": 0,
     "lossy_fingerprint_collisions": 0,
