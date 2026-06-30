@@ -276,6 +276,92 @@ fn scoped_imported_member_call_target_uses_full_suffix_for_nested_paths() {
 }
 
 #[test]
+fn rust_block_scoped_imported_binding_does_not_emit_call_target() {
+    let interner = Interner::new();
+    let spawn = interner.intern("spawn");
+    let mut b = IlBuilder::new(FileId(0));
+    let block = b.add(NodeKind::Block, Payload::None, wide_sp(15, 30), &[]);
+    let callee = b.add(NodeKind::Var, Payload::Name(spawn), sp(42), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(43), &[callee]);
+    let ret = b.add(NodeKind::Return, Payload::None, sp(44), &[call]);
+    let body = b.add(NodeKind::Block, Payload::None, wide_sp(40, 50), &[ret]);
+    let func = b.add(NodeKind::Func, Payload::None, wide_sp(35, 55), &[body]);
+    let module = b.add(
+        NodeKind::Module,
+        Payload::None,
+        wide_sp(0, 60),
+        &[block, func],
+    );
+    let mut il = b.finish(
+        module,
+        FileMeta {
+            path: "t".into(),
+            lang: Lang::Rust,
+        },
+        Vec::new(),
+        Vec::new(),
+    );
+    il.evidence.push(binding_symbol(
+        0,
+        sp(20),
+        "spawn",
+        SymbolEvidenceKind::ImportedBinding {
+            module_hash: stable_symbol_hash("tokio"),
+            exported_hash: stable_symbol_hash("spawn"),
+        },
+        EvidenceStatus::Asserted,
+    ));
+
+    run(&mut il, &interner);
+
+    assert_eq!(call_target_evidence_at_call(&il, &interner, call), None);
+    assert!(!imported_function_call_target_at_call(&il, &interner, call));
+}
+
+#[test]
+fn rust_parent_module_imported_binding_does_not_emit_nested_module_call_target() {
+    let interner = Interner::new();
+    let spawn = interner.intern("spawn");
+    let mut b = IlBuilder::new(FileId(0));
+    let callee = b.add(NodeKind::Var, Payload::Name(spawn), sp(52), &[]);
+    let call = b.add(NodeKind::Call, Payload::None, sp(53), &[callee]);
+    let ret = b.add(NodeKind::Return, Payload::None, sp(54), &[call]);
+    let body = b.add(NodeKind::Block, Payload::None, wide_sp(50, 60), &[ret]);
+    let func = b.add(NodeKind::Func, Payload::None, wide_sp(45, 65), &[body]);
+    let nested_module = b.add(NodeKind::Module, Payload::None, wide_sp(40, 70), &[func]);
+    let root_module = b.add(
+        NodeKind::Module,
+        Payload::None,
+        wide_sp(0, 80),
+        &[nested_module],
+    );
+    let mut il = b.finish(
+        root_module,
+        FileMeta {
+            path: "t".into(),
+            lang: Lang::Rust,
+        },
+        Vec::new(),
+        Vec::new(),
+    );
+    il.evidence.push(binding_symbol(
+        0,
+        sp(1),
+        "spawn",
+        SymbolEvidenceKind::ImportedBinding {
+            module_hash: stable_symbol_hash("tokio"),
+            exported_hash: stable_symbol_hash("spawn"),
+        },
+        EvidenceStatus::Asserted,
+    ));
+
+    run(&mut il, &interner);
+
+    assert_eq!(call_target_evidence_at_call(&il, &interner, call), None);
+    assert!(!imported_function_call_target_at_call(&il, &interner, call));
+}
+
+#[test]
 fn updates_legacy_first_party_imported_function_records() {
     let interner = Interner::new();
     let p = interner.intern("p");

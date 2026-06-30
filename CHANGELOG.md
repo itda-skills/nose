@@ -151,6 +151,14 @@ break.
   `use tokio::join; join!(...)`, and `use futures::select; select!(...)` now
   receive the same reporting-only task/timer/aggregate obligations when their
   import identity is proven. Exact admission remains closed.
+- Expanded the same proof path to Python `from asyncio import ...` bindings
+  and Rust brace imports such as `use tokio::{spawn}` or
+  `use futures::{select as fut_select}`. The slice reuses existing
+  `ImportedBinding` evidence, keeps nested Python imports and local
+  shadow/module cases plus Rust block-scoped and other-module imports closed
+  at the imported-occurrence producer, adds `2` newly priced Python imported `sleep`
+  occurrences in the pinned 120-repo corpus, and keeps the release
+  `verify crates` gate at `0` false merges.
 - Refined import-snapshot census reporting to separate missing provider modules,
   missing exports, re-export boundaries, external/stdlib/workspace boundaries,
   provider/importer mutation, missing provider API proof, and aggregate shapes

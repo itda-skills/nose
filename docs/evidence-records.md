@@ -144,10 +144,10 @@ matching `nose.lang.*` pack provenance for the lowered file language:
   raw-name path stays closed instead of overriding that proof.
 - `ImportedFunction` for variable callees whose local binding has a unique
   asserted `Symbol(ImportedBinding)` proof and whose call-site occurrence can be
-  materialized as dependency-backed imported-symbol evidence. Alias rebinding,
-  local shadowing, ambiguous/conflicting symbol evidence, dependency-broken
-  import proof, and locally visible same-name function units keep the call
-  target closed.
+  materialized as dependency-backed imported-symbol evidence visible at that
+  occurrence. Alias rebinding, local shadowing, ambiguous/conflicting symbol
+  evidence, dependency-broken import proof, locally visible same-name function
+  units, and out-of-scope imported bindings keep the call target closed.
 - `ImportedMember` for field callees whose receiver has a unique asserted
   `Symbol(ImportedNamespace)` or `Symbol(ImportedBinding)` proof. Imported
   namespace receivers use the module/member coordinate; imported binding
@@ -548,9 +548,12 @@ Imported API occurrence evidence is not a broad name guess. A call-site
 `Symbol(ImportedBinding)` or `Symbol(ImportedNamespace)` dependency must itself
 depend on the matching binding-anchor symbol, pass rebinding and local/parameter
 shadow checks, and match the current receiver/callee span when that span is
-available. If normalization erases an import occurrence into a seeded import
-value, consumers pass no occurrence span and rely on that validated dependency
-instead of accepting an unrelated imported symbol elsewhere in the file.
+available. The occurrence producer also requires the binding anchor to be
+visible at the occurrence; Rust `use` bindings in block scopes or parent
+modules do not prove unqualified calls outside that module scope. If
+normalization erases an import occurrence into a seeded import value, consumers
+pass no occurrence span and rely on that validated dependency instead of
+accepting an unrelated imported symbol elsewhere in the file.
 Recall-loss reports use these same evidence boundaries when attributing
 fail-closed exact admission to callee identity, receiver domain, library API
 occurrence, HOF demand/effect, source surface, mutation/effect, and unsupported

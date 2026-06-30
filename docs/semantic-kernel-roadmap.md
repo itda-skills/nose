@@ -2118,11 +2118,14 @@ different APIs.
   obligations.
 - The non-JS async runtime follow-ups keep using that vocabulary instead of
   adding API-by-API kernel features. Python `asyncio` namespace aliases and
-  Rust imported `tokio`/`async_std`/`futures` runtime bindings now compose
-  existing import/symbol identity proof with shared task and async aggregate
-  obligations, while exact admission remains closed until scheduling,
-  cancellation, lifecycle, result-channel, exception, and callback/effect
-  contracts are dependency-closed.
+  `from asyncio import ...` bindings plus Rust imported and brace-imported
+  `tokio`/`async_std`/`futures` runtime bindings now compose existing
+  import/symbol identity proof with shared task and async aggregate obligations.
+  The latest pricing artifact adds `2` Python imported `asyncio.sleep`
+  occurrences over the previous `142,845` source-prevalence baseline, while
+  exact admission remains closed until scheduling, cancellation, lifecycle,
+  result-channel, exception, and callback/effect contracts are
+  dependency-closed.
 - Keep expanding lazy iterator/generator/channel hard negatives before enabling
   new exact laws. The first Python generator/list/set and Go channel/goroutine
   hard negatives are now in place, along with hard negatives for pull-lazy

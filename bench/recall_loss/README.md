@@ -396,6 +396,22 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   `join!`/`try_join!` (`8` / `1` repo). Python `asyncio` alias and Rust
   imported `select!` support are exercised by fixtures but have `0` occurrences
   in the pinned corpus.
+- [non-js-async-runtime-imported-binding-proof-2026-06-30.v1.json](non-js-async-runtime-imported-binding-proof-2026-06-30.v1.json)
+  records the next reporting-only imported-binding expansion. Python
+  `from asyncio import create_task`/`sleep`/`gather`/`wait` bindings and Rust
+  brace imports such as `use tokio::{spawn}` or
+  `use futures::{select as fut_select}` now reuse existing `ImportedBinding`
+  proof before receiving shared task/timer/aggregate obligations. Imported
+  occurrence evidence is scoped at the producer, so Rust block-scoped or
+  parent-module `use` bindings do not prove out-of-scope unqualified calls.
+  Exact admission stays closed.
+- [scheduling-lifecycle-boundary-audit-non-js-async-runtime-imported-binding-proof-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-runtime-imported-binding-proof-2026-06-30.v1.json)
+  records the matching 120-repo source-prevalence pricing. It raises total
+  source prevalence from `142,845` to `142,847` by adding `2` Python
+  `from asyncio import sleep` occurrences in `1` repo. Rust imported rows remain
+  `11` priced occurrences because the prior audit already counted direct and
+  brace `use` spellings; this slice makes brace evidence-only imports
+  actionable in admission.
 - [promise-protocol-hard-negatives-2026-06-28.v1.json](promise-protocol-hard-negatives-2026-06-28.v1.json)
   records the follow-up Promise hard-negative slice. It keeps exact admission
   closed while pinning async-function/sync, Promise executor/sync,

@@ -83,6 +83,13 @@ bindings receive the same reporting-only obligations. Its matching [120-repo
 pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-non-js-async-runtime-import-proof-2026-06-30.v1.json)
 adds `11` Rust imported-binding occurrences over the qualified-only pricing and
 records `0` Python `asyncio` alias occurrences in the pinned corpus.
+The next [imported-binding proof artifact](../bench/recall_loss/non-js-async-runtime-imported-binding-proof-2026-06-30.v1.json)
+keeps exact admission closed while extending that same capability to Python
+`from asyncio import ...` bindings and Rust brace imports backed only by
+binding evidence. Its matching [120-repo pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-non-js-async-runtime-imported-binding-proof-2026-06-30.v1.json)
+adds `2` Python imported `asyncio.sleep` occurrences over the prior artifact;
+Rust direct and brace imported runtime rows stay at `11` priced occurrences,
+but brace evidence-only imports are now actionable by the reporter.
 The follow-up [promise-protocol-hard-negatives-2026-06-28.v1.json](../bench/recall_loss/promise-protocol-hard-negatives-2026-06-28.v1.json)
 pins the Promise-specific hard negatives before any recovery slice opens:
 async-function/sync, Promise executor/sync, Promise.resolve/sync,
