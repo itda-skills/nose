@@ -109,6 +109,10 @@ break.
   without opening exact admission. The focused async/sync synthetic gold set now
   includes Python, TypeScript, Rust, and Swift pairs plus Rust/Swift hard
   negatives.
+- Added hand-audited Swift real-corpus evidence for async/sync mirrors. Swift
+  NIO's sync/async `withTemporaryFile` overloads now back the
+  `async_sync_twin` Swift coverage cell, which moves from `none` to `covered`
+  while keeping Rust unflipped until a clean real-corpus twin is audited.
 - Added staged Promise recovery infrastructure: protocol diagnostics and hard
   negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
   continuation recovery; receiver-producer/call-return attribution; and
