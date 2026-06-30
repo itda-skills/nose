@@ -35,6 +35,16 @@ pub(super) fn lower_params(lo: &mut Lowering, params: TsNode, out: &mut Vec<Node
                 if let Some(pat) = p.child_by_field_name("pattern") {
                     let semantic_text = p.child_by_field_name("type").map(|ty| lo.text(ty));
                     let type_text = semantic_text.unwrap_or_else(|| lo.text(p));
+                    if let Some((domain, dependencies)) =
+                        rust_tokio_runtime_param_nominal_domain(lo, p, type_text)
+                    {
+                        if let Some(sym) = ident_of(lo, pat) {
+                            let pspan = lo.span(pat);
+                            lo.record_param_domain_with_dependencies(pspan, domain, dependencies);
+                            out.push(lo.add(NodeKind::Param, Payload::Name(sym), pspan, &[]));
+                            continue;
+                        }
+                    }
                     if let Some(domain) = lo.type_domain_from_text_with_dependencies(type_text) {
                         if let Some(sym) = ident_of(lo, pat) {
                             let pspan = lo.span(pat);
@@ -56,6 +66,102 @@ pub(super) fn lower_params(lo: &mut Lowering, params: TsNode, out: &mut Vec<Node
             _ => push_pattern_params(lo, p, out),
         }
     }
+}
+fn rust_tokio_runtime_param_nominal_domain(
+    lo: &Lowering,
+    param: TsNode,
+    type_text: &str,
+) -> Option<(DomainEvidence, Vec<nose_il::EvidenceId>)> {
+    let head = rust_type_head_preserving_case(type_text)?;
+    match head.as_str() {
+        "tokio::runtime::Runtime" => {
+            if rust_module_scope_defines_type_name(lo, param, "tokio") {
+                return None;
+            }
+            Some((rust_tokio_runtime_nominal_domain("Runtime"), Vec::new()))
+        }
+        "tokio::runtime::Handle" => {
+            if rust_module_scope_defines_type_name(lo, param, "tokio") {
+                return None;
+            }
+            Some((rust_tokio_runtime_nominal_domain("Handle"), Vec::new()))
+        }
+        _ if !head.contains("::") => {
+            if rust_module_scope_defines_type_name(lo, param, &head) {
+                return None;
+            }
+            let mut matches = Vec::new();
+            for exported in ["Runtime", "Handle"] {
+                if let Some(dependencies) =
+                    rust_imported_runtime_type_dependencies(lo, param, &head, exported)
+                {
+                    matches.push((rust_tokio_runtime_nominal_domain(exported), dependencies));
+                }
+            }
+            let [(domain, dependencies)] = matches.as_slice() else {
+                return None;
+            };
+            Some((*domain, dependencies.clone()))
+        }
+        _ => None,
+    }
+}
+fn rust_tokio_runtime_nominal_domain(exported: &str) -> DomainEvidence {
+    DomainEvidence::Nominal {
+        type_hash: nose_il::stable_symbol_hash(&format!("tokio::runtime::{exported}")),
+    }
+}
+fn rust_imported_runtime_type_dependencies(
+    lo: &Lowering,
+    param: TsNode,
+    local: &str,
+    exported: &str,
+) -> Option<Vec<nose_il::EvidenceId>> {
+    let scope = rust_enclosing_module_scope(param)?;
+    let local_hash = nose_il::stable_symbol_hash(local);
+    let module_hash = nose_il::stable_symbol_hash("tokio::runtime");
+    let exported_hash = nose_il::stable_symbol_hash(exported);
+    let mut dependencies = Vec::new();
+    for record in &lo.evidence {
+        let nose_il::EvidenceAnchor::Binding {
+            local_hash: anchor_hash,
+            span,
+            ..
+        } = record.anchor
+        else {
+            continue;
+        };
+        if anchor_hash != local_hash {
+            continue;
+        }
+        if !rust_import_span_is_direct_child_of_scope(lo, scope, span) {
+            continue;
+        }
+        let nose_il::EvidenceKind::Symbol(nose_il::SymbolEvidenceKind::ImportedBinding {
+            module_hash: actual_module,
+            exported_hash: actual_exported,
+        }) = record.kind
+        else {
+            continue;
+        };
+        if record.status != nose_il::EvidenceStatus::Asserted
+            || actual_module != module_hash
+            || actual_exported != exported_hash
+        {
+            return None;
+        }
+        dependencies.push(record.id);
+    }
+    (!dependencies.is_empty()).then_some(dependencies)
+}
+fn rust_import_span_is_direct_child_of_scope(lo: &Lowering, scope: TsNode, span: Span) -> bool {
+    Lowering::named_children(scope).into_iter().any(|child| {
+        let child_span = lo.span(child);
+        matches!(child.kind(), "use_declaration" | "extern_crate_declaration")
+            && child_span.file == span.file
+            && child_span.start_byte <= span.start_byte
+            && span.end_byte <= child_span.end_byte
+    })
 }
 fn rust_param_domain_is_safe(
     lo: &Lowering,
@@ -79,6 +185,19 @@ fn rust_compact_type_path(type_text: &str) -> Option<String> {
         .filter(|c| !c.is_whitespace())
         .flat_map(char::to_lowercase)
         .collect();
+    let mut ty = compact
+        .split('=')
+        .next()
+        .unwrap_or(compact.as_str())
+        .trim_start_matches("::");
+    while let Some(rest) = ty.strip_prefix('&') {
+        ty = rest.strip_prefix("mut").unwrap_or(rest);
+    }
+    let head = ty.split(['<', '[', '(']).next().unwrap_or(ty);
+    (!head.is_empty()).then(|| head.to_string())
+}
+fn rust_type_head_preserving_case(type_text: &str) -> Option<String> {
+    let compact: String = type_text.chars().filter(|c| !c.is_whitespace()).collect();
     let mut ty = compact
         .split('=')
         .next()

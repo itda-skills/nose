@@ -116,6 +116,51 @@ fn reports_future_drive_obligations_when_local_runtime_binding_is_proven() {
 }
 
 #[test]
+fn reports_future_drive_obligations_when_parameter_runtime_identity_is_proven() {
+    let imported_runtime_param = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nfn run(rt: Runtime) { rt.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let imported_runtime_ref_param = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nfn run(rt: &Runtime) { rt.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let aliased_handle_param = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Handle as TokioHandle;\nfn run(handle: TokioHandle) { handle.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let qualified_runtime_param = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "fn run(rt: tokio::runtime::Runtime) { rt.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let scoped_imported_runtime_param = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "mod local { use tokio::runtime::Runtime; fn run(rt: Runtime) { rt.block_on(work()); } }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+
+    for labels in [
+        imported_runtime_param,
+        imported_runtime_ref_param,
+        aliased_handle_param,
+        qualified_runtime_param,
+        scoped_imported_runtime_param,
+    ] {
+        assert!(labels.contains(&"future-drive-scheduling-contract"));
+        assert!(labels.contains(&"future-settled-value-channel-contract"));
+    }
+}
+
+#[test]
 fn requires_proven_runtime_identity() {
     let unproven_receiver = runtime_boundary_evidence_for_lang_call(
         "runtime.rs",
@@ -191,6 +236,78 @@ fn requires_proven_runtime_identity() {
         (
             extension_method_changes_receiver_type,
             "Rust extension method changes block_on receiver type",
+        ),
+    ] {
+        assert_missing_evidence_not_contains(labels, "future-drive-scheduling-contract", surface);
+    }
+}
+
+#[test]
+fn requires_proven_parameter_runtime_identity() {
+    let local_runtime_type = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "struct Runtime;\nfn run(rt: Runtime) { rt.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let wrong_runtime_import = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "use project::runtime::Runtime;\nfn run(rt: Runtime) { rt.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let project_local_tokio_runtime = runtime_boundary_evidence_for_corpus_call(
+        &[(
+            "runtime.rs",
+            "mod tokio { pub mod runtime { pub struct Runtime; } }\nfn run(rt: tokio::runtime::Runtime) { rt.block_on(work()); }\n",
+            Lang::Rust,
+        )],
+        "runtime.rs",
+        ".block_on",
+    );
+    let case_mismatched_tokio_runtime = runtime_boundary_evidence_for_corpus_call(
+        &[(
+            "runtime.rs",
+            "mod Tokio { pub mod runtime { pub struct Runtime; } }\nfn run(rt: Tokio::runtime::Runtime) { rt.block_on(work()); }\n",
+            Lang::Rust,
+        )],
+        "runtime.rs",
+        ".block_on",
+    );
+    let parent_module_import_not_visible = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nmod local { fn run(rt: Runtime) { rt.block_on(work()); } }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+    let parameter_reassigned_to_local = runtime_boundary_evidence_for_lang_call(
+        "runtime.rs",
+        "use tokio::runtime::Runtime;\nfn run(rt: Runtime) { let rt = make_local(rt); rt.block_on(work()); }\n",
+        Lang::Rust,
+        ".block_on",
+    );
+
+    for (labels, surface) in [
+        (local_runtime_type, "Rust local Runtime parameter type"),
+        (
+            wrong_runtime_import,
+            "Rust non-tokio Runtime parameter import",
+        ),
+        (
+            project_local_tokio_runtime,
+            "project-local tokio Runtime parameter type",
+        ),
+        (
+            case_mismatched_tokio_runtime,
+            "case-mismatched Tokio Runtime parameter type",
+        ),
+        (
+            parent_module_import_not_visible,
+            "parent-module import for child-module Runtime parameter type",
+        ),
+        (
+            parameter_reassigned_to_local,
+            "Rust Runtime parameter reassigned before block_on",
         ),
     ] {
         assert_missing_evidence_not_contains(labels, "future-drive-scheduling-contract", surface);
