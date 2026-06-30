@@ -237,3 +237,64 @@ fn aggregate_executor_scheduler_and_lifecycle_labels_have_specific_obligations()
         )
     );
 }
+
+#[test]
+fn task_and_async_aggregate_labels_have_specific_obligations() {
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "task-spawn-scheduling-contract",
+            "task-handle-lifecycle-contract",
+            "task-cancellation-liveness-contract",
+        ]),
+        (
+            "scheduling-boundary",
+            "task-spawn-scheduling-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["task-handle-lifecycle-contract"]),
+        (
+            "lifecycle-materialization-boundary",
+            "task-handle-lifecycle-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["task-cancellation-liveness-contract"]),
+        (
+            "cancellation-liveness-boundary",
+            "task-cancellation-liveness-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "async-aggregate-all-completion-contract",
+            "async-aggregate-result-channel-contract",
+        ]),
+        (
+            "success-error-result-channel",
+            "async-aggregate-all-completion-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "async-aggregate-first-completion-contract",
+            "async-aggregate-cancellation-liveness-contract",
+            "async-aggregate-result-channel-contract",
+        ]),
+        (
+            "cancellation-liveness-boundary",
+            "async-aggregate-first-completion-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "async-aggregate-completion-contract",
+            "async-aggregate-cancellation-liveness-contract",
+            "async-aggregate-result-channel-contract",
+        ]),
+        (
+            "success-error-result-channel",
+            "async-aggregate-completion-contract-missing",
+        )
+    );
+}

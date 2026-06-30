@@ -181,3 +181,208 @@ fn recall_loss_report_attributes_async_function_and_block_oracle_exclusions() {
         "oracle-excluded async rows should not be mixed into interpretable admission rollups: {report}"
     );
 }
+
+#[test]
+fn recall_loss_report_attributes_non_js_async_runtime_api_exclusions() {
+    let project = TempProject::new("recall_loss_non_js_async_runtime_api_exclusions");
+    project.write(
+        "asyncio_api.py",
+        "import asyncio\n\
+         def schedule():\n    return asyncio.create_task(work())\n\
+         def sleep_timer():\n    return asyncio.sleep(1)\n\
+         def gather_all(task):\n    return asyncio.gather(task)\n\
+         def wait_some(task):\n    return asyncio.wait([task])\n",
+    );
+    project.write(
+        "rust_runtime.rs",
+        "fn spawn_it() { tokio::spawn(work()); }\n\
+         fn join_it() { tokio::join!(work(), other()); }\n\
+         fn select_it() { futures::select!(a = work() => a); }\n",
+    );
+    project.write(
+        "swift_task.swift",
+        "func schedule() {\n  Task { work() }\n}\n\
+         func detached() {\n  Task.detached { work() }\n}\n",
+    );
+    let report_path = project.path().join("recall-loss.json");
+    let out = run_raw(&[
+        "verify",
+        project.path().to_str().unwrap(),
+        "--max-violations",
+        "0",
+        "--recall-loss-report",
+        report_path.to_str().unwrap(),
+    ]);
+    assert!(out.contains("GATE: 0"));
+
+    let report_text = fs::read_to_string(&report_path).expect("recall-loss report");
+    let report: serde_json::Value =
+        serde_json::from_str(&report_text).expect("recall-loss report JSON");
+    assert_admission_obligation(
+        &report,
+        "scheduling-boundary",
+        "task-spawn-scheduling-contract-missing",
+        2,
+    );
+    for (family, subreason, minimum) in [
+        (
+            "scheduling-boundary",
+            "task-spawn-scheduling-contract-missing",
+            2,
+        ),
+        (
+            "success-error-result-channel",
+            "async-aggregate-all-completion-contract-missing",
+            1,
+        ),
+        (
+            "cancellation-liveness-boundary",
+            "async-aggregate-first-completion-contract-missing",
+            1,
+        ),
+    ] {
+        assert_exclusion_obligation(&report, family, subreason, minimum);
+    }
+
+    for (language, evidence) in [
+        ("swift", "task-spawn-scheduling-contract"),
+        ("rust", "async-aggregate-all-completion-contract"),
+        ("rust", "async-aggregate-first-completion-contract"),
+    ] {
+        assert_excluded_runtime_unit(&report, language, evidence);
+    }
+    for language in ["python", "rust"] {
+        assert_admission_rejection(&report, language, "task-spawn-scheduling-contract");
+    }
+    for subreason in [
+        "async-aggregate-all-completion-contract-missing",
+        "async-aggregate-first-completion-contract-missing",
+        "async-aggregate-completion-contract-missing",
+    ] {
+        assert_no_admission_obligation(&report, subreason);
+    }
+}
+
+fn report_array<'a>(
+    report: &'a serde_json::Value,
+    path: &[&str],
+    description: &str,
+) -> &'a [serde_json::Value] {
+    let mut cursor = report;
+    for key in path {
+        cursor = &cursor[*key];
+    }
+    cursor
+        .as_array()
+        .unwrap_or_else(|| panic!("{description} should be an array"))
+}
+
+fn has_obligation_rollup(
+    items: &[serde_json::Value],
+    family: &str,
+    subreason: &str,
+    count_field: &str,
+    minimum: u64,
+) -> bool {
+    items.iter().any(|item| {
+        item["obligation_family"] == family
+            && item["obligation_subreason"] == subreason
+            && item[count_field].as_u64().unwrap_or(0) >= minimum
+    })
+}
+
+fn assert_admission_obligation(
+    report: &serde_json::Value,
+    family: &str,
+    subreason: &str,
+    minimum: u64,
+) {
+    let obligations = report_array(report, &["by_obligation"], "by_obligation");
+    assert!(
+        has_obligation_rollup(
+            obligations,
+            family,
+            subreason,
+            "oracle_interpretable",
+            minimum
+        ),
+        "expected interpretable {family}/{subreason} admission rollup: {report}"
+    );
+}
+
+fn assert_no_admission_obligation(report: &serde_json::Value, subreason: &str) {
+    let obligations = report_array(report, &["by_obligation"], "by_obligation");
+    assert!(
+        obligations
+            .iter()
+            .all(|item| item["obligation_subreason"] != subreason),
+        "oracle-excluded rows for {subreason} should not be mixed into interpretable admission rollups: {report}"
+    );
+}
+
+fn assert_exclusion_obligation(
+    report: &serde_json::Value,
+    family: &str,
+    subreason: &str,
+    minimum: u64,
+) {
+    let obligations = report_array(
+        report,
+        &["oracle_exclusions", "by_obligation"],
+        "oracle_exclusions.by_obligation",
+    );
+    assert!(
+        obligations
+            .iter()
+            .any(|item| item["exclusion_reason"] == "uninterpretable"
+                && item["attribution_reason"] == "unsupported-runtime-boundary"
+                && has_obligation_rollup(
+                    std::slice::from_ref(item),
+                    family,
+                    subreason,
+                    "oracle_excluded",
+                    minimum
+                )),
+        "expected {family}/{subreason} oracle exclusion rollup: {report}"
+    );
+}
+
+fn missing_evidence_contains(item: &serde_json::Value, evidence: &str) -> bool {
+    item["missing_evidence"]
+        .as_array()
+        .is_some_and(|items| items.iter().any(|value| value == evidence))
+}
+
+fn attribution_missing_evidence_contains(item: &serde_json::Value, evidence: &str) -> bool {
+    item["attribution"]["missing_evidence"]
+        .as_array()
+        .is_some_and(|items| items.iter().any(|value| value == evidence))
+}
+
+fn assert_excluded_runtime_unit(report: &serde_json::Value, language: &str, evidence: &str) {
+    let units = report_array(
+        report,
+        &["oracle_exclusions", "units"],
+        "oracle_exclusions.units",
+    );
+    assert!(
+        units.iter().any(|item| item["reason"] == "uninterpretable"
+            && item["loc"]["language"] == language
+            && item["attribution"]["oracle_status"] == "excluded"
+            && item["attribution"]["capability_id"] == "runtime-boundary-model"
+            && attribution_missing_evidence_contains(item, evidence)),
+        "expected {language} exclusion attribution for {evidence}: {report}"
+    );
+}
+
+fn assert_admission_rejection(report: &serde_json::Value, language: &str, evidence: &str) {
+    let rejections = report_array(report, &["admission_rejections"], "admission_rejections");
+    assert!(
+        rejections
+            .iter()
+            .any(|item| item["loc"]["language"] == language
+                && item["capability_id"] == "runtime-boundary-model"
+                && missing_evidence_contains(item, evidence)),
+        "expected interpretable {language} attribution for {evidence}: {report}"
+    );
+}

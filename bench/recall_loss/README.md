@@ -132,6 +132,19 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-06-30
 ```
 
+Build the non-JS async runtime API obligation audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.non-js-async-runtime.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.non-js-async-runtime.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.non-js-async-runtime.json \
+  --generated-on 2026-06-30
+```
+
 Build the first #602 `Promise.all` exact aggregate slice audit with:
 
 ```sh
@@ -348,6 +361,18 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   Python, Rust, and Swift async function rows to the shared scheduling
   subreason. Its `current_recall_loss` section carries the matching crates gate
   summary plus separate interpretable and oracle-exclusion obligation rollups.
+- [non-js-async-runtime-api-obligation-reporting-2026-06-30.v1.json](non-js-async-runtime-api-obligation-reporting-2026-06-30.v1.json)
+  records the next reporting-only runtime API migration. Python `asyncio`
+  task/timer/aggregate calls, Rust async task spawn plus `join!`/`select!`
+  macros, and Swift `Task` creation now report shared `task-*` and
+  `async-aggregate-*` obligations without opening exact admission.
+- [scheduling-lifecycle-boundary-audit-non-js-async-runtime-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-runtime-2026-06-30.v1.json)
+  records the 120-repo lexical pricing for that runtime API slice: Rust
+  `tokio`/`async-std` spawn (`349` occurrences / `3` repos), Swift `Task`
+  (`210` / `12`), Python `asyncio.sleep` (`104` / `6`), Rust `join!`/`try_join!`
+  (`82` / `2`), Python `asyncio.gather` (`17` / `4`), Rust `select!`
+  (`17` / `1`), Python `asyncio.create_task`/`ensure_future` (`14` / `3`),
+  and Python `asyncio.wait` (`4` / `3`).
 - [promise-protocol-hard-negatives-2026-06-28.v1.json](promise-protocol-hard-negatives-2026-06-28.v1.json)
   records the follow-up Promise hard-negative slice. It keeps exact admission
   closed while pinning async-function/sync, Promise executor/sync,

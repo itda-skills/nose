@@ -28,6 +28,9 @@ preserved as protocol boundaries with `Source::Protocol(AsyncBlock)` and
 goroutine spawn, deferred calls, channel send/receive, receive-status
 projections, and `select` boundaries are also preserved as raw source-backed
 protocol anchors rather than ordinary calls, values, or sequence tags. Python
+`asyncio` task/timer/aggregate calls, Rust `tokio`/`async-std` spawn and
+`join!`/`select!` macros, and Swift `Task` creation now report shared
+runtime-boundary obligations without becoming exact recovery evidence. Python
 comprehension lowering now records whether a
 HOF came from a list comprehension, set comprehension, dict comprehension, or
 generator expression, and exact/value consumers use that surface evidence before
@@ -120,6 +123,10 @@ with zero semantic-admission delta. The follow-up [promise protocol diagnostics]
 split that closed boundary into await scheduling, async function scheduling,
 executor callback, factory, aggregate result, rejection channel, and
 non-construct Promise-call labels for recall-loss reporting.
+The [non-JS async runtime API reporting artifact](../bench/recall_loss/non-js-async-runtime-api-obligation-reporting-2026-06-30.v1.json)
+extends that attribution capability to Python/Rust/Swift runtime APIs using
+shared `task-*` and `async-aggregate-*` obligations while keeping exact
+admission closed.
 Library/API identity is consolidated through internal `LibraryApiContract` rows
 for factory, constructor, selected property/non-factory method/view surfaces,
 and selected non-call sentinels, with occurrence evidence covering selected
@@ -1364,6 +1371,10 @@ this worktree because the required evidence is not yet modeled:
   closed until future/error protocol obligations are modeled. JS/TS and Python
   `yield value` remains closed against plain `value` until generator demand and
   suspension semantics are modeled.
+- Python `asyncio.create_task`/`sleep`/`gather`/`wait`, Rust `tokio`/`async-std`
+  spawn and `join!`/`select!`, and Swift `Task` creation report scheduler,
+  lifecycle, cancellation, and result-channel obligations but do not yet
+  converge with synchronous calls, direct payload values, or each other.
 - Go `go f(x)`, `defer f(x)`, `<-ch`, `ch <- x`, and `select` do not converge
   with ordinary calls, values, sends, or sequential control-flow variants until
   channel/goroutine/defer/select contracts can prove scheduling, blocking,

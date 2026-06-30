@@ -60,6 +60,16 @@ source-prevalence group (`29,094` occurrences) reportable as scheduling,
 executor callback, rejection-channel, aggregate-result, factory, and
 non-construct call obligations. JS/TS async functions now emit a fail-closed
 `Source::Protocol(AsyncFunction)` boundary even when the body has no `await`.
+The follow-up [non-js-async-runtime-api-obligation-reporting-2026-06-30.v1.json](../bench/recall_loss/non-js-async-runtime-api-obligation-reporting-2026-06-30.v1.json)
+extends the same reporting-only process to non-JS runtime APIs without adding a
+new kernel enum: Python `asyncio` task/timer/aggregate calls, Rust async spawn
+and `join!`/`select!` macros, and Swift `Task` creation now report shared
+`task-*` and `async-aggregate-*` obligations. The matching 120-repo audit prices
+Rust async spawn at `349` occurrences / `3` repos, Swift `Task` at `210` / `12`,
+Python `asyncio.sleep` at `104` / `6`, Rust `join!`/`try_join!` at `82` / `2`,
+Python `asyncio.gather` at `17` / `4`, Rust `select!` at `17` / `1`, Python
+`asyncio.create_task`/`ensure_future` at `14` / `3`, and Python `asyncio.wait`
+at `4` / `3`.
 The follow-up [promise-protocol-hard-negatives-2026-06-28.v1.json](../bench/recall_loss/promise-protocol-hard-negatives-2026-06-28.v1.json)
 pins the Promise-specific hard negatives before any recovery slice opens:
 async-function/sync, Promise executor/sync, Promise.resolve/sync,
@@ -314,11 +324,11 @@ to specific obligation buckets.
 | language | current #594 surfaces | first safe direction |
 |---|---|---|
 | JS/TS | `await`, async functions, Promise executor/combinators/rejection, Array HOFs, mutations | report scheduling/rejection/executor separately; keep broad async convergence closed |
-| Python | builtins `map`/`filter`, `itertools`, `functools`, decorators, materializers | callback/lifecycle reporting, then narrow producer evidence for already admitted iterator builtins |
-| Rust | iterator HOFs, `Option`/`Result`, mutation/effect, iterator views | reuse lazy callback and channel vocabulary; keep type-directed `collect` and mutating APIs closed |
+| Python | builtins `map`/`filter`, `itertools`, `functools`, decorators, materializers, `asyncio` task/timer/aggregate APIs | callback/lifecycle reporting, shared task/aggregate runtime obligations, then narrow producer evidence for already admitted iterator builtins |
+| Rust | iterator HOFs, `Option`/`Result`, mutation/effect, iterator views, async task spawn and `join!`/`select!` macros | reuse lazy callback, channel, task, and aggregate vocabulary; keep type-directed `collect`, mutating APIs, and exact async runtime semantics closed |
 | Go | `sort`/`slices`/`maps`, mutation callbacks, channel/goroutine surfaces for future scans | add effect/callback reporting before exact sort or goroutine/channel semantics |
 | Java | `Arrays`/`Collections`, Optional/Future/Stream-shaped domains, mutation/wrapper APIs | split receiver mutation, wrapper aliasing, channel, and stream callback obligations |
-| Swift | Sequence HOFs, cardinality, mutation, views, reductions, `throws`/`async` future work | reuse callback/effect and lifecycle buckets; keep selector-only collection methods closed |
+| Swift | Sequence HOFs, cardinality, mutation, views, reductions, `throws`/`async`, `Task` creation | reuse callback/effect, scheduling, task lifecycle, and cancellation buckets; keep selector-only collection methods and exact task semantics closed |
 | Ruby | Enumerable blocks, `raise`/`rescue`, Thread/Fiber surfaces | block timing and exception-channel reporting before expanding Enumerable support |
 | C | callback comparators, allocation/lifetime, memory mutation, `errno`, non-local jumps, threads | keep pointer/lifetime and mutation separate from callback/error-channel evidence |
 

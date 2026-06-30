@@ -1,19 +1,6 @@
 use super::*;
 use nose_il::{FileId, Lang};
 
-fn lowered_js(src: &str) -> (nose_il::Il, Interner) {
-    let interner = Interner::new();
-    let il = nose_frontend::lower_source(
-        FileId(0),
-        "promise.js",
-        src.as_bytes(),
-        Lang::JavaScript,
-        &interner,
-    )
-    .expect("lower JavaScript fixture");
-    (il, interner)
-}
-
 fn lowered_source(path: &str, src: &str, lang: Lang) -> (nose_il::Il, Interner) {
     let interner = Interner::new();
     let il = nose_frontend::lower_source(FileId(0), path, src.as_bytes(), lang, &interner)
@@ -37,7 +24,16 @@ fn missing_evidence_for_protocol(
 }
 
 fn missing_evidence_for_call(src: &str, callee_suffix: &str) -> Vec<&'static str> {
-    let (il, interner) = lowered_js(src);
+    missing_evidence_for_lang_call("promise.js", src, Lang::JavaScript, callee_suffix)
+}
+
+fn missing_evidence_for_lang_call(
+    path: &str,
+    src: &str,
+    lang: Lang,
+    callee_suffix: &str,
+) -> Vec<&'static str> {
+    let (il, interner) = lowered_source(path, src, lang);
     let call = (0..il.nodes.len())
         .map(|idx| NodeId(idx as u32))
         .find(|&node| {
@@ -382,6 +378,87 @@ fn abort_signal_calls_report_cancellation_liveness_obligations() {
     }
     assert!(controller.contains(&"abort-controller-signal-lifecycle-contract"));
     assert!(controller.contains(&"abort-signal-cancellation-contract"));
+}
+
+#[test]
+fn non_js_async_runtime_calls_report_shared_task_and_aggregate_obligations() {
+    let py_task = missing_evidence_for_lang_call(
+        "runtime.py",
+        "import asyncio\nasync def main():\n    return asyncio.create_task(work())\n",
+        Lang::Python,
+        "asyncio.create_task",
+    );
+    let py_sleep = missing_evidence_for_lang_call(
+        "runtime.py",
+        "import asyncio\nasync def main():\n    return await asyncio.sleep(1)\n",
+        Lang::Python,
+        "asyncio.sleep",
+    );
+    let py_gather = missing_evidence_for_lang_call(
+        "runtime.py",
+        "import asyncio\nasync def main(task):\n    return await asyncio.gather(task)\n",
+        Lang::Python,
+        "asyncio.gather",
+    );
+    let py_wait = missing_evidence_for_lang_call(
+        "runtime.py",
+        "import asyncio\nasync def main(task):\n    return await asyncio.wait([task])\n",
+        Lang::Python,
+        "asyncio.wait",
+    );
+    let rust_spawn = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "async fn run() { tokio::spawn(async { work().await }); }\n",
+        Lang::Rust,
+        "tokio::spawn",
+    );
+    let rust_join = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "async fn run() { tokio::join!(work(), other()); }\n",
+        Lang::Rust,
+        "tokio::join",
+    );
+    let rust_try_join = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "async fn run() { tokio::try_join!(work(), other()); }\n",
+        Lang::Rust,
+        "tokio::try_join",
+    );
+    let rust_select = missing_evidence_for_lang_call(
+        "runtime.rs",
+        "async fn run() { futures::select!(a = work() => a); }\n",
+        Lang::Rust,
+        "futures::select",
+    );
+    let swift_task = missing_evidence_for_lang_call(
+        "runtime.swift",
+        "func run() async {\n  Task { await work() }\n}\n",
+        Lang::Swift,
+        "Task",
+    );
+    let swift_detached = missing_evidence_for_lang_call(
+        "runtime.swift",
+        "func run() async {\n  Task.detached { await work() }\n}\n",
+        Lang::Swift,
+        "Task.detached",
+    );
+
+    for labels in [&py_task, &rust_spawn, &swift_task, &swift_detached] {
+        assert!(labels.contains(&"task-spawn-scheduling-contract"));
+        assert!(labels.contains(&"task-handle-lifecycle-contract"));
+        assert!(labels.contains(&"task-cancellation-liveness-contract"));
+    }
+    assert!(py_sleep.contains(&"timer-scheduling-contract"));
+    for labels in [&py_gather, &rust_join, &rust_try_join] {
+        assert!(labels.contains(&"async-aggregate-all-completion-contract"));
+        assert!(labels.contains(&"async-aggregate-result-channel-contract"));
+    }
+    assert!(py_wait.contains(&"async-aggregate-completion-contract"));
+    assert!(py_wait.contains(&"async-aggregate-cancellation-liveness-contract"));
+    assert!(py_wait.contains(&"async-aggregate-result-channel-contract"));
+    assert!(rust_select.contains(&"async-aggregate-first-completion-contract"));
+    assert!(rust_select.contains(&"async-aggregate-cancellation-liveness-contract"));
+    assert!(rust_select.contains(&"async-aggregate-result-channel-contract"));
 }
 
 #[test]
