@@ -673,3 +673,19 @@ shared Promise-like and DirectMethod fixture helpers removed that new family.
 The remaining delta is the same reviewed direct-call-target negative fixture
 family moving from `32ed015840375d04` to `1af33fd980c0e8b9` after new branch
 fixtures shifted line spans. No new budget is accepted.
+
+The cross-language async-function obligation reporting slice tightens the count
+from 53 to 52. The first draft added a third Python protocol-boundary lowering
+test and surfaced avoidable test scaffolding duplication against the existing
+await/yield protocol tests; extracting `expect_python_protocol_boundary` removed
+that new family. After cleanup, accepted representative `57be5bd4067b5967` no
+longer reports and no new default-surface family appears, so the baseline budget
+is tightened.
+
+The follow-up review fix for that slice keeps the count at 52. Gating JS
+`PromiseLike` producer evidence away from Python/Rust/Swift async functions adds
+one focused negative test, which shifts the already reviewed direct-call-target
+negative fixture representative from `5e2b99978272a129` to
+`f6a2c8af9c3fd791`. The reported locations are still the same test-scope
+`does_not_emit_*` direct-call-target negatives plus the semantics selector shape
+guard. No new budget is accepted.

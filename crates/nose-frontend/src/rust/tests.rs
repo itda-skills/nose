@@ -532,7 +532,7 @@ fn match_typed_integer_literal_pattern_retains_value() {
 }
 
 #[test]
-fn async_blocks_preserve_source_backed_protocol_boundaries() {
+fn async_functions_and_blocks_preserve_source_backed_protocol_boundaries() {
     let interner = Interner::new();
     let il = lower(
         FileId(0),
@@ -542,6 +542,12 @@ fn async_blocks_preserve_source_backed_protocol_boundaries() {
     )
     .expect("lower");
 
+    crate::test_helpers::expect_raw_protocol_boundary(
+        &il,
+        &interner,
+        "async_function",
+        SourceProtocolKind::AsyncFunction,
+    );
     crate::test_helpers::expect_raw_protocol_boundary(
         &il,
         &interner,

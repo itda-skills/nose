@@ -83,7 +83,7 @@ class Pattern:
 
 PATTERNS: tuple[Pattern, ...] = (
     Pattern("javascript-typescript", "js-ts.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "await is scheduling and thenable assimilation, not sync value equivalence", re.compile(r"\bawait\b")),
-    Pattern("javascript-typescript", "js-ts.async.function", "async function", "scheduling-boundary", "promise-async-function-scheduling-contract-missing", "async function scheduling", "async functions have Promise scheduling and rejection boundaries even without explicit await", re.compile(r"\basync\s+(?:function\b|[A-Za-z_$]|\([^)]*\)\s*=>)")),
+    Pattern("javascript-typescript", "js-ts.async.function", "async function", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async functions have scheduling and rejection boundaries even without explicit await", re.compile(r"\basync\s+(?:function\b|[A-Za-z_$]|\([^)]*\)\s*=>)")),
     Pattern("javascript-typescript", "js-ts.promise.executor", "new Promise", "executor-callback", "promise-executor-timing-contract-missing", "executor timing", "new Promise needs executor timing, resolve/reject callback, and throw-to-rejection contracts", re.compile(r"\bnew\s+Promise\s*(?:<[^;\n(){}]*>)?\s*\(")),
     Pattern("javascript-typescript", "js-ts.promise.aggregate", "Promise.all", "success-error-result-channel", "promise-aggregate-all-fulfilled-contract-missing", "all-fulfilled aggregate", "Promise.all needs ordered all-fulfilled value and first rejection semantics", re.compile(r"\bPromise\s*\.\s*all\s*(?:<[^;\n(){}]*>)?\s*\(")),
     Pattern("javascript-typescript", "js-ts.promise.aggregate", "Promise.race", "cancellation-liveness-boundary", "promise-aggregate-first-settled-contract-missing", "first-settled aggregate", "Promise.race needs first-settled ordering and liveness proof", re.compile(r"\bPromise\s*\.\s*race\s*(?:<[^;\n(){}]*>)?\s*\(")),
@@ -94,13 +94,14 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("javascript-typescript", "js-ts.promise.interval", "setInterval", "lifecycle-materialization-boundary", "interval-async-iteration-lifecycle-contract-missing", "interval lifecycle", "setInterval and timers interval streams have repeated emission, cancellation, and liveness semantics", re.compile(r"(?<![A-Za-z0-9_$])setInterval\s*\(")),
     Pattern("javascript-typescript", "js-ts.cancellation.abort", "AbortController/AbortSignal", "cancellation-liveness-boundary", "abort-signal-cancellation-contract-missing", "cancellation signal", "AbortSignal/AbortController can change scheduling and rejection outcomes", re.compile(r"\b(?:AbortController|AbortSignal)\b")),
     Pattern("python", "python.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Python await has coroutine scheduling and exception channel semantics", re.compile(r"\bawait\b")),
-    Pattern("python", "python.async.function", "async def", "scheduling-boundary", "python-async-function-scheduling-contract-missing", "async function scheduling", "async def creates coroutine protocol boundaries", re.compile(r"\basync\s+def\b")),
+    Pattern("python", "python.async.function", "async def", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async def creates coroutine protocol boundaries", re.compile(r"\basync\s+def\b")),
     Pattern("python", "python.async.iteration", "async for/with", "lifecycle-materialization-boundary", "python-async-iterator-lifecycle-contract-missing", "async iterator lifecycle", "async for/with needs awaitable lifecycle and cleanup proof", re.compile(r"\basync\s+(?:for|with)\b")),
     Pattern("python", "python.asyncio.aggregate", "asyncio.gather/wait", "success-error-result-channel", "python-asyncio-aggregate-channel-contract-missing", "asyncio aggregate", "asyncio gather/wait need aggregate completion, cancellation, and exception semantics", re.compile(r"\basyncio\s*\.\s*(?:gather|wait)\s*\(")),
     Pattern("python", "python.asyncio.scheduler", "asyncio.create_task/sleep", "scheduling-boundary", "python-asyncio-scheduler-contract-missing", "asyncio scheduler", "asyncio task/sleep APIs create scheduler and cancellation boundaries", re.compile(r"\basyncio\s*\.\s*(?:create_task|ensure_future|sleep)\s*\(")),
     Pattern("python", "python.generator.yield", "yield", "lifecycle-materialization-boundary", "generator-yield-lifecycle-contract-missing", "generator lifecycle", "yield has suspension and iterator lifecycle semantics", re.compile(r"\byield(?:\s+from)?\b")),
     Pattern("rust", "rust.async.await", ".await", "scheduling-boundary", "async-await-scheduling-contract-missing", "future await", "Rust .await polls a Future and must keep wake/scheduling effects explicit", re.compile(r"\.\s*await\b")),
-    Pattern("rust", "rust.async.function", "async fn/block", "scheduling-boundary", "future-async-block-scheduling-contract-missing", "future construction", "async fn/block creates a Future boundary", re.compile(r"\basync\s+(?:fn|move\b|async\b|\{)")),
+    Pattern("rust", "rust.async.function", "async fn", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async fn creates a suspended async function boundary", re.compile(r"\basync\s+fn\b")),
+    Pattern("rust", "rust.async.block", "async block", "scheduling-boundary", "async-block-scheduling-contract-missing", "async block construction", "async blocks create suspended async boundaries", re.compile(r"\basync\s+(?:move\b|\{)")),
     Pattern("rust", "rust.async.spawn", "tokio/std spawn", "scheduling-boundary", "rust-spawn-scheduling-contract-missing", "task/thread spawn", "spawn APIs introduce scheduler, cancellation, and join-handle boundaries", re.compile(r"\b(?:tokio|async_std|std::thread)\s*::\s*spawn(?:_blocking)?\s*\(")),
     Pattern("rust", "rust.async.aggregate", "join/select", "success-error-result-channel", "rust-future-aggregate-channel-contract-missing", "future aggregate", "join/select style macros need all/first completion and cancellation proof", re.compile(r"\b(?:join|try_join|select)!\s*\(")),
     Pattern("go", "go.concurrent.goroutine", "go statement", "scheduling-boundary", "goroutine-scheduling-contract-missing", "goroutine scheduling", "go statements spawn concurrent execution", re.compile(r"\bgo\s+[A-Za-z_{(]")),
@@ -111,7 +112,7 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("java", "java.future.executor", "Executor/Future", "scheduling-boundary", "java-executor-scheduling-contract-missing", "executor scheduling", "Executor/Future APIs introduce scheduler and lifecycle boundaries", re.compile(r"\b(?:ExecutorService|Executor|Future|ScheduledFuture)\b")),
     Pattern("java", "java.stream.lifecycle", "stream/parallelStream", "lifecycle-materialization-boundary", "java-stream-lifecycle-contract-missing", "stream lifecycle", "Java streams need lazy/eager lifecycle and terminal materialization proof", re.compile(r"\.\s*(?:stream|parallelStream)\s*\(")),
     Pattern("swift", "swift.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Swift await has task scheduling and actor/lifetime boundaries", re.compile(r"\bawait\b")),
-    Pattern("swift", "swift.async.function", "async", "scheduling-boundary", "swift-async-function-scheduling-contract-missing", "async function scheduling", "Swift async surfaces create task/future-like protocol boundaries", re.compile(r"\basync\b")),
+    Pattern("swift", "swift.async.function", "async", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "Swift async surfaces create task/future-like protocol boundaries", re.compile(r"\basync\b")),
     Pattern("swift", "swift.error.throws", "throws/try", "exception-channel", "swift-throws-exception-channel-contract-missing", "throws channel", "Swift throws/try is an explicit error channel", re.compile(r"\b(?:throws|try)\b")),
     Pattern("swift", "swift.task.spawn", "Task", "scheduling-boundary", "swift-task-scheduling-contract-missing", "task scheduling", "Task APIs introduce scheduler and cancellation boundaries", re.compile(r"\bTask(?:\s*\.\s*detached)?\s*\{")),
     Pattern("ruby", "ruby.thread.fiber", "Thread/Fiber", "scheduling-boundary", "ruby-thread-fiber-scheduling-contract-missing", "thread/fiber scheduling", "Thread/Fiber APIs create scheduler and lifecycle boundaries", re.compile(r"\b(?:Thread|Fiber)\s*\.\s*(?:new|schedule)\b")),
@@ -294,11 +295,24 @@ def summarize(args: argparse.Namespace) -> dict[str, Any]:
         "recommended_order": recommended_order(surfaces),
         "hard_negative_inventory": hard_negative_inventory(),
         "current_recall_loss": current_recall_loss(args.recall_loss_report),
-        "regenerate": [
-            "python3 scripts/scheduling-lifecycle-boundary-audit.py --recall-loss-report target/recall-loss.issue-602.crates.json --output target/scheduling-lifecycle-boundary-audit-602.v1.json",
-        ],
+        "regenerate": [regenerate_command(args)],
     }
     return report
+
+
+def regenerate_command(args: argparse.Namespace) -> str:
+    parts = ["python3", "scripts/scheduling-lifecycle-boundary-audit.py"]
+    if args.manifest != DEFAULT_MANIFEST:
+        parts.extend(["--manifest", args.manifest])
+    if args.repos_root != DEFAULT_REPOS_ROOT:
+        parts.extend(["--repos-root", args.repos_root])
+    if args.recall_loss_report:
+        parts.extend(["--recall-loss-report", args.recall_loss_report])
+    if args.output != DEFAULT_OUTPUT:
+        parts.extend(["--output", args.output])
+    if args.generated_on != DEFAULT_GENERATED_ON:
+        parts.extend(["--generated-on", args.generated_on])
+    return " ".join(parts)
 
 
 def recommended_order(surfaces: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -405,8 +419,23 @@ def current_recall_loss(path: str | None) -> dict[str, Any] | None:
     if not report_path.exists():
         return {"report": path, "status": "missing"}
     report = json.loads(report_path.read_text())
+    relevant_interpretable = relevant_recall_loss_obligations(report.get("by_obligation", []))
+    oracle = report.get("oracle_exclusions", {})
+    relevant_oracle_exclusions = relevant_recall_loss_obligations(
+        oracle.get("by_obligation", [])
+    )
+    return {
+        "report": path,
+        "summary": report.get("summary", {}),
+        "soundness_gate": report.get("soundness_gate", {}),
+        "relevant_obligations": relevant_interpretable,
+        "relevant_oracle_exclusion_obligations": relevant_oracle_exclusions,
+    }
+
+
+def relevant_recall_loss_obligations(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     relevant = []
-    for item in report.get("by_obligation", []):
+    for item in items:
         family = item.get("obligation_family", "")
         subreason = item.get("obligation_subreason", "")
         if family in {
@@ -419,12 +448,7 @@ def current_recall_loss(path: str | None) -> dict[str, Any] | None:
             "exception-channel",
         } or any(key in subreason for key in ("promise", "scheduler", "channel", "goroutine", "defer", "interval")):
             relevant.append(item)
-    return {
-        "report": path,
-        "summary": report.get("summary", {}),
-        "soundness_gate": report.get("soundness_gate", {}),
-        "relevant_obligations": relevant,
-    }
+    return relevant
 
 
 def main() -> None:

@@ -92,7 +92,7 @@ They do not change exact admission.
 | `rejection-channel` | `promise-reject-rejected-value-channel-contract-missing`, `promise-catch-rejection-continuation-contract-missing`, `promise-finally-settlement-continuation-contract-missing`, `promise-then-rejection-continuation-contract-missing`, legacy `promise-rejection-channel-contract-missing`/`promise-rejection-continuation-contract-missing`, or `exception-channel-contract-missing` | Rejection, catch/finally settlement, throw, rescue, or non-local error flow must remain distinct from ordinary return values. |
 | `success-error-result-channel` | `promise-factory-settled-value-contract-missing`, `promise-aggregate-all-fulfilled-contract-missing`, `promise-aggregate-all-settled-contract-missing`, `promise-aggregate-first-fulfilled-contract-missing`, `promise-aggregate-result-channel-contract-missing`, or `promise-then-fulfillment-continuation-contract-missing` | Success, empty/default, error/rejection, and aggregate result channels need explicit result-shape proof. |
 | `cancellation-liveness-boundary` | `promise-aggregate-first-settled-contract-missing`, `promise-aggregate-cancellation-liveness-contract-missing`, `abort-signal-cancellation-contract-missing`, `abort-signal-lifecycle-contract-missing`, `abort-controller-signal-lifecycle-contract-missing`, `scheduler-wait-cancellation-liveness-contract-missing`, `timer-cancellation-liveness-contract-missing`, or `interval-cancellation-liveness-contract-missing` | First-settled, cancellation, liveness, stop, and early-exit behavior must stay separate from all-value result channels. |
-| `scheduling-boundary` | `async-await-scheduling-contract-missing`, legacy `promise-await-scheduling-contract-missing`, `promise-async-function-scheduling-contract-missing`, `future-async-block-scheduling-contract-missing`, `promise-non-construct-call-boundary-contract-missing`, `scheduler-wait-timing-contract-missing`, `scheduler-yield-microtask-order-contract-missing`, `timer-scheduling-contract-missing`, `goroutine-scheduling-contract-missing`, or `runtime-protocol-boundary-contract-missing` | A lowered runtime/protocol construct needs scheduling or protocol semantics before exact use. |
+| `scheduling-boundary` | `async-await-scheduling-contract-missing`, `async-function-scheduling-contract-missing`, `async-block-scheduling-contract-missing`, legacy `promise-await-scheduling-contract-missing`, `promise-async-function-scheduling-contract-missing`, `future-async-block-scheduling-contract-missing`, `promise-non-construct-call-boundary-contract-missing`, `scheduler-wait-timing-contract-missing`, `scheduler-yield-microtask-order-contract-missing`, `timer-scheduling-contract-missing`, `goroutine-scheduling-contract-missing`, or `runtime-protocol-boundary-contract-missing` | A lowered runtime/protocol construct needs scheduling or protocol semantics before exact use. |
 | `channel-boundary` | `channel-send-receive-protocol-contract-missing`, `channel-select-protocol-contract-missing`, or `channel-protocol-contract-missing` | Channel send/receive/select semantics need protocol evidence before exact use. |
 | `exception-channel` | `exception-channel-contract-missing` | Try/throw/error propagation is an explicit channel boundary, not a scheduling boundary. |
 | `lifecycle-materialization-boundary` | `interval-async-iteration-lifecycle-contract-missing`, `defer-lifecycle-ordering-contract-missing`, `generator-yield-lifecycle-contract-missing`, or `generator-yield-protocol-contract-missing` | Repeated emission, deferred execution, suspension, one-shot views, reusable collections, and materialization require explicit lifecycle proof. |
@@ -138,7 +138,16 @@ keeps that label visible even when await-only runtime/protocol units are exclude
 before admission-rejection rows exist: JS/TS, Python, Rust, and Swift fixtures
 roll up under `oracle_exclusions.by_obligation` as
 `scheduling-boundary/async-await-scheduling-contract-missing`, while the
-top-level interpretable `by_obligation` stays separate. The checked [promise-protocol diagnostics](../bench/recall_loss/promise-protocol-diagnostics-2026-06-28.v1.json)
+top-level interpretable `by_obligation` stays separate. The follow-up [cross-language async-function obligation reporting](../bench/recall_loss/cross-language-async-function-obligation-reporting-2026-06-30.v1.json)
+extends the same reporting vocabulary to `Source::Protocol(AsyncFunction)` for
+JS/TS, Python, Rust, and Swift runtime bodies, plus
+`Source::Protocol(AsyncBlock)` for Rust async blocks. New reports use
+`async-function-scheduling-contract` and `async-block-scheduling-contract`;
+legacy checked artifacts may still mention
+`promise-async-function-scheduling-contract` or
+`future-async-block-scheduling-contract`. Promise receiver/producer labels such
+as `promise-async-function-return-producer-proof` remain Promise-specific. The
+checked [promise-protocol diagnostics](../bench/recall_loss/promise-protocol-diagnostics-2026-06-28.v1.json)
 connect the JS/TS source-prevalence group (`29,094` Promise/async occurrences)
 to report labels such as legacy `promise-await-scheduling-contract`,
 `promise-async-function-scheduling-contract`,
@@ -190,10 +199,10 @@ all have named missing-evidence labels. These labels are attribution only; exact
 admission still requires explicit callee identity plus returned `PromiseLike`
 domain proof.
 The [same-file async-function return recovery](../bench/recall_loss/promise-async-function-return-recovery-2026-06-29.v1.json)
-slice opens the narrow direct-call case behind that requirement. A direct call to
-a source-proven async function now has `PromiseLike` result-domain evidence, and
-only pure non-thenable-safe returned payloads feed local `.then` fulfillment
-recovery. The report should therefore move those receivers out of
+slice opens the narrow JS/TS direct-call case behind that requirement. A direct
+call to a JS/TS source-proven async function now has `PromiseLike` result-domain
+evidence, and only pure non-thenable-safe returned payloads feed local `.then`
+fulfillment recovery. The report should therefore move those receivers out of
 `promise-async-function-return-producer-proof` and leave any still-closed work in
 continuation, rejection, callback, or scheduling obligations.
 The [direct-function Promise return recovery](../bench/recall_loss/promise-direct-function-return-recovery-2026-06-29.v1.json)

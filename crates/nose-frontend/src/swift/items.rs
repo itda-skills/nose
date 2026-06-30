@@ -124,6 +124,7 @@ pub(super) fn record_typealias_shadow(lo: &mut Lowering, node: TsNode) {
 pub(super) fn lower_function(lo: &mut Lowering, node: TsNode, method: bool) -> NodeId {
     let span = lo.span(node);
     let name = swift_decl_name(lo, node);
+    let is_async = crate::lower::node_has_child_kind(node, "async");
     let mut kids = Vec::new();
     for param in Lowering::named_children(node)
         .into_iter()
@@ -133,7 +134,19 @@ pub(super) fn lower_function(lo: &mut Lowering, node: TsNode, method: bool) -> N
     }
     let body_node = node.child_by_field_name("body");
     let body = body_node
-        .map(|body| lower_function_body(lo, body))
+        .map(|body| {
+            let body = lower_function_body(lo, body);
+            if is_async {
+                lo.protocol_boundary(
+                    span,
+                    SourceProtocolKind::AsyncFunction,
+                    "async_function",
+                    &[body],
+                )
+            } else {
+                body
+            }
+        })
         .unwrap_or_else(|| lo.empty_block(span));
     kids.push(body);
     let func = lo.add(NodeKind::Func, Payload::None, span, &kids);

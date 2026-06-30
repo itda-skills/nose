@@ -7,7 +7,7 @@
 use nose_il::{
     stable_symbol_hash, CallTargetEvidenceKind, DomainEvidence, EvidenceAnchor, EvidenceEmitter,
     EvidenceId, EvidenceKind, EvidenceProvenance, EvidenceRecord, EvidenceStatus, Il, Interner,
-    LoopKind, NodeId, NodeKind, Payload, SourceFactKind, SourceProtocolKind, Span, Symbol,
+    Lang, LoopKind, NodeId, NodeKind, Payload, SourceFactKind, SourceProtocolKind, Span, Symbol,
     SymbolEvidenceKind, UnitKind,
 };
 use nose_semantics::{
@@ -131,6 +131,9 @@ fn record_direct_async_function_result_domain(
     target_evidence: EvidenceId,
     provenance: CallTargetEvidenceProvenance,
 ) -> Option<EvidenceId> {
+    if !matches!(il.meta.lang, Lang::JavaScript | Lang::TypeScript) {
+        return None;
+    }
     let boundary = direct_async_function_protocol_boundary(il, target_root)?;
     let protocol =
         asserted_source_protocol_evidence_id(il, boundary, SourceProtocolKind::AsyncFunction)?;

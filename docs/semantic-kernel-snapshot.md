@@ -16,14 +16,15 @@ capabilities across the import boundary for JS/TS `new Map(...)`/`new Set(...)`,
 Python builtin/imported collection factories, and Java collection/map
 factories; provider-local shadows, mutation facts, raw coordinate sequences, and
 ambiguous provider factory shapes stay closed.
-JS/TS async functions are preserved as raw Promise-producing protocol
-boundaries with `Source::Protocol(AsyncFunction)` evidence, even when the body
-has no `await`. JS/TS, Python, and Rust `await` expressions are preserved as raw
-async protocol boundaries with `Source::Protocol(Await)` evidence instead of
-being erased into their operand. JS/TS and Python `yield` expressions are
-preserved as generator protocol boundaries with `Source::Protocol(Yield)`. Rust
-`async {}` and `?` are likewise preserved as protocol boundaries with
-`Source::Protocol(AsyncBlock)` and `Source::Protocol(TryPropagation)`. Go
+JS/TS, Python, Rust, and Swift runtime-body async functions are preserved as raw
+async protocol boundaries with `Source::Protocol(AsyncFunction)` evidence, even
+when the body has no `await`. JS/TS, Python, Rust, and Swift `await`
+expressions are preserved as raw async protocol boundaries with
+`Source::Protocol(Await)` evidence instead of being erased into their operand.
+JS/TS and Python `yield` expressions are preserved as generator protocol
+boundaries with `Source::Protocol(Yield)`. Rust `async {}` and `?` are likewise
+preserved as protocol boundaries with `Source::Protocol(AsyncBlock)` and
+`Source::Protocol(TryPropagation)`. Go
 goroutine spawn, deferred calls, channel send/receive, receive-status
 projections, and `select` boundaries are also preserved as raw source-backed
 protocol anchors rather than ordinary calls, values, or sequence tags. Python
@@ -516,22 +517,25 @@ migrated.
   stable law ids, exact-proven channel, proven status, and formal obligation ids.
   Broader internal laws and external LawPack execution remain closed.
 - Source facts are now first-class internal evidence for source distinctions that
-  the shared IL erases. JS/TS frontends emit construct syntax, async `await`,
-  generator `yield` boundaries, regex literal, strict/loose equality,
+  the shared IL erases. JS/TS frontends emit construct syntax, async function and
+  async `await` boundaries, generator `yield` boundaries, regex literal, strict/loose equality,
   strict/loose inequality, and `instanceof` facts. Python emits async `await`,
-  generator `yield` boundaries, list/set/dict/generator comprehension surfaces,
-  value equality/inequality, and identity equality/inequality facts. Go emits
+  async function and generator `yield` boundaries, list/set/dict/generator
+  comprehension surfaces, value equality/inequality, and identity
+  equality/inequality facts. Swift emits async function, async `await`, and
+  `try` boundaries. Go emits
   protocol facts for `go`, `defer`, channel send/receive, receive-status
   projection, `select`, and select cases/defaults. C emits source-cast facts
   for explicit unsigned 32-bit byte-lane casts, with alias-based casts depending
   on C type-alias evidence. Rust emits macro invocation syntax for selected
   macro-backed APIs, half-open/inclusive range expression facts, tuple-struct
-  single-wildcard pattern facts, plus async/error protocol facts for `.await`,
-  `async {}`, and `?`. These are stored directly as
+  single-wildcard pattern facts, plus async/error protocol facts for async
+  functions, `.await`, `async {}`, and `?`. These are stored directly as
   `EvidenceRecord::Source`; there is no source-fact side-table fallback.
   Normalize and detect consume source facts only where a semantic contract
-  requires that exact source surface. Current JS/TS/Python/Rust `await` nodes,
-  JS/TS/Python `yield` nodes, Rust `async`/`?` nodes, and Go concurrency/channel
+  requires that exact source surface. Current JS/TS/Python/Rust/Swift async
+  function and `await` nodes, JS/TS/Python `yield` nodes, Rust `async`/`?` nodes,
+  Swift `try` nodes, and Go concurrency/channel
   nodes remain raw exact-closed protocol anchors until such a contract exists.
   Python returned generator/set comprehensions and unsupported cardinality
   surfaces stay exact-closed; supported list/generator terminal reductions can
@@ -1282,11 +1286,12 @@ Semantic knowledge still appears in several forms outside the facade:
   ecosystem APIs, and broader protocol/API evidence paths still rely on contract
   rows plus local proof or remain exact-closed. Raw Python async-looking field names such
   as `aread` no longer rewrite to sync names without an explicit protocol/API
-  evidence path, JS/TS/Python/Rust `await` expressions no longer erase to their
-  operand without async protocol proof, JS/TS/Python `yield` no longer erases to
-  its yielded expression without generator protocol proof, and Rust
-  `async {}`/`?` no longer erase to their body or operand without async/error
-  protocol proof. Go `go`/`defer`/channel receive no longer erase to ordinary
+  evidence path, JS/TS/Python/Rust/Swift async function and `await` expressions
+  no longer erase to their body or operand without async protocol proof,
+  JS/TS/Python `yield` no longer erases to its yielded expression without
+  generator protocol proof, and Rust `async {}`/`?` no longer erase to their body
+  or operand without async/error protocol proof. Swift `try` similarly keeps the
+  error channel explicit. Go `go`/`defer`/channel receive no longer erase to ordinary
   calls or operands, Go channel send no longer relies on an untyped
   `send_statement` sequence tag, and Python list/set/dict/generator
   comprehension surfaces no longer share exact semantics merely because they
@@ -1351,8 +1356,8 @@ this worktree because the required evidence is not yet modeled:
 - JS-like `.then(lambda)` does not converge with `await` code yet. Supported
   `Promise.resolve(...).then(...)` chains can reduce behind a Promise boundary,
   but await scheduling, exception, and effect equivalence are not modeled as the
-  same async protocol. The JS/TS audit counts `18,841` `await` occurrences and
-  `9,569` async-function surfaces in this closed boundary.
+  same async protocol. The 2026-06-30 JS/TS audit counts `29,305` `await`
+  occurrences and `14,491` async-function surfaces in this closed boundary.
 - JS/TS, Python, and Rust `await value` does not converge with plain `value`
   until language/runtime-specific async protocol, demand, scheduling, exception,
   and effect obligations are modeled. Rust `async {}` and `?` are similarly

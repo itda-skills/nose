@@ -449,3 +449,21 @@ func fetch(_ key: String) async throws -> Int
     );
     assert!(il.nodes.iter().any(|node| node.kind == NodeKind::Param));
 }
+
+#[test]
+fn async_function_preserves_source_backed_async_boundary() {
+    let (il, interner) = il_with_interner(
+        r#"
+func fetch(_ key: String) async -> Int {
+  return key.count
+}
+"#,
+    );
+
+    crate::test_helpers::expect_raw_protocol_boundary(
+        &il,
+        &interner,
+        "async_function",
+        SourceProtocolKind::AsyncFunction,
+    );
+}

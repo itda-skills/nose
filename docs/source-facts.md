@@ -78,7 +78,7 @@ The pack-facing vocabulary should cover at least these classes.
 | Range | Rust half-open range expression, Rust inclusive range expression, future language-specific range surfaces |
 | Pattern | Rust tuple-struct single-wildcard pattern, future language-specific pattern surfaces |
 | Literal and surface | regex literal, string literal, map/object literal, tuple/list/array surface, computed property key |
-| Call/protocol shape | constructor call, ordinary function call, method call, property access, macro-like call, JS/TS async function boundary, async `await` boundary, generator `yield` boundary, Rust `?` error propagation, Go goroutine/defer/channel/select boundaries |
+| Call/protocol shape | constructor call, ordinary function call, method call, property access, macro-like call, async function boundary, async `await` boundary, async block boundary, generator `yield` boundary, Rust `?` error propagation, Swift `try` propagation, Go goroutine/defer/channel/select boundaries |
 | Comprehension surface | Python list comprehension, set comprehension, dict comprehension, generator expression |
 | Sequence and aggregate | collection surface, map-entry surface, iterator surface, exported literal surface |
 | Place and mutation | receiver field, index assignment, builder append, immutable binding, direct write, opaque escape |
@@ -106,9 +106,10 @@ fall back to a side-table mirror when source evidence is missing.
   boundaries, async `await` boundaries, generator `yield` boundaries, regex
   literals, strict equality, strict inequality, loose equality, loose
   inequality, unary `typeof`, and `instanceof`.
-- Python lowering emits source facts for async `await` boundaries, generator
-  `yield` boundaries, list/set/dict/generator comprehension surfaces, value
-  equality/inequality, and identity equality/inequality.
+- Python lowering emits source facts for async function and async `await`
+  boundaries, generator `yield` boundaries, list/set/dict/generator
+  comprehension surfaces, value equality/inequality, and identity
+  equality/inequality.
 - Go lowering emits source facts for goroutine spawn, deferred calls, channel
   send/receive, select, and select case/default protocol boundaries. These
   surfaces remain raw protocol anchors; `v, ok := <-ch` preserves both the
@@ -121,15 +122,18 @@ fall back to a side-table mirror when source evidence is missing.
   provenance and the specialized `c.source.cast.unsigned32` producer id.
 - Rust lowering emits source facts for macro invocation syntax, half-open versus
   inclusive range expressions, tuple-struct single-wildcard patterns such as
-  `Some(_)`, `.await`, async blocks, and `?` error propagation. Macro facts are
+  `Some(_)`, async functions, `.await`, async blocks, and `?` error propagation. Macro facts are
   syntax provenance only: recall-loss diagnostics attribute unmodeled Rust
   macros such as `format!` to `source-surface-proof-missing` until a library or
   macro-expansion contract proves their behavior.
-- JS/TS async functions preserve `Raw("async_function", body)`, so a Promise
-  producer without an `await` expression is still fail-closed. JS/TS, Python,
-  and Rust `await` lowering preserves `Raw("await", value)` instead of erasing
-  the source operation. JS/TS and Python `yield` preserves
-  `Raw("yield", value)`. Rust `async {}` and `?` are preserved as
+- Swift lowering emits source facts for async function, async `await`, and
+  `try` propagation boundaries.
+- JS/TS, Python, Rust, and Swift async functions preserve
+  `Raw("async_function", body)`, so an async producer without an `await`
+  expression is still fail-closed. JS/TS, Python, Rust, and Swift `await`
+  lowering preserves `Raw("await", value)` instead of erasing the source
+  operation. JS/TS and Python `yield` preserves `Raw("yield", value)`. Rust
+  `async {}` and `?` are preserved as
   `Raw("async_block", body)` and `Raw("try", value)`. Exact async/sync,
   generator, and error-propagation convergence stays closed until a future
   protocol contract proves the receiver, scheduling, exception, and

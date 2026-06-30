@@ -405,10 +405,7 @@ fn is_func_value(kind: &str) -> bool {
 }
 
 fn node_has_async_modifier(node: TsNode) -> bool {
-    (0..node.child_count()).any(|index| {
-        node.child(index)
-            .is_some_and(|child| child.kind() == "async")
-    })
+    crate::lower::node_has_child_kind(node, "async")
 }
 
 /// Lower a function-valued expression as a named `Func` unit (params + body),

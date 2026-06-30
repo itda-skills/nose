@@ -31,10 +31,10 @@ fn push_runtime_node_missing_evidence(
                     push_unique(labels, "async-await-scheduling-contract");
                 }
                 Some(nose_il::SourceProtocolKind::AsyncFunction) => {
-                    push_unique(labels, "promise-async-function-scheduling-contract");
+                    push_unique(labels, "async-function-scheduling-contract");
                 }
                 Some(nose_il::SourceProtocolKind::AsyncBlock) => {
-                    push_unique(labels, "future-async-block-scheduling-contract");
+                    push_unique(labels, "async-block-scheduling-contract");
                 }
                 Some(nose_il::SourceProtocolKind::Yield) => {
                     push_unique(labels, "generator-yield-lifecycle-contract");

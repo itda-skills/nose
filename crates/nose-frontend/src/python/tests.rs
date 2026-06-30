@@ -28,6 +28,12 @@ fn seq_names(src: &[u8]) -> Vec<String> {
         .collect()
 }
 
+fn expect_python_protocol_boundary(src: &[u8], tag: &str, protocol: SourceProtocolKind) {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.py", src, &interner).expect("lower");
+    crate::test_helpers::expect_raw_protocol_boundary(&il, &interner, tag, protocol);
+}
+
 #[test]
 fn explicit_line_continuations_do_not_become_raw() {
     let raw = raw_names(
@@ -195,37 +201,26 @@ fn literal_or_match_lowers_to_or_condition_without_raw() {
 
 #[test]
 fn await_expression_preserves_source_backed_async_boundary() {
-    let interner = Interner::new();
-    let il = lower(
-        FileId(0),
-        "t.py",
+    expect_python_protocol_boundary(
         b"async def f(x):\n    return await x + 1\n",
-        &interner,
-    )
-    .expect("lower");
-
-    crate::test_helpers::expect_raw_protocol_boundary(
-        &il,
-        &interner,
         "await",
         SourceProtocolKind::Await,
     );
 }
 
 #[test]
-fn yield_expression_preserves_source_backed_protocol_boundary() {
-    let interner = Interner::new();
-    let il = lower(
-        FileId(0),
-        "t.py",
-        b"def f(x):\n    yield x + 1\n",
-        &interner,
-    )
-    .expect("lower");
+fn async_function_preserves_source_backed_async_boundary() {
+    expect_python_protocol_boundary(
+        b"async def f(x):\n    return x + 1\n",
+        "async_function",
+        SourceProtocolKind::AsyncFunction,
+    );
+}
 
-    crate::test_helpers::expect_raw_protocol_boundary(
-        &il,
-        &interner,
+#[test]
+fn yield_expression_preserves_source_backed_protocol_boundary() {
+    expect_python_protocol_boundary(
+        b"def f(x):\n    yield x + 1\n",
         "yield",
         SourceProtocolKind::Yield,
     );
