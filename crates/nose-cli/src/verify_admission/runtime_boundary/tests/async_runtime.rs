@@ -7,6 +7,8 @@ use nose_il::{FileId, Interner, Lang, NodeId, NodeKind};
 
 use super::super::runtime_boundary_missing_evidence_with_context;
 
+mod imported_bindings;
+
 fn runtime_boundary_evidence_for_corpus_call(
     sources: &[(&str, &str, Lang)],
     target_path: &str,
@@ -36,6 +38,36 @@ fn runtime_boundary_evidence_for_corpus_call(
         })
         .unwrap_or_else(|| panic!("expected call ending in {callee_suffix}"));
     runtime_boundary_missing_evidence_with_context(il, &corpus.interner, call, &context)
+}
+
+fn python_runtime_with_path_visible_local_asyncio(
+    runtime_src: &str,
+    callee_suffix: &str,
+) -> Option<Vec<&'static str>> {
+    runtime_boundary_evidence_for_corpus_call(
+        &[
+            (
+                "asyncio.py",
+                "def create_task(x):\n    return x\n",
+                Lang::Python,
+            ),
+            ("runtime.py", runtime_src, Lang::Python),
+        ],
+        "runtime.py",
+        callee_suffix,
+    )
+}
+
+fn rust_runtime_with_same_file_local_tokio(
+    runtime_src: &str,
+    callee_suffix: &str,
+) -> Option<Vec<&'static str>> {
+    let src = format!("mod tokio {{ pub fn spawn<T>(task: T) -> T {{ task }} }}\n{runtime_src}");
+    runtime_boundary_evidence_for_corpus_call(
+        &[("runtime.rs", &src, Lang::Rust)],
+        "runtime.rs",
+        callee_suffix,
+    )
 }
 
 #[test]
@@ -427,29 +459,12 @@ fn non_js_async_runtime_context_keeps_unrelated_runtime_names_open() {
 
 #[test]
 fn non_js_async_runtime_context_rejects_project_local_import_aliases() {
-    let py_local_asyncio_alias = runtime_boundary_evidence_for_corpus_call(
-        &[
-            (
-                "asyncio.py",
-                "def create_task(x):\n    return x\n",
-                Lang::Python,
-            ),
-            (
-                "runtime.py",
-                "import asyncio as aio\nasync def main():\n    return aio.create_task(work())\n",
-                Lang::Python,
-            ),
-        ],
-        "runtime.py",
+    let py_local_asyncio_alias = python_runtime_with_path_visible_local_asyncio(
+        "import asyncio as aio\nasync def main():\n    return aio.create_task(work())\n",
         "aio.create_task",
     );
-    let rust_local_tokio_imported_spawn = runtime_boundary_evidence_for_corpus_call(
-        &[(
-            "runtime.rs",
-            "mod tokio { pub fn spawn<T>(task: T) -> T { task } }\nuse tokio::spawn;\nfn run() { spawn(work()); }\n",
-            Lang::Rust,
-        )],
-        "runtime.rs",
+    let rust_local_tokio_imported_spawn = rust_runtime_with_same_file_local_tokio(
+        "use tokio::spawn;\nfn run() { spawn(work()); }\n",
         "spawn",
     );
 

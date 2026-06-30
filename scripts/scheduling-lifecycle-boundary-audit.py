@@ -170,6 +170,50 @@ PYTHON_ASYNCIO_ALIAS_WAIT = Pattern(
     re.compile(r"(?!x)x"),
     "reporting-supported-closed-boundary",
 )
+PYTHON_ASYNCIO_IMPORTED_TASK = Pattern(
+    "python",
+    "python.asyncio.imported.task",
+    "from asyncio import create_task/ensure_future; binding",
+    "scheduling-boundary",
+    "task-spawn-scheduling-contract-missing",
+    "imported asyncio task spawn",
+    "import-backed asyncio task bindings create the same scheduler, cancellation, and handle lifecycle boundaries as asyncio.*",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+PYTHON_ASYNCIO_IMPORTED_SLEEP = Pattern(
+    "python",
+    "python.asyncio.imported.sleep",
+    "from asyncio import sleep; binding",
+    "scheduling-boundary",
+    "timer-scheduling-contract-missing",
+    "imported asyncio timer",
+    "import-backed asyncio sleep bindings create timer-backed scheduling boundaries",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+PYTHON_ASYNCIO_IMPORTED_GATHER = Pattern(
+    "python",
+    "python.asyncio.imported.gather",
+    "from asyncio import gather; binding",
+    "success-error-result-channel",
+    "async-aggregate-all-completion-contract-missing",
+    "imported asyncio all-completion aggregate",
+    "import-backed asyncio gather bindings need all-completion, result-channel, cancellation, and exception semantics",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+PYTHON_ASYNCIO_IMPORTED_WAIT = Pattern(
+    "python",
+    "python.asyncio.imported.wait",
+    "from asyncio import wait; binding",
+    "success-error-result-channel",
+    "async-aggregate-completion-contract-missing",
+    "imported asyncio completion aggregate",
+    "import-backed asyncio wait bindings need completion-selection, result-channel, cancellation, and exception semantics",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
 RUST_IMPORTED_ASYNC_SPAWN = Pattern(
     "rust",
     "rust.async.spawn.imported",
@@ -297,6 +341,7 @@ def count_file(text: str, language: str) -> dict[Pattern, int]:
             counts[pattern] = count
     if language == "python":
         counts.update(python_asyncio_alias_counts(masked))
+        counts.update(python_asyncio_imported_counts(masked))
     elif language == "rust":
         counts.update(rust_imported_async_runtime_counts(masked))
     return counts
@@ -331,6 +376,79 @@ def python_asyncio_aliases(text: str) -> set[str]:
                 if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", alias) and alias != "asyncio":
                     aliases.add(alias)
     return aliases
+
+
+def python_asyncio_imported_counts(text: str) -> dict[Pattern, int]:
+    bindings = python_asyncio_imported_bindings(text)
+    if not bindings:
+        return {}
+    counts: dict[Pattern, int] = {}
+    count_bindings(
+        counts,
+        PYTHON_ASYNCIO_IMPORTED_TASK,
+        text,
+        bindings_for_python(bindings, ("create_task", "ensure_future")),
+        "(",
+    )
+    count_bindings(
+        counts,
+        PYTHON_ASYNCIO_IMPORTED_SLEEP,
+        text,
+        bindings_for_python(bindings, ("sleep",)),
+        "(",
+    )
+    count_bindings(
+        counts,
+        PYTHON_ASYNCIO_IMPORTED_GATHER,
+        text,
+        bindings_for_python(bindings, ("gather",)),
+        "(",
+    )
+    count_bindings(
+        counts,
+        PYTHON_ASYNCIO_IMPORTED_WAIT,
+        text,
+        bindings_for_python(bindings, ("wait",)),
+        "(",
+    )
+    return counts
+
+
+def python_asyncio_imported_bindings(text: str) -> dict[str, set[str]]:
+    bindings: dict[str, set[str]] = defaultdict(set)
+    for match in re.finditer(r"(?m)^\s*from\s+asyncio\s+import\s+([^\n]+)", text):
+        for part in match.group(1).split(","):
+            parsed = python_imported_name(part)
+            if not parsed:
+                continue
+            exported, local = parsed
+            if exported in {"create_task", "ensure_future", "sleep", "gather", "wait"}:
+                bindings[exported].add(local)
+    return bindings
+
+
+def python_imported_name(part: str) -> tuple[str, str] | None:
+    pieces = part.strip().split()
+    if len(pieces) == 1:
+        exported = local = pieces[0]
+    elif len(pieces) == 3 and pieces[1] == "as":
+        exported = pieces[0]
+        local = pieces[2]
+    else:
+        return None
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", exported) and re.fullmatch(
+        r"[A-Za-z_][A-Za-z0-9_]*",
+        local,
+    ):
+        return exported, local
+    return None
+
+
+def bindings_for_python(bindings: dict[str, set[str]], targets: tuple[str, ...]) -> set[str]:
+    out: set[str] = set()
+    for target in targets:
+        out.update(bindings.get(target, set()))
+    return out
 
 
 def rust_imported_async_runtime_counts(text: str) -> dict[Pattern, int]:
@@ -727,6 +845,16 @@ def hard_negative_inventory() -> list[dict[str, Any]]:
             "class": "cross-language lifecycle one-shot/reusable/materialized distinctions",
             "evidence": "docs/scheduling-channel-callback-obligations-594.md",
             "status": "mapped-doc-policy",
+        },
+        {
+            "class": "Python imported asyncio bindings shadowed by parameters, assignments, nested imports, or project-local asyncio modules",
+            "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/imported_bindings.rs::non_js_async_runtime_imported_bindings_reject_local_shadows and ::non_js_async_runtime_context_rejects_project_local_imported_bindings",
+            "status": "expanded-this-slice",
+        },
+        {
+            "class": "Rust brace/direct-imported runtime bindings shadowed by parameters, lets, local macros, block scopes, other modules, or project-local runtime roots",
+            "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/imported_bindings.rs::non_js_async_runtime_imported_bindings_reject_rust_shadows_and_scopes and ::non_js_async_runtime_context_rejects_project_local_imported_bindings",
+            "status": "expanded-this-slice",
         },
     ]
 

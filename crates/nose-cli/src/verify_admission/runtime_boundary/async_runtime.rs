@@ -5,6 +5,8 @@ use nose_il::{
     NodeId, NodeKind, SymbolEvidenceKind,
 };
 
+mod rust_imports;
+
 pub(super) fn push_async_runtime_call_missing_evidence(
     il: &nose_il::Il,
     interner: &Interner,
@@ -43,32 +45,54 @@ fn push_python_async_runtime_call_missing_evidence(
     if context.python_module_is_local_for_file("asyncio", &il.meta.path) {
         return false;
     }
-    let Some(receiver) = method_receiver(il, callee) else {
-        return false;
-    };
-    if !python_asyncio_namespace_receiver_proven(il, interner, receiver) {
-        return false;
+    if let Some(receiver) = method_receiver(il, callee) {
+        if python_asyncio_namespace_receiver_proven(il, interner, receiver) {
+            return callee_field_method(il, interner, callee)
+                .is_some_and(|method| push_python_asyncio_api_missing_evidence(method, labels));
+        }
     }
-    match callee_field_method(il, interner, callee) {
-        Some("create_task" | "ensure_future") => {
+    for exported in ["create_task", "ensure_future", "sleep", "gather", "wait"] {
+        if python_asyncio_imported_binding_proven(il, interner, callee, exported) {
+            return push_python_asyncio_api_missing_evidence(exported, labels);
+        }
+    }
+    false
+}
+
+fn push_python_asyncio_api_missing_evidence(
+    exported: &str,
+    labels: &mut Vec<&'static str>,
+) -> bool {
+    match exported {
+        "create_task" | "ensure_future" => {
             push_task_spawn_missing_evidence(labels);
             true
         }
-        Some("sleep") => {
+        "sleep" => {
             super::super::push_unique(labels, "timer-scheduling-contract");
             true
         }
-        Some("gather") => {
+        "gather" => {
             push_async_aggregate_all_missing_evidence(labels);
             true
         }
-        Some("wait") => {
+        "wait" => {
             push_async_aggregate_completion_missing_evidence(labels);
             super::super::push_unique(labels, "async-aggregate-cancellation-liveness-contract");
             true
         }
         _ => false,
     }
+}
+
+fn python_asyncio_imported_binding_proven(
+    il: &nose_il::Il,
+    interner: &Interner,
+    callee: NodeId,
+    exported: &str,
+) -> bool {
+    nose_semantics::imported_binding_symbol(il, interner, callee, "asyncio", exported)
+        && !python_imported_binding_shadowed(il, interner, callee, "asyncio", exported)
 }
 
 fn python_asyncio_namespace_receiver_proven(
@@ -133,6 +157,55 @@ fn python_asyncio_namespace_receiver_proven(
     import_bindings > 0 && shadow_definitions == 0
 }
 
+fn python_imported_binding_shadowed(
+    il: &nose_il::Il,
+    interner: &Interner,
+    callee: NodeId,
+    module: &str,
+    exported: &str,
+) -> bool {
+    let Some(local_name) = super::super::node_exact_name(il, interner, callee) else {
+        return false;
+    };
+    let occurrence_span = il.node(callee).span;
+    let top_level_statements = top_level_statements(il);
+    for unit in &il.units {
+        if il.node(unit.root).span.file == occurrence_span.file
+            && unit
+                .name
+                .is_some_and(|symbol| interner.resolve(symbol) == local_name)
+        {
+            return true;
+        }
+    }
+    for (idx, node) in il.nodes.iter().enumerate() {
+        if node.span.file != occurrence_span.file {
+            continue;
+        }
+        let node_id = NodeId(idx as u32);
+        match node.kind {
+            NodeKind::Assign => {
+                let Some(lhs) = il.children(node_id).first().copied() else {
+                    continue;
+                };
+                if !node_defines_name(il, interner, lhs, local_name) {
+                    continue;
+                }
+                if !top_level_statements.contains(&node_id)
+                    || !python_import_binding_at_span(il, node.span, local_name, module, exported)
+                {
+                    return true;
+                }
+            }
+            NodeKind::Param if node_defines_name(il, interner, node_id, local_name) => {
+                return true;
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
 fn python_import_namespace_binding_at_span(
     il: &nose_il::Il,
     span: nose_il::Span,
@@ -145,6 +218,29 @@ fn python_import_namespace_binding_at_span(
         record.anchor == EvidenceAnchor::binding(span, local_hash)
             && record.kind
                 == EvidenceKind::Symbol(SymbolEvidenceKind::ImportedNamespace { module_hash })
+            && record.provenance.emitter == EvidenceEmitter::Builtin
+            && record.status == EvidenceStatus::Asserted
+            && il.evidence_dependencies_asserted(record)
+    })
+}
+
+fn python_import_binding_at_span(
+    il: &nose_il::Il,
+    span: nose_il::Span,
+    local: &str,
+    module: &str,
+    exported: &str,
+) -> bool {
+    let local_hash = stable_symbol_hash(local);
+    let module_hash = stable_symbol_hash(module);
+    let exported_hash = stable_symbol_hash(exported);
+    il.evidence_anchored_at(span).any(|record| {
+        record.anchor == EvidenceAnchor::binding(span, local_hash)
+            && record.kind
+                == EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
+                    module_hash,
+                    exported_hash,
+                })
             && record.provenance.emitter == EvidenceEmitter::Builtin
             && record.status == EvidenceStatus::Asserted
             && il.evidence_dependencies_asserted(record)
@@ -332,7 +428,10 @@ fn rust_imported_runtime_member(
     if context.rust_runtime_root_is_local_for_file(module_root(module), &il.meta.path) {
         return false;
     }
-    nose_semantics::imported_member_symbol(il, interner, callee, module, exported)
+    (nose_semantics::imported_member_symbol(il, interner, callee, module, exported)
+        || rust_imports::rust_imported_binding_evidence_only_symbol(
+            il, interner, callee, module, exported,
+        ))
         && !rust_imported_member_shadowed(il, interner, callee, module, exported)
 }
 

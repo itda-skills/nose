@@ -119,8 +119,12 @@ fn imported_scoped_member_target(
 ) -> Option<ImportedMemberTarget> {
     let (root, suffix) = scoped_var_root_and_suffix(il, interner, callee)?;
     let root_hash = stable_symbol_hash(root);
-    let (symbol, binding_dependency) =
-        unique_binding_symbol_for_hash(il, root_hash, ImportedBindingUse::MemberReceiver)?;
+    let (symbol, binding_dependency) = unique_binding_symbol_for_hash(
+        il,
+        root_hash,
+        il.node(callee).span,
+        ImportedBindingUse::MemberReceiver,
+    )?;
     let dependency = upsert_valid_imported_symbol_occurrence(
         il,
         interner,
@@ -204,16 +208,23 @@ fn unique_binding_symbol_for_var(
     imported_use: ImportedBindingUse,
 ) -> Option<(SymbolEvidenceKind, EvidenceId)> {
     let local_hash = node_name_hash(il, interner, node)?;
-    unique_binding_symbol_for_hash(il, local_hash, imported_use)
+    unique_binding_symbol_for_hash(il, local_hash, il.node(node).span, imported_use)
 }
 
 fn unique_binding_symbol_for_hash(
     il: &Il,
     local_hash: u64,
+    occurrence_span: Span,
     imported_use: ImportedBindingUse,
 ) -> Option<(SymbolEvidenceKind, EvidenceId)> {
     let mut found = None;
     for record in il.evidence_binding_anchored(local_hash) {
+        let EvidenceAnchor::Binding { span, .. } = record.anchor else {
+            continue;
+        };
+        if !imported_binding_span_visible_at_occurrence(il, span, occurrence_span) {
+            continue;
+        }
         let EvidenceKind::Symbol(symbol) = record.kind else {
             continue;
         };
@@ -230,6 +241,50 @@ fn unique_binding_symbol_for_hash(
         }
     }
     found
+}
+
+fn imported_binding_span_visible_at_occurrence(
+    il: &Il,
+    binding_span: Span,
+    occurrence_span: Span,
+) -> bool {
+    if binding_span.file != occurrence_span.file {
+        return false;
+    }
+    if binding_span_inside_local_scope(il, binding_span) {
+        return false;
+    }
+    if il.meta.lang == Lang::Rust {
+        return nearest_module_scope_containing_span(il, binding_span)
+            == nearest_module_scope_containing_span(il, occurrence_span);
+    }
+    true
+}
+
+fn binding_span_inside_local_scope(il: &Il, span: Span) -> bool {
+    il.nodes.iter().any(|node| {
+        matches!(
+            node.kind,
+            NodeKind::Block | NodeKind::Func | NodeKind::Lambda
+        ) && node.span.file == span.file
+            && node.span.start_byte <= span.start_byte
+            && span.end_byte <= node.span.end_byte
+            && (node.span.start_byte < span.start_byte || span.end_byte < node.span.end_byte)
+    })
+}
+
+fn nearest_module_scope_containing_span(il: &Il, span: Span) -> Option<NodeId> {
+    il.nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, node)| {
+            node.kind == NodeKind::Module
+                && node.span.file == span.file
+                && node.span.start_byte <= span.start_byte
+                && span.end_byte <= node.span.end_byte
+        })
+        .min_by_key(|(_, node)| node.span.end_byte.saturating_sub(node.span.start_byte))
+        .map(|(idx, _)| NodeId(idx as u32))
 }
 
 fn scoped_var_root_and_suffix<'a>(

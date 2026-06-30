@@ -132,6 +132,11 @@ widens that reporting to Python `asyncio` namespace aliases and Rust imported
 runtime bindings by composing existing `ImportedNamespace`/`ImportedMember`
 symbol proof with the same obligations instead of adding a selector-specific
 kernel feature.
+The next [imported-binding proof artifact](../bench/recall_loss/non-js-async-runtime-imported-binding-proof-2026-06-30.v1.json)
+uses the same capability boundary for Python `from asyncio import ...`
+bindings and Rust brace-use `ImportedBinding` evidence, adding `2` newly priced
+Python imported `asyncio.sleep` occurrences while keeping exact admission
+closed and preserving the release `verify crates` gate at `0` false merges.
 Library/API identity is consolidated through internal `LibraryApiContract` rows
 for factory, constructor, selected property/non-factory method/view surfaces,
 and selected non-call sentinels, with occurrence evidence covering selected
@@ -1381,9 +1386,13 @@ this worktree because the required evidence is not yet modeled:
   Swift `Task` creation report scheduler, lifecycle, cancellation, and
   result-channel obligations but do not yet converge with synchronous calls,
   direct payload values, or each other. These reports require import-backed
-  Python `asyncio` with no path-visible local module, qualified Rust
-  spawn/aggregate paths whose root is not locally defined in the same file, and
-  unshadowed Swift `Task` roots with no corpus-visible Swift `Task` definition.
+  Python `asyncio` namespace or binding proof with no path-visible local module,
+  qualified or imported Rust runtime proof whose root is not locally defined in
+  the same file, and unshadowed Swift `Task` roots with no corpus-visible Swift
+  `Task` definition. Python function-local `asyncio` imports remain closed
+  until scope proof exists, and the imported-occurrence producer keeps Rust
+  block-scoped or other-module runtime imports from proving calls outside that
+  module scope.
 - Go `go f(x)`, `defer f(x)`, `<-ch`, `ch <- x`, and `select` do not converge
   with ordinary calls, values, sends, or sequential control-flow variants until
   channel/goroutine/defer/select contracts can prove scheduling, blocking,
