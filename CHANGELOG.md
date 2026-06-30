@@ -79,6 +79,13 @@ break.
   without opening exact admission; the 120-repo audit prices the new Swift
   surfaces at `326` occurrences plus `5` corrected `Task.detached(...)` spawn
   occurrences.
+- Added Java `CompletableFuture`/FutureLike reporting for exact-imported,
+  wildcard-imported, or fully qualified static future calls and receiver-domain
+  proven, exact-import-backed continuation methods. These now map to reusable
+  future-settled, continuation, callback, task, aggregate, and exception
+  obligations without opening exact admission; the 120-repo lexical audit prices
+  `40` Java future reporting candidates while leaving `276` broad
+  `CompletableFuture` mentions closed.
 - Added staged Promise recovery infrastructure: protocol diagnostics and hard
   negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
   continuation recovery; receiver-producer/call-return attribution; and

@@ -1,10 +1,6 @@
 use super::*;
 
 impl<'a> Lowering<'a> {
-    pub(crate) fn record_param_domain(&mut self, span: Span, domain: DomainEvidence) {
-        self.record_param_domain_with_dependencies(span, domain, Vec::new());
-    }
-
     pub(crate) fn record_param_domain_with_dependencies(
         &mut self,
         span: Span,

@@ -99,6 +99,19 @@ raises total source prevalence from `142,847` to `143,178`: `Task.sleep`
 contributes `161` occurrences / `10` repos, task groups `153` / `9`,
 `Task.yield` `12` / `3`, and the audit now counts `5` already-supported
 `Task.detached(...)` spawn occurrences. Exact admission remains closed.
+The follow-up [Java CompletableFuture artifact](../bench/recall_loss/java-completablefuture-obligation-reporting-2026-06-30.v1.json)
+keeps exact admission closed and maps proof-backed Java
+`CompletableFuture.supplyAsync`/`runAsync`, settled factories, `allOf`/`anyOf`,
+and exact-import-backed CompletionStage-style receiver continuations onto
+reusable future, task, aggregate, callback, and exception obligations. Its
+matching [120-repo pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-java-completablefuture-2026-06-30.v1.json)
+splits `40` lexical Java future reporting candidates out of the broad
+`CompletableFuture` bucket: `14` settled factories / `2` repos, `12`
+async factories / `4` repos, `10` settlement continuations / `2` repos, and
+`4` `allOf` calls / `2` repos. Broad `CompletableFuture` mentions remain
+closed at `276` occurrences, and exact recovery still requires dependency-closed
+executor timing, callback identity/effects, exceptional completion, and result
+channel contracts.
 The follow-up [promise-protocol-hard-negatives-2026-06-28.v1.json](../bench/recall_loss/promise-protocol-hard-negatives-2026-06-28.v1.json)
 pins the Promise-specific hard negatives before any recovery slice opens:
 async-function/sync, Promise executor/sync, Promise.resolve/sync,
@@ -356,7 +369,7 @@ to specific obligation buckets.
 | Python | builtins `map`/`filter`, `itertools`, `functools`, decorators, materializers, `asyncio` task/timer/aggregate APIs | callback/lifecycle reporting, shared task/aggregate runtime obligations, then narrow producer evidence for already admitted iterator builtins |
 | Rust | iterator HOFs, `Option`/`Result`, mutation/effect, iterator views, async task spawn and `join!`/`select!` macros | reuse lazy callback, channel, task, and aggregate vocabulary; keep type-directed `collect`, mutating APIs, and exact async runtime semantics closed |
 | Go | `sort`/`slices`/`maps`, mutation callbacks, channel/goroutine surfaces for future scans | add effect/callback reporting before exact sort or goroutine/channel semantics |
-| Java | `Arrays`/`Collections`, Optional/Future/Stream-shaped domains, mutation/wrapper APIs | split receiver mutation, wrapper aliasing, channel, and stream callback obligations |
+| Java | `Arrays`/`Collections`, Optional/Future/Stream-shaped domains, `CompletableFuture` static/continuation reporting, mutation/wrapper APIs | keep Java Future exact recovery closed until executor timing, callback/effect, exception-channel, cancellation, wrapper aliasing, and stream lifecycle obligations are proven |
 | Swift | Sequence HOFs, cardinality, mutation, views, reductions, `throws`/`async`, `Task` creation | reuse callback/effect, scheduling, task lifecycle, and cancellation buckets; keep selector-only collection methods and exact task semantics closed |
 | Ruby | Enumerable blocks, `raise`/`rescue`, Thread/Fiber surfaces | block timing and exception-channel reporting before expanding Enumerable support |
 | C | callback comparators, allocation/lifetime, memory mutation, `errno`, non-local jumps, threads | keep pointer/lifetime and mutation separate from callback/error-channel evidence |

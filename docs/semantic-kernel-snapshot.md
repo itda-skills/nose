@@ -31,7 +31,11 @@ protocol anchors rather than ordinary calls, values, or sequence tags. Python
 `asyncio` task/timer/aggregate calls, including import-backed namespace aliases,
 Rust `tokio`/`async-std` spawn and `join!`/`select!` macros, including
 imported runtime bindings, and Swift `Task` creation now report shared
-runtime-boundary obligations without becoming exact recovery evidence. Python
+runtime-boundary obligations without becoming exact recovery evidence. Java
+`CompletableFuture` static calls and exact-import-backed CompletionStage-style
+receiver continuations likewise report reusable future/channel/callback
+obligations when static import identity or receiver-domain evidence is proven.
+Python
 comprehension lowering now records whether a
 HOF came from a list comprehension, set comprehension, dict comprehension, or
 generator expression, and exact/value consumers use that surface evidence before
@@ -1401,6 +1405,15 @@ this worktree because the required evidence is not yet modeled:
   until scope proof exists, and the imported-occurrence producer keeps Rust
   block-scoped or other-module runtime imports from proving calls outside that
   module scope.
+- Java `CompletableFuture.supplyAsync`/`runAsync`, settled factories,
+  `allOf`/`anyOf`, and exact-import-backed CompletionStage-style receiver
+  continuations now report future settled-value, continuation, callback
+  demand/effect, task scheduling, aggregate, and exception obligations when the
+  type or receiver identity is proven. Exact Future/CompletionStage recovery
+  remains closed: executor timing, callback identity/effects,
+  cancellation/liveness, exceptional completion, result channels, and
+  constructor semantics still need dependency-closed contracts before Java
+  future calls can converge with synchronous values or each other.
 - Go `go f(x)`, `defer f(x)`, `<-ch`, `ch <- x`, and `select` do not converge
   with ordinary calls, values, sends, or sequential control-flow variants until
   channel/goroutine/defer/select contracts can prove scheduling, blocking,

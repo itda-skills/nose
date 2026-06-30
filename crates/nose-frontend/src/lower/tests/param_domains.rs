@@ -266,6 +266,25 @@ fn assert_ts_and_java_param_domains(interner: &Interner) {
         param_domain_record_count(&java.evidence, DomainEvidence::Collection),
         1
     );
+
+    let java_future = lower_fixture(
+        "FutureDomain.java",
+        b"import java.util.concurrent.CompletableFuture;\nclass T { void f(CompletableFuture<String> future) {} }\n",
+        Lang::Java,
+        interner,
+    );
+    let future_import_ids = imported_binding_symbol_ids(
+        &java_future.evidence,
+        "java.util.concurrent",
+        "CompletableFuture",
+    );
+    assert_eq!(future_import_ids.len(), 1);
+    let future_domains = param_domain_records(&java_future.evidence, DomainEvidence::FutureLike);
+    assert_eq!(future_domains.len(), 1);
+    assert_eq!(
+        future_domains[0].dependencies, future_import_ids,
+        "Java exact-imported Future-like parameter domains should be import-backed"
+    );
 }
 
 fn assert_rust_result_param_domains(interner: &Interner) {

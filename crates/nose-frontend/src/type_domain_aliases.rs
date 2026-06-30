@@ -56,12 +56,17 @@ impl TypeDomainAliases {
     pub(crate) fn resolve_text(&self, text: &str) -> Option<ResolvedTypeDomain> {
         let t = normalize_type_text(text);
         self.aliases.iter().find_map(|known| {
-            (t.contains(&format!(":{}[", known.alias)) || t.contains(&format!(":{}<", known.alias)))
-                .then(|| ResolvedTypeDomain {
-                    domain: known.domain,
-                    dependencies: known.evidence.into_iter().collect(),
-                    provenance: known.provenance,
-                })
+            let alias = normalize_type_text(&known.alias);
+            (t == alias
+                || t.starts_with(&format!("{alias}["))
+                || t.starts_with(&format!("{alias}<"))
+                || t.contains(&format!(":{alias}["))
+                || t.contains(&format!(":{alias}<")))
+            .then(|| ResolvedTypeDomain {
+                domain: known.domain,
+                dependencies: known.evidence.into_iter().collect(),
+                provenance: known.provenance,
+            })
         })
     }
 

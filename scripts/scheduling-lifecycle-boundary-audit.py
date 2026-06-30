@@ -111,7 +111,11 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("go", "go.concurrent.defer", "defer statement", "lifecycle-materialization-boundary", "defer-lifecycle-ordering-contract-missing", "defer lifecycle", "defer has scope-exit ordering and panic interaction semantics", re.compile(r"\bdefer\s+")),
     Pattern("go", "go.channel.send_receive", "channel send/receive", "channel-boundary", "channel-send-receive-protocol-contract-missing", "channel protocol", "channel send/receive has blocking and synchronization semantics", re.compile(r"<-")),
     Pattern("go", "go.channel.select", "select", "channel-boundary", "channel-select-protocol-contract-missing", "channel select", "select has readiness, default, and scheduling semantics", re.compile(r"\bselect\s*\{")),
-    Pattern("java", "java.future.completable", "CompletableFuture", "success-error-result-channel", "java-completable-future-channel-contract-missing", "future channel", "CompletableFuture needs success/error channel and scheduling proof", re.compile(r"\bCompletableFuture\b")),
+    Pattern("java", "java.future.completable", "CompletableFuture", "success-error-result-channel", "future-settled-value-channel-contract-missing", "future channel", "CompletableFuture needs success/error channel and scheduling proof", re.compile(r"\bCompletableFuture\b(?!\s*\.\s*(?:supplyAsync|runAsync|completedFuture|completedStage|failedFuture|failedStage|allOf|anyOf)\s*\()")),
+    Pattern("java", "java.future.completable.spawn", "CompletableFuture.supplyAsync/runAsync", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "future task spawn", "CompletableFuture async factories schedule executor callbacks and return future handles", re.compile(r"\bCompletableFuture\s*\.\s*(?:supplyAsync|runAsync)\s*\("), "reporting-candidate-closed-boundary"),
+    Pattern("java", "java.future.completable.factory", "CompletableFuture.completedFuture/failedFuture", "success-error-result-channel", "future-settled-value-channel-contract-missing", "future settled value", "CompletableFuture settled factories create fulfilled or exceptional future channels", re.compile(r"\bCompletableFuture\s*\.\s*(?:completedFuture|completedStage|failedFuture|failedStage)\s*\("), "reporting-candidate-closed-boundary"),
+    Pattern("java", "java.future.completable.all", "CompletableFuture.allOf", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "future all-completion aggregate", "CompletableFuture.allOf needs all-completion and exceptional completion proof", re.compile(r"\bCompletableFuture\s*\.\s*allOf\s*\("), "reporting-candidate-closed-boundary"),
+    Pattern("java", "java.future.completable.any", "CompletableFuture.anyOf", "cancellation-liveness-boundary", "async-aggregate-first-completion-contract-missing", "future first-completion aggregate", "CompletableFuture.anyOf needs first-completion and result-channel proof", re.compile(r"\bCompletableFuture\s*\.\s*anyOf\s*\("), "reporting-candidate-closed-boundary"),
     Pattern("java", "java.future.executor", "Executor/Future", "scheduling-boundary", "java-executor-scheduling-contract-missing", "executor scheduling", "Executor/Future APIs introduce scheduler and lifecycle boundaries", re.compile(r"\b(?:ExecutorService|Executor|Future|ScheduledFuture)\b")),
     Pattern("java", "java.stream.lifecycle", "stream/parallelStream", "lifecycle-materialization-boundary", "java-stream-lifecycle-contract-missing", "stream lifecycle", "Java streams need lazy/eager lifecycle and terminal materialization proof", re.compile(r"\.\s*(?:stream|parallelStream)\s*\(")),
     Pattern("swift", "swift.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Swift await has task scheduling and actor/lifetime boundaries", re.compile(r"\bawait\b")),
@@ -250,6 +254,61 @@ RUST_IMPORTED_ASYNC_SELECT = Pattern(
     re.compile(r"(?!x)x"),
     "reporting-supported-closed-boundary",
 )
+JAVA_FUTURE_FULFILLMENT_CONTINUATION = Pattern(
+    "java",
+    "java.future.completion_stage.fulfillment",
+    "FutureLike.thenApply/thenAccept/thenRun/thenCompose",
+    "success-error-result-channel",
+    "future-fulfillment-continuation-contract-missing",
+    "future fulfillment continuation",
+    "Future-like receivers need fulfillment continuation and callback demand/effect proof",
+    re.compile(r"(?!x)x"),
+    "reporting-candidate-closed-boundary",
+)
+JAVA_FUTURE_EXCEPTION_CONTINUATION = Pattern(
+    "java",
+    "java.future.completion_stage.exception",
+    "FutureLike.exceptionally",
+    "exception-channel",
+    "future-exception-continuation-contract-missing",
+    "future exception continuation",
+    "Future-like receivers need exceptional completion continuation and callback demand/effect proof",
+    re.compile(r"(?!x)x"),
+    "reporting-candidate-closed-boundary",
+)
+JAVA_FUTURE_SETTLEMENT_CONTINUATION = Pattern(
+    "java",
+    "java.future.completion_stage.settlement",
+    "FutureLike.handle/whenComplete",
+    "success-error-result-channel",
+    "future-settlement-continuation-contract-missing",
+    "future settlement continuation",
+    "Future-like receivers need settlement continuation and callback demand/effect proof",
+    re.compile(r"(?!x)x"),
+    "reporting-candidate-closed-boundary",
+)
+JAVA_FUTURE_ALL_COMPLETION_CONTINUATION = Pattern(
+    "java",
+    "java.future.completion_stage.all",
+    "FutureLike.thenCombine/thenAcceptBoth/runAfterBoth",
+    "success-error-result-channel",
+    "async-aggregate-all-completion-contract-missing",
+    "future all-completion continuation",
+    "Future-like pair continuations need all-completion and callback demand/effect proof",
+    re.compile(r"(?!x)x"),
+    "reporting-candidate-closed-boundary",
+)
+JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION = Pattern(
+    "java",
+    "java.future.completion_stage.first",
+    "FutureLike.applyToEither/acceptEither/runAfterEither",
+    "cancellation-liveness-boundary",
+    "async-aggregate-first-completion-contract-missing",
+    "future first-completion continuation",
+    "Future-like either continuations need first-completion and callback demand/effect proof",
+    re.compile(r"(?!x)x"),
+    "reporting-candidate-closed-boundary",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -347,6 +406,8 @@ def count_file(text: str, language: str) -> dict[Pattern, int]:
         counts.update(python_asyncio_imported_counts(masked))
     elif language == "rust":
         counts.update(rust_imported_async_runtime_counts(masked))
+    elif language == "java":
+        counts.update(java_future_receiver_counts(masked))
     return counts
 
 
@@ -652,6 +713,98 @@ def rust_runtime_import_target(module: str, exported: str) -> bool:
     }
 
 
+def java_future_receiver_counts(text: str) -> dict[Pattern, int]:
+    receivers = java_future_like_receiver_names(text)
+    if not receivers:
+        return {}
+    counts: dict[Pattern, int] = {}
+    count_by_methods(
+        counts,
+        JAVA_FUTURE_FULFILLMENT_CONTINUATION,
+        text,
+        receivers,
+        (
+            "thenApply",
+            "thenApplyAsync",
+            "thenAccept",
+            "thenAcceptAsync",
+            "thenRun",
+            "thenRunAsync",
+            "thenCompose",
+            "thenComposeAsync",
+        ),
+        ".",
+    )
+    count_by_methods(
+        counts,
+        JAVA_FUTURE_EXCEPTION_CONTINUATION,
+        text,
+        receivers,
+        (
+            "exceptionally",
+            "exceptionallyAsync",
+            "exceptionallyCompose",
+            "exceptionallyComposeAsync",
+        ),
+        ".",
+    )
+    count_by_methods(
+        counts,
+        JAVA_FUTURE_SETTLEMENT_CONTINUATION,
+        text,
+        receivers,
+        ("handle", "handleAsync", "whenComplete", "whenCompleteAsync"),
+        ".",
+    )
+    count_by_methods(
+        counts,
+        JAVA_FUTURE_ALL_COMPLETION_CONTINUATION,
+        text,
+        receivers,
+        (
+            "thenCombine",
+            "thenCombineAsync",
+            "thenAcceptBoth",
+            "thenAcceptBothAsync",
+            "runAfterBoth",
+            "runAfterBothAsync",
+        ),
+        ".",
+    )
+    count_by_methods(
+        counts,
+        JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION,
+        text,
+        receivers,
+        (
+            "applyToEither",
+            "applyToEitherAsync",
+            "acceptEither",
+            "acceptEitherAsync",
+            "runAfterEither",
+            "runAfterEitherAsync",
+        ),
+        ".",
+    )
+    return counts
+
+
+def java_future_like_receiver_names(text: str) -> set[str]:
+    type_name = (
+        r"(?:java\s*\.\s*util\s*\.\s*concurrent\s*\.\s*)?"
+        r"(?:CompletableFuture|CompletionStage)"
+    )
+    pattern = re.compile(
+        rf"\b{type_name}\b(?:\s*<[^;()={{}}]*>)?(?:\s*\[\s*\])?\s+"
+        rf"([A-Za-z_$][A-Za-z0-9_$]*)"
+    )
+    return {
+        match.group(1)
+        for match in pattern.finditer(text)
+        if match.group(1) not in {"class", "interface", "enum", "record"}
+    }
+
+
 def summarize(args: argparse.Namespace) -> dict[str, Any]:
     repos = load_repos(Path(args.manifest))
     by_pattern: dict[Pattern, Counter[str]] = defaultdict(Counter)
@@ -771,8 +924,11 @@ def recommended_order(surfaces: list[dict[str, Any]]) -> list[dict[str, Any]]:
     candidates = [
         item
         for item in surfaces
-        if item["obligation_subreason"] in priority
-        or item["surface"] in surface_priority
+        if not item["status"].startswith("reporting-")
+        and (
+            item["obligation_subreason"] in priority
+            or item["surface"] in surface_priority
+        )
     ]
 
     def item_priority(item: dict[str, Any]) -> int:
@@ -862,6 +1018,16 @@ def hard_negative_inventory() -> list[dict[str, Any]]:
         {
             "class": "Swift structured-concurrency runtime names shadowed by local Task bindings, Task extensions, same-file task-group functions, or project-visible task-group functions",
             "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/swift.rs::swift_structured_concurrency_rejects_local_runtime_shadows",
+            "status": "mapped-existing",
+        },
+        {
+            "class": "Java CompletableFuture static calls without exact stdlib type identity, or with local/conflicting type names",
+            "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/java.rs::java_completable_future_static_attribution_requires_type_identity",
+            "status": "expanded-this-slice",
+        },
+        {
+            "class": "Java CompletionStage-style receiver continuations without import-backed java.util.concurrent type-domain evidence",
+            "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/java.rs::java_completion_stage_receiver_methods_require_import_backed_type_domain",
             "status": "expanded-this-slice",
         },
     ]

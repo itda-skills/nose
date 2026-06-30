@@ -126,13 +126,34 @@ pub(super) fn lower_import(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
         return None;
     }
     let (module, exported) = path.rsplit_once('.')?;
-    Some(crate::lower::import_binding(
+    let (assign, import_evidence) = crate::lower::import_binding_with_symbol_evidence(
         lo,
         span,
         exported.trim(),
         module.trim(),
         exported.trim(),
-    ))
+    );
+    record_java_type_domain_alias(lo, module.trim(), exported.trim(), import_evidence);
+    Some(assign)
+}
+
+fn record_java_type_domain_alias(
+    lo: &mut Lowering,
+    module: &str,
+    exported: &str,
+    import_evidence: Option<nose_il::EvidenceId>,
+) {
+    if module == "java.util.concurrent"
+        && matches!(exported, "CompletableFuture" | "CompletionStage")
+    {
+        lo.record_type_domain_alias_exact_with_evidence(
+            exported,
+            nose_il::DomainEvidence::FutureLike,
+            import_evidence,
+        );
+    } else {
+        lo.clear_type_domain_alias(exported);
+    }
 }
 /// `class`/`interface`/`enum` → a `Class` unit; its methods become units too.
 pub(super) fn lower_type(lo: &mut Lowering, node: TsNode) -> NodeId {
@@ -163,9 +184,9 @@ pub(super) fn lower_method(lo: &mut Lowering, node: TsNode) -> NodeId {
             let pspan = lo.span(p);
             let sym = p.child_by_field_name("name").map(|n| lo.sym(lo.text(n)));
             if let Some(domain) =
-                nose_semantics::type_domain_from_source_text(Lang::Java, lo.text(p))
+                lo.type_domain_from_text_with_dependencies(java_param_type_text(lo, p))
             {
-                lo.record_param_domain(pspan, domain);
+                lo.record_param_domain_resolution(pspan, domain);
             }
             kids.push(lo.add(
                 NodeKind::Param,
@@ -188,6 +209,18 @@ pub(super) fn lower_method(lo: &mut Lowering, node: TsNode) -> NodeId {
         java_method_origin(node, body_node.is_some()),
     );
     func
+}
+
+fn java_param_type_text<'a>(lo: &'a Lowering<'a>, param: TsNode) -> &'a str {
+    let text = lo.text(param);
+    let Some(name_node) = param.child_by_field_name("name") else {
+        return text;
+    };
+    let name = lo.text(name_node);
+    text.rsplit_once(name)
+        .map(|(ty, _)| ty.trim())
+        .filter(|ty| !ty.is_empty())
+        .unwrap_or(text)
 }
 pub(super) fn lower_compact_constructor(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
