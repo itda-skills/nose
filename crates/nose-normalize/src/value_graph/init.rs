@@ -21,6 +21,7 @@ impl<'a> Builder<'a> {
             cur_span: None,
             cur_il_kind: None,
             await_transparent: true,
+            async_protocol_depth: 0,
             opaque_census: None,
             intern: FxHashMap::default(),
             sinks: Vec::new(),

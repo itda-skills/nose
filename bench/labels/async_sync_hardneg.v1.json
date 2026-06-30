@@ -44,6 +44,36 @@
     "start_line": 1,
     "end_line": 9
    }
+  },
+  {
+   "repo": "async_sync",
+   "left": {
+    "repo": "async_sync",
+    "file": "hn4_a.rs",
+    "start_line": 1,
+    "end_line": 9
+   },
+   "right": {
+    "repo": "async_sync",
+    "file": "hn4_b.rs",
+    "start_line": 1,
+    "end_line": 9
+   }
+  },
+  {
+   "repo": "async_sync",
+   "left": {
+    "repo": "async_sync",
+    "file": "hn5_a.swift",
+    "start_line": 1,
+    "end_line": 9
+   },
+   "right": {
+    "repo": "async_sync",
+    "file": "hn5_b.swift",
+    "start_line": 1,
+    "end_line": 9
+   }
   }
  ]
 }

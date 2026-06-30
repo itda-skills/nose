@@ -689,3 +689,14 @@ negative fixture representative from `5e2b99978272a129` to
 `f6a2c8af9c3fd791`. The reported locations are still the same test-scope
 `does_not_emit_*` direct-call-target negatives plus the semantics selector shape
 guard. No new budget is accepted.
+
+The async protocol near-channel mirror slice keeps the count at 52. Extending
+the value-graph dual-view handling from `await` to supported async protocol
+boundaries moves a large evaluator whole-impl span: accepted representative
+`c9fe4dc9d9cd14f5` no longer reports, and `149bb759833d2d51` now covers
+`interp/eval.rs`'s oracle evaluator impl and `value_graph/eval/core.rs`'s
+value-graph evaluator impl. The family is a `shared-sub-dag` whole-impl match
+with 7 shared/removable lines and 8 parameter spots across two different
+execution models. Extracting it would couple oracle interpretation to
+fingerprint construction, so this is recorded as evaluator span noise rather
+than avoidable duplication. No new budget is accepted.

@@ -3,7 +3,7 @@
 The exact `semantic` channel proves two units compute the same thing — *equal
 fingerprint ⟹ equal behavior* ([design §1](design.md)). The `near` and shared-core
 channels can still need explanation. The **graded witness** bridges that gap: for an
-enriched same-language near/shared-core family it computes the *least general
+enriched near/shared-core family it computes the *least general
 generalization* (anti-unification) of representative copies' value DAGs and reports
 them as **equal except at *k* holes**, each hole carrying the specific value that
 differs. It turns a bare `0.86` or a shared-sub-DAG anchor into a machine-checkable,
@@ -52,14 +52,16 @@ Some divergences are better described than itemized as holes:
 - `fragment-containment` — the smaller copy is a sliver of the larger (a containment,
   not a clone claim);
 - `low-substance` — the units are too small for the claim to mean much.
-- `async-mirror` — one copy `await`s where the other does not: an async↔sync
-  *transformation* twin (§K / experiments §CU). The witness build keeps `await e` as an
-  `Opaque(VG_PROTOCOL_AWAIT,[e])` wrapper; the alignment recurses *through* it (matching the
-  operand against the bare sync value) and records the await as a one-sided hole. Always sets
-  `equal_modulo_holes = false` — a coroutine is not its resolved value, so this is a refactoring
-  lead, never a behavioral-equivalence claim. (The fingerprint build, by contrast, makes `await e`
-  transparent so the twin's `vj` converges — see the dual view in
-  `value_graph/eval/core.rs`.)
+- `async-mirror` — one copy crosses an async protocol boundary where the other does
+  not: an async↔sync *transformation* twin (§K / experiments §CU). The witness
+  build keeps supported boundaries such as `await e`, async-function return sinks,
+  and Rust `async { ... }` values behind an `Opaque(VG_PROTOCOL_AWAIT,[value])`
+  wrapper; the alignment recurses *through* it (matching the wrapped value against
+  the bare sync value) and records the boundary as a one-sided hole. Always sets
+  `equal_modulo_holes = false` — a coroutine is not its resolved value, so this is
+  a refactoring lead, never a behavioral-equivalence claim. (The fingerprint
+  build, by contrast, makes the supported async protocol boundary transparent so
+  the twin's `vj` converges — see the dual view in `value_graph/eval/core.rs`.)
 
 ## Soundness — the referent check
 
@@ -83,9 +85,11 @@ marker) and compares:
   produce the same value graph. Because the graph cannot see this, the witness compares
   the two copies' decorator/attribute **source lines** directly: any difference becomes a
   `decorator` hole (with the differing text), fires the `decorator-differs` pattern, and
-  demotes `equal_modulo_holes`. (Language-aware: a leading `@` is a decorator in
-  Python/Java/JS/TS and an *instance variable* in Ruby, where it is correctly ignored;
-  Rust uses `#[…]`.)
+  demotes `equal_modulo_holes`. This source-text comparison runs only when the selected
+  representative pair is in the same language; cross-language pairs still get value-DAG
+  grades when the graphs align, but do not compare decorator syntaxes across languages.
+  (Language-aware: a leading `@` is a decorator in Python/Java/JS/TS and an *instance
+  variable* in Ruby, where it is correctly ignored; Rust uses `#[…]`.)
 
 A pair too large or too deep to align soundly yields **no** witness rather than a
 guessed one.
@@ -104,15 +108,17 @@ not folded into nose's deterministic order on a neutral signal.
 
 ## Scope and limits
 
-- **Same-language near/shared-core families only.** Cross-language copies share no
-  value-DAG structure by construction; the witness is absent for them, as it is for
-  sub-function fragments and pathological (generated/minified) files. Multi-member
-  shared-core families keep the historical first representative pair unless another
-  sampled pair exposes the specific async/sync `async-mirror` transformation that would
-  otherwise be hidden by a decoy member. The `async-mirror` label is emitted when the
-  alignment reaches a one-sided `await` wrapper; lossy or opaque control regions can
-  still surface as structural `modeled_caveat` witnesses before that wrapper is
-  alignable.
+- **Near/shared-core families whose value DAGs can be aligned.** Same-language pairs are
+  the common case, but cross-language families can now be enriched when their canonical
+  value DAGs share enough structure; source-line anti-unification, source-comparable
+  removable-line accounting, and decorator/attribute comparison remain same-language
+  surfaces. The witness is absent for sub-function fragments and pathological
+  (generated/minified) files. Multi-member shared-core families keep the historical first
+  representative pair unless another sampled pair exposes the specific async/sync
+  `async-mirror` transformation that would otherwise be hidden by a decoy member. The
+  `async-mirror` label is emitted when the alignment reaches a one-sided async protocol
+  wrapper; lossy or opaque control regions can still surface as structural
+  `modeled_caveat` witnesses before that wrapper is alignable.
 - **The unit body, plus decorators by source — not the full signature.** The witness
   compares the two units' *value graphs* (the modeled body), augmented by the
   source-level decorator/attribute check above. What it does not model is the parameter

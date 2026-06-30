@@ -20,11 +20,26 @@ impl<'a> Builder<'a> {
         self.cur_il_kind = prev_kind;
         v
     }
-    /// Whether a `Raw` node is the `await` protocol boundary (the one `Raw` we model as a
-    /// value-preserving wrapper, see the `NodeKind::Raw` arm in `eval_inner`).
-    fn is_await_raw(&self, payload: &Payload) -> bool {
-        matches!(payload, Payload::Name(s) if self.interner.resolve(*s) == "await")
+    pub(in crate::value_graph) fn raw_name_is(&self, payload: &Payload, name: &str) -> bool {
+        matches!(payload, Payload::Name(s) if self.interner.resolve(*s) == name)
     }
+
+    /// Whether a `Raw` node is an async protocol boundary that the near channel models as a
+    /// value-preserving wrapper. Exact admission still sees the original `Raw` IL node.
+    pub(in crate::value_graph) fn is_async_protocol_raw(&self, payload: &Payload) -> bool {
+        self.raw_name_is(payload, "await")
+            || self.raw_name_is(payload, "async_block")
+            || self.raw_name_is(payload, "async_function")
+    }
+
+    pub(in crate::value_graph) fn async_protocol_value(&mut self, operand: ValueId) -> ValueId {
+        if self.await_transparent {
+            operand
+        } else {
+            self.mk(ValOp::Opaque(VG_PROTOCOL_AWAIT), vec![operand])
+        }
+    }
+
     fn eval_inner(&mut self, expr: NodeId, env: &FxHashMap<u32, ValueId>) -> ValueId {
         let node = *self.il.node(expr);
         match node.kind {
@@ -70,30 +85,19 @@ impl<'a> Builder<'a> {
                     .unwrap_or_else(|| self.mk(ValOp::Opaque(0), vec![]));
                 self.mk(ValOp::KwArg(name_hash), vec![value])
             }
-            // `await e` is the ONE `Raw` we key as a wrapper that KEEPS its operand as a
-            // child — `Opaque(VG_PROTOCOL_AWAIT, [eval(e)])` — so the near/graded witness can
-            // align an async fn with its sync twin through the wrapper (the `async-mirror`
-            // pattern). The wrapper still makes `await e` ≠ `e` and ≠ `await f`, so the EXACT
-            // channel never merges a Future with its resolved value — and async units are
-            // non-`exact_safe` anyway (a `Raw` in the IL ⇒ `strict_exact` returns false), the
-            // load-bearing guard. Every OTHER `Raw` stays on the childless arm below.
-            NodeKind::Raw if self.is_await_raw(&node.payload) => {
+            // Async protocol wrappers (`await e`, Rust `async { ... }`, and async function
+            // boundaries when evaluated in expression position) keep their operand as a child in
+            // the witness build so async/sync twins can be labeled `async-mirror`. The fingerprint
+            // build stays transparent for near-channel recall, while exact admission remains
+            // closed because the original IL is still `Raw`.
+            NodeKind::Raw if self.is_async_protocol_raw(&node.payload) => {
                 let operand = self
                     .il
                     .children(expr)
                     .first()
                     .map(|&v| self.eval(v, env))
                     .unwrap_or_else(|| self.mk(ValOp::Opaque(VG_PROTOCOL_AWAIT), vec![]));
-                if self.await_transparent {
-                    // Fingerprint build: `await e` ≡ `e`'s value, so the operand identity flows
-                    // downstream and an async fn's fingerprint matches its sync twin (vj↑).
-                    operand
-                } else {
-                    // Witness build: keep the wrapper so `value_dag`'s graded anti-unification can
-                    // see the await and label the difference `async-mirror` (a transformation, not
-                    // a behavioral equivalence).
-                    self.mk(ValOp::Opaque(VG_PROTOCOL_AWAIT), vec![operand])
-                }
+                self.async_protocol_value(operand)
             }
             // Any other unlowered / unhandled construct — notably `Raw`, which wraps a
             // macro, C compound literal, `#ifdef`, parse-ERROR, etc. Key it by its full

@@ -10,8 +10,7 @@ pub(crate) fn enrich_graded_witnesses(
     opts: &nose_detect::DetectOptions,
 ) {
     let is_enrichable = |f: &nose_detect::RefactorFamily| {
-        f.languages == 1
-            && f.locations.len() >= 2
+        f.locations.len() >= 2
             && matches!(
                 f.witness.as_ref().map(|w| w.kind),
                 Some("structural-similarity" | "shared-sub-dag")
@@ -81,22 +80,25 @@ pub(crate) fn enrich_graded_witnesses(
         // bodies being equal-modulo-holes is NOT the whole story — record the difference
         // as a hole and demote the claim (fail-closed). Identical decorators leave the
         // witness untouched.
-        let lang = f.locations[0].lang.as_str();
-        let a_decos = decorator_lines(&mut lines, lang, a_file, a_lines.0, a_lines.1);
-        let b_decos = decorator_lines(&mut lines, lang, b_file, b_lines.0, b_lines.1);
-        if let Some((a_only, b_only)) = decorator_difference(&a_decos, &b_decos) {
-            witness.spots.push(nose_detect::WitnessHole {
-                class: "decorator",
-                a_lines: None,
-                b_lines: None,
-                effect: false,
-                a_text: cap_join(&a_only),
-                b_text: cap_join(&b_only),
-            });
-            witness.holes += 1;
-            witness.equal_modulo_holes = false;
-            if !witness.patterns.contains(&"decorator-differs") {
-                witness.patterns.push("decorator-differs");
+        let a_lang = f.locations[a_idx].lang.as_str();
+        let b_lang = f.locations[b_idx].lang.as_str();
+        if a_lang == b_lang {
+            let a_decos = decorator_lines(&mut lines, a_lang, a_file, a_lines.0, a_lines.1);
+            let b_decos = decorator_lines(&mut lines, b_lang, b_file, b_lines.0, b_lines.1);
+            if let Some((a_only, b_only)) = decorator_difference(&a_decos, &b_decos) {
+                witness.spots.push(nose_detect::WitnessHole {
+                    class: "decorator",
+                    a_lines: None,
+                    b_lines: None,
+                    effect: false,
+                    a_text: cap_join(&a_only),
+                    b_text: cap_join(&b_only),
+                });
+                witness.holes += 1;
+                witness.equal_modulo_holes = false;
+                if !witness.patterns.contains(&"decorator-differs") {
+                    witness.patterns.push("decorator-differs");
+                }
             }
         }
         if let Some(w) = f.witness.as_mut() {

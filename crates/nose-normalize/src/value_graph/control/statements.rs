@@ -8,6 +8,9 @@ impl<'a> Builder<'a> {
     ) {
         match self.il.kind(stmt) {
             NodeKind::Block => self.process_block(stmt, env),
+            NodeKind::Raw if self.is_async_protocol_raw(&self.il.node(stmt).payload) => {
+                self.process_async_protocol_body(stmt, env);
+            }
             NodeKind::Assign => self.process_assign_stmt(stmt, env),
             NodeKind::Return => {
                 // A bare `return;` (no value) is still behaviorally significant: as an
@@ -103,6 +106,16 @@ impl<'a> Builder<'a> {
                 self.push_effect(v);
             }
         }
+    }
+
+    fn process_async_protocol_body(&mut self, stmt: NodeId, env: &mut FxHashMap<u32, ValueId>) {
+        let Some(&body) = self.il.children(stmt).first() else {
+            return;
+        };
+        let prior_depth = self.async_protocol_depth;
+        self.async_protocol_depth = prior_depth.saturating_add(1);
+        self.process_stmt(body, env);
+        self.async_protocol_depth = prior_depth;
     }
 
     fn process_assign_stmt(&mut self, stmt: NodeId, env: &mut FxHashMap<u32, ValueId>) {

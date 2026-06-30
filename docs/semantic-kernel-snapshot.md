@@ -21,6 +21,10 @@ async protocol boundaries with `Source::Protocol(AsyncFunction)` evidence, even
 when the body has no `await`. JS/TS, Python, Rust, and Swift `await`
 expressions are preserved as raw async protocol boundaries with
 `Source::Protocol(Await)` evidence instead of being erased into their operand.
+The near-channel fingerprint build can look through supported async protocol
+boundaries while the graded-witness build keeps an explicit protocol wrapper, so
+async/sync twins can surface as `async-mirror` transformation leads without
+opening exact admission.
 JS/TS and Python `yield` expressions are preserved as generator protocol
 boundaries with `Source::Protocol(Yield)`. Rust `async {}` and `?` are likewise
 preserved as protocol boundaries with `Source::Protocol(AsyncBlock)` and
@@ -1330,7 +1334,7 @@ Semantic knowledge still appears in several forms outside the facade:
   free-function builtins, pack-proven Python iterator builtins, Rust free-name/path factories,
   Rust Option/scalar APIs, Ruby `require "set"; Set.new(...)`, Java `java.util`
   static factories/adapters and selected empty constructors, JS regex literals,
-  selected receiver-method families. Broader thenable assimilation, async/sync protocol convergence,
+  selected receiver-method families. Broader thenable assimilation, exact async/sync protocol convergence,
   ecosystem APIs, and broader protocol/API evidence paths still rely on contract
   rows plus local proof or remain exact-closed. Raw Python async-looking field names such
   as `aread` no longer rewrite to sync names without an explicit protocol/API
@@ -1406,12 +1410,14 @@ this worktree because the required evidence is not yet modeled:
   but await scheduling, exception, and effect equivalence are not modeled as the
   same async protocol. The 2026-06-30 JS/TS audit counts `29,305` `await`
   occurrences and `14,491` async-function surfaces in this closed boundary.
-- JS/TS, Python, and Rust `await value` does not converge with plain `value`
-  until language/runtime-specific async protocol, demand, scheduling, exception,
-  and effect obligations are modeled. Rust `async {}` and `?` are similarly
-  closed until future/error protocol obligations are modeled. JS/TS and Python
-  `yield value` remains closed against plain `value` until generator demand and
-  suspension semantics are modeled.
+- JS/TS, Python, Rust, and Swift async/sync protocol twins can converge only in
+  the near/graded channel as `async-mirror` transformation leads. Exact
+  `await value`/async-function payload equivalence with plain `value` remains
+  closed until language/runtime-specific async protocol, demand, scheduling,
+  exception, and effect obligations are modeled. Rust `?` is similarly closed
+  until error protocol obligations are modeled. JS/TS and Python `yield value`
+  remains closed against plain `value` until generator demand and suspension
+  semantics are modeled.
 - Python `asyncio.create_task`/`sleep`/`gather`/`wait`, Rust `tokio`/`async-std`
   spawn and qualified `tokio`/`futures`/`futures_util` `join!`/`select!`, and
   Swift `Task` creation report scheduler, lifecycle, cancellation, and

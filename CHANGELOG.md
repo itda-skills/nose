@@ -102,6 +102,13 @@ break.
   merges. Python/Rust async-runtime recall-loss diagnostics now prefer
   source-preserving unit roots before falling back to normalized roots, so
   alpha-renamed diagnostics do not reopen Python `asyncio` alias shadows.
+- Added non-JS async protocol near-channel mirror support. The dual-view async
+  protocol capability now covers `await`, async-function boundaries, and Rust
+  async blocks in near/witness builds, so Rust `async fn`/`.await` and Swift
+  `async func`/`await` twins can surface as `async-mirror` structural leads
+  without opening exact admission. The focused async/sync synthetic gold set now
+  includes Python, TypeScript, Rust, and Swift pairs plus Rust/Swift hard
+  negatives.
 - Added staged Promise recovery infrastructure: protocol diagnostics and hard
   negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
   continuation recovery; receiver-producer/call-return attribution; and
