@@ -1626,7 +1626,7 @@ repeated registry walks on hot paths. Binary size changed 20,181,712 ->
   inner HOF call's admitted `LibraryApi` occurrence instead of a raw method
   selector. Raw Python async-looking field names no longer rewrite to sync names
   until an explicit async/sync protocol evidence path exists.
-- JS/TS, Python, and Rust `await` expressions now preserve a raw async protocol
+- JS/TS, Python, Rust, and Swift `await` expressions now preserve a raw async protocol
   boundary and emit `Source::Protocol(Await)` evidence instead of lowering
   directly to the operand. JS/TS and Python `yield` expressions preserve raw
   generator protocol boundaries with `Source::Protocol(Yield)`. Rust `async {}`
@@ -2158,6 +2158,14 @@ different APIs.
   diagnostics now prefer source-preserving unit roots before normalized
   fallback, so alpha renaming does not make Python `asyncio` alias shadows look
   unshadowed.
+- The async protocol near-channel follow-up applies the same dual-view capability
+  to supported async protocol boundaries instead of adding JS/TS-only features.
+  Fingerprint builds can look through `await`, `async_function`, and
+  `async_block` wrappers for near candidate formation; value-DAG/witness builds
+  keep the wrapper and label the difference `async-mirror`. This makes Rust
+  `async fn`/`.await` and Swift `async func`/`await` synthetic twins surface in
+  `near`/`spotclass=structural` while exact admission stays closed behind the
+  existing scheduling, exception, and effect obligations.
 - Keep expanding lazy iterator/generator/channel hard negatives before enabling
   new exact laws. The first Python generator/list/set and Go channel/goroutine
   hard negatives are now in place, along with hard negatives for pull-lazy

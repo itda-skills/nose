@@ -101,6 +101,40 @@
     "start_line": 1,
     "end_line": 14
    }
+  },
+  {
+   "repo": "async_sync",
+   "kind": "production_async_sync",
+   "clone_type": "type4_semantic",
+   "left": {
+    "repo": "async_sync",
+    "file": "t7_total_async.rs",
+    "start_line": 1,
+    "end_line": 9
+   },
+   "right": {
+    "repo": "async_sync",
+    "file": "t7_total_sync.rs",
+    "start_line": 1,
+    "end_line": 9
+   }
+  },
+  {
+   "repo": "async_sync",
+   "kind": "production_async_sync",
+   "clone_type": "type4_semantic",
+   "left": {
+    "repo": "async_sync",
+    "file": "t8_total_async.swift",
+    "start_line": 1,
+    "end_line": 9
+   },
+   "right": {
+    "repo": "async_sync",
+    "file": "t8_total_sync.swift",
+    "start_line": 1,
+    "end_line": 9
+   }
   }
  ]
 }

@@ -78,6 +78,11 @@ impl<'a> Builder<'a> {
                 }
             }
         }
+        let v = if self.async_protocol_depth == 0 {
+            v
+        } else {
+            self.async_protocol_value(v)
+        };
         let g = self.guarded(v);
         self.sinks.push(Sink::new(SinkKind::Return, g));
     }

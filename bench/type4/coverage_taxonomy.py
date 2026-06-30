@@ -125,10 +125,11 @@ _STRUCTURAL = [
           "exact fragments beyond the current bounded grammar — needs free-variable / "
           "live-out / receiver-overload / effect-ordering boundary modeling."),
     _axis("async_sync_twin", "async ↔ sync twins", "structural", "recall", "within",
-          "research", ["javascript", "typescript", "python", "rust"],
+          "partial", ["javascript", "typescript", "python", "rust", "swift"],
           "async/await version vs sync version of the same logic — the #1 real-world Type-4 "
-          "gap (experiments §K). Needs an async-desugaring model; soundness boundary is "
-          "scheduling/await-point observability."),
+          "gap (experiments §K). Supported await/async-function boundaries are surfaced in "
+          "near/graded as async-mirror transformation twins; exact behavioral equivalence "
+          "stays closed behind scheduling, await-point, exception, and effect obligations."),
     _axis("representation_choice", "Equivalent data-structure choice", "structural",
           "recall", "both", "research", "all",
           "same logic via dict vs list-of-pairs, array vs map, etc. where behavior matches."),

@@ -3027,6 +3027,18 @@ So scoring sees *through* await (twins converge) while the witness *sees* await 
 through `await_boundary`); Rust `.await` and the other protocol boundaries (`yield`/`try`-`?`/
 channels — non-pass-through semantics) deferred.
 
+**2026-06-30 follow-up: async protocol boundaries beyond JS/TS.** The same dual-view
+mechanism now covers supported async protocol boundaries instead of a JS/TS/Python-only
+`await` special case. Fingerprint builds look through `await`, `async_function`, and
+`async_block` wrappers for near-channel candidate formation; value-DAG/witness builds keep
+the wrapper so `async-mirror` remains explicit and `equal_modulo_holes=false`. This makes
+Rust `.await`/`async fn` and Swift `await`/`async func` synthetic twins converge in
+`near`/`spotclass=structural` while keeping exact admission closed. The synthetic gold set
+now includes Rust and Swift total-loop pairs, and the focused query JSON regression asserts
+that those pairs carry `async-mirror`/`equal_modulo_holes=false` evidence. The real-frontier
+coverage matrix is not flipped for Rust or Swift until there is hand-verified real-corpus
+evidence comparable to the httpx Python cases.
+
 **Gates.** Full suite **1056 pass**; the dual-view broke no existing await test. **Exact-channel
 provably inert:** `verify --max-violations 0` clean (axios/rxjs/trpc/flask/guava), and the
 `exact-value-graph` families are **byte-identical** before/after on zod/prettier/flask/guava/gorm —
@@ -3054,9 +3066,9 @@ is flipped none→covered (evidence: the hand-verified httpx `read`/`aread`, `re
 Lesson, the twin of §CU's first: a new recall feature's *real-corpus lift* is also a hypothesis to
 measure, not assume — here it is small.
 
-**Follow-up (not soundness):** real-corpus evidence for the js/ts/rust cells (js/ts libraries keep
-parallel sync/async versions far less often than Python ones, so no clean mined twin yet), and
-extending the mechanism to Rust `.await` and the other protocol boundaries.
+**Follow-up (not soundness):** real-corpus evidence for the js/ts/rust/swift cells (js/ts libraries
+keep parallel sync/async versions far less often than Python ones, so no clean mined twin yet),
+and then broader protocol boundaries only when their runtime obligations are measurable.
 
 ## CV. Swift lowering gap tranche from app dogfood (#452, 2026-06-18)
 

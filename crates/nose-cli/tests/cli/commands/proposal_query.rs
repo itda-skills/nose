@@ -167,8 +167,8 @@ fn query_json_grades_async_mirror_shared_core_families() {
         assert_ne!(a_idx, b_idx);
         assert!(
             a_file != b_file
-                && (a_file.ends_with(".py") || a_file.ends_with(".ts"))
-                && (b_file.ends_with(".py") || b_file.ends_with(".ts")),
+                && async_mirror_fixture_file(a_file)
+                && async_mirror_fixture_file(b_file),
             "graded_pair should identify the concrete representatives behind the witness: {family}"
         );
     }
@@ -177,6 +177,8 @@ fn query_json_grades_async_mirror_shared_core_families() {
         ["t3_aggregate_async.py", "t3_aggregate_sync.py"],
         ["t4_collect_async.ts", "t4_collect_sync.ts"],
         ["t6_retry_async.ts", "t6_retry_sync.ts"],
+        ["t7_total_async.rs", "t7_total_sync.rs"],
+        ["t8_total_async.swift", "t8_total_sync.swift"],
     ] {
         assert!(
             async_mirror_families
@@ -207,6 +209,12 @@ fn query_json_grades_async_mirror_shared_core_families() {
         .all(|pair| !families.iter().any(|family| family_has_files(family, pair))),
         "async/sync hard-negative pairs must not merge: {json}"
     );
+}
+
+fn async_mirror_fixture_file(path: &str) -> bool {
+    [".py", ".ts", ".rs", ".swift"]
+        .iter()
+        .any(|suffix| path.ends_with(suffix))
 }
 
 #[test]

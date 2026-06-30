@@ -110,6 +110,10 @@ set -euo pipefail
 # check removed that family. The remaining delta is representative-ID churn for the reviewed
 # semantic-kernel language-core provenance helper family, now `551e7992e1632597` instead of
 # `46eafe785a6f3517`; no new budget is accepted.
+# 52 -> 52 (async protocol near-channel mirror): extending value-graph async protocol dual-view
+# handling moves a reviewed evaluator whole-impl span. `c9fe4dc9d9cd14f5` disappears and
+# `149bb759833d2d51` appears for the oracle evaluator / value-graph evaluator overlap; no new
+# budget is accepted.
 BIN="${NOSE_BIN:-./target/release/nose}"
 BASELINE="${NOSE_DUP_BASELINE:-scripts/duplication-baseline.json}"
 
