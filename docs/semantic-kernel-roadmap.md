@@ -2135,6 +2135,16 @@ different APIs.
   scheduling, cancellation, lifecycle, result-channel, exception, and
   callback/effect contracts are
   dependency-closed.
+- The Go channel/goroutine/defer follow-up applies the same capability
+  vocabulary to source-backed Go protocol boundaries. It does not add a Go-only
+  admission feature: sends, receives, comma-ok receives, select
+  parents/cases/defaults, goroutines, and `defer` now report synchronization,
+  value-channel,
+  status, readiness, liveness, scheduling, lifecycle, and callback-effect
+  obligations. The 120-repo protocol-node pricing records `4,294` channel
+  receives, `1,525` sends, `155` comma-ok receives, `1,920` selects, `3,590`
+  select cases, `546` select defaults, `1,949` goroutines, and `17,521`
+  defers while exact channel/goroutine/defer recovery stays closed.
 - Keep expanding lazy iterator/generator/channel hard negatives before enabling
   new exact laws. The first Python generator/list/set and Go channel/goroutine
   hard negatives are now in place, along with hard negatives for pull-lazy
@@ -2266,6 +2276,17 @@ The [interval-scheduler-lifecycle-boundary-audit-2026-06-30.v1.json](../bench/re
 
 2026-06-30 #602 closeout note:
 The [issue-602-closeout-2026-06-30.v1.json](../bench/recall_loss/issue-602-closeout-2026-06-30.v1.json) artifact closes #602 as a broad scheduling, aggregate, cancellation, and lifecycle boundary milestone. The exact admissions opened under this epic are limited to checked literal Promise aggregate slices; executor timing, cancellation/liveness, scheduler/timer/microtask/interval behavior, and cross-language lifecycle protocols remain named closed obligations. The current local `crates` gate records `false_merges = 0`, `canon_preservation_violations = 0`, and no Promise/scheduling/aggregate/cancellation/lifecycle unsupported-runtime rollup rows. Further exact lifecycle work should start as a new priced epic, not as API-by-API continuation of #602.
+
+2026-06-30 Go channel protocol obligation note:
+The [scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json)
+artifact keeps exact admission closed while refining Go protocol-boundary
+diagnostics. Runtime-boundary reports now split channel send synchronization,
+receive value, comma-ok receive status, select readiness/case/default,
+goroutine callback effects, and defer callback effects instead of rolling every
+Go channel operation into one broad protocol label. The pinned 120-repo pricing
+records `4,294` channel receives, `1,525` sends, `155` comma-ok receives,
+`1,920` select parents, `3,590` select cases, `546` select defaults, `1,949`
+goroutines, and `17,521` defers with `semantic_admission_delta = 0`.
 
 ## See also
 

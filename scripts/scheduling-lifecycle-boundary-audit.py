@@ -110,7 +110,7 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("go", "go.concurrent.goroutine", "go statement", "scheduling-boundary", "goroutine-scheduling-contract-missing", "goroutine scheduling", "go statements spawn concurrent execution", re.compile(r"\bgo\s+[A-Za-z_{(]")),
     Pattern("go", "go.concurrent.defer", "defer statement", "lifecycle-materialization-boundary", "defer-lifecycle-ordering-contract-missing", "defer lifecycle", "defer has scope-exit ordering and panic interaction semantics", re.compile(r"\bdefer\s+")),
     Pattern("go", "go.channel.send_receive", "channel send/receive", "channel-boundary", "channel-send-receive-protocol-contract-missing", "channel protocol", "channel send/receive has blocking and synchronization semantics", re.compile(r"<-")),
-    Pattern("go", "go.channel.select", "select", "channel-boundary", "channel-select-protocol-contract-missing", "channel select", "select has readiness, default, and scheduling semantics", re.compile(r"\bselect\s*\{")),
+    Pattern("go", "go.channel.select", "select", "channel-boundary", "channel-select-readiness-contract-missing", "channel select", "select has readiness, default, and scheduling semantics", re.compile(r"\bselect\s*\{")),
     Pattern("java", "java.future.completable", "CompletableFuture", "success-error-result-channel", "future-settled-value-channel-contract-missing", "future channel", "CompletableFuture needs success/error channel and scheduling proof", re.compile(r"\bCompletableFuture\b(?!\s*\.\s*(?:supplyAsync|runAsync|completedFuture|completedStage|failedFuture|failedStage|allOf|anyOf)\s*\()")),
     Pattern("java", "java.future.completable.spawn", "CompletableFuture.supplyAsync/runAsync", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "future task spawn", "CompletableFuture async factories schedule executor callbacks and return future handles", re.compile(r"\bCompletableFuture\s*\.\s*(?:supplyAsync|runAsync)\s*\("), "reporting-candidate-closed-boundary"),
     Pattern("java", "java.future.completable.factory", "CompletableFuture.completedFuture/failedFuture", "success-error-result-channel", "future-settled-value-channel-contract-missing", "future settled value", "CompletableFuture settled factories create fulfilled or exceptional future channels", re.compile(r"\bCompletableFuture\s*\.\s*(?:completedFuture|completedStage|failedFuture|failedStage)\s*\("), "reporting-candidate-closed-boundary"),
@@ -309,6 +309,56 @@ JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION = Pattern(
     re.compile(r"(?!x)x"),
     "reporting-candidate-closed-boundary",
 )
+GO_CHANNEL_SEND = Pattern(
+    "go",
+    "go.channel.send",
+    "channel send",
+    "channel-boundary",
+    "channel-send-synchronization-contract-missing",
+    "channel send synchronization",
+    "Go channel sends have blocking and synchronization semantics",
+    re.compile(r"(?!x)x"),
+)
+GO_CHANNEL_RECEIVE = Pattern(
+    "go",
+    "go.channel.receive",
+    "channel receive",
+    "channel-boundary",
+    "channel-receive-value-channel-contract-missing",
+    "channel receive value",
+    "Go channel receives have blocking, synchronization, and close/zero-value channel semantics",
+    re.compile(r"(?!x)x"),
+)
+GO_CHANNEL_RECEIVE_STATUS = Pattern(
+    "go",
+    "go.channel.receive_status",
+    "comma-ok channel receive",
+    "channel-boundary",
+    "channel-receive-status-contract-missing",
+    "channel receive status",
+    "Go comma-ok receives expose the channel close status as an additional protocol result",
+    re.compile(r"(?!x)x"),
+)
+GO_CHANNEL_SELECT_CASE = Pattern(
+    "go",
+    "go.channel.select.case",
+    "select case",
+    "channel-boundary",
+    "channel-select-case-selection-contract-missing",
+    "select case selection",
+    "Go select cases require readiness, case-selection, and send/receive side-effect proof",
+    re.compile(r"(?!x)x"),
+)
+GO_CHANNEL_SELECT_DEFAULT = Pattern(
+    "go",
+    "go.channel.select.default",
+    "select default",
+    "channel-boundary",
+    "channel-select-default-liveness-contract-missing",
+    "select default liveness",
+    "Go select defaults change blocking and liveness behavior",
+    re.compile(r"(?!x)x"),
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -406,9 +456,135 @@ def count_file(text: str, language: str) -> dict[Pattern, int]:
         counts.update(python_asyncio_imported_counts(masked))
     elif language == "rust":
         counts.update(rust_imported_async_runtime_counts(masked))
+    elif language == "go":
+        counts = {
+            pattern: count
+            for pattern, count in counts.items()
+            if pattern.surface not in {"go.channel.send_receive"}
+        }
+        counts.update(go_channel_protocol_counts(masked))
     elif language == "java":
         counts.update(java_future_receiver_counts(masked))
     return counts
+
+
+def go_channel_protocol_counts(text: str) -> dict[Pattern, int]:
+    counts: dict[Pattern, int] = {}
+    send_count = 0
+    receive_count = 0
+    status_count = len(
+        re.findall(
+            r"\b[A-Za-z_][A-Za-z0-9_]*\s*,\s*[A-Za-z_][A-Za-z0-9_]*\s*(?::=|=)\s*<-",
+            text,
+        )
+    )
+    for line in text.splitlines():
+        for match in re.finditer(r"<-", line):
+            if go_channel_arrow_is_directional_type(line, match.start(), match.end()):
+                continue
+            left = line[: match.start()].strip()
+            if go_channel_operator_is_receive(left):
+                receive_count += 1
+            else:
+                send_count += 1
+    if send_count:
+        counts[GO_CHANNEL_SEND] = send_count
+    if receive_count:
+        counts[GO_CHANNEL_RECEIVE] = receive_count
+    if status_count:
+        counts[GO_CHANNEL_RECEIVE_STATUS] = status_count
+    select_case_count, select_default_count = go_select_arm_counts(text)
+    if select_case_count:
+        counts[GO_CHANNEL_SELECT_CASE] = select_case_count
+    if select_default_count:
+        counts[GO_CHANNEL_SELECT_DEFAULT] = select_default_count
+    return counts
+
+
+def go_channel_arrow_is_directional_type(line: str, start: int, end: int) -> bool:
+    before = line[:start].rstrip()
+    after = line[end:].lstrip()
+    return re.search(r"\bchan\s*$", before) is not None or re.match(r"chan\b", after) is not None
+
+
+def go_channel_operator_is_receive(left: str) -> bool:
+    if not left:
+        return True
+    stripped = left.rstrip()
+    if stripped.endswith((":=", "=", ",", "(", "[", "{")):
+        return True
+    last = stripped.rsplit(None, 1)[-1]
+    return last in {"return", "case", "range"}
+
+
+def go_select_arm_counts(text: str) -> tuple[int, int]:
+    case_count = 0
+    default_count = 0
+    for match in re.finditer(r"\bselect\s*\{", text):
+        open_brace = text.find("{", match.start(), match.end())
+        if open_brace < 0:
+            continue
+        close_brace = matching_brace(text, open_brace)
+        if close_brace is None:
+            continue
+        cases, defaults = go_top_level_case_counts(text[open_brace + 1 : close_brace])
+        case_count += cases
+        default_count += defaults
+    return case_count, default_count
+
+
+def matching_brace(text: str, open_brace: int) -> int | None:
+    depth = 0
+    for idx in range(open_brace, len(text)):
+        if text[idx] == "{":
+            depth += 1
+        elif text[idx] == "}":
+            depth -= 1
+            if depth == 0:
+                return idx
+    return None
+
+
+def go_top_level_case_counts(block: str) -> tuple[int, int]:
+    case_count = 0
+    default_count = 0
+    depth = 0
+    idx = 0
+    while idx < len(block):
+        ch = block[idx]
+        if ch == "{":
+            depth += 1
+            idx += 1
+            continue
+        if ch == "}":
+            depth = max(0, depth - 1)
+            idx += 1
+            continue
+        if depth == 0 and go_word_at(block, idx, "case"):
+            colon = block.find(":", idx + len("case"))
+            newline = block.find("\n", idx)
+            if colon >= 0 and (newline < 0 or colon < newline):
+                case_count += 1
+                idx = colon + 1
+                continue
+        if depth == 0 and go_word_at(block, idx, "default"):
+            colon = block.find(":", idx + len("default"))
+            newline = block.find("\n", idx)
+            if colon >= 0 and (newline < 0 or colon < newline):
+                default_count += 1
+                idx = colon + 1
+                continue
+        idx += 1
+    return case_count, default_count
+
+
+def go_word_at(text: str, idx: int, word: str) -> bool:
+    if not text.startswith(word, idx):
+        return False
+    before = text[idx - 1] if idx > 0 else ""
+    after_idx = idx + len(word)
+    after = text[after_idx] if after_idx < len(text) else ""
+    return not (before.isalnum() or before == "_") and not (after.isalnum() or after == "_")
 
 
 def python_asyncio_alias_counts(text: str) -> dict[Pattern, int]:
@@ -873,6 +1049,7 @@ def summarize(args: argparse.Namespace) -> dict[str, Any]:
             "source_prevalence_only": True,
             "raw_source_snippets_included": False,
             "note": "Counts price boundary surfaces; they do not prove exact semantics.",
+            "go_channel_operation_pricing": "Directional channel type arrows such as <-chan and chan<- are excluded from send/receive operation counts.",
         },
         "summary": {
             "repos_in_manifest": len(repos),
@@ -912,14 +1089,20 @@ def recommended_order(surfaces: list[dict[str, Any]]) -> list[dict[str, Any]]:
         "abort-signal-cancellation-contract-missing": 4,
         "interval-async-iteration-lifecycle-contract-missing": 5,
         "goroutine-scheduling-contract-missing": 6,
-        "task-spawn-scheduling-contract-missing": 7,
-        "async-aggregate-all-completion-contract-missing": 8,
-        "async-aggregate-first-completion-contract-missing": 9,
-        "async-aggregate-completion-contract-missing": 10,
-        "java-completable-future-channel-contract-missing": 11,
+        "channel-receive-value-channel-contract-missing": 7,
+        "channel-send-synchronization-contract-missing": 8,
+        "channel-select-readiness-contract-missing": 9,
+        "channel-select-case-selection-contract-missing": 10,
+        "channel-select-default-liveness-contract-missing": 11,
+        "channel-receive-status-contract-missing": 12,
+        "task-spawn-scheduling-contract-missing": 13,
+        "async-aggregate-all-completion-contract-missing": 14,
+        "async-aggregate-first-completion-contract-missing": 15,
+        "async-aggregate-completion-contract-missing": 16,
+        "future-settled-value-channel-contract-missing": 17,
     }
     surface_priority = {
-        "swift.async.await": 12,
+        "swift.async.await": 18,
     }
     candidates = [
         item
@@ -970,6 +1153,8 @@ def recommended_reason(item: dict[str, Any]) -> str:
         return "Cancellation appears across JS/TS scheduling APIs and must stay separate from fulfillment/rejection recovery."
     if "interval" in subreason:
         return "Repeated emission/liveness needs lifecycle proof before interval streams can be compared exactly."
+    if "channel" in subreason:
+        return "Go channel protocol boundaries now split blocking, synchronization, close-status, and select readiness obligations."
     return "High-prevalence boundary surface with reusable obligation vocabulary."
 
 
@@ -1004,6 +1189,16 @@ def hard_negative_inventory() -> list[dict[str, Any]]:
             "class": "cross-language lifecycle one-shot/reusable/materialized distinctions",
             "evidence": "docs/scheduling-channel-callback-obligations-594.md",
             "status": "mapped-doc-policy",
+        },
+        {
+            "class": "Go direct call versus goroutine/defer scheduling and callback effects",
+            "evidence": "crates/nose-cli/tests/cli/semantic_boundaries.rs::query_mode_semantic_rejects_unproven_go_concurrency_protocol_convergence and crates/nose-cli/src/verify_admission/runtime_boundary/tests.rs::go_select_defer_and_goroutine_boundaries_report_specific_obligations",
+            "status": "expanded-this-slice",
+        },
+        {
+            "class": "Go channel receive value/status, channel send, and select/default readiness boundaries",
+            "evidence": "crates/nose-cli/tests/cli/semantic_boundaries.rs::query_mode_semantic_rejects_unproven_go_concurrency_protocol_convergence and crates/nose-cli/src/verify_admission/runtime_boundary/tests.rs::go_channel_protocol_boundaries_report_specific_obligations",
+            "status": "expanded-this-slice",
         },
         {
             "class": "Python imported asyncio bindings shadowed by parameters, assignments, nested imports, or project-local asyncio modules",
@@ -1067,6 +1262,7 @@ def relevant_recall_loss_obligations(items: list[dict[str, Any]]) -> list[dict[s
             "cancellation-liveness-boundary",
             "lifecycle-materialization-boundary",
             "exception-channel",
+            "callback-demand-effect",
         } or any(key in subreason for key in ("promise", "scheduler", "channel", "goroutine", "defer", "interval")):
             relevant.append(item)
     return relevant

@@ -86,6 +86,13 @@ break.
   obligations without opening exact admission; the 120-repo lexical audit prices
   `40` Java future reporting candidates while leaving `276` broad
   `CompletableFuture` mentions closed.
+- Added Go channel/goroutine/defer obligation refinement. Go source-backed
+  protocol boundaries now report channel send synchronization, receive value,
+  comma-ok receive status, select readiness/case/default, goroutine scheduling
+  plus callback effect, and defer lifecycle plus callback effect obligations
+  without opening exact admission; the 120-repo audit prices `4,294` channel
+  receives, `1,525` sends, `1,920` selects, `3,590` select cases, `546` select
+  defaults, `155` comma-ok receives, `1,949` goroutines, and `17,521` defers.
 - Added staged Promise recovery infrastructure: protocol diagnostics and hard
   negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
   continuation recovery; receiver-producer/call-return attribution; and

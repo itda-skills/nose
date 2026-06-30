@@ -344,3 +344,120 @@ fn future_channel_and_continuation_labels_have_specific_obligations() {
         )
     );
 }
+
+#[test]
+fn channel_send_receive_labels_have_specific_obligations() {
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "channel-send-synchronization-contract",
+            "channel-send-receive-protocol-contract",
+        ]),
+        (
+            "channel-boundary",
+            "channel-send-synchronization-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "channel-receive-status-contract",
+            "channel-receive-value-channel-contract",
+        ]),
+        (
+            "channel-boundary",
+            "channel-receive-status-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["channel-receive-value-channel-contract"]),
+        (
+            "channel-boundary",
+            "channel-receive-value-channel-contract-missing",
+        )
+    );
+}
+
+#[test]
+fn channel_select_labels_are_primary_over_nested_operations() {
+    assert_eq!(
+        runtime_boundary_obligation(&["channel-select-readiness-contract"]),
+        (
+            "channel-boundary",
+            "channel-select-readiness-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["channel-select-case-selection-contract"]),
+        (
+            "channel-boundary",
+            "channel-select-case-selection-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["channel-select-default-liveness-contract"]),
+        (
+            "channel-boundary",
+            "channel-select-default-liveness-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "channel-select-readiness-contract",
+            "channel-select-case-selection-contract",
+            "channel-receive-value-channel-contract",
+            "channel-select-protocol-contract",
+        ]),
+        (
+            "channel-boundary",
+            "channel-select-readiness-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "channel-select-case-selection-contract",
+            "channel-send-synchronization-contract",
+            "channel-select-protocol-contract",
+        ]),
+        (
+            "channel-boundary",
+            "channel-select-case-selection-contract-missing",
+        )
+    );
+}
+
+#[test]
+fn goroutine_and_defer_labels_have_specific_obligations() {
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "defer-lifecycle-ordering-contract",
+            "defer-callback-effect-contract",
+        ]),
+        (
+            "lifecycle-materialization-boundary",
+            "defer-lifecycle-ordering-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["defer-callback-effect-contract"]),
+        (
+            "callback-demand-effect",
+            "defer-callback-effect-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "goroutine-scheduling-contract",
+            "goroutine-callback-effect-contract",
+        ]),
+        (
+            "scheduling-boundary",
+            "goroutine-scheduling-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["goroutine-callback-effect-contract"]),
+        (
+            "callback-demand-effect",
+            "goroutine-callback-effect-contract-missing",
+        )
+    );
+}

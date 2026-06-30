@@ -27,7 +27,11 @@ preserved as protocol boundaries with `Source::Protocol(AsyncBlock)` and
 `Source::Protocol(TryPropagation)`. Go
 goroutine spawn, deferred calls, channel send/receive, receive-status
 projections, and `select` boundaries are also preserved as raw source-backed
-protocol anchors rather than ordinary calls, values, or sequence tags. Python
+protocol anchors rather than ordinary calls, values, or sequence tags. Their
+runtime-boundary reporting now splits channel send synchronization, receive
+value channels, comma-ok receive status, select readiness/case/default,
+goroutine callback effects, and defer callback effects while keeping exact
+admission closed. Python
 `asyncio` task/timer/aggregate calls, including import-backed namespace aliases,
 Rust `tokio`/`async-std` spawn and `join!`/`select!` macros, including
 imported runtime bindings, and Swift `Task` creation now report shared
@@ -149,6 +153,12 @@ matching [120-repo pricing artifact](../bench/recall_loss/scheduling-lifecycle-b
 prices `Task.sleep` at `161` occurrences / `10` repos, task groups at `153` /
 `9`, `Task.yield` at `12` / `3`, and corrects `5` already-supported
 `Task.detached(...)` spawn occurrences in the audit.
+The follow-up [Go channel protocol pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json)
+keeps exact admission closed while pricing `4,294` channel receives, `1,525`
+sends, `155` comma-ok receives, `1,920` select parents, `3,590` select cases,
+`546` select defaults, `1,949` goroutines, and `17,521` defers in the pinned
+120-repo corpus. Select parents and arms are counted separately because Go
+lowering preserves them as distinct source-backed protocol boundaries.
 Library/API identity is consolidated through internal `LibraryApiContract` rows
 for factory, constructor, selected property/non-factory method/view surfaces,
 and selected non-call sentinels, with occurrence evidence covering selected

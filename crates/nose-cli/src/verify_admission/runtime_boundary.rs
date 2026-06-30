@@ -24,7 +24,7 @@ pub(super) fn runtime_boundary_missing_evidence_with_context(
     let mut labels = vec!["lowered-runtime-boundary-contract"];
     let mut found = false;
     visit_subtree(il, root, |node| {
-        if push_runtime_node_missing_evidence(il, node, &mut labels) {
+        if push_runtime_node_missing_evidence(il, interner, node, &mut labels) {
             found = true;
         }
         if il.kind(node) == NodeKind::Call {
@@ -38,6 +38,7 @@ pub(super) fn runtime_boundary_missing_evidence_with_context(
 
 fn push_runtime_node_missing_evidence(
     il: &nose_il::Il,
+    interner: &Interner,
     node: NodeId,
     labels: &mut Vec<&'static str>,
 ) -> bool {
@@ -61,6 +62,7 @@ fn push_runtime_node_missing_evidence(
                     nose_il::SourceProtocolKind::ChannelReceive
                     | nose_il::SourceProtocolKind::ChannelSend,
                 ) => {
+                    push_go_channel_send_receive_missing_evidence(il, interner, node, labels);
                     push_unique(labels, "channel-send-receive-protocol-contract");
                     push_unique(labels, "channel-protocol-contract");
                 }
@@ -69,15 +71,21 @@ fn push_runtime_node_missing_evidence(
                     | nose_il::SourceProtocolKind::ChannelSelectCase
                     | nose_il::SourceProtocolKind::ChannelSelectDefault,
                 ) => {
+                    push_go_channel_select_missing_evidence(
+                        nose_semantics::source_protocol_at_node(il, node),
+                        labels,
+                    );
                     push_unique(labels, "channel-select-protocol-contract");
                     push_unique(labels, "channel-protocol-contract");
                 }
                 Some(nose_il::SourceProtocolKind::Defer) => {
                     push_unique(labels, "defer-lifecycle-ordering-contract");
+                    push_unique(labels, "defer-callback-effect-contract");
                     push_unique(labels, "concurrency-scheduling-contract");
                 }
                 Some(nose_il::SourceProtocolKind::GoRoutine) => {
                     push_unique(labels, "goroutine-scheduling-contract");
+                    push_unique(labels, "goroutine-callback-effect-contract");
                     push_unique(labels, "concurrency-scheduling-contract");
                 }
                 Some(nose_il::SourceProtocolKind::TryPropagation) => {
@@ -96,6 +104,52 @@ fn push_runtime_node_missing_evidence(
             true
         }
         _ => false,
+    }
+}
+
+fn push_go_channel_send_receive_missing_evidence(
+    il: &nose_il::Il,
+    interner: &Interner,
+    node: NodeId,
+    labels: &mut Vec<&'static str>,
+) {
+    match raw_node_name(il, interner, node) {
+        Some("channel_send") => {
+            push_unique(labels, "channel-send-synchronization-contract");
+        }
+        Some("channel_receive_status") => {
+            push_unique(labels, "channel-receive-status-contract");
+            push_unique(labels, "channel-receive-value-channel-contract");
+        }
+        Some("channel_receive") => {
+            push_unique(labels, "channel-receive-value-channel-contract");
+        }
+        _ => {}
+    }
+}
+
+fn push_go_channel_select_missing_evidence(
+    protocol: Option<nose_il::SourceProtocolKind>,
+    labels: &mut Vec<&'static str>,
+) {
+    match protocol {
+        Some(nose_il::SourceProtocolKind::ChannelSelect) => {
+            push_unique(labels, "channel-select-readiness-contract");
+        }
+        Some(nose_il::SourceProtocolKind::ChannelSelectCase) => {
+            push_unique(labels, "channel-select-case-selection-contract");
+        }
+        Some(nose_il::SourceProtocolKind::ChannelSelectDefault) => {
+            push_unique(labels, "channel-select-default-liveness-contract");
+        }
+        _ => {}
+    }
+}
+
+fn raw_node_name<'a>(il: &nose_il::Il, interner: &'a Interner, node: NodeId) -> Option<&'a str> {
+    match il.node(node).payload {
+        Payload::Name(symbol) => Some(interner.resolve(symbol)),
+        _ => None,
     }
 }
 

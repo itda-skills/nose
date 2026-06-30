@@ -23,6 +23,19 @@ fn missing_evidence_for_protocol(
         .unwrap_or_else(|| panic!("expected runtime boundary evidence for {protocol:?} in {path}"))
 }
 
+fn missing_evidence_for_raw_tag(path: &str, src: &str, lang: Lang, tag: &str) -> Vec<&'static str> {
+    let (il, interner) = lowered_source(path, src, lang);
+    let node = (0..il.nodes.len())
+        .map(|idx| NodeId(idx as u32))
+        .find(|&node| match il.node(node).payload {
+            Payload::Name(symbol) => interner.resolve(symbol) == tag,
+            _ => false,
+        })
+        .unwrap_or_else(|| panic!("expected raw tag {tag} in {path}"));
+    runtime_boundary_missing_evidence(&il, &interner, node)
+        .unwrap_or_else(|| panic!("expected runtime boundary evidence for {tag} in {path}"))
+}
+
 fn missing_evidence_for_call(src: &str, callee_suffix: &str) -> Vec<&'static str> {
     missing_evidence_for_lang_call("promise.js", src, Lang::JavaScript, callee_suffix)
 }
@@ -113,6 +126,87 @@ fn await_protocol_missing_evidence_is_language_neutral() {
             "{path} should not report plain await as Promise-specific evidence: {labels:?}"
         );
     }
+}
+
+#[test]
+fn go_channel_protocol_boundaries_report_specific_obligations() {
+    let send = missing_evidence_for_raw_tag(
+        "channel.go",
+        "package p\nfunc send(ch chan int, x int) { ch <- x }\n",
+        Lang::Go,
+        "channel_send",
+    );
+    assert!(send.contains(&"channel-send-synchronization-contract"));
+    assert!(send.contains(&"channel-send-receive-protocol-contract"));
+    assert!(send.contains(&"channel-protocol-contract"));
+
+    let receive = missing_evidence_for_raw_tag(
+        "channel.go",
+        "package p\nfunc recv(ch chan int) int { return <-ch }\n",
+        Lang::Go,
+        "channel_receive",
+    );
+    assert!(receive.contains(&"channel-receive-value-channel-contract"));
+    assert!(!receive.contains(&"channel-receive-status-contract"));
+    assert!(receive.contains(&"channel-send-receive-protocol-contract"));
+
+    let status = missing_evidence_for_raw_tag(
+        "channel.go",
+        "package p\nfunc recv(ch chan int) bool { _, ok := <-ch; return ok }\n",
+        Lang::Go,
+        "channel_receive_status",
+    );
+    assert!(status.contains(&"channel-receive-status-contract"));
+    assert!(status.contains(&"channel-receive-value-channel-contract"));
+    assert!(status.contains(&"channel-send-receive-protocol-contract"));
+}
+
+#[test]
+fn go_select_defer_and_goroutine_boundaries_report_specific_obligations() {
+    let select = missing_evidence_for_raw_tag(
+        "select.go",
+        "package p\nfunc f(ch chan int) { select { case <-ch: return; default: return } }\n",
+        Lang::Go,
+        "select",
+    );
+    assert!(select.contains(&"channel-select-readiness-contract"));
+    assert!(select.contains(&"channel-select-protocol-contract"));
+
+    let select_case = missing_evidence_for_raw_tag(
+        "select.go",
+        "package p\nfunc f(ch chan int) { select { case <-ch: return; default: return } }\n",
+        Lang::Go,
+        "select_case",
+    );
+    assert!(select_case.contains(&"channel-select-case-selection-contract"));
+    assert!(select_case.contains(&"channel-select-protocol-contract"));
+
+    let select_default = missing_evidence_for_raw_tag(
+        "select.go",
+        "package p\nfunc f(ch chan int) { select { case <-ch: return; default: return } }\n",
+        Lang::Go,
+        "select_default",
+    );
+    assert!(select_default.contains(&"channel-select-default-liveness-contract"));
+    assert!(select_default.contains(&"channel-select-protocol-contract"));
+
+    let deferred = missing_evidence_for_protocol(
+        "defer.go",
+        "package p\nfunc f(x int) { defer record(x) }\n",
+        Lang::Go,
+        nose_il::SourceProtocolKind::Defer,
+    );
+    assert!(deferred.contains(&"defer-lifecycle-ordering-contract"));
+    assert!(deferred.contains(&"defer-callback-effect-contract"));
+
+    let goroutine = missing_evidence_for_protocol(
+        "goroutine.go",
+        "package p\nfunc f(x int) { go record(x) }\n",
+        Lang::Go,
+        nose_il::SourceProtocolKind::GoRoutine,
+    );
+    assert!(goroutine.contains(&"goroutine-scheduling-contract"));
+    assert!(goroutine.contains(&"goroutine-callback-effect-contract"));
 }
 
 #[test]
