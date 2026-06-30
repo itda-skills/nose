@@ -134,6 +134,10 @@ break.
   interpretation can still carry diagnostics-only obligation attribution under
   `oracle_exclusions.by_obligation`. The top-level `by_obligation` rollup stays
   limited to oracle-interpretable admission rejections.
+- Refined non-JS async runtime API diagnostics so Python `asyncio`
+  task/timer/aggregate calls, Rust `tokio`/`async-std` spawn and
+  `join!`/`select!` macros, and Swift `Task` creation report shared
+  `task-*` and `async-aggregate-*` obligations without opening exact admission.
 - Refined import-snapshot census reporting to separate missing provider modules,
   missing exports, re-export boundaries, external/stdlib/workspace boundaries,
   provider/importer mutation, missing provider API proof, and aggregate shapes

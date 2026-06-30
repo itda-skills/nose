@@ -427,6 +427,14 @@ const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
     runtime_rule!("timer-cancellation-liveness-contract" => "cancellation-liveness-boundary", "timer-cancellation-liveness-contract-missing"),
     runtime_rule!("interval-async-iteration-lifecycle-contract" => "lifecycle-materialization-boundary", "interval-async-iteration-lifecycle-contract-missing"),
     runtime_rule!("interval-cancellation-liveness-contract" => "cancellation-liveness-boundary", "interval-cancellation-liveness-contract-missing"),
+    runtime_rule!("task-spawn-scheduling-contract" => "scheduling-boundary", "task-spawn-scheduling-contract-missing"),
+    runtime_rule!("task-handle-lifecycle-contract" => "lifecycle-materialization-boundary", "task-handle-lifecycle-contract-missing"),
+    runtime_rule!("task-cancellation-liveness-contract" => "cancellation-liveness-boundary", "task-cancellation-liveness-contract-missing"),
+    runtime_rule!("async-aggregate-all-completion-contract" => "success-error-result-channel", "async-aggregate-all-completion-contract-missing"),
+    runtime_rule!("async-aggregate-first-completion-contract" => "cancellation-liveness-boundary", "async-aggregate-first-completion-contract-missing"),
+    runtime_rule!("async-aggregate-completion-contract" => "success-error-result-channel", "async-aggregate-completion-contract-missing"),
+    runtime_rule!("async-aggregate-result-channel-contract" => "success-error-result-channel", "async-aggregate-result-channel-contract-missing"),
+    runtime_rule!("async-aggregate-cancellation-liveness-contract" => "cancellation-liveness-boundary", "async-aggregate-cancellation-liveness-contract-missing"),
     RuntimeBoundaryRule {
         evidence: "channel-send-receive-protocol-contract",
         obligation: (
