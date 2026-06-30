@@ -129,7 +129,7 @@ break.
   existing `Source::Protocol(AsyncFunction)` boundary alongside JS/TS, while
   Rust async blocks use `Source::Protocol(AsyncBlock)`. Legacy Promise/Future
   labels remain readable for old artifacts, and Promise async-function return
-  producer proof remains Promise-specific.
+  producer proof remains JS/TS-only.
 - Refined recall-loss reports so runtime/protocol units excluded before oracle
   interpretation can still carry diagnostics-only obligation attribution under
   `oracle_exclusions.by_obligation`. The top-level `by_obligation` rollup stays

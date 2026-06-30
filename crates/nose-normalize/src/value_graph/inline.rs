@@ -20,7 +20,7 @@
 //! evidence facade.
 
 use super::*;
-use nose_il::UnitKind;
+use nose_il::{Lang, UnitKind};
 use nose_semantics::direct_function_call_target_span_at_call;
 
 /// Body-size ceiling (IL nodes) for an inline candidate — keeps per-call-site re-evaluation
@@ -414,6 +414,9 @@ impl<'a> Builder<'a> {
         &self,
         call: NodeId,
     ) -> Option<(NodeId, InlineFunction)> {
+        if !matches!(self.il.meta.lang, Lang::JavaScript | Lang::TypeScript) {
+            return None;
+        }
         let proven_span = direct_function_call_target_span_at_call(self.il, self.interner, call)?;
         let mut found = None;
         for unit in &self.il.units {

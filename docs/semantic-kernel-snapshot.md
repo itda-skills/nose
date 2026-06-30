@@ -1356,8 +1356,8 @@ this worktree because the required evidence is not yet modeled:
 - JS-like `.then(lambda)` does not converge with `await` code yet. Supported
   `Promise.resolve(...).then(...)` chains can reduce behind a Promise boundary,
   but await scheduling, exception, and effect equivalence are not modeled as the
-  same async protocol. The JS/TS audit counts `18,841` `await` occurrences and
-  `9,569` async-function surfaces in this closed boundary.
+  same async protocol. The 2026-06-30 JS/TS audit counts `29,305` `await`
+  occurrences and `14,491` async-function surfaces in this closed boundary.
 - JS/TS, Python, and Rust `await value` does not converge with plain `value`
   until language/runtime-specific async protocol, demand, scheduling, exception,
   and effect obligations are modeled. Rust `async {}` and `?` are similarly

@@ -237,7 +237,7 @@ fn scoped_var_root_and_suffix<'a>(
     interner: &'a Interner,
     node: NodeId,
 ) -> Option<(&'a str, &'a str)> {
-    if il.meta.lang != nose_il::Lang::Rust || il.kind(node) != NodeKind::Var {
+    if il.meta.lang != Lang::Rust || il.kind(node) != NodeKind::Var {
         return None;
     }
     let Payload::Name(symbol) = il.node(node).payload else {

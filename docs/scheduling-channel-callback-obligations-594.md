@@ -112,13 +112,13 @@ largest surface but remains the riskiest; exact recovery should require both
 callee identity and returned `PromiseLike` domain proof, with narrower
 async/direct-return slices priced first.
 The first such recovery slice is [promise-async-function-return-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-async-function-return-recovery-2026-06-29.v1.json).
-Same-file direct calls to source-proven async functions now provide
+Same-file direct calls to JS/TS source-proven async functions now provide
 dependency-backed `PromiseLike` result-domain evidence, and pure
 non-thenable-safe returned payloads can feed local `.then` fulfillment recovery.
-This is still a producer proof, not broad scheduling equivalence: `await`,
-throw/rejection paths, possible thenables, opaque call results, constructors,
-imported/member call returns, `.finally`, and aggregate combinators remain
-closed.
+Non-JS async functions remain scheduling/protocol facts only. This is still a
+producer proof, not broad scheduling equivalence: `await`, throw/rejection
+paths, possible thenables, opaque call results, constructors, imported/member
+call returns, `.finally`, and aggregate combinators remain closed.
 The follow-up [promise-direct-function-return-recovery-2026-06-29.v1.json](../bench/recall_loss/promise-direct-function-return-recovery-2026-06-29.v1.json)
 opens the next producer-proof slice inside the `184` local/parameter
 call-return candidates from the JS/TS corpus scan. A same-file direct function

@@ -127,6 +127,7 @@ cargo run -q -p nose-cli -- verify crates \
   --recall-loss-report target/recall-loss.async-function-obligation.crates.json
 
 python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.async-function-obligation.crates.json \
   --output target/scheduling-lifecycle-boundary-audit.async-function-obligation.json \
   --generated-on 2026-06-30
 ```
@@ -340,12 +341,13 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   runtime-body async functions now share
   `async-function-scheduling-contract`, and Rust async blocks use
   `async-block-scheduling-contract`. Exact admission remains closed, and
-  Promise-specific async-function return producer proof remains separate.
+  Promise-specific async-function return producer proof remains JS/TS-only.
 - [scheduling-lifecycle-boundary-audit-async-function-obligation-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-async-function-obligation-2026-06-30.v1.json)
   records the 120-repo lexical pricing after the async function/block vocabulary
   migration. It splits Rust `async fn` from Rust async blocks and aligns JS/TS,
   Python, Rust, and Swift async function rows to the shared scheduling
-  subreason.
+  subreason. Its `current_recall_loss` section carries the matching crates gate
+  summary plus separate interpretable and oracle-exclusion obligation rollups.
 - [promise-protocol-hard-negatives-2026-06-28.v1.json](promise-protocol-hard-negatives-2026-06-28.v1.json)
   records the follow-up Promise hard-negative slice. It keeps exact admission
   closed while pinning async-function/sync, Promise executor/sync,
@@ -402,10 +404,11 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   closed until callee identity and returned `PromiseLike` domain proof are both
   explicit.
 - [promise-async-function-return-recovery-2026-06-29.v1.json](promise-async-function-return-recovery-2026-06-29.v1.json)
-  records the first same-file async-function producer recovery slice. Direct
-  calls to source-proven async functions now emit `PromiseLike` result-domain
-  evidence, and pure non-thenable-safe returned payloads can feed local `.then`
-  fulfillment recovery while preserving the Promise boundary. Await,
+  records the first JS/TS same-file async-function producer recovery slice.
+  Direct calls to JS/TS source-proven async functions now emit `PromiseLike`
+  result-domain evidence, and pure non-thenable-safe returned payloads can feed
+  local `.then` fulfillment recovery while preserving the Promise boundary.
+  Await,
   throw/rejection, possible thenables, opaque call results, constructor
   receivers, imported/member call returns, `.finally`, and aggregate
   combinators remain closed.

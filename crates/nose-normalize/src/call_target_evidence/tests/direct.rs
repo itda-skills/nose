@@ -67,6 +67,39 @@ fn emits_promise_like_domain_for_direct_async_function_call_result() {
 }
 
 #[test]
+fn direct_async_function_result_domain_is_js_ts_only() {
+    for lang in [Lang::Python, Lang::Rust, Lang::Swift] {
+        let DirectReturnFixture {
+            interner,
+            mut il,
+            target,
+            call,
+            async_boundary,
+            ..
+        } = direct_return_call_fixture_for_lang(DirectReturnKind::AsyncLiteral, lang);
+        il.evidence.push(EvidenceRecord {
+            id: EvidenceId(500),
+            anchor: EvidenceAnchor::source_span(il.node(async_boundary.unwrap()).span),
+            kind: EvidenceKind::Source(SourceFactKind::Protocol(SourceProtocolKind::AsyncFunction)),
+            provenance: language_core_provenance(lang),
+            dependencies: Vec::new(),
+            status: EvidenceStatus::Asserted,
+        });
+
+        run(&mut il, &interner);
+
+        assert!(
+            direct_function_call_target_at_call(&il, &interner, call, target),
+            "{lang:?} should still get direct call-target evidence"
+        );
+        assert!(
+            promise_like_domain_at_call(&il, call).is_none(),
+            "{lang:?} async function calls must not be asserted as JS PromiseLike"
+        );
+    }
+}
+
+#[test]
 fn emits_promise_like_domain_for_direct_function_returning_promise_like() {
     let DirectReturnFixture {
         interner,
@@ -222,6 +255,7 @@ struct DirectReturnFixture {
     async_boundary: Option<NodeId>,
 }
 
+#[derive(Clone, Copy)]
 enum DirectReturnKind {
     AsyncLiteral,
     PromiseCall,
@@ -229,6 +263,10 @@ enum DirectReturnKind {
 }
 
 fn direct_return_call_fixture(kind: DirectReturnKind) -> DirectReturnFixture {
+    direct_return_call_fixture_for_lang(kind, Lang::TypeScript)
+}
+
+fn direct_return_call_fixture_for_lang(kind: DirectReturnKind, lang: Lang) -> DirectReturnFixture {
     let interner = Interner::new();
     let load = interner.intern("load");
     let use_value = interner.intern("useValue");
@@ -268,7 +306,7 @@ fn direct_return_call_fixture(kind: DirectReturnKind) -> DirectReturnFixture {
         module,
         FileMeta {
             path: "t".into(),
-            lang: Lang::TypeScript,
+            lang,
         },
         vec![
             Unit {

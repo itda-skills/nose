@@ -15,6 +15,7 @@
       "No language-specific async-function admission path was opened.",
       "No public semantic-pack API was added.",
       "Promise-specific receiver/producer proof labels remain Promise-specific.",
+      "Non-JS async function calls do not produce JS PromiseLike domain evidence.",
       "Declaration-only Swift protocol requirements remain outside this runtime-body boundary slice."
     ],
     "reused_capabilities": [
@@ -52,9 +53,9 @@
   },
   "current_crates_gate": {
     "report": "target/recall-loss.async-function-obligation.crates.json",
-    "total_units": 6611,
+    "total_units": 6613,
     "interpretable_units": 895,
-    "excluded_units": 5716,
+    "excluded_units": 5718,
     "admission_rejections": 744,
     "false_merges": 0,
     "lossy_fingerprint_collisions": 0,
@@ -165,8 +166,9 @@
     "cargo test -p nose-cli async_block_protocol_missing_evidence_is_language_neutral -- --nocapture",
     "cargo test -p nose-cli recall_loss_report::obligations -- --nocapture",
     "cargo test -p nose-cli recall_loss_report_attributes_async_function_and_block_oracle_exclusions -- --nocapture",
+    "cargo test -p nose-normalize direct_async_function_result_domain_is_js_ts_only -- --nocapture",
     "python3 -m py_compile scripts/scheduling-lifecycle-boundary-audit.py",
-    "python3 scripts/scheduling-lifecycle-boundary-audit.py --output target/scheduling-lifecycle-boundary-audit.async-function-obligation.json --generated-on 2026-06-30",
+    "python3 scripts/scheduling-lifecycle-boundary-audit.py --recall-loss-report target/recall-loss.async-function-obligation.crates.json --output target/scheduling-lifecycle-boundary-audit.async-function-obligation.json --generated-on 2026-06-30",
     "cargo run -q -p nose-cli -- verify crates --max-violations 0 --recall-loss-report target/recall-loss.async-function-obligation.crates.json"
   ],
   "next_exact_work_policy": {

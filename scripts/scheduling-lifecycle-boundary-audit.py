@@ -295,11 +295,24 @@ def summarize(args: argparse.Namespace) -> dict[str, Any]:
         "recommended_order": recommended_order(surfaces),
         "hard_negative_inventory": hard_negative_inventory(),
         "current_recall_loss": current_recall_loss(args.recall_loss_report),
-        "regenerate": [
-            "python3 scripts/scheduling-lifecycle-boundary-audit.py --recall-loss-report target/recall-loss.issue-602.crates.json --output target/scheduling-lifecycle-boundary-audit-602.v1.json",
-        ],
+        "regenerate": [regenerate_command(args)],
     }
     return report
+
+
+def regenerate_command(args: argparse.Namespace) -> str:
+    parts = ["python3", "scripts/scheduling-lifecycle-boundary-audit.py"]
+    if args.manifest != DEFAULT_MANIFEST:
+        parts.extend(["--manifest", args.manifest])
+    if args.repos_root != DEFAULT_REPOS_ROOT:
+        parts.extend(["--repos-root", args.repos_root])
+    if args.recall_loss_report:
+        parts.extend(["--recall-loss-report", args.recall_loss_report])
+    if args.output != DEFAULT_OUTPUT:
+        parts.extend(["--output", args.output])
+    if args.generated_on != DEFAULT_GENERATED_ON:
+        parts.extend(["--generated-on", args.generated_on])
+    return " ".join(parts)
 
 
 def recommended_order(surfaces: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -406,8 +419,23 @@ def current_recall_loss(path: str | None) -> dict[str, Any] | None:
     if not report_path.exists():
         return {"report": path, "status": "missing"}
     report = json.loads(report_path.read_text())
+    relevant_interpretable = relevant_recall_loss_obligations(report.get("by_obligation", []))
+    oracle = report.get("oracle_exclusions", {})
+    relevant_oracle_exclusions = relevant_recall_loss_obligations(
+        oracle.get("by_obligation", [])
+    )
+    return {
+        "report": path,
+        "summary": report.get("summary", {}),
+        "soundness_gate": report.get("soundness_gate", {}),
+        "relevant_obligations": relevant_interpretable,
+        "relevant_oracle_exclusion_obligations": relevant_oracle_exclusions,
+    }
+
+
+def relevant_recall_loss_obligations(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     relevant = []
-    for item in report.get("by_obligation", []):
+    for item in items:
         family = item.get("obligation_family", "")
         subreason = item.get("obligation_subreason", "")
         if family in {
@@ -420,12 +448,7 @@ def current_recall_loss(path: str | None) -> dict[str, Any] | None:
             "exception-channel",
         } or any(key in subreason for key in ("promise", "scheduler", "channel", "goroutine", "defer", "interval")):
             relevant.append(item)
-    return {
-        "report": path,
-        "summary": report.get("summary", {}),
-        "soundness_gate": report.get("soundness_gate", {}),
-        "relevant_obligations": relevant,
-    }
+    return relevant
 
 
 def main() -> None:
