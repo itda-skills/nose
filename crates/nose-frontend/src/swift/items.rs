@@ -96,6 +96,10 @@ pub(super) fn lower_type(lo: &mut Lowering, node: TsNode) -> NodeId {
 }
 pub(super) fn lower_extension(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
+    let name = node
+        .child_by_field_name("type")
+        .and_then(|ty| type_surface_name(lo, ty))
+        .map(|name| lo.sym(&name));
     let mut kids = Vec::new();
     for child in Lowering::named_children(node) {
         match child.kind() {
@@ -110,7 +114,7 @@ pub(super) fn lower_extension(lo: &mut Lowering, node: TsNode) -> NodeId {
         }
     }
     let block = lo.add(NodeKind::Block, Payload::None, span, &kids);
-    lo.push_unit_with_origin(block, UnitKind::Class, None, swift_extension_origin(node));
+    lo.push_unit_with_origin(block, UnitKind::Class, name, swift_extension_origin(node));
     block
 }
 pub(super) fn record_typealias_shadow(lo: &mut Lowering, node: TsNode) {

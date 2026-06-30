@@ -8,6 +8,7 @@ use nose_il::{FileId, Interner, Lang, NodeId, NodeKind};
 use super::super::runtime_boundary_missing_evidence_with_context;
 
 mod imported_bindings;
+mod swift;
 
 fn runtime_boundary_evidence_for_corpus_call(
     sources: &[(&str, &str, Lang)],

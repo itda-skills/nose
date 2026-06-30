@@ -6,6 +6,7 @@ use nose_il::{
 };
 
 mod rust_imports;
+mod swift;
 
 pub(super) fn push_async_runtime_call_missing_evidence(
     il: &nose_il::Il,
@@ -27,7 +28,7 @@ pub(super) fn push_async_runtime_call_missing_evidence(
         nose_il::Lang::Rust => push_rust_async_runtime_call_missing_evidence(
             il, interner, call, callee, &path, context, labels,
         ),
-        nose_il::Lang::Swift => push_swift_async_runtime_call_missing_evidence(
+        nose_il::Lang::Swift => swift::push_swift_async_runtime_call_missing_evidence(
             il, interner, callee, &path, context, labels,
         ),
         _ => false,
@@ -307,26 +308,6 @@ fn push_rust_async_runtime_call_missing_evidence(
     false
 }
 
-fn push_swift_async_runtime_call_missing_evidence(
-    il: &nose_il::Il,
-    interner: &Interner,
-    callee: NodeId,
-    callee_path: &str,
-    context: &AdmissionContext,
-    labels: &mut Vec<&'static str>,
-) -> bool {
-    if context.swift_name_is_visible("Task") {
-        return false;
-    }
-    match callee_path {
-        "Task" | "Task.detached" if swift_task_root_unshadowed(il, interner, callee) => {
-            push_task_spawn_missing_evidence(labels);
-            true
-        }
-        _ => false,
-    }
-}
-
 fn runtime_root(callee_path: &str) -> Option<&str> {
     callee_path.split("::").next()
 }
@@ -504,17 +485,6 @@ fn rust_imported_binding_at_span(
             && record.status == EvidenceStatus::Asserted
             && il.evidence_dependencies_asserted(record)
     })
-}
-
-fn swift_task_root_unshadowed(il: &nose_il::Il, interner: &Interner, callee: NodeId) -> bool {
-    let root = if il.kind(callee) == NodeKind::Field {
-        method_receiver(il, callee).unwrap_or(callee)
-    } else {
-        callee
-    };
-    il.kind(root) == NodeKind::Var
-        && node_defines_name(il, interner, root, "Task")
-        && !nose_semantics::file_defines_name_visible_at(il, interner, "Task", il.node(root).span)
 }
 
 fn push_task_spawn_missing_evidence(labels: &mut Vec<&'static str>) {

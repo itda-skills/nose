@@ -73,6 +73,12 @@ break.
   executor timing, cancellation/liveness, scheduler/timer/microtask/interval
   behavior, and cross-language lifecycle protocols stay named closed
   obligations for future priced epics.
+- Added Swift structured-concurrency reporting for `Task.sleep`, `Task.yield`,
+  and task-group calls. These now map to shared timer, task-yield, aggregate,
+  cancellation/liveness, result-channel, and exception-channel obligations
+  without opening exact admission; the 120-repo audit prices the new Swift
+  surfaces at `326` occurrences plus `5` corrected `Task.detached(...)` spawn
+  occurrences.
 - Added staged Promise recovery infrastructure: protocol diagnostics and hard
   negatives; dependency-closed `Promise.resolve`; local fulfilled/rejected
   continuation recovery; receiver-producer/call-return attribution; and

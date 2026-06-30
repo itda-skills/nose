@@ -2119,13 +2119,16 @@ different APIs.
 - The non-JS async runtime follow-ups keep using that vocabulary instead of
   adding API-by-API kernel features. Python `asyncio` namespace aliases and
   `from asyncio import ...` bindings plus Rust imported and brace-imported
-  `tokio`/`async_std`/`futures` runtime bindings now compose existing
-  import/symbol identity proof with shared task and async aggregate obligations.
-  The latest pricing artifact adds `2` Python imported `asyncio.sleep`
-  occurrences over the previous `142,845` source-prevalence baseline, while
-  exact admission remains closed until scheduling, cancellation, lifecycle,
-  result-channel, exception, and callback/effect contracts are
-  dependency-closed.
+  `tokio`/`async_std`/`futures` runtime bindings compose existing import/symbol
+  identity proof with shared task and async aggregate obligations. The Swift
+  structured-concurrency follow-up then maps `Task.sleep`, `Task.yield`, and
+  task-group calls onto the same timer, task-yield, aggregate,
+  cancellation/liveness, result-channel, and exception-channel vocabulary. The
+  latest pricing artifact raises source prevalence from `142,847` to `143,178`
+  by adding `326` Swift structured-concurrency occurrences plus `5` corrected
+  `Task.detached(...)` audit occurrences, while exact admission remains closed
+  until scheduling, cancellation, lifecycle, result-channel, exception, and
+  callback/effect contracts are dependency-closed.
 - Keep expanding lazy iterator/generator/channel hard negatives before enabling
   new exact laws. The first Python generator/list/set and Go channel/goroutine
   hard negatives are now in place, along with hard negatives for pull-lazy

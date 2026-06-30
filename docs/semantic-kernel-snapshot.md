@@ -137,6 +137,14 @@ uses the same capability boundary for Python `from asyncio import ...`
 bindings and Rust brace-use `ImportedBinding` evidence, adding `2` newly priced
 Python imported `asyncio.sleep` occurrences while keeping exact admission
 closed and preserving the release `verify crates` gate at `0` false merges.
+The follow-up [Swift structured-concurrency artifact](../bench/recall_loss/swift-structured-concurrency-obligation-reporting-2026-06-30.v1.json)
+keeps exact admission closed while mapping `Task.sleep`, `Task.yield`, and
+task-group calls onto the existing timer, task-yield, aggregate,
+cancellation/liveness, result-channel, and exception-channel obligations. Its
+matching [120-repo pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-swift-structured-concurrency-2026-06-30.v1.json)
+prices `Task.sleep` at `161` occurrences / `10` repos, task groups at `153` /
+`9`, `Task.yield` at `12` / `3`, and corrects `5` already-supported
+`Task.detached(...)` spawn occurrences in the audit.
 Library/API identity is consolidated through internal `LibraryApiContract` rows
 for factory, constructor, selected property/non-factory method/view surfaces,
 and selected non-call sentinels, with occurrence evidence covering selected

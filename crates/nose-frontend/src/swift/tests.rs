@@ -467,3 +467,20 @@ func fetch(_ key: String) async -> Int {
         SourceProtocolKind::AsyncFunction,
     );
 }
+
+#[test]
+fn extension_declaration_preserves_extended_type_name() {
+    let (il, interner) = il_with_interner(
+        r#"
+extension Task {
+  static func sleep(nanoseconds: Int) {}
+}
+"#,
+    );
+    assert!(
+        il.units
+            .iter()
+            .any(|unit| unit.kind == UnitKind::Class && unit.name == Some(interner.intern("Task"))),
+        "extension Task should preserve the extended type name as a visible unit"
+    );
+}
