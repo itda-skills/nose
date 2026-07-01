@@ -276,6 +276,25 @@ fn query_mode_semantic_rejects_unproven_rust_await_sync_convergence() {
     );
 }
 
+/// Rust async closures are Future-producing callable boundaries, not ordinary
+/// synchronous lambdas. Exact convergence requires async callable scheduling and
+/// result-channel proof that is not modeled yet.
+#[test]
+fn query_mode_semantic_rejects_unproven_rust_async_closure_sync_convergence() {
+    let project = TempProject::new("rs_async_closure_boundary");
+    project.write("sync.rs", "fn make() { let cb = |x: i32| x + 1; }\n");
+    project.write(
+        "async.rs",
+        "fn make() { let cb = async move |x: i32| x + 1; }\n",
+    );
+
+    let json = project.query_semantic_min_json();
+    assert!(
+        !family_contains_all(&json, &["sync.rs", "async.rs"]),
+        "Rust async closures must not merge with sync closures without async callable proof: {json}"
+    );
+}
+
 /// Swift `await` is a task/protocol boundary. It must not be erased into a
 /// synchronous expression until the kernel has scheduling and effect proof for
 /// the relevant Swift async protocol slice.

@@ -451,6 +451,7 @@ pub(super) fn lower_index(lo: &mut Lowering, node: TsNode) -> NodeId {
 }
 pub(super) fn lower_closure(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
+    let is_async = rust_closure_has_async_modifier(node);
     let mut kids = Vec::new();
     if let Some(params) = node.child_by_field_name("parameters") {
         lower_params(lo, params, &mut kids);
@@ -460,7 +461,23 @@ pub(super) fn lower_closure(lo: &mut Lowering, node: TsNode) -> NodeId {
         .map(|b| lower_expr(lo, b))
         .unwrap_or_else(|| lo.empty_block(span));
     kids.push(body);
-    lo.add(NodeKind::Lambda, Payload::None, span, &kids)
+    let lambda = lo.add(NodeKind::Lambda, Payload::None, span, &kids);
+    if is_async {
+        lo.protocol_boundary(
+            span,
+            SourceProtocolKind::AsyncFunction,
+            "async_function",
+            &[lambda],
+        )
+    } else {
+        lambda
+    }
+}
+fn rust_closure_has_async_modifier(node: TsNode) -> bool {
+    (0..node.child_count()).any(|index| {
+        node.child(index)
+            .is_some_and(|child| child.kind() == "async")
+    })
 }
 pub(super) fn lower_negative_literal(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
