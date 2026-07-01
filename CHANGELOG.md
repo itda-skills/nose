@@ -211,6 +211,15 @@ break.
   reporting-supported, brings currently backed task-spawn reporting-supported
   rows to `1,123` occurrences, and keeps the checked `crates` gate at `0` false
   merges and `0` canon preservation violations.
+- Added non-JS async aggregate reporting alignment. Rust
+  `tokio`/`futures`/`futures_util` `join!`/`try_join!`/`select!`, Python
+  `asyncio.gather`/`wait`, and Java `CompletableFuture.allOf`/`anyOf` now align
+  with existing runtime-boundary reporting in the scheduling lifecycle audit.
+  Exact admission remains closed; the slice newly marks `98`
+  source-prevalence occurrences reporting-supported, brings currently backed
+  async-aggregate reporting-supported rows to `286` occurrences, and keeps the
+  checked `crates` gate at `0` false merges and `0` canon preservation
+  violations.
 - Added non-JS async protocol near-channel mirror support. The dual-view async
   protocol capability now covers `await`, async-function boundaries, and Rust
   async blocks in near/witness builds, so Rust `async fn`/`.await` and Swift

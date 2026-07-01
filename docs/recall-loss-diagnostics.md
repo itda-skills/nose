@@ -308,6 +308,13 @@ then aligns already-backed Rust `tokio`/`async-std` spawn, Swift
 closed-boundaries. It newly accounts for `590` source-prevalence occurrences,
 raises currently backed task-spawn reporting-supported rows to `1,123`
 occurrences, and keeps exact admission closed.
+The follow-up [non-JS async aggregate reporting alignment artifact](../bench/recall_loss/non-js-async-aggregate-reporting-alignment-2026-07-01.v1.json)
+does the same for already-backed aggregate rows: Rust
+`tokio`/`futures`/`futures_util` `join!`/`try_join!`/`select!`, Python
+`asyncio.gather`/`wait`, and Java `CompletableFuture.allOf`/`anyOf`. It newly
+accounts for `98` source-prevalence occurrences, raises currently backed
+async-aggregate reporting-supported rows to `286` occurrences, and keeps exact
+admission closed.
 The
 checked [promise-protocol diagnostics](../bench/recall_loss/promise-protocol-diagnostics-2026-06-28.v1.json)
 connect the JS/TS source-prevalence group (`29,094` Promise/async occurrences)

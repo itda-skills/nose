@@ -363,6 +363,19 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-07-01
 ```
 
+Build the non-JS async aggregate reporting alignment audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.non-js-async-aggregate-reporting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.non-js-async-aggregate-reporting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.non-js-async-aggregate-reporting.json \
+  --generated-on 2026-07-01
+```
+
 Build the first #602 `Promise.all` exact aggregate slice audit with:
 
 ```sh
@@ -753,6 +766,17 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   source-prevalence occurrences, brings currently backed task-spawn
   reporting-supported rows to `1,123` occurrences, and keeps the checked
   `crates` gate at `0` false merges and `0` canon preservation violations.
+- [scheduling-lifecycle-boundary-audit-non-js-async-aggregate-reporting-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-aggregate-reporting-2026-07-01.v1.json)
+  records the non-JS async aggregate reporting alignment. It marks the already
+  runtime-boundary-backed Rust `tokio`/`futures`/`futures_util`
+  `join!`/`try_join!`/`select!`, Python `asyncio.gather`/`wait`, and Java
+  `CompletableFuture.allOf`/`anyOf` rows reporting-supported while keeping
+  exact admission closed.
+- [non-js-async-aggregate-reporting-alignment-2026-07-01.v1.json](non-js-async-aggregate-reporting-alignment-2026-07-01.v1.json)
+  records the compact closeout for the same slice. It newly aligns `98`
+  source-prevalence occurrences, brings currently backed async-aggregate
+  reporting-supported rows to `286` occurrences, and keeps the checked `crates`
+  gate at `0` false merges and `0` canon preservation violations.
 - [scheduling-lifecycle-boundary-audit-python-async-lifecycle-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-python-async-lifecycle-2026-07-01.v1.json)
   records the Python async protocol lifecycle reporting slice. It keeps exact
   admission closed while splitting `async for` statements/comprehensions and
