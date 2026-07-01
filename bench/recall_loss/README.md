@@ -339,6 +339,15 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --recall-loss-report target/recall-loss.go-protocol-reporting-support.crates.json \
   --output target/scheduling-lifecycle-boundary-audit.go-protocol-reporting-support.json \
   --generated-on 2026-07-01
+
+python3 scripts/query-regression-harness.py \
+  --baseline-binary /tmp/nose-go-protocol-main-target/release/nose \
+  --current-binary target/release/nose \
+  --baseline-source-ref origin/main \
+  --current-source-ref go-protocol-reporting-support \
+  --repo nats-server --repo etcd --repo minio \
+  --repo prometheus --repo badger --repo delve \
+  --output target/go-protocol-reporting-support-query-regression.json
 ```
 
 Build the first #602 `Promise.all` exact aggregate slice audit with:
@@ -715,6 +724,11 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   select, goroutine, and defer protocol rows reporting-supported. Go
   `go`/`defer` now also have scheduled/deferred callback demand/effect
   profiles in the shared kernel.
+- [go-protocol-reporting-support-2026-07-01.v1.json](go-protocol-reporting-support-2026-07-01.v1.json)
+  records the compact Go protocol closeout. It prices `31,500` Go protocol
+  occurrences, keeps the checked `crates` gate at `0` false merges, and records
+  a Go-heavy r9 query regression of `3757.82ms -> 3674.17ms` (`-2.23%`) with
+  identical product hashes on all six measured repos.
 - [scheduling-lifecycle-boundary-audit-python-async-lifecycle-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-python-async-lifecycle-2026-07-01.v1.json)
   records the Python async protocol lifecycle reporting slice. It keeps exact
   admission closed while splitting `async for` statements/comprehensions and

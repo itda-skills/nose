@@ -1,0 +1,1169 @@
+{
+  "command": "nose query <repo> all top=0 --mode semantic --format json",
+  "provenance": {
+    "baseline_binary": "/private/tmp/nose-go-protocol-main-target/release/nose",
+    "baseline_binary_sha256": "08f48b950731694c695d02711094f7ce47d23554695e74df873848a45f8f038d",
+    "baseline_source_ref": "origin/main",
+    "baseline_source_sha": "6002e57397fdf005de5bd181e20cdffc0712f581",
+    "current_binary": "/Users/ak/prjs/cc/nose/target/release/nose",
+    "current_binary_sha256": "1ae5c9bbe0ce5d564e74afb71a723e83d4ac7923f976b03f700930edf6a4ad7b",
+    "current_source_ref": "go-protocol-reporting-support",
+    "current_source_sha": "dc3a622179b7a516539b6d68d32a4205d2202a00",
+    "harness": "scripts/query-regression-harness.py",
+    "harness_command": "scripts/query-regression-harness.py --baseline-binary /tmp/nose-go-protocol-main-target/release/nose --current-binary target/release/nose --baseline-source-ref origin/main --current-source-ref go-protocol-reporting-support --repo nats-server --repo etcd --repo minio --repo prometheus --repo badger --repo delve --output bench/recall_loss/go-protocol-reporting-support-query-regression-2026-07-01.v1.json",
+    "working_tree_status_before_measurement": ""
+  },
+  "repos": [
+    "nats-server",
+    "etcd",
+    "minio",
+    "prometheus",
+    "badger",
+    "delve"
+  ],
+  "runs": [
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1162.7379171550274,
+      "families": 27,
+      "iteration": 1,
+      "label": "baseline",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 415.5155420303345,
+      "families": 32,
+      "iteration": 1,
+      "label": "baseline",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 700.2789578400552,
+      "families": 54,
+      "iteration": 1,
+      "label": "baseline",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 819.5239580236375,
+      "families": 67,
+      "iteration": 1,
+      "label": "baseline",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 88.45037501305342,
+      "families": 8,
+      "iteration": 1,
+      "label": "baseline",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 369.16333297267556,
+      "families": 29,
+      "iteration": 1,
+      "label": "baseline",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1271.5191249735653,
+      "families": 27,
+      "iteration": 1,
+      "label": "current",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 380.8552920818329,
+      "families": 32,
+      "iteration": 1,
+      "label": "current",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 751.6098329797387,
+      "families": 54,
+      "iteration": 1,
+      "label": "current",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 754.5036659575999,
+      "families": 67,
+      "iteration": 1,
+      "label": "current",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 108.45866613090038,
+      "families": 8,
+      "iteration": 1,
+      "label": "current",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 342.5934580154717,
+      "families": 29,
+      "iteration": 1,
+      "label": "current",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1171.1053329054266,
+      "families": 27,
+      "iteration": 2,
+      "label": "current",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 441.9457500334829,
+      "families": 32,
+      "iteration": 2,
+      "label": "current",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 753.2711669337004,
+      "families": 54,
+      "iteration": 2,
+      "label": "current",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 757.5495410710573,
+      "families": 67,
+      "iteration": 2,
+      "label": "current",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 126.28804217092693,
+      "families": 8,
+      "iteration": 2,
+      "label": "current",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 372.70816694945097,
+      "families": 29,
+      "iteration": 2,
+      "label": "current",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1235.403792001307,
+      "families": 27,
+      "iteration": 2,
+      "label": "baseline",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 377.4082080926746,
+      "families": 32,
+      "iteration": 2,
+      "label": "baseline",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 736.3559999503195,
+      "families": 54,
+      "iteration": 2,
+      "label": "baseline",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 831.9686250761151,
+      "families": 67,
+      "iteration": 2,
+      "label": "baseline",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 91.49495791643858,
+      "families": 8,
+      "iteration": 2,
+      "label": "baseline",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 305.39141595363617,
+      "families": 29,
+      "iteration": 2,
+      "label": "baseline",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1311.6912499535829,
+      "families": 27,
+      "iteration": 3,
+      "label": "baseline",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 420.9559999871999,
+      "families": 32,
+      "iteration": 3,
+      "label": "baseline",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 758.2178749144077,
+      "families": 54,
+      "iteration": 3,
+      "label": "baseline",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 839.4325419794768,
+      "families": 67,
+      "iteration": 3,
+      "label": "baseline",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 98.39495806954801,
+      "families": 8,
+      "iteration": 3,
+      "label": "baseline",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 343.90504099428654,
+      "families": 29,
+      "iteration": 3,
+      "label": "baseline",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1157.8782501164824,
+      "families": 27,
+      "iteration": 3,
+      "label": "current",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 475.56874994188547,
+      "families": 32,
+      "iteration": 3,
+      "label": "current",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 719.5974588394165,
+      "families": 54,
+      "iteration": 3,
+      "label": "current",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 759.1244999784976,
+      "families": 67,
+      "iteration": 3,
+      "label": "current",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 90.5242080334574,
+      "families": 8,
+      "iteration": 3,
+      "label": "current",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 418.2450419757515,
+      "families": 29,
+      "iteration": 3,
+      "label": "current",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1243.2681659702212,
+      "families": 27,
+      "iteration": 4,
+      "label": "current",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 360.6850409414619,
+      "families": 32,
+      "iteration": 4,
+      "label": "current",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 775.5940000060946,
+      "families": 54,
+      "iteration": 4,
+      "label": "current",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 821.5456667821854,
+      "families": 67,
+      "iteration": 4,
+      "label": "current",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 92.70879183895886,
+      "families": 8,
+      "iteration": 4,
+      "label": "current",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 302.7718330267817,
+      "families": 29,
+      "iteration": 4,
+      "label": "current",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1345.721042016521,
+      "families": 27,
+      "iteration": 4,
+      "label": "baseline",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 406.06645797379315,
+      "families": 32,
+      "iteration": 4,
+      "label": "baseline",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 749.8001668136567,
+      "families": 54,
+      "iteration": 4,
+      "label": "baseline",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 726.9945421721786,
+      "families": 67,
+      "iteration": 4,
+      "label": "baseline",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 110.89270794764161,
+      "families": 8,
+      "iteration": 4,
+      "label": "baseline",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 405.37895797751844,
+      "families": 29,
+      "iteration": 4,
+      "label": "baseline",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1180.927542038262,
+      "families": 27,
+      "iteration": 5,
+      "label": "baseline",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 486.0265839379281,
+      "families": 32,
+      "iteration": 5,
+      "label": "baseline",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 767.0567079912871,
+      "families": 54,
+      "iteration": 5,
+      "label": "baseline",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 770.6804999615997,
+      "families": 67,
+      "iteration": 5,
+      "label": "baseline",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 135.07908396422863,
+      "families": 8,
+      "iteration": 5,
+      "label": "baseline",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 367.49933287501335,
+      "families": 29,
+      "iteration": 5,
+      "label": "baseline",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1271.7395829968154,
+      "families": 27,
+      "iteration": 5,
+      "label": "current",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 410.7015000190586,
+      "families": 32,
+      "iteration": 5,
+      "label": "current",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 721.0837919265032,
+      "families": 54,
+      "iteration": 5,
+      "label": "current",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 875.1620419789106,
+      "families": 67,
+      "iteration": 5,
+      "label": "current",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 88.53754214942455,
+      "families": 8,
+      "iteration": 5,
+      "label": "current",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 379.5942079741508,
+      "families": 29,
+      "iteration": 5,
+      "label": "current",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1268.5357918962836,
+      "families": 27,
+      "iteration": 6,
+      "label": "current",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 388.42858420684934,
+      "families": 32,
+      "iteration": 6,
+      "label": "current",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 766.0229590255767,
+      "families": 54,
+      "iteration": 6,
+      "label": "current",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 765.8058749511838,
+      "families": 67,
+      "iteration": 6,
+      "label": "current",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 117.68750008195639,
+      "families": 8,
+      "iteration": 6,
+      "label": "current",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 337.05537486821413,
+      "families": 29,
+      "iteration": 6,
+      "label": "current",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1264.2817911691964,
+      "families": 27,
+      "iteration": 6,
+      "label": "baseline",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 454.24620900303125,
+      "families": 32,
+      "iteration": 6,
+      "label": "baseline",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 745.3173329122365,
+      "families": 54,
+      "iteration": 6,
+      "label": "baseline",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 793.9247919712216,
+      "families": 67,
+      "iteration": 6,
+      "label": "baseline",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 116.77195900119841,
+      "families": 8,
+      "iteration": 6,
+      "label": "baseline",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 392.6047079730779,
+      "families": 29,
+      "iteration": 6,
+      "label": "baseline",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1186.9657919742167,
+      "families": 27,
+      "iteration": 7,
+      "label": "baseline",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 437.0463329833001,
+      "families": 32,
+      "iteration": 7,
+      "label": "baseline",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 712.9243751987815,
+      "families": 54,
+      "iteration": 7,
+      "label": "baseline",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 902.2035838570446,
+      "families": 67,
+      "iteration": 7,
+      "label": "baseline",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 82.66329183243215,
+      "families": 8,
+      "iteration": 7,
+      "label": "baseline",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 432.7021250501275,
+      "families": 29,
+      "iteration": 7,
+      "label": "baseline",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1242.7525410894305,
+      "families": 27,
+      "iteration": 7,
+      "label": "current",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 347.61837497353554,
+      "families": 32,
+      "iteration": 7,
+      "label": "current",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 781.4663341268897,
+      "families": 54,
+      "iteration": 7,
+      "label": "current",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 827.7624580077827,
+      "families": 67,
+      "iteration": 7,
+      "label": "current",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 92.95454202219844,
+      "families": 8,
+      "iteration": 7,
+      "label": "current",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 297.2815001849085,
+      "families": 29,
+      "iteration": 7,
+      "label": "current",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1330.6118750479072,
+      "families": 27,
+      "iteration": 8,
+      "label": "current",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 436.00391619838774,
+      "families": 32,
+      "iteration": 8,
+      "label": "current",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 764.728375012055,
+      "families": 54,
+      "iteration": 8,
+      "label": "current",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 791.6306250263005,
+      "families": 67,
+      "iteration": 8,
+      "label": "current",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 110.64816592261195,
+      "families": 8,
+      "iteration": 8,
+      "label": "current",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 357.07929194904864,
+      "families": 29,
+      "iteration": 8,
+      "label": "current",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1255.6953330058604,
+      "families": 27,
+      "iteration": 8,
+      "label": "baseline",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 456.1393749900162,
+      "families": 32,
+      "iteration": 8,
+      "label": "baseline",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 782.1527919732034,
+      "families": 54,
+      "iteration": 8,
+      "label": "baseline",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 760.1458330173045,
+      "families": 67,
+      "iteration": 8,
+      "label": "baseline",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 116.42866604961455,
+      "families": 8,
+      "iteration": 8,
+      "label": "baseline",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 395.4774171579629,
+      "families": 29,
+      "iteration": 8,
+      "label": "baseline",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1306.699875043705,
+      "families": 27,
+      "iteration": 9,
+      "label": "baseline",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 442.0789999421686,
+      "families": 32,
+      "iteration": 9,
+      "label": "baseline",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 779.3532500509173,
+      "families": 54,
+      "iteration": 9,
+      "label": "baseline",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 835.0734580308199,
+      "families": 67,
+      "iteration": 9,
+      "label": "baseline",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 103.15141687169671,
+      "families": 8,
+      "iteration": 9,
+      "label": "baseline",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 403.3715829718858,
+      "families": 29,
+      "iteration": 9,
+      "label": "baseline",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    },
+    {
+      "bytes": 64019,
+      "elapsed_ms": 1307.9147080425173,
+      "families": 27,
+      "iteration": 9,
+      "label": "current",
+      "repo": "nats-server",
+      "sha256": "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+    },
+    {
+      "bytes": 63385,
+      "elapsed_ms": 415.4251669533551,
+      "families": 32,
+      "iteration": 9,
+      "label": "current",
+      "repo": "etcd",
+      "sha256": "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+    },
+    {
+      "bytes": 84761,
+      "elapsed_ms": 749.0016249939799,
+      "families": 54,
+      "iteration": 9,
+      "label": "current",
+      "repo": "minio",
+      "sha256": "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+    },
+    {
+      "bytes": 149292,
+      "elapsed_ms": 908.9371250011027,
+      "families": 67,
+      "iteration": 9,
+      "label": "current",
+      "repo": "prometheus",
+      "sha256": "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+    },
+    {
+      "bytes": 32276,
+      "elapsed_ms": 79.80399997904897,
+      "families": 8,
+      "iteration": 9,
+      "label": "current",
+      "repo": "badger",
+      "sha256": "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+    },
+    {
+      "bytes": 65064,
+      "elapsed_ms": 405.30170896090567,
+      "families": 29,
+      "iteration": 9,
+      "label": "current",
+      "repo": "delve",
+      "sha256": "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+    }
+  ],
+  "summary": {
+    "aggregate_baseline_median_ms": 3757.8219156712294,
+    "aggregate_current_median_ms": 3674.1729178465903,
+    "aggregate_delta_pct": -2.2259968593987387,
+    "by_repo": {
+      "badger": {
+        "baseline": {
+          "bytes": [
+            32276
+          ],
+          "families": [
+            8
+          ],
+          "hashes": [
+            "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+          ],
+          "median_ms": 103.15141687169671
+        },
+        "current": {
+          "bytes": [
+            32276
+          ],
+          "families": [
+            8
+          ],
+          "hashes": [
+            "f49db7a70c4ec415042a905b62ab619e6ba4c630916ce9d6642b0d2a7344f426"
+          ],
+          "median_ms": 92.95454202219844
+        }
+      },
+      "delve": {
+        "baseline": {
+          "bytes": [
+            65064
+          ],
+          "families": [
+            29
+          ],
+          "hashes": [
+            "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+          ],
+          "median_ms": 392.6047079730779
+        },
+        "current": {
+          "bytes": [
+            65064
+          ],
+          "families": [
+            29
+          ],
+          "hashes": [
+            "67d339dbcf426d7ca8f8ed38c8476e0411f3af8ee789b5d9d92145321d8eb65f"
+          ],
+          "median_ms": 357.07929194904864
+        }
+      },
+      "etcd": {
+        "baseline": {
+          "bytes": [
+            63385
+          ],
+          "families": [
+            32
+          ],
+          "hashes": [
+            "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+          ],
+          "median_ms": 437.0463329833001
+        },
+        "current": {
+          "bytes": [
+            63385
+          ],
+          "families": [
+            32
+          ],
+          "hashes": [
+            "4e09b17c4cd320355e213ca780ffe691674f1706536ef0f375803dfe452e663e"
+          ],
+          "median_ms": 410.7015000190586
+        }
+      },
+      "minio": {
+        "baseline": {
+          "bytes": [
+            84761
+          ],
+          "families": [
+            54
+          ],
+          "hashes": [
+            "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+          ],
+          "median_ms": 749.8001668136567
+        },
+        "current": {
+          "bytes": [
+            84761
+          ],
+          "families": [
+            54
+          ],
+          "hashes": [
+            "04938a6530487d1e48954e655e87b6228d05e8525bee172d13872269b3b66dde"
+          ],
+          "median_ms": 753.2711669337004
+        }
+      },
+      "nats-server": {
+        "baseline": {
+          "bytes": [
+            64019
+          ],
+          "families": [
+            27
+          ],
+          "hashes": [
+            "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+          ],
+          "median_ms": 1255.6953330058604
+        },
+        "current": {
+          "bytes": [
+            64019
+          ],
+          "families": [
+            27
+          ],
+          "hashes": [
+            "bab54b3294eb4da36462a81c44b57d9e792b01760a96fc03199b31eaa3b57edf"
+          ],
+          "median_ms": 1268.5357918962836
+        }
+      },
+      "prometheus": {
+        "baseline": {
+          "bytes": [
+            149292
+          ],
+          "families": [
+            67
+          ],
+          "hashes": [
+            "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+          ],
+          "median_ms": 819.5239580236375
+        },
+        "current": {
+          "bytes": [
+            149292
+          ],
+          "families": [
+            67
+          ],
+          "hashes": [
+            "d1a8152da9dc31ed184e8e6911f4b00f4c2e5b841aed0d1b3c1fd3c17ef997e0"
+          ],
+          "median_ms": 791.6306250263005
+        }
+      }
+    },
+    "hashes_identical_by_repo": {
+      "badger": true,
+      "delve": true,
+      "etcd": true,
+      "minio": true,
+      "nats-server": true,
+      "prometheus": true
+    }
+  }
+}

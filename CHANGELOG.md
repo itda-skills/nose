@@ -200,7 +200,9 @@ break.
   are marked reporting-supported closed-boundaries in the 120-repo audit.
   Exact admission remains closed; the Go protocol slice covers `31,500`
   occurrences across the pinned corpus and keeps the checked `crates`
-  recall-loss gate at `0` false merges.
+  recall-loss gate at `0` false merges. The Go-heavy query regression measured
+  `3757.82ms -> 3674.17ms` (`-2.23%`) with identical product hashes on all six
+  measured repos.
 - Added non-JS async protocol near-channel mirror support. The dual-view async
   protocol capability now covers `await`, async-function boundaries, and Rust
   async blocks in near/witness builds, so Rust `async fn`/`.await` and Swift
