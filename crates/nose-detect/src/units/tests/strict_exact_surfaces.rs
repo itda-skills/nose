@@ -573,3 +573,20 @@ fn lowered_function_exact_safe(path: &str, source: &str, lang: Lang) -> bool {
         .expect("callable unit");
     strict_exact_safe_tree(&il, &interner, &facts, function.root)
 }
+
+#[test]
+fn strict_exact_closes_ruby_exception_boundaries() {
+    for (name, source) in [
+        ("raise", "def f(error)\n  raise error\nend\n"),
+        (
+            "guarded raise",
+            "def f(error, bad)\n  raise error if bad\n  1\nend\n",
+        ),
+        ("rescue", "def f\n  work\nrescue Error\n  recover\nend\n"),
+    ] {
+        assert!(
+            !lowered_function_exact_safe("exception.rb", source, Lang::Ruby),
+            "{name} must stay closed in strict exact until Ruby exception-channel semantics are proven"
+        );
+    }
+}

@@ -116,6 +116,8 @@ pub(super) fn is_tail_expr(k: &str) -> bool {
             | "unless"
             | "while"
             | "until"
+            | "if_modifier"
+            | "unless_modifier"
             | "while_modifier"
             | "until_modifier"
             | "case"

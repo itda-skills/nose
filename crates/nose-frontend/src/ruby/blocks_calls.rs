@@ -129,7 +129,7 @@ pub(super) fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
 }
 
 pub(super) fn is_unqualified_raise_call(node: TsNode, method_name: Option<&str>) -> bool {
-    node.child_by_field_name("receiver").is_none() && matches!(method_name, Some("raise" | "fail"))
+    node.child_by_field_name("receiver").is_none() && method_name == Some("raise")
 }
 
 pub(super) fn lower_raise_call(lo: &mut Lowering, node: TsNode, span: Span) -> NodeId {

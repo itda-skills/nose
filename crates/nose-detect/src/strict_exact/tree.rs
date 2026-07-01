@@ -48,7 +48,7 @@ pub(crate) fn strict_exact_safe_tree(
         return false;
     }
     match il.kind(node) {
-        NodeKind::Raw => false,
+        NodeKind::Raw | NodeKind::Try | NodeKind::Throw => false,
         // Declarative (CSS) units are constant, deterministic, effect-free data. A rule
         // is exact-safe iff it has no unparsed (`Raw`) construct, so recurse into the
         // rule but treat a declaration / selector (whose leaves are constant value
