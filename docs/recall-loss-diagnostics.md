@@ -203,6 +203,13 @@ reporting-supported closed-boundary status and leaves `230` broad
 regression kept product output hashes identical across `netty`, `rxjava`,
 `retrofit`, `junit5`, `jedis`, and `h2database`, with aggregate median runtime
 `7023.49ms -> 6991.92ms` (`-0.45%`). The
+follow-up [Java Future residual-accounting artifact](../bench/recall_loss/java-future-residual-accounting-2026-07-02.v1.json)
+aligns existing receiver-domain reporting with the audit by marking
+`FutureLike.handle/whenComplete` settlement continuations reporting-supported at
+`10` occurrences across `2` repos. It also marks the historical Java
+`Executor/Future` type-name bucket as a superseded overlap row at `3,297`
+occurrences, so Java residual work is ranked from concrete operation rows
+rather than broad type mentions. The
 follow-up [non-JS source-protocol reporting alignment artifact](../bench/recall_loss/non-js-source-protocol-reporting-alignment-2026-07-02.v1.json)
 brings the scheduling lifecycle audit in line with the existing
 `Source::Protocol(Await)`, `Source::Protocol(AsyncFunction)`, and

@@ -62,6 +62,12 @@ wildcard-import-backed and unshadowed. Those constructors report future-settled,
 exception-channel, task-handle lifecycle, and cancellation/liveness obligations
 without opening exact admission; residual broad `CompletableFuture` mentions
 remain closed until split into product-backed surfaces.
+Java Future/Executor audit accounting now treats proof-backed
+`CompletionStage.handle`/`whenComplete` settlement continuations as
+reporting-supported receiver-domain surfaces. The older broad `Executor/Future`
+type-name bucket remains visible only as a superseded overlap row; actionable
+Java Future/Executor tracking now uses concrete static call, constructor, and
+receiver-method rows.
 Swift `try`, `try?`, `try!`, and `for try await` propagation boundaries now have
 their own reporting-supported audit row backed by
 `Source::Protocol(TryPropagation)`. This exposes the exception channel in

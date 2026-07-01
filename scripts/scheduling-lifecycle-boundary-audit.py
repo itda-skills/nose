@@ -123,7 +123,7 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("java", "java.future.completable.factory", "CompletableFuture.completedFuture/failedFuture", "success-error-result-channel", "future-settled-value-channel-contract-missing", "future settled value", "CompletableFuture settled factories create fulfilled or exceptional future channels", re.compile(r"\bCompletableFuture\s*\.\s*(?:completedFuture|completedStage|failedFuture|failedStage)\s*\("), "reporting-supported-closed-boundary"),
     Pattern("java", "java.future.completable.all", "CompletableFuture.allOf", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "future all-completion aggregate", "CompletableFuture.allOf needs all-completion and exceptional completion proof", re.compile(r"\bCompletableFuture\s*\.\s*allOf\s*\("), "reporting-supported-closed-boundary"),
     Pattern("java", "java.future.completable.any", "CompletableFuture.anyOf", "cancellation-liveness-boundary", "async-aggregate-first-completion-contract-missing", "future first-completion aggregate", "CompletableFuture.anyOf needs first-completion and result-channel proof", re.compile(r"\bCompletableFuture\s*\.\s*anyOf\s*\("), "reporting-supported-closed-boundary"),
-    Pattern("java", "java.future.executor", "Executor/Future", "scheduling-boundary", "java-executor-scheduling-contract-missing", "executor scheduling", "Executor/Future APIs introduce scheduler and lifecycle boundaries", re.compile(r"\b(?:ExecutorService|Executor|Future|ScheduledFuture)\b")),
+    Pattern("java", "java.future.executor", "Executor/Future", "scheduling-boundary", "java-executor-scheduling-contract-missing", "executor scheduling", "Historical lexical type-name bucket; use proof-backed Java Future, CompletionStage, Executor, and ScheduledExecutor receiver-method rows as actionable surfaces", re.compile(r"\b(?:ExecutorService|Executor|Future|ScheduledFuture)\b"), "superseded-overlap-boundary"),
     Pattern("java", "java.stream.lifecycle", "stream/parallelStream", "lifecycle-materialization-boundary", "java-stream-lifecycle-contract-missing", "stream lifecycle", "Java streams need lazy/eager lifecycle and terminal materialization proof", re.compile(r"\.\s*(?:stream|parallelStream)\s*\(")),
     Pattern("swift", "swift.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Swift await has task scheduling and actor/lifetime boundaries", re.compile(r"\bawait\b"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.async.function", "async", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "Swift async surfaces create task/future-like protocol boundaries", re.compile(r"\basync\b"), "reporting-supported-closed-boundary"),
@@ -385,7 +385,7 @@ JAVA_FUTURE_FULFILLMENT_CONTINUATION = Pattern(
     "future fulfillment continuation",
     "Future-like receivers need fulfillment continuation and callback demand/effect proof",
     re.compile(r"(?!x)x"),
-    "reporting-candidate-closed-boundary",
+    "reporting-supported-closed-boundary",
 )
 JAVA_FUTURE_EXCEPTION_CONTINUATION = Pattern(
     "java",
@@ -396,7 +396,7 @@ JAVA_FUTURE_EXCEPTION_CONTINUATION = Pattern(
     "future exception continuation",
     "Future-like receivers need exceptional completion continuation and callback demand/effect proof",
     re.compile(r"(?!x)x"),
-    "reporting-candidate-closed-boundary",
+    "reporting-supported-closed-boundary",
 )
 JAVA_FUTURE_SETTLEMENT_CONTINUATION = Pattern(
     "java",
@@ -407,7 +407,7 @@ JAVA_FUTURE_SETTLEMENT_CONTINUATION = Pattern(
     "future settlement continuation",
     "Future-like receivers need settlement continuation and callback demand/effect proof",
     re.compile(r"(?!x)x"),
-    "reporting-candidate-closed-boundary",
+    "reporting-supported-closed-boundary",
 )
 JAVA_FUTURE_ALL_COMPLETION_CONTINUATION = Pattern(
     "java",
@@ -418,7 +418,7 @@ JAVA_FUTURE_ALL_COMPLETION_CONTINUATION = Pattern(
     "future all-completion continuation",
     "Future-like pair continuations need all-completion and callback demand/effect proof",
     re.compile(r"(?!x)x"),
-    "reporting-candidate-closed-boundary",
+    "reporting-supported-closed-boundary",
 )
 JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION = Pattern(
     "java",
@@ -429,7 +429,7 @@ JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION = Pattern(
     "future first-completion continuation",
     "Future-like either continuations need first-completion and callback demand/effect proof",
     re.compile(r"(?!x)x"),
-    "reporting-candidate-closed-boundary",
+    "reporting-supported-closed-boundary",
 )
 JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR = Pattern(
     "java",
@@ -712,6 +712,11 @@ def self_test() -> None:
     )
     assert wildcard_submit.get(JAVA_EXECUTOR_SUBMIT) == 1
 
+    java_future_executor_overlap = next(
+        item for item in PATTERNS if item.surface == "java.future.executor"
+    )
+    assert java_future_executor_overlap.status == "superseded-overlap-boundary"
+
     exact_conflict = count_file(
         "import java.util.concurrent.Future;\n"
         "import example.Future;\n"
@@ -917,6 +922,17 @@ def self_test() -> None:
     }
     for surface in settled_future_and_await_reporting_surfaces:
         pattern = next(item for item in PATTERNS if item.surface == surface)
+        assert pattern.status == "reporting-supported-closed-boundary", surface
+
+    java_future_continuation_reporting_surfaces = {
+        "java.future.completion_stage.fulfillment",
+        "java.future.completion_stage.exception",
+        "java.future.completion_stage.settlement",
+        "java.future.completion_stage.all",
+        "java.future.completion_stage.first",
+    }
+    for surface in java_future_continuation_reporting_surfaces:
+        pattern = next(item for item in all_known_patterns() if item.surface == surface)
         assert pattern.status == "reporting-supported-closed-boundary", surface
 
     source_protocol_reporting_surfaces = {

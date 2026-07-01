@@ -193,6 +193,14 @@ cancel/status-cancellation `184 -> 239`, `ExecutorService.submit` `146 -> 222`,
 `21 -> 27`, repeating schedules `20 -> 22`, `invokeAll` `19 -> 21`, and
 `invokeAny` `4 -> 6`. The broad `Executor/Future` lexical bucket remains closed
 at `3,297` occurrences.
+The follow-up [Java Future residual-accounting artifact](../bench/recall_loss/java-future-residual-accounting-2026-07-02.v1.json)
+aligns the audit with the already implemented receiver-domain continuation
+reporting: `FutureLike.handle/whenComplete` contributes `10` reporting-supported
+settlement-continuation occurrences across `2` repos. The broad
+`Executor/Future` lexical bucket is still visible at `3,297` occurrences, but it
+is now a superseded overlap row rather than an actionable implementation target;
+concrete static call, constructor, and receiver-method rows drive the Java
+Future/Executor residual queue.
 The follow-up [Go channel protocol pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json)
 keeps exact admission closed while making Go's source-backed protocol
 boundaries reportable at the same capability level. Channel sends now report
