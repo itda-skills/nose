@@ -276,6 +276,92 @@ fn seq_names(src: &str) -> Vec<String> {
         .collect()
 }
 
+fn call_callee_paths(src: &str) -> Vec<String> {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "T.java", src.as_bytes(), &interner).expect("lower");
+    il.nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, node)| node.kind == NodeKind::Call)
+        .filter_map(|(idx, _)| {
+            il.children(NodeId(idx as u32))
+                .first()
+                .and_then(|callee| callee_path_for_test(&il, &interner, *callee))
+        })
+        .collect()
+}
+
+fn callee_path_for_test(il: &Il, interner: &Interner, node: NodeId) -> Option<String> {
+    match il.node(node).kind {
+        NodeKind::Var => match il.node(node).payload {
+            Payload::Name(sym) => Some(interner.resolve(sym).to_string()),
+            _ => None,
+        },
+        NodeKind::Field => {
+            let Payload::Name(field) = il.node(node).payload else {
+                return None;
+            };
+            let receiver = il.children(node).first().copied()?;
+            Some(format!(
+                "{}.{}",
+                callee_path_for_test(il, interner, receiver)?,
+                interner.resolve(field)
+            ))
+        }
+        _ => None,
+    }
+}
+
+#[test]
+fn completable_future_constructor_callee_requires_stdlib_type_identity() {
+    let exact = call_callee_paths(
+        "import java.util.concurrent.CompletableFuture;\nclass T { Object run() { return new CompletableFuture<String>(); } }\n",
+    );
+    assert!(
+        exact.iter().any(|path| path == "CompletableFuture"),
+        "exact import should preserve constructor callee: {exact:?}"
+    );
+
+    let wildcard = call_callee_paths(
+        "import java.util.concurrent.*;\nclass T { Object run() { return new CompletableFuture<String>(); } }\n",
+    );
+    assert!(
+        wildcard.iter().any(|path| path == "CompletableFuture"),
+        "wildcard import should preserve constructor callee: {wildcard:?}"
+    );
+
+    let qualified = call_callee_paths(
+        "class T { Object run() { return new java.util.concurrent.CompletableFuture<String>(); } }\n",
+    );
+    assert!(
+        qualified
+            .iter()
+            .any(|path| path == "java.util.concurrent.CompletableFuture"),
+        "qualified constructor should preserve constructor callee: {qualified:?}"
+    );
+
+    for (surface, src) in [
+        (
+            "unimported CompletableFuture",
+            "class T { Object run() { return new CompletableFuture<String>(); } }\n",
+        ),
+        (
+            "conflicting CompletableFuture import",
+            "import java.util.concurrent.*;\nimport example.CompletableFuture;\nclass T { Object run() { return new CompletableFuture<String>(); } }\n",
+        ),
+        (
+            "local CompletableFuture type",
+            "import java.util.concurrent.CompletableFuture;\nclass CompletableFuture<T> {}\nclass T { Object run() { return new CompletableFuture<String>(); } }\n",
+        ),
+    ] {
+        let paths = call_callee_paths(src);
+        assert!(
+            !paths.iter().any(|path| path.ends_with("CompletableFuture")),
+            "{surface} should not preserve a stdlib constructor callee: {paths:?}"
+        );
+    }
+}
+
 fn switch_expression_branch_ints(src: &str) -> Vec<i64> {
     let interner = Interner::new();
     let il = lower(FileId(0), "T.java", src.as_bytes(), &interner).expect("lower");

@@ -29,10 +29,16 @@ pub(super) fn push_java_future_runtime_call_missing_evidence(
     call: NodeId,
     callee: NodeId,
     callee_path: &str,
-    _context: &crate::verify_admission::AdmissionContext,
+    context: &crate::verify_admission::AdmissionContext,
     labels: &mut Vec<&'static str>,
 ) -> bool {
-    if let Some(method) = completable_future_static_method(il, interner, call, callee, callee_path)
+    if completable_future_construct_call(il, interner, call, callee, callee_path, context) {
+        push_completable_future_constructor_missing_evidence(labels);
+        return true;
+    }
+
+    if let Some(method) =
+        completable_future_static_method(il, interner, call, callee, callee_path, context)
     {
         return push_completable_future_static_method_missing_evidence(method, labels);
     }
@@ -40,22 +46,44 @@ pub(super) fn push_java_future_runtime_call_missing_evidence(
     let Some(method) = super::super::callee_field_method(il, interner, callee) else {
         return false;
     };
-    if receiver_provenance::completion_stage_receiver_proven(il, interner, callee)
+    if receiver_provenance::completion_stage_receiver_proven(il, interner, callee, context)
         && push_completion_stage_continuation_missing_evidence(method, labels)
     {
         return true;
     }
-    if receiver_provenance::future_handle_receiver_proven(il, interner, callee)
+    if receiver_provenance::future_handle_receiver_proven(il, interner, callee, context)
         && push_future_handle_method_missing_evidence(method, labels)
     {
         return true;
     }
-    if let Some(kind) = receiver_provenance::executor_receiver_kind_proven(il, interner, callee) {
+    if let Some(kind) =
+        receiver_provenance::executor_receiver_kind_proven(il, interner, callee, context)
+    {
         if push_executor_method_missing_evidence(kind, method, labels) {
             return true;
         }
     }
     false
+}
+
+fn completable_future_construct_call(
+    il: &nose_il::Il,
+    interner: &Interner,
+    call: NodeId,
+    callee: NodeId,
+    callee_path: &str,
+    context: &crate::verify_admission::AdmissionContext,
+) -> bool {
+    if !super::super::construct_call(il, call) {
+        return false;
+    }
+    if callee_path == COMPLETABLE_FUTURE_QUALIFIED {
+        return true;
+    }
+    if callee_path != COMPLETABLE_FUTURE_TYPE {
+        return false;
+    }
+    java_completable_future_simple_receiver_proven(il, interner, call, callee, context)
 }
 
 fn completable_future_static_method<'a>(
@@ -64,6 +92,7 @@ fn completable_future_static_method<'a>(
     call: NodeId,
     callee: NodeId,
     callee_path: &'a str,
+    context: &crate::verify_admission::AdmissionContext,
 ) -> Option<&'a str> {
     let (receiver_path, method) = callee_path.rsplit_once('.')?;
     if receiver_path == COMPLETABLE_FUTURE_QUALIFIED {
@@ -73,7 +102,8 @@ fn completable_future_static_method<'a>(
         return None;
     }
     let receiver = super::super::method_receiver(il, callee)?;
-    java_completable_future_simple_receiver_proven(il, interner, call, receiver).then_some(method)
+    java_completable_future_simple_receiver_proven(il, interner, call, receiver, context)
+        .then_some(method)
 }
 
 fn java_completable_future_simple_receiver_proven(
@@ -81,17 +111,63 @@ fn java_completable_future_simple_receiver_proven(
     interner: &Interner,
     call: NodeId,
     receiver: NodeId,
+    context: &crate::verify_admission::AdmissionContext,
 ) -> bool {
     il.kind(receiver) == NodeKind::Var
         && super::super::node_defines_name(il, interner, receiver, COMPLETABLE_FUTURE_TYPE)
         && !java_simple_type_shadowed(il, interner, receiver)
-        && (nose_semantics::imported_binding_symbol(
-            il,
-            interner,
-            receiver,
-            JAVA_CONCURRENT_MODULE,
-            COMPLETABLE_FUTURE_TYPE,
-        ) || java_wildcard_import_proves_completable_future(il, call))
+        && java_completable_future_import_proven(il, interner, call, receiver, context)
+}
+
+fn java_completable_future_import_proven(
+    il: &nose_il::Il,
+    interner: &Interner,
+    call: NodeId,
+    receiver: NodeId,
+    context: &crate::verify_admission::AdmissionContext,
+) -> bool {
+    java_imported_binding_symbol_usable_for_type(
+        il,
+        interner,
+        receiver,
+        COMPLETABLE_FUTURE_TYPE,
+        context,
+    ) || java_wildcard_import_proves_completable_future(il, interner, call, context)
+}
+
+fn java_imported_binding_symbol_usable_for_type(
+    il: &nose_il::Il,
+    interner: &Interner,
+    node: NodeId,
+    type_name: &str,
+    context: &crate::verify_admission::AdmissionContext,
+) -> bool {
+    if il.kind(node) != NodeKind::Var
+        || !super::super::node_defines_name(il, interner, node, type_name)
+    {
+        return false;
+    }
+    let span = il.node(node).span;
+    let local_hash = stable_symbol_hash(type_name);
+    let expected = EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
+        module_hash: stable_symbol_hash(JAVA_CONCURRENT_MODULE),
+        exported_hash: stable_symbol_hash(type_name),
+    });
+    il.evidence.iter().any(|record| {
+        record.kind == expected
+            && matches!(
+                record.anchor,
+                EvidenceAnchor::Binding { span: import_span, local_hash: actual }
+                    if actual == local_hash
+                        && import_span.file == span.file
+                        && import_span.end_byte <= span.start_byte
+            )
+            && record.status == EvidenceStatus::Asserted
+            && record.provenance.emitter == EvidenceEmitter::Builtin
+            && il.evidence_dependencies_asserted(record)
+            && (!java_imported_binding_is_wildcard_backed(il, record)
+                || !context.java_package_local_type_is_visible_in_file(il, interner, type_name))
+    })
 }
 
 fn java_simple_type_shadowed(il: &nose_il::Il, interner: &Interner, receiver: NodeId) -> bool {
@@ -159,7 +235,15 @@ fn java_imported_completable_future_at_span(il: &nose_il::Il, span: Span) -> boo
     })
 }
 
-fn java_wildcard_import_proves_completable_future(il: &nose_il::Il, call: NodeId) -> bool {
+fn java_wildcard_import_proves_completable_future(
+    il: &nose_il::Il,
+    interner: &Interner,
+    call: NodeId,
+    context: &crate::verify_admission::AdmissionContext,
+) -> bool {
+    if context.java_package_local_type_is_visible_in_file(il, interner, COMPLETABLE_FUTURE_TYPE) {
+        return false;
+    }
     let call_span = il.node(call).span;
     if import_conflicts::type_import_conflicted_at_span(il, call_span, COMPLETABLE_FUTURE_TYPE) {
         return false;
@@ -178,6 +262,32 @@ fn java_wildcard_import_proves_completable_future(il: &nose_il::Il, call: NodeId
             )
             && il.evidence_dependencies_asserted(record)
     })
+}
+
+pub(super) fn java_imported_binding_is_wildcard_backed(
+    il: &nose_il::Il,
+    record: &nose_il::EvidenceRecord,
+) -> bool {
+    let expected = EvidenceKind::Import(ImportEvidenceKind::Wildcard {
+        module_hash: stable_symbol_hash(JAVA_CONCURRENT_MODULE),
+    });
+    record.dependencies.iter().copied().any(|dependency| {
+        il.evidence
+            .get(dependency.0 as usize)
+            .is_some_and(|dependency_record| {
+                dependency_record.kind == expected
+                    && dependency_record.status == EvidenceStatus::Asserted
+                    && dependency_record.provenance.emitter == EvidenceEmitter::Builtin
+                    && il.evidence_dependencies_asserted(dependency_record)
+            })
+    })
+}
+
+fn push_completable_future_constructor_missing_evidence(labels: &mut Vec<&'static str>) {
+    super::push_future_settled_value_missing_evidence(labels);
+    super::super::push_unique(labels, "exception-channel-contract");
+    super::super::push_unique(labels, "task-handle-lifecycle-contract");
+    super::super::push_unique(labels, "task-cancellation-liveness-contract");
 }
 
 fn push_completable_future_static_method_missing_evidence(

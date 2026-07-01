@@ -275,6 +275,29 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --recall-loss-report target/recall-loss.java-completablefuture.crates.json
 ```
 
+Build the Java `CompletableFuture` constructor reporting audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.java-completablefuture-constructor.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --generated-on 2026-07-02 \
+  --recall-loss-report target/recall-loss.java-completablefuture-constructor.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.java-completablefuture-constructor.json
+
+python3 scripts/query-regression-harness.py \
+  --baseline-binary /tmp/nose-java-cf-main-worktree/target/release/nose \
+  --current-binary target/release/nose \
+  --baseline-source-ref origin/main \
+  --current-source-ref java-completablefuture-constructor-reporting \
+  --iterations 9 \
+  --repo netty --repo rxjava --repo retrofit \
+  --repo junit5 --repo jedis --repo h2database \
+  --output target/java-completablefuture-constructor-query-regression.json
+```
+
 Build the Java `Executor`/`Future` receiver-method obligation audit with:
 
 ```sh
@@ -743,6 +766,21 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   source prevalence from `143,178` to `143,188` while splitting `40` lexical
   Java future reporting candidates out of the broad
   `CompletableFuture` bucket and leaving `276` broad mentions closed.
+- [scheduling-lifecycle-boundary-audit-java-completablefuture-constructor-reporting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-java-completablefuture-constructor-reporting-2026-07-02.v1.json)
+  records the Java `CompletableFuture` constructor reporting split. It marks
+  fully qualified or exact-/wildcard-import-backed `new CompletableFuture`
+  calls reporting-supported, newly aligning `46` occurrences across `5` repos
+  and reducing the residual broad `CompletableFuture` bucket from `276` to
+  `230`.
+- [java-completablefuture-constructor-reporting-2026-07-02.v1.json](java-completablefuture-constructor-reporting-2026-07-02.v1.json)
+  records the compact closeout for the same slice, including the checked
+  `crates` recall-loss gate (`0` false merges, `0` canon preservation
+  violations) and Java reporting-supported totals after the split.
+- [java-completablefuture-constructor-query-regression-2026-07-02.v1.json](java-completablefuture-constructor-query-regression-2026-07-02.v1.json)
+  records the Java-heavy product query regression for the constructor slice.
+  The 6-repo alternating r9 run kept product output hashes identical on every
+  measured repo and measured aggregate median runtime at
+  `7023.49ms -> 6991.92ms` (`-0.45%`).
 - [scheduling-lifecycle-boundary-audit-java-wildcard-executor-future-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-java-wildcard-executor-future-2026-07-01.v1.json)
   records the Java `java.util.concurrent.*` receiver-domain follow-up. It keeps
   exact admission closed while allowing wildcard-derived import evidence to

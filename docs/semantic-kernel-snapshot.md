@@ -1,6 +1,6 @@
 # Semantic kernel snapshot
 
-Snapshot date: 2026-07-01. The current implementation has an internal
+Snapshot date: 2026-07-02. The current implementation has an internal
 semantic-kernel facade, evidence-gated field state, sequence-surface contracts,
 proof-backed append fragment evidence, operator-law contracts, typed import
 facts, source-fact gates for construct/macro/literal/operator provenance,
@@ -56,6 +56,12 @@ remain closed until their counters match product proof. Java
 `CompletableFuture` static calls and exact-import-backed CompletionStage-style
 receiver continuations likewise report reusable future/channel/callback
 obligations when static import identity or receiver-domain evidence is proven.
+Java `new CompletableFuture<...>()` constructors now preserve a construct-call
+callee only when the stdlib type identity is fully qualified or exact-/
+wildcard-import-backed and unshadowed. Those constructors report future-settled,
+exception-channel, task-handle lifecycle, and cancellation/liveness obligations
+without opening exact admission; residual broad `CompletableFuture` mentions
+remain closed until split into product-backed surfaces.
 Python
 comprehension lowering now records whether a
 HOF came from a list comprehension, set comprehension, dict comprehension, or

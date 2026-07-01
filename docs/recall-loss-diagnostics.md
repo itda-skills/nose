@@ -190,7 +190,19 @@ receiver continuations:
 `future-exception-continuation-contract`, and
 `future-callback-demand-effect-contract`. It keeps exact admission closed while
 pricing `40` lexical Java future reporting candidates in the pinned corpus and
-leaving `276` broad `CompletableFuture` mentions closed. The
+leaving `276` broad `CompletableFuture` mentions closed.
+The follow-up [Java CompletableFuture constructor reporting artifact](../bench/recall_loss/java-completablefuture-constructor-reporting-2026-07-02.v1.json)
+adds proof-backed `new CompletableFuture` constructor reporting for fully
+qualified or exact-/wildcard-import-backed stdlib type identity. Constructors
+now report `future-settled-value-channel-contract`,
+`exception-channel-contract`, `task-handle-lifecycle-contract`, and
+`task-cancellation-liveness-contract` without opening exact admission. The
+120-repo audit moves `46` constructor occurrences to
+reporting-supported closed-boundary status and leaves `230` broad
+`CompletableFuture` mentions closed for later splitting. The Java-heavy query
+regression kept product output hashes identical across `netty`, `rxjava`,
+`retrofit`, `junit5`, `jedis`, and `h2database`, with aggregate median runtime
+`7023.49ms -> 6991.92ms` (`-0.45%`). The
 follow-up [Rust block_on future-drive artifact](../bench/recall_loss/rust-block-on-future-drive-obligation-reporting-2026-07-01.v1.json)
 keeps exact admission closed and maps qualified/import-backed Rust
 `tokio_test::block_on` calls plus proof-backed tokio runtime receiver chains to
@@ -322,6 +334,12 @@ aligns two more already-backed rows: Swift `await` via
 `8,703` source-prevalence occurrences and keeps broad Java
 `CompletableFuture` mentions plus looser FutureLike receiver settlement rows
 closed until their audit counters match product proof.
+The follow-up [Java CompletableFuture constructor reporting artifact](../bench/recall_loss/java-completablefuture-constructor-reporting-2026-07-02.v1.json)
+splits the first product-backed part of that broad Java bucket: fully qualified
+or exact-/wildcard-import-backed `new CompletableFuture` calls now report
+manual settlement future-channel obligations. It newly accounts for `46`
+source-prevalence occurrences, lowers the broad Java `CompletableFuture` bucket
+to `230`, and keeps exact admission closed.
 The
 checked [promise-protocol diagnostics](../bench/recall_loss/promise-protocol-diagnostics-2026-06-28.v1.json)
 connect the JS/TS source-prevalence group (`29,094` Promise/async occurrences)
