@@ -53,11 +53,11 @@
     "relevant_oracle_exclusion_obligations": [
       {
         "attribution_reason": "unsupported-runtime-boundary",
-        "count": 579,
+        "count": 580,
         "exclusion_reason": "uninterpretable",
         "obligation_family": "exception-channel",
         "obligation_subreason": "exception-channel-contract-missing",
-        "oracle_excluded": 579
+        "oracle_excluded": 580
       },
       {
         "attribution_reason": "unsupported-runtime-boundary",
@@ -82,9 +82,9 @@
       "admission_rejections": 812,
       "canon_checked": 99,
       "canon_preservation_violations": 0,
-      "excluded_units": 6011,
+      "excluded_units": 6014,
       "interpretable_units": 970,
-      "total_units": 6981
+      "total_units": 6984
     }
   },
   "generated_on": "2026-07-02",

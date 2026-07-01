@@ -76,9 +76,9 @@
   },
   "current_recall_loss": {
     "report": "target/recall-loss.java-completablefuture-constructor.crates.json",
-    "total_units": 6981,
+    "total_units": 6984,
     "interpretable_units": 970,
-    "excluded_units": 6011,
+    "excluded_units": 6014,
     "admission_rejections": 812,
     "fingerprint_groups": 38,
     "false_merges": 0,
@@ -99,14 +99,14 @@
     ],
     "iterations": 9,
     "hashes_identical_by_repo": true,
-    "aggregate_baseline_median_ms": 7108.090041903779,
-    "aggregate_current_median_ms": 7188.733458286151,
-    "aggregate_delta_pct": 1.1345300341858562
+    "aggregate_baseline_median_ms": 7092.754248064011,
+    "aggregate_current_median_ms": 7080.961583647877,
+    "aggregate_delta_pct": -0.16626354168908644
   },
   "performance_assessment": {
     "product_code_changed": true,
     "query_regression_required": true,
-    "summary": "The Java-heavy 6-repo alternating r9 query regression kept product output hashes identical on every measured repo and measured aggregate median runtime at 7108.09ms -> 7188.73ms (+1.13%)."
+    "summary": "The Java-heavy 6-repo alternating r9 query regression kept product output hashes identical on every measured repo and measured aggregate median runtime at 7092.75ms -> 7080.96ms (-0.17%)."
   },
   "related_artifacts": [
     "bench/recall_loss/scheduling-lifecycle-boundary-audit-java-completablefuture-constructor-reporting-2026-07-02.v1.json",
@@ -128,6 +128,6 @@
     "cargo run -q -p nose-cli -- verify crates --max-violations 0 --recall-loss-report target/recall-loss.java-completablefuture-constructor.crates.json",
     "python3 scripts/scheduling-lifecycle-boundary-audit.py --generated-on 2026-07-02 --recall-loss-report target/recall-loss.java-completablefuture-constructor.crates.json --output bench/recall_loss/scheduling-lifecycle-boundary-audit-java-completablefuture-constructor-reporting-2026-07-02.v1.json",
     "cargo build --release -p nose-cli",
-    "python3 scripts/query-regression-harness.py --baseline-binary /tmp/nose-java-cf-main-worktree/target/release/nose --current-binary target/release/nose --baseline-source-ref origin/main --current-source-ref java-completablefuture-constructor-reporting --current-source-sha 5bdcd8009691712cc60fe8410f640f92b8dbf9d2 --iterations 9 --repo netty --repo rxjava --repo retrofit --repo junit5 --repo jedis --repo h2database --output bench/recall_loss/java-completablefuture-constructor-query-regression-2026-07-02.v1.json"
+    "python3 scripts/query-regression-harness.py --baseline-binary /tmp/nose-java-cf-main-worktree/target/release/nose --current-binary target/release/nose --baseline-source-ref origin/main --current-source-ref java-completablefuture-constructor-reporting --current-source-sha 91e75c91edeb000fe2b68081d9a1855ef468a363 --iterations 9 --repo netty --repo rxjava --repo retrofit --repo junit5 --repo jedis --repo h2database --output bench/recall_loss/java-completablefuture-constructor-query-regression-2026-07-02.v1.json"
   ]
 }

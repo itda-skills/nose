@@ -93,8 +93,8 @@ break.
   120-repo audit splits `46` proof-backed constructor occurrences out of the
   broad Java `CompletableFuture` bucket, reducing the broad closed bucket from
   `276` to `230`; the Java-heavy query regression kept product output hashes
-  identical on all six measured repos and measured `7108.09ms -> 7188.73ms`
-  (`+1.13%`).
+  identical on all six measured repos and measured `7092.75ms -> 7080.96ms`
+  (`-0.17%`).
 - Added Java `Executor`/`Future` receiver-method reporting for
   exact- or wildcard-import-backed `CompletableFuture`, `Future`,
   `ScheduledFuture`, `Executor`, `ExecutorService`, and
