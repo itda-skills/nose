@@ -95,6 +95,11 @@ break.
   `276` to `230`; the Java-heavy query regression kept product output hashes
   identical on all six measured repos and measured `7023.49ms -> 6991.92ms`
   (`-0.45%`).
+- Aligned already source-protocol-backed Python `await`/`async def`, Rust
+  `.await`/`async fn`/`async block`, and Swift `async` function audit rows with
+  runtime-boundary reporting. This moves `19,144` non-JS async source-protocol
+  occurrences to reporting-supported closed-boundaries while exact admission
+  remains closed.
 - Added Java `Executor`/`Future` receiver-method reporting for
   exact- or wildcard-import-backed `CompletableFuture`, `Future`,
   `ScheduledFuture`, `Executor`, `ExecutorService`, and
