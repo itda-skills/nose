@@ -780,7 +780,7 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   records the Java-heavy product query regression for the constructor slice.
   The 6-repo alternating r9 run kept product output hashes identical on every
   measured repo and measured aggregate median runtime at
-  `7387.63ms -> 7366.03ms` (`-0.29%`).
+  `7108.09ms -> 7188.73ms` (`+1.13%`).
 - [scheduling-lifecycle-boundary-audit-java-wildcard-executor-future-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-java-wildcard-executor-future-2026-07-01.v1.json)
   records the Java `java.util.concurrent.*` receiver-domain follow-up. It keeps
   exact admission closed while allowing wildcard-derived import evidence to
