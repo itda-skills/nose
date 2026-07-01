@@ -106,7 +106,7 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("python", "python.asyncio.shield", "asyncio.shield", "cancellation-liveness-boundary", "task-cancellation-liveness-contract-missing", "asyncio cancellation shield", "asyncio.shield changes cancellation propagation while preserving an awaitable result channel", re.compile(r"\basyncio\s*\.\s*shield\s*\("), "reporting-supported-closed-boundary"),
     Pattern("python", "python.asyncio.run_coroutine_threadsafe", "asyncio.run_coroutine_threadsafe", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "asyncio thread-safe task submission", "asyncio.run_coroutine_threadsafe schedules a coroutine onto another loop and returns a future handle", re.compile(r"\basyncio\s*\.\s*run_coroutine_threadsafe\s*\("), "reporting-supported-closed-boundary"),
     Pattern("python", "python.asyncio.to_thread", "asyncio.to_thread", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "asyncio thread offload", "asyncio.to_thread schedules a callback on a worker thread and returns an awaitable result channel", re.compile(r"\basyncio\s*\.\s*to_thread\s*\("), "reporting-supported-closed-boundary"),
-    Pattern("python", "python.generator.yield", "yield", "lifecycle-materialization-boundary", "generator-yield-lifecycle-contract-missing", "generator lifecycle", "yield has suspension and iterator lifecycle semantics", re.compile(r"\byield(?:\s+from)?\b")),
+    Pattern("python", "python.generator.yield", "yield", "lifecycle-materialization-boundary", "generator-yield-lifecycle-contract-missing", "generator lifecycle", "Python yield expressions expose source-backed generator lifecycle and protocol boundaries", re.compile(r"\byield(?:\s+from)?\b"), "reporting-supported-closed-boundary"),
     Pattern("rust", "rust.async.await", ".await", "scheduling-boundary", "async-await-scheduling-contract-missing", "future await", "Rust .await polls a Future and must keep wake/scheduling effects explicit", re.compile(r"\.\s*await\b"), "reporting-supported-closed-boundary"),
     Pattern("rust", "rust.async.function", "async fn", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async fn creates a suspended async function boundary", re.compile(r"\basync\s+fn\b"), "reporting-supported-closed-boundary"),
     Pattern("rust", "rust.async.closure", "async closure", "scheduling-boundary", "async-function-scheduling-contract-missing", "async closure scheduling", "Rust async closures create suspended async callable protocol boundaries even when the surrounding function is synchronous", re.compile(r"\basync\s+(?:move\s+)?\|"), "reporting-supported-closed-boundary"),
@@ -938,6 +938,7 @@ def self_test() -> None:
     source_protocol_reporting_surfaces = {
         "python.async.await",
         "python.async.function",
+        "python.generator.yield",
         "rust.async.await",
         "rust.async.function",
         "rust.async.block",
