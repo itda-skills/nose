@@ -203,6 +203,14 @@ break.
   recall-loss gate at `0` false merges. The Go-heavy query regression measured
   `3560.13ms -> 3563.06ms` (`+0.08%`) with identical product hashes on all six
   measured repos.
+- Added non-JS task-spawn reporting alignment. Rust `tokio`/`async-std` spawn,
+  Swift `Task`/`Task.detached`, Python `asyncio.create_task`/`ensure_future`,
+  and Java `CompletableFuture.supplyAsync`/`runAsync` now align with existing
+  runtime-boundary reporting in the scheduling lifecycle audit. Exact admission
+  remains closed; the slice newly marks `590` source-prevalence occurrences
+  reporting-supported, brings currently backed task-spawn reporting-supported
+  rows to `1,123` occurrences, and keeps the checked `crates` gate at `0` false
+  merges and `0` canon preservation violations.
 - Added non-JS async protocol near-channel mirror support. The dual-view async
   protocol capability now covers `await`, async-function boundaries, and Rust
   async blocks in near/witness builds, so Rust `async fn`/`.await` and Swift

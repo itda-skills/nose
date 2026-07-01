@@ -301,6 +301,13 @@ across `17` repos, and the checked `crates` gate reports `0` false merges.
 The follow-up [Go protocol reporting-support artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json)
 marks Go channel/send/receive/select, goroutine, and defer source-protocol rows
 reporting-supported while keeping exact admission closed.
+The follow-up [non-JS task-spawn reporting alignment artifact](../bench/recall_loss/non-js-task-spawn-reporting-alignment-2026-07-01.v1.json)
+then aligns already-backed Rust `tokio`/`async-std` spawn, Swift
+`Task`/`Task.detached`, Python `asyncio.create_task`/`ensure_future`, and Java
+`CompletableFuture.supplyAsync`/`runAsync` audit rows as reporting-supported
+closed-boundaries. It newly accounts for `590` source-prevalence occurrences,
+raises currently backed task-spawn reporting-supported rows to `1,123`
+occurrences, and keeps exact admission closed.
 The
 checked [promise-protocol diagnostics](../bench/recall_loss/promise-protocol-diagnostics-2026-06-28.v1.json)
 connect the JS/TS source-prevalence group (`29,094` Promise/async occurrences)
