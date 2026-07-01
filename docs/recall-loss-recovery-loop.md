@@ -131,6 +131,13 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
   status, newly aligning `104` source-prevalence occurrences across `6` repos
   and leaving no Python closed-boundary rows in the scheduling lifecycle audit
   while exact admission remains closed.
+- [Ruby exception-channel reporting](../bench/recall_loss/ruby-exception-reporting-2026-07-02.v1.json) records the audit closeout for source-backed Ruby exception boundaries.
+  Unqualified `raise`/`fail` calls now lower to `Throw`, `rescue` remains on
+  `Try`, and the audit newly aligns `3,998` concrete Ruby exception-channel
+  occurrences while reclassifying the broad `4,010`-occurrence `raise/rescue`
+  row as superseded overlap. The Ruby-heavy query regression records
+  `2778.68ms -> 2670.37ms` (`-3.90%`) and intentional new exact families for
+  repeated Ruby `raise` guard clauses.
 - [Swift try-expression reporting alignment](../bench/recall_loss/swift-try-expression-reporting-2026-07-02.v1.json) records the source-backed `TryPropagation` audit closeout for `try`, `try?`,
   `try!`, and `for try await`. It newly aligns `17,970` source-prevalence
   occurrences across `18` repos while keeping exact admission closed and the

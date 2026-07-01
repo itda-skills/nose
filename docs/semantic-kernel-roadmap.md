@@ -2440,6 +2440,19 @@ closed-boundary rows in the scheduling lifecycle audit. Exact admission remains
 closed until timer suspension, cancellation, and event-loop timing semantics are
 proven.
 
+2026-07-02 Ruby exception-channel reporting note:
+The [ruby-exception-reporting-2026-07-02.v1.json](../bench/recall_loss/ruby-exception-reporting-2026-07-02.v1.json)
+artifact aligns Ruby exception flow with existing runtime-boundary capabilities.
+Unqualified `raise`/`fail` calls now lower to `NodeKind::Throw`, while `rescue`
+continues to lower to `NodeKind::Try`; both report `exception-channel-contract`
+without adding a Ruby-only kernel API. The 120-repo audit splits the old broad
+`raise/rescue` row into `2,065` `raise` and `1,933` `rescue`
+reporting-supported occurrences, reclassifies the `4,010` broad bucket as
+superseded overlap, and leaves Java Stream lifecycle as the largest non-JS
+actionable closed boundary. Exact admission remains closed until Ruby exception
+propagation, rescue matching, ensure ordering, and non-local control semantics
+are proven.
+
 2026-07-01 Go protocol reporting-support note:
 The [scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json)
 artifact aligns the existing Go source protocol support with the shared

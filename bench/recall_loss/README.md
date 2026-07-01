@@ -288,6 +288,29 @@ python3 scripts/query-regression-harness.py \
   --output target/ruby-yield-source-protocol-query-regression.json
 ```
 
+Build the Ruby exception-channel reporting audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.ruby-exception-reporting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.ruby-exception-reporting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.ruby-exception-reporting.json \
+  --generated-on 2026-07-02
+
+python3 scripts/query-regression-harness.py \
+  --baseline-binary /tmp/nose-ruby-exception-main/target/release/nose \
+  --current-binary target/release/nose \
+  --baseline-source-ref origin/main \
+  --current-source-ref ruby-exception-reporting-alignment \
+  --iterations 15 \
+  --repo rubocop --repo rspec-core --repo sidekiq \
+  --repo rack --repo fastlane --repo sinatra \
+  --output target/ruby-exception-reporting-query-regression.json
+```
+
 Build the Java `CompletableFuture`/FutureLike obligation audit with:
 
 ```sh
@@ -1049,6 +1072,24 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   aggregate median was `2504.55ms -> 2574.79ms` (`+2.80%`). `rspec-core`
   changed one same-location 3-member HTML family's representative label from
   `pre` to `code` while keeping the family count stable.
+- [scheduling-lifecycle-boundary-audit-ruby-exception-reporting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-ruby-exception-reporting-2026-07-02.v1.json)
+  records the Ruby exception-channel reporting audit. It splits the historical
+  broad `raise/rescue` bucket into `2,065` source-backed `raise` occurrences
+  and `1,933` source-backed `rescue` occurrences, both reporting-supported
+  closed-boundaries, while the broad `4,010`-occurrence overlap bucket remains
+  visible as superseded.
+- [ruby-exception-reporting-2026-07-02.v1.json](ruby-exception-reporting-2026-07-02.v1.json)
+  records the compact closeout for the same slice. Reporting-supported
+  closed-boundary rows rise to `94,977` occurrences across `63` rows, exact
+  admission remains closed, and Java Stream lifecycle becomes the largest
+  non-JS actionable closed boundary at `1,996` occurrences.
+- [ruby-exception-reporting-query-regression-2026-07-02.v1.json](ruby-exception-reporting-query-regression-2026-07-02.v1.json)
+  records the Ruby-heavy product query regression. The 6-repo alternating r15
+  aggregate median was `2778.68ms -> 2670.37ms` (`-3.90%`). Output hashes stay
+  identical on `rack`, `rubocop`, `sidekiq`, and `sinatra`; `fastlane`
+  increases from `28` to `34` families and `rspec-core` from `8` to `9`
+  because repeated Ruby `raise` guard clauses are now preserved as exact
+  exception-boundary clones.
 - [scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json)
   records the Python/Rust async runtime scope-shadowing hardening. It keeps
   exact admission closed while making unrelated local shadows in other

@@ -129,6 +129,16 @@ break.
   raising the total to `90,979` occurrences across `61` rows and leaving no
   Python closed-boundary rows in the scheduling/lifecycle audit; exact
   admission remains closed.
+- Added Ruby exception-channel reporting for unqualified `raise`/`fail` calls
+  by lowering them to the existing `Throw` boundary, while keeping `rescue` on
+  the existing `Try` boundary. The 120-repo audit splits the broad
+  `raise/rescue` bucket into `2,065` `raise` and `1,933` `rescue`
+  reporting-supported occurrences, reclassifies the old `4,010`-occurrence
+  broad bucket as a superseded overlap row, and makes Java Stream lifecycle
+  (`1,996`) the largest non-JS actionable closed boundary. The Ruby-heavy
+  query regression measured `2778.68ms -> 2670.37ms` (`-3.90%`) and the output
+  drift is intentional: `fastlane` and `rspec-core` gain exact families for
+  repeated Ruby `raise` guard clauses.
 - Added Java `Executor`/`Future` receiver-method reporting for
   exact- or wildcard-import-backed `CompletableFuture`, `Future`,
   `ScheduledFuture`, `Executor`, `ExecutorService`, and
