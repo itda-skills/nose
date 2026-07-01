@@ -399,6 +399,19 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-07-01
 ```
 
+Build the non-JS source-protocol reporting alignment audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.non-js-source-protocol-alignment.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.non-js-source-protocol-alignment.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.non-js-source-protocol-alignment.json \
+  --generated-on 2026-07-02
+```
+
 Build the Swift await and Java settled-factory reporting alignment audit with:
 
 ```sh
@@ -781,6 +794,17 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   The 6-repo alternating r9 run kept product output hashes identical on every
   measured repo and measured aggregate median runtime at
   `7023.49ms -> 6991.92ms` (`-0.45%`).
+- [scheduling-lifecycle-boundary-audit-non-js-source-protocol-alignment-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-non-js-source-protocol-alignment-2026-07-02.v1.json)
+  records the non-JS async source-protocol reporting alignment. It marks the
+  already runtime-boundary-backed Python `await`/`async def`, Rust
+  `.await`/`async fn`/`async block`, and Swift `async` function rows
+  reporting-supported while keeping exact admission closed.
+- [non-js-source-protocol-reporting-alignment-2026-07-02.v1.json](non-js-source-protocol-reporting-alignment-2026-07-02.v1.json)
+  records the compact closeout for the same slice. It newly aligns `19,144`
+  source-prevalence occurrences, brings all reporting-supported
+  closed-boundary rows to `70,491` occurrences across `57` rows, and keeps the
+  checked `crates` gate at `0` false merges and `0` canon preservation
+  violations.
 - [scheduling-lifecycle-boundary-audit-java-wildcard-executor-future-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-java-wildcard-executor-future-2026-07-01.v1.json)
   records the Java `java.util.concurrent.*` receiver-domain follow-up. It keeps
   exact admission closed while allowing wildcard-derived import evidence to

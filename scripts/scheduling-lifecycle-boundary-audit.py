@@ -93,8 +93,8 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("javascript-typescript", "js-ts.promise.scheduler", "scheduler.yield", "scheduling-boundary", "scheduler-yield-microtask-order-contract-missing", "scheduler yield", "scheduler.yield needs microtask/order proof", re.compile(r"\bscheduler\s*\.\s*yield\s*\(")),
     Pattern("javascript-typescript", "js-ts.promise.interval", "setInterval", "lifecycle-materialization-boundary", "interval-async-iteration-lifecycle-contract-missing", "interval lifecycle", "setInterval and timers interval streams have repeated emission, cancellation, and liveness semantics", re.compile(r"(?<![A-Za-z0-9_$])setInterval\s*\(")),
     Pattern("javascript-typescript", "js-ts.cancellation.abort", "AbortController/AbortSignal", "cancellation-liveness-boundary", "abort-signal-cancellation-contract-missing", "cancellation signal", "AbortSignal/AbortController can change scheduling and rejection outcomes", re.compile(r"\b(?:AbortController|AbortSignal)\b")),
-    Pattern("python", "python.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Python await has coroutine scheduling and exception channel semantics", re.compile(r"\bawait\b")),
-    Pattern("python", "python.async.function", "async def", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async def creates coroutine protocol boundaries", re.compile(r"\basync\s+def\b")),
+    Pattern("python", "python.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Python await has coroutine scheduling and exception channel semantics", re.compile(r"\bawait\b"), "reporting-supported-closed-boundary"),
+    Pattern("python", "python.async.function", "async def", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async def creates coroutine protocol boundaries", re.compile(r"\basync\s+def\b"), "reporting-supported-closed-boundary"),
     Pattern("python", "python.async.iteration", "async for", "lifecycle-materialization-boundary", "async-iteration-lifecycle-contract-missing", "async iteration lifecycle", "async for statements and comprehensions need async iterator lifecycle, value-channel, and scheduling proof", re.compile(r"\basync\s+for\b"), "reporting-supported-closed-boundary"),
     Pattern("python", "python.async.context", "async with", "lifecycle-materialization-boundary", "async-context-lifecycle-contract-missing", "async context lifecycle", "async with needs async enter/exit cleanup, exception-channel, and scheduling proof", re.compile(r"\basync\s+with\b"), "reporting-supported-closed-boundary"),
     Pattern("python", "python.asyncio.task", "asyncio.create_task/ensure_future", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "asyncio task spawn", "asyncio task APIs create scheduler, cancellation, and handle lifecycle boundaries", re.compile(r"\basyncio\s*\.\s*(?:create_task|ensure_future)\s*\("), "reporting-supported-closed-boundary"),
@@ -107,10 +107,10 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("python", "python.asyncio.run_coroutine_threadsafe", "asyncio.run_coroutine_threadsafe", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "asyncio thread-safe task submission", "asyncio.run_coroutine_threadsafe schedules a coroutine onto another loop and returns a future handle", re.compile(r"\basyncio\s*\.\s*run_coroutine_threadsafe\s*\("), "reporting-supported-closed-boundary"),
     Pattern("python", "python.asyncio.to_thread", "asyncio.to_thread", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "asyncio thread offload", "asyncio.to_thread schedules a callback on a worker thread and returns an awaitable result channel", re.compile(r"\basyncio\s*\.\s*to_thread\s*\("), "reporting-supported-closed-boundary"),
     Pattern("python", "python.generator.yield", "yield", "lifecycle-materialization-boundary", "generator-yield-lifecycle-contract-missing", "generator lifecycle", "yield has suspension and iterator lifecycle semantics", re.compile(r"\byield(?:\s+from)?\b")),
-    Pattern("rust", "rust.async.await", ".await", "scheduling-boundary", "async-await-scheduling-contract-missing", "future await", "Rust .await polls a Future and must keep wake/scheduling effects explicit", re.compile(r"\.\s*await\b")),
-    Pattern("rust", "rust.async.function", "async fn", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async fn creates a suspended async function boundary", re.compile(r"\basync\s+fn\b")),
+    Pattern("rust", "rust.async.await", ".await", "scheduling-boundary", "async-await-scheduling-contract-missing", "future await", "Rust .await polls a Future and must keep wake/scheduling effects explicit", re.compile(r"\.\s*await\b"), "reporting-supported-closed-boundary"),
+    Pattern("rust", "rust.async.function", "async fn", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async fn creates a suspended async function boundary", re.compile(r"\basync\s+fn\b"), "reporting-supported-closed-boundary"),
     Pattern("rust", "rust.async.closure", "async closure", "scheduling-boundary", "async-function-scheduling-contract-missing", "async closure scheduling", "Rust async closures create suspended async callable protocol boundaries even when the surrounding function is synchronous", re.compile(r"\basync\s+(?:move\s+)?\|"), "reporting-supported-closed-boundary"),
-    Pattern("rust", "rust.async.block", "async block", "scheduling-boundary", "async-block-scheduling-contract-missing", "async block construction", "async blocks create suspended async boundaries", re.compile(r"\basync\s+(?:move\s*)?\{")),
+    Pattern("rust", "rust.async.block", "async block", "scheduling-boundary", "async-block-scheduling-contract-missing", "async block construction", "async blocks create suspended async boundaries", re.compile(r"\basync\s+(?:move\s*)?\{"), "reporting-supported-closed-boundary"),
     Pattern("rust", "rust.async.spawn", "tokio/async-std spawn", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "task spawn", "async spawn APIs introduce scheduler, cancellation, and join-handle boundaries", re.compile(r"\b(?:tokio(?:::task)?|async_std::task)\s*::\s*spawn(?:_blocking)?\s*\("), "reporting-supported-closed-boundary"),
     Pattern("rust", "rust.async.join", "tokio/futures/futures_util join/try_join", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "future all-completion aggregate", "qualified runtime join style macros need all-completion result-channel proof", re.compile(r"\b(?:tokio|futures|futures_util)::(?:join|try_join)!\s*\("), "reporting-supported-closed-boundary"),
     Pattern("rust", "rust.async.select", "tokio/futures/futures_util select", "cancellation-liveness-boundary", "async-aggregate-first-completion-contract-missing", "future first-completion aggregate", "qualified runtime select style macros need first-completion, cancellation, and result-channel proof", re.compile(r"\b(?:tokio|futures|futures_util)::select!\s*\("), "reporting-supported-closed-boundary"),
@@ -126,7 +126,7 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("java", "java.future.executor", "Executor/Future", "scheduling-boundary", "java-executor-scheduling-contract-missing", "executor scheduling", "Executor/Future APIs introduce scheduler and lifecycle boundaries", re.compile(r"\b(?:ExecutorService|Executor|Future|ScheduledFuture)\b")),
     Pattern("java", "java.stream.lifecycle", "stream/parallelStream", "lifecycle-materialization-boundary", "java-stream-lifecycle-contract-missing", "stream lifecycle", "Java streams need lazy/eager lifecycle and terminal materialization proof", re.compile(r"\.\s*(?:stream|parallelStream)\s*\(")),
     Pattern("swift", "swift.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Swift await has task scheduling and actor/lifetime boundaries", re.compile(r"\bawait\b"), "reporting-supported-closed-boundary"),
-    Pattern("swift", "swift.async.function", "async", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "Swift async surfaces create task/future-like protocol boundaries", re.compile(r"\basync\b")),
+    Pattern("swift", "swift.async.function", "async", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "Swift async surfaces create task/future-like protocol boundaries", re.compile(r"\basync\b"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.async.closure", "async closure", "scheduling-boundary", "async-function-scheduling-contract-missing", "async closure scheduling", "Swift async closures create async callable protocol boundaries even when the surrounding function is synchronous", re.compile(r"(?!x)x"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.async.iteration", "for await/for try await", "lifecycle-materialization-boundary", "async-iteration-lifecycle-contract-missing", "async iteration lifecycle", "Swift async sequence loops need async iterator lifecycle, value-channel, scheduling, and throwing-channel proof", re.compile(r"\bfor\s+(?:try[!?]?\s+)?await\b"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.error.throws", "throws/try", "exception-channel", "swift-throws-exception-channel-contract-missing", "throws channel", "Swift throws/try is an explicit error channel", re.compile(r"\b(?:throws|try)\b")),
@@ -832,6 +832,26 @@ def self_test() -> None:
     assert SWIFT_THROWING_FUNCTION not in swift_type_only
     assert SWIFT_THROWING_CLOSURE not in swift_type_only
 
+    swift_async_function_pattern = next(
+        item for item in PATTERNS if item.surface == "swift.async.function"
+    )
+    swift_async_functions = count_file(
+        "func f() async -> Int { 1 }\n"
+        "func g() async throws -> Int { try await work() }\n"
+        "init(value: Int) async { self.init() }\n"
+        "func accepts(_ body: () async -> Int) -> Int { 1 }\n"
+        "func returns() -> () async -> Int { { 1 } }\n",
+        "swift",
+    )
+    assert swift_async_functions.get(swift_async_function_pattern) == 3
+    swift_async_type_only = count_file(
+        "let factory: (@escaping () async throws -> Void) -> Void = { closure in closure }\n"
+        "func accepts(_ body: () async -> Int) -> Int { 1 }\n"
+        "func returns() -> () async -> Int { { 1 } }\n",
+        "swift",
+    )
+    assert swift_async_function_pattern not in swift_async_type_only
+
     ruby_yield = count_file(
         "def render(value)\n"
         "  yield value\n"
@@ -870,6 +890,18 @@ def self_test() -> None:
         "swift.async.await",
     }
     for surface in settled_future_and_await_reporting_surfaces:
+        pattern = next(item for item in PATTERNS if item.surface == surface)
+        assert pattern.status == "reporting-supported-closed-boundary", surface
+
+    source_protocol_reporting_surfaces = {
+        "python.async.await",
+        "python.async.function",
+        "rust.async.await",
+        "rust.async.function",
+        "rust.async.block",
+        "swift.async.function",
+    }
+    for surface in source_protocol_reporting_surfaces:
         pattern = next(item for item in PATTERNS if item.surface == surface)
         assert pattern.status == "reporting-supported-closed-boundary", surface
 
@@ -963,6 +995,7 @@ def count_file(
         if pattern.language != language:
             continue
         if pattern.surface in {
+            "swift.async.function",
             "swift.async.closure",
             "swift.error.throwing_function",
             "swift.error.throwing_closure",
@@ -995,6 +1028,7 @@ def count_file(
         )
         counts.update(java_future_receiver_counts(masked, java_package_local_types))
     elif language == "swift":
+        counts.update(swift_async_function_counts(masked))
         counts.update(swift_async_closure_counts(masked))
         counts.update(swift_throwing_callable_counts(masked))
     return counts
@@ -1055,6 +1089,16 @@ def swift_async_closure_counts(text: str) -> dict[Pattern, int]:
     return {pattern: count} if count else {}
 
 
+def swift_async_function_counts(text: str) -> dict[Pattern, int]:
+    pattern = next(item for item in PATTERNS if item.surface == "swift.async.function")
+    count = sum(
+        1
+        for signature in iter_swift_body_bearing_callable_signatures(text)
+        if swift_callable_signature_has_top_level_async_modifier(signature)
+    )
+    return {pattern: count} if count else {}
+
+
 def swift_throwing_callable_counts(text: str) -> dict[Pattern, int]:
     counts: dict[Pattern, int] = {}
     function_count = sum(
@@ -1105,6 +1149,15 @@ def iter_swift_body_bearing_callable_signatures(text: str):
             idx += 1
 
 
+def swift_callable_signature_has_top_level_async_modifier(signature: str) -> bool:
+    for idx, _ in iter_top_level_word_offsets(signature, "async"):
+        before = signature[:idx].rstrip()
+        after = signature[idx + len("async") :].lstrip()
+        if swift_callable_async_prefix_is_valid(before) and swift_callable_async_tail_is_valid(after):
+            return True
+    return False
+
+
 def swift_callable_signature_has_top_level_throwing_modifier(signature: str) -> bool:
     for keyword in ("throws", "rethrows"):
         for idx, _ in iter_top_level_word_offsets(signature, keyword):
@@ -1112,6 +1165,20 @@ def swift_callable_signature_has_top_level_throwing_modifier(signature: str) -> 
             after = signature[idx + len(keyword) :].lstrip()
             if swift_callable_throwing_prefix_is_valid(before) and swift_callable_throwing_tail_is_valid(after):
                 return True
+    return False
+
+
+def swift_callable_async_prefix_is_valid(before: str) -> bool:
+    return not swift_has_top_level_return_arrow(before)
+
+
+def swift_callable_async_tail_is_valid(after: str) -> bool:
+    if not after or after.startswith("->") or is_word_at(after, 0, "where"):
+        return True
+    for keyword in ("throws", "rethrows"):
+        if is_word_at(after, 0, keyword):
+            rest = swift_consume_typed_throws_tail(after[len(keyword) :]).lstrip()
+            return not rest or rest.startswith("->") or is_word_at(rest, 0, "where")
     return False
 
 

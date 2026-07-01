@@ -203,6 +203,14 @@ reporting-supported closed-boundary status and leaves `230` broad
 regression kept product output hashes identical across `netty`, `rxjava`,
 `retrofit`, `junit5`, `jedis`, and `h2database`, with aggregate median runtime
 `7023.49ms -> 6991.92ms` (`-0.45%`). The
+follow-up [non-JS source-protocol reporting alignment artifact](../bench/recall_loss/non-js-source-protocol-reporting-alignment-2026-07-02.v1.json)
+brings the scheduling lifecycle audit in line with the existing
+`Source::Protocol(Await)`, `Source::Protocol(AsyncFunction)`, and
+`Source::Protocol(AsyncBlock)` runtime-boundary reporting. Python
+`await`/`async def`, Rust `.await`/`async fn`/`async block`, and Swift `async`
+function rows now count as reporting-supported closed-boundaries, newly
+accounting for `19,144` source-prevalence occurrences while exact admission
+remains closed. The
 follow-up [Rust block_on future-drive artifact](../bench/recall_loss/rust-block-on-future-drive-obligation-reporting-2026-07-01.v1.json)
 keeps exact admission closed and maps qualified/import-backed Rust
 `tokio_test::block_on` calls plus proof-backed tokio runtime receiver chains to
