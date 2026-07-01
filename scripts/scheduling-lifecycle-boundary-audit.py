@@ -431,6 +431,17 @@ JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION = Pattern(
     re.compile(r"(?!x)x"),
     "reporting-candidate-closed-boundary",
 )
+JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR = Pattern(
+    "java",
+    "java.future.completable.constructor",
+    "new CompletableFuture",
+    "success-error-result-channel",
+    "future-settled-value-channel-contract-missing",
+    "future constructor channel",
+    "Import- or qualified-name-backed Java CompletableFuture constructors create manual settlement future channels",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
 JAVA_FUTURE_HANDLE_GET = Pattern(
     "java",
     "java.future.handle.get",
@@ -637,6 +648,7 @@ def all_known_patterns() -> tuple[Pattern, ...]:
         JAVA_FUTURE_SETTLEMENT_CONTINUATION,
         JAVA_FUTURE_ALL_COMPLETION_CONTINUATION,
         JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION,
+        JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR,
         JAVA_FUTURE_HANDLE_GET,
         JAVA_FUTURE_HANDLE_CANCEL,
         JAVA_FUTURE_HANDLE_STATUS,
@@ -719,6 +731,53 @@ def self_test() -> None:
         "java",
     )
     assert JAVA_FUTURE_HANDLE_GET not in wildcard_shadow
+
+    java_completable_broad = next(
+        item for item in PATTERNS if item.surface == "java.future.completable"
+    )
+    exact_completable_constructor = count_file(
+        "import java.util.concurrent.CompletableFuture;\n"
+        "class T { Object run() { return new CompletableFuture<String>(); } }\n",
+        "java",
+    )
+    assert exact_completable_constructor.get(JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR) == 1
+    assert exact_completable_constructor.get(java_completable_broad) == 1
+
+    wildcard_completable_constructor = count_file(
+        "import java.util.concurrent.*;\n"
+        "class T { Object run() { return new CompletableFuture<String>(); } }\n",
+        "java",
+    )
+    assert wildcard_completable_constructor.get(JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR) == 1
+
+    qualified_completable_constructor = count_file(
+        "class T { Object run() { return new java.util.concurrent.CompletableFuture<String>(); } }\n",
+        "java",
+    )
+    assert qualified_completable_constructor.get(JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR) == 1
+
+    unimported_completable_constructor = count_file(
+        "class T { Object run() { return new CompletableFuture<String>(); } }\n",
+        "java",
+    )
+    assert JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR not in unimported_completable_constructor
+    assert unimported_completable_constructor.get(java_completable_broad) == 1
+
+    conflict_completable_constructor = count_file(
+        "import java.util.concurrent.*;\n"
+        "import example.CompletableFuture;\n"
+        "class T { Object run() { return new CompletableFuture<String>(); } }\n",
+        "java",
+    )
+    assert JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR not in conflict_completable_constructor
+
+    shadow_completable_constructor = count_file(
+        "import java.util.concurrent.CompletableFuture;\n"
+        "class CompletableFuture<T> {}\n"
+        "class T { Object run() { return new CompletableFuture<String>(); } }\n",
+        "java",
+    )
+    assert JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR not in shadow_completable_constructor
 
     swift_throwing = count_file(
         "func f() throws -> Int { 1 }\n"
@@ -888,11 +947,54 @@ def count_file(text: str, language: str) -> dict[Pattern, int]:
         }
         counts.update(go_channel_protocol_counts(masked))
     elif language == "java":
+        java_completable_pattern = next(
+            item for item in PATTERNS if item.surface == "java.future.completable"
+        )
+        counts.pop(java_completable_pattern, None)
+        counts.update(java_completable_future_counts(masked, java_completable_pattern))
         counts.update(java_future_receiver_counts(masked))
     elif language == "swift":
         counts.update(swift_async_closure_counts(masked))
         counts.update(swift_throwing_callable_counts(masked))
     return counts
+
+
+def java_completable_future_counts(
+    text: str,
+    broad_pattern: Pattern,
+) -> dict[Pattern, int]:
+    accepted_constructor_starts = java_completable_future_constructor_name_starts(text)
+    broad_count = 0
+    for match in re.finditer(
+        r"\bCompletableFuture\b"
+        r"(?!\s*\.\s*(?:supplyAsync|runAsync|completedFuture|completedStage|failedFuture|failedStage|allOf|anyOf)\s*\()",
+        text,
+    ):
+        if match.start() in accepted_constructor_starts:
+            continue
+        broad_count += 1
+
+    counts: dict[Pattern, int] = {}
+    if broad_count:
+        counts[broad_pattern] = broad_count
+    if accepted_constructor_starts:
+        counts[JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR] = len(accepted_constructor_starts)
+    return counts
+
+
+def java_completable_future_constructor_name_starts(text: str) -> set[int]:
+    starts: set[int] = set()
+    qualified = re.compile(
+        r"\bnew\s+java\s*\.\s*util\s*\.\s*concurrent\s*\.\s*"
+        r"(CompletableFuture)\b(?:\s*<[^;(){}]*>)?\s*\("
+    )
+    starts.update(match.start(1) for match in qualified.finditer(text))
+
+    if "CompletableFuture" not in java_imported_concurrent_types(text, {"CompletableFuture"}):
+        return starts
+    simple = re.compile(r"\bnew\s+(CompletableFuture)\b(?:\s*<[^;(){}]*>)?\s*\(")
+    starts.update(match.start(1) for match in simple.finditer(text))
+    return starts
 
 
 def swift_async_closure_counts(text: str) -> dict[Pattern, int]:

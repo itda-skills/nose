@@ -69,6 +69,9 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             if let Some(list) = lower_empty_java_collection_constructor(lo, node, &kids, span) {
                 return list;
             }
+            if let Some(future) = lower_java_completable_future_constructor(lo, node, &kids, span) {
+                return future;
+            }
             lo.record_source_fact(span, SourceFactKind::Call(SourceCallKind::Construct));
             lo.add(NodeKind::Call, Payload::None, span, &kids)
         }

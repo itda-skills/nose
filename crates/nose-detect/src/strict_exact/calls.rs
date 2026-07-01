@@ -44,6 +44,9 @@ pub(super) fn strict_exact_safe_call(
     if strict_exact_factory_call_safe(il, interner, facts, node) {
         return true;
     }
+    if strict_exact_java_completable_future_constructor_boundary(il, interner, node) {
+        return false;
+    }
     let Some(&callee) = il.children(node).first() else {
         return false;
     };
@@ -96,6 +99,26 @@ fn strict_exact_js_like_promise_continuation_selector(il: &Il, method: &str) -> 
         il.meta.lang,
         Lang::JavaScript | Lang::TypeScript | Lang::Vue | Lang::Svelte | Lang::Html
     ) && matches!(method, "then" | "catch" | "finally")
+}
+
+fn strict_exact_java_completable_future_constructor_boundary(
+    il: &Il,
+    interner: &Interner,
+    node: NodeId,
+) -> bool {
+    if il.meta.lang != Lang::Java || !construct_syntax_proof(il, node) {
+        return false;
+    }
+    let Some(&callee) = il.children(node).first() else {
+        return false;
+    };
+    let (NodeKind::Var, Payload::Name(name)) = (il.kind(callee), il.node(callee).payload) else {
+        return false;
+    };
+    matches!(
+        interner.resolve(name),
+        "CompletableFuture" | "java.util.concurrent.CompletableFuture"
+    )
 }
 
 fn strict_exact_factory_call_safe(

@@ -1,0 +1,1169 @@
+{
+  "command": "nose query <repo> all top=0 --mode semantic --format json",
+  "provenance": {
+    "baseline_binary": "/private/tmp/nose-java-cf-main-worktree/target/release/nose",
+    "baseline_binary_sha256": "385b90ef3a538f4640f0d1d8c1931a9c5d9f188bb7490b19d3f7e44e1bc39a0b",
+    "baseline_source_ref": "origin/main",
+    "baseline_source_sha": "1441d7b404aace7c406bad20d98a35196a16b16e",
+    "current_binary": "/Users/ak/prjs/cc/nose/target/release/nose",
+    "current_binary_sha256": "2f196b543f8724b6e02e952b647ef05e7f0f8aefc51a95a44389c2283c00b9eb",
+    "current_source_ref": "java-completablefuture-constructor-reporting",
+    "current_source_sha": "8877b1c891d552443e5e8468496473dba47734eb",
+    "harness": "scripts/query-regression-harness.py",
+    "harness_command": "scripts/query-regression-harness.py --baseline-binary /tmp/nose-java-cf-main-worktree/target/release/nose --current-binary target/release/nose --baseline-source-ref origin/main --current-source-ref java-completablefuture-constructor-reporting --current-source-sha 8877b1c891d552443e5e8468496473dba47734eb --iterations 9 --repo netty --repo rxjava --repo retrofit --repo junit5 --repo jedis --repo h2database --output bench/recall_loss/java-completablefuture-constructor-query-regression-2026-07-02.v1.json",
+    "working_tree_status_before_measurement": ""
+  },
+  "repos": [
+    "netty",
+    "rxjava",
+    "retrofit",
+    "junit5",
+    "jedis",
+    "h2database"
+  ],
+  "runs": [
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2118.0709169711918,
+      "families": 879,
+      "iteration": 1,
+      "label": "baseline",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1317.260832991451,
+      "families": 618,
+      "iteration": 1,
+      "label": "baseline",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 144.39283404499292,
+      "families": 81,
+      "iteration": 1,
+      "label": "baseline",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 720.6310001201928,
+      "families": 327,
+      "iteration": 1,
+      "label": "baseline",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1191.8560829944909,
+      "families": 267,
+      "iteration": 1,
+      "label": "baseline",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1760.5540410149843,
+      "families": 515,
+      "iteration": 1,
+      "label": "baseline",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2008.2575001288205,
+      "families": 879,
+      "iteration": 1,
+      "label": "current",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1366.5284169837832,
+      "families": 618,
+      "iteration": 1,
+      "label": "current",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 146.2355419062078,
+      "families": 81,
+      "iteration": 1,
+      "label": "current",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 780.5945840664208,
+      "families": 327,
+      "iteration": 1,
+      "label": "current",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1197.7347498759627,
+      "families": 267,
+      "iteration": 1,
+      "label": "current",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1727.6637079194188,
+      "families": 515,
+      "iteration": 1,
+      "label": "current",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2052.750749979168,
+      "families": 879,
+      "iteration": 2,
+      "label": "current",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1377.569583011791,
+      "families": 618,
+      "iteration": 2,
+      "label": "current",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 136.82041689753532,
+      "families": 81,
+      "iteration": 2,
+      "label": "current",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 730.6695829611272,
+      "families": 327,
+      "iteration": 2,
+      "label": "current",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1233.2732500508428,
+      "families": 267,
+      "iteration": 2,
+      "label": "current",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1750.8039579261094,
+      "families": 515,
+      "iteration": 2,
+      "label": "current",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 1991.2912079598755,
+      "families": 879,
+      "iteration": 2,
+      "label": "baseline",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1337.5366248656064,
+      "families": 618,
+      "iteration": 2,
+      "label": "baseline",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 132.17954197898507,
+      "families": 81,
+      "iteration": 2,
+      "label": "baseline",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 791.078332811594,
+      "families": 327,
+      "iteration": 2,
+      "label": "baseline",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1227.2654590196908,
+      "families": 267,
+      "iteration": 2,
+      "label": "baseline",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1876.1945830192417,
+      "families": 515,
+      "iteration": 2,
+      "label": "baseline",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2119.500875007361,
+      "families": 879,
+      "iteration": 3,
+      "label": "baseline",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1423.0487500317395,
+      "families": 618,
+      "iteration": 3,
+      "label": "baseline",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 152.01962483115494,
+      "families": 81,
+      "iteration": 3,
+      "label": "baseline",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 772.651833947748,
+      "families": 327,
+      "iteration": 3,
+      "label": "baseline",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1346.3798749726266,
+      "families": 267,
+      "iteration": 3,
+      "label": "baseline",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1814.1683749854565,
+      "families": 515,
+      "iteration": 3,
+      "label": "baseline",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2238.0205411463976,
+      "families": 879,
+      "iteration": 3,
+      "label": "current",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1593.4390828479081,
+      "families": 618,
+      "iteration": 3,
+      "label": "current",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 151.47762489505112,
+      "families": 81,
+      "iteration": 3,
+      "label": "current",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 991.7694579344243,
+      "families": 327,
+      "iteration": 3,
+      "label": "current",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1553.0800838023424,
+      "families": 267,
+      "iteration": 3,
+      "label": "current",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 2040.809083962813,
+      "families": 515,
+      "iteration": 3,
+      "label": "current",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2140.53133293055,
+      "families": 879,
+      "iteration": 4,
+      "label": "current",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1450.1286670565605,
+      "families": 618,
+      "iteration": 4,
+      "label": "current",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 133.07691598311067,
+      "families": 81,
+      "iteration": 4,
+      "label": "current",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 813.4780421387404,
+      "families": 327,
+      "iteration": 4,
+      "label": "current",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1273.5965829342604,
+      "families": 267,
+      "iteration": 4,
+      "label": "current",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1933.5631248541176,
+      "families": 515,
+      "iteration": 4,
+      "label": "current",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2270.296833012253,
+      "families": 879,
+      "iteration": 4,
+      "label": "baseline",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1401.5539579559118,
+      "families": 618,
+      "iteration": 4,
+      "label": "baseline",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 155.98566713742912,
+      "families": 81,
+      "iteration": 4,
+      "label": "baseline",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 787.8957909997553,
+      "families": 327,
+      "iteration": 4,
+      "label": "baseline",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1272.542875027284,
+      "families": 267,
+      "iteration": 4,
+      "label": "baseline",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1981.2173750251532,
+      "families": 515,
+      "iteration": 4,
+      "label": "baseline",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2161.27095813863,
+      "families": 879,
+      "iteration": 5,
+      "label": "baseline",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1380.7697920128703,
+      "families": 618,
+      "iteration": 5,
+      "label": "baseline",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 161.11895884387195,
+      "families": 81,
+      "iteration": 5,
+      "label": "baseline",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 795.5922079272568,
+      "families": 327,
+      "iteration": 5,
+      "label": "baseline",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1286.4576249849051,
+      "families": 267,
+      "iteration": 5,
+      "label": "baseline",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1774.880499811843,
+      "families": 515,
+      "iteration": 5,
+      "label": "baseline",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2119.235125137493,
+      "families": 879,
+      "iteration": 5,
+      "label": "current",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1451.8505840096623,
+      "families": 618,
+      "iteration": 5,
+      "label": "current",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 158.64245896227658,
+      "families": 81,
+      "iteration": 5,
+      "label": "current",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 848.2262080069631,
+      "families": 327,
+      "iteration": 5,
+      "label": "current",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1384.3865420203656,
+      "families": 267,
+      "iteration": 5,
+      "label": "current",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1872.7666661143303,
+      "families": 515,
+      "iteration": 5,
+      "label": "current",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2043.287165928632,
+      "families": 879,
+      "iteration": 6,
+      "label": "current",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1444.4421250373125,
+      "families": 618,
+      "iteration": 6,
+      "label": "current",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 135.8263751026243,
+      "families": 81,
+      "iteration": 6,
+      "label": "current",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 817.7488748915493,
+      "families": 327,
+      "iteration": 6,
+      "label": "current",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1231.0469581279904,
+      "families": 267,
+      "iteration": 6,
+      "label": "current",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1894.0635828766972,
+      "families": 515,
+      "iteration": 6,
+      "label": "current",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2085.12454200536,
+      "families": 879,
+      "iteration": 6,
+      "label": "baseline",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1439.6876250393689,
+      "families": 618,
+      "iteration": 6,
+      "label": "baseline",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 156.2659579794854,
+      "families": 81,
+      "iteration": 6,
+      "label": "baseline",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 849.8994158580899,
+      "families": 327,
+      "iteration": 6,
+      "label": "baseline",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1323.9563340321183,
+      "families": 267,
+      "iteration": 6,
+      "label": "baseline",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1801.0263750329614,
+      "families": 515,
+      "iteration": 6,
+      "label": "baseline",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2133.1311247777194,
+      "families": 879,
+      "iteration": 7,
+      "label": "baseline",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1432.4536661151797,
+      "families": 618,
+      "iteration": 7,
+      "label": "baseline",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 146.79370890371501,
+      "families": 81,
+      "iteration": 7,
+      "label": "baseline",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 786.604915978387,
+      "families": 327,
+      "iteration": 7,
+      "label": "baseline",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1288.3907919749618,
+      "families": 267,
+      "iteration": 7,
+      "label": "baseline",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1856.5566670149565,
+      "families": 515,
+      "iteration": 7,
+      "label": "baseline",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2156.0591249726713,
+      "families": 879,
+      "iteration": 7,
+      "label": "current",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1478.0902080237865,
+      "families": 618,
+      "iteration": 7,
+      "label": "current",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 138.48966686055064,
+      "families": 81,
+      "iteration": 7,
+      "label": "current",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 828.3847921993583,
+      "families": 327,
+      "iteration": 7,
+      "label": "current",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1277.782249962911,
+      "families": 267,
+      "iteration": 7,
+      "label": "current",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1831.767958123237,
+      "families": 515,
+      "iteration": 7,
+      "label": "current",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2141.858832910657,
+      "families": 879,
+      "iteration": 8,
+      "label": "current",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1408.727457979694,
+      "families": 618,
+      "iteration": 8,
+      "label": "current",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 152.8594170231372,
+      "families": 81,
+      "iteration": 8,
+      "label": "current",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 809.984875144437,
+      "families": 327,
+      "iteration": 8,
+      "label": "current",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1275.1133749261498,
+      "families": 267,
+      "iteration": 8,
+      "label": "current",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1813.237375114113,
+      "families": 515,
+      "iteration": 8,
+      "label": "current",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 1992.5576669629663,
+      "families": 879,
+      "iteration": 8,
+      "label": "baseline",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1362.2819159645587,
+      "families": 618,
+      "iteration": 8,
+      "label": "baseline",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 165.68000009283423,
+      "families": 81,
+      "iteration": 8,
+      "label": "baseline",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 854.3118750676513,
+      "families": 327,
+      "iteration": 8,
+      "label": "baseline",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1257.1093749720603,
+      "families": 267,
+      "iteration": 8,
+      "label": "baseline",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1799.3254158645868,
+      "families": 515,
+      "iteration": 8,
+      "label": "baseline",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2062.763167079538,
+      "families": 879,
+      "iteration": 9,
+      "label": "baseline",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1414.679457899183,
+      "families": 618,
+      "iteration": 9,
+      "label": "baseline",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 148.32574990577996,
+      "families": 81,
+      "iteration": 9,
+      "label": "baseline",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 776.9333750475198,
+      "families": 327,
+      "iteration": 9,
+      "label": "baseline",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1209.9445830099285,
+      "families": 267,
+      "iteration": 9,
+      "label": "baseline",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1891.5864590089768,
+      "families": 515,
+      "iteration": 9,
+      "label": "baseline",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    },
+    {
+      "bytes": 1321539,
+      "elapsed_ms": 2133.303957991302,
+      "families": 879,
+      "iteration": 9,
+      "label": "current",
+      "repo": "netty",
+      "sha256": "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+    },
+    {
+      "bytes": 1169728,
+      "elapsed_ms": 1381.1942080501467,
+      "families": 618,
+      "iteration": 9,
+      "label": "current",
+      "repo": "rxjava",
+      "sha256": "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+    },
+    {
+      "bytes": 124169,
+      "elapsed_ms": 144.96845891699195,
+      "families": 81,
+      "iteration": 9,
+      "label": "current",
+      "repo": "retrofit",
+      "sha256": "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+    },
+    {
+      "bytes": 514636,
+      "elapsed_ms": 796.6792918741703,
+      "families": 327,
+      "iteration": 9,
+      "label": "current",
+      "repo": "junit5",
+      "sha256": "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+    },
+    {
+      "bytes": 329711,
+      "elapsed_ms": 1322.870000032708,
+      "families": 267,
+      "iteration": 9,
+      "label": "current",
+      "repo": "jedis",
+      "sha256": "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+    },
+    {
+      "bytes": 650060,
+      "elapsed_ms": 1895.6652919296175,
+      "families": 515,
+      "iteration": 9,
+      "label": "current",
+      "repo": "h2database",
+      "sha256": "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+    }
+  ],
+  "summary": {
+    "aggregate_baseline_median_ms": 7546.251540770754,
+    "aggregate_current_median_ms": 7684.072625124827,
+    "aggregate_delta_pct": 1.8263515814368962,
+    "by_repo": {
+      "h2database": {
+        "baseline": {
+          "bytes": [
+            650060
+          ],
+          "families": [
+            515
+          ],
+          "hashes": [
+            "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+          ],
+          "median_ms": 1814.1683749854565
+        },
+        "current": {
+          "bytes": [
+            650060
+          ],
+          "families": [
+            515
+          ],
+          "hashes": [
+            "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
+          ],
+          "median_ms": 1872.7666661143303
+        }
+      },
+      "jedis": {
+        "baseline": {
+          "bytes": [
+            329711
+          ],
+          "families": [
+            267
+          ],
+          "hashes": [
+            "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+          ],
+          "median_ms": 1272.542875027284
+        },
+        "current": {
+          "bytes": [
+            329711
+          ],
+          "families": [
+            267
+          ],
+          "hashes": [
+            "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
+          ],
+          "median_ms": 1275.1133749261498
+        }
+      },
+      "junit5": {
+        "baseline": {
+          "bytes": [
+            514636
+          ],
+          "families": [
+            327
+          ],
+          "hashes": [
+            "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+          ],
+          "median_ms": 787.8957909997553
+        },
+        "current": {
+          "bytes": [
+            514636
+          ],
+          "families": [
+            327
+          ],
+          "hashes": [
+            "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
+          ],
+          "median_ms": 813.4780421387404
+        }
+      },
+      "netty": {
+        "baseline": {
+          "bytes": [
+            1321539
+          ],
+          "families": [
+            879
+          ],
+          "hashes": [
+            "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+          ],
+          "median_ms": 2118.0709169711918
+        },
+        "current": {
+          "bytes": [
+            1321539
+          ],
+          "families": [
+            879
+          ],
+          "hashes": [
+            "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
+          ],
+          "median_ms": 2133.303957991302
+        }
+      },
+      "retrofit": {
+        "baseline": {
+          "bytes": [
+            124169
+          ],
+          "families": [
+            81
+          ],
+          "hashes": [
+            "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+          ],
+          "median_ms": 152.01962483115494
+        },
+        "current": {
+          "bytes": [
+            124169
+          ],
+          "families": [
+            81
+          ],
+          "hashes": [
+            "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
+          ],
+          "median_ms": 144.96845891699195
+        }
+      },
+      "rxjava": {
+        "baseline": {
+          "bytes": [
+            1169728
+          ],
+          "families": [
+            618
+          ],
+          "hashes": [
+            "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+          ],
+          "median_ms": 1401.5539579559118
+        },
+        "current": {
+          "bytes": [
+            1169728
+          ],
+          "families": [
+            618
+          ],
+          "hashes": [
+            "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
+          ],
+          "median_ms": 1444.4421250373125
+        }
+      }
+    },
+    "hashes_identical_by_repo": {
+      "h2database": true,
+      "jedis": true,
+      "junit5": true,
+      "netty": true,
+      "retrofit": true,
+      "rxjava": true
+    }
+  }
+}

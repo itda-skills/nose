@@ -32,6 +32,11 @@ pub(super) fn push_java_future_runtime_call_missing_evidence(
     _context: &crate::verify_admission::AdmissionContext,
     labels: &mut Vec<&'static str>,
 ) -> bool {
+    if completable_future_construct_call(il, interner, call, callee, callee_path) {
+        push_completable_future_constructor_missing_evidence(labels);
+        return true;
+    }
+
     if let Some(method) = completable_future_static_method(il, interner, call, callee, callee_path)
     {
         return push_completable_future_static_method_missing_evidence(method, labels);
@@ -56,6 +61,25 @@ pub(super) fn push_java_future_runtime_call_missing_evidence(
         }
     }
     false
+}
+
+fn completable_future_construct_call(
+    il: &nose_il::Il,
+    interner: &Interner,
+    call: NodeId,
+    callee: NodeId,
+    callee_path: &str,
+) -> bool {
+    if !super::super::construct_call(il, call) {
+        return false;
+    }
+    if callee_path == COMPLETABLE_FUTURE_QUALIFIED {
+        return true;
+    }
+    if callee_path != COMPLETABLE_FUTURE_TYPE {
+        return false;
+    }
+    java_completable_future_simple_receiver_proven(il, interner, call, callee)
 }
 
 fn completable_future_static_method<'a>(
@@ -178,6 +202,13 @@ fn java_wildcard_import_proves_completable_future(il: &nose_il::Il, call: NodeId
             )
             && il.evidence_dependencies_asserted(record)
     })
+}
+
+fn push_completable_future_constructor_missing_evidence(labels: &mut Vec<&'static str>) {
+    super::push_future_settled_value_missing_evidence(labels);
+    super::super::push_unique(labels, "exception-channel-contract");
+    super::super::push_unique(labels, "task-handle-lifecycle-contract");
+    super::super::push_unique(labels, "task-cancellation-liveness-contract");
 }
 
 fn push_completable_future_static_method_missing_evidence(

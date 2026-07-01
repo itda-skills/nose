@@ -86,6 +86,15 @@ break.
   obligations without opening exact admission; the 120-repo lexical audit prices
   `40` Java future reporting candidates while leaving `276` broad
   `CompletableFuture` mentions closed.
+- Added Java `CompletableFuture` constructor reporting for fully qualified or
+  exact-/wildcard-import-backed `new CompletableFuture<...>()` calls. These now
+  report future-settled, exception-channel, task-handle lifecycle, and
+  cancellation/liveness obligations without opening exact admission. The
+  120-repo audit splits `46` proof-backed constructor occurrences out of the
+  broad Java `CompletableFuture` bucket, reducing the broad closed bucket from
+  `276` to `230`; the Java-heavy query regression kept product output hashes
+  identical on all six measured repos and measured `7546.25ms -> 7684.07ms`
+  (`+1.83%`).
 - Added Java `Executor`/`Future` receiver-method reporting for
   exact- or wildcard-import-backed `CompletableFuture`, `Future`,
   `ScheduledFuture`, `Executor`, `ExecutorService`, and

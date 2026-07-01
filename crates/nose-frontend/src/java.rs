@@ -10,8 +10,8 @@ use crate::lower::{common_bin_op, Lowering};
 use nose_il::{
     stable_symbol_hash, EvidenceAnchor, EvidenceKind, FileId, Il, ImportEvidenceKind, Interner,
     Lang, LitClass, LoopKind, NodeId, NodeKind, Op, Payload, RegionKind, SourceCallKind,
-    SourceFactKind, SourceGranularity, Span, UnitBodyKind, UnitDomain, UnitDomains,
-    UnitEvidenceFlag, UnitKind, UnitOrigin, UnitSubkind,
+    SourceFactKind, SourceGranularity, Span, SymbolEvidenceKind, UnitBodyKind, UnitDomain,
+    UnitDomains, UnitEvidenceFlag, UnitKind, UnitOrigin, UnitSubkind,
 };
 use nose_semantics::{
     library_java_collection_constructor_contract, LibraryApiCalleeContract,
