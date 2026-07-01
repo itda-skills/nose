@@ -13,14 +13,16 @@ axes:
 - operation class: eager, fold reduction, short-circuit quantifier, append
   mutation, nullish default, per-element HOF, pull-lazy HOF, call-by-need thunk,
   async continuation, generator suspension, source-order callback invocation,
-  channel operation, or protocol boundary;
+  scheduled/deferred callback invocation, channel operation, or protocol
+  boundary;
 - evaluation order: source order, short-circuit, per-element source order,
   deferred until observation, runtime scheduled, or protocol-defined;
 - child demand: always, never, conditional, short-circuit-until-known,
   per-element-pull, maybe repeated, call-by-need memoized, suspended until
   observed, async continuation, channel boundary, or protocol boundary;
 - callback demand, when present: per-element callback, fold step, async
-  continuation, or source callback invocation, with argument/result roles;
+  continuation, source callback invocation, scheduled callback, or deferred
+  callback, with argument/result roles;
 - effect visibility: immediate, only-if-demanded, delayed-until-pull,
   memoized-first-demand, async boundary, yield boundary, channel boundary, or
   protocol boundary.
@@ -106,7 +108,8 @@ Source protocol boundaries have internal profiles for future contracts:
 - JS/TS and Python generator `yield` is a generator suspension boundary;
 - Ruby block `yield` is a source-order callback invocation boundary;
 - Go channel/select surfaces are channel boundaries;
-- Go goroutine/defer surfaces are protocol boundaries, not channel operations;
+- Go goroutine surfaces are scheduled callback protocol boundaries, while
+  `defer` surfaces are scope-exit deferred callback protocol boundaries;
 - Rust `?` is a conditional short-circuit boundary.
 
 ## Current consumers

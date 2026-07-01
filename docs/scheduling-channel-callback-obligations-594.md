@@ -231,6 +231,16 @@ callback argument/result role, effect visibility, non-local control, and
 exception behavior are proven. The 120-repo audit prices `801` Ruby yield
 occurrences across `17` repos and marks the row reporting-supported
 closed-boundary.
+
+The follow-up [Go protocol reporting-support artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json)
+keeps exact admission closed while aligning Go protocol reporting with the
+existing source-backed lowering and runtime obligations. Go `go` now carries a
+scheduled callback demand/effect profile, `defer` carries a scope-exit deferred
+callback profile, and channel/select protocol rows are marked
+reporting-supported closed-boundaries. The 120-repo audit keeps the same Go
+source prevalence: `17,521` defers, `4,294` channel receives, `3,590` select
+cases, `1,949` goroutines, `1,920` select parents, `1,525` channel sends, `546`
+select defaults, and `155` comma-ok receives.
 The follow-up [non-JS async runtime scope-shadowing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json)
 keeps the same reporting-only boundary while making Python/Rust runtime
 attribution scope-aware. Python `asyncio` aliases/imported bindings and Rust
@@ -516,7 +526,7 @@ cardinality, and cancellation cleanup are dependency-closed obligations.
 | success/error result channel | `Domain(Option/Result/FutureLike/PromiseLike)`, constructor/predicate rows, default contracts | success, empty, default, error, panic, and rejection channels must remain distinct |
 | exception channel | `Source::Protocol`, static-error control, effect-free throw checks | thrown/rescued/non-local control must not be collapsed into ordinary return values |
 | rejection channel | Promise/Future-like contracts and async demand profiles | rejected values, catch/then continuations, finally settlement, aggregate rejection, and thenable assimilation stay closed until proven |
-| scheduling boundary | `DemandOperation::AsyncContinuation`, `GeneratorSuspension`, `ChannelOperation`, `ProtocolBoundary` | task/thread/goroutine/microtask timing is not synchronous equivalence proof |
+| scheduling boundary | `DemandOperation::AsyncContinuation`, `GeneratorSuspension`, `CallbackInvocation`, `ChannelOperation`, `ProtocolBoundary` | task/thread/goroutine/microtask timing is not synchronous equivalence proof |
 | cancellation/early exit | short-circuit demand profiles and future protocol facts | cancellation, stop, break, first-settled, and early-exit behavior must be explicit |
 | lifecycle/materialization | `SequenceSurface`, `Domain`, iterator adapter/materializer rows | one-shot views, reusable collections, type-directed materializers, and allocation/lifetime are separate |
 | receiver mutation | `Effect(ReceiverMutation)`, place/effect contracts | mutation can close later exact receiver use; it does not create pure value equality |
@@ -525,8 +535,8 @@ cardinality, and cancellation cleanup are dependency-closed obligations.
 ## Existing Mapping
 
 - `DemandEffectProfile` already carries eager, fold, short-circuit, lazy HOF,
-  async continuation, generator, channel, and protocol-boundary timing. This is
-  the contract side of the vocabulary.
+  async continuation, generator, scheduled/deferred callback, channel, and
+  protocol-boundary timing. This is the contract side of the vocabulary.
 - `Source` facts anchor syntax/protocol distinctions such as await, async
   functions, yield, casts, calls, comprehensions, ranges, and patterns. They do
   not approve exact clones by themselves.

@@ -54,8 +54,8 @@ applying materialization or demand-sensitive laws. Admitted builtin and HOF
 operations now also have internal `DemandEffectProfile` contracts for the
 currently supported eager, short-circuit, append, nullish-default, reduction,
 per-element callback, pull-lazy generator, async-continuation, generator
-suspension, source-order callback invocation, channel-boundary, and
-protocol-boundary shapes; these profiles
+suspension, source-order callback invocation, scheduled/deferred callback
+invocation, channel-boundary, and protocol-boundary shapes; these profiles
 describe how an already-admitted operation is consumed, not which source API is
 admitted. HOF callback timing comes from an explicit source or API demand source,
 not from the raw HOF kind alone. The node-level HOF resolver distinguishes

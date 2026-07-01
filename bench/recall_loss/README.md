@@ -328,6 +328,19 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-06-30
 ```
 
+Build the Go protocol reporting-support audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.go-protocol-reporting-support.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.go-protocol-reporting-support.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.go-protocol-reporting-support.json \
+  --generated-on 2026-07-01
+```
+
 Build the first #602 `Promise.all` exact aggregate slice audit with:
 
 ```sh
@@ -696,6 +709,12 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   parents, `3,590` select cases, `546` select defaults, `1,949` goroutines,
   and `17,521` defers. Select parents and arms are counted separately because
   they are distinct source-backed protocol boundaries in lowering.
+- [scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json)
+  records the Go protocol reporting-support follow-up. It keeps exact
+  admission closed while marking the already source-backed Go channel,
+  select, goroutine, and defer protocol rows reporting-supported. Go
+  `go`/`defer` now also have scheduled/deferred callback demand/effect
+  profiles in the shared kernel.
 - [scheduling-lifecycle-boundary-audit-python-async-lifecycle-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-python-async-lifecycle-2026-07-01.v1.json)
   records the Python async protocol lifecycle reporting slice. It keeps exact
   admission closed while splitting `async for` statements/comprehensions and
