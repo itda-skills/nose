@@ -11,7 +11,9 @@
 /// tag must be added here.
 pub(crate) const PROTOCOL_BOUNDARY_TAGS: &[&str] = &[
     "async_block",
+    "async_for",
     "async_function",
+    "async_with",
     "await",
     "channel_receive",
     "channel_receive_status",

@@ -56,9 +56,19 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode, in_class: bool) -> Opt
             // Treat `with ...: body` as its body block (the context manager is
             // mostly setup/teardown noise for structural matching).
             let body = node.child_by_field_name("body");
-            Some(match body {
+            let lowered = match body {
                 Some(b) => lower_block(lo, b, false),
                 None => lo.empty_block(span),
+            };
+            Some(if crate::lower::node_has_child_kind(node, "async") {
+                lo.protocol_boundary(
+                    span,
+                    nose_il::SourceProtocolKind::AsyncContext,
+                    "async_with",
+                    &[lowered],
+                )
+            } else {
+                lowered
             })
         }
         "break_statement" => Some(lo.add(NodeKind::Break, Payload::None, span, &[])),

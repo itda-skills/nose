@@ -66,6 +66,10 @@ macro_rules! runtime_rule {
 }
 
 const RUNTIME_BOUNDARY_OBLIGATIONS: &[RuntimeBoundaryRule] = &[
+    runtime_rule!("async-iteration-lifecycle-contract" => "lifecycle-materialization-boundary", "async-iteration-lifecycle-contract-missing"),
+    runtime_rule!("async-iteration-value-channel-contract" => "success-error-result-channel", "async-iteration-value-channel-contract-missing"),
+    runtime_rule!("async-context-lifecycle-contract" => "lifecycle-materialization-boundary", "async-context-lifecycle-contract-missing"),
+    runtime_rule!("async-context-cleanup-contract" => "lifecycle-materialization-boundary", "async-context-cleanup-contract-missing"),
     runtime_rule!("async-await-scheduling-contract" => "scheduling-boundary", "async-await-scheduling-contract-missing"),
     runtime_rule!("promise-await-scheduling-contract" => "scheduling-boundary", "promise-await-scheduling-contract-missing"),
     runtime_rule!("promise-async-function-return-producer-proof" => "scheduling-boundary", "promise-async-function-return-producer-proof-missing"),

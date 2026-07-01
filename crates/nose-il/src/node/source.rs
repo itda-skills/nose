@@ -60,6 +60,8 @@ pub enum SourceProtocolKind {
     Await,
     AsyncBlock,
     AsyncFunction,
+    AsyncContext,
+    AsyncIteration,
     ChannelReceive,
     ChannelSelect,
     ChannelSelectCase,

@@ -59,7 +59,7 @@ The current implemented kinds are:
 
 | kind | purpose |
 |---|---|
-| `Source` | construct syntax, Rust macro invocation/range/pattern syntax, async/generator/error and Go concurrency/channel protocol boundary syntax, Python comprehension surface provenance, C unsigned-cast syntax, regex literal provenance, and source operator family including JS-like unary `typeof` |
+| `Source` | construct syntax, Rust macro invocation/range/pattern syntax, async/generator/error, async iteration/context, and Go concurrency/channel protocol boundary syntax, Python comprehension surface provenance, C unsigned-cast syntax, regex literal provenance, and source operator family including JS-like unary `typeof` |
 | `Domain` | parameter, receiver-expression, or value/binding domain such as array, collection, iterable, iterator, set, map, record, option/result, promise/future-like, string, boolean, integer/float/number, byte array, or nominal type |
 | `Import` | static import binding/namespace proof, Python wildcard-import ambiguity proof, Java wildcard import proof, C quote-include proof, Ruby `require` module proof, and imported-literal snapshot provenance |
 | `Symbol` | resolved or proven symbol identity, with record kinds for unshadowed globals, static imported binding/namespace aliases, and selected qualified global API paths |

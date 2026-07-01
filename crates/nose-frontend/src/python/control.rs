@@ -102,12 +102,22 @@ pub(super) fn lower_for(lo: &mut Lowering, node: TsNode) -> NodeId {
         .child_by_field_name("body")
         .map(|b| lower_block(lo, b, false))
         .unwrap_or_else(|| lo.empty_block(span));
-    lo.add(
+    let loop_id = lo.add(
         NodeKind::Loop,
         Payload::Loop(LoopKind::ForEach),
         span,
         &[pat, iter, body],
-    )
+    );
+    if crate::lower::node_has_child_kind(node, "async") {
+        lo.protocol_boundary(
+            span,
+            nose_il::SourceProtocolKind::AsyncIteration,
+            "async_for",
+            &[loop_id],
+        )
+    } else {
+        loop_id
+    }
 }
 pub(super) fn lower_while(lo: &mut Lowering, node: TsNode) -> NodeId {
     crate::lower::while_loop(lo, node, lower_expr, |lo, b| lower_block(lo, b, false))
