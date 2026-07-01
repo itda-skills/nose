@@ -196,6 +196,27 @@ fn method_body_rescue_and_ensure_lower_as_try_without_clause_raw() {
 }
 
 #[test]
+fn unqualified_raise_and_fail_lower_as_throw() {
+    let kinds =
+        node_kinds("def f(error)\n  raise error\nend\n\ndef g\n  value || fail('missing')\nend\n");
+    assert_eq!(
+        kinds
+            .iter()
+            .filter(|&&kind| kind == NodeKind::Throw)
+            .count(),
+        2,
+        "bare raise/fail calls should lower to Throw boundaries: {kinds:?}"
+    );
+    assert!(
+        !kinds.windows(2).any(|window| matches!(
+            window,
+            [NodeKind::Return, NodeKind::Throw] | [NodeKind::Throw, NodeKind::Return]
+        )),
+        "tail-position raise/fail should not be wrapped as ordinary returns: {kinds:?}"
+    );
+}
+
+#[test]
 fn block_body_rescue_else_and_ensure_lower_as_try_without_clause_raw() {
     let src = "it 'defaults' do\n  res = options.instrumenter\nrescue NameError => e then recover(e)\nelse\n  verify(res)\nensure\n  cleanup\nend\n";
     let raw = raw_names(src);
