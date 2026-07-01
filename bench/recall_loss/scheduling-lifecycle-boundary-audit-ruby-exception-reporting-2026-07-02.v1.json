@@ -82,9 +82,9 @@
       "admission_rejections": 812,
       "canon_checked": 99,
       "canon_preservation_violations": 0,
-      "excluded_units": 6021,
+      "excluded_units": 6023,
       "interpretable_units": 970,
-      "total_units": 6991
+      "total_units": 6993
     }
   },
   "generated_on": "2026-07-02",
