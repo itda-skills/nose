@@ -28,9 +28,10 @@ boundaries while the graded-witness build keeps an explicit protocol wrapper, so
 async/sync twins can surface as `async-mirror` transformation leads without
 opening exact admission.
 JS/TS and Python `yield` expressions are preserved as generator protocol
-boundaries with `Source::Protocol(Yield)`. Rust `async {}` and `?` are likewise
-preserved as protocol boundaries with `Source::Protocol(AsyncBlock)` and
-`Source::Protocol(TryPropagation)`. Go
+boundaries with `Source::Protocol(Yield)`, while Ruby block `yield` uses the
+separate callback protocol boundary `Source::Protocol(BlockYield)`. Rust
+`async {}` and `?` are likewise preserved as protocol boundaries with
+`Source::Protocol(AsyncBlock)` and `Source::Protocol(TryPropagation)`. Go
 goroutine spawn, deferred calls, channel send/receive, receive-status
 projections, and `select` boundaries are also preserved as raw source-backed
 protocol anchors rather than ordinary calls, values, or sequence tags. Their
@@ -53,7 +54,8 @@ applying materialization or demand-sensitive laws. Admitted builtin and HOF
 operations now also have internal `DemandEffectProfile` contracts for the
 currently supported eager, short-circuit, append, nullish-default, reduction,
 per-element callback, pull-lazy generator, async-continuation, generator
-suspension, channel-boundary, and protocol-boundary shapes; these profiles
+suspension, source-order callback invocation, channel-boundary, and
+protocol-boundary shapes; these profiles
 describe how an already-admitted operation is consumed, not which source API is
 admitted. HOF callback timing comes from an explicit source or API demand source,
 not from the raw HOF kind alone. The node-level HOF resolver distinguishes
@@ -680,8 +682,8 @@ migrated.
   strict/loose inequality, and `instanceof` facts. Python emits async `await`,
   async function and generator `yield` boundaries, list/set/dict/generator
   comprehension surfaces, value equality/inequality, and identity
-  equality/inequality facts. Swift emits async function, async `await`, and
-  `try` boundaries. Go emits
+  equality/inequality facts. Ruby emits block `yield` callback protocol
+  boundaries. Swift emits async function, async `await`, and `try` boundaries. Go emits
   protocol facts for `go`, `defer`, channel send/receive, receive-status
   projection, `select`, and select cases/defaults. C emits source-cast facts
   for explicit unsigned 32-bit byte-lane casts, with alias-based casts depending
@@ -692,8 +694,8 @@ migrated.
   `EvidenceRecord::Source`; there is no source-fact side-table fallback.
   Normalize and detect consume source facts only where a semantic contract
   requires that exact source surface. Current JS/TS/Python/Rust/Swift async
-  function/closure and `await` nodes, JS/TS/Python `yield` nodes, Rust `async`/`?` nodes,
-  Swift `try` nodes, and Go concurrency/channel
+  function/closure and `await` nodes, JS/TS/Python generator `yield` nodes,
+  Ruby block `yield` nodes, Rust `async`/`?` nodes, Swift `try` nodes, and Go concurrency/channel
   nodes remain raw exact-closed protocol anchors until such a contract exists.
   Python returned generator/set comprehensions and unsupported cardinality
   surfaces stay exact-closed; supported list/generator terminal reductions can
@@ -1447,8 +1449,9 @@ Semantic knowledge still appears in several forms outside the facade:
   as `aread` no longer rewrite to sync names without an explicit protocol/API
   evidence path, JS/TS/Python/Rust/Swift async function/closure and `await` expressions
   no longer erase to their body or operand without async protocol proof,
-  JS/TS/Python `yield` no longer erases to its yielded expression without
-  generator protocol proof, and Rust `async {}`/`?` no longer erase to their body
+  JS/TS/Python generator `yield` and Ruby block `yield` no longer erase to
+  their yielded expression or callback arguments without protocol proof, and
+  Rust `async {}`/`?` no longer erase to their body
   or operand without async/error protocol proof. Swift `try` similarly keeps the
   error channel explicit. Go `go`/`defer`/channel receive no longer erase to ordinary
   calls or operands, Go channel send no longer relies on an untyped

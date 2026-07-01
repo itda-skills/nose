@@ -239,6 +239,29 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-07-01
 ```
 
+Build the Ruby yield source-protocol audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.ruby-yield-source-protocol.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.ruby-yield-source-protocol.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.ruby-yield-source-protocol.json \
+  --generated-on 2026-07-01
+
+python3 scripts/query-regression-harness.py \
+  --baseline-binary /tmp/nose-ruby-yield-main-target/release/nose \
+  --current-binary target/release/nose \
+  --baseline-source-ref origin/main \
+  --current-source-ref ruby-yield-source-protocol \
+  --iterations 15 \
+  --repo rubocop --repo rspec-core --repo sidekiq \
+  --repo rack --repo fastlane --repo sinatra \
+  --output target/ruby-yield-source-protocol-query-regression.json
+```
+
 Build the Java `CompletableFuture`/FutureLike obligation audit with:
 
 ```sh
@@ -729,6 +752,19 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   records the matching 120-repo source-prevalence pricing. It raises total
   source prevalence from `146,987` to `146,988`, marks the Ruby Thread/Fiber row
   reporting-supported, and prices `74` occurrences across `11` repos.
+- [ruby-yield-source-protocol-reporting-2026-07-01.v1.json](ruby-yield-source-protocol-reporting-2026-07-01.v1.json)
+  records the Ruby block-yield reporting-only expansion. Ruby `yield` now
+  preserves a source-backed `BlockYield` protocol boundary and reports callback
+  demand/effect obligations without opening exact admission or widening
+  generator-yield semantics.
+- [scheduling-lifecycle-boundary-audit-ruby-yield-source-protocol-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-ruby-yield-source-protocol-2026-07-01.v1.json)
+  records the matching 120-repo pricing: `801` Ruby yield occurrences across
+  `17` repos are reporting-supported closed boundaries.
+- [ruby-yield-source-protocol-query-regression-2026-07-01.v1.json](ruby-yield-source-protocol-query-regression-2026-07-01.v1.json)
+  records the Ruby-heavy product query regression. The 6-repo alternating r15
+  aggregate median was `2504.55ms -> 2574.79ms` (`+2.80%`). `rspec-core`
+  changed one same-location 3-member HTML family's representative label from
+  `pre` to `code` while keeping the family count stable.
 - [scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json)
   records the Python/Rust async runtime scope-shadowing hardening. It keeps
   exact admission closed while making unrelated local shadows in other
