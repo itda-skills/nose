@@ -305,7 +305,7 @@ python3 scripts/query-regression-harness.py \
   --current-binary target/release/nose \
   --baseline-source-ref origin/main \
   --current-source-ref ruby-exception-reporting-alignment \
-  --current-source-sha 524a6726156caa550a185e52544da41d365e55d1 \
+  --current-source-sha 8bb0ed37d13d98bbb94f29fc23cc19163d8d52e3 \
   --iterations 15 \
   --repo rubocop --repo rspec-core --repo sidekiq \
   --repo rack --repo fastlane --repo sinatra \
@@ -1087,7 +1087,7 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   non-JS actionable closed boundary at `1,996` occurrences.
 - [ruby-exception-reporting-query-regression-2026-07-02.v1.json](ruby-exception-reporting-query-regression-2026-07-02.v1.json)
   records the Ruby-heavy product query regression. The 6-repo alternating r15
-  aggregate median was `3326.98ms -> 3354.09ms` (`+0.81%`). Family counts stay
+  aggregate median was `3295.78ms -> 3330.24ms` (`+1.05%`). Family counts stay
   stable across all 6 repos. Output hashes stay identical on `fastlane`,
   `rack`, `sidekiq`, and `sinatra`; `rubocop` changes only
   `value_nodes`/`mean_sem` metadata on one Ruby helper family, and `rspec-core`

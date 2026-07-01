@@ -8,7 +8,7 @@
     "sha": "6a58c16eea0cd037b1772a7d0318bdbd2a2f75a2"
   },
   "implementation_commit": "e189b1f4aa2c996aa75cc187f3629df06e017df4",
-  "measured_source_commit": "524a6726156caa550a185e52544da41d365e55d1",
+  "measured_source_commit": "8bb0ed37d13d98bbb94f29fc23cc19163d8d52e3",
   "newly_aligned_reporting_supported_rows": [
     {
       "language": "ruby",
@@ -65,7 +65,7 @@
   "exact_admission_policy": {
     "new_exact_admissions": 0,
     "status": "closed_until_evidence",
-    "summary": "The change reports Ruby exception-channel obligations and explicitly keeps Try/Throw runtime boundaries closed in strict exact. It does not make raising/rescuing exact-equivalent to ordinary returns."
+    "summary": "The change reports Ruby exception-channel obligations and explicitly keeps Ruby Try/Throw runtime boundaries closed in strict exact. It does not make raising/rescuing exact-equivalent to ordinary returns, while preserving existing non-Ruby exact fragment contracts."
   },
   "current_recall_loss": {
     "report": "target/recall-loss.ruby-exception-reporting.crates.json",
@@ -84,9 +84,9 @@
     "artifact": "bench/recall_loss/ruby-exception-reporting-query-regression-2026-07-02.v1.json",
     "repos": ["rubocop", "rspec-core", "sidekiq", "rack", "fastlane", "sinatra"],
     "iterations": 15,
-    "aggregate_baseline_median_ms": 3326.981251593679,
-    "aggregate_current_median_ms": 3354.0852514561266,
-    "aggregate_delta_pct": 0.814672455682283,
+    "aggregate_baseline_median_ms": 3295.7787909545004,
+    "aggregate_current_median_ms": 3330.240792129189,
+    "aggregate_delta_pct": 1.045640601525556,
     "hashes_identical_by_repo": {
       "fastlane": true,
       "rack": true,
@@ -125,7 +125,7 @@
     "cargo test -p nose-detect strict_exact_closes_ruby_exception_boundaries -- --nocapture",
     "cargo run -q -p nose-cli -- verify crates --max-violations 0 --recall-loss-report target/recall-loss.ruby-exception-reporting.crates.json",
     "python3 scripts/scheduling-lifecycle-boundary-audit.py --recall-loss-report target/recall-loss.ruby-exception-reporting.crates.json --output bench/recall_loss/scheduling-lifecycle-boundary-audit-ruby-exception-reporting-2026-07-02.v1.json --generated-on 2026-07-02",
-    "python3 scripts/query-regression-harness.py --baseline-binary /tmp/nose-ruby-exception-main/target/release/nose --current-binary target/release/nose --baseline-source-ref origin/main --current-source-ref ruby-exception-reporting-alignment --current-source-sha 524a6726156caa550a185e52544da41d365e55d1 --iterations 15 --repo rubocop --repo rspec-core --repo sidekiq --repo rack --repo fastlane --repo sinatra --output bench/recall_loss/ruby-exception-reporting-query-regression-2026-07-02.v1.json",
+    "python3 scripts/query-regression-harness.py --baseline-binary /tmp/nose-ruby-exception-main/target/release/nose --current-binary target/release/nose --baseline-source-ref origin/main --current-source-ref ruby-exception-reporting-alignment --current-source-sha 8bb0ed37d13d98bbb94f29fc23cc19163d8d52e3 --iterations 15 --repo rubocop --repo rspec-core --repo sidekiq --repo rack --repo fastlane --repo sinatra --output bench/recall_loss/ruby-exception-reporting-query-regression-2026-07-02.v1.json",
     "scripts/check-docs.sh",
     "cargo fmt --check",
     "python3 scripts/check-file-lengths.py --ratchet-base origin/main",

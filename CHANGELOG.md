@@ -137,7 +137,7 @@ break.
   `raise/rescue` bucket as a superseded overlap row, and leaves the 12
   receiver-qualified broad-only overlaps outside the concrete rows. Java Stream
   lifecycle (`1,996`) becomes the largest non-JS actionable closed boundary.
-  The Ruby-heavy query regression measured `3326.98ms -> 3354.09ms` (`+0.81%`);
+  The Ruby-heavy query regression measured `3295.78ms -> 3330.24ms` (`+1.05%`);
   family counts stayed stable across all 6 repos, with metadata/hash drift only
   in `rubocop` and `rspec-core`.
 - Added Java `Executor`/`Future` receiver-method reporting for
