@@ -81,6 +81,30 @@ class Pattern:
     status: str = "closed-boundary"
 
 
+RUBY_EXCEPTION_RAISE = Pattern(
+    "ruby",
+    "ruby.exception.raise",
+    "raise",
+    "exception-channel",
+    "ruby-exception-channel-contract-missing",
+    "raise exception channel",
+    "Ruby raise calls expose source-backed Throw exception-channel boundaries",
+    re.compile(r"(?<!\.)\braise\b"),
+    "reporting-supported-closed-boundary",
+)
+RUBY_EXCEPTION_RESCUE = Pattern(
+    "ruby",
+    "ruby.exception.rescue",
+    "rescue",
+    "exception-channel",
+    "ruby-exception-channel-contract-missing",
+    "rescue exception channel",
+    "Ruby rescue clauses lower to Try exception-channel boundaries",
+    re.compile(r"\brescue\b"),
+    "reporting-supported-closed-boundary",
+)
+
+
 PATTERNS: tuple[Pattern, ...] = (
     Pattern("javascript-typescript", "js-ts.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "await is scheduling and thenable assimilation, not sync value equivalence", re.compile(r"\bawait\b")),
     Pattern("javascript-typescript", "js-ts.async.function", "async function", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async functions have scheduling and rejection boundaries even without explicit await", re.compile(r"\basync\s+(?:function\b|[A-Za-z_$]|\([^)]*\)\s*=>)")),
@@ -138,7 +162,9 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("swift", "swift.continuation.checked", "withCheckedContinuation/withUnsafeContinuation", "success-error-result-channel", "future-settled-value-channel-contract-missing", "Swift continuation bridge", "Swift continuation bridges suspend and resume through a callback-settled future-like result channel", re.compile(r"\bwith(?:Checked|Unsafe)Continuation\s*(?:\(|\{)"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.continuation.throwing", "withCheckedThrowingContinuation/withUnsafeThrowingContinuation", "success-error-result-channel", "future-settled-value-channel-contract-missing", "Swift throwing continuation bridge", "Swift throwing continuation bridges add exception-channel behavior to callback-settled future-like result channels", re.compile(r"\bwith(?:Checked|Unsafe)ThrowingContinuation\s*(?:\(|\{)"), "reporting-supported-closed-boundary"),
     Pattern("ruby", "ruby.thread.fiber", "Thread/Fiber", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "thread/fiber scheduling", "Thread/Fiber APIs create scheduler and lifecycle boundaries", re.compile(r"\b(?:Thread\s*\.\s*(?:new|start|fork)|Fiber\s*\.\s*(?:new|schedule))\b"), "reporting-supported-closed-boundary"),
-    Pattern("ruby", "ruby.exception", "raise/rescue", "exception-channel", "ruby-exception-channel-contract-missing", "exception channel", "raise/rescue changes error channels and non-local control", re.compile(r"\b(?:raise|rescue)\b")),
+    RUBY_EXCEPTION_RAISE,
+    RUBY_EXCEPTION_RESCUE,
+    Pattern("ruby", "ruby.exception", "raise/rescue", "exception-channel", "ruby-exception-channel-contract-missing", "exception channel", "Historical lexical overlap bucket; use source-backed Ruby raise and rescue rows as actionable exception-channel surfaces", re.compile(r"\b(?:raise|rescue)\b"), "superseded-overlap-boundary"),
     Pattern("ruby", "ruby.block.yield", "yield", "callback-demand-effect", "ruby-yield-callback-demand-effect-contract-missing", "block callback", "Ruby yield invokes a block with demand/effect obligations", re.compile(r"\byield\b"), "reporting-supported-closed-boundary"),
     Pattern("c", "c.thread.pthread", "pthread_create", "scheduling-boundary", "c-pthread-scheduling-contract-missing", "thread scheduling", "pthread_create introduces thread scheduling and lifetime boundaries", re.compile(r"\bpthread_create\s*\(")),
     Pattern("c", "c.nonlocal_jump", "setjmp/longjmp", "exception-channel", "c-nonlocal-jump-contract-missing", "non-local jump", "setjmp/longjmp is non-local control flow, not ordinary return", re.compile(r"\b(?:setjmp|longjmp)\s*\(")),
@@ -893,6 +919,23 @@ def self_test() -> None:
     ruby_yield_pattern = next(item for item in PATTERNS if item.surface == "ruby.block.yield")
     assert ruby_yield.get(ruby_yield_pattern) == 1
     assert ruby_yield_pattern.status == "reporting-supported-closed-boundary"
+
+    ruby_exception = count_file(
+        "def f(error)\n"
+        "  raise error\n"
+        "rescue Error\n"
+        "  recover\n"
+        "end\n"
+        "raise_error(:not_a_raise)\n",
+        "ruby",
+    )
+    ruby_exception_overlap = next(item for item in PATTERNS if item.surface == "ruby.exception")
+    assert ruby_exception.get(RUBY_EXCEPTION_RAISE) == 1
+    assert ruby_exception.get(RUBY_EXCEPTION_RESCUE) == 1
+    assert ruby_exception.get(ruby_exception_overlap) == 2
+    assert RUBY_EXCEPTION_RAISE.status == "reporting-supported-closed-boundary"
+    assert RUBY_EXCEPTION_RESCUE.status == "reporting-supported-closed-boundary"
+    assert ruby_exception_overlap.status == "superseded-overlap-boundary"
 
     task_spawn_reporting_surfaces = {
         "python.asyncio.task",

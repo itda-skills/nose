@@ -152,6 +152,22 @@ fn yield_protocol_missing_evidence_is_language_specific() {
 }
 
 #[test]
+fn ruby_raise_reports_exception_channel_boundary() {
+    let (il, interner) = lowered_source(
+        "raise.rb",
+        "def fail_fast(error)\n  raise error\nend\n",
+        Lang::Ruby,
+    );
+    let node = (0..il.nodes.len())
+        .map(|idx| NodeId(idx as u32))
+        .find(|&node| il.kind(node) == NodeKind::Throw)
+        .expect("expected Ruby raise to lower to Throw");
+    let labels = runtime_boundary_missing_evidence(&il, &interner, node)
+        .expect("expected exception-channel runtime boundary evidence");
+    assert!(labels.contains(&"exception-channel-contract"));
+}
+
+#[test]
 fn go_channel_protocol_boundaries_report_specific_obligations() {
     let send = missing_evidence_for_raw_tag(
         "channel.go",

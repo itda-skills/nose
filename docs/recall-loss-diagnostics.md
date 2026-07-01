@@ -346,6 +346,15 @@ matching [120-repo
 pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-ruby-yield-source-protocol-2026-07-01.v1.json)
 marks `ruby.block.yield` reporting-supported, prices `801` occurrences
 across `17` repos, and the checked `crates` gate reports `0` false merges.
+The follow-up [Ruby exception-channel reporting artifact](../bench/recall_loss/ruby-exception-reporting-2026-07-02.v1.json)
+keeps exact admission closed while lowering unqualified Ruby `raise` to the
+existing `Throw` boundary and retaining `rescue` on the existing `Try`
+boundary. Its 120-repo audit prices `2,065` unqualified `raise` and `1,933`
+`rescue` occurrences as reporting-supported, then marks the old
+`4,010`-occurrence broad row as superseded overlap; the 12 broad-only
+occurrences are receiver-qualified `.raise` overlaps. The Ruby-heavy query
+regression records a `+1.05%` aggregate median change, stable family counts
+across all 6 repos, and metadata/hash drift only in `rubocop` and `rspec-core`.
 The follow-up [Go protocol reporting-support artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json)
 marks Go channel/send/receive/select, goroutine, and defer source-protocol rows
 reporting-supported while keeping exact admission closed.

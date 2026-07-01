@@ -84,6 +84,9 @@ pub(super) fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
     let method_name = node
         .child_by_field_name("method")
         .map(|m| lo.text(m).to_string());
+    if is_unqualified_raise_call(node, method_name.as_deref()) {
+        return lower_raise_call(lo, node, span);
+    }
     let method = method_name.as_deref().map(|m| lo.sym(m));
     let recv = node.child_by_field_name("receiver");
     let block = Lowering::named_children(node)
@@ -123,4 +126,22 @@ pub(super) fn lower_call(lo: &mut Lowering, node: TsNode) -> NodeId {
         kids.push(block_expr);
     }
     lo.add(NodeKind::Call, Payload::None, span, &kids)
+}
+
+pub(super) fn is_unqualified_raise_call(node: TsNode, method_name: Option<&str>) -> bool {
+    node.child_by_field_name("receiver").is_none() && method_name == Some("raise")
+}
+
+pub(super) fn lower_raise_call(lo: &mut Lowering, node: TsNode, span: Span) -> NodeId {
+    let mut args = Vec::new();
+    if let Some(arguments) = node.child_by_field_name("arguments") {
+        for arg in Lowering::named_children(arguments) {
+            args.push(lower_expr(lo, arg));
+        }
+    }
+    let kids = match args.len() {
+        0 | 1 => args,
+        _ => vec![lo.add(NodeKind::Seq, Payload::None, span, &args)],
+    };
+    lo.add(NodeKind::Throw, Payload::None, span, &kids)
 }

@@ -129,6 +129,32 @@ fn raw_names_without_errors(src: &str) -> Vec<String> {
         .collect()
 }
 
+fn throw_has_return_ancestor(src: &str) -> bool {
+    let interner = Interner::new();
+    let il = lower(FileId(0), "t.rb", src.as_bytes(), &interner).expect("lower");
+    let mut parents: Vec<Option<NodeId>> = vec![None; il.nodes.len()];
+    for idx in 0..il.nodes.len() {
+        let parent = NodeId(idx as u32);
+        for &child in il.children(parent) {
+            parents[child.0 as usize] = Some(parent);
+        }
+    }
+    for idx in 0..il.nodes.len() {
+        let node = NodeId(idx as u32);
+        if il.kind(node) != NodeKind::Throw {
+            continue;
+        }
+        let mut current = parents[idx];
+        while let Some(parent) = current {
+            if il.kind(parent) == NodeKind::Return {
+                return true;
+            }
+            current = parents[parent.0 as usize];
+        }
+    }
+    false
+}
+
 #[test]
 fn yield_preserves_source_backed_protocol_boundary() {
     let interner = Interner::new();
@@ -192,6 +218,26 @@ fn method_body_rescue_and_ensure_lower_as_try_without_clause_raw() {
     assert!(
         vars.iter().any(|name| name == "recover") && vars.iter().any(|name| name == "cleanup"),
         "rescue/ensure handler bodies should be preserved: {vars:?}"
+    );
+}
+
+#[test]
+fn unqualified_raise_lowers_as_throw_without_tail_return_wrapping() {
+    let kinds =
+        node_kinds("def f(error, bad)\n  raise error\n  raise 'guarded' if bad\n  1\nend\n");
+    assert_eq!(
+        kinds
+            .iter()
+            .filter(|&&kind| kind == NodeKind::Throw)
+            .count(),
+        2,
+        "bare raise calls should lower to Throw boundaries: {kinds:?}"
+    );
+    assert!(
+        !throw_has_return_ancestor(
+            "def f(error, bad)\n  raise error\n  raise 'guarded' if bad\n  1\nend\n"
+        ),
+        "raise and guarded raise must not be wrapped as ordinary returns"
     );
 }
 

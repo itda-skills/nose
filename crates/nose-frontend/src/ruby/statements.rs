@@ -48,7 +48,10 @@ pub(super) fn body_children_with_return(
     let n = children.len();
     let mut stmts = Vec::new();
     for (idx, c) in children.into_iter().enumerate() {
-        if idx + 1 == n && is_tail_expr(c.kind()) {
+        let method_name = c.child_by_field_name("method").map(|m| lo.text(m));
+        if is_unqualified_raise_call(c, method_name) {
+            stmts.push(lower_raise_call(lo, c, lo.span(c)));
+        } else if idx + 1 == n && is_tail_expr(c.kind()) {
             let e = lower_expr(lo, c);
             stmts.push(lo.add(NodeKind::Return, Payload::None, lo.span(c), &[e]));
         } else if let Some(id) = lower_stmt(lo, c) {
@@ -113,6 +116,8 @@ pub(super) fn is_tail_expr(k: &str) -> bool {
             | "unless"
             | "while"
             | "until"
+            | "if_modifier"
+            | "unless_modifier"
             | "while_modifier"
             | "until_modifier"
             | "case"
@@ -135,6 +140,14 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
                 kids.push(lower_return_value(lo, v));
             }
             Some(lo.add(NodeKind::Return, Payload::None, span, &kids))
+        }
+        "call" | "method_call"
+            if is_unqualified_raise_call(
+                node,
+                node.child_by_field_name("method").map(|m| lo.text(m)),
+            ) =>
+        {
+            Some(lower_raise_call(lo, node, span))
         }
         "break" => Some(lo.add(NodeKind::Break, Payload::None, span, &[])),
         "next" => Some(lo.add(NodeKind::Continue, Payload::None, span, &[])),

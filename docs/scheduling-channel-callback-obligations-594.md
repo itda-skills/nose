@@ -95,6 +95,12 @@ aligns the original direct `asyncio.sleep` timer row with the same
 runtime-boundary reporting capability. The 120-repo audit moves `104`
 occurrences across `6` repos to reporting-supported closed-boundary status and
 leaves no Python closed-boundary rows in the scheduling lifecycle audit.
+The follow-up [Ruby exception-channel reporting artifact](../bench/recall_loss/ruby-exception-reporting-2026-07-02.v1.json)
+applies the existing `Throw`/`Try` runtime-boundary capability to Ruby exception
+flow. Unqualified `raise` calls now report exception-channel obligations,
+`rescue` remains a `Try` boundary, and the old broad `raise/rescue` lexical row
+is superseded by concrete reporting-supported rows while receiver-qualified
+`.raise` overlaps remain outside the concrete rows.
 The follow-up [Swift structured-concurrency artifact](../bench/recall_loss/swift-structured-concurrency-obligation-reporting-2026-06-30.v1.json)
 keeps that same capability boundary and maps Swift `Task.sleep`, `Task.yield`,
 and task-group calls onto shared timer, task-yield, aggregate,
