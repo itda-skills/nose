@@ -197,6 +197,20 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-07-01
 ```
 
+Build the Rust async closure source-protocol audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.rust-async-closure.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.rust-async-closure.crates.json \
+  --output target/rust-async-closure-source-protocol-audit.json \
+  --generated-on 2026-07-01 \
+  --include-zero-surface rust.async.closure
+```
+
 Build the Ruby Thread/Fiber runtime obligation audit with:
 
 ```sh
@@ -646,6 +660,14 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   Alamofire/Swift NIO/Vapor spot checks move `task_spawn` raw protocol tags
   from `0` to `36` and async-function tags from `110` to `139` with `0` false
   merges.
+- [rust-async-closure-source-protocol-2026-07-01.v1.json](rust-async-closure-source-protocol-2026-07-01.v1.json)
+  records the Rust async closure source-protocol parity slice. It reuses
+  `AsyncFunction` for `async |...|` and `async move |...|` closures without
+  adding a Rust-only kernel feature or opening exact admission. The pinned
+  120-repo corpus has `0` Rust async closure occurrences, while the same audit
+  now distinguishes those closures from `1,342` Rust async blocks across
+  `4` repos. The checked `crates` gate remains at `0` false merges and `0`
+  canon preservation violations.
 - [ruby-thread-fiber-runtime-reporting-2026-07-01.v1.json](ruby-thread-fiber-runtime-reporting-2026-07-01.v1.json)
   records the Ruby Thread/Fiber reporting-only expansion. `Thread.new`,
   `Thread.start`, `Thread.fork`, `Fiber.new`, and `Fiber.schedule` now reuse

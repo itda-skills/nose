@@ -258,6 +258,14 @@ Swift-only feature row. The 120-repo audit prices `100` async closures across
 `4` repos and `51` async-let bindings across `7` repos. Alamofire/Swift
 NIO/Vapor spot checks move `task_spawn` raw protocol tags from `0` to `36` and
 async-function tags from `110` to `139` with `0` false merges.
+The follow-up [Rust async closure source-protocol artifact](../bench/recall_loss/rust-async-closure-source-protocol-2026-07-01.v1.json)
+applies the same async callable boundary to Rust `async |...|` and
+`async move |...|` closures without adding a Rust-only feature. Rust async
+closures reuse `AsyncFunction`; Rust `async { ... }` blocks remain the separate
+`AsyncBlock` protocol surface. The pinned 120-repo audit has `0` Rust async
+closure occurrences, so this is a parity/hard-negative slice, while the audit
+now keeps the `1,342` Rust async-block occurrences across `4` repos distinct
+from closure syntax.
 The follow-up [promise-protocol-hard-negatives-2026-06-28.v1.json](../bench/recall_loss/promise-protocol-hard-negatives-2026-06-28.v1.json)
 pins the Promise-specific hard negatives before any recovery slice opens:
 async-function/sync, Promise executor/sync, Promise.resolve/sync,

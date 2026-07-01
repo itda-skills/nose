@@ -1632,7 +1632,8 @@ repeated registry walks on hot paths. Binary size changed 20,181,712 ->
   generator protocol boundaries with `Source::Protocol(Yield)`. Rust `async {}`
   and `?` also preserve raw protocol boundaries with
   `Source::Protocol(AsyncBlock)` and
-  `Source::Protocol(TryPropagation)`. This closes the old exact async/sync and
+  `Source::Protocol(TryPropagation)`, and Rust async closures reuse
+  `Source::Protocol(AsyncFunction)`. This closes the old exact async/sync and
   error-propagation convergence paths, plus generator/body erasure, until
   language/runtime-specific protocol contracts can prove receiver, demand,
   scheduling, suspension, exception, and effect obligations.
@@ -2374,6 +2375,18 @@ async closures across `4` repos and `51` async-let bindings across `7` repos,
 and Alamofire/Swift NIO/Vapor spot checks move `task_spawn` raw protocol tags
 from `0` to `36` plus async-function tags from `110` to `139` with `0` false
 merges.
+
+2026-07-01 Rust async closure source-protocol note:
+The [rust-async-closure-source-protocol-2026-07-01.v1.json](../bench/recall_loss/rust-async-closure-source-protocol-2026-07-01.v1.json)
+artifact extends Rust async callable source reporting without adding a Rust-only
+feature row. Rust `async |...|` and `async move |...|` closures reuse the
+existing `AsyncFunction` source protocol, while Rust `async { ... }` and
+`async move { ... }` blocks remain separate `AsyncBlock` source protocol
+surfaces. Exact admission remains closed. The pinned 120-repo audit has `0`
+Rust async closure occurrences, so this is a parity and hard-negative slice;
+the same audit now prices `1,342` Rust async blocks across `4` repos without
+letting closure syntax inflate the block row. The checked `crates` gate remains
+at `0` false merges and `0` canon preservation violations.
 
 ## See also
 

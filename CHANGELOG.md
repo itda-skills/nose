@@ -117,6 +117,10 @@ break.
   non-self fields, duplicate or shadowed local structs, project-local `tokio`
   roots or aliases, wildcard or relative imports, type aliases, wrapped
   constructors, and constructor-assigned fields remain closed.
+- Added Rust async closure source-protocol reporting. `async |...|` and
+  `async move |...|` closures now reuse the shared `AsyncFunction` source
+  protocol boundary, while synchronous closures and Rust `async { ... }`
+  blocks remain distinct; exact async closure admission remains closed.
 - Added Go channel/goroutine/defer obligation refinement. Go source-backed
   protocol boundaries now report channel send synchronization, receive value,
   comma-ok receive status, select readiness/case/default, goroutine scheduling

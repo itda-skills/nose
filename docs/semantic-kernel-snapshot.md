@@ -18,7 +18,9 @@ factories; provider-local shadows, mutation facts, raw coordinate sequences, and
 ambiguous provider factory shapes stay closed.
 JS/TS, Python, Rust, and Swift runtime-body async functions are preserved as raw
 async protocol boundaries with `Source::Protocol(AsyncFunction)` evidence, even
-when the body has no `await`. JS/TS, Python, Rust, and Swift `await`
+when the body has no `await`. Rust and Swift async closures reuse that same
+async callable protocol boundary; Rust `async {}` blocks remain the separate
+`AsyncBlock` protocol surface. JS/TS, Python, Rust, and Swift `await`
 expressions are preserved as raw async protocol boundaries with
 `Source::Protocol(Await)` evidence instead of being erased into their operand.
 The near-channel fingerprint build can look through supported async protocol
@@ -269,6 +271,13 @@ prices `100` async closures across `4` repos and `51` async-let bindings
 across `7` repos; Alamofire/Swift NIO/Vapor spot checks move `task_spawn` raw
 protocol tags from `0` to `36` and async-function tags from `110` to `139`
 with `0` false merges.
+The follow-up [Rust async closure artifact](../bench/recall_loss/rust-async-closure-source-protocol-2026-07-01.v1.json)
+keeps Rust async callable syntax on the same capability: `async |...|` and
+`async move |...|` closures reuse `Source::Protocol(AsyncFunction)`, while
+`async { ... }` and `async move { ... }` blocks remain separate `AsyncBlock`
+boundaries. The pinned 120-repo corpus has `0` Rust async closure occurrences,
+but the hard-negative fixture prevents future async closures from collapsing
+into ordinary synchronous lambdas.
 Library/API identity is consolidated through internal `LibraryApiContract` rows
 for factory, constructor, selected property/non-factory method/view surfaces,
 and selected non-call sentinels, with occurrence evidence covering selected
@@ -679,11 +688,11 @@ migrated.
   on C type-alias evidence. Rust emits macro invocation syntax for selected
   macro-backed APIs, half-open/inclusive range expression facts, tuple-struct
   single-wildcard pattern facts, plus async/error protocol facts for async
-  functions, `.await`, `async {}`, and `?`. These are stored directly as
+  functions, async closures, `.await`, `async {}`, and `?`. These are stored directly as
   `EvidenceRecord::Source`; there is no source-fact side-table fallback.
   Normalize and detect consume source facts only where a semantic contract
   requires that exact source surface. Current JS/TS/Python/Rust/Swift async
-  function and `await` nodes, JS/TS/Python `yield` nodes, Rust `async`/`?` nodes,
+  function/closure and `await` nodes, JS/TS/Python `yield` nodes, Rust `async`/`?` nodes,
   Swift `try` nodes, and Go concurrency/channel
   nodes remain raw exact-closed protocol anchors until such a contract exists.
   Python returned generator/set comprehensions and unsupported cardinality
@@ -1436,7 +1445,7 @@ Semantic knowledge still appears in several forms outside the facade:
   ecosystem APIs, and broader protocol/API evidence paths still rely on contract
   rows plus local proof or remain exact-closed. Raw Python async-looking field names such
   as `aread` no longer rewrite to sync names without an explicit protocol/API
-  evidence path, JS/TS/Python/Rust/Swift async function and `await` expressions
+  evidence path, JS/TS/Python/Rust/Swift async function/closure and `await` expressions
   no longer erase to their body or operand without async protocol proof,
   JS/TS/Python `yield` no longer erases to its yielded expression without
   generator protocol proof, and Rust `async {}`/`?` no longer erase to their body

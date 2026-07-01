@@ -109,7 +109,8 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("python", "python.generator.yield", "yield", "lifecycle-materialization-boundary", "generator-yield-lifecycle-contract-missing", "generator lifecycle", "yield has suspension and iterator lifecycle semantics", re.compile(r"\byield(?:\s+from)?\b")),
     Pattern("rust", "rust.async.await", ".await", "scheduling-boundary", "async-await-scheduling-contract-missing", "future await", "Rust .await polls a Future and must keep wake/scheduling effects explicit", re.compile(r"\.\s*await\b")),
     Pattern("rust", "rust.async.function", "async fn", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async fn creates a suspended async function boundary", re.compile(r"\basync\s+fn\b")),
-    Pattern("rust", "rust.async.block", "async block", "scheduling-boundary", "async-block-scheduling-contract-missing", "async block construction", "async blocks create suspended async boundaries", re.compile(r"\basync\s+(?:move\b|\{)")),
+    Pattern("rust", "rust.async.closure", "async closure", "scheduling-boundary", "async-function-scheduling-contract-missing", "async closure scheduling", "Rust async closures create suspended async callable protocol boundaries even when the surrounding function is synchronous", re.compile(r"\basync\s+(?:move\s+)?\|"), "reporting-supported-closed-boundary"),
+    Pattern("rust", "rust.async.block", "async block", "scheduling-boundary", "async-block-scheduling-contract-missing", "async block construction", "async blocks create suspended async boundaries", re.compile(r"\basync\s+(?:move\s*)?\{")),
     Pattern("rust", "rust.async.spawn", "tokio/async-std spawn", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "task spawn", "async spawn APIs introduce scheduler, cancellation, and join-handle boundaries", re.compile(r"\b(?:tokio(?:::task)?|async_std::task)\s*::\s*spawn(?:_blocking)?\s*\(")),
     Pattern("rust", "rust.async.join", "tokio/futures/futures_util join/try_join", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "future all-completion aggregate", "qualified runtime join style macros need all-completion result-channel proof", re.compile(r"\b(?:tokio|futures|futures_util)::(?:join|try_join)!\s*\(")),
     Pattern("rust", "rust.async.select", "tokio/futures/futures_util select", "cancellation-liveness-boundary", "async-aggregate-first-completion-contract-missing", "future first-completion aggregate", "qualified runtime select style macros need first-completion, cancellation, and result-channel proof", re.compile(r"\b(?:tokio|futures|futures_util)::select!\s*\(")),
@@ -581,6 +582,51 @@ GO_CHANNEL_SELECT_DEFAULT = Pattern(
 )
 
 
+def all_known_patterns() -> tuple[Pattern, ...]:
+    return PATTERNS + (
+        PYTHON_ASYNCIO_ALIAS_TASK,
+        PYTHON_ASYNCIO_ALIAS_SLEEP,
+        PYTHON_ASYNCIO_ALIAS_GATHER,
+        PYTHON_ASYNCIO_ALIAS_WAIT,
+        PYTHON_ASYNCIO_ALIAS_RUN,
+        PYTHON_ASYNCIO_ALIAS_WAIT_FOR,
+        PYTHON_ASYNCIO_ALIAS_SHIELD,
+        PYTHON_ASYNCIO_ALIAS_THREADSAFE,
+        PYTHON_ASYNCIO_ALIAS_TO_THREAD,
+        PYTHON_ASYNCIO_IMPORTED_TASK,
+        PYTHON_ASYNCIO_IMPORTED_SLEEP,
+        PYTHON_ASYNCIO_IMPORTED_GATHER,
+        PYTHON_ASYNCIO_IMPORTED_WAIT,
+        PYTHON_ASYNCIO_IMPORTED_RUN,
+        PYTHON_ASYNCIO_IMPORTED_WAIT_FOR,
+        PYTHON_ASYNCIO_IMPORTED_SHIELD,
+        PYTHON_ASYNCIO_IMPORTED_THREADSAFE,
+        PYTHON_ASYNCIO_IMPORTED_TO_THREAD,
+        RUST_IMPORTED_ASYNC_SPAWN,
+        RUST_IMPORTED_ASYNC_JOIN,
+        RUST_IMPORTED_ASYNC_SELECT,
+        JAVA_FUTURE_FULFILLMENT_CONTINUATION,
+        JAVA_FUTURE_EXCEPTION_CONTINUATION,
+        JAVA_FUTURE_SETTLEMENT_CONTINUATION,
+        JAVA_FUTURE_ALL_COMPLETION_CONTINUATION,
+        JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION,
+        JAVA_FUTURE_HANDLE_GET,
+        JAVA_FUTURE_HANDLE_CANCEL,
+        JAVA_FUTURE_HANDLE_STATUS,
+        JAVA_EXECUTOR_EXECUTE,
+        JAVA_EXECUTOR_SUBMIT,
+        JAVA_EXECUTOR_INVOKE_ALL,
+        JAVA_EXECUTOR_INVOKE_ANY,
+        JAVA_SCHEDULED_EXECUTOR_SCHEDULE,
+        JAVA_SCHEDULED_EXECUTOR_INTERVAL,
+        GO_CHANNEL_SEND,
+        GO_CHANNEL_RECEIVE,
+        GO_CHANNEL_RECEIVE_STATUS,
+        GO_CHANNEL_SELECT_CASE,
+        GO_CHANNEL_SELECT_DEFAULT,
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", default=DEFAULT_MANIFEST)
@@ -588,6 +634,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", default=DEFAULT_OUTPUT)
     parser.add_argument("--generated-on", default=DEFAULT_GENERATED_ON)
     parser.add_argument("--recall-loss-report", default=None)
+    parser.add_argument(
+        "--include-zero-surface",
+        action="append",
+        default=[],
+        help="Emit an explicitly searched surface even when the occurrence count is zero.",
+    )
     return parser.parse_args()
 
 
@@ -1536,6 +1588,14 @@ def java_exact_imported_concurrent_types(text: str) -> set[str]:
 
 def summarize(args: argparse.Namespace) -> dict[str, Any]:
     repos = load_repos(Path(args.manifest))
+    include_zero_surfaces = set(args.include_zero_surface)
+    known_patterns = {pattern.surface: pattern for pattern in all_known_patterns()}
+    unknown_zero_surfaces = sorted(include_zero_surfaces - set(known_patterns))
+    if unknown_zero_surfaces:
+        raise SystemExit(
+            "unknown --include-zero-surface value(s): "
+            + ", ".join(unknown_zero_surfaces)
+        )
     by_pattern: dict[Pattern, Counter[str]] = defaultdict(Counter)
     file_counts: dict[Pattern, Counter[str]] = defaultdict(Counter)
     language_counts: Counter[str] = Counter()
@@ -1560,9 +1620,15 @@ def summarize(args: argparse.Namespace) -> dict[str, Any]:
                 family_counts[pattern.obligation_family] += count
 
     surfaces = []
-    for pattern, repo_counts in by_pattern.items():
+    patterns_for_report = list(by_pattern.keys())
+    for surface in sorted(include_zero_surfaces):
+        pattern = known_patterns[surface]
+        if pattern not in by_pattern:
+            patterns_for_report.append(pattern)
+    for pattern in patterns_for_report:
+        repo_counts = by_pattern[pattern]
         occurrences = sum(repo_counts.values())
-        if occurrences == 0:
+        if occurrences == 0 and pattern.surface not in include_zero_surfaces:
             continue
         surfaces.append(
             {
@@ -1631,6 +1697,8 @@ def regenerate_command(args: argparse.Namespace) -> str:
         parts.extend(["--output", args.output])
     if args.generated_on != DEFAULT_GENERATED_ON:
         parts.extend(["--generated-on", args.generated_on])
+    for surface in args.include_zero_surface:
+        parts.extend(["--include-zero-surface", surface])
     return " ".join(parts)
 
 
@@ -1767,6 +1835,11 @@ def hard_negative_inventory() -> list[dict[str, Any]]:
             "class": "Rust brace/direct-imported runtime bindings shadowed by parameters, lets, local macros, block scopes, other modules, or project-local runtime roots",
             "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/imported_bindings.rs::non_js_async_runtime_imported_bindings_reject_rust_shadows_and_scopes and ::non_js_async_runtime_context_rejects_project_local_imported_bindings",
             "status": "mapped-existing",
+        },
+        {
+            "class": "Rust async closures versus synchronous closures and async blocks",
+            "evidence": "crates/nose-frontend/src/rust/tests/async_protocols.rs::async_closure_preserves_source_backed_protocol_boundary, ::sync_closure_does_not_create_async_protocol_boundary, and crates/nose-cli/tests/cli/semantic_boundaries.rs::query_mode_semantic_rejects_unproven_rust_async_closure_sync_convergence",
+            "status": "expanded-this-slice",
         },
         {
             "class": "Swift structured-concurrency runtime names shadowed by local Task bindings, Task extensions, same-file task-group functions, or project-visible task-group functions",
