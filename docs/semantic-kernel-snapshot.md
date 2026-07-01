@@ -67,6 +67,9 @@ their own reporting-supported audit row backed by
 `Source::Protocol(TryPropagation)`. This exposes the exception channel in
 reports without treating throwing control flow as exact-equivalent to ordinary
 returns.
+The older broad Swift `throws/try` lexical audit row remains visible only as a
+superseded overlap bucket; actionable Swift exception-channel tracking now uses
+the source-backed `try`, throwing function, and throwing closure rows.
 Python
 comprehension lowering now records whether a
 HOF came from a list comprehension, set comprehension, dict comprehension, or

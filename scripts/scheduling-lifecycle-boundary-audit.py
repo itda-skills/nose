@@ -129,7 +129,7 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("swift", "swift.async.function", "async", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "Swift async surfaces create task/future-like protocol boundaries", re.compile(r"\basync\b"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.async.closure", "async closure", "scheduling-boundary", "async-function-scheduling-contract-missing", "async closure scheduling", "Swift async closures create async callable protocol boundaries even when the surrounding function is synchronous", re.compile(r"(?!x)x"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.async.iteration", "for await/for try await", "lifecycle-materialization-boundary", "async-iteration-lifecycle-contract-missing", "async iteration lifecycle", "Swift async sequence loops need async iterator lifecycle, value-channel, scheduling, and throwing-channel proof", re.compile(r"\bfor\s+(?:try[!?]?\s+)?await\b"), "reporting-supported-closed-boundary"),
-    Pattern("swift", "swift.error.throws", "throws/try", "exception-channel", "swift-throws-exception-channel-contract-missing", "throws channel", "Swift throws/try is an explicit error channel", re.compile(r"\b(?:throws|try)\b")),
+    Pattern("swift", "swift.error.throws", "throws/try", "exception-channel", "swift-throws-exception-channel-contract-missing", "throws channel", "Historical lexical overlap bucket; use source-backed Swift try and throwing-callable rows as actionable exception-channel surfaces", re.compile(r"\b(?:throws|try)\b"), "superseded-overlap-boundary"),
     Pattern("swift", "swift.task.spawn", "Task/Task.detached", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "task scheduling", "Task APIs introduce scheduler, cancellation, and handle lifecycle boundaries", re.compile(r"\bTask(?:\s*\.\s*detached\s*(?:\{|\()|\s*\{)"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.task.sleep", "Task.sleep", "scheduling-boundary", "timer-scheduling-contract-missing", "task sleep timer", "Swift Task.sleep creates a timer-backed scheduling boundary and cancellation/liveness boundary", re.compile(r"\bTask\s*\.\s*sleep\s*\("), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.task.yield", "Task.yield", "scheduling-boundary", "task-yield-scheduling-contract-missing", "task yield", "Swift Task.yield yields to the task scheduler and must not collapse into sync value equivalence", re.compile(r"\bTask\s*\.\s*yield\s*\("), "reporting-supported-closed-boundary"),
@@ -931,6 +931,10 @@ def self_test() -> None:
         pattern = next(item for item in PATTERNS if item.surface == surface)
         assert pattern.status == "reporting-supported-closed-boundary", surface
     assert SWIFT_TRY_EXPRESSION.status == "reporting-supported-closed-boundary"
+    swift_error_overlap = next(
+        item for item in PATTERNS if item.surface == "swift.error.throws"
+    )
+    assert swift_error_overlap.status == "superseded-overlap-boundary"
 
     future_channel_reason = recommended_reason(
         {
@@ -2381,7 +2385,7 @@ def recommended_order(surfaces: list[dict[str, Any]]) -> list[dict[str, Any]]:
     candidates = [
         item
         for item in surfaces
-        if not item["status"].startswith("reporting-")
+        if not item["status"].startswith(("reporting-", "superseded-"))
         and (
             item["obligation_subreason"] in priority
             or item["surface"] in surface_priority

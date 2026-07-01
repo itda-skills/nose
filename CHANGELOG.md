@@ -105,6 +105,12 @@ break.
   `for try await`. The 120-repo audit moves `17,970` Swift try-expression
   occurrences to reporting-supported closed-boundaries while exact admission
   remains closed.
+- Reclassified the historical Swift `throws/try` lexical audit bucket as a
+  superseded overlap row now that source-backed Swift `try`, throwing function,
+  and throwing closure rows are tracked separately. This keeps the
+  `26,608`-occurrence broad bucket from being treated as an actionable residual
+  gap and makes Ruby `raise/rescue` the largest non-JS actionable closed
+  exception-channel bucket at `4,010` occurrences.
 - Added Java `Executor`/`Future` receiver-method reporting for
   exact- or wildcard-import-backed `CompletableFuture`, `Future`,
   `ScheduledFuture`, `Executor`, `ExecutorService`, and

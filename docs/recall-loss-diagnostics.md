@@ -216,6 +216,11 @@ adds the matching `Source::Protocol(TryPropagation)` audit row for Swift
 `try`, `try?`, `try!`, and `for try await` propagation boundaries. It newly
 accounts for `17,970` source-prevalence occurrences across `18` repos while
 keeping exact admission closed. The
+follow-up [Swift exception residual-accounting artifact](../bench/recall_loss/swift-exception-residual-accounting-2026-07-02.v1.json)
+marks the historical `swift.error.throws` lexical bucket as a superseded overlap
+row once source-backed `try`, throwing function, and throwing closure rows are
+tracked separately. The broad row remains visible at `26,608` occurrences, but
+it no longer drives actionable residual ordering. The
 follow-up [Rust block_on future-drive artifact](../bench/recall_loss/rust-block-on-future-drive-obligation-reporting-2026-07-01.v1.json)
 keeps exact admission closed and maps qualified/import-backed Rust
 `tokio_test::block_on` calls plus proof-backed tokio runtime receiver chains to
