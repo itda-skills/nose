@@ -42,7 +42,10 @@ admission closed. Python
 `asyncio` task/timer/aggregate calls, including import-backed namespace aliases,
 Rust `tokio`/`async-std` spawn and `join!`/`select!` macros, including
 imported runtime bindings, and Swift `Task` creation now report shared
-runtime-boundary obligations without becoming exact recovery evidence. Java
+runtime-boundary obligations without becoming exact recovery evidence. The
+non-JS task-spawn alignment audit marks the already-backed Rust spawn, Swift
+Task, Python asyncio task creation, and Java CompletableFuture async-factory
+rows reporting-supported while keeping exact admission closed. Java
 `CompletableFuture` static calls and exact-import-backed CompletionStage-style
 receiver continuations likewise report reusable future/channel/callback
 obligations when static import identity or receiver-domain evidence is proven.
