@@ -118,6 +118,11 @@ break.
   rows. The historical broad Java `Executor/Future` type-name bucket remains
   visible at `3,297` occurrences but is now a superseded overlap row rather than
   an actionable residual implementation target.
+- Aligned Python generator `yield` audit accounting with existing
+  `Source::Protocol(Yield)` runtime-boundary reporting. The 120-repo audit moves
+  `2,404` Python generator-yield occurrences across `21` repos to
+  reporting-supported closed-boundaries, raising the total to `90,875`
+  occurrences across `60` rows while exact admission remains closed.
 - Added Java `Executor`/`Future` receiver-method reporting for
   exact- or wildcard-import-backed `CompletableFuture`, `Future`,
   `ScheduledFuture`, `Executor`, `ExecutorService`, and

@@ -218,6 +218,11 @@ brings the scheduling lifecycle audit in line with the existing
 function rows now count as reporting-supported closed-boundaries, newly
 accounting for `19,144` source-prevalence occurrences while exact admission
 remains closed. The
+follow-up [Python generator-yield reporting artifact](../bench/recall_loss/python-generator-yield-reporting-2026-07-02.v1.json)
+adds the matching `Source::Protocol(Yield)` audit row for Python `yield` and
+`yield from` generator boundaries. It newly accounts for `2,404`
+source-prevalence occurrences across `21` repos while keeping exact admission
+closed. The
 follow-up [Swift try-expression reporting alignment artifact](../bench/recall_loss/swift-try-expression-reporting-2026-07-02.v1.json)
 adds the matching `Source::Protocol(TryPropagation)` audit row for Swift
 `try`, `try?`, `try!`, and `for try await` propagation boundaries. It newly

@@ -2421,6 +2421,15 @@ roles, effect visibility, non-local control, and exception behavior are proven.
 The 120-repo audit prices `801` Ruby yield occurrences across `17` repos, and
 the checked `crates` gate remains at `0` false merges.
 
+2026-07-02 Python generator-yield reporting note:
+The [python-generator-yield-reporting-2026-07-02.v1.json](../bench/recall_loss/python-generator-yield-reporting-2026-07-02.v1.json)
+artifact aligns Python generator `yield` audit accounting with the existing
+`Source::Protocol(Yield)` runtime-boundary reporting path. Python `yield` and
+`yield from` now count as reporting-supported generator lifecycle/protocol
+closed-boundaries in the 120-repo audit, newly aligning `2,404` occurrences
+across `21` repos. Exact admission remains closed until generator suspension,
+send/throw/close behavior, and materialization equivalence are proven.
+
 2026-07-01 Go protocol reporting-support note:
 The [scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json)
 artifact aligns the existing Go source protocol support with the shared

@@ -39,6 +39,9 @@ runtime-boundary reporting now splits channel send synchronization, receive
 value channels, comma-ok receive status, select readiness/case/default,
 goroutine callback effects, and defer callback effects while keeping exact
 admission closed. Python
+generator-yield audit accounting now treats `Source::Protocol(Yield)` rows as
+reporting-supported generator lifecycle/protocol boundaries without treating
+generator suspension as exact-equivalent to ordinary returns. Python
 `asyncio` task/timer/aggregate calls, including import-backed namespace aliases,
 Rust `tokio`/`async-std` spawn and `join!`/`select!` macros, including
 imported runtime bindings, and Swift `Task` creation now report shared

@@ -122,6 +122,10 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
   `async` function rows now move to reporting-supported closed-boundaries,
   newly aligning `19,144` source-prevalence occurrences while keeping exact
   admission closed and the checked `crates` gate at `0` false merges.
+- [Python generator-yield reporting alignment](../bench/recall_loss/python-generator-yield-reporting-2026-07-02.v1.json) records the audit closeout for source-backed generator `yield` boundaries.
+  Python `yield` and `yield from` now move to reporting-supported
+  closed-boundaries, newly aligning `2,404` source-prevalence occurrences
+  across `21` repos while exact admission remains closed.
 - [Swift try-expression reporting alignment](../bench/recall_loss/swift-try-expression-reporting-2026-07-02.v1.json) records the source-backed `TryPropagation` audit closeout for `try`, `try?`,
   `try!`, and `for try await`. It newly aligns `17,970` source-prevalence
   occurrences across `18` repos while keeping exact admission closed and the
