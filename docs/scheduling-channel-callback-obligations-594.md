@@ -90,6 +90,11 @@ binding evidence. Its matching [120-repo pricing artifact](../bench/recall_loss/
 adds `2` Python imported `asyncio.sleep` occurrences over the prior artifact;
 Rust direct and brace imported runtime rows stay at `11` priced occurrences,
 but brace evidence-only imports are now actionable by the reporter.
+The follow-up [Python asyncio sleep reporting artifact](../bench/recall_loss/python-asyncio-sleep-reporting-2026-07-02.v1.json)
+aligns the original direct `asyncio.sleep` timer row with the same
+runtime-boundary reporting capability. The 120-repo audit moves `104`
+occurrences across `6` repos to reporting-supported closed-boundary status and
+leaves no Python closed-boundary rows in the scheduling lifecycle audit.
 The follow-up [Swift structured-concurrency artifact](../bench/recall_loss/swift-structured-concurrency-obligation-reporting-2026-06-30.v1.json)
 keeps that same capability boundary and maps Swift `Task.sleep`, `Task.yield`,
 and task-group calls onto shared timer, task-yield, aggregate,

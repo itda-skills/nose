@@ -464,6 +464,19 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-07-02
 ```
 
+Build the Python `asyncio.sleep` reporting alignment audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.python-asyncio-sleep-reporting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.python-asyncio-sleep-reporting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.python-asyncio-sleep-reporting.json \
+  --generated-on 2026-07-02
+```
+
 Build the Swift await and Java settled-factory reporting alignment audit with:
 
 ```sh
@@ -867,6 +880,16 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   reporting-supported closed-boundary rows to `90,875` occurrences across
   `60` rows while the checked `crates` gate remains at `0` false merges and
   `0` canon preservation violations.
+- [scheduling-lifecycle-boundary-audit-python-asyncio-sleep-reporting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-python-asyncio-sleep-reporting-2026-07-02.v1.json)
+  records the direct Python `asyncio.sleep` reporting alignment. It marks the
+  already runtime-boundary-backed timer row reporting-supported while keeping
+  exact admission closed.
+- [python-asyncio-sleep-reporting-2026-07-02.v1.json](python-asyncio-sleep-reporting-2026-07-02.v1.json)
+  records the compact closeout for the same slice. It newly aligns `104`
+  `asyncio.sleep` occurrences across `6` repos, bringing all
+  reporting-supported closed-boundary rows to `90,979` occurrences across
+  `61` rows and leaving no Python closed-boundary rows in the scheduling
+  lifecycle audit.
 - [scheduling-lifecycle-boundary-audit-java-wildcard-executor-future-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-java-wildcard-executor-future-2026-07-01.v1.json)
   records the Java `java.util.concurrent.*` receiver-domain follow-up. It keeps
   exact admission closed while allowing wildcard-derived import evidence to

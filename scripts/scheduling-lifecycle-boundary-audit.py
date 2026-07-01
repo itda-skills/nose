@@ -98,7 +98,7 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("python", "python.async.iteration", "async for", "lifecycle-materialization-boundary", "async-iteration-lifecycle-contract-missing", "async iteration lifecycle", "async for statements and comprehensions need async iterator lifecycle, value-channel, and scheduling proof", re.compile(r"\basync\s+for\b"), "reporting-supported-closed-boundary"),
     Pattern("python", "python.async.context", "async with", "lifecycle-materialization-boundary", "async-context-lifecycle-contract-missing", "async context lifecycle", "async with needs async enter/exit cleanup, exception-channel, and scheduling proof", re.compile(r"\basync\s+with\b"), "reporting-supported-closed-boundary"),
     Pattern("python", "python.asyncio.task", "asyncio.create_task/ensure_future", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "asyncio task spawn", "asyncio task APIs create scheduler, cancellation, and handle lifecycle boundaries", re.compile(r"\basyncio\s*\.\s*(?:create_task|ensure_future)\s*\("), "reporting-supported-closed-boundary"),
-    Pattern("python", "python.asyncio.sleep", "asyncio.sleep", "scheduling-boundary", "timer-scheduling-contract-missing", "asyncio timer", "asyncio sleep creates a timer-backed scheduling boundary", re.compile(r"\basyncio\s*\.\s*sleep\s*\(")),
+    Pattern("python", "python.asyncio.sleep", "asyncio.sleep", "scheduling-boundary", "timer-scheduling-contract-missing", "asyncio timer", "asyncio sleep creates a timer-backed scheduling boundary", re.compile(r"\basyncio\s*\.\s*sleep\s*\("), "reporting-supported-closed-boundary"),
     Pattern("python", "python.asyncio.gather", "asyncio.gather", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "asyncio all-completion aggregate", "asyncio gather needs all-completion, result-channel, cancellation, and exception semantics", re.compile(r"\basyncio\s*\.\s*gather\s*\("), "reporting-supported-closed-boundary"),
     Pattern("python", "python.asyncio.wait", "asyncio.wait", "success-error-result-channel", "async-aggregate-completion-contract-missing", "asyncio completion aggregate", "asyncio wait needs completion-selection, result-channel, cancellation, and exception semantics", re.compile(r"\basyncio\s*\.\s*wait\s*\("), "reporting-supported-closed-boundary"),
     Pattern("python", "python.asyncio.run", "asyncio.run", "scheduling-boundary", "future-drive-scheduling-contract-missing", "asyncio future drive", "asyncio.run drives a coroutine to completion with scheduling, result-channel, and exception boundaries", re.compile(r"\basyncio\s*\.\s*run\s*\("), "reporting-supported-closed-boundary"),
@@ -918,6 +918,7 @@ def self_test() -> None:
 
     settled_future_and_await_reporting_surfaces = {
         "java.future.completable.factory",
+        "python.asyncio.sleep",
         "swift.async.await",
     }
     for surface in settled_future_and_await_reporting_surfaces:
