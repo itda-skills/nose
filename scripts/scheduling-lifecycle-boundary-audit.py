@@ -750,6 +750,18 @@ def self_test() -> None:
     )
     assert wildcard_completable_constructor.get(JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR) == 1
 
+    wildcard_package_shadow_completable_constructor = count_file(
+        "import java.util.concurrent.*;\n"
+        "class T { Object run() { return new CompletableFuture<String>(); } }\n",
+        "java",
+        {"CompletableFuture"},
+    )
+    assert (
+        JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR
+        not in wildcard_package_shadow_completable_constructor
+    )
+    assert wildcard_package_shadow_completable_constructor.get(java_completable_broad) == 1
+
     qualified_completable_constructor = count_file(
         "class T { Object run() { return new java.util.concurrent.CompletableFuture<String>(); } }\n",
         "java",
@@ -778,6 +790,20 @@ def self_test() -> None:
         "java",
     )
     assert JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR not in shadow_completable_constructor
+
+    wildcard_package_shadow_future_receiver = count_file(
+        "import java.util.concurrent.*;\n"
+        "class T { Object run(Future<String> future) throws Exception { return future.get(); } }\n",
+        "java",
+        {"Future"},
+    )
+    assert JAVA_FUTURE_HANDLE_GET not in wildcard_package_shadow_future_receiver
+
+    top_level_types = java_top_level_type_names(
+        "class Top { class Nested {} void f() { class Local {} } }\n"
+        "record Other(int value) {}\n"
+    )
+    assert top_level_types == {"Top", "Other"}
 
     swift_throwing = count_file(
         "func f() throws -> Int { 1 }\n"
@@ -919,7 +945,11 @@ def mask_comments_and_strings(text: str) -> str:
     return "".join(chars)
 
 
-def count_file(text: str, language: str) -> dict[Pattern, int]:
+def count_file(
+    text: str,
+    language: str,
+    java_package_local_types: set[str] | None = None,
+) -> dict[Pattern, int]:
     masked = mask_comments_and_strings(text)
     counts: dict[Pattern, int] = {}
     for pattern in PATTERNS:
@@ -951,8 +981,12 @@ def count_file(text: str, language: str) -> dict[Pattern, int]:
             item for item in PATTERNS if item.surface == "java.future.completable"
         )
         counts.pop(java_completable_pattern, None)
-        counts.update(java_completable_future_counts(masked, java_completable_pattern))
-        counts.update(java_future_receiver_counts(masked))
+        counts.update(
+            java_completable_future_counts(
+                masked, java_completable_pattern, java_package_local_types
+            )
+        )
+        counts.update(java_future_receiver_counts(masked, java_package_local_types))
     elif language == "swift":
         counts.update(swift_async_closure_counts(masked))
         counts.update(swift_throwing_callable_counts(masked))
@@ -962,8 +996,11 @@ def count_file(text: str, language: str) -> dict[Pattern, int]:
 def java_completable_future_counts(
     text: str,
     broad_pattern: Pattern,
+    package_local_types: set[str] | None = None,
 ) -> dict[Pattern, int]:
-    accepted_constructor_starts = java_completable_future_constructor_name_starts(text)
+    accepted_constructor_starts = java_completable_future_constructor_name_starts(
+        text, package_local_types
+    )
     broad_count = 0
     for match in re.finditer(
         r"\bCompletableFuture\b"
@@ -982,7 +1019,10 @@ def java_completable_future_counts(
     return counts
 
 
-def java_completable_future_constructor_name_starts(text: str) -> set[int]:
+def java_completable_future_constructor_name_starts(
+    text: str,
+    package_local_types: set[str] | None = None,
+) -> set[int]:
     starts: set[int] = set()
     qualified = re.compile(
         r"\bnew\s+java\s*\.\s*util\s*\.\s*concurrent\s*\.\s*"
@@ -990,7 +1030,9 @@ def java_completable_future_constructor_name_starts(text: str) -> set[int]:
     )
     starts.update(match.start(1) for match in qualified.finditer(text))
 
-    if "CompletableFuture" not in java_imported_concurrent_types(text, {"CompletableFuture"}):
+    if "CompletableFuture" not in java_imported_concurrent_types(
+        text, {"CompletableFuture"}, package_local_types
+    ):
         return starts
     simple = re.compile(r"\bnew\s+(CompletableFuture)\b(?:\s*<[^;(){}]*>)?\s*\(")
     starts.update(match.start(1) for match in simple.finditer(text))
@@ -1751,7 +1793,10 @@ def rust_runtime_import_target(module: str, exported: str) -> bool:
     }
 
 
-def java_future_receiver_counts(text: str) -> dict[Pattern, int]:
+def java_future_receiver_counts(
+    text: str,
+    package_local_types: set[str] | None = None,
+) -> dict[Pattern, int]:
     receivers = java_future_like_receiver_names(text)
     counts: dict[Pattern, int] = {}
     if receivers:
@@ -1823,8 +1868,8 @@ def java_future_receiver_counts(text: str) -> dict[Pattern, int]:
             ),
             ".",
         )
-    java_future_handle_counts(counts, text)
-    java_executor_receiver_counts(counts, text)
+    java_future_handle_counts(counts, text, package_local_types)
+    java_executor_receiver_counts(counts, text, package_local_types)
     return counts
 
 
@@ -1844,10 +1889,15 @@ def java_future_like_receiver_names(text: str) -> set[str]:
     }
 
 
-def java_future_handle_counts(counts: dict[Pattern, int], text: str) -> None:
+def java_future_handle_counts(
+    counts: dict[Pattern, int],
+    text: str,
+    package_local_types: set[str] | None = None,
+) -> None:
     future_receivers = java_import_backed_receiver_names(
         text,
         {"CompletableFuture", "Future", "ScheduledFuture"},
+        package_local_types,
     )
     if not future_receivers:
         return
@@ -1870,15 +1920,23 @@ def java_future_handle_counts(counts: dict[Pattern, int], text: str) -> None:
     )
 
 
-def java_executor_receiver_counts(counts: dict[Pattern, int], text: str) -> None:
-    executor_receivers = java_import_backed_receiver_names(text, {"Executor"})
+def java_executor_receiver_counts(
+    counts: dict[Pattern, int],
+    text: str,
+    package_local_types: set[str] | None = None,
+) -> None:
+    executor_receivers = java_import_backed_receiver_names(
+        text, {"Executor"}, package_local_types
+    )
     executor_service_receivers = java_import_backed_receiver_names(
         text,
         {"ExecutorService", "ScheduledExecutorService"},
+        package_local_types,
     )
     scheduled_receivers = java_import_backed_receiver_names(
         text,
         {"ScheduledExecutorService"},
+        package_local_types,
     )
     if executor_receivers or executor_service_receivers:
         count_by_methods(
@@ -1944,8 +2002,12 @@ JAVA_CONCURRENT_RECEIVER_TYPE_NAMES = {
 }
 
 
-def java_import_backed_receiver_names(text: str, type_names: set[str]) -> set[str]:
-    imported = java_imported_concurrent_types(text, type_names)
+def java_import_backed_receiver_names(
+    text: str,
+    type_names: set[str],
+    package_local_types: set[str] | None = None,
+) -> set[str]:
+    imported = java_imported_concurrent_types(text, type_names, package_local_types)
     if not imported:
         return set()
     type_pattern = "|".join(re.escape(type_name) for type_name in sorted(imported))
@@ -1960,11 +2022,15 @@ def java_import_backed_receiver_names(text: str, type_names: set[str]) -> set[st
     }
 
 
-def java_imported_concurrent_types(text: str, type_names: set[str]) -> set[str]:
+def java_imported_concurrent_types(
+    text: str,
+    type_names: set[str],
+    package_local_types: set[str] | None = None,
+) -> set[str]:
     blocked = java_local_type_names(text) | java_conflicting_exact_imported_type_names(text)
     imported = (java_exact_imported_concurrent_types(text) & type_names) - blocked
     if java_has_concurrent_wildcard_import(text):
-        imported |= type_names - blocked
+        imported |= type_names - blocked - (package_local_types or set())
     return imported
 
 
@@ -2010,6 +2076,38 @@ def java_local_type_names(text: str) -> set[str]:
     }
 
 
+def java_top_level_type_names(text: str) -> set[str]:
+    names: set[str] = set()
+    depth = 0
+    tokens = re.finditer(
+        r"[{}]|\b(?:class|interface|enum|record)\s+([A-Za-z_$][A-Za-z0-9_$]*)\b",
+        text,
+    )
+    for token in tokens:
+        if token.group(0) == "{":
+            depth += 1
+        elif token.group(0) == "}":
+            depth = max(0, depth - 1)
+        elif depth == 0 and token.group(1):
+            names.add(token.group(1))
+    return names
+
+
+def java_package_local_types_by_dir(root: Path) -> dict[Path, set[str]]:
+    by_dir: dict[Path, set[str]] = defaultdict(set)
+    for path in source_files(root):
+        if language_for_path(path) != "java":
+            continue
+        try:
+            text = mask_comments_and_strings(path.read_text(errors="ignore"))
+        except OSError:
+            continue
+        names = java_top_level_type_names(text)
+        if names:
+            by_dir[path.parent].update(names)
+    return by_dir
+
+
 def summarize(args: argparse.Namespace) -> dict[str, Any]:
     repos = load_repos(Path(args.manifest))
     include_zero_surfaces = set(args.include_zero_surface)
@@ -2028,6 +2126,7 @@ def summarize(args: argparse.Namespace) -> dict[str, Any]:
     for repo in repos:
         repo_id = repo["id"]
         root = Path(args.repos_root) / repo_id
+        java_dir_types = java_package_local_types_by_dir(root)
         for path in source_files(root):
             language = language_for_path(path)
             if language is None:
@@ -2037,7 +2136,11 @@ def summarize(args: argparse.Namespace) -> dict[str, Any]:
             except OSError:
                 continue
             rel = str(path.relative_to(root))
-            for pattern, count in count_file(text, language).items():
+            for pattern, count in count_file(
+                text,
+                language,
+                java_dir_types.get(path.parent) if language == "java" else None,
+            ).items():
                 by_pattern[pattern][repo_id] += count
                 file_counts[pattern][f"{repo_id}/{rel}"] += count
                 language_counts[language] += count

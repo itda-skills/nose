@@ -111,3 +111,29 @@ fn java_completable_future_wildcard_import_is_not_blocked_by_other_file_conflict
         "Java CompletableFuture wildcard import with unrelated file conflict",
     );
 }
+
+#[test]
+fn java_completable_future_wildcard_import_respects_same_package_type_shadow() {
+    let wildcard = runtime_boundary_evidence_for_corpus_call(
+        &[
+            (
+                "p/CompletableFuture.java",
+                "package p;\nclass CompletableFuture { static Object runAsync(Object work) { return work; } }\n",
+                Lang::Java,
+            ),
+            (
+                "p/Runtime.java",
+                "package p;\nimport java.util.concurrent.*;\nclass Runtime { Object run() { return CompletableFuture.runAsync(work()); } }\n",
+                Lang::Java,
+            ),
+        ],
+        "p/Runtime.java",
+        "CompletableFuture.runAsync",
+    );
+
+    assert_missing_evidence_not_contains(
+        wildcard,
+        "task-spawn-scheduling-contract",
+        "same-package Java CompletableFuture wildcard shadow",
+    );
+}
