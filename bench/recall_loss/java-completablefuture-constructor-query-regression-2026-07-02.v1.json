@@ -6,11 +6,11 @@
     "baseline_source_ref": "origin/main",
     "baseline_source_sha": "1441d7b404aace7c406bad20d98a35196a16b16e",
     "current_binary": "/Users/ak/prjs/cc/nose/target/release/nose",
-    "current_binary_sha256": "c0b2290ad46d94611eaee7cddefbee8ee7cc96903c0f34150c03047c092b5580",
+    "current_binary_sha256": "9e5893686c1385f6dcca2318a5d77efeb3a026b3e52b84193c5f8f97e720c9f3",
     "current_source_ref": "java-completablefuture-constructor-reporting",
-    "current_source_sha": "91e75c91edeb000fe2b68081d9a1855ef468a363",
+    "current_source_sha": "50963c5f3557dfa3b2c41eb79daa2549c1175b21",
     "harness": "scripts/query-regression-harness.py",
-    "harness_command": "scripts/query-regression-harness.py --baseline-binary /tmp/nose-java-cf-main-worktree/target/release/nose --current-binary target/release/nose --baseline-source-ref origin/main --current-source-ref java-completablefuture-constructor-reporting --current-source-sha 91e75c91edeb000fe2b68081d9a1855ef468a363 --iterations 9 --repo netty --repo rxjava --repo retrofit --repo junit5 --repo jedis --repo h2database --output bench/recall_loss/java-completablefuture-constructor-query-regression-2026-07-02.v1.json",
+    "harness_command": "scripts/query-regression-harness.py --baseline-binary /tmp/nose-java-cf-main-worktree/target/release/nose --current-binary target/release/nose --baseline-source-ref origin/main --current-source-ref java-completablefuture-constructor-reporting --current-source-sha 50963c5f3557dfa3b2c41eb79daa2549c1175b21 --iterations 9 --repo netty --repo rxjava --repo retrofit --repo junit5 --repo jedis --repo h2database --output bench/recall_loss/java-completablefuture-constructor-query-regression-2026-07-02.v1.json",
     "working_tree_status_before_measurement": ""
   },
   "repos": [
@@ -24,7 +24,7 @@
   "runs": [
     {
       "bytes": 1321539,
-      "elapsed_ms": 1829.3319588992745,
+      "elapsed_ms": 1856.714874971658,
       "families": 879,
       "iteration": 1,
       "label": "baseline",
@@ -33,7 +33,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1249.8847080860287,
+      "elapsed_ms": 1242.5641671288759,
       "families": 618,
       "iteration": 1,
       "label": "baseline",
@@ -42,7 +42,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 108.72124996967614,
+      "elapsed_ms": 129.24187490716577,
       "families": 81,
       "iteration": 1,
       "label": "baseline",
@@ -51,7 +51,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 723.7415420822799,
+      "elapsed_ms": 690.0488750543445,
       "families": 327,
       "iteration": 1,
       "label": "baseline",
@@ -60,7 +60,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1137.0877500157803,
+      "elapsed_ms": 1089.6050001028925,
       "families": 267,
       "iteration": 1,
       "label": "baseline",
@@ -69,7 +69,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1558.2592498976737,
+      "elapsed_ms": 1605.7967499364167,
       "families": 515,
       "iteration": 1,
       "label": "baseline",
@@ -78,7 +78,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 1885.831416817382,
+      "elapsed_ms": 1778.4868341404945,
       "families": 879,
       "iteration": 1,
       "label": "current",
@@ -87,7 +87,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1288.364915875718,
+      "elapsed_ms": 1229.6366249211133,
       "families": 618,
       "iteration": 1,
       "label": "current",
@@ -96,7 +96,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 135.7367078308016,
+      "elapsed_ms": 125.26812497526407,
       "families": 81,
       "iteration": 1,
       "label": "current",
@@ -105,7 +105,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 720.5299159977585,
+      "elapsed_ms": 678.2271249685436,
       "families": 327,
       "iteration": 1,
       "label": "current",
@@ -114,7 +114,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1191.825499990955,
+      "elapsed_ms": 1069.8025000747293,
       "families": 267,
       "iteration": 1,
       "label": "current",
@@ -123,7 +123,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1521.4081248268485,
+      "elapsed_ms": 1600.0438751652837,
       "families": 515,
       "iteration": 1,
       "label": "current",
@@ -132,7 +132,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 1937.2578330803663,
+      "elapsed_ms": 1926.9520409870893,
       "families": 879,
       "iteration": 2,
       "label": "current",
@@ -141,7 +141,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1247.1622498705983,
+      "elapsed_ms": 1240.7633340917528,
       "families": 618,
       "iteration": 2,
       "label": "current",
@@ -150,7 +150,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 143.3585830964148,
+      "elapsed_ms": 144.65608401224017,
       "families": 81,
       "iteration": 2,
       "label": "current",
@@ -159,7 +159,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 683.6211250629276,
+      "elapsed_ms": 689.2412090674043,
       "families": 327,
       "iteration": 2,
       "label": "current",
@@ -168,7 +168,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1209.178667049855,
+      "elapsed_ms": 1147.3845420405269,
       "families": 267,
       "iteration": 2,
       "label": "current",
@@ -177,7 +177,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1648.5520000569522,
+      "elapsed_ms": 1622.569875093177,
       "families": 515,
       "iteration": 2,
       "label": "current",
@@ -186,7 +186,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 1881.315957987681,
+      "elapsed_ms": 1933.9156670030206,
       "families": 879,
       "iteration": 2,
       "label": "baseline",
@@ -195,7 +195,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1276.1398751754314,
+      "elapsed_ms": 1253.897082991898,
       "families": 618,
       "iteration": 2,
       "label": "baseline",
@@ -204,7 +204,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 155.63870896585286,
+      "elapsed_ms": 131.53441692702472,
       "families": 81,
       "iteration": 2,
       "label": "baseline",
@@ -213,7 +213,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 683.131166966632,
+      "elapsed_ms": 713.7904998380691,
       "families": 327,
       "iteration": 2,
       "label": "baseline",
@@ -222,7 +222,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1150.18445905298,
+      "elapsed_ms": 1175.4476251080632,
       "families": 267,
       "iteration": 2,
       "label": "baseline",
@@ -231,7 +231,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1713.8817079830915,
+      "elapsed_ms": 1667.1277079731226,
       "families": 515,
       "iteration": 2,
       "label": "baseline",
@@ -240,7 +240,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 1930.5317078251392,
+      "elapsed_ms": 1911.854499951005,
       "families": 879,
       "iteration": 3,
       "label": "baseline",
@@ -249,7 +249,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1306.8024578969926,
+      "elapsed_ms": 1253.7801249418408,
       "families": 618,
       "iteration": 3,
       "label": "baseline",
@@ -258,7 +258,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 148.33858399651945,
+      "elapsed_ms": 140.1742920279503,
       "families": 81,
       "iteration": 3,
       "label": "baseline",
@@ -267,7 +267,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 683.8834590744227,
+      "elapsed_ms": 723.6108330544084,
       "families": 327,
       "iteration": 3,
       "label": "baseline",
@@ -276,7 +276,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1153.9289171341807,
+      "elapsed_ms": 1118.8682499341667,
       "families": 267,
       "iteration": 3,
       "label": "baseline",
@@ -285,7 +285,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1762.3866668436676,
+      "elapsed_ms": 1738.1262090057135,
       "families": 515,
       "iteration": 3,
       "label": "baseline",
@@ -294,7 +294,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 1968.3809580747038,
+      "elapsed_ms": 1929.9697920214385,
       "families": 879,
       "iteration": 3,
       "label": "current",
@@ -303,7 +303,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1321.508124936372,
+      "elapsed_ms": 1288.6074581183493,
       "families": 618,
       "iteration": 3,
       "label": "current",
@@ -312,7 +312,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 143.78816587850451,
+      "elapsed_ms": 162.55287500098348,
       "families": 81,
       "iteration": 3,
       "label": "current",
@@ -321,7 +321,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 705.1313328556716,
+      "elapsed_ms": 739.4639998674393,
       "families": 327,
       "iteration": 3,
       "label": "current",
@@ -330,7 +330,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1222.6473328191787,
+      "elapsed_ms": 1155.5851658340544,
       "families": 267,
       "iteration": 3,
       "label": "current",
@@ -339,7 +339,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1739.7228749468923,
+      "elapsed_ms": 1715.1628751307726,
       "families": 515,
       "iteration": 3,
       "label": "current",
@@ -348,7 +348,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 1886.23083406128,
+      "elapsed_ms": 1930.9065418783575,
       "families": 879,
       "iteration": 4,
       "label": "current",
@@ -357,7 +357,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1369.8072920087725,
+      "elapsed_ms": 1285.7288329396397,
       "families": 618,
       "iteration": 4,
       "label": "current",
@@ -366,7 +366,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 135.8141249511391,
+      "elapsed_ms": 146.46158297546208,
       "families": 81,
       "iteration": 4,
       "label": "current",
@@ -375,7 +375,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 766.0007500089705,
+      "elapsed_ms": 707.3038751259446,
       "families": 327,
       "iteration": 4,
       "label": "current",
@@ -384,7 +384,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1167.85137495026,
+      "elapsed_ms": 1179.6959999483079,
       "families": 267,
       "iteration": 4,
       "label": "current",
@@ -393,7 +393,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1740.497542079538,
+      "elapsed_ms": 1704.5215421821922,
       "families": 515,
       "iteration": 4,
       "label": "current",
@@ -402,7 +402,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 2006.7837920505553,
+      "elapsed_ms": 1903.7177911959589,
       "families": 879,
       "iteration": 4,
       "label": "baseline",
@@ -411,7 +411,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1352.8725830838084,
+      "elapsed_ms": 1322.053459007293,
       "families": 618,
       "iteration": 4,
       "label": "baseline",
@@ -420,7 +420,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 144.6224160026759,
+      "elapsed_ms": 168.546583969146,
       "families": 81,
       "iteration": 4,
       "label": "baseline",
@@ -429,7 +429,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 752.2686249576509,
+      "elapsed_ms": 757.0772089529783,
       "families": 327,
       "iteration": 4,
       "label": "baseline",
@@ -438,7 +438,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1256.8935418967158,
+      "elapsed_ms": 1164.6842500194907,
       "families": 267,
       "iteration": 4,
       "label": "baseline",
@@ -447,7 +447,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1691.2438748404384,
+      "elapsed_ms": 1750.958708114922,
       "families": 515,
       "iteration": 4,
       "label": "baseline",
@@ -456,7 +456,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 1971.0332080721855,
+      "elapsed_ms": 2102.059958036989,
       "families": 879,
       "iteration": 5,
       "label": "baseline",
@@ -465,7 +465,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1307.0225410629064,
+      "elapsed_ms": 1348.793291952461,
       "families": 618,
       "iteration": 5,
       "label": "baseline",
@@ -474,7 +474,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 131.7509999498725,
+      "elapsed_ms": 139.4084170460701,
       "families": 81,
       "iteration": 5,
       "label": "baseline",
@@ -483,7 +483,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 692.4752499908209,
+      "elapsed_ms": 718.0682090111077,
       "families": 327,
       "iteration": 5,
       "label": "baseline",
@@ -492,7 +492,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1217.8408331237733,
+      "elapsed_ms": 1226.4932920224965,
       "families": 267,
       "iteration": 5,
       "label": "baseline",
@@ -501,7 +501,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1777.6778750121593,
+      "elapsed_ms": 1713.9530421700329,
       "families": 515,
       "iteration": 5,
       "label": "baseline",
@@ -510,7 +510,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 1949.5937919709831,
+      "elapsed_ms": 2012.7664590254426,
       "families": 879,
       "iteration": 5,
       "label": "current",
@@ -519,7 +519,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1333.9450000785291,
+      "elapsed_ms": 1293.9998749643564,
       "families": 618,
       "iteration": 5,
       "label": "current",
@@ -528,7 +528,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 124.81537507846951,
+      "elapsed_ms": 153.77166704274714,
       "families": 81,
       "iteration": 5,
       "label": "current",
@@ -537,7 +537,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 760.0203328765929,
+      "elapsed_ms": 762.1043340768665,
       "families": 327,
       "iteration": 5,
       "label": "current",
@@ -546,7 +546,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1179.068708093837,
+      "elapsed_ms": 1222.603667061776,
       "families": 267,
       "iteration": 5,
       "label": "current",
@@ -555,7 +555,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1775.4556250292808,
+      "elapsed_ms": 1655.3592921700329,
       "families": 515,
       "iteration": 5,
       "label": "current",
@@ -564,7 +564,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 1937.7675410360098,
+      "elapsed_ms": 1921.3647078722715,
       "families": 879,
       "iteration": 6,
       "label": "current",
@@ -573,7 +573,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1302.2408338729292,
+      "elapsed_ms": 1370.0020420365036,
       "families": 618,
       "iteration": 6,
       "label": "current",
@@ -582,7 +582,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 148.9625838585198,
+      "elapsed_ms": 141.9014169368893,
       "families": 81,
       "iteration": 6,
       "label": "current",
@@ -591,7 +591,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 738.9623750932515,
+      "elapsed_ms": 764.1412089578807,
       "families": 327,
       "iteration": 6,
       "label": "current",
@@ -600,7 +600,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1240.2384171728045,
+      "elapsed_ms": 1194.1722920164466,
       "families": 267,
       "iteration": 6,
       "label": "current",
@@ -609,7 +609,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1761.7201670072973,
+      "elapsed_ms": 1688.8374590780586,
       "families": 515,
       "iteration": 6,
       "label": "current",
@@ -618,7 +618,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 1939.2020420636982,
+      "elapsed_ms": 1932.74962506257,
       "families": 879,
       "iteration": 6,
       "label": "baseline",
@@ -627,7 +627,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1317.4745829310268,
+      "elapsed_ms": 1346.750000026077,
       "families": 618,
       "iteration": 6,
       "label": "baseline",
@@ -636,7 +636,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 134.90704097785056,
+      "elapsed_ms": 137.98233401030302,
       "families": 81,
       "iteration": 6,
       "label": "baseline",
@@ -645,7 +645,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 725.7305830717087,
+      "elapsed_ms": 715.8537500072271,
       "families": 327,
       "iteration": 6,
       "label": "baseline",
@@ -654,7 +654,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1268.7109170947224,
+      "elapsed_ms": 1240.95662496984,
       "families": 267,
       "iteration": 6,
       "label": "baseline",
@@ -663,7 +663,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1723.3199579641223,
+      "elapsed_ms": 1758.5060000419617,
       "families": 515,
       "iteration": 6,
       "label": "baseline",
@@ -672,7 +672,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 1981.739749899134,
+      "elapsed_ms": 1981.9077919237316,
       "families": 879,
       "iteration": 7,
       "label": "baseline",
@@ -681,7 +681,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1405.0701670348644,
+      "elapsed_ms": 1288.173042004928,
       "families": 618,
       "iteration": 7,
       "label": "baseline",
@@ -690,7 +690,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 145.6987918354571,
+      "elapsed_ms": 122.87266692146659,
       "families": 81,
       "iteration": 7,
       "label": "baseline",
@@ -699,7 +699,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 765.610792208463,
+      "elapsed_ms": 783.3134999964386,
       "families": 327,
       "iteration": 7,
       "label": "baseline",
@@ -708,7 +708,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1253.8151659537107,
+      "elapsed_ms": 1165.7561669126153,
       "families": 267,
       "iteration": 7,
       "label": "baseline",
@@ -717,7 +717,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1718.9697499852628,
+      "elapsed_ms": 1746.022499864921,
       "families": 515,
       "iteration": 7,
       "label": "baseline",
@@ -726,7 +726,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 2034.7553330939263,
+      "elapsed_ms": 1933.3375829737633,
       "families": 879,
       "iteration": 7,
       "label": "current",
@@ -735,7 +735,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1418.7560831196606,
+      "elapsed_ms": 1300.4817499313504,
       "families": 618,
       "iteration": 7,
       "label": "current",
@@ -744,7 +744,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 128.6136251874268,
+      "elapsed_ms": 123.33845812827349,
       "families": 81,
       "iteration": 7,
       "label": "current",
@@ -753,7 +753,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 742.4971668515354,
+      "elapsed_ms": 748.9282919559628,
       "families": 327,
       "iteration": 7,
       "label": "current",
@@ -762,7 +762,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1159.2783329542726,
+      "elapsed_ms": 1191.0369999241084,
       "families": 267,
       "iteration": 7,
       "label": "current",
@@ -771,7 +771,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1739.999916870147,
+      "elapsed_ms": 1746.3675001636147,
       "families": 515,
       "iteration": 7,
       "label": "current",
@@ -780,7 +780,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 2016.1764160729945,
+      "elapsed_ms": 2054.6880420297384,
       "families": 879,
       "iteration": 8,
       "label": "current",
@@ -789,7 +789,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1303.6034579854459,
+      "elapsed_ms": 1320.2385830227286,
       "families": 618,
       "iteration": 8,
       "label": "current",
@@ -798,7 +798,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 124.04216593131423,
+      "elapsed_ms": 134.6177498344332,
       "families": 81,
       "iteration": 8,
       "label": "current",
@@ -807,7 +807,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 765.8408330753446,
+      "elapsed_ms": 734.7057908773422,
       "families": 327,
       "iteration": 8,
       "label": "current",
@@ -816,7 +816,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1177.4244999978691,
+      "elapsed_ms": 1181.1237090732902,
       "families": 267,
       "iteration": 8,
       "label": "current",
@@ -825,7 +825,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1725.9252499789,
+      "elapsed_ms": 1758.1687080673873,
       "families": 515,
       "iteration": 8,
       "label": "current",
@@ -834,7 +834,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 2037.600832991302,
+      "elapsed_ms": 2006.978667108342,
       "families": 879,
       "iteration": 8,
       "label": "baseline",
@@ -843,7 +843,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1274.245624896139,
+      "elapsed_ms": 1341.4677921682596,
       "families": 618,
       "iteration": 8,
       "label": "baseline",
@@ -852,7 +852,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 146.23924996703863,
+      "elapsed_ms": 152.35191606916487,
       "families": 81,
       "iteration": 8,
       "label": "baseline",
@@ -861,7 +861,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 756.7793328780681,
+      "elapsed_ms": 736.2425830215216,
       "families": 327,
       "iteration": 8,
       "label": "baseline",
@@ -870,7 +870,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1261.6232079453766,
+      "elapsed_ms": 1198.3267089817673,
       "families": 267,
       "iteration": 8,
       "label": "baseline",
@@ -879,7 +879,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1778.584917075932,
+      "elapsed_ms": 1790.2199160307646,
       "families": 515,
       "iteration": 8,
       "label": "baseline",
@@ -888,7 +888,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 2017.5299169495702,
+      "elapsed_ms": 1975.4191250540316,
       "families": 879,
       "iteration": 9,
       "label": "baseline",
@@ -897,7 +897,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1386.7722919676453,
+      "elapsed_ms": 1331.616915995255,
       "families": 618,
       "iteration": 9,
       "label": "baseline",
@@ -906,7 +906,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 142.50499987974763,
+      "elapsed_ms": 153.6703750025481,
       "families": 81,
       "iteration": 9,
       "label": "baseline",
@@ -915,7 +915,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 749.119833111763,
+      "elapsed_ms": 780.1195830106735,
       "families": 327,
       "iteration": 9,
       "label": "baseline",
@@ -924,7 +924,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1221.0255418904126,
+      "elapsed_ms": 1166.3717911578715,
       "families": 267,
       "iteration": 9,
       "label": "baseline",
@@ -933,7 +933,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1752.077167155221,
+      "elapsed_ms": 1735.8140000142157,
       "families": 515,
       "iteration": 9,
       "label": "baseline",
@@ -942,7 +942,7 @@
     },
     {
       "bytes": 1321539,
-      "elapsed_ms": 2057.786582969129,
+      "elapsed_ms": 2026.668667094782,
       "families": 879,
       "iteration": 9,
       "label": "current",
@@ -951,7 +951,7 @@
     },
     {
       "bytes": 1169728,
-      "elapsed_ms": 1335.4579999577254,
+      "elapsed_ms": 1361.6984579712152,
       "families": 618,
       "iteration": 9,
       "label": "current",
@@ -960,7 +960,7 @@
     },
     {
       "bytes": 124169,
-      "elapsed_ms": 142.28729205206037,
+      "elapsed_ms": 126.77574995905161,
       "families": 81,
       "iteration": 9,
       "label": "current",
@@ -969,7 +969,7 @@
     },
     {
       "bytes": 514636,
-      "elapsed_ms": 792.8613750264049,
+      "elapsed_ms": 764.9520828854293,
       "families": 327,
       "iteration": 9,
       "label": "current",
@@ -978,7 +978,7 @@
     },
     {
       "bytes": 329711,
-      "elapsed_ms": 1247.475374955684,
+      "elapsed_ms": 1249.052750179544,
       "families": 267,
       "iteration": 9,
       "label": "current",
@@ -987,7 +987,7 @@
     },
     {
       "bytes": 650060,
-      "elapsed_ms": 1734.2090420424938,
+      "elapsed_ms": 1755.600000033155,
       "families": 515,
       "iteration": 9,
       "label": "current",
@@ -996,9 +996,9 @@
     }
   ],
   "summary": {
-    "aggregate_baseline_median_ms": 7092.754248064011,
-    "aggregate_current_median_ms": 7080.961583647877,
-    "aggregate_delta_pct": -0.16626354168908644,
+    "aggregate_baseline_median_ms": 7023.486376274377,
+    "aggregate_current_median_ms": 6991.917084902525,
+    "aggregate_delta_pct": -0.4494817770059968,
     "by_repo": {
       "h2database": {
         "baseline": {
@@ -1011,7 +1011,7 @@
           "hashes": [
             "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
           ],
-          "median_ms": 1723.3199579641223
+          "median_ms": 1738.1262090057135
         },
         "current": {
           "bytes": [
@@ -1023,7 +1023,7 @@
           "hashes": [
             "2c4611c2bc4065f41c80cb3787177174e55366eed1ef7d3c6701a2509ac24365"
           ],
-          "median_ms": 1739.7228749468923
+          "median_ms": 1704.5215421821922
         }
       },
       "jedis": {
@@ -1037,7 +1037,7 @@
           "hashes": [
             "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
           ],
-          "median_ms": 1221.0255418904126
+          "median_ms": 1166.3717911578715
         },
         "current": {
           "bytes": [
@@ -1049,7 +1049,7 @@
           "hashes": [
             "606ecaf372e28109fec434aa821fd55d30b9507f7eebfee6090233a600159024"
           ],
-          "median_ms": 1191.825499990955
+          "median_ms": 1181.1237090732902
         }
       },
       "junit5": {
@@ -1063,7 +1063,7 @@
           "hashes": [
             "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
           ],
-          "median_ms": 725.7305830717087
+          "median_ms": 723.6108330544084
         },
         "current": {
           "bytes": [
@@ -1075,7 +1075,7 @@
           "hashes": [
             "f14acbc7f5f2d62ae82fc76db8774f47911381f6acdd40a8f933987784fa2c5e"
           ],
-          "median_ms": 742.4971668515354
+          "median_ms": 739.4639998674393
         }
       },
       "netty": {
@@ -1089,7 +1089,7 @@
           "hashes": [
             "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
           ],
-          "median_ms": 1971.0332080721855
+          "median_ms": 1933.9156670030206
         },
         "current": {
           "bytes": [
@@ -1101,7 +1101,7 @@
           "hashes": [
             "ff967cc0cd517ba9cdde85d2f79e98a3ba7c2f0fc5c627aa4d41cc41e983f83f"
           ],
-          "median_ms": 1949.5937919709831
+          "median_ms": 1930.9065418783575
         }
       },
       "retrofit": {
@@ -1115,7 +1115,7 @@
           "hashes": [
             "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
           ],
-          "median_ms": 144.6224160026759
+          "median_ms": 139.4084170460701
         },
         "current": {
           "bytes": [
@@ -1127,7 +1127,7 @@
           "hashes": [
             "9e59d42b1282cb828c4e641fef8c3898d73a8e9a7c897380dc58cda43db2cb14"
           ],
-          "median_ms": 135.8141249511391
+          "median_ms": 141.9014169368893
         }
       },
       "rxjava": {
@@ -1141,7 +1141,7 @@
           "hashes": [
             "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
           ],
-          "median_ms": 1307.0225410629064
+          "median_ms": 1322.053459007293
         },
         "current": {
           "bytes": [
@@ -1153,7 +1153,7 @@
           "hashes": [
             "69fceb883e475097cd9dbda7569f66422357d05bee804f50611fc32bfa8d19e2"
           ],
-          "median_ms": 1321.508124936372
+          "median_ms": 1293.9998749643564
         }
       }
     },
