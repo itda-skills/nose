@@ -426,6 +426,105 @@ JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION = Pattern(
     re.compile(r"(?!x)x"),
     "reporting-candidate-closed-boundary",
 )
+JAVA_FUTURE_HANDLE_GET = Pattern(
+    "java",
+    "java.future.handle.get",
+    "Future.get",
+    "success-error-result-channel",
+    "future-settled-value-channel-contract-missing",
+    "future handle get",
+    "Exact-import-backed Java Future receivers expose blocking settled-value and exception channels",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+JAVA_FUTURE_HANDLE_CANCEL = Pattern(
+    "java",
+    "java.future.handle.cancel",
+    "Future.cancel/isCancelled",
+    "cancellation-liveness-boundary",
+    "task-cancellation-liveness-contract-missing",
+    "future handle cancellation",
+    "Exact-import-backed Java Future receivers expose cancellation and task-handle liveness boundaries",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+JAVA_FUTURE_HANDLE_STATUS = Pattern(
+    "java",
+    "java.future.handle.status",
+    "Future.isDone",
+    "lifecycle-materialization-boundary",
+    "task-handle-lifecycle-contract-missing",
+    "future handle lifecycle",
+    "Exact-import-backed Java Future receivers expose task-handle lifecycle status",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+JAVA_EXECUTOR_EXECUTE = Pattern(
+    "java",
+    "java.executor.execute",
+    "Executor.execute",
+    "scheduling-boundary",
+    "task-spawn-scheduling-contract-missing",
+    "executor runnable scheduling",
+    "Exact-import-backed Java Executor receivers schedule callback execution without returning a task handle",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+JAVA_EXECUTOR_SUBMIT = Pattern(
+    "java",
+    "java.executor_service.submit",
+    "ExecutorService.submit",
+    "scheduling-boundary",
+    "task-spawn-scheduling-contract-missing",
+    "executor service future scheduling",
+    "Exact-import-backed Java ExecutorService receivers schedule callbacks and return Future handles",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+JAVA_EXECUTOR_INVOKE_ALL = Pattern(
+    "java",
+    "java.executor_service.invoke_all",
+    "ExecutorService.invokeAll",
+    "success-error-result-channel",
+    "async-aggregate-all-completion-contract-missing",
+    "executor service all-completion aggregate",
+    "Exact-import-backed Java ExecutorService invokeAll waits for all submitted tasks and returns Future result channels",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+JAVA_EXECUTOR_INVOKE_ANY = Pattern(
+    "java",
+    "java.executor_service.invoke_any",
+    "ExecutorService.invokeAny",
+    "cancellation-liveness-boundary",
+    "async-aggregate-first-completion-contract-missing",
+    "executor service first-completion aggregate",
+    "Exact-import-backed Java ExecutorService invokeAny exposes first-success completion, cancellation, and exception boundaries",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+JAVA_SCHEDULED_EXECUTOR_SCHEDULE = Pattern(
+    "java",
+    "java.scheduled_executor.schedule",
+    "ScheduledExecutorService.schedule",
+    "scheduling-boundary",
+    "timer-scheduling-contract-missing",
+    "scheduled executor timer",
+    "Exact-import-backed Java ScheduledExecutorService schedule calls add timer-backed task scheduling and Future result channels",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+JAVA_SCHEDULED_EXECUTOR_INTERVAL = Pattern(
+    "java",
+    "java.scheduled_executor.interval",
+    "ScheduledExecutorService.scheduleAtFixedRate/scheduleWithFixedDelay",
+    "lifecycle-materialization-boundary",
+    "interval-async-iteration-lifecycle-contract-missing",
+    "scheduled executor interval lifecycle",
+    "Exact-import-backed Java ScheduledExecutorService repeating schedules expose interval lifecycle and cancellation boundaries",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
 GO_CHANNEL_SEND = Pattern(
     "go",
     "go.channel.send",
@@ -1070,77 +1169,78 @@ def rust_runtime_import_target(module: str, exported: str) -> bool:
 
 def java_future_receiver_counts(text: str) -> dict[Pattern, int]:
     receivers = java_future_like_receiver_names(text)
-    if not receivers:
-        return {}
     counts: dict[Pattern, int] = {}
-    count_by_methods(
-        counts,
-        JAVA_FUTURE_FULFILLMENT_CONTINUATION,
-        text,
-        receivers,
-        (
-            "thenApply",
-            "thenApplyAsync",
-            "thenAccept",
-            "thenAcceptAsync",
-            "thenRun",
-            "thenRunAsync",
-            "thenCompose",
-            "thenComposeAsync",
-        ),
-        ".",
-    )
-    count_by_methods(
-        counts,
-        JAVA_FUTURE_EXCEPTION_CONTINUATION,
-        text,
-        receivers,
-        (
-            "exceptionally",
-            "exceptionallyAsync",
-            "exceptionallyCompose",
-            "exceptionallyComposeAsync",
-        ),
-        ".",
-    )
-    count_by_methods(
-        counts,
-        JAVA_FUTURE_SETTLEMENT_CONTINUATION,
-        text,
-        receivers,
-        ("handle", "handleAsync", "whenComplete", "whenCompleteAsync"),
-        ".",
-    )
-    count_by_methods(
-        counts,
-        JAVA_FUTURE_ALL_COMPLETION_CONTINUATION,
-        text,
-        receivers,
-        (
-            "thenCombine",
-            "thenCombineAsync",
-            "thenAcceptBoth",
-            "thenAcceptBothAsync",
-            "runAfterBoth",
-            "runAfterBothAsync",
-        ),
-        ".",
-    )
-    count_by_methods(
-        counts,
-        JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION,
-        text,
-        receivers,
-        (
-            "applyToEither",
-            "applyToEitherAsync",
-            "acceptEither",
-            "acceptEitherAsync",
-            "runAfterEither",
-            "runAfterEitherAsync",
-        ),
-        ".",
-    )
+    if receivers:
+        count_by_methods(
+            counts,
+            JAVA_FUTURE_FULFILLMENT_CONTINUATION,
+            text,
+            receivers,
+            (
+                "thenApply",
+                "thenApplyAsync",
+                "thenAccept",
+                "thenAcceptAsync",
+                "thenRun",
+                "thenRunAsync",
+                "thenCompose",
+                "thenComposeAsync",
+            ),
+            ".",
+        )
+        count_by_methods(
+            counts,
+            JAVA_FUTURE_EXCEPTION_CONTINUATION,
+            text,
+            receivers,
+            (
+                "exceptionally",
+                "exceptionallyAsync",
+                "exceptionallyCompose",
+                "exceptionallyComposeAsync",
+            ),
+            ".",
+        )
+        count_by_methods(
+            counts,
+            JAVA_FUTURE_SETTLEMENT_CONTINUATION,
+            text,
+            receivers,
+            ("handle", "handleAsync", "whenComplete", "whenCompleteAsync"),
+            ".",
+        )
+        count_by_methods(
+            counts,
+            JAVA_FUTURE_ALL_COMPLETION_CONTINUATION,
+            text,
+            receivers,
+            (
+                "thenCombine",
+                "thenCombineAsync",
+                "thenAcceptBoth",
+                "thenAcceptBothAsync",
+                "runAfterBoth",
+                "runAfterBothAsync",
+            ),
+            ".",
+        )
+        count_by_methods(
+            counts,
+            JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION,
+            text,
+            receivers,
+            (
+                "applyToEither",
+                "applyToEitherAsync",
+                "acceptEither",
+                "acceptEitherAsync",
+                "runAfterEither",
+                "runAfterEitherAsync",
+            ),
+            ".",
+        )
+    java_future_handle_counts(counts, text)
+    java_executor_receiver_counts(counts, text)
     return counts
 
 
@@ -1157,6 +1257,123 @@ def java_future_like_receiver_names(text: str) -> set[str]:
         match.group(1)
         for match in pattern.finditer(text)
         if match.group(1) not in {"class", "interface", "enum", "record"}
+    }
+
+
+def java_future_handle_counts(counts: dict[Pattern, int], text: str) -> None:
+    future_receivers = java_exact_import_backed_receiver_names(
+        text,
+        {"CompletableFuture", "Future", "ScheduledFuture"},
+    )
+    if not future_receivers:
+        return
+    count_by_methods(counts, JAVA_FUTURE_HANDLE_GET, text, future_receivers, ("get",), ".")
+    count_by_methods(
+        counts,
+        JAVA_FUTURE_HANDLE_CANCEL,
+        text,
+        future_receivers,
+        ("cancel", "isCancelled"),
+        ".",
+    )
+    count_by_methods(
+        counts,
+        JAVA_FUTURE_HANDLE_STATUS,
+        text,
+        future_receivers,
+        ("isDone",),
+        ".",
+    )
+
+
+def java_executor_receiver_counts(counts: dict[Pattern, int], text: str) -> None:
+    executor_receivers = java_exact_import_backed_receiver_names(text, {"Executor"})
+    executor_service_receivers = java_exact_import_backed_receiver_names(
+        text,
+        {"ExecutorService", "ScheduledExecutorService"},
+    )
+    scheduled_receivers = java_exact_import_backed_receiver_names(
+        text,
+        {"ScheduledExecutorService"},
+    )
+    if executor_receivers or executor_service_receivers:
+        count_by_methods(
+            counts,
+            JAVA_EXECUTOR_EXECUTE,
+            text,
+            executor_receivers | executor_service_receivers,
+            ("execute",),
+            ".",
+        )
+    if executor_service_receivers:
+        count_by_methods(
+            counts,
+            JAVA_EXECUTOR_SUBMIT,
+            text,
+            executor_service_receivers,
+            ("submit",),
+            ".",
+        )
+        count_by_methods(
+            counts,
+            JAVA_EXECUTOR_INVOKE_ALL,
+            text,
+            executor_service_receivers,
+            ("invokeAll",),
+            ".",
+        )
+        count_by_methods(
+            counts,
+            JAVA_EXECUTOR_INVOKE_ANY,
+            text,
+            executor_service_receivers,
+            ("invokeAny",),
+            ".",
+        )
+    if scheduled_receivers:
+        count_by_methods(
+            counts,
+            JAVA_SCHEDULED_EXECUTOR_SCHEDULE,
+            text,
+            scheduled_receivers,
+            ("schedule",),
+            ".",
+        )
+        count_by_methods(
+            counts,
+            JAVA_SCHEDULED_EXECUTOR_INTERVAL,
+            text,
+            scheduled_receivers,
+            ("scheduleAtFixedRate", "scheduleWithFixedDelay"),
+            ".",
+        )
+
+
+def java_exact_import_backed_receiver_names(text: str, type_names: set[str]) -> set[str]:
+    imported = java_exact_imported_concurrent_types(text) & type_names
+    if not imported:
+        return set()
+    type_pattern = "|".join(re.escape(type_name) for type_name in sorted(imported))
+    pattern = re.compile(
+        rf"\b(?:{type_pattern})\b(?:\s*<[^;()={{}}]*>)?(?:\s*\[\s*\])?\s+"
+        rf"([A-Za-z_$][A-Za-z0-9_$]*)"
+    )
+    return {
+        match.group(1)
+        for match in pattern.finditer(text)
+        if match.group(1) not in {"class", "interface", "enum", "record"}
+    }
+
+
+def java_exact_imported_concurrent_types(text: str) -> set[str]:
+    return {
+        match.group(1)
+        for match in re.finditer(
+            r"\bimport\s+java\s*\.\s*util\s*\.\s*concurrent\s*\.\s*"
+            r"(CompletableFuture|Future|ScheduledFuture|Executor|ExecutorService|ScheduledExecutorService)"
+            r"\s*;",
+            text,
+        )
     }
 
 

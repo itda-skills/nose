@@ -143,17 +143,24 @@ fn record_java_type_domain_alias(
     exported: &str,
     import_evidence: Option<nose_il::EvidenceId>,
 ) {
-    if module == "java.util.concurrent"
-        && matches!(exported, "CompletableFuture" | "CompletionStage")
-    {
-        lo.record_type_domain_alias_exact_with_evidence(
-            exported,
-            nose_il::DomainEvidence::FutureLike,
-            import_evidence,
-        );
-    } else {
-        lo.clear_type_domain_alias(exported);
+    if module == "java.util.concurrent" {
+        let domain = match exported {
+            "CompletableFuture" | "CompletionStage" | "Future" | "ScheduledFuture" => {
+                Some(nose_il::DomainEvidence::FutureLike)
+            }
+            "Executor" | "ExecutorService" | "ScheduledExecutorService" => {
+                Some(nose_il::DomainEvidence::Nominal {
+                    type_hash: stable_symbol_hash(&format!("java.util.concurrent.{exported}")),
+                })
+            }
+            _ => None,
+        };
+        if let Some(domain) = domain {
+            lo.record_type_domain_alias_exact_with_evidence(exported, domain, import_evidence);
+            return;
+        }
     }
+    lo.clear_type_domain_alias(exported);
 }
 /// `class`/`interface`/`enum` → a `Class` unit; its methods become units too.
 pub(super) fn lower_type(lo: &mut Lowering, node: TsNode) -> NodeId {

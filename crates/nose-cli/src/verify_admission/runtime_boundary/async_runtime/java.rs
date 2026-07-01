@@ -1,13 +1,26 @@
 use nose_il::{
     stable_symbol_hash, DomainEvidence, EvidenceAnchor, EvidenceEmitter, EvidenceId, EvidenceKind,
     EvidenceRecord, EvidenceStatus, ImportEvidenceKind, Interner, NodeId, NodeKind, Payload, Span,
-    Symbol, SymbolEvidenceKind,
+    Symbol, SymbolEvidenceKind, UnitKind,
 };
 
-const COMPLETABLE_FUTURE_MODULE: &str = "java.util.concurrent";
+mod import_conflicts;
+
+const JAVA_CONCURRENT_MODULE: &str = "java.util.concurrent";
 const COMPLETABLE_FUTURE_TYPE: &str = "CompletableFuture";
 const COMPLETABLE_FUTURE_QUALIFIED: &str = "java.util.concurrent.CompletableFuture";
 const COMPLETION_STAGE_TYPE: &str = "CompletionStage";
+const FUTURE_TYPE: &str = "Future";
+const EXECUTOR_TYPE: &str = "Executor";
+const EXECUTOR_SERVICE_TYPE: &str = "ExecutorService";
+const SCHEDULED_EXECUTOR_SERVICE_TYPE: &str = "ScheduledExecutorService";
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum JavaExecutorKind {
+    Executor,
+    ExecutorService,
+    ScheduledExecutorService,
+}
 
 pub(super) fn push_java_future_runtime_call_missing_evidence(
     il: &nose_il::Il,
@@ -26,8 +39,20 @@ pub(super) fn push_java_future_runtime_call_missing_evidence(
     let Some(method) = super::super::callee_field_method(il, interner, callee) else {
         return false;
     };
-    if java_future_like_receiver_proven(il, interner, callee) {
-        return push_completion_stage_continuation_missing_evidence(method, labels);
+    if java_completion_stage_receiver_proven(il, interner, callee)
+        && push_completion_stage_continuation_missing_evidence(method, labels)
+    {
+        return true;
+    }
+    if java_future_handle_receiver_proven(il, interner, callee)
+        && push_future_handle_method_missing_evidence(method, labels)
+    {
+        return true;
+    }
+    if let Some(kind) = java_executor_receiver_kind_proven(il, interner, callee) {
+        if push_executor_method_missing_evidence(kind, method, labels) {
+            return true;
+        }
     }
     false
 }
@@ -63,7 +88,7 @@ fn java_completable_future_simple_receiver_proven(
             il,
             interner,
             receiver,
-            COMPLETABLE_FUTURE_MODULE,
+            JAVA_CONCURRENT_MODULE,
             COMPLETABLE_FUTURE_TYPE,
         ) || java_wildcard_import_proves_completable_future(il, call))
 }
@@ -73,6 +98,7 @@ fn java_simple_type_shadowed(il: &nose_il::Il, interner: &Interner, receiver: No
     let top_level_statements = super::top_level_statements(il);
     for unit in &il.units {
         if il.node(unit.root).span.file == occurrence_span.file
+            && unit.kind == UnitKind::Class
             && unit
                 .name
                 .is_some_and(|symbol| interner.resolve(symbol) == COMPLETABLE_FUTURE_TYPE)
@@ -117,7 +143,7 @@ fn java_simple_type_shadowed(il: &nose_il::Il, interner: &Interner, receiver: No
 
 fn java_imported_completable_future_at_span(il: &nose_il::Il, span: Span) -> bool {
     let local_hash = stable_symbol_hash(COMPLETABLE_FUTURE_TYPE);
-    let module_hash = stable_symbol_hash(COMPLETABLE_FUTURE_MODULE);
+    let module_hash = stable_symbol_hash(JAVA_CONCURRENT_MODULE);
     let exported_hash = stable_symbol_hash(COMPLETABLE_FUTURE_TYPE);
     il.evidence_anchored_at(span).any(|record| {
         record.anchor == EvidenceAnchor::binding(span, local_hash)
@@ -134,11 +160,11 @@ fn java_imported_completable_future_at_span(il: &nose_il::Il, span: Span) -> boo
 
 fn java_wildcard_import_proves_completable_future(il: &nose_il::Il, call: NodeId) -> bool {
     let call_span = il.node(call).span;
-    if java_explicit_completable_future_import_conflicts(il, call_span) {
+    if import_conflicts::type_import_conflicted_at_span(il, call_span, COMPLETABLE_FUTURE_TYPE) {
         return false;
     }
     let expected = EvidenceKind::Import(ImportEvidenceKind::Wildcard {
-        module_hash: stable_symbol_hash(COMPLETABLE_FUTURE_MODULE),
+        module_hash: stable_symbol_hash(JAVA_CONCURRENT_MODULE),
     });
     il.evidence.iter().any(|record| {
         record.kind == expected
@@ -153,26 +179,11 @@ fn java_wildcard_import_proves_completable_future(il: &nose_il::Il, call: NodeId
     })
 }
 
-fn java_explicit_completable_future_import_conflicts(il: &nose_il::Il, call_span: Span) -> bool {
-    let local_hash = stable_symbol_hash(COMPLETABLE_FUTURE_TYPE);
-    let expected = SymbolEvidenceKind::ImportedBinding {
-        module_hash: stable_symbol_hash(COMPLETABLE_FUTURE_MODULE),
-        exported_hash: stable_symbol_hash(COMPLETABLE_FUTURE_TYPE),
-    };
-    il.evidence.iter().any(|record| {
-        matches!(
-            record.anchor,
-            EvidenceAnchor::Binding { span, local_hash: actual }
-                if actual == local_hash
-                    && span.file == call_span.file
-                    && span.end_byte <= call_span.start_byte
-        ) && matches!(record.kind, EvidenceKind::Symbol(actual) if actual != expected)
-            && record.status == EvidenceStatus::Asserted
-            && il.evidence_dependencies_asserted(record)
-    })
-}
-
-fn java_future_like_receiver_proven(il: &nose_il::Il, interner: &Interner, callee: NodeId) -> bool {
+fn java_completion_stage_receiver_proven(
+    il: &nose_il::Il,
+    interner: &Interner,
+    callee: NodeId,
+) -> bool {
     let Some(receiver) = super::super::method_receiver(il, callee) else {
         return false;
     };
@@ -181,25 +192,114 @@ fn java_future_like_receiver_proven(il: &nose_il::Il, interner: &Interner, calle
     {
         return false;
     }
-    java_future_like_receiver_domain_record(il, receiver).is_some_and(|record| {
-        record
-            .dependencies
-            .iter()
-            .copied()
-            .any(|dependency| java_completion_stage_type_import_dependency(il, dependency))
+    let Some(param_span) = java_receiver_param_span(il, receiver) else {
+        return false;
+    };
+    java_receiver_domain_record_at_span(il, param_span, |domain| {
+        domain == DomainEvidence::FutureLike
+    })
+    .is_some_and(|record| {
+        record.dependencies.iter().copied().any(|dependency| {
+            java_completion_stage_type_import_dependency(il, dependency).is_some_and(
+                |imported_type| {
+                    java_concurrent_import_usable_at_span(il, interner, param_span, imported_type)
+                },
+            )
+        })
     })
 }
 
-fn java_future_like_receiver_domain_record(
+fn java_future_handle_receiver_proven(
     il: &nose_il::Il,
-    receiver: NodeId,
+    interner: &Interner,
+    callee: NodeId,
+) -> bool {
+    let Some(receiver) = super::super::method_receiver(il, callee) else {
+        return false;
+    };
+    if nose_semantics::domain_evidence_for_receiver(il, interner, receiver)
+        != Some(DomainEvidence::FutureLike)
+    {
+        return false;
+    }
+    let Some(param_span) = java_receiver_param_span(il, receiver) else {
+        return false;
+    };
+    java_receiver_domain_record_at_span(il, param_span, |domain| {
+        domain == DomainEvidence::FutureLike
+    })
+    .is_some_and(|record| {
+        record.dependencies.iter().copied().any(|dependency| {
+            java_future_handle_type_import_dependency(il, dependency).is_some_and(|imported_type| {
+                java_concurrent_import_usable_at_span(il, interner, param_span, imported_type)
+            })
+        })
+    })
+}
+
+fn java_executor_receiver_kind_proven(
+    il: &nose_il::Il,
+    interner: &Interner,
+    callee: NodeId,
+) -> Option<JavaExecutorKind> {
+    let receiver = super::super::method_receiver(il, callee)?;
+    let DomainEvidence::Nominal { type_hash } =
+        nose_semantics::domain_evidence_for_receiver(il, interner, receiver)?
+    else {
+        return None;
+    };
+    let kind = java_executor_kind_from_type_hash(type_hash)?;
+    let param_span = java_receiver_param_span(il, receiver)?;
+    java_receiver_domain_record_at_span(il, param_span, |domain| {
+        matches!(domain, DomainEvidence::Nominal { type_hash: actual } if actual == type_hash)
+    })
+    .is_some_and(|record| {
+        record.dependencies.iter().copied().any(|dependency| {
+            java_executor_type_import_dependency(il, dependency, kind).is_some_and(
+                |imported_type| {
+                    java_concurrent_import_usable_at_span(il, interner, param_span, imported_type)
+                },
+            )
+        })
+    })
+    .then_some(kind)
+}
+
+fn java_concurrent_import_usable_at_span(
+    il: &nose_il::Il,
+    interner: &Interner,
+    span: Span,
+    type_name: &str,
+) -> bool {
+    !java_type_name_shadowed_at_span(il, interner, span, type_name)
+        && !import_conflicts::type_import_conflicted_at_span(il, span, type_name)
+}
+
+fn java_receiver_domain_record_at_span(
+    il: &nose_il::Il,
+    span: Span,
+    accepts: impl Fn(DomainEvidence) -> bool,
 ) -> Option<&EvidenceRecord> {
-    let span = java_receiver_param_span(il, receiver)?;
     il.evidence_anchored_at(span).find(|record| {
         record.anchor == EvidenceAnchor::param(span)
-            && record.kind == EvidenceKind::Domain(DomainEvidence::FutureLike)
+            && matches!(record.kind, EvidenceKind::Domain(domain) if accepts(domain))
             && record.status == EvidenceStatus::Asserted
             && il.evidence_dependencies_asserted(record)
+    })
+}
+
+fn java_type_name_shadowed_at_span(
+    il: &nose_il::Il,
+    interner: &Interner,
+    span: Span,
+    type_name: &str,
+) -> bool {
+    il.units.iter().any(|unit| {
+        il.node(unit.root).span.file == span.file
+            && unit.kind == UnitKind::Class
+            && unit
+                .name
+                .is_some_and(|symbol| interner.resolve(symbol) == type_name)
     })
 }
 
@@ -241,24 +341,79 @@ fn java_nearest_named_param_span(il: &nose_il::Il, receiver: NodeId, name: Symbo
     best.map(|(_, span)| span)
 }
 
-fn java_completion_stage_type_import_dependency(il: &nose_il::Il, dependency: EvidenceId) -> bool {
-    let Some(record) = il.evidence.get(dependency.0 as usize) else {
-        return false;
+fn java_completion_stage_type_import_dependency(
+    il: &nose_il::Il,
+    dependency: EvidenceId,
+) -> Option<&'static str> {
+    java_concurrent_type_import_dependency(
+        il,
+        dependency,
+        &[COMPLETABLE_FUTURE_TYPE, COMPLETION_STAGE_TYPE],
+    )
+}
+
+fn java_future_handle_type_import_dependency(
+    il: &nose_il::Il,
+    dependency: EvidenceId,
+) -> Option<&'static str> {
+    java_concurrent_type_import_dependency(
+        il,
+        dependency,
+        &[COMPLETABLE_FUTURE_TYPE, FUTURE_TYPE, "ScheduledFuture"],
+    )
+}
+
+fn java_executor_type_import_dependency(
+    il: &nose_il::Il,
+    dependency: EvidenceId,
+    kind: JavaExecutorKind,
+) -> Option<&'static str> {
+    let expected = match kind {
+        JavaExecutorKind::Executor => EXECUTOR_TYPE,
+        JavaExecutorKind::ExecutorService => EXECUTOR_SERVICE_TYPE,
+        JavaExecutorKind::ScheduledExecutorService => SCHEDULED_EXECUTOR_SERVICE_TYPE,
     };
-    let expected_module_hash = stable_symbol_hash(COMPLETABLE_FUTURE_MODULE);
-    let supported_type = |exported_hash| {
-        exported_hash == stable_symbol_hash(COMPLETABLE_FUTURE_TYPE)
-            || exported_hash == stable_symbol_hash(COMPLETION_STAGE_TYPE)
+    java_concurrent_type_import_dependency(il, dependency, &[expected])
+}
+
+fn java_concurrent_type_import_dependency(
+    il: &nose_il::Il,
+    dependency: EvidenceId,
+    supported_types: &[&'static str],
+) -> Option<&'static str> {
+    let record = il.evidence.get(dependency.0 as usize)?;
+    let expected_module_hash = stable_symbol_hash(JAVA_CONCURRENT_MODULE);
+    let EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
+        module_hash,
+        exported_hash,
+    }) = record.kind
+    else {
+        return None;
     };
-    matches!(
-        record.kind,
-        EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
-            module_hash,
-            exported_hash,
-        }) if module_hash == expected_module_hash && supported_type(exported_hash)
-    ) && record.status == EvidenceStatus::Asserted
-        && record.provenance.emitter == EvidenceEmitter::Builtin
-        && il.evidence_dependencies_asserted(record)
+    if module_hash != expected_module_hash
+        || record.status != EvidenceStatus::Asserted
+        || record.provenance.emitter != EvidenceEmitter::Builtin
+        || !il.evidence_dependencies_asserted(record)
+    {
+        return None;
+    }
+    supported_types
+        .iter()
+        .copied()
+        .find(|supported| exported_hash == stable_symbol_hash(supported))
+}
+
+fn java_executor_kind_from_type_hash(type_hash: u64) -> Option<JavaExecutorKind> {
+    if type_hash == stable_symbol_hash("java.util.concurrent.Executor") {
+        return Some(JavaExecutorKind::Executor);
+    }
+    if type_hash == stable_symbol_hash("java.util.concurrent.ExecutorService") {
+        return Some(JavaExecutorKind::ExecutorService);
+    }
+    if type_hash == stable_symbol_hash("java.util.concurrent.ScheduledExecutorService") {
+        return Some(JavaExecutorKind::ScheduledExecutorService);
+    }
+    None
 }
 
 fn push_completable_future_static_method_missing_evidence(
@@ -268,29 +423,27 @@ fn push_completable_future_static_method_missing_evidence(
     match method {
         "supplyAsync" | "runAsync" => {
             super::push_task_spawn_missing_evidence(labels);
-            push_future_settled_value_missing_evidence(labels);
-            push_future_callback_missing_evidence(labels);
-            super::super::push_unique(labels, "exception-channel-contract");
+            push_future_result_callback_exception_missing_evidence(labels);
             true
         }
         "completedFuture" | "completedStage" => {
-            push_future_settled_value_missing_evidence(labels);
+            super::push_future_settled_value_missing_evidence(labels);
             true
         }
         "failedFuture" | "failedStage" => {
-            push_future_settled_value_missing_evidence(labels);
+            super::push_future_settled_value_missing_evidence(labels);
             super::super::push_unique(labels, "exception-channel-contract");
             true
         }
         "allOf" => {
             super::push_async_aggregate_all_missing_evidence(labels);
-            push_future_settled_value_missing_evidence(labels);
+            super::push_future_settled_value_missing_evidence(labels);
             super::super::push_unique(labels, "exception-channel-contract");
             true
         }
         "anyOf" => {
             super::push_async_aggregate_first_missing_evidence(labels);
-            push_future_settled_value_missing_evidence(labels);
+            super::push_future_settled_value_missing_evidence(labels);
             super::super::push_unique(labels, "exception-channel-contract");
             true
         }
@@ -306,8 +459,7 @@ fn push_completion_stage_continuation_missing_evidence(
         "thenApply" | "thenApplyAsync" | "thenAccept" | "thenAcceptAsync" | "thenRun"
         | "thenRunAsync" | "thenCompose" | "thenComposeAsync" => {
             super::super::push_unique(labels, "future-fulfillment-continuation-contract");
-            push_future_settled_value_missing_evidence(labels);
-            push_future_callback_missing_evidence(labels);
+            push_future_result_callback_missing_evidence(labels);
             true
         }
         "thenCombine"
@@ -318,8 +470,7 @@ fn push_completion_stage_continuation_missing_evidence(
         | "runAfterBothAsync" => {
             super::push_async_aggregate_all_missing_evidence(labels);
             super::super::push_unique(labels, "future-fulfillment-continuation-contract");
-            push_future_settled_value_missing_evidence(labels);
-            push_future_callback_missing_evidence(labels);
+            push_future_result_callback_missing_evidence(labels);
             true
         }
         "applyToEither"
@@ -330,8 +481,7 @@ fn push_completion_stage_continuation_missing_evidence(
         | "runAfterEitherAsync" => {
             super::push_async_aggregate_first_missing_evidence(labels);
             super::super::push_unique(labels, "future-fulfillment-continuation-contract");
-            push_future_settled_value_missing_evidence(labels);
-            push_future_callback_missing_evidence(labels);
+            push_future_result_callback_missing_evidence(labels);
             true
         }
         "exceptionally"
@@ -339,15 +489,91 @@ fn push_completion_stage_continuation_missing_evidence(
         | "exceptionallyCompose"
         | "exceptionallyComposeAsync" => {
             super::super::push_unique(labels, "future-exception-continuation-contract");
-            push_future_settled_value_missing_evidence(labels);
-            push_future_callback_missing_evidence(labels);
-            super::super::push_unique(labels, "exception-channel-contract");
+            push_future_result_callback_exception_missing_evidence(labels);
             true
         }
         "handle" | "handleAsync" | "whenComplete" | "whenCompleteAsync" => {
             super::super::push_unique(labels, "future-settlement-continuation-contract");
-            push_future_settled_value_missing_evidence(labels);
-            push_future_callback_missing_evidence(labels);
+            push_future_result_callback_exception_missing_evidence(labels);
+            true
+        }
+        _ => false,
+    }
+}
+
+fn push_future_handle_method_missing_evidence(
+    method: &str,
+    labels: &mut Vec<&'static str>,
+) -> bool {
+    match method {
+        "get" => {
+            super::push_future_settled_value_missing_evidence(labels);
+            super::super::push_unique(labels, "exception-channel-contract");
+            super::super::push_unique(labels, "task-handle-lifecycle-contract");
+            super::super::push_unique(labels, "task-cancellation-liveness-contract");
+            true
+        }
+        "cancel" => {
+            super::super::push_unique(labels, "task-cancellation-liveness-contract");
+            super::super::push_unique(labels, "task-handle-lifecycle-contract");
+            true
+        }
+        "isDone" => {
+            super::super::push_unique(labels, "task-handle-lifecycle-contract");
+            true
+        }
+        "isCancelled" => {
+            super::super::push_unique(labels, "task-cancellation-liveness-contract");
+            super::super::push_unique(labels, "task-handle-lifecycle-contract");
+            true
+        }
+        _ => false,
+    }
+}
+
+fn push_executor_method_missing_evidence(
+    kind: JavaExecutorKind,
+    method: &str,
+    labels: &mut Vec<&'static str>,
+) -> bool {
+    match method {
+        "execute" => {
+            super::super::push_unique(labels, "task-spawn-scheduling-contract");
+            super::push_future_callback_missing_evidence(labels);
+            super::super::push_unique(labels, "exception-channel-contract");
+            true
+        }
+        "submit" if kind != JavaExecutorKind::Executor => {
+            super::push_task_spawn_missing_evidence(labels);
+            push_future_result_callback_exception_missing_evidence(labels);
+            true
+        }
+        "invokeAll" if kind != JavaExecutorKind::Executor => {
+            super::push_async_aggregate_all_missing_evidence(labels);
+            super::super::push_unique(labels, "async-aggregate-cancellation-liveness-contract");
+            push_future_result_callback_exception_missing_evidence(labels);
+            true
+        }
+        "invokeAny" if kind != JavaExecutorKind::Executor => {
+            super::push_async_aggregate_first_missing_evidence(labels);
+            push_future_result_callback_exception_missing_evidence(labels);
+            true
+        }
+        "schedule" if kind == JavaExecutorKind::ScheduledExecutorService => {
+            super::super::push_unique(labels, "timer-scheduling-contract");
+            super::push_task_spawn_missing_evidence(labels);
+            push_future_result_callback_exception_missing_evidence(labels);
+            true
+        }
+        "scheduleAtFixedRate" | "scheduleWithFixedDelay"
+            if kind == JavaExecutorKind::ScheduledExecutorService =>
+        {
+            super::super::push_unique(labels, "timer-scheduling-contract");
+            super::super::push_unique(labels, "interval-async-iteration-lifecycle-contract");
+            super::super::push_unique(labels, "interval-cancellation-liveness-contract");
+            super::super::push_unique(labels, "task-handle-lifecycle-contract");
+            super::super::push_unique(labels, "task-cancellation-liveness-contract");
+            super::push_future_callback_missing_evidence(labels);
             super::super::push_unique(labels, "exception-channel-contract");
             true
         }
@@ -355,10 +581,12 @@ fn push_completion_stage_continuation_missing_evidence(
     }
 }
 
-fn push_future_settled_value_missing_evidence(labels: &mut Vec<&'static str>) {
-    super::super::push_unique(labels, "future-settled-value-channel-contract");
+fn push_future_result_callback_missing_evidence(labels: &mut Vec<&'static str>) {
+    super::push_future_settled_value_missing_evidence(labels);
+    super::push_future_callback_missing_evidence(labels);
 }
 
-fn push_future_callback_missing_evidence(labels: &mut Vec<&'static str>) {
-    super::super::push_unique(labels, "future-callback-demand-effect-contract");
+fn push_future_result_callback_exception_missing_evidence(labels: &mut Vec<&'static str>) {
+    push_future_result_callback_missing_evidence(labels);
+    super::super::push_unique(labels, "exception-channel-contract");
 }

@@ -127,6 +127,12 @@ fn java_completion_stage_receiver_methods_require_import_backed_type_domain() {
         Lang::Java,
         "future.thenApply",
     );
+    let imported_shadowed_member = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.CompletableFuture;\nclass Runtime { static class CompletableFuture<T> { Object thenApply(Object callback) { return this; } }\nObject run(CompletableFuture<String> future) { return future.thenApply(value -> value); } }\n",
+        Lang::Java,
+        "future.thenApply",
+    );
 
     for (labels, surface) in [
         (
@@ -141,6 +147,10 @@ fn java_completion_stage_receiver_methods_require_import_backed_type_domain() {
             wildcard_only,
             "wildcard-only Java CompletableFuture receiver type",
         ),
+        (
+            imported_shadowed_member,
+            "imported Java CompletableFuture hidden by member type",
+        ),
     ] {
         for label in [
             "future-fulfillment-continuation-contract",
@@ -148,6 +158,204 @@ fn java_completion_stage_receiver_methods_require_import_backed_type_domain() {
         ] {
             assert_missing_evidence_not_contains(labels.clone(), label, surface);
         }
+    }
+}
+
+#[test]
+fn java_future_handle_methods_report_future_lifecycle_obligations() {
+    let get = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.Future;\nclass Runtime { Object run(Future<String> future) throws Exception { return future.get(); } }\n",
+        Lang::Java,
+        "future.get",
+    );
+    let cancel = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.ScheduledFuture;\nclass Runtime { boolean run(ScheduledFuture<?> future) { return future.cancel(true); } }\n",
+        Lang::Java,
+        "future.cancel",
+    );
+    let is_done = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.CompletableFuture;\nclass Runtime { boolean run(CompletableFuture<String> future) { return future.isDone(); } }\n",
+        Lang::Java,
+        "future.isDone",
+    );
+
+    assert!(get.contains(&"future-settled-value-channel-contract"));
+    assert!(get.contains(&"exception-channel-contract"));
+    assert!(get.contains(&"task-handle-lifecycle-contract"));
+    assert!(get.contains(&"task-cancellation-liveness-contract"));
+    assert!(cancel.contains(&"task-cancellation-liveness-contract"));
+    assert!(cancel.contains(&"task-handle-lifecycle-contract"));
+    assert!(is_done.contains(&"task-handle-lifecycle-contract"));
+}
+
+#[test]
+fn java_executor_methods_report_scheduler_handle_and_callback_obligations() {
+    let execute = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.Executor;\nclass Runtime { Object run(Executor executor) { executor.execute(() -> work()); return null; } }\n",
+        Lang::Java,
+        "executor.execute",
+    );
+    let submit = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.ExecutorService;\nclass Runtime { Object run(ExecutorService executor) { return executor.submit(() -> work()); } }\n",
+        Lang::Java,
+        "executor.submit",
+    );
+    let invoke_all = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.List;\nimport java.util.concurrent.Callable;\nimport java.util.concurrent.ExecutorService;\nclass Runtime { Object run(ExecutorService executor, List<Callable<String>> calls) throws Exception { return executor.invokeAll(calls); } }\n",
+        Lang::Java,
+        "executor.invokeAll",
+    );
+    let invoke_any = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.List;\nimport java.util.concurrent.Callable;\nimport java.util.concurrent.ExecutorService;\nclass Runtime { Object run(ExecutorService executor, List<Callable<String>> calls) throws Exception { return executor.invokeAny(calls); } }\n",
+        Lang::Java,
+        "executor.invokeAny",
+    );
+
+    assert!(execute.contains(&"task-spawn-scheduling-contract"));
+    assert!(execute.contains(&"future-callback-demand-effect-contract"));
+    assert!(execute.contains(&"exception-channel-contract"));
+    assert!(!execute.contains(&"task-handle-lifecycle-contract"));
+
+    for labels in [&submit, &invoke_all, &invoke_any] {
+        assert!(labels.contains(&"future-settled-value-channel-contract"));
+        assert!(labels.contains(&"future-callback-demand-effect-contract"));
+        assert!(labels.contains(&"exception-channel-contract"));
+    }
+    assert!(submit.contains(&"task-handle-lifecycle-contract"));
+    assert!(submit.contains(&"task-cancellation-liveness-contract"));
+    assert!(invoke_all.contains(&"async-aggregate-all-completion-contract"));
+    assert!(invoke_all.contains(&"async-aggregate-cancellation-liveness-contract"));
+    assert!(invoke_any.contains(&"async-aggregate-first-completion-contract"));
+    assert!(invoke_any.contains(&"async-aggregate-cancellation-liveness-contract"));
+}
+
+#[test]
+fn java_scheduled_executor_methods_report_timer_and_interval_obligations() {
+    let schedule = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.ScheduledExecutorService;\nimport java.util.concurrent.TimeUnit;\nclass Runtime { Object run(ScheduledExecutorService executor) { return executor.schedule(() -> work(), 1, TimeUnit.SECONDS); } }\n",
+        Lang::Java,
+        "executor.schedule",
+    );
+    let fixed_rate = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.ScheduledExecutorService;\nimport java.util.concurrent.TimeUnit;\nclass Runtime { Object run(ScheduledExecutorService executor) { return executor.scheduleAtFixedRate(() -> work(), 1, 1, TimeUnit.SECONDS); } }\n",
+        Lang::Java,
+        "executor.scheduleAtFixedRate",
+    );
+
+    assert!(schedule.contains(&"timer-scheduling-contract"));
+    assert!(schedule.contains(&"task-spawn-scheduling-contract"));
+    assert!(schedule.contains(&"future-settled-value-channel-contract"));
+    assert!(schedule.contains(&"future-callback-demand-effect-contract"));
+    assert!(fixed_rate.contains(&"timer-scheduling-contract"));
+    assert!(fixed_rate.contains(&"interval-async-iteration-lifecycle-contract"));
+    assert!(fixed_rate.contains(&"interval-cancellation-liveness-contract"));
+    assert!(fixed_rate.contains(&"task-cancellation-liveness-contract"));
+    assert!(fixed_rate.contains(&"future-callback-demand-effect-contract"));
+}
+
+#[test]
+fn java_executor_future_receivers_require_exact_import_backed_domains() {
+    let wildcard_future = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.*;\nclass Runtime { Object run(Future<String> future) throws Exception { return future.get(); } }\n",
+        Lang::Java,
+        "future.get",
+    );
+    let custom_future = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import example.Future;\nclass Runtime { Object run(Future<String> future) throws Exception { return future.get(); } }\n",
+        Lang::Java,
+        "future.get",
+    );
+    let wildcard_executor = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.*;\nclass Runtime { Object run(ExecutorService executor) { return executor.submit(() -> work()); } }\n",
+        Lang::Java,
+        "executor.submit",
+    );
+    let plain_executor_submit = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.Executor;\nclass Runtime { Object run(Executor executor) { return executor.submit(() -> work()); } }\n",
+        Lang::Java,
+        "executor.submit",
+    );
+    let imported_future_shadowed_by_member_type = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.Future;\nclass Runtime { static class Future<T> { Object get() { return null; } }\nObject run(Future<String> future) throws Exception { return future.get(); } }\n",
+        Lang::Java,
+        "future.get",
+    );
+    let imported_executor_shadowed_by_member_type = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.ExecutorService;\nclass Runtime { static class ExecutorService { Object submit(Object work) { return null; } }\nObject run(ExecutorService executor) { return executor.submit(() -> work()); } }\n",
+        Lang::Java,
+        "executor.submit",
+    );
+    let conflicting_future_import = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.Future;\nimport example.Future;\nclass Runtime { Object run(Future<String> future) throws Exception { return future.get(); } }\n",
+        Lang::Java,
+        "future.get",
+    );
+    let conflicting_executor_import = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.ExecutorService;\nimport example.ExecutorService;\nclass Runtime { Object run(ExecutorService executor) { return executor.submit(() -> work()); } }\n",
+        Lang::Java,
+        "executor.submit",
+    );
+
+    for (labels, label, surface) in [
+        (
+            wildcard_future,
+            "future-settled-value-channel-contract",
+            "wildcard-only Java Future receiver type",
+        ),
+        (
+            custom_future,
+            "future-settled-value-channel-contract",
+            "custom Java Future receiver import",
+        ),
+        (
+            wildcard_executor,
+            "task-spawn-scheduling-contract",
+            "wildcard-only Java ExecutorService receiver type",
+        ),
+        (
+            plain_executor_submit,
+            "task-handle-lifecycle-contract",
+            "plain Java Executor submit receiver",
+        ),
+        (
+            imported_future_shadowed_by_member_type,
+            "future-settled-value-channel-contract",
+            "imported Java Future hidden by member type",
+        ),
+        (
+            imported_executor_shadowed_by_member_type,
+            "task-spawn-scheduling-contract",
+            "imported Java ExecutorService hidden by member type",
+        ),
+        (
+            conflicting_future_import,
+            "future-settled-value-channel-contract",
+            "conflicting Java Future import",
+        ),
+        (
+            conflicting_executor_import,
+            "task-spawn-scheduling-contract",
+            "conflicting Java ExecutorService import",
+        ),
+    ] {
+        assert_missing_evidence_not_contains(labels, label, surface);
     }
 }
 
