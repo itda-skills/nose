@@ -86,9 +86,9 @@
     "summary": "Exact Go channel/goroutine/defer convergence still needs blocking, synchronization, close/status, select readiness, callback effects, panic/defer ordering, scheduling, and liveness proof."
   },
   "product_query_regression": {
-    "aggregate_baseline_median_ms": 3757.8219156712294,
-    "aggregate_current_median_ms": 3674.1729178465903,
-    "aggregate_delta_pct": -2.2259968593987387,
+    "aggregate_baseline_median_ms": 3560.1316671818495,
+    "aggregate_current_median_ms": 3563.0643751937896,
+    "aggregate_delta_pct": 0.08237639183332823,
     "hashes_identical_by_repo": {
       "badger": true,
       "delve": true,

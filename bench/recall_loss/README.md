@@ -727,7 +727,7 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
 - [go-protocol-reporting-support-2026-07-01.v1.json](go-protocol-reporting-support-2026-07-01.v1.json)
   records the compact Go protocol closeout. It prices `31,500` Go protocol
   occurrences, keeps the checked `crates` gate at `0` false merges, and records
-  a Go-heavy r9 query regression of `3757.82ms -> 3674.17ms` (`-2.23%`) with
+  a Go-heavy r9 query regression of `3560.13ms -> 3563.06ms` (`+0.08%`) with
   identical product hashes on all six measured repos.
 - [scheduling-lifecycle-boundary-audit-python-async-lifecycle-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-python-async-lifecycle-2026-07-01.v1.json)
   records the Python async protocol lifecycle reporting slice. It keeps exact
