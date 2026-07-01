@@ -111,6 +111,13 @@ break.
   `26,608`-occurrence broad bucket from being treated as an actionable residual
   gap and makes Ruby `raise/rescue` the largest non-JS actionable closed
   exception-channel bucket at `4,010` occurrences.
+- Aligned Java `CompletionStage` settlement continuation accounting with the
+  existing receiver-domain reporting path. `FutureLike.handle/whenComplete`
+  moves `10` occurrences across `2` repos to reporting-supported
+  closed-boundaries, raising the total to `88,471` occurrences across `59`
+  rows. The historical broad Java `Executor/Future` type-name bucket remains
+  visible at `3,297` occurrences but is now a superseded overlap row rather than
+  an actionable residual implementation target.
 - Added Java `Executor`/`Future` receiver-method reporting for
   exact- or wildcard-import-backed `CompletableFuture`, `Future`,
   `ScheduledFuture`, `Executor`, `ExecutorService`, and

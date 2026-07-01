@@ -2142,10 +2142,12 @@ different APIs.
   kernel feature; local type declarations and explicit same-name imports still
   close reporting. The latest pricing artifact moves Java reporting-supported
   receiver-method candidates from `858` to `1,093` (`+235`) while leaving the
-  broad `3,297`-occurrence `Executor/Future` lexical bucket closed until
-  wrapper aliases, project-specific executors, scheduling, cancellation,
-  lifecycle, result-channel, exception, and callback/effect contracts are
-  dependency-closed.
+  broad `3,297`-occurrence `Executor/Future` lexical bucket visible as a
+  superseded overlap row. The residual-accounting follow-up also marks
+  product-backed `FutureLike.handle/whenComplete` settlement continuations
+  reporting-supported at `10` occurrences, so concrete static call,
+  constructor, and receiver-method rows drive Java Future/Executor residual
+  planning.
 - The Go channel/goroutine/defer follow-up applies the same capability
   vocabulary to source-backed Go protocol boundaries. It does not add a Go-only
   admission feature: sends, receives, comma-ok receives, select

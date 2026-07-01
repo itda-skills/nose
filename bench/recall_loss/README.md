@@ -364,6 +364,19 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-07-01
 ```
 
+Build the Java Future/Executor residual-accounting audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.java-future-residual-accounting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.java-future-residual-accounting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.java-future-residual-accounting.json \
+  --generated-on 2026-07-02
+```
+
 Build the Go channel/goroutine/defer obligation audit with:
 
 ```sh
@@ -838,6 +851,17 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   local type or explicit same-name import conflicts. On the current
   `origin/main` baseline, Java reporting-supported receiver-method candidates
   rise from `858` to `1,093` (`+235`) across the pinned 120-repo corpus.
+- [scheduling-lifecycle-boundary-audit-java-future-residual-accounting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-java-future-residual-accounting-2026-07-02.v1.json)
+  records the Java Future/Executor residual-accounting alignment. It marks
+  existing product-backed `FutureLike.handle/whenComplete` settlement
+  continuations reporting-supported at `10` occurrences across `2` repos, and
+  keeps the historical `Executor/Future` type-name bucket visible at `3,297`
+  occurrences while marking it as a superseded overlap row.
+- [java-future-residual-accounting-2026-07-02.v1.json](java-future-residual-accounting-2026-07-02.v1.json)
+  records the compact closeout for the same correction. Reporting-supported
+  totals move to `88,471` occurrences across `59` rows, and the largest
+  actionable Java closed boundary becomes `stream/parallelStream` at `1,996`
+  occurrences across `15` repos.
 - [scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json)
   records the Go channel/goroutine/defer reporting-only refinement. It keeps
   exact admission closed while splitting Go protocol-node pricing into `4,294`
