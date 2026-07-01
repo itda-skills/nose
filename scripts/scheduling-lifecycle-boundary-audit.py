@@ -618,6 +618,17 @@ SWIFT_THROWING_CLOSURE = Pattern(
     re.compile(r"(?!x)x"),
     "reporting-supported-closed-boundary",
 )
+SWIFT_TRY_EXPRESSION = Pattern(
+    "swift",
+    "swift.error.try_expression",
+    "try/try?/try!",
+    "exception-channel",
+    "exception-channel-contract-missing",
+    "try propagation error channel",
+    "Swift try expressions and for-try-await loops expose source-backed TryPropagation boundaries",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
 
 
 def all_known_patterns() -> tuple[Pattern, ...]:
@@ -665,6 +676,7 @@ def all_known_patterns() -> tuple[Pattern, ...]:
         GO_CHANNEL_SELECT_DEFAULT,
         SWIFT_THROWING_FUNCTION,
         SWIFT_THROWING_CLOSURE,
+        SWIFT_TRY_EXPRESSION,
     )
 
 
@@ -822,6 +834,7 @@ def self_test() -> None:
     )
     assert swift_throwing.get(SWIFT_THROWING_FUNCTION) == 3
     assert swift_throwing.get(SWIFT_THROWING_CLOSURE) == 2
+    assert swift_throwing.get(SWIFT_TRY_EXPRESSION) == 3
 
     swift_type_only = count_file(
         "let factory: (@escaping () async throws -> Void) -> Void = { closure in closure }\n"
@@ -831,6 +844,19 @@ def self_test() -> None:
     )
     assert SWIFT_THROWING_FUNCTION not in swift_type_only
     assert SWIFT_THROWING_CLOSURE not in swift_type_only
+    assert SWIFT_TRY_EXPRESSION not in swift_type_only
+
+    swift_try_expressions = count_file(
+        "func run(_ stream: AsyncThrowingStream<Int, Error>) async throws {\n"
+        "  let value = try load()\n"
+        "  let optional = try? maybe()\n"
+        "  let forced = try! definitely()\n"
+        "  for try await item in stream { print(item) }\n"
+        "}\n"
+        "let tryawait = 1\n",
+        "swift",
+    )
+    assert swift_try_expressions.get(SWIFT_TRY_EXPRESSION) == 4
 
     swift_async_function_pattern = next(
         item for item in PATTERNS if item.surface == "swift.async.function"
@@ -904,6 +930,7 @@ def self_test() -> None:
     for surface in source_protocol_reporting_surfaces:
         pattern = next(item for item in PATTERNS if item.surface == surface)
         assert pattern.status == "reporting-supported-closed-boundary", surface
+    assert SWIFT_TRY_EXPRESSION.status == "reporting-supported-closed-boundary"
 
     future_channel_reason = recommended_reason(
         {
@@ -1031,6 +1058,7 @@ def count_file(
         counts.update(swift_async_function_counts(masked))
         counts.update(swift_async_closure_counts(masked))
         counts.update(swift_throwing_callable_counts(masked))
+        counts.update(swift_try_expression_counts(masked))
     return counts
 
 
@@ -1116,6 +1144,11 @@ def swift_throwing_callable_counts(text: str) -> dict[Pattern, int]:
     if closure_count:
         counts[SWIFT_THROWING_CLOSURE] = closure_count
     return counts
+
+
+def swift_try_expression_counts(text: str) -> dict[Pattern, int]:
+    count = sum(1 for _ in re.finditer(r"\btry\b[!?]?", text))
+    return {SWIFT_TRY_EXPRESSION: count} if count else {}
 
 
 def iter_swift_body_bearing_callable_signatures(text: str):

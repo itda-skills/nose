@@ -211,6 +211,11 @@ brings the scheduling lifecycle audit in line with the existing
 function rows now count as reporting-supported closed-boundaries, newly
 accounting for `19,144` source-prevalence occurrences while exact admission
 remains closed. The
+follow-up [Swift try-expression reporting alignment artifact](../bench/recall_loss/swift-try-expression-reporting-2026-07-02.v1.json)
+adds the matching `Source::Protocol(TryPropagation)` audit row for Swift
+`try`, `try?`, `try!`, and `for try await` propagation boundaries. It newly
+accounts for `17,970` source-prevalence occurrences across `18` repos while
+keeping exact admission closed. The
 follow-up [Rust block_on future-drive artifact](../bench/recall_loss/rust-block-on-future-drive-obligation-reporting-2026-07-01.v1.json)
 keeps exact admission closed and maps qualified/import-backed Rust
 `tokio_test::block_on` calls plus proof-backed tokio runtime receiver chains to

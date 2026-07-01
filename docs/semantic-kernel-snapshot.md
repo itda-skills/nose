@@ -62,6 +62,11 @@ wildcard-import-backed and unshadowed. Those constructors report future-settled,
 exception-channel, task-handle lifecycle, and cancellation/liveness obligations
 without opening exact admission; residual broad `CompletableFuture` mentions
 remain closed until split into product-backed surfaces.
+Swift `try`, `try?`, `try!`, and `for try await` propagation boundaries now have
+their own reporting-supported audit row backed by
+`Source::Protocol(TryPropagation)`. This exposes the exception channel in
+reports without treating throwing control flow as exact-equivalent to ordinary
+returns.
 Python
 comprehension lowering now records whether a
 HOF came from a list comprehension, set comprehension, dict comprehension, or
