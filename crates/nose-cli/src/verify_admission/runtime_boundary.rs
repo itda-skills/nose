@@ -42,59 +42,11 @@ fn push_runtime_node_missing_evidence(
     node: NodeId,
     labels: &mut Vec<&'static str>,
 ) -> bool {
+    if push_source_protocol_missing_evidence(il, interner, node, labels) {
+        return true;
+    }
     match il.kind(node) {
-        NodeKind::Raw => {
-            match nose_semantics::source_protocol_at_node(il, node) {
-                Some(nose_il::SourceProtocolKind::Await) => {
-                    push_unique(labels, "async-await-scheduling-contract");
-                }
-                Some(nose_il::SourceProtocolKind::AsyncFunction) => {
-                    push_unique(labels, "async-function-scheduling-contract");
-                }
-                Some(nose_il::SourceProtocolKind::AsyncBlock) => {
-                    push_unique(labels, "async-block-scheduling-contract");
-                }
-                Some(nose_il::SourceProtocolKind::Yield) => {
-                    push_unique(labels, "generator-yield-lifecycle-contract");
-                    push_unique(labels, "generator-yield-protocol-contract");
-                }
-                Some(
-                    nose_il::SourceProtocolKind::ChannelReceive
-                    | nose_il::SourceProtocolKind::ChannelSend,
-                ) => {
-                    push_go_channel_send_receive_missing_evidence(il, interner, node, labels);
-                    push_unique(labels, "channel-send-receive-protocol-contract");
-                    push_unique(labels, "channel-protocol-contract");
-                }
-                Some(
-                    nose_il::SourceProtocolKind::ChannelSelect
-                    | nose_il::SourceProtocolKind::ChannelSelectCase
-                    | nose_il::SourceProtocolKind::ChannelSelectDefault,
-                ) => {
-                    push_go_channel_select_missing_evidence(
-                        nose_semantics::source_protocol_at_node(il, node),
-                        labels,
-                    );
-                    push_unique(labels, "channel-select-protocol-contract");
-                    push_unique(labels, "channel-protocol-contract");
-                }
-                Some(nose_il::SourceProtocolKind::Defer) => {
-                    push_unique(labels, "defer-lifecycle-ordering-contract");
-                    push_unique(labels, "defer-callback-effect-contract");
-                    push_unique(labels, "concurrency-scheduling-contract");
-                }
-                Some(nose_il::SourceProtocolKind::GoRoutine) => {
-                    push_unique(labels, "goroutine-scheduling-contract");
-                    push_unique(labels, "goroutine-callback-effect-contract");
-                    push_unique(labels, "concurrency-scheduling-contract");
-                }
-                Some(nose_il::SourceProtocolKind::TryPropagation) => {
-                    push_unique(labels, "exception-channel-contract");
-                }
-                None => {}
-            }
-            true
-        }
+        NodeKind::Raw => true,
         NodeKind::Try | NodeKind::Throw => {
             push_unique(labels, "exception-channel-contract");
             true
@@ -105,6 +57,69 @@ fn push_runtime_node_missing_evidence(
         }
         _ => false,
     }
+}
+
+fn push_source_protocol_missing_evidence(
+    il: &nose_il::Il,
+    interner: &Interner,
+    node: NodeId,
+    labels: &mut Vec<&'static str>,
+) -> bool {
+    let Some(protocol) = nose_semantics::source_protocol_at_node(il, node) else {
+        return false;
+    };
+    match protocol {
+        nose_il::SourceProtocolKind::Await => {
+            push_unique(labels, "async-await-scheduling-contract");
+        }
+        nose_il::SourceProtocolKind::AsyncFunction => {
+            push_unique(labels, "async-function-scheduling-contract");
+        }
+        nose_il::SourceProtocolKind::AsyncBlock => {
+            push_unique(labels, "async-block-scheduling-contract");
+        }
+        nose_il::SourceProtocolKind::AsyncIteration => {
+            push_unique(labels, "async-iteration-lifecycle-contract");
+            push_unique(labels, "async-iteration-value-channel-contract");
+            push_unique(labels, "async-await-scheduling-contract");
+        }
+        nose_il::SourceProtocolKind::AsyncContext => {
+            push_unique(labels, "async-context-lifecycle-contract");
+            push_unique(labels, "async-context-cleanup-contract");
+            push_unique(labels, "exception-channel-contract");
+            push_unique(labels, "async-await-scheduling-contract");
+        }
+        nose_il::SourceProtocolKind::Yield => {
+            push_unique(labels, "generator-yield-lifecycle-contract");
+            push_unique(labels, "generator-yield-protocol-contract");
+        }
+        nose_il::SourceProtocolKind::ChannelReceive | nose_il::SourceProtocolKind::ChannelSend => {
+            push_go_channel_send_receive_missing_evidence(il, interner, node, labels);
+            push_unique(labels, "channel-send-receive-protocol-contract");
+            push_unique(labels, "channel-protocol-contract");
+        }
+        nose_il::SourceProtocolKind::ChannelSelect
+        | nose_il::SourceProtocolKind::ChannelSelectCase
+        | nose_il::SourceProtocolKind::ChannelSelectDefault => {
+            push_go_channel_select_missing_evidence(Some(protocol), labels);
+            push_unique(labels, "channel-select-protocol-contract");
+            push_unique(labels, "channel-protocol-contract");
+        }
+        nose_il::SourceProtocolKind::Defer => {
+            push_unique(labels, "defer-lifecycle-ordering-contract");
+            push_unique(labels, "defer-callback-effect-contract");
+            push_unique(labels, "concurrency-scheduling-contract");
+        }
+        nose_il::SourceProtocolKind::GoRoutine => {
+            push_unique(labels, "goroutine-scheduling-contract");
+            push_unique(labels, "goroutine-callback-effect-contract");
+            push_unique(labels, "concurrency-scheduling-contract");
+        }
+        nose_il::SourceProtocolKind::TryPropagation => {
+            push_unique(labels, "exception-channel-contract");
+        }
+    }
+    true
 }
 
 fn push_go_channel_send_receive_missing_evidence(

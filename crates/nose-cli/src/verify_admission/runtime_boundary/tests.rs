@@ -287,6 +287,30 @@ fn async_block_protocol_missing_evidence_is_language_neutral() {
 }
 
 #[test]
+fn python_async_lifecycle_protocols_report_specific_obligations() {
+    let async_for = missing_evidence_for_protocol(
+        "async-for.py",
+        "async def read(xs):\n    async for x in xs:\n        yield x\n",
+        Lang::Python,
+        nose_il::SourceProtocolKind::AsyncIteration,
+    );
+    assert!(async_for.contains(&"async-iteration-lifecycle-contract"));
+    assert!(async_for.contains(&"async-iteration-value-channel-contract"));
+    assert!(async_for.contains(&"async-await-scheduling-contract"));
+
+    let async_with = missing_evidence_for_protocol(
+        "async-with.py",
+        "async def read(cm):\n    async with cm:\n        return 1\n",
+        Lang::Python,
+        nose_il::SourceProtocolKind::AsyncContext,
+    );
+    assert!(async_with.contains(&"async-context-lifecycle-contract"));
+    assert!(async_with.contains(&"async-context-cleanup-contract"));
+    assert!(async_with.contains(&"exception-channel-contract"));
+    assert!(async_with.contains(&"async-await-scheduling-contract"));
+}
+
+#[test]
 fn promise_then_missing_evidence_splits_receiver_fulfillment_rejection_and_callback() {
     let labels = missing_evidence_for_call(
         "function thenIt(p, f, r) { return p.then(f, r); }\n",

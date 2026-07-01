@@ -146,6 +146,43 @@ fn async_protocol_labels_have_specific_obligations() {
             "future-async-block-scheduling-contract-missing",
         )
     );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "async-iteration-lifecycle-contract",
+            "async-iteration-value-channel-contract",
+            "async-await-scheduling-contract",
+        ]),
+        (
+            "lifecycle-materialization-boundary",
+            "async-iteration-lifecycle-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["async-iteration-value-channel-contract"]),
+        (
+            "success-error-result-channel",
+            "async-iteration-value-channel-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&[
+            "async-context-lifecycle-contract",
+            "async-context-cleanup-contract",
+            "exception-channel-contract",
+            "async-await-scheduling-contract",
+        ]),
+        (
+            "lifecycle-materialization-boundary",
+            "async-context-lifecycle-contract-missing",
+        )
+    );
+    assert_eq!(
+        runtime_boundary_obligation(&["async-context-cleanup-contract"]),
+        (
+            "lifecycle-materialization-boundary",
+            "async-context-cleanup-contract-missing",
+        )
+    );
 }
 
 #[test]

@@ -218,6 +218,24 @@ fn async_function_preserves_source_backed_async_boundary() {
 }
 
 #[test]
+fn async_for_preserves_source_backed_iteration_boundary() {
+    expect_python_protocol_boundary(
+        b"async def f(xs):\n    async for x in xs:\n        yield x\n",
+        "async_for",
+        SourceProtocolKind::AsyncIteration,
+    );
+}
+
+#[test]
+fn async_with_preserves_source_backed_context_boundary() {
+    expect_python_protocol_boundary(
+        b"async def f(cm):\n    async with cm:\n        return 1\n",
+        "async_with",
+        SourceProtocolKind::AsyncContext,
+    );
+}
+
+#[test]
 fn yield_expression_preserves_source_backed_protocol_boundary() {
     expect_python_protocol_boundary(
         b"def f(x):\n    yield x + 1\n",
