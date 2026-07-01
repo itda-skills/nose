@@ -1621,6 +1621,16 @@ def hard_negative_inventory() -> list[dict[str, Any]]:
             "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/java.rs::java_completion_stage_receiver_methods_require_import_backed_type_domain",
             "status": "expanded-this-slice",
         },
+        {
+            "class": "Java Future local receivers with wildcard-only imports, reassignment, local shadows, or conflicting imports, plus wildcard-only Executor local receivers",
+            "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/java.rs::java_local_and_this_field_receivers_require_exact_type_identity",
+            "status": "expanded-this-slice",
+        },
+        {
+            "class": "Java Future field receivers that are implicit, non-this, member-shadowed, duplicate, or conflicting, plus conflicting Executor field receivers",
+            "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/java.rs::java_local_and_this_field_receivers_require_exact_type_identity",
+            "status": "expanded-this-slice",
+        },
     ]
 
 

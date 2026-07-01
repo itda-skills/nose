@@ -2131,10 +2131,10 @@ different APIs.
   CompletionStage-style continuations without opening exact admission. The Java
   Executor/Future follow-up keeps using the same capability vocabulary for
   exact-import-backed `CompletableFuture`, `Future`, `ScheduledFuture`,
-  `Executor`, `ExecutorService`, and `ScheduledExecutorService` parameter
-  receivers. The latest pricing artifact raises source prevalence from
-  `146,988` to `147,846` by adding `858` reporting-supported Java
-  receiver-method candidates while
+  `Executor`, `ExecutorService`, and `ScheduledExecutorService` parameter,
+  local variable, and explicit `this.<field>` receivers. The latest pricing
+  artifact remains at source prevalence `147,846`, with `858`
+  reporting-supported Java receiver-method candidates while
   leaving the broad `3,297`-occurrence `Executor/Future` lexical bucket closed
   until wrapper aliases, project-specific executors, scheduling, cancellation,
   lifecycle, result-channel, exception, and callback/effect contracts are

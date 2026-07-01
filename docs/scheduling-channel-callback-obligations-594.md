@@ -150,10 +150,15 @@ async factories / `4` repos, `10` settlement continuations / `2` repos, and
 closed at `276` occurrences, and exact recovery still requires dependency-closed
 executor timing, callback identity/effects, exceptional completion, and result
 channel contracts.
-The follow-up [Java Executor/Future artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-java-executor-future-2026-07-01.v1.json)
+The follow-up [Java Executor/Future local/this-field artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-java-local-this-field-executor-future-2026-07-01.v1.json)
 keeps exact admission closed while extending the same receiver-domain capability
 to exact-import-backed `CompletableFuture`, `Future`, `ScheduledFuture`,
-`Executor`, `ExecutorService`, and `ScheduledExecutorService` parameters.
+`Executor`, `ExecutorService`, and `ScheduledExecutorService` parameter, local
+variable, and explicit `this.<field>` receivers. It follows the earlier
+parameter-only [receiver artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-java-executor-future-2026-07-01.v1.json)
+without increasing the lexical corpus price: the same declaration-backed
+receiver-method candidates are now implemented for local and explicit field
+anchors instead of parameter anchors only.
 `CompletableFuture`/`Future` handle methods (`get`, `cancel`, `isCancelled`,
 and `isDone`) now report settled-value, exception, cancellation/liveness, and
 handle-lifecycle obligations; executor `execute`, `submit`, `invokeAll`,

@@ -1514,11 +1514,12 @@ this worktree because the required evidence is not yet modeled:
   demand/effect, task scheduling, aggregate, and exception obligations when the
   type or receiver identity is proven. Exact-import-backed Java
   `CompletableFuture`, `Future`, `ScheduledFuture`, `Executor`,
-  `ExecutorService`, and `ScheduledExecutorService` parameter receivers now
-  reuse the same capability vocabulary for handle lifecycle,
-  cancellation/liveness, executor scheduling, timer/interval lifecycle,
-  aggregate, callback/effect, settled-value, and exception obligations. Exact
-  Future/CompletionStage/Executor recovery remains closed: wrapper aliases,
+  `ExecutorService`, and `ScheduledExecutorService` parameter, local variable,
+  and explicit `this.<field>` receivers now reuse the same capability
+  vocabulary for handle lifecycle, cancellation/liveness, executor scheduling,
+  timer/interval lifecycle, aggregate, callback/effect, settled-value, and
+  exception obligations. Exact Future/CompletionStage/Executor recovery remains
+  closed: implicit fields, non-`this` fields, wrapper aliases,
   project-specific executors, callback
   identity/effects, cancellation/liveness, exceptional completion, result
   channels, and constructor semantics still need dependency-closed contracts

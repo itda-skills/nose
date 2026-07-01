@@ -80,12 +80,14 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
             let field = node
                 .child_by_field_name("field")
                 .map(|f| lo.sym(lo.text(f)));
-            lo.add(
+            let field_id = lo.add(
                 NodeKind::Field,
                 field.map(Payload::Name).unwrap_or(Payload::None),
                 span,
                 &[base],
-            )
+            );
+            record_java_this_field_receiver_domain(lo, node, field_id);
+            field_id
         }
         "array_access" => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
@@ -350,6 +352,80 @@ pub(super) fn is_java_identifier(name: &str) -> bool {
     };
     (first == '_' || first == '$' || first.is_ascii_alphabetic())
         && chars.all(|c| c == '_' || c == '$' || c.is_ascii_alphanumeric())
+}
+
+fn record_java_this_field_receiver_domain(lo: &mut Lowering, node: TsNode, field_id: NodeId) {
+    if lo.b.kind(field_id) != NodeKind::Field || !java_field_access_base_is_this(node) {
+        return;
+    }
+    let Some(field_name) = node
+        .child_by_field_name("field")
+        .map(|field| lo.text(field))
+    else {
+        return;
+    };
+    let Some(class_node) = java_enclosing_type_decl(node) else {
+        return;
+    };
+    let Some(field_decl) = java_unique_field_declaration_in_type(lo, class_node, field_name) else {
+        return;
+    };
+    let Some(domain) = java_receiver_declaration_domain(lo, field_decl) else {
+        return;
+    };
+    lo.record_node_domain_with_dependencies(
+        lo.b.node(field_id).span,
+        NodeKind::Field,
+        domain.domain,
+        domain.dependencies,
+    );
+}
+
+fn java_field_access_base_is_this(node: TsNode) -> bool {
+    node.child_by_field_name("object")
+        .is_some_and(|base| base.kind() == "this")
+}
+
+fn java_enclosing_type_decl<'tree>(mut node: TsNode<'tree>) -> Option<TsNode<'tree>> {
+    while let Some(parent) = node.parent() {
+        if java_is_nested_type_decl(parent.kind()) {
+            return Some(parent);
+        }
+        node = parent;
+    }
+    None
+}
+
+fn java_unique_field_declaration_in_type<'tree>(
+    lo: &Lowering<'_>,
+    type_node: TsNode<'tree>,
+    field_name: &str,
+) -> Option<TsNode<'tree>> {
+    let body = type_node.child_by_field_name("body")?;
+    let mut found = None;
+    for child in Lowering::named_children(body) {
+        if !matches!(child.kind(), "field_declaration" | "constant_declaration") {
+            continue;
+        }
+        if !java_field_declaration_defines(lo, child, field_name) {
+            continue;
+        }
+        if found.replace(child).is_some() {
+            return None;
+        }
+    }
+    found
+}
+
+fn java_field_declaration_defines(lo: &Lowering<'_>, decl: TsNode, field_name: &str) -> bool {
+    Lowering::named_children(decl)
+        .into_iter()
+        .filter(|child| child.kind() == "variable_declarator")
+        .any(|declarator| {
+            declarator
+                .child_by_field_name("name")
+                .is_some_and(|name| lo.text(name) == field_name)
+        })
 }
 pub(super) fn lower_binary(lo: &mut Lowering, node: TsNode) -> NodeId {
     if node
