@@ -24,11 +24,23 @@ fn java_completable_future_static_calls_report_shared_future_obligations() {
         Lang::Java,
         "CompletableFuture.completedFuture",
     );
+    let completed_stage = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.CompletableFuture;\nclass Runtime { Object run() { return CompletableFuture.completedStage(value()); } }\n",
+        Lang::Java,
+        "CompletableFuture.completedStage",
+    );
     let failed = missing_evidence_for_lang_call(
         "Runtime.java",
         "import java.util.concurrent.CompletableFuture;\nclass Runtime { Object run(Throwable error) { return CompletableFuture.failedFuture(error); } }\n",
         Lang::Java,
         "CompletableFuture.failedFuture",
+    );
+    let failed_stage = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.CompletableFuture;\nclass Runtime { Object run(Throwable error) { return CompletableFuture.failedStage(error); } }\n",
+        Lang::Java,
+        "CompletableFuture.failedStage",
     );
     let all_of = missing_evidence_for_lang_call(
         "Runtime.java",
@@ -51,8 +63,11 @@ fn java_completable_future_static_calls_report_shared_future_obligations() {
         assert!(labels.contains(&"future-callback-demand-effect-contract"));
     }
     assert!(wildcard_completed.contains(&"future-settled-value-channel-contract"));
+    assert!(completed_stage.contains(&"future-settled-value-channel-contract"));
     assert!(failed.contains(&"future-settled-value-channel-contract"));
     assert!(failed.contains(&"exception-channel-contract"));
+    assert!(failed_stage.contains(&"future-settled-value-channel-contract"));
+    assert!(failed_stage.contains(&"exception-channel-contract"));
     assert!(all_of.contains(&"async-aggregate-all-completion-contract"));
     assert!(all_of.contains(&"async-aggregate-result-channel-contract"));
     assert!(any_of.contains(&"async-aggregate-first-completion-contract"));

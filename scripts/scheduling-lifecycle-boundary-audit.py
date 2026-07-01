@@ -120,12 +120,12 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("go", "go.channel.select", "select", "channel-boundary", "channel-select-readiness-contract-missing", "channel select", "select has readiness, default, and scheduling semantics", re.compile(r"\bselect\s*\{"), "reporting-supported-closed-boundary"),
     Pattern("java", "java.future.completable", "CompletableFuture", "success-error-result-channel", "future-settled-value-channel-contract-missing", "future channel", "CompletableFuture needs success/error channel and scheduling proof", re.compile(r"\bCompletableFuture\b(?!\s*\.\s*(?:supplyAsync|runAsync|completedFuture|completedStage|failedFuture|failedStage|allOf|anyOf)\s*\()")),
     Pattern("java", "java.future.completable.spawn", "CompletableFuture.supplyAsync/runAsync", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "future task spawn", "CompletableFuture async factories schedule executor callbacks and return future handles", re.compile(r"\bCompletableFuture\s*\.\s*(?:supplyAsync|runAsync)\s*\("), "reporting-supported-closed-boundary"),
-    Pattern("java", "java.future.completable.factory", "CompletableFuture.completedFuture/failedFuture", "success-error-result-channel", "future-settled-value-channel-contract-missing", "future settled value", "CompletableFuture settled factories create fulfilled or exceptional future channels", re.compile(r"\bCompletableFuture\s*\.\s*(?:completedFuture|completedStage|failedFuture|failedStage)\s*\("), "reporting-candidate-closed-boundary"),
+    Pattern("java", "java.future.completable.factory", "CompletableFuture.completedFuture/failedFuture", "success-error-result-channel", "future-settled-value-channel-contract-missing", "future settled value", "CompletableFuture settled factories create fulfilled or exceptional future channels", re.compile(r"\bCompletableFuture\s*\.\s*(?:completedFuture|completedStage|failedFuture|failedStage)\s*\("), "reporting-supported-closed-boundary"),
     Pattern("java", "java.future.completable.all", "CompletableFuture.allOf", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "future all-completion aggregate", "CompletableFuture.allOf needs all-completion and exceptional completion proof", re.compile(r"\bCompletableFuture\s*\.\s*allOf\s*\("), "reporting-supported-closed-boundary"),
     Pattern("java", "java.future.completable.any", "CompletableFuture.anyOf", "cancellation-liveness-boundary", "async-aggregate-first-completion-contract-missing", "future first-completion aggregate", "CompletableFuture.anyOf needs first-completion and result-channel proof", re.compile(r"\bCompletableFuture\s*\.\s*anyOf\s*\("), "reporting-supported-closed-boundary"),
     Pattern("java", "java.future.executor", "Executor/Future", "scheduling-boundary", "java-executor-scheduling-contract-missing", "executor scheduling", "Executor/Future APIs introduce scheduler and lifecycle boundaries", re.compile(r"\b(?:ExecutorService|Executor|Future|ScheduledFuture)\b")),
     Pattern("java", "java.stream.lifecycle", "stream/parallelStream", "lifecycle-materialization-boundary", "java-stream-lifecycle-contract-missing", "stream lifecycle", "Java streams need lazy/eager lifecycle and terminal materialization proof", re.compile(r"\.\s*(?:stream|parallelStream)\s*\(")),
-    Pattern("swift", "swift.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Swift await has task scheduling and actor/lifetime boundaries", re.compile(r"\bawait\b")),
+    Pattern("swift", "swift.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Swift await has task scheduling and actor/lifetime boundaries", re.compile(r"\bawait\b"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.async.function", "async", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "Swift async surfaces create task/future-like protocol boundaries", re.compile(r"\basync\b")),
     Pattern("swift", "swift.async.closure", "async closure", "scheduling-boundary", "async-function-scheduling-contract-missing", "async closure scheduling", "Swift async closures create async callable protocol boundaries even when the surrounding function is synchronous", re.compile(r"(?!x)x"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.async.iteration", "for await/for try await", "lifecycle-materialization-boundary", "async-iteration-lifecycle-contract-missing", "async iteration lifecycle", "Swift async sequence loops need async iterator lifecycle, value-channel, scheduling, and throwing-channel proof", re.compile(r"\bfor\s+(?:try[!?]?\s+)?await\b"), "reporting-supported-closed-boundary"),
@@ -770,6 +770,14 @@ def self_test() -> None:
         "java.future.completable.any",
     }
     for surface in async_aggregate_reporting_surfaces:
+        pattern = next(item for item in PATTERNS if item.surface == surface)
+        assert pattern.status == "reporting-supported-closed-boundary", surface
+
+    settled_future_and_await_reporting_surfaces = {
+        "java.future.completable.factory",
+        "swift.async.await",
+    }
+    for surface in settled_future_and_await_reporting_surfaces:
         pattern = next(item for item in PATTERNS if item.surface == surface)
         assert pattern.status == "reporting-supported-closed-boundary", surface
 

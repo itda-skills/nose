@@ -315,6 +315,13 @@ does the same for already-backed aggregate rows: Rust
 accounts for `98` source-prevalence occurrences, raises currently backed
 async-aggregate reporting-supported rows to `286` occurrences, and keeps exact
 admission closed.
+The follow-up [Swift await and Java settled-factory reporting alignment artifact](../bench/recall_loss/swift-await-java-factory-reporting-alignment-2026-07-02.v1.json)
+aligns two more already-backed rows: Swift `await` via
+`Source::Protocol(Await)` and Java `CompletableFuture.completedFuture` /
+`failedFuture` via static runtime-boundary reporting. It newly accounts for
+`8,703` source-prevalence occurrences and keeps broad Java
+`CompletableFuture` mentions plus looser FutureLike receiver settlement rows
+closed until their audit counters match product proof.
 The
 checked [promise-protocol diagnostics](../bench/recall_loss/promise-protocol-diagnostics-2026-06-28.v1.json)
 connect the JS/TS source-prevalence group (`29,094` Promise/async occurrences)
