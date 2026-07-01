@@ -751,6 +751,23 @@ def self_test() -> None:
     assert ruby_yield.get(ruby_yield_pattern) == 1
     assert ruby_yield_pattern.status == "reporting-supported-closed-boundary"
 
+    task_spawn_reporting_surfaces = {
+        "python.asyncio.task",
+        "rust.async.spawn",
+        "swift.task.spawn",
+        "java.future.completable.spawn",
+    }
+    for surface in task_spawn_reporting_surfaces:
+        pattern = next(item for item in PATTERNS if item.surface == surface)
+        assert pattern.status == "reporting-supported-closed-boundary", surface
+
+    future_channel_reason = recommended_reason(
+        {
+            "obligation_subreason": "future-settled-value-channel-contract-missing",
+        }
+    )
+    assert "Go channel" not in future_channel_reason
+
 
 def load_repos(manifest: Path) -> list[dict[str, Any]]:
     return json.loads(manifest.read_text()).get("repositories", [])
@@ -2143,7 +2160,7 @@ def hard_negative_inventory() -> list[dict[str, Any]]:
         },
         {
             "class": "Java CompletableFuture static calls without exact stdlib type identity, or with local/conflicting type names",
-            "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/java.rs::java_completable_future_static_attribution_requires_type_identity",
+            "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/java_static_wildcard.rs::java_completable_future_static_attribution_requires_type_identity",
             "status": "expanded-this-slice",
         },
         {

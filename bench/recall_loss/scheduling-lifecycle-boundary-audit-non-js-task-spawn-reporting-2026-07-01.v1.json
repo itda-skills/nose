@@ -166,7 +166,7 @@
     },
     {
       "class": "Java CompletableFuture static calls without exact stdlib type identity, or with local/conflicting type names",
-      "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/java.rs::java_completable_future_static_attribution_requires_type_identity",
+      "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/java_static_wildcard.rs::java_completable_future_static_attribution_requires_type_identity",
       "status": "expanded-this-slice"
     },
     {
