@@ -114,10 +114,10 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("rust", "rust.async.spawn", "tokio/async-std spawn", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "task spawn", "async spawn APIs introduce scheduler, cancellation, and join-handle boundaries", re.compile(r"\b(?:tokio(?:::task)?|async_std::task)\s*::\s*spawn(?:_blocking)?\s*\(")),
     Pattern("rust", "rust.async.join", "tokio/futures/futures_util join/try_join", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "future all-completion aggregate", "qualified runtime join style macros need all-completion result-channel proof", re.compile(r"\b(?:tokio|futures|futures_util)::(?:join|try_join)!\s*\(")),
     Pattern("rust", "rust.async.select", "tokio/futures/futures_util select", "cancellation-liveness-boundary", "async-aggregate-first-completion-contract-missing", "future first-completion aggregate", "qualified runtime select style macros need first-completion, cancellation, and result-channel proof", re.compile(r"\b(?:tokio|futures|futures_util)::select!\s*\(")),
-    Pattern("go", "go.concurrent.goroutine", "go statement", "scheduling-boundary", "goroutine-scheduling-contract-missing", "goroutine scheduling", "go statements spawn concurrent execution", re.compile(r"\bgo\s+[A-Za-z_{(]")),
-    Pattern("go", "go.concurrent.defer", "defer statement", "lifecycle-materialization-boundary", "defer-lifecycle-ordering-contract-missing", "defer lifecycle", "defer has scope-exit ordering and panic interaction semantics", re.compile(r"\bdefer\s+")),
+    Pattern("go", "go.concurrent.goroutine", "go statement", "scheduling-boundary", "goroutine-scheduling-contract-missing", "goroutine scheduling", "go statements spawn concurrent execution", re.compile(r"\bgo\s+[A-Za-z_{(]"), "reporting-supported-closed-boundary"),
+    Pattern("go", "go.concurrent.defer", "defer statement", "lifecycle-materialization-boundary", "defer-lifecycle-ordering-contract-missing", "defer lifecycle", "defer has scope-exit ordering and panic interaction semantics", re.compile(r"\bdefer\s+"), "reporting-supported-closed-boundary"),
     Pattern("go", "go.channel.send_receive", "channel send/receive", "channel-boundary", "channel-send-receive-protocol-contract-missing", "channel protocol", "channel send/receive has blocking and synchronization semantics", re.compile(r"<-")),
-    Pattern("go", "go.channel.select", "select", "channel-boundary", "channel-select-readiness-contract-missing", "channel select", "select has readiness, default, and scheduling semantics", re.compile(r"\bselect\s*\{")),
+    Pattern("go", "go.channel.select", "select", "channel-boundary", "channel-select-readiness-contract-missing", "channel select", "select has readiness, default, and scheduling semantics", re.compile(r"\bselect\s*\{"), "reporting-supported-closed-boundary"),
     Pattern("java", "java.future.completable", "CompletableFuture", "success-error-result-channel", "future-settled-value-channel-contract-missing", "future channel", "CompletableFuture needs success/error channel and scheduling proof", re.compile(r"\bCompletableFuture\b(?!\s*\.\s*(?:supplyAsync|runAsync|completedFuture|completedStage|failedFuture|failedStage|allOf|anyOf)\s*\()")),
     Pattern("java", "java.future.completable.spawn", "CompletableFuture.supplyAsync/runAsync", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "future task spawn", "CompletableFuture async factories schedule executor callbacks and return future handles", re.compile(r"\bCompletableFuture\s*\.\s*(?:supplyAsync|runAsync)\s*\("), "reporting-candidate-closed-boundary"),
     Pattern("java", "java.future.completable.factory", "CompletableFuture.completedFuture/failedFuture", "success-error-result-channel", "future-settled-value-channel-contract-missing", "future settled value", "CompletableFuture settled factories create fulfilled or exceptional future channels", re.compile(r"\bCompletableFuture\s*\.\s*(?:completedFuture|completedStage|failedFuture|failedStage)\s*\("), "reporting-candidate-closed-boundary"),
@@ -539,6 +539,7 @@ GO_CHANNEL_SEND = Pattern(
     "channel send synchronization",
     "Go channel sends have blocking and synchronization semantics",
     re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
 )
 GO_CHANNEL_RECEIVE = Pattern(
     "go",
@@ -549,6 +550,7 @@ GO_CHANNEL_RECEIVE = Pattern(
     "channel receive value",
     "Go channel receives have blocking, synchronization, and close/zero-value channel semantics",
     re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
 )
 GO_CHANNEL_RECEIVE_STATUS = Pattern(
     "go",
@@ -559,6 +561,7 @@ GO_CHANNEL_RECEIVE_STATUS = Pattern(
     "channel receive status",
     "Go comma-ok receives expose the channel close status as an additional protocol result",
     re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
 )
 GO_CHANNEL_SELECT_CASE = Pattern(
     "go",
@@ -569,6 +572,7 @@ GO_CHANNEL_SELECT_CASE = Pattern(
     "select case selection",
     "Go select cases require readiness, case-selection, and send/receive side-effect proof",
     re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
 )
 GO_CHANNEL_SELECT_DEFAULT = Pattern(
     "go",
@@ -579,6 +583,7 @@ GO_CHANNEL_SELECT_DEFAULT = Pattern(
     "select default liveness",
     "Go select defaults change blocking and liveness behavior",
     re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
 )
 SWIFT_THROWING_FUNCTION = Pattern(
     "swift",

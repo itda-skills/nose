@@ -328,6 +328,28 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-06-30
 ```
 
+Build the Go protocol reporting-support audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.go-protocol-reporting-support.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.go-protocol-reporting-support.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.go-protocol-reporting-support.json \
+  --generated-on 2026-07-01
+
+python3 scripts/query-regression-harness.py \
+  --baseline-binary /tmp/nose-go-protocol-main-target/release/nose \
+  --current-binary target/release/nose \
+  --baseline-source-ref origin/main \
+  --current-source-ref go-protocol-reporting-support \
+  --repo nats-server --repo etcd --repo minio \
+  --repo prometheus --repo badger --repo delve \
+  --output target/go-protocol-reporting-support-query-regression.json
+```
+
 Build the first #602 `Promise.all` exact aggregate slice audit with:
 
 ```sh
@@ -696,6 +718,17 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   parents, `3,590` select cases, `546` select defaults, `1,949` goroutines,
   and `17,521` defers. Select parents and arms are counted separately because
   they are distinct source-backed protocol boundaries in lowering.
+- [scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json)
+  records the Go protocol reporting-support follow-up. It keeps exact
+  admission closed while marking the already source-backed Go channel,
+  select, goroutine, and defer protocol rows reporting-supported. Go
+  `go`/`defer` now also have scheduled/deferred callback demand/effect
+  profiles in the shared kernel.
+- [go-protocol-reporting-support-2026-07-01.v1.json](go-protocol-reporting-support-2026-07-01.v1.json)
+  records the compact Go protocol closeout. It prices `31,500` Go protocol
+  occurrences, keeps the checked `crates` gate at `0` false merges, and records
+  a Go-heavy r9 query regression of `3560.13ms -> 3563.06ms` (`+0.08%`) with
+  identical product hashes on all six measured repos.
 - [scheduling-lifecycle-boundary-audit-python-async-lifecycle-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-python-async-lifecycle-2026-07-01.v1.json)
   records the Python async protocol lifecycle reporting slice. It keeps exact
   admission closed while splitting `async for` statements/comprehensions and

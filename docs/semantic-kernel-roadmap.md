@@ -1260,8 +1260,8 @@ repeated registry walks on hot paths. Binary size changed 20,181,712 ->
   map/flat-map/filter-map/filter/reduce, pull-lazy Python generator expressions,
   eager JS-like/Ruby library HOFs, pull-lazy Rust iterator/Java Stream HOFs,
   async continuation boundaries, generator suspension, source-order callback
-  invocation, channel boundaries, and non-channel protocol boundaries. The
-  oracle consumes those profiles for
+  invocation, scheduled/deferred callback invocation, channel boundaries, and
+  non-channel protocol boundaries. The oracle consumes those profiles for
   admitted builtins instead of matching local demand enums; value-graph HOF
   callback exception timing, HOF materialization gates, strict-exact HOF gates,
   and Promise `.then` beta-reduction also read shared profiles. API admission
@@ -2418,6 +2418,17 @@ Exact admission remains closed until block identity, callback argument/result
 roles, effect visibility, non-local control, and exception behavior are proven.
 The 120-repo audit prices `801` Ruby yield occurrences across `17` repos, and
 the checked `crates` gate remains at `0` false merges.
+
+2026-07-01 Go protocol reporting-support note:
+The [scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json)
+artifact aligns the existing Go source protocol support with the shared
+demand/effect vocabulary. `go` statements now profile as runtime-scheduled
+callbacks and `defer` statements as scope-exit deferred callbacks. Channel
+send/receive, receive-status, select, select-case, select-default, goroutine,
+and defer rows are reporting-supported closed-boundaries in the 120-repo audit.
+Exact channel/goroutine/defer admission remains closed until scheduling,
+blocking, close/status, readiness, callback effect, panic/defer ordering, and
+liveness contracts are proven.
 
 ## See also
 

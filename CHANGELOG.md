@@ -194,6 +194,15 @@ break.
   `17` repos, the checked `crates` recall-loss gate stays at `0` false merges,
   and the Ruby-heavy query regression measured `2504.55ms -> 2574.79ms`
   (`+2.80%`) with one stable-count `rspec-core` representative-label drift.
+- Added Go protocol reporting-support alignment. `go` statements now carry a
+  runtime-scheduled callback demand/effect profile and `defer` statements carry
+  a scope-exit deferred callback profile, while channel/select protocol rows
+  are marked reporting-supported closed-boundaries in the 120-repo audit.
+  Exact admission remains closed; the Go protocol slice covers `31,500`
+  occurrences across the pinned corpus and keeps the checked `crates`
+  recall-loss gate at `0` false merges. The Go-heavy query regression measured
+  `3560.13ms -> 3563.06ms` (`+0.08%`) with identical product hashes on all six
+  measured repos.
 - Added non-JS async protocol near-channel mirror support. The dual-view async
   protocol capability now covers `await`, async-function boundaries, and Rust
   async blocks in near/witness builds, so Rust `async fn`/`.await` and Swift
