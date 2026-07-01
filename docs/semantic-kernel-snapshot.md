@@ -186,6 +186,11 @@ uses the same capability boundary for Python `from asyncio import ...`
 bindings and Rust brace-use `ImportedBinding` evidence, adding `2` newly priced
 Python imported `asyncio.sleep` occurrences while keeping exact admission
 closed and preserving the release `verify crates` gate at `0` false merges.
+The follow-up [Python asyncio sleep reporting artifact](../bench/recall_loss/python-asyncio-sleep-reporting-2026-07-02.v1.json)
+aligns the direct `asyncio.sleep` audit row with that existing timer
+runtime-boundary reporting. Direct calls add `104` reporting-supported
+closed-boundary occurrences across `6` repos, and the scheduling lifecycle
+audit now has no remaining Python closed-boundary rows.
 The follow-up [Swift structured-concurrency artifact](../bench/recall_loss/swift-structured-concurrency-obligation-reporting-2026-06-30.v1.json)
 keeps exact admission closed while mapping `Task.sleep`, `Task.yield`, and
 task-group calls onto the existing timer, task-yield, aggregate,

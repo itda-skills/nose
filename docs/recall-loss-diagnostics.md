@@ -223,6 +223,12 @@ adds the matching `Source::Protocol(Yield)` audit row for Python `yield` and
 `yield from` generator boundaries. It newly accounts for `2,404`
 source-prevalence occurrences across `21` repos while keeping exact admission
 closed. The
+follow-up [Python asyncio sleep reporting artifact](../bench/recall_loss/python-asyncio-sleep-reporting-2026-07-02.v1.json)
+then aligns direct `asyncio.sleep` with the existing runtime-boundary timer
+reporting path. It newly accounts for `104` occurrences across `6` repos,
+raises reporting-supported closed-boundaries to `90,979` occurrences across
+`61` rows, and leaves no Python closed-boundary rows in the scheduling
+lifecycle audit while exact admission remains closed. The
 follow-up [Swift try-expression reporting alignment artifact](../bench/recall_loss/swift-try-expression-reporting-2026-07-02.v1.json)
 adds the matching `Source::Protocol(TryPropagation)` audit row for Swift
 `try`, `try?`, `try!`, and `for try await` propagation boundaries. It newly

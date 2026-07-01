@@ -126,6 +126,11 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
   Python `yield` and `yield from` now move to reporting-supported
   closed-boundaries, newly aligning `2,404` source-prevalence occurrences
   across `21` repos while exact admission remains closed.
+- [Python asyncio sleep reporting alignment](../bench/recall_loss/python-asyncio-sleep-reporting-2026-07-02.v1.json) records the audit closeout for direct runtime-backed timer boundaries.
+  Python `asyncio.sleep` now moves to reporting-supported closed-boundary
+  status, newly aligning `104` source-prevalence occurrences across `6` repos
+  and leaving no Python closed-boundary rows in the scheduling lifecycle audit
+  while exact admission remains closed.
 - [Swift try-expression reporting alignment](../bench/recall_loss/swift-try-expression-reporting-2026-07-02.v1.json) records the source-backed `TryPropagation` audit closeout for `try`, `try?`,
   `try!`, and `for try await`. It newly aligns `17,970` source-prevalence
   occurrences across `18` repos while keeping exact admission closed and the

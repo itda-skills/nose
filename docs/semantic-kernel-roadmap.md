@@ -2430,6 +2430,16 @@ closed-boundaries in the 120-repo audit, newly aligning `2,404` occurrences
 across `21` repos. Exact admission remains closed until generator suspension,
 send/throw/close behavior, and materialization equivalence are proven.
 
+2026-07-02 Python asyncio sleep reporting note:
+The [python-asyncio-sleep-reporting-2026-07-02.v1.json](../bench/recall_loss/python-asyncio-sleep-reporting-2026-07-02.v1.json)
+artifact aligns direct `asyncio.sleep` audit accounting with the existing
+runtime-boundary timer reporting path. Direct calls now count as
+reporting-supported timer scheduling closed-boundaries in the 120-repo audit,
+newly aligning `104` occurrences across `6` repos and leaving no Python
+closed-boundary rows in the scheduling lifecycle audit. Exact admission remains
+closed until timer suspension, cancellation, and event-loop timing semantics are
+proven.
+
 2026-07-01 Go protocol reporting-support note:
 The [scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json)
 artifact aligns the existing Go source protocol support with the shared

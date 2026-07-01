@@ -123,6 +123,12 @@ break.
   `2,404` Python generator-yield occurrences across `21` repos to
   reporting-supported closed-boundaries, raising the total to `90,875`
   occurrences across `60` rows while exact admission remains closed.
+- Aligned direct Python `asyncio.sleep` audit accounting with existing
+  runtime-boundary timer reporting. The 120-repo audit moves `104`
+  occurrences across `6` repos to reporting-supported closed-boundaries,
+  raising the total to `90,979` occurrences across `61` rows and leaving no
+  Python closed-boundary rows in the scheduling/lifecycle audit; exact
+  admission remains closed.
 - Added Java `Executor`/`Future` receiver-method reporting for
   exact- or wildcard-import-backed `CompletableFuture`, `Future`,
   `ScheduledFuture`, `Executor`, `ExecutorService`, and
