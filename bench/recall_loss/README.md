@@ -197,6 +197,20 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-07-01
 ```
 
+Build the Java `Executor`/`Future` local and explicit `this.<field>` receiver
+audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.java-local-this-field-executor-future.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.java-local-this-field-executor-future.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.java-local-this-field-executor-future.json \
+  --generated-on 2026-07-01
+```
+
 Build the Go channel/goroutine/defer obligation audit with:
 
 ```sh

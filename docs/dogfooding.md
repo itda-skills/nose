@@ -700,3 +700,13 @@ with 7 shared/removable lines and 8 parameter spots across two different
 execution models. Extracting it would couple oracle interpretation to
 fingerprint construction, so this is recorded as evaluator span noise rather
 than avoidable duplication. No new budget is accepted.
+
+The Java Future/Executor local and `this`-field receiver provenance slice keeps
+the count at 52. Recording exact Java receiver-domain evidence shifts line
+spans in `java/expressions.rs`, so two already reviewed frontend-lowering
+representatives move without changing members or values:
+`7b134f23e922f405` becomes `596f602568ace201` for the per-frontend
+call/constructor/enum-constant lowering family, and `6e37683225332c86`
+becomes `a54e8f6b173a160a` for the Java/C expression-dispatch family. Both are
+the same language-frontend parallelism recorded above; no new budget is
+accepted.

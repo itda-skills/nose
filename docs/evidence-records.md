@@ -320,11 +320,15 @@ type names alone are not proof; the dependent `Domain` record still needs a
 valid symbol/import/scope chain. Rust typed `const`/`static` items and typed
 `let` bindings now emit binding-anchored `Domain` evidence through the same
 type-domain vocabulary as parameters; this is receiver-domain proof for the
-binding, not exact value proof for the initializer. Rust exact `self.<field>`
+binding, not exact value proof for the initializer. Java exact-import-backed
+`Future`/`CompletableFuture` and executor declarations use the same shape for
+local variable and field bindings, while explicit `this.<field>` receiver nodes
+can carry node-anchored `Domain` evidence when the same class directly declares
+that field with a supported import-backed type. Rust exact `self.<field>`
 receiver nodes can also emit node-anchored nominal `Domain` evidence when a
 same-scope struct field declaration proves a tokio runtime field type through a
-fully qualified or exact imported-binding type chain; this is field receiver
-proof only, not arbitrary field or alias inference. Proven collection
+fully qualified or exact imported-binding type chain. These field records are
+receiver proof only, not arbitrary field or alias inference. Proven collection
 `SequenceSurface` records also materialize dependency-backed `Domain(Collection)`
 evidence on the `Seq` node, so literal collection receivers and typed collection
 receivers flow through the same receiver-domain capability. Assignments whose

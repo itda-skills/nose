@@ -114,6 +114,9 @@ set -euo pipefail
 # handling moves a reviewed evaluator whole-impl span. `c9fe4dc9d9cd14f5` disappears and
 # `149bb759833d2d51` appears for the oracle evaluator / value-graph evaluator overlap; no new
 # budget is accepted.
+# 52 -> 52 (Java Future/Executor local/this-field receivers): exact Java receiver-domain evidence
+# moves two reviewed frontend-lowering representatives (`7b134f23e922f405` -> `596f602568ace201`,
+# `6e37683225332c86` -> `a54e8f6b173a160a`) without changing members or budget.
 BIN="${NOSE_BIN:-./target/release/nose}"
 BASELINE="${NOSE_DUP_BASELINE:-scripts/duplication-baseline.json}"
 

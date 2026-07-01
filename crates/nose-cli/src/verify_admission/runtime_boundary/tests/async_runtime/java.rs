@@ -263,6 +263,137 @@ fn java_scheduled_executor_methods_report_timer_and_interval_obligations() {
 }
 
 #[test]
+fn java_local_and_this_field_executor_future_receivers_report_obligations() {
+    let local_get = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.Future;\nclass Runtime { Object run() throws Exception { Future<String> future = make(); return future.get(); } }\n",
+        Lang::Java,
+        "future.get",
+    );
+    let local_then = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.CompletableFuture;\nclass Runtime { Object run() { CompletableFuture<String> future = make(); return future.thenApply(value -> value.trim()); } }\n",
+        Lang::Java,
+        "future.thenApply",
+    );
+    let local_submit = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.ExecutorService;\nclass Runtime { Object run() { ExecutorService executor = make(); return executor.submit(() -> work()); } }\n",
+        Lang::Java,
+        "executor.submit",
+    );
+    let field_get = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.Future;\nclass Runtime { private Future<String> future; Object run() throws Exception { return this.future.get(); } }\n",
+        Lang::Java,
+        "this.future.get",
+    );
+    let field_submit = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.ExecutorService;\nclass Runtime { private ExecutorService executor; Object run() { return this.executor.submit(() -> work()); } }\n",
+        Lang::Java,
+        "this.executor.submit",
+    );
+    let field_schedule = missing_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.ScheduledExecutorService;\nimport java.util.concurrent.TimeUnit;\nclass Runtime { private ScheduledExecutorService executor; Object run() { return this.executor.schedule(() -> work(), 1, TimeUnit.SECONDS); } }\n",
+        Lang::Java,
+        "this.executor.schedule",
+    );
+
+    assert!(local_get.contains(&"future-settled-value-channel-contract"));
+    assert!(local_get.contains(&"exception-channel-contract"));
+    assert!(local_then.contains(&"future-fulfillment-continuation-contract"));
+    assert!(local_submit.contains(&"task-spawn-scheduling-contract"));
+    assert!(local_submit.contains(&"task-handle-lifecycle-contract"));
+    assert!(field_get.contains(&"future-settled-value-channel-contract"));
+    assert!(field_submit.contains(&"future-settled-value-channel-contract"));
+    assert!(field_submit.contains(&"future-callback-demand-effect-contract"));
+    assert!(field_schedule.contains(&"timer-scheduling-contract"));
+}
+
+#[test]
+fn java_local_and_this_field_receivers_require_exact_type_identity() {
+    let wildcard_local = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.*;\nclass Runtime { Object run() throws Exception { Future<String> future = make(); return future.get(); } }\n",
+        Lang::Java,
+        "future.get",
+    );
+    let reassigned_local = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.Future;\nclass Runtime { Object run() throws Exception { Future<String> future = make(); future = other(); return future.get(); } }\n",
+        Lang::Java,
+        "future.get",
+    );
+    let implicit_field = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.Future;\nclass Runtime { private Future<String> future; Object run() throws Exception { return future.get(); } }\n",
+        Lang::Java,
+        "future.get",
+    );
+    let non_this_field = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.Future;\nclass Runtime { private Future<String> future; Object run(Runtime other) throws Exception { return other.future.get(); } }\n",
+        Lang::Java,
+        "other.future.get",
+    );
+    let shadowed_field = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.Future;\nclass Runtime { static class Future<T> { Object get() { return null; } }\nprivate Future<String> future; Object run() throws Exception { return this.future.get(); } }\n",
+        Lang::Java,
+        "this.future.get",
+    );
+    let conflicting_field = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.Future;\nimport example.Future;\nclass Runtime { private Future<String> future; Object run() throws Exception { return this.future.get(); } }\n",
+        Lang::Java,
+        "this.future.get",
+    );
+    let duplicate_field = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.Future;\nclass Runtime { private Future<String> future; private Future<String> future; Object run() throws Exception { return this.future.get(); } }\n",
+        Lang::Java,
+        "this.future.get",
+    );
+    let wildcard_executor_local = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.*;\nclass Runtime { Object run() { ExecutorService executor = make(); return executor.submit(() -> work()); } }\n",
+        Lang::Java,
+        "executor.submit",
+    );
+    let conflicting_executor_field = runtime_boundary_evidence_for_lang_call(
+        "Runtime.java",
+        "import java.util.concurrent.ExecutorService;\nimport example.ExecutorService;\nclass Runtime { private ExecutorService executor; Object run() { return this.executor.submit(() -> work()); } }\n",
+        Lang::Java,
+        "this.executor.submit",
+    );
+
+    let assert_not = assert_missing_evidence_not_contains;
+    for (labels, surface) in [
+        (wildcard_local, "wildcard-only Java Future local"),
+        (reassigned_local, "reassigned Java Future local"),
+        (implicit_field, "implicit Java Future field"),
+        (non_this_field, "non-this Java Future field"),
+        (shadowed_field, "member-shadowed Java Future field"),
+        (conflicting_field, "conflicting Java Future field import"),
+        (duplicate_field, "duplicate Java Future field"),
+    ] {
+        assert_not(labels, "future-settled-value-channel-contract", surface);
+    }
+
+    for (labels, surface) in [
+        (wildcard_executor_local, "wildcard Executor local"),
+        (
+            conflicting_executor_field,
+            "conflicting Executor field import",
+        ),
+    ] {
+        assert_not(labels, "task-spawn-scheduling-contract", surface);
+    }
+}
+
+#[test]
 fn java_executor_future_receivers_require_exact_import_backed_domains() {
     let wildcard_future = runtime_boundary_evidence_for_lang_call(
         "Runtime.java",

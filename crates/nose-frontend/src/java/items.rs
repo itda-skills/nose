@@ -389,6 +389,7 @@ pub(super) fn java_is_nested_type_decl(kind: &str) -> bool {
 }
 pub(super) fn lower_field(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
+    let type_domain = java_receiver_declaration_domain(lo, node);
     // a field_declaration has one or more variable_declarators
     let mut assigns = Vec::new();
     for d in Lowering::named_children(node) {
@@ -398,7 +399,13 @@ pub(super) fn lower_field(lo: &mut Lowering, node: TsNode) -> NodeId {
         let dspan = lo.span(d);
         let lhs = d
             .child_by_field_name("name")
-            .map(|n| lo.var(lo.text(n), dspan))
+            .map(|n| {
+                let local = lo.text(n);
+                if let Some(domain) = type_domain.clone() {
+                    lo.record_binding_domain_resolution(dspan, local, domain);
+                }
+                lo.var(local, dspan)
+            })
             .unwrap_or_else(|| lo.empty_block(dspan));
         let rhs = d
             .child_by_field_name("value")
@@ -410,5 +417,28 @@ pub(super) fn lower_field(lo: &mut Lowering, node: TsNode) -> NodeId {
         assigns.pop().unwrap()
     } else {
         lo.add(NodeKind::Block, Payload::None, span, &assigns)
+    }
+}
+
+pub(super) fn java_receiver_declaration_domain(
+    lo: &Lowering,
+    node: TsNode,
+) -> Option<crate::type_domain_aliases::ResolvedTypeDomain> {
+    let type_node = node.child_by_field_name("type")?;
+    let domain = lo.type_domain_from_text_with_dependencies(lo.text(type_node))?;
+    java_runtime_receiver_domain_supported(domain.domain).then_some(domain)
+}
+
+pub(super) fn java_runtime_receiver_domain_supported(domain: nose_il::DomainEvidence) -> bool {
+    match domain {
+        nose_il::DomainEvidence::FutureLike => true,
+        nose_il::DomainEvidence::Nominal { type_hash } => [
+            "java.util.concurrent.Executor",
+            "java.util.concurrent.ExecutorService",
+            "java.util.concurrent.ScheduledExecutorService",
+        ]
+        .into_iter()
+        .any(|name| type_hash == stable_symbol_hash(name)),
+        _ => false,
     }
 }

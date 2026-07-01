@@ -349,6 +349,44 @@ fn assert_ts_and_java_param_domains(interner: &Interner) {
         executor_domains[0].dependencies, executor_import_ids,
         "Java exact-imported ExecutorService receiver domains should retain import evidence"
     );
+
+    let java_future_bindings = lower_fixture(
+        "FutureBindingDomain.java",
+        b"import java.util.concurrent.Future;\nclass T { private Future<String> field; void f() { Future<String> local = make(); } }\n",
+        Lang::Java,
+        interner,
+    );
+    let future_binding_import_ids = imported_binding_symbol_ids(
+        &java_future_bindings.evidence,
+        "java.util.concurrent",
+        "Future",
+    );
+    assert_eq!(future_binding_import_ids.len(), 1);
+    let future_binding_domains =
+        binding_domain_records(&java_future_bindings.evidence, DomainEvidence::FutureLike);
+    assert_eq!(future_binding_domains.len(), 2);
+    assert!(future_binding_domains
+        .iter()
+        .all(|record| record.dependencies == future_binding_import_ids));
+
+    let java_executor_binding = lower_fixture(
+        "ExecutorBindingDomain.java",
+        b"import java.util.concurrent.ExecutorService;\nclass T { void f() { ExecutorService local = make(); local.submit(() -> work()); } }\n",
+        Lang::Java,
+        interner,
+    );
+    let executor_binding_import_ids = imported_binding_symbol_ids(
+        &java_executor_binding.evidence,
+        "java.util.concurrent",
+        "ExecutorService",
+    );
+    let executor_binding_domains =
+        binding_domain_records(&java_executor_binding.evidence, executor_domain);
+    assert_eq!(executor_binding_domains.len(), 1);
+    assert_eq!(
+        executor_binding_domains[0].dependencies,
+        executor_binding_import_ids
+    );
 }
 
 fn assert_rust_result_param_domains(interner: &Interner) {

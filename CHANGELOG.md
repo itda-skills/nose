@@ -88,12 +88,12 @@ break.
   `CompletableFuture` mentions closed.
 - Added Java `Executor`/`Future` receiver-method reporting for
   exact-import-backed `CompletableFuture`, `Future`, `ScheduledFuture`,
-  `Executor`, `ExecutorService`, and `ScheduledExecutorService` parameter
-  receivers. These now map handle lifecycle, cancellation/liveness, executor
-  scheduling, timer/interval lifecycle, aggregate, callback/effect,
-  future-settled, and exception obligations without opening exact admission; the
-  120-repo audit
-  prices `858` reporting-supported receiver-method candidates while the broad
+  `Executor`, `ExecutorService`, and `ScheduledExecutorService` parameter,
+  local variable, and explicit `this.<field>` receivers. These now map handle
+  lifecycle, cancellation/liveness, executor scheduling, timer/interval
+  lifecycle, aggregate, callback/effect, future-settled, and exception
+  obligations without opening exact admission; the 120-repo audit remains at
+  `858` reporting-supported receiver-method candidates while the broad
   `Executor/Future` bucket remains closed.
 - Added Rust `block_on` Future bridge reporting. Qualified/import-backed
   `tokio_test::block_on` calls and proof-backed `Handle::current().block_on`
