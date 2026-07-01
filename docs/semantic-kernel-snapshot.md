@@ -1512,11 +1512,17 @@ this worktree because the required evidence is not yet modeled:
   `allOf`/`anyOf`, and exact-import-backed CompletionStage-style receiver
   continuations now report future settled-value, continuation, callback
   demand/effect, task scheduling, aggregate, and exception obligations when the
-  type or receiver identity is proven. Exact Future/CompletionStage recovery
-  remains closed: executor timing, callback identity/effects,
-  cancellation/liveness, exceptional completion, result channels, and
-  constructor semantics still need dependency-closed contracts before Java
-  future calls can converge with synchronous values or each other.
+  type or receiver identity is proven. Exact-import-backed Java
+  `CompletableFuture`, `Future`, `ScheduledFuture`, `Executor`,
+  `ExecutorService`, and `ScheduledExecutorService` parameter receivers now
+  reuse the same capability vocabulary for handle lifecycle,
+  cancellation/liveness, executor scheduling, timer/interval lifecycle,
+  aggregate, callback/effect, settled-value, and exception obligations. Exact
+  Future/CompletionStage/Executor recovery remains closed: wrapper aliases,
+  project-specific executors, callback
+  identity/effects, cancellation/liveness, exceptional completion, result
+  channels, and constructor semantics still need dependency-closed contracts
+  before Java future calls can converge with synchronous values or each other.
 - Go `go f(x)`, `defer f(x)`, `<-ch`, `ch <- x`, and `select` do not converge
   with ordinary calls, values, sends, or sequential control-flow variants until
   channel/goroutine/defer/select contracts can prove scheduling, blocking,

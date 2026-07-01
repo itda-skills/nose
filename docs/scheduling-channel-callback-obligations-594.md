@@ -150,6 +150,24 @@ async factories / `4` repos, `10` settlement continuations / `2` repos, and
 closed at `276` occurrences, and exact recovery still requires dependency-closed
 executor timing, callback identity/effects, exceptional completion, and result
 channel contracts.
+The follow-up [Java Executor/Future artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-java-executor-future-2026-07-01.v1.json)
+keeps exact admission closed while extending the same receiver-domain capability
+to exact-import-backed `CompletableFuture`, `Future`, `ScheduledFuture`,
+`Executor`, `ExecutorService`, and `ScheduledExecutorService` parameters.
+`CompletableFuture`/`Future` handle methods (`get`, `cancel`, `isCancelled`,
+and `isDone`) now report settled-value, exception, cancellation/liveness, and
+handle-lifecycle obligations; executor `execute`, `submit`, `invokeAll`,
+`invokeAny`, `schedule`, and repeating schedule calls now report task
+scheduling, timer/interval lifecycle, aggregate, callback/effect,
+future-settled, cancellation/liveness, and exception obligations according to
+the proven receiver type. The 120-repo pricing artifact adds `858`
+reporting-supported Java receiver-method candidates: `192` `Future.get`, `184`
+cancel/status-cancellation calls, `166` `Executor.execute`, `146`
+`ExecutorService.submit`, `106` `Future.isDone`, `21` scheduled timers, `20`
+repeating schedules, `19` `invokeAll`, and `4` `invokeAny`. The broad
+`Executor/Future` lexical bucket remains closed at `3,297` occurrences until
+wrapper aliases, project-specific executors, callback identity/effects, result
+channels, cancellation, and lifecycle contracts are dependency-closed.
 The follow-up [Go channel protocol pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json)
 keeps exact admission closed while making Go's source-backed protocol
 boundaries reportable at the same capability level. Channel sends now report

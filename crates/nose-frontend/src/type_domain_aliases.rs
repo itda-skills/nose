@@ -50,7 +50,8 @@ impl TypeDomainAliases {
         if alias.is_empty() {
             return;
         }
-        self.aliases.retain(|known| known.alias != alias);
+        self.aliases
+            .retain(|known| normalize_type_text(&known.alias) != alias);
     }
 
     pub(crate) fn resolve_text(&self, text: &str) -> Option<ResolvedTypeDomain> {

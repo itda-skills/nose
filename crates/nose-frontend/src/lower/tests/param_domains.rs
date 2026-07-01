@@ -286,6 +286,69 @@ fn assert_ts_and_java_param_domains(interner: &Interner) {
         future_domains[0].dependencies, future_import_ids,
         "Java exact-imported Future-like parameter domains should be import-backed"
     );
+
+    let java_future_handle = lower_fixture(
+        "FutureHandleDomain.java",
+        b"import java.util.concurrent.Future;\nclass T { void f(Future<String> future) {} }\n",
+        Lang::Java,
+        interner,
+    );
+    let future_handle_import_ids = imported_binding_symbol_ids(
+        &java_future_handle.evidence,
+        "java.util.concurrent",
+        "Future",
+    );
+    assert_eq!(future_handle_import_ids.len(), 1);
+    let future_handle_domains =
+        param_domain_records(&java_future_handle.evidence, DomainEvidence::FutureLike);
+    assert_eq!(future_handle_domains.len(), 1);
+    assert_eq!(
+        future_handle_domains[0].dependencies, future_handle_import_ids,
+        "Java exact-imported Future handle domains should be import-backed separately from CompletionStage"
+    );
+
+    let java_future_conflict = lower_fixture(
+        "FutureConflictDomain.java",
+        b"import java.util.concurrent.Future;\nimport example.Future;\nclass T { void f(Future<String> future) {} }\n",
+        Lang::Java,
+        interner,
+    );
+    let conflicted_future_import_ids = imported_binding_symbol_ids(
+        &java_future_conflict.evidence,
+        "java.util.concurrent",
+        "Future",
+    );
+    assert_eq!(conflicted_future_import_ids.len(), 1);
+    let conflicted_future_domains =
+        param_domain_records(&java_future_conflict.evidence, DomainEvidence::FutureLike);
+    assert!(
+        conflicted_future_domains
+            .iter()
+            .all(|record| record.dependencies != conflicted_future_import_ids),
+        "a conflicting Java Future import must clear stale import-backed FutureLike aliases"
+    );
+
+    let executor_domain = DomainEvidence::Nominal {
+        type_hash: stable_symbol_hash("java.util.concurrent.ExecutorService"),
+    };
+    let java_executor = lower_fixture(
+        "ExecutorDomain.java",
+        b"import java.util.concurrent.ExecutorService;\nclass T { void f(ExecutorService executor) {} }\n",
+        Lang::Java,
+        interner,
+    );
+    let executor_import_ids = imported_binding_symbol_ids(
+        &java_executor.evidence,
+        "java.util.concurrent",
+        "ExecutorService",
+    );
+    assert_eq!(executor_import_ids.len(), 1);
+    let executor_domains = param_domain_records(&java_executor.evidence, executor_domain);
+    assert_eq!(executor_domains.len(), 1);
+    assert_eq!(
+        executor_domains[0].dependencies, executor_import_ids,
+        "Java exact-imported ExecutorService receiver domains should retain import evidence"
+    );
 }
 
 fn assert_rust_result_param_domains(interner: &Interner) {

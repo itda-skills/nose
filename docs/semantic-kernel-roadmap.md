@@ -2128,12 +2128,16 @@ different APIs.
   fulfillment/settlement/exception continuation, and callback-demand/effect
   obligation labels, then uses Java import and receiver-domain evidence to
   report proof-backed static Future calls and exact-import-backed
-  CompletionStage-style continuations without opening exact admission. The
-  latest pricing artifact raises source prevalence from `143,178` to `143,188`
-  while splitting `40` lexical Java future reporting candidates out of the broad
-  `CompletableFuture` bucket and leaving `276` broad mentions closed until
-  scheduling, cancellation, lifecycle, result-channel, exception, and
-  callback/effect contracts are
+  CompletionStage-style continuations without opening exact admission. The Java
+  Executor/Future follow-up keeps using the same capability vocabulary for
+  exact-import-backed `CompletableFuture`, `Future`, `ScheduledFuture`,
+  `Executor`, `ExecutorService`, and `ScheduledExecutorService` parameter
+  receivers. The latest pricing artifact raises source prevalence from
+  `146,988` to `147,846` by adding `858` reporting-supported Java
+  receiver-method candidates while
+  leaving the broad `3,297`-occurrence `Executor/Future` lexical bucket closed
+  until wrapper aliases, project-specific executors, scheduling, cancellation,
+  lifecycle, result-channel, exception, and callback/effect contracts are
   dependency-closed.
 - The Go channel/goroutine/defer follow-up applies the same capability
   vocabulary to source-backed Go protocol boundaries. It does not add a Go-only
