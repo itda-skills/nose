@@ -7,7 +7,8 @@
     "ref": "origin/main",
     "sha": "6a58c16eea0cd037b1772a7d0318bdbd2a2f75a2"
   },
-  "implementation_commit": "f85ebcce4b7fc5c48a36b4f20e8678bc49d59770",
+  "implementation_commit": "e189b1f4aa2c996aa75cc187f3629df06e017df4",
+  "measured_source_commit": "524a6726156caa550a185e52544da41d365e55d1",
   "newly_aligned_reporting_supported_rows": [
     {
       "language": "ruby",
@@ -59,18 +60,18 @@
       "occurrences": 1996,
       "repos": 15
     },
-    "summary": "Ruby raise/fail now lower to the existing Throw boundary and rescue already lowers to Try. The broad lexical raise/rescue row is retained as a superseded overlap row so residual ordering moves to concrete operation rows."
+    "summary": "Unqualified Ruby raise now lowers to the existing Throw boundary and rescue already lowers to Try. The broad lexical raise/rescue row is retained as a superseded overlap row; the 12 broad-only occurrences are receiver-qualified raise overlaps that remain outside the concrete reporting-supported rows."
   },
   "exact_admission_policy": {
-    "semantic_admission_delta": 0,
+    "new_exact_admissions": 0,
     "status": "closed_until_evidence",
-    "summary": "The change reports Ruby exception-channel obligations and closes exact admission for throw/try runtime boundaries. It does not make raising/rescuing exact-equivalent to ordinary returns."
+    "summary": "The change reports Ruby exception-channel obligations and explicitly keeps Try/Throw runtime boundaries closed in strict exact. It does not make raising/rescuing exact-equivalent to ordinary returns."
   },
   "current_recall_loss": {
     "report": "target/recall-loss.ruby-exception-reporting.crates.json",
-    "total_units": 6991,
+    "total_units": 6993,
     "interpretable_units": 970,
-    "excluded_units": 6021,
+    "excluded_units": 6023,
     "admission_rejections": 812,
     "fingerprint_groups": 38,
     "false_merges": 0,
@@ -83,29 +84,29 @@
     "artifact": "bench/recall_loss/ruby-exception-reporting-query-regression-2026-07-02.v1.json",
     "repos": ["rubocop", "rspec-core", "sidekiq", "rack", "fastlane", "sinatra"],
     "iterations": 15,
-    "aggregate_baseline_median_ms": 2778.6843322683126,
-    "aggregate_current_median_ms": 2670.3669177368283,
-    "aggregate_delta_pct": -3.898154722852664,
+    "aggregate_baseline_median_ms": 3326.981251593679,
+    "aggregate_current_median_ms": 3354.0852514561266,
+    "aggregate_delta_pct": 0.814672455682283,
     "hashes_identical_by_repo": {
-      "fastlane": false,
+      "fastlane": true,
       "rack": true,
       "rspec-core": false,
-      "rubocop": true,
+      "rubocop": false,
       "sidekiq": true,
       "sinatra": true
     },
-    "intentional_output_changes": [
+    "output_changes": [
       {
-        "repo": "fastlane",
-        "baseline_families": 28,
-        "current_families": 34,
-        "summary": "New exact families are repeated Ruby raise guard clauses such as duplicate group_id, app_id, capability_type, profile_id, and sort_order checks."
+        "repo": "rubocop",
+        "baseline_families": 104,
+        "current_families": 104,
+        "summary": "Family count and bytes are stable; the hash changes because the repeated Ruby kind helper family reports value_nodes/mean_sem 6 -> 7 after raise is represented as a closed Throw boundary."
       },
       {
         "repo": "rspec-core",
         "baseline_families": 8,
-        "current_families": 9,
-        "summary": "The new exact family is the repeated '#let or #subject called without a block' raise guard."
+        "current_families": 8,
+        "summary": "Family count stays stable; the hash changes in one HTML hidden family whose representative moves from code elements to pre elements with static-attrs-only origin evidence."
       }
     ]
   },
@@ -121,9 +122,10 @@
     "python3 scripts/scheduling-lifecycle-boundary-audit.py --self-test",
     "cargo test -p nose-frontend ruby::tests -- --nocapture",
     "cargo test -p nose-cli --lib ruby_raise_reports_exception_channel_boundary -- --nocapture",
+    "cargo test -p nose-detect strict_exact_closes_ruby_exception_boundaries -- --nocapture",
     "cargo run -q -p nose-cli -- verify crates --max-violations 0 --recall-loss-report target/recall-loss.ruby-exception-reporting.crates.json",
     "python3 scripts/scheduling-lifecycle-boundary-audit.py --recall-loss-report target/recall-loss.ruby-exception-reporting.crates.json --output bench/recall_loss/scheduling-lifecycle-boundary-audit-ruby-exception-reporting-2026-07-02.v1.json --generated-on 2026-07-02",
-    "python3 scripts/query-regression-harness.py --baseline-binary /tmp/nose-ruby-exception-main/target/release/nose --current-binary target/release/nose --baseline-source-ref origin/main --current-source-ref ruby-exception-reporting-alignment --iterations 15 --repo rubocop --repo rspec-core --repo sidekiq --repo rack --repo fastlane --repo sinatra --output bench/recall_loss/ruby-exception-reporting-query-regression-2026-07-02.v1.json",
+    "python3 scripts/query-regression-harness.py --baseline-binary /tmp/nose-ruby-exception-main/target/release/nose --current-binary target/release/nose --baseline-source-ref origin/main --current-source-ref ruby-exception-reporting-alignment --current-source-sha 524a6726156caa550a185e52544da41d365e55d1 --iterations 15 --repo rubocop --repo rspec-core --repo sidekiq --repo rack --repo fastlane --repo sinatra --output bench/recall_loss/ruby-exception-reporting-query-regression-2026-07-02.v1.json",
     "scripts/check-docs.sh",
     "cargo fmt --check",
     "python3 scripts/check-file-lengths.py --ratchet-base origin/main",

@@ -6,11 +6,11 @@
     "baseline_source_ref": "origin/main",
     "baseline_source_sha": "6a58c16eea0cd037b1772a7d0318bdbd2a2f75a2",
     "current_binary": "/Users/ak/prjs/cc/nose/target/release/nose",
-    "current_binary_sha256": "a67b1efb6df12ee55ce8fd255c6655e48a8f6e0a5f9dd5fdb9ef1a332982ef4b",
+    "current_binary_sha256": "9fa50c8b2954de750db8c7c81893af97d4144a0dd2f44c549b89163b0c685e70",
     "current_source_ref": "ruby-exception-reporting-alignment",
-    "current_source_sha": "f85ebcce4b7fc5c48a36b4f20e8678bc49d59770",
+    "current_source_sha": "524a6726156caa550a185e52544da41d365e55d1",
     "harness": "scripts/query-regression-harness.py",
-    "harness_command": "scripts/query-regression-harness.py --baseline-binary /tmp/nose-ruby-exception-main/target/release/nose --current-binary target/release/nose --baseline-source-ref origin/main --current-source-ref ruby-exception-reporting-alignment --iterations 15 --repo rubocop --repo rspec-core --repo sidekiq --repo rack --repo fastlane --repo sinatra --output bench/recall_loss/ruby-exception-reporting-query-regression-2026-07-02.v1.json",
+    "harness_command": "scripts/query-regression-harness.py --baseline-binary /tmp/nose-ruby-exception-main/target/release/nose --current-binary target/release/nose --baseline-source-ref origin/main --current-source-ref ruby-exception-reporting-alignment --current-source-sha 524a6726156caa550a185e52544da41d365e55d1 --iterations 15 --repo rubocop --repo rspec-core --repo sidekiq --repo rack --repo fastlane --repo sinatra --output bench/recall_loss/ruby-exception-reporting-query-regression-2026-07-02.v1.json",
     "working_tree_status_before_measurement": ""
   },
   "repos": [
@@ -24,7 +24,7 @@
   "runs": [
     {
       "bytes": 138988,
-      "elapsed_ms": 520.5945409834385,
+      "elapsed_ms": 404.90299998782575,
       "families": 104,
       "iteration": 1,
       "label": "baseline",
@@ -33,7 +33,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 152.74933399632573,
+      "elapsed_ms": 121.71645811758935,
       "families": 8,
       "iteration": 1,
       "label": "baseline",
@@ -42,7 +42,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 81.81599993258715,
+      "elapsed_ms": 121.10237521119416,
       "families": 6,
       "iteration": 1,
       "label": "baseline",
@@ -51,7 +51,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 63.6939590331167,
+      "elapsed_ms": 86.19329193606973,
       "families": 3,
       "iteration": 1,
       "label": "baseline",
@@ -60,7 +60,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1514.5891250576824,
+      "elapsed_ms": 1830.82979102619,
       "families": 28,
       "iteration": 1,
       "label": "baseline",
@@ -69,7 +69,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 85.82950010895729,
+      "elapsed_ms": 100.48912488855422,
       "families": 1,
       "iteration": 1,
       "label": "baseline",
@@ -78,25 +78,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 409.23449979163706,
+      "elapsed_ms": 624.2268329951912,
       "families": 104,
       "iteration": 1,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 116.64083413779736,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 157.27370791137218,
+      "families": 8,
       "iteration": 1,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 117.34145786613226,
+      "elapsed_ms": 156.8943748716265,
       "families": 6,
       "iteration": 1,
       "label": "current",
@@ -105,7 +105,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 86.24837500974536,
+      "elapsed_ms": 93.71891594491899,
       "families": 3,
       "iteration": 1,
       "label": "current",
@@ -113,17 +113,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1581.4587499480695,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2162.690791999921,
+      "families": 28,
       "iteration": 1,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 65.37766708061099,
+      "elapsed_ms": 100.50462512299418,
       "families": 1,
       "iteration": 1,
       "label": "current",
@@ -132,25 +132,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 517.9152090568095,
+      "elapsed_ms": 510.87612519040704,
       "families": 104,
       "iteration": 2,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 136.7780000437051,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 209.23083391971886,
+      "families": 8,
       "iteration": 2,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 95.73941701091826,
+      "elapsed_ms": 114.90716598927975,
       "families": 6,
       "iteration": 2,
       "label": "current",
@@ -159,7 +159,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 86.22262487187982,
+      "elapsed_ms": 93.49970798939466,
       "families": 3,
       "iteration": 2,
       "label": "current",
@@ -167,17 +167,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1538.0744168069214,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2040.0640829466283,
+      "families": 28,
       "iteration": 2,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 81.67649991810322,
+      "elapsed_ms": 99.41566688939929,
       "families": 1,
       "iteration": 2,
       "label": "current",
@@ -186,7 +186,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 488.10795904137194,
+      "elapsed_ms": 517.3602919094265,
       "families": 104,
       "iteration": 2,
       "label": "baseline",
@@ -195,7 +195,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 123.90537490136921,
+      "elapsed_ms": 190.43275015428662,
       "families": 8,
       "iteration": 2,
       "label": "baseline",
@@ -204,7 +204,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 99.24429096281528,
+      "elapsed_ms": 111.13808280788362,
       "families": 6,
       "iteration": 2,
       "label": "baseline",
@@ -213,7 +213,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 94.67325010336936,
+      "elapsed_ms": 105.55825009942055,
       "families": 3,
       "iteration": 2,
       "label": "baseline",
@@ -222,7 +222,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1633.993374882266,
+      "elapsed_ms": 2091.6134170256555,
       "families": 28,
       "iteration": 2,
       "label": "baseline",
@@ -231,7 +231,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 68.50904203020036,
+      "elapsed_ms": 79.33358405716717,
       "families": 1,
       "iteration": 2,
       "label": "baseline",
@@ -240,7 +240,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 431.69983313418925,
+      "elapsed_ms": 562.4480410479009,
       "families": 104,
       "iteration": 3,
       "label": "baseline",
@@ -249,7 +249,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 160.32849997282028,
+      "elapsed_ms": 209.20141716487706,
       "families": 8,
       "iteration": 3,
       "label": "baseline",
@@ -258,7 +258,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 115.30849989503622,
+      "elapsed_ms": 144.4564580451697,
       "families": 6,
       "iteration": 3,
       "label": "baseline",
@@ -267,7 +267,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 87.28312514722347,
+      "elapsed_ms": 107.33108315616846,
       "families": 3,
       "iteration": 3,
       "label": "baseline",
@@ -276,7 +276,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1611.2462079618126,
+      "elapsed_ms": 2122.590082930401,
       "families": 28,
       "iteration": 3,
       "label": "baseline",
@@ -285,7 +285,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 82.35491602681577,
+      "elapsed_ms": 75.78937523066998,
       "families": 1,
       "iteration": 3,
       "label": "baseline",
@@ -294,25 +294,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 498.92075010575354,
+      "elapsed_ms": 623.5511670820415,
       "families": 104,
       "iteration": 3,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 118.29270888119936,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 164.8642080835998,
+      "families": 8,
       "iteration": 3,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 94.2119169048965,
+      "elapsed_ms": 119.08304202370346,
       "families": 6,
       "iteration": 3,
       "label": "current",
@@ -321,7 +321,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 99.76608399301767,
+      "elapsed_ms": 96.81570809334517,
       "families": 3,
       "iteration": 3,
       "label": "current",
@@ -329,17 +329,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1583.5396249312907,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2082.7935829292983,
+      "families": 28,
       "iteration": 3,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 66.14300003275275,
+      "elapsed_ms": 114.26791595295072,
       "families": 1,
       "iteration": 3,
       "label": "current",
@@ -348,25 +348,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 485.91983411461115,
+      "elapsed_ms": 617.4134591128677,
       "families": 104,
       "iteration": 4,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 141.2927908822894,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 182.14075011201203,
+      "families": 8,
       "iteration": 4,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 96.53137507848442,
+      "elapsed_ms": 108.13324991613626,
       "families": 6,
       "iteration": 4,
       "label": "current",
@@ -375,7 +375,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 79.60291602648795,
+      "elapsed_ms": 112.40758304484189,
       "families": 3,
       "iteration": 4,
       "label": "current",
@@ -383,17 +383,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1671.655457932502,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2261.3473751116544,
+      "families": 28,
       "iteration": 4,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 89.46725004352629,
+      "elapsed_ms": 101.26587492413819,
       "families": 1,
       "iteration": 4,
       "label": "current",
@@ -402,7 +402,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 490.0594169739634,
+      "elapsed_ms": 533.9424591511488,
       "families": 104,
       "iteration": 4,
       "label": "baseline",
@@ -411,7 +411,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 113.40216593816876,
+      "elapsed_ms": 223.47579197958112,
       "families": 8,
       "iteration": 4,
       "label": "baseline",
@@ -420,7 +420,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 79.50637489557266,
+      "elapsed_ms": 136.42545812763274,
       "families": 6,
       "iteration": 4,
       "label": "baseline",
@@ -429,7 +429,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 71.97620812803507,
+      "elapsed_ms": 106.50120908394456,
       "families": 3,
       "iteration": 4,
       "label": "baseline",
@@ -438,7 +438,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1752.3879590444267,
+      "elapsed_ms": 2193.174249958247,
       "families": 28,
       "iteration": 4,
       "label": "baseline",
@@ -447,7 +447,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 64.63179201819003,
+      "elapsed_ms": 77.04491703771055,
       "families": 1,
       "iteration": 4,
       "label": "baseline",
@@ -456,7 +456,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 480.24616693146527,
+      "elapsed_ms": 658.1928750965744,
       "families": 104,
       "iteration": 5,
       "label": "baseline",
@@ -465,7 +465,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 162.95458399690688,
+      "elapsed_ms": 181.21254118159413,
       "families": 8,
       "iteration": 5,
       "label": "baseline",
@@ -474,7 +474,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 99.27224996499717,
+      "elapsed_ms": 138.6728750076145,
       "families": 6,
       "iteration": 5,
       "label": "baseline",
@@ -483,7 +483,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 81.75704092718661,
+      "elapsed_ms": 97.42895909585059,
       "families": 3,
       "iteration": 5,
       "label": "baseline",
@@ -492,7 +492,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1697.3213329911232,
+      "elapsed_ms": 2189.5434588659555,
       "families": 28,
       "iteration": 5,
       "label": "baseline",
@@ -501,7 +501,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 86.94170787930489,
+      "elapsed_ms": 89.08995799720287,
       "families": 1,
       "iteration": 5,
       "label": "baseline",
@@ -510,25 +510,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 479.0580829139799,
+      "elapsed_ms": 635.7992079574615,
       "families": 104,
       "iteration": 5,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 146.78295911289752,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 156.97124996222556,
+      "families": 8,
       "iteration": 5,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 100.58404179289937,
+      "elapsed_ms": 119.3061659578234,
       "families": 6,
       "iteration": 5,
       "label": "current",
@@ -537,7 +537,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 84.2759998049587,
+      "elapsed_ms": 120.35291595384479,
       "families": 3,
       "iteration": 5,
       "label": "current",
@@ -545,17 +545,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1746.8800419010222,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2250.5405419506133,
+      "families": 28,
       "iteration": 5,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 111.21379095129669,
+      "elapsed_ms": 112.47091693803668,
       "families": 1,
       "iteration": 5,
       "label": "current",
@@ -564,25 +564,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 587.9798328969628,
+      "elapsed_ms": 554.9430830869824,
       "families": 104,
       "iteration": 6,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 133.31800000742078,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 218.80983281880617,
+      "families": 8,
       "iteration": 6,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 108.92941593192518,
+      "elapsed_ms": 128.14112496562302,
       "families": 6,
       "iteration": 6,
       "label": "current",
@@ -591,7 +591,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 86.49741695262492,
+      "elapsed_ms": 97.07920788787305,
       "families": 3,
       "iteration": 6,
       "label": "current",
@@ -599,17 +599,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1707.2546670679003,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2204.124125186354,
+      "families": 28,
       "iteration": 6,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 64.51724981889129,
+      "elapsed_ms": 81.85079088434577,
       "families": 1,
       "iteration": 6,
       "label": "current",
@@ -618,7 +618,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 590.3253750875592,
+      "elapsed_ms": 635.3474999777973,
       "families": 104,
       "iteration": 6,
       "label": "baseline",
@@ -627,7 +627,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 155.1304159220308,
+      "elapsed_ms": 208.1250420305878,
       "families": 8,
       "iteration": 6,
       "label": "baseline",
@@ -636,7 +636,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 100.23645800538361,
+      "elapsed_ms": 134.62829194031656,
       "families": 6,
       "iteration": 6,
       "label": "baseline",
@@ -645,7 +645,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 87.9738749936223,
+      "elapsed_ms": 103.08116697706282,
       "families": 3,
       "iteration": 6,
       "label": "baseline",
@@ -654,7 +654,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1785.089915851131,
+      "elapsed_ms": 2125.1297499984503,
       "families": 28,
       "iteration": 6,
       "label": "baseline",
@@ -663,7 +663,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 73.28308303840458,
+      "elapsed_ms": 97.11770806461573,
       "families": 1,
       "iteration": 6,
       "label": "baseline",
@@ -672,7 +672,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 503.0956659466028,
+      "elapsed_ms": 658.4287080913782,
       "families": 104,
       "iteration": 7,
       "label": "baseline",
@@ -681,7 +681,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 171.02833301760256,
+      "elapsed_ms": 186.350499978289,
       "families": 8,
       "iteration": 7,
       "label": "baseline",
@@ -690,7 +690,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 115.6962919048965,
+      "elapsed_ms": 133.86545912362635,
       "families": 6,
       "iteration": 7,
       "label": "baseline",
@@ -699,7 +699,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 103.31354197114706,
+      "elapsed_ms": 118.18516603671014,
       "families": 3,
       "iteration": 7,
       "label": "baseline",
@@ -708,7 +708,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1735.8057498931885,
+      "elapsed_ms": 2251.170708797872,
       "families": 28,
       "iteration": 7,
       "label": "baseline",
@@ -717,7 +717,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 87.87620812654495,
+      "elapsed_ms": 101.92279191687703,
       "families": 1,
       "iteration": 7,
       "label": "baseline",
@@ -726,25 +726,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 558.0206250306219,
+      "elapsed_ms": 559.0964169241488,
       "families": 104,
       "iteration": 7,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 172.0643751323223,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 182.17983283102512,
+      "families": 8,
       "iteration": 7,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 103.8053329102695,
+      "elapsed_ms": 147.15041709132493,
       "families": 6,
       "iteration": 7,
       "label": "current",
@@ -753,7 +753,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 101.41695803031325,
+      "elapsed_ms": 119.20287483371794,
       "families": 3,
       "iteration": 7,
       "label": "current",
@@ -761,17 +761,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1721.5661669615656,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2263.768707867712,
+      "families": 28,
       "iteration": 7,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 92.6617500372231,
+      "elapsed_ms": 76.21666695922613,
       "families": 1,
       "iteration": 7,
       "label": "current",
@@ -780,25 +780,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 610.8132919762284,
+      "elapsed_ms": 620.8587919827551,
       "families": 104,
       "iteration": 8,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 127.52058287151158,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 194.90391621366143,
+      "families": 8,
       "iteration": 8,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 93.66708295419812,
+      "elapsed_ms": 119.72104106098413,
       "families": 6,
       "iteration": 8,
       "label": "current",
@@ -807,7 +807,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 70.78816695138812,
+      "elapsed_ms": 107.03854192979634,
       "families": 3,
       "iteration": 8,
       "label": "current",
@@ -815,17 +815,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1818.5228749644011,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2167.2699579503387,
+      "families": 28,
       "iteration": 8,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 69.67899994924664,
+      "elapsed_ms": 106.62420885637403,
       "families": 1,
       "iteration": 8,
       "label": "current",
@@ -834,7 +834,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 574.965207837522,
+      "elapsed_ms": 645.2823327854276,
       "families": 104,
       "iteration": 8,
       "label": "baseline",
@@ -843,7 +843,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 157.81249990686774,
+      "elapsed_ms": 160.64095916226506,
       "families": 8,
       "iteration": 8,
       "label": "baseline",
@@ -852,7 +852,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 101.30654205568135,
+      "elapsed_ms": 159.39374989829957,
       "families": 6,
       "iteration": 8,
       "label": "baseline",
@@ -861,7 +861,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 87.51791692338884,
+      "elapsed_ms": 108.23179199360311,
       "families": 3,
       "iteration": 8,
       "label": "baseline",
@@ -870,7 +870,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1845.8951250649989,
+      "elapsed_ms": 2331.710333004594,
       "families": 28,
       "iteration": 8,
       "label": "baseline",
@@ -879,7 +879,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 66.28374988213181,
+      "elapsed_ms": 80.2926670294255,
       "families": 1,
       "iteration": 8,
       "label": "baseline",
@@ -888,7 +888,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 513.835959136486,
+      "elapsed_ms": 639.0081669669598,
       "families": 104,
       "iteration": 9,
       "label": "baseline",
@@ -897,7 +897,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 156.9780830759555,
+      "elapsed_ms": 191.2080841138959,
       "families": 8,
       "iteration": 9,
       "label": "baseline",
@@ -906,7 +906,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 106.18187487125397,
+      "elapsed_ms": 126.92804192192852,
       "families": 6,
       "iteration": 9,
       "label": "baseline",
@@ -915,7 +915,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 92.18270797282457,
+      "elapsed_ms": 114.25662506371737,
       "families": 3,
       "iteration": 9,
       "label": "baseline",
@@ -924,7 +924,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1906.7560411058366,
+      "elapsed_ms": 2201.3483338523656,
       "families": 28,
       "iteration": 9,
       "label": "baseline",
@@ -933,7 +933,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 69.43933316506445,
+      "elapsed_ms": 80.05616697482765,
       "families": 1,
       "iteration": 9,
       "label": "baseline",
@@ -942,25 +942,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 448.2509170193225,
+      "elapsed_ms": 669.7634998708963,
       "families": 104,
       "iteration": 9,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 180.69404200650752,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 189.86441707238555,
+      "families": 8,
       "iteration": 9,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 109.28595787845552,
+      "elapsed_ms": 110.92179198749363,
       "families": 6,
       "iteration": 9,
       "label": "current",
@@ -969,7 +969,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 88.8839999679476,
+      "elapsed_ms": 130.41849993169308,
       "families": 3,
       "iteration": 9,
       "label": "current",
@@ -977,17 +977,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1718.5873328708112,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2281.487707979977,
+      "families": 28,
       "iteration": 9,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 78.85154196992517,
+      "elapsed_ms": 108.26770798303187,
       "families": 1,
       "iteration": 9,
       "label": "current",
@@ -996,25 +996,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 565.3300411067903,
+      "elapsed_ms": 593.5069168917835,
       "families": 104,
       "iteration": 10,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 133.35454207845032,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 209.41500016488135,
+      "families": 8,
       "iteration": 10,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 94.12183403037488,
+      "elapsed_ms": 125.05754199810326,
       "families": 6,
       "iteration": 10,
       "label": "current",
@@ -1023,7 +1023,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 110.07604212500155,
+      "elapsed_ms": 97.82162494957447,
       "families": 3,
       "iteration": 10,
       "label": "current",
@@ -1031,17 +1031,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1806.8643331062049,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2205.263457959518,
+      "families": 28,
       "iteration": 10,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 69.83341695740819,
+      "elapsed_ms": 81.40437491238117,
       "families": 1,
       "iteration": 10,
       "label": "current",
@@ -1050,7 +1050,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 578.2174998894334,
+      "elapsed_ms": 670.5777498427778,
       "families": 104,
       "iteration": 10,
       "label": "baseline",
@@ -1059,7 +1059,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 145.8101668395102,
+      "elapsed_ms": 179.48974994942546,
       "families": 8,
       "iteration": 10,
       "label": "baseline",
@@ -1068,7 +1068,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 107.62525000609457,
+      "elapsed_ms": 143.77162512391806,
       "families": 6,
       "iteration": 10,
       "label": "baseline",
@@ -1077,7 +1077,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 79.9531249795109,
+      "elapsed_ms": 103.12874987721443,
       "families": 3,
       "iteration": 10,
       "label": "baseline",
@@ -1086,7 +1086,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1833.485416136682,
+      "elapsed_ms": 2314.482167130336,
       "families": 28,
       "iteration": 10,
       "label": "baseline",
@@ -1095,7 +1095,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 68.22291691787541,
+      "elapsed_ms": 114.78816694580019,
       "families": 1,
       "iteration": 10,
       "label": "baseline",
@@ -1104,7 +1104,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 525.0154591631144,
+      "elapsed_ms": 603.8280420470983,
       "families": 104,
       "iteration": 11,
       "label": "baseline",
@@ -1113,7 +1113,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 140.87124983780086,
+      "elapsed_ms": 205.240709008649,
       "families": 8,
       "iteration": 11,
       "label": "baseline",
@@ -1122,7 +1122,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 119.97579201124609,
+      "elapsed_ms": 130.24145807139575,
       "families": 6,
       "iteration": 11,
       "label": "baseline",
@@ -1131,7 +1131,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 100.30616587027907,
+      "elapsed_ms": 121.68341712094843,
       "families": 3,
       "iteration": 11,
       "label": "baseline",
@@ -1140,7 +1140,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1883.4691250231117,
+      "elapsed_ms": 2232.458416139707,
       "families": 28,
       "iteration": 11,
       "label": "baseline",
@@ -1149,7 +1149,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 70.20587497390807,
+      "elapsed_ms": 74.86424990929663,
       "families": 1,
       "iteration": 11,
       "label": "baseline",
@@ -1158,25 +1158,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 481.4730421639979,
+      "elapsed_ms": 615.1641251053661,
       "families": 104,
       "iteration": 11,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 175.41945888660848,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 205.57133294641972,
+      "families": 8,
       "iteration": 11,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 105.23041686974466,
+      "elapsed_ms": 139.6032499615103,
       "families": 6,
       "iteration": 11,
       "label": "current",
@@ -1185,7 +1185,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 85.98704100586474,
+      "elapsed_ms": 119.69370883889496,
       "families": 3,
       "iteration": 11,
       "label": "current",
@@ -1193,17 +1193,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1825.596584007144,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2181.442917091772,
+      "families": 28,
       "iteration": 11,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 94.62716593407094,
+      "elapsed_ms": 92.87725016474724,
       "families": 1,
       "iteration": 11,
       "label": "current",
@@ -1212,25 +1212,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 491.0299580078572,
+      "elapsed_ms": 635.6337910983711,
       "families": 104,
       "iteration": 12,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 175.81320903263986,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 172.38070792518556,
+      "families": 8,
       "iteration": 12,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 102.65541705302894,
+      "elapsed_ms": 159.53291696496308,
       "families": 6,
       "iteration": 12,
       "label": "current",
@@ -1239,7 +1239,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 88.23070907965302,
+      "elapsed_ms": 131.13004202023149,
       "families": 3,
       "iteration": 12,
       "label": "current",
@@ -1247,17 +1247,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1851.6720838379115,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2245.3977910336107,
+      "families": 28,
       "iteration": 12,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 91.28149994648993,
+      "elapsed_ms": 98.36533316411078,
       "families": 1,
       "iteration": 12,
       "label": "current",
@@ -1266,7 +1266,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 592.3959158826619,
+      "elapsed_ms": 597.9432910680771,
       "families": 104,
       "iteration": 12,
       "label": "baseline",
@@ -1275,7 +1275,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 123.98799997754395,
+      "elapsed_ms": 192.37658311612904,
       "families": 8,
       "iteration": 12,
       "label": "baseline",
@@ -1284,7 +1284,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 151.40400012023747,
+      "elapsed_ms": 138.3378750178963,
       "families": 6,
       "iteration": 12,
       "label": "baseline",
@@ -1293,7 +1293,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 100.63479212112725,
+      "elapsed_ms": 115.90283294208348,
       "families": 3,
       "iteration": 12,
       "label": "baseline",
@@ -1302,7 +1302,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1884.2594581656158,
+      "elapsed_ms": 2207.264000084251,
       "families": 28,
       "iteration": 12,
       "label": "baseline",
@@ -1311,7 +1311,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 81.83108316734433,
+      "elapsed_ms": 75.90679218992591,
       "families": 1,
       "iteration": 12,
       "label": "baseline",
@@ -1320,7 +1320,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 588.0736249964684,
+      "elapsed_ms": 609.568125102669,
       "families": 104,
       "iteration": 13,
       "label": "baseline",
@@ -1329,7 +1329,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 150.0910420436412,
+      "elapsed_ms": 184.1642081271857,
       "families": 8,
       "iteration": 13,
       "label": "baseline",
@@ -1338,7 +1338,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 126.95533293299377,
+      "elapsed_ms": 119.73316594958305,
       "families": 6,
       "iteration": 13,
       "label": "baseline",
@@ -1347,7 +1347,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 97.79033297672868,
+      "elapsed_ms": 97.33283310197294,
       "families": 3,
       "iteration": 13,
       "label": "baseline",
@@ -1356,7 +1356,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1904.1640418581665,
+      "elapsed_ms": 2253.6430000327528,
       "families": 28,
       "iteration": 13,
       "label": "baseline",
@@ -1365,7 +1365,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 105.31000001356006,
+      "elapsed_ms": 107.44866612367332,
       "families": 1,
       "iteration": 13,
       "label": "baseline",
@@ -1374,25 +1374,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 611.88037507236,
+      "elapsed_ms": 630.6539999786764,
       "families": 104,
       "iteration": 13,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 142.15383399277925,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 202.57929200306535,
+      "families": 8,
       "iteration": 13,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 127.28887493722141,
+      "elapsed_ms": 132.93466717004776,
       "families": 6,
       "iteration": 13,
       "label": "current",
@@ -1401,7 +1401,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 98.07391604408622,
+      "elapsed_ms": 107.42862499319017,
       "families": 3,
       "iteration": 13,
       "label": "current",
@@ -1409,17 +1409,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1810.676374938339,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2205.754042137414,
+      "families": 28,
       "iteration": 13,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 71.81133306585252,
+      "elapsed_ms": 94.39283283427358,
       "families": 1,
       "iteration": 13,
       "label": "current",
@@ -1428,25 +1428,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 605.3936660755426,
+      "elapsed_ms": 590.6499170232564,
       "families": 104,
       "iteration": 14,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 155.87183297611773,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 184.38287498429418,
+      "families": 8,
       "iteration": 14,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 113.35437512025237,
+      "elapsed_ms": 136.71233388595283,
       "families": 6,
       "iteration": 14,
       "label": "current",
@@ -1455,7 +1455,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 83.37387489154935,
+      "elapsed_ms": 115.33033405430615,
       "families": 3,
       "iteration": 14,
       "label": "current",
@@ -1463,17 +1463,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1922.751666046679,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2222.2167919389904,
+      "families": 28,
       "iteration": 14,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 68.39620787650347,
+      "elapsed_ms": 112.61316714808345,
       "families": 1,
       "iteration": 14,
       "label": "current",
@@ -1482,7 +1482,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 613.5638749692589,
+      "elapsed_ms": 661.7954999674112,
       "families": 104,
       "iteration": 14,
       "label": "baseline",
@@ -1491,7 +1491,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 166.05370794422925,
+      "elapsed_ms": 180.00712501816452,
       "families": 8,
       "iteration": 14,
       "label": "baseline",
@@ -1500,7 +1500,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 104.25204108469188,
+      "elapsed_ms": 114.74770889617503,
       "families": 6,
       "iteration": 14,
       "label": "baseline",
@@ -1509,7 +1509,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 82.65916700474918,
+      "elapsed_ms": 105.5386250372976,
       "families": 3,
       "iteration": 14,
       "label": "baseline",
@@ -1518,7 +1518,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1964.7789171431214,
+      "elapsed_ms": 2243.056375067681,
       "families": 28,
       "iteration": 14,
       "label": "baseline",
@@ -1527,7 +1527,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 97.7379169780761,
+      "elapsed_ms": 104.69158389605582,
       "families": 1,
       "iteration": 14,
       "label": "baseline",
@@ -1536,7 +1536,7 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 584.3573750462383,
+      "elapsed_ms": 563.2505419198424,
       "families": 104,
       "iteration": 15,
       "label": "baseline",
@@ -1545,7 +1545,7 @@
     },
     {
       "bytes": 35452,
-      "elapsed_ms": 170.00354221090674,
+      "elapsed_ms": 201.6484159976244,
       "families": 8,
       "iteration": 15,
       "label": "baseline",
@@ -1554,7 +1554,7 @@
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 98.48124999552965,
+      "elapsed_ms": 130.2955828141421,
       "families": 6,
       "iteration": 15,
       "label": "baseline",
@@ -1563,7 +1563,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 71.05041691102087,
+      "elapsed_ms": 101.99024993926287,
       "families": 3,
       "iteration": 15,
       "label": "baseline",
@@ -1572,7 +1572,7 @@
     },
     {
       "bytes": 71641,
-      "elapsed_ms": 1930.2377081476152,
+      "elapsed_ms": 2293.4672080446035,
       "families": 28,
       "iteration": 15,
       "label": "baseline",
@@ -1581,7 +1581,7 @@
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 65.64433313906193,
+      "elapsed_ms": 78.59375001862645,
       "families": 1,
       "iteration": 15,
       "label": "baseline",
@@ -1590,25 +1590,25 @@
     },
     {
       "bytes": 138988,
-      "elapsed_ms": 675.4708748776466,
+      "elapsed_ms": 613.4114998858422,
       "families": 104,
       "iteration": 15,
       "label": "current",
       "repo": "rubocop",
-      "sha256": "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+      "sha256": "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
     },
     {
-      "bytes": 36246,
-      "elapsed_ms": 171.13108304329216,
-      "families": 9,
+      "bytes": 35566,
+      "elapsed_ms": 202.942208154127,
+      "families": 8,
       "iteration": 15,
       "label": "current",
       "repo": "rspec-core",
-      "sha256": "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+      "sha256": "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
     },
     {
       "bytes": 32237,
-      "elapsed_ms": 104.45216600783169,
+      "elapsed_ms": 128.25662503018975,
       "families": 6,
       "iteration": 15,
       "label": "current",
@@ -1617,7 +1617,7 @@
     },
     {
       "bytes": 28232,
-      "elapsed_ms": 83.63816607743502,
+      "elapsed_ms": 112.74008289910853,
       "families": 3,
       "iteration": 15,
       "label": "current",
@@ -1625,17 +1625,17 @@
       "sha256": "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
     },
     {
-      "bytes": 76801,
-      "elapsed_ms": 1935.8829578850418,
-      "families": 34,
+      "bytes": 71641,
+      "elapsed_ms": 2221.1911249905825,
+      "families": 28,
       "iteration": 15,
       "label": "current",
       "repo": "fastlane",
-      "sha256": "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+      "sha256": "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
     },
     {
       "bytes": 27177,
-      "elapsed_ms": 73.36412486620247,
+      "elapsed_ms": 111.0206248704344,
       "families": 1,
       "iteration": 15,
       "label": "current",
@@ -1644,9 +1644,9 @@
     }
   ],
   "summary": {
-    "aggregate_baseline_median_ms": 2778.6843322683126,
-    "aggregate_current_median_ms": 2670.3669177368283,
-    "aggregate_delta_pct": -3.898154722852664,
+    "aggregate_baseline_median_ms": 3326.981251593679,
+    "aggregate_current_median_ms": 3354.0852514561266,
+    "aggregate_delta_pct": 0.814672455682283,
     "by_repo": {
       "fastlane": {
         "baseline": {
@@ -1659,19 +1659,19 @@
           "hashes": [
             "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
           ],
-          "median_ms": 1833.485416136682
+          "median_ms": 2207.264000084251
         },
         "current": {
           "bytes": [
-            76801
+            71641
           ],
           "families": [
-            34
+            28
           ],
           "hashes": [
-            "ab2f319e852806b8676033bdfbb81f072b8edd9124121007d23d553212b25565"
+            "2480bcc49a82e097ba3ba81d42820581c9ee766d850e32de89e4d094d12e6da8"
           ],
-          "median_ms": 1746.8800419010222
+          "median_ms": 2205.754042137414
         }
       },
       "rack": {
@@ -1685,7 +1685,7 @@
           "hashes": [
             "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
           ],
-          "median_ms": 87.51791692338884
+          "median_ms": 105.55825009942055
         },
         "current": {
           "bytes": [
@@ -1697,7 +1697,7 @@
           "hashes": [
             "0ba5ea138badceb1ba9d770cde1152d468fec82b51995b5ed067b9b5b0a6d345"
           ],
-          "median_ms": 86.24837500974536
+          "median_ms": 112.40758304484189
         }
       },
       "rspec-core": {
@@ -1711,19 +1711,19 @@
           "hashes": [
             "9a3a14775e369e095ff60d55a32ac7c09cf2ef16919fab22b0b3c862779523a2"
           ],
-          "median_ms": 155.1304159220308
+          "median_ms": 190.43275015428662
         },
         "current": {
           "bytes": [
-            36246
+            35566
           ],
           "families": [
-            9
+            8
           ],
           "hashes": [
-            "a1db47438e7e2531fd0b0ff083acc9a8519606f1f90cdb6bcb49c482c204fc73"
+            "d79cb4c42029903b2fe1f84847a84634f9cb737fae00dfd383ac4624d65c3714"
           ],
-          "median_ms": 142.15383399277925
+          "median_ms": 189.86441707238555
         }
       },
       "rubocop": {
@@ -1737,7 +1737,7 @@
           "hashes": [
             "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
           ],
-          "median_ms": 525.0154591631144
+          "median_ms": 609.568125102669
         },
         "current": {
           "bytes": [
@@ -1747,9 +1747,9 @@
             104
           ],
           "hashes": [
-            "20ed571d60a124512ade42c7c5bcbbfd1765d3eda9f3ea44275b1f4401bfecb4"
+            "9332e563fe0a6f730ad8cf4c42a90184b8ddac8294ea5e01b58320620e88f3af"
           ],
-          "median_ms": 517.9152090568095
+          "median_ms": 617.4134591128677
         }
       },
       "sidekiq": {
@@ -1763,7 +1763,7 @@
           "hashes": [
             "ccdbfe3c0dd364af6e521cc24b647de2786bce0ffcd9a94f067ec70e84a0eab5"
           ],
-          "median_ms": 104.25204108469188
+          "median_ms": 133.86545912362635
         },
         "current": {
           "bytes": [
@@ -1775,7 +1775,7 @@
           "hashes": [
             "ccdbfe3c0dd364af6e521cc24b647de2786bce0ffcd9a94f067ec70e84a0eab5"
           ],
-          "median_ms": 103.8053329102695
+          "median_ms": 128.14112496562302
         }
       },
       "sinatra": {
@@ -1789,7 +1789,7 @@
           "hashes": [
             "8da5b06729f145969c4fb3083af11ba78130db8b83bd7a384adc586d60485c39"
           ],
-          "median_ms": 73.28308303840458
+          "median_ms": 80.2926670294255
         },
         "current": {
           "bytes": [
@@ -1801,15 +1801,15 @@
           "hashes": [
             "8da5b06729f145969c4fb3083af11ba78130db8b83bd7a384adc586d60485c39"
           ],
-          "median_ms": 73.36412486620247
+          "median_ms": 100.50462512299418
         }
       }
     },
     "hashes_identical_by_repo": {
-      "fastlane": false,
+      "fastlane": true,
       "rack": true,
       "rspec-core": false,
-      "rubocop": true,
+      "rubocop": false,
       "sidekiq": true,
       "sinatra": true
     }

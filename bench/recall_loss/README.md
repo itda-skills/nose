@@ -305,6 +305,7 @@ python3 scripts/query-regression-harness.py \
   --current-binary target/release/nose \
   --baseline-source-ref origin/main \
   --current-source-ref ruby-exception-reporting-alignment \
+  --current-source-sha 524a6726156caa550a185e52544da41d365e55d1 \
   --iterations 15 \
   --repo rubocop --repo rspec-core --repo sidekiq \
   --repo rack --repo fastlane --repo sinatra \
@@ -1073,11 +1074,12 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   changed one same-location 3-member HTML family's representative label from
   `pre` to `code` while keeping the family count stable.
 - [scheduling-lifecycle-boundary-audit-ruby-exception-reporting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-ruby-exception-reporting-2026-07-02.v1.json)
-  records the Ruby exception-channel reporting audit. It splits the historical
-  broad `raise/rescue` bucket into `2,065` source-backed `raise` occurrences
-  and `1,933` source-backed `rescue` occurrences, both reporting-supported
-  closed-boundaries, while the broad `4,010`-occurrence overlap bucket remains
-  visible as superseded.
+  records the Ruby exception-channel reporting audit. It prices `2,065`
+  source-backed unqualified `raise` occurrences and `1,933` source-backed
+  `rescue` occurrences as reporting-supported closed-boundaries, while the
+  broad `4,010`-occurrence `raise/rescue` overlap bucket remains visible as
+  superseded. The 12 broad-only occurrences are receiver-qualified `.raise`
+  overlaps that stay outside the concrete reporting-supported rows.
 - [ruby-exception-reporting-2026-07-02.v1.json](ruby-exception-reporting-2026-07-02.v1.json)
   records the compact closeout for the same slice. Reporting-supported
   closed-boundary rows rise to `94,977` occurrences across `63` rows, exact
@@ -1085,11 +1087,12 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   non-JS actionable closed boundary at `1,996` occurrences.
 - [ruby-exception-reporting-query-regression-2026-07-02.v1.json](ruby-exception-reporting-query-regression-2026-07-02.v1.json)
   records the Ruby-heavy product query regression. The 6-repo alternating r15
-  aggregate median was `2778.68ms -> 2670.37ms` (`-3.90%`). Output hashes stay
-  identical on `rack`, `rubocop`, `sidekiq`, and `sinatra`; `fastlane`
-  increases from `28` to `34` families and `rspec-core` from `8` to `9`
-  because repeated Ruby `raise` guard clauses are now preserved as exact
-  exception-boundary clones.
+  aggregate median was `3326.98ms -> 3354.09ms` (`+0.81%`). Family counts stay
+  stable across all 6 repos. Output hashes stay identical on `fastlane`,
+  `rack`, `sidekiq`, and `sinatra`; `rubocop` changes only
+  `value_nodes`/`mean_sem` metadata on one Ruby helper family, and `rspec-core`
+  changes one stable-count HTML hidden family's representative from `code` to
+  `pre` with `static-attrs-only` origin evidence.
 - [scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json)
   records the Python/Rust async runtime scope-shadowing hardening. It keeps
   exact admission closed while making unrelated local shadows in other
