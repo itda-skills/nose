@@ -125,6 +125,10 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
   `try!`, and `for try await`. It newly aligns `17,970` source-prevalence
   occurrences across `18` repos while keeping exact admission closed and the
   checked `crates` gate at `0` false merges.
+- [Swift exception residual accounting](../bench/recall_loss/swift-exception-residual-accounting-2026-07-02.v1.json) records the follow-up tracking correction for the historical `throws/try`
+  lexical bucket. The broad `26,608`-occurrence row is now a superseded overlap
+  row, so the loop treats source-backed Swift `try`, throwing functions, and
+  throwing closures as the actionable exception-channel surfaces.
 - [Rust block_on future-drive obligation reporting](../bench/recall_loss/rust-block-on-future-drive-obligation-reporting-2026-07-01.v1.json) records the Rust Future bridge follow-up: qualified/import-backed `tokio_test::block_on` plus proof-backed `Handle::current().block_on` and inline `Runtime`/`Builder` receiver chains now report `future-drive-scheduling-contract` plus `future-settled-value-channel-contract`. Exact admission remains closed.
 - [Rust local runtime provenance](../bench/recall_loss/rust-block-on-local-runtime-provenance-2026-07-01.v1.json) extends that reporting to local variables whose last visible assignment is proof-backed `Handle::current()`, `Runtime::new().unwrap()/expect/?`, or `Builder::new_*().build().unwrap()/expect/?`; selector-only receivers, parameters, fields, wrappers, and `map_err(...)?` construction remained closed in that slice.
 - [Rust parameter runtime provenance](../bench/recall_loss/rust-block-on-parameter-runtime-provenance-2026-07-01.v1.json) extends the same reporting to nominal `tokio::runtime::Runtime` and `tokio::runtime::Handle` parameter receivers when the type is fully qualified or backed by scope-visible exact imported-binding evidence. Exact admission remains closed; in that slice, struct fields, nested brace-import parameter types, child-module parameters with only parent-module imports, type aliases, wrappers, and `map_err(...)?` construction remained closed.

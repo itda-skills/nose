@@ -225,6 +225,19 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-07-02
 ```
 
+Build the Swift exception residual-accounting audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.swift-exception-residual-accounting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.swift-exception-residual-accounting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.swift-exception-residual-accounting.json \
+  --generated-on 2026-07-02
+```
+
 Build the Rust async closure source-protocol audit with:
 
 ```sh
@@ -926,6 +939,16 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   reporting-supported closed-boundary rows to `88,461` occurrences across
   `58` rows while the checked `crates` gate remains at `0` false merges and
   `0` canon preservation violations.
+- [scheduling-lifecycle-boundary-audit-swift-exception-residual-accounting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-swift-exception-residual-accounting-2026-07-02.v1.json)
+  records the Swift exception residual-accounting correction. The historical
+  `throws/try` lexical bucket remains visible at `26,608` occurrences across
+  `18` repos but is marked as a superseded overlap bucket rather than an
+  actionable closed-boundary.
+- [swift-exception-residual-accounting-2026-07-02.v1.json](swift-exception-residual-accounting-2026-07-02.v1.json)
+  records the compact closeout for the same correction. Reporting-supported
+  totals remain `88,461` occurrences across `58` rows; the measured change is
+  that Ruby `raise/rescue` at `4,010` occurrences becomes the largest non-JS
+  actionable closed exception-channel bucket.
 - [rust-async-closure-source-protocol-2026-07-01.v1.json](rust-async-closure-source-protocol-2026-07-01.v1.json)
   records the Rust async closure source-protocol parity slice. It reuses
   `AsyncFunction` for `async |...|` and `async move |...|` closures without
