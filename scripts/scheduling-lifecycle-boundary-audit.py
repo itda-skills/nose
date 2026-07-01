@@ -804,6 +804,13 @@ def self_test() -> None:
         "record Other(int value) {}\n"
     )
     assert top_level_types == {"Top", "Other"}
+    assert (
+        java_package_key(
+            Path("src2/p/Runtime.java"),
+            "package p;\nimport java.util.concurrent.*;\nclass Runtime {}\n",
+        )
+        == "package:p"
+    )
 
     swift_throwing = count_file(
         "func f() throws -> Int { 1 }\n"
@@ -2093,8 +2100,8 @@ def java_top_level_type_names(text: str) -> set[str]:
     return names
 
 
-def java_package_local_types_by_dir(root: Path) -> dict[Path, set[str]]:
-    by_dir: dict[Path, set[str]] = defaultdict(set)
+def java_package_local_types_by_package(root: Path) -> dict[str, set[str]]:
+    by_package: dict[str, set[str]] = defaultdict(set)
     for path in source_files(root):
         if language_for_path(path) != "java":
             continue
@@ -2104,8 +2111,25 @@ def java_package_local_types_by_dir(root: Path) -> dict[Path, set[str]]:
             continue
         names = java_top_level_type_names(text)
         if names:
-            by_dir[path.parent].update(names)
-    return by_dir
+            by_package[java_package_key(path, text)].update(names)
+    return by_package
+
+
+def java_package_key(path: Path, text: str) -> str:
+    declared = java_declared_package_name(text)
+    if declared:
+        return f"package:{declared}"
+    return f"dir:{path.parent}"
+
+
+def java_declared_package_name(text: str) -> str | None:
+    match = re.search(
+        r"\bpackage\s+([A-Za-z_$][A-Za-z0-9_$]*(?:\s*\.\s*[A-Za-z_$][A-Za-z0-9_$]*)*)\s*;",
+        text,
+    )
+    if not match:
+        return None
+    return re.sub(r"\s+", "", match.group(1))
 
 
 def summarize(args: argparse.Namespace) -> dict[str, Any]:
@@ -2126,7 +2150,7 @@ def summarize(args: argparse.Namespace) -> dict[str, Any]:
     for repo in repos:
         repo_id = repo["id"]
         root = Path(args.repos_root) / repo_id
-        java_dir_types = java_package_local_types_by_dir(root)
+        java_package_types = java_package_local_types_by_package(root)
         for path in source_files(root):
             language = language_for_path(path)
             if language is None:
@@ -2139,7 +2163,9 @@ def summarize(args: argparse.Namespace) -> dict[str, Any]:
             for pattern, count in count_file(
                 text,
                 language,
-                java_dir_types.get(path.parent) if language == "java" else None,
+                java_package_types.get(java_package_key(path, mask_comments_and_strings(text)))
+                if language == "java"
+                else None,
             ).items():
                 by_pattern[pattern][repo_id] += count
                 file_counts[pattern][f"{repo_id}/{rel}"] += count

@@ -47,13 +47,14 @@ class Runtime {\n\
 fn recall_loss_report_rejects_same_package_java_completable_future_wildcard_shadow() {
     let project =
         TempProject::new("recall_loss_java_completable_future_constructor_wildcard_shadow");
-    fs::create_dir_all(project.path().join("p")).expect("package dir");
+    fs::create_dir_all(project.path().join("src1/p")).expect("package dir");
+    fs::create_dir_all(project.path().join("src2/p")).expect("package dir");
     project.write(
-        "p/CompletableFuture.java",
+        "src1/p/CompletableFuture.java",
         "package p;\nclass CompletableFuture<T> {}\n",
     );
     project.write(
-        "p/Runtime.java",
+        "src2/p/Runtime.java",
         "package p;\n\
 import java.util.concurrent.*;\n\
 class Runtime {\n\

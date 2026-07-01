@@ -132,7 +132,7 @@ fn java_completable_future_import_proven(
         receiver,
         COMPLETABLE_FUTURE_TYPE,
         context,
-    ) || java_wildcard_import_proves_completable_future(il, call, context)
+    ) || java_wildcard_import_proves_completable_future(il, interner, call, context)
 }
 
 fn java_imported_binding_symbol_usable_for_type(
@@ -166,7 +166,7 @@ fn java_imported_binding_symbol_usable_for_type(
             && record.provenance.emitter == EvidenceEmitter::Builtin
             && il.evidence_dependencies_asserted(record)
             && (!java_imported_binding_is_wildcard_backed(il, record)
-                || !context.java_package_local_type_is_visible_for_file(type_name, &il.meta.path))
+                || !context.java_package_local_type_is_visible_in_file(il, interner, type_name))
     })
 }
 
@@ -237,10 +237,11 @@ fn java_imported_completable_future_at_span(il: &nose_il::Il, span: Span) -> boo
 
 fn java_wildcard_import_proves_completable_future(
     il: &nose_il::Il,
+    interner: &Interner,
     call: NodeId,
     context: &crate::verify_admission::AdmissionContext,
 ) -> bool {
-    if context.java_package_local_type_is_visible_for_file(COMPLETABLE_FUTURE_TYPE, &il.meta.path) {
+    if context.java_package_local_type_is_visible_in_file(il, interner, COMPLETABLE_FUTURE_TYPE) {
         return false;
     }
     let call_span = il.node(call).span;

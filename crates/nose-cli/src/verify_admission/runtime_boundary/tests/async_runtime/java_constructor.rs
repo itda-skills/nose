@@ -69,6 +69,22 @@ fn java_completable_future_constructor_wildcard_import_respects_same_package_typ
         "q/Runtime.java",
         "CompletableFuture",
     );
+    let split_source_root_shadow = runtime_boundary_evidence_for_corpus_call(
+        &[
+            (
+                "src1/p/CompletableFuture.java",
+                "package p;\nclass CompletableFuture<T> {}\n",
+                Lang::Java,
+            ),
+            (
+                "src2/p/Runtime.java",
+                "package p;\nimport java.util.concurrent.*;\nclass Runtime { Object run() { return new CompletableFuture<String>(); } }\n",
+                Lang::Java,
+            ),
+        ],
+        "src2/p/Runtime.java",
+        "CompletableFuture",
+    );
 
     for label in [
         "future-settled-value-channel-contract",
@@ -80,6 +96,11 @@ fn java_completable_future_constructor_wildcard_import_respects_same_package_typ
             same_package_shadow.clone(),
             label,
             "same-package Java CompletableFuture wildcard shadow",
+        );
+        assert_missing_evidence_not_contains(
+            split_source_root_shadow.clone(),
+            label,
+            "same-package Java CompletableFuture wildcard shadow across source roots",
         );
         assert_missing_evidence_contains(
             unrelated_package_shadow.clone(),

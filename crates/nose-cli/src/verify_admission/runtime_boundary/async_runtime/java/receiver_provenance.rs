@@ -125,7 +125,7 @@ fn java_concurrent_import_usable_at_span(
     !java_type_name_shadowed_at_span(il, interner, span, type_name)
         && !import_conflicts::type_import_conflicted_at_span(il, span, type_name)
         && (!super::java_imported_binding_is_wildcard_backed(il, import_record)
-            || !context.java_package_local_type_is_visible_for_file(type_name, &il.meta.path))
+            || !context.java_package_local_type_is_visible_in_file(il, interner, type_name))
 }
 
 fn receiver_domain_record<'a>(

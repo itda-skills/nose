@@ -15,7 +15,7 @@ use runtime_boundary::runtime_boundary_missing_evidence_with_context;
 pub(crate) struct AdmissionContext {
     python_local_modules: Vec<PythonLocalModule>,
     rust_local_runtime_roots_by_file: HashMap<String, HashSet<String>>,
-    java_top_level_types_by_dir: HashMap<String, HashSet<String>>,
+    java_top_level_types_by_package: HashMap<String, HashSet<String>>,
     swift_visible_names: HashSet<String>,
 }
 
@@ -63,13 +63,15 @@ impl AdmissionContext {
             .is_some_and(|roots| roots.contains(root))
     }
 
-    pub(crate) fn java_package_local_type_is_visible_for_file(
+    pub(crate) fn java_package_local_type_is_visible_in_file(
         &self,
+        il: &nose_il::Il,
+        interner: &Interner,
         type_name: &str,
-        file_path: &str,
     ) -> bool {
-        self.java_top_level_types_by_dir
-            .get(&parent_dir(file_path))
+        let key = java_package_key(il, interner);
+        self.java_top_level_types_by_package
+            .get(&key)
             .is_some_and(|types| types.contains(type_name))
     }
 
@@ -97,14 +99,14 @@ impl AdmissionContext {
     }
 
     fn collect_java_top_level_types(&mut self, il: &nose_il::Il, interner: &Interner) {
-        let dir = parent_dir(&il.meta.path);
+        let package_key = java_package_key(il, interner);
         for unit in &il.units {
             if unit.kind != UnitKind::Class || il.span_inside_local_scope(il.node(unit.root).span) {
                 continue;
             }
             if let Some(name) = unit.name {
-                self.java_top_level_types_by_dir
-                    .entry(dir.clone())
+                self.java_top_level_types_by_package
+                    .entry(package_key.clone())
                     .or_default()
                     .insert(interner.resolve(name).to_string());
             }
@@ -155,6 +157,32 @@ fn path_to_string(path: &Path) -> String {
 
 fn path_is_same_or_ancestor(ancestor: &str, path: &str) -> bool {
     ancestor.is_empty() || Path::new(path).starts_with(Path::new(ancestor))
+}
+
+fn java_package_key(il: &nose_il::Il, interner: &Interner) -> String {
+    java_declared_package_name(il, interner)
+        .map(|package| format!("package:{package}"))
+        .unwrap_or_else(|| java_package_key_for_path(&il.meta.path))
+}
+
+fn java_package_key_for_path(file_path: &str) -> String {
+    format!("dir:{}", parent_dir(file_path))
+}
+
+fn java_declared_package_name(il: &nose_il::Il, interner: &Interner) -> Option<String> {
+    let package = il.children(il.root).first().copied()?;
+    if il.kind(package) != nose_il::NodeKind::Seq {
+        return None;
+    }
+    let mut parts = Vec::new();
+    for &child in il.children(package) {
+        let name = node_exact_name(il, interner, child)?;
+        if name == "*" {
+            return None;
+        }
+        parts.push(name);
+    }
+    (!parts.is_empty()).then(|| parts.join("."))
 }
 
 fn names_defined_in_il(il: &nose_il::Il, interner: &Interner) -> HashSet<String> {

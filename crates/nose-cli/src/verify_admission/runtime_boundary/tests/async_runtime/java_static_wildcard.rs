@@ -136,4 +136,27 @@ fn java_completable_future_wildcard_import_respects_same_package_type_shadow() {
         "task-spawn-scheduling-contract",
         "same-package Java CompletableFuture wildcard shadow",
     );
+
+    let split_source_root = runtime_boundary_evidence_for_corpus_call(
+        &[
+            (
+                "src1/p/CompletableFuture.java",
+                "package p;\nclass CompletableFuture { static Object runAsync(Object work) { return work; } }\n",
+                Lang::Java,
+            ),
+            (
+                "src2/p/Runtime.java",
+                "package p;\nimport java.util.concurrent.*;\nclass Runtime { Object run() { return CompletableFuture.runAsync(work()); } }\n",
+                Lang::Java,
+            ),
+        ],
+        "src2/p/Runtime.java",
+        "CompletableFuture.runAsync",
+    );
+
+    assert_missing_evidence_not_contains(
+        split_source_root,
+        "task-spawn-scheduling-contract",
+        "same-package Java CompletableFuture wildcard shadow across source roots",
+    );
 }
