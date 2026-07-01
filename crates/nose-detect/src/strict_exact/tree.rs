@@ -48,7 +48,12 @@ pub(crate) fn strict_exact_safe_tree(
         return false;
     }
     match il.kind(node) {
-        NodeKind::Raw | NodeKind::Try | NodeKind::Throw => false,
+        NodeKind::Raw => false,
+        // Ruby `raise`/`rescue` exact recovery needs exception propagation,
+        // rescue matching, ensure ordering, and non-local-control semantics.
+        // Keep those boundaries closed without disabling existing exact
+        // fragment contracts for other languages' direct throw/exit shapes.
+        NodeKind::Try | NodeKind::Throw if il.meta.lang == Lang::Ruby => false,
         // Declarative (CSS) units are constant, deterministic, effect-free data. A rule
         // is exact-safe iff it has no unparsed (`Raw`) construct, so recurse into the
         // rule but treat a declaration / selector (whose leaves are constant value
