@@ -103,6 +103,18 @@ fn swift_throwing_callables_report_exception_obligations() {
 }
 
 #[test]
+fn swift_try_expressions_report_exception_obligations() {
+    let labels = missing_evidence_for_raw_tag(
+        "try.swift",
+        "func run() async throws {\n  let value = try load()\n  let optional = try? maybe()\n  let forced = try! definitely()\n}\n",
+        Lang::Swift,
+        "try",
+    );
+
+    assert!(labels.contains(&"exception-channel-contract"));
+}
+
+#[test]
 fn swift_structured_concurrency_rejects_local_runtime_shadows() {
     let swift_shadowed_sleep = runtime_boundary_evidence_for_lang_call(
         "runtime.swift",

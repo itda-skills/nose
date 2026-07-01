@@ -113,6 +113,44 @@ func risky(_ key: String) throws -> Int {
 }
 
 #[test]
+fn try_expressions_preserve_source_backed_exception_boundaries() {
+    let (il, interner) = il_with_interner(
+        r#"
+func run() async throws {
+  let value = try load()
+  let optional = try? maybe()
+  let forced = try! definitely()
+}
+"#,
+    );
+    let raw = raw_names(&il, &interner);
+    let try_nodes: Vec<NodeId> = il
+        .nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, node)| match node.payload {
+            Payload::Name(sym) if node.kind == NodeKind::Raw && interner.resolve(sym) == "try" => {
+                Some(NodeId(idx as u32))
+            }
+            _ => None,
+        })
+        .collect();
+
+    assert_eq!(
+        try_nodes.len(),
+        3,
+        "try, try?, and try! should each remain explicit TryPropagation boundaries: {raw:?}"
+    );
+    for node in try_nodes {
+        assert_eq!(
+            nose_semantics::source_protocol_at_node(&il, node),
+            Some(SourceProtocolKind::TryPropagation),
+            "each try boundary should carry source protocol evidence"
+        );
+    }
+}
+
+#[test]
 fn typed_throwing_function_preserves_source_backed_exception_boundary() {
     let (il, interner) = il_with_interner(
         r#"

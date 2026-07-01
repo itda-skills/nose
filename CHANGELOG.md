@@ -100,6 +100,11 @@ break.
   runtime-boundary reporting. This moves `19,144` non-JS async source-protocol
   occurrences to reporting-supported closed-boundaries while exact admission
   remains closed.
+- Added Swift `try` expression reporting alignment for source-backed
+  `TryPropagation` boundaries, including `try`, `try?`, `try!`, and
+  `for try await`. The 120-repo audit moves `17,970` Swift try-expression
+  occurrences to reporting-supported closed-boundaries while exact admission
+  remains closed.
 - Added Java `Executor`/`Future` receiver-method reporting for
   exact- or wildcard-import-backed `CompletableFuture`, `Future`,
   `ScheduledFuture`, `Executor`, `ExecutorService`, and
