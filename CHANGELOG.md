@@ -220,6 +220,16 @@ break.
   async-aggregate reporting-supported rows to `286` occurrences, and keeps the
   checked `crates` gate at `0` false merges and `0` canon preservation
   violations.
+- Added Swift await and Java settled-factory reporting alignment. Swift
+  `await` and Java `CompletableFuture.completedFuture`/`failedFuture` now align
+  with existing source-protocol/static-runtime reporting in the scheduling
+  lifecycle audit. Exact admission remains closed; the slice newly marks
+  `8,703` source-prevalence occurrences reporting-supported, brings all
+  reporting-supported closed-boundary rows to `51,301` occurrences across `50`
+  rows, and keeps the checked `crates` gate at `0` false merges and `0` canon
+  preservation violations. The broad Java `CompletableFuture` and looser
+  receiver-settlement buckets remain deferred until the audit counters are split
+  to match product proof.
 - Added non-JS async protocol near-channel mirror support. The dual-view async
   protocol capability now covers `await`, async-function boundaries, and Rust
   async blocks in near/witness builds, so Rust `async fn`/`.await` and Swift
