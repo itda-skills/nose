@@ -24,8 +24,9 @@ its [RUBRIC.md](../bench/labels/RUBRIC.md)). The corpus has a **dev / held-out**
 so a change has to generalize, not just fit the dev repos; tune only on dev.
 
 Swift support adds 15 pinned Swift repositories to `bench/goldens/corpus.json` for
-lowering/oracle/corpus coverage (120 repos total). The v5 product labelset remains frozen
-at 105 repos; Swift's initial LLM-judge add-on golden is
+lowering/oracle/corpus coverage, and C# support adds 15 more on the same pattern
+(135 repos total; C# splits dev 8 / held-out 7, mirroring Swift). The v5 product
+labelset remains frozen at 105 repos; Swift's initial LLM-judge add-on golden is
 `bench/labels/swift_families.v1.json` and is tied to the executable Type-4 Swift probes.
 The checked-in prune manifest is still the v5 product-corpus artifact; reconstructing the
 expanded corpus rewrites it for that checkout until the next product-labelset refresh

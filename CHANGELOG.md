@@ -23,6 +23,11 @@ break.
   language packs. On real-world corpora the lowering gap is ≲0.7% of IL nodes
   (dominated by tree-sitter parse errors on `#if` inside interface bodies); richer
   stdlib semantics remain honest `Raw` gaps for follow-up.
+- Pinned 15 C# repositories into the benchmark corpus (`bench/goldens/corpus.json`,
+  135 repos total; dev 8 / held-out 7 mirroring the Swift split) and taught the
+  corpus pruner that `.cs` is a source suffix. The `nose verify` soundness oracle
+  interprets C# units as-is (the interpreter is IL-level): all 15 pinned repos
+  report zero false merges under `--max-violations 0`.
 - Desugared C# LINQ query syntax to the spec's method-syntax chain
   (`from`/`where`/`orderby`/`select`/`group by` → `.Where()`/`.OrderBy()`/
   `.Select()`/`.GroupBy()`), so the two spellings converge; queries with

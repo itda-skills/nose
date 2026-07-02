@@ -30,6 +30,7 @@ SOURCE_SUFFIXES = (
     ".cc",
     ".cjs",
     ".cpp",
+    ".cs",
     ".cts",
     ".cxx",
     ".go",

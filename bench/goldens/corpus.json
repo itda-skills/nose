@@ -13,6 +13,16 @@
       "split": "dev"
     },
     {
+      "id": "alamofire",
+      "name": "Alamofire/Alamofire",
+      "primary_language": "Swift",
+      "domain": "HTTP networking",
+      "url": "https://github.com/Alamofire/Alamofire.git",
+      "commit": "7595cbcf59809f9977c5f6378500de2ad73b7ddb",
+      "source_file_count": 98,
+      "split": "dev"
+    },
+    {
       "id": "antlr4",
       "name": "antlr/antlr4",
       "primary_language": "Java",
@@ -43,6 +53,16 @@
       "split": "heldout"
     },
     {
+      "id": "automapper",
+      "name": "AutoMapper/AutoMapper",
+      "primary_language": "C#",
+      "domain": "object-object mapping",
+      "url": "https://github.com/AutoMapper/AutoMapper.git",
+      "commit": "dfa6dd587c5854b4beee5934beb39ba6e9569b84",
+      "source_file_count": 512,
+      "split": "dev"
+    },
+    {
       "id": "axios",
       "name": "axios/axios",
       "primary_language": "TypeScript",
@@ -71,6 +91,16 @@
       "commit": "af1f53d9a977154216d01435991fe33631b74713",
       "source_file_count": 67,
       "split": "dev"
+    },
+    {
+      "id": "benchmarkdotnet",
+      "name": "dotnet/BenchmarkDotNet",
+      "primary_language": "C#",
+      "domain": "benchmarking harness",
+      "url": "https://github.com/dotnet/BenchmarkDotNet.git",
+      "commit": "dde87a16370686adf5b33e63eafae0fb5d32374c",
+      "source_file_count": 1083,
+      "split": "heldout"
     },
     {
       "id": "black",
@@ -163,6 +193,16 @@
       "split": "dev"
     },
     {
+      "id": "dapper",
+      "name": "DapperLib/Dapper",
+      "primary_language": "C#",
+      "domain": "micro ORM",
+      "url": "https://github.com/DapperLib/Dapper.git",
+      "commit": "72a54c475f75e18cb93cba0809d00a5e6e49efd9",
+      "source_file_count": 157,
+      "split": "dev"
+    },
+    {
       "id": "date-fns",
       "name": "date-fns/date-fns",
       "primary_language": "TypeScript",
@@ -191,6 +231,16 @@
       "commit": "9ea459de9aec5f1217ad738c58e0d23fb9f5beaa",
       "source_file_count": 196,
       "split": "dev"
+    },
+    {
+      "id": "dotnet-reactive",
+      "name": "dotnet/reactive",
+      "primary_language": "C#",
+      "domain": "reactive extensions",
+      "url": "https://github.com/dotnet/reactive.git",
+      "commit": "94b5d5ab912789f5abe9a72138a25bbd716fe59c",
+      "source_file_count": 1521,
+      "split": "heldout"
     },
     {
       "id": "drizzle-orm",
@@ -271,6 +321,16 @@
       "commit": "36e4a824f340fdee7ed50937ba8e7f6bc7d17f81",
       "source_file_count": 83,
       "split": "heldout"
+    },
+    {
+      "id": "fluentvalidation",
+      "name": "FluentValidation/FluentValidation",
+      "primary_language": "C#",
+      "domain": "validation rules",
+      "url": "https://github.com/FluentValidation/FluentValidation.git",
+      "commit": "943979089b55664ceb8390547ea1eb84ee99252a",
+      "source_file_count": 218,
+      "split": "dev"
     },
     {
       "id": "fzf",
@@ -383,6 +443,16 @@
       "split": "dev"
     },
     {
+      "id": "humanizer",
+      "name": "Humanizr/Humanizer",
+      "primary_language": "C#",
+      "domain": "text humanization",
+      "url": "https://github.com/Humanizr/Humanizer.git",
+      "commit": "f9292aa90948de0aea2d4fa7d6549b1b2432c0fb",
+      "source_file_count": 469,
+      "split": "dev"
+    },
+    {
       "id": "hyperfine",
       "name": "sharkdp/hyperfine",
       "primary_language": "Rust",
@@ -471,6 +541,16 @@
       "commit": "9a7a266fdd22cbe62d0d06e69fe8aab0dd2649cd",
       "source_file_count": 1831,
       "split": "dev"
+    },
+    {
+      "id": "kingfisher",
+      "name": "onevcat/Kingfisher",
+      "primary_language": "Swift",
+      "domain": "image loading",
+      "url": "https://github.com/onevcat/Kingfisher.git",
+      "commit": "072c31174e9f481882e6c3ec8ddc74384d395789",
+      "source_file_count": 174,
+      "split": "heldout"
     },
     {
       "id": "kramdown",
@@ -563,6 +643,16 @@
       "split": "heldout"
     },
     {
+      "id": "mediatr",
+      "name": "jbogard/MediatR",
+      "primary_language": "C#",
+      "domain": "in-process messaging",
+      "url": "https://github.com/jbogard/MediatR.git",
+      "commit": "f5cae96343436d665f682157fdc89d01ddafe986",
+      "source_file_count": 153,
+      "split": "heldout"
+    },
+    {
       "id": "meilisearch",
       "name": "meilisearch/meilisearch",
       "primary_language": "Rust",
@@ -593,6 +683,16 @@
       "split": "dev"
     },
     {
+      "id": "moq",
+      "name": "devlooped/moq",
+      "primary_language": "C#",
+      "domain": "mocking framework",
+      "url": "https://github.com/devlooped/moq.git",
+      "commit": "89a5be629c752960fe403e95ff583e4ae6f00542",
+      "source_file_count": 243,
+      "split": "heldout"
+    },
+    {
       "id": "nats-server",
       "name": "nats-io/nats-server",
       "primary_language": "Go",
@@ -613,6 +713,16 @@
       "split": "dev"
     },
     {
+      "id": "newtonsoft-json",
+      "name": "JamesNK/Newtonsoft.Json",
+      "primary_language": "C#",
+      "domain": "JSON serialization",
+      "url": "https://github.com/JamesNK/Newtonsoft.Json.git",
+      "commit": "4f73e74372445108d2c1bda37b36e6f5e43402e0",
+      "source_file_count": 945,
+      "split": "dev"
+    },
+    {
       "id": "nginx",
       "name": "nginx/nginx",
       "primary_language": "C",
@@ -623,6 +733,16 @@
       "split": "dev"
     },
     {
+      "id": "nimble",
+      "name": "Quick/Nimble",
+      "primary_language": "Swift",
+      "domain": "matcher framework",
+      "url": "https://github.com/Quick/Nimble.git",
+      "commit": "727f75d91a0f7501d08d938966d17e6728b76a2a",
+      "source_file_count": 127,
+      "split": "heldout"
+    },
+    {
       "id": "nushell",
       "name": "nushell/nushell",
       "primary_language": "Rust",
@@ -631,6 +751,16 @@
       "commit": "779e2473aa28092760fe91ceefb288f36f0670e7",
       "source_file_count": 1712,
       "split": "dev"
+    },
+    {
+      "id": "octokit-net",
+      "name": "octokit/octokit.net",
+      "primary_language": "C#",
+      "domain": "GitHub API client",
+      "url": "https://github.com/octokit/octokit.net.git",
+      "commit": "7fa5b0fe4a18c9b981b21290c3ca9320b2d6415b",
+      "source_file_count": 1584,
+      "split": "heldout"
     },
     {
       "id": "packaging",
@@ -660,6 +790,16 @@
       "url": "https://github.com/python-poetry/poetry.git",
       "commit": "aab3194f200e52198101d0f303b0f6423897829c",
       "source_file_count": 440,
+      "split": "dev"
+    },
+    {
+      "id": "polly",
+      "name": "App-vNext/Polly",
+      "primary_language": "C#",
+      "domain": "resilience and transient-fault handling",
+      "url": "https://github.com/App-vNext/Polly.git",
+      "commit": "7a1d10f47e2ec667ceada49deb6bdd9a765753bd",
+      "source_file_count": 797,
       "split": "dev"
     },
     {
@@ -700,6 +840,16 @@
       "url": "https://github.com/puma/puma.git",
       "commit": "c981c010f438596d958932c08d123d079033b7fa",
       "source_file_count": 168,
+      "split": "heldout"
+    },
+    {
+      "id": "quick",
+      "name": "Quick/Quick",
+      "primary_language": "Swift",
+      "domain": "testing framework",
+      "url": "https://github.com/Quick/Quick.git",
+      "commit": "2b4547b230e94d84320724fd6df65e418b058be2",
+      "source_file_count": 113,
       "split": "heldout"
     },
     {
@@ -760,6 +910,16 @@
       "url": "https://github.com/psf/requests.git",
       "commit": "cd90742ed94d901759e26766197d0ce7c7bd9c8e",
       "source_file_count": 37,
+      "split": "dev"
+    },
+    {
+      "id": "restsharp",
+      "name": "restsharp/RestSharp",
+      "primary_language": "C#",
+      "domain": "HTTP client",
+      "url": "https://github.com/restsharp/RestSharp.git",
+      "commit": "6a5082169257438cd085f822f050d93256a8e499",
+      "source_file_count": 255,
       "split": "dev"
     },
     {
@@ -843,6 +1003,16 @@
       "split": "heldout"
     },
     {
+      "id": "rxswift",
+      "name": "ReactiveX/RxSwift",
+      "primary_language": "Swift",
+      "domain": "reactive programming",
+      "url": "https://github.com/ReactiveX/RxSwift.git",
+      "commit": "132aea4f236ccadc51590b38af0357a331d51fa2",
+      "source_file_count": 1019,
+      "split": "heldout"
+    },
+    {
       "id": "scrapy",
       "name": "scrapy/scrapy",
       "primary_language": "Python",
@@ -861,6 +1031,26 @@
       "commit": "a1ae73ac6a6940a4a57c673aebaa13ed4dfe3e8c",
       "source_file_count": 71,
       "split": "dev"
+    },
+    {
+      "id": "serilog",
+      "name": "serilog/serilog",
+      "primary_language": "C#",
+      "domain": "structured logging",
+      "url": "https://github.com/serilog/serilog.git",
+      "commit": "6d9fc0b84e004418f2677b5961b9c8970349d0be",
+      "source_file_count": 216,
+      "split": "dev"
+    },
+    {
+      "id": "shouldly",
+      "name": "shouldly/shouldly",
+      "primary_language": "C#",
+      "domain": "assertion framework",
+      "url": "https://github.com/shouldly/shouldly.git",
+      "commit": "dc0d22bd5a3c72297c70c9ac66dc0f15136bf42a",
+      "source_file_count": 605,
+      "split": "heldout"
     },
     {
       "id": "sidekiq",
@@ -910,6 +1100,106 @@
       "url": "https://github.com/sqlite/sqlite.git",
       "commit": "2acb57c1be48b34129b2d91b33d7b5fdbaac7d07",
       "source_file_count": 456,
+      "split": "dev"
+    },
+    {
+      "id": "stackexchange-redis",
+      "name": "StackExchange/StackExchange.Redis",
+      "primary_language": "C#",
+      "domain": "Redis client",
+      "url": "https://github.com/StackExchange/StackExchange.Redis.git",
+      "commit": "cbbda97827b3decbec56a7e59beb94f3b346e964",
+      "source_file_count": 558,
+      "split": "heldout"
+    },
+    {
+      "id": "swift-algorithms",
+      "name": "apple/swift-algorithms",
+      "primary_language": "Swift",
+      "domain": "algorithm package",
+      "url": "https://github.com/apple/swift-algorithms.git",
+      "commit": "0b4376902cfc3901c496a79f2cb70f1ffd583fff",
+      "source_file_count": 57,
+      "split": "dev"
+    },
+    {
+      "id": "swift-argument-parser",
+      "name": "apple/swift-argument-parser",
+      "primary_language": "Swift",
+      "domain": "CLI parser",
+      "url": "https://github.com/apple/swift-argument-parser.git",
+      "commit": "6a52f3251125d74daf04fcbd5e6f08a75d074382",
+      "source_file_count": 165,
+      "split": "dev"
+    },
+    {
+      "id": "swift-collections",
+      "name": "apple/swift-collections",
+      "primary_language": "Swift",
+      "domain": "collection data structures",
+      "url": "https://github.com/apple/swift-collections.git",
+      "commit": "f5b320c29f5af4087bc8f527ed52e0930f4f9fb4",
+      "source_file_count": 696,
+      "split": "dev"
+    },
+    {
+      "id": "swift-composable-architecture",
+      "name": "pointfreeco/swift-composable-architecture",
+      "primary_language": "Swift",
+      "domain": "app architecture",
+      "url": "https://github.com/pointfreeco/swift-composable-architecture.git",
+      "commit": "a28ddfada0ec31d726e5c8e525318c3745ad97d9",
+      "source_file_count": 797,
+      "split": "dev"
+    },
+    {
+      "id": "swift-log",
+      "name": "apple/swift-log",
+      "primary_language": "Swift",
+      "domain": "logging API",
+      "url": "https://github.com/apple/swift-log.git",
+      "commit": "ca6118469893201380f29a4d67feb68bcb44fa25",
+      "source_file_count": 39,
+      "split": "dev"
+    },
+    {
+      "id": "swift-metrics",
+      "name": "apple/swift-metrics",
+      "primary_language": "Swift",
+      "domain": "metrics API",
+      "url": "https://github.com/apple/swift-metrics.git",
+      "commit": "4d99a2ec9735d7738c642189a09a77ccbb117aeb",
+      "source_file_count": 17,
+      "split": "heldout"
+    },
+    {
+      "id": "swift-nio",
+      "name": "apple/swift-nio",
+      "primary_language": "Swift",
+      "domain": "networking framework",
+      "url": "https://github.com/apple/swift-nio.git",
+      "commit": "eb8ac41afd91195d1095de61803402c27ecde293",
+      "source_file_count": 554,
+      "split": "heldout"
+    },
+    {
+      "id": "swift-service-lifecycle",
+      "name": "swift-server/swift-service-lifecycle",
+      "primary_language": "Swift",
+      "domain": "service lifecycle",
+      "url": "https://github.com/swift-server/swift-service-lifecycle.git",
+      "commit": "2fd7a348e9d0333979108c2da83642a64df6cb2c",
+      "source_file_count": 23,
+      "split": "heldout"
+    },
+    {
+      "id": "swiftlint",
+      "name": "realm/SwiftLint",
+      "primary_language": "Swift",
+      "domain": "linter",
+      "url": "https://github.com/realm/SwiftLint.git",
+      "commit": "64b731e35cda419025868a9c5248a3bdf1b57631",
+      "source_file_count": 769,
       "split": "dev"
     },
     {
@@ -993,6 +1283,16 @@
       "split": "heldout"
     },
     {
+      "id": "vapor",
+      "name": "vapor/vapor",
+      "primary_language": "Swift",
+      "domain": "web framework",
+      "url": "https://github.com/vapor/vapor.git",
+      "commit": "fff4892930e69b49ea2612699bed9583721723dc",
+      "source_file_count": 247,
+      "split": "dev"
+    },
+    {
       "id": "vim",
       "name": "vim/vim",
       "primary_language": "C",
@@ -1051,156 +1351,6 @@
       "commit": "04a8487aea075b13e71a327cc99b16fb68352c1a",
       "source_file_count": 48,
       "split": "dev"
-    },
-    {
-      "id": "swift-algorithms",
-      "name": "apple/swift-algorithms",
-      "primary_language": "Swift",
-      "domain": "algorithm package",
-      "url": "https://github.com/apple/swift-algorithms.git",
-      "commit": "0b4376902cfc3901c496a79f2cb70f1ffd583fff",
-      "source_file_count": 57,
-      "split": "dev"
-    },
-    {
-      "id": "swift-collections",
-      "name": "apple/swift-collections",
-      "primary_language": "Swift",
-      "domain": "collection data structures",
-      "url": "https://github.com/apple/swift-collections.git",
-      "commit": "f5b320c29f5af4087bc8f527ed52e0930f4f9fb4",
-      "source_file_count": 696,
-      "split": "dev"
-    },
-    {
-      "id": "swift-nio",
-      "name": "apple/swift-nio",
-      "primary_language": "Swift",
-      "domain": "networking framework",
-      "url": "https://github.com/apple/swift-nio.git",
-      "commit": "eb8ac41afd91195d1095de61803402c27ecde293",
-      "source_file_count": 554,
-      "split": "heldout"
-    },
-    {
-      "id": "swift-argument-parser",
-      "name": "apple/swift-argument-parser",
-      "primary_language": "Swift",
-      "domain": "CLI parser",
-      "url": "https://github.com/apple/swift-argument-parser.git",
-      "commit": "6a52f3251125d74daf04fcbd5e6f08a75d074382",
-      "source_file_count": 165,
-      "split": "dev"
-    },
-    {
-      "id": "swift-log",
-      "name": "apple/swift-log",
-      "primary_language": "Swift",
-      "domain": "logging API",
-      "url": "https://github.com/apple/swift-log.git",
-      "commit": "ca6118469893201380f29a4d67feb68bcb44fa25",
-      "source_file_count": 39,
-      "split": "dev"
-    },
-    {
-      "id": "swift-metrics",
-      "name": "apple/swift-metrics",
-      "primary_language": "Swift",
-      "domain": "metrics API",
-      "url": "https://github.com/apple/swift-metrics.git",
-      "commit": "4d99a2ec9735d7738c642189a09a77ccbb117aeb",
-      "source_file_count": 17,
-      "split": "heldout"
-    },
-    {
-      "id": "swift-service-lifecycle",
-      "name": "swift-server/swift-service-lifecycle",
-      "primary_language": "Swift",
-      "domain": "service lifecycle",
-      "url": "https://github.com/swift-server/swift-service-lifecycle.git",
-      "commit": "2fd7a348e9d0333979108c2da83642a64df6cb2c",
-      "source_file_count": 23,
-      "split": "heldout"
-    },
-    {
-      "id": "vapor",
-      "name": "vapor/vapor",
-      "primary_language": "Swift",
-      "domain": "web framework",
-      "url": "https://github.com/vapor/vapor.git",
-      "commit": "fff4892930e69b49ea2612699bed9583721723dc",
-      "source_file_count": 247,
-      "split": "dev"
-    },
-    {
-      "id": "alamofire",
-      "name": "Alamofire/Alamofire",
-      "primary_language": "Swift",
-      "domain": "HTTP networking",
-      "url": "https://github.com/Alamofire/Alamofire.git",
-      "commit": "7595cbcf59809f9977c5f6378500de2ad73b7ddb",
-      "source_file_count": 98,
-      "split": "dev"
-    },
-    {
-      "id": "quick",
-      "name": "Quick/Quick",
-      "primary_language": "Swift",
-      "domain": "testing framework",
-      "url": "https://github.com/Quick/Quick.git",
-      "commit": "2b4547b230e94d84320724fd6df65e418b058be2",
-      "source_file_count": 113,
-      "split": "heldout"
-    },
-    {
-      "id": "nimble",
-      "name": "Quick/Nimble",
-      "primary_language": "Swift",
-      "domain": "matcher framework",
-      "url": "https://github.com/Quick/Nimble.git",
-      "commit": "727f75d91a0f7501d08d938966d17e6728b76a2a",
-      "source_file_count": 127,
-      "split": "heldout"
-    },
-    {
-      "id": "rxswift",
-      "name": "ReactiveX/RxSwift",
-      "primary_language": "Swift",
-      "domain": "reactive programming",
-      "url": "https://github.com/ReactiveX/RxSwift.git",
-      "commit": "132aea4f236ccadc51590b38af0357a331d51fa2",
-      "source_file_count": 1019,
-      "split": "heldout"
-    },
-    {
-      "id": "swift-composable-architecture",
-      "name": "pointfreeco/swift-composable-architecture",
-      "primary_language": "Swift",
-      "domain": "app architecture",
-      "url": "https://github.com/pointfreeco/swift-composable-architecture.git",
-      "commit": "a28ddfada0ec31d726e5c8e525318c3745ad97d9",
-      "source_file_count": 797,
-      "split": "dev"
-    },
-    {
-      "id": "swiftlint",
-      "name": "realm/SwiftLint",
-      "primary_language": "Swift",
-      "domain": "linter",
-      "url": "https://github.com/realm/SwiftLint.git",
-      "commit": "64b731e35cda419025868a9c5248a3bdf1b57631",
-      "source_file_count": 769,
-      "split": "dev"
-    },
-    {
-      "id": "kingfisher",
-      "name": "onevcat/Kingfisher",
-      "primary_language": "Swift",
-      "domain": "image loading",
-      "url": "https://github.com/onevcat/Kingfisher.git",
-      "commit": "072c31174e9f481882e6c3ec8ddc74384d395789",
-      "source_file_count": 174,
-      "split": "heldout"
     }
   ]
 }
