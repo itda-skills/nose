@@ -49,7 +49,11 @@ Event `add`/`remove` accessors lower like property accessors, auto-property
 initializers bind like field initializers, `checked`/`unchecked`/`ref` wrappers
 unwrap to their value, `global::` aliases erase, `goto` lowers as `Break` with
 its label dropped (the C discipline), and a record `with` expression keeps a
-tagged shape of its own so it cannot merge with a tuple.
+tagged shape of its own so it cannot merge with a tuple. The remaining C# gap
+is dominated by tree-sitter parse `ERROR`s (`#if` around C#8 default interface
+members) that lowering cannot fix; grammar advances are re-measured against the
+pinned corpus before any pin bump — the standing watch is
+recorded in [csharp-grammar-bump-premeasurement-2026-07-02](csharp-grammar-bump-premeasurement-2026-07-02.md).
 
 `.h` files are treated as C headers unless their source strongly indicates unsupported C++
 (`namespace`, `template`, `class`, `std::`, or access specifiers after comments/strings are
