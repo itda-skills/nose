@@ -38,6 +38,8 @@ fn count_nodes(il: &nose_il::Il, root: NodeId, kind: Option<nose_il::NodeKind>) 
 
 #[path = "equivalence/algebra_laws.rs"]
 mod algebra_laws;
+#[path = "equivalence/async_scheduling_hard_negatives.rs"]
+mod async_scheduling_hard_negatives;
 #[path = "equivalence/branch_selection.rs"]
 mod branch_selection;
 #[path = "equivalence/call_binding_boundaries.rs"]

@@ -79,6 +79,14 @@ break.
   hard-negative fixture groups, and `25` reporting artifact evidence groups,
   and names `48` fixture classes for #657 while keeping exact admission
   unchanged.
+- Added the #653/#657 executable async/scheduling hard-negative suite. The new
+  cross-language equivalence fixture adds `8` test symbols and `42`
+  fail-closed assertions across JS/TS, Go, Python, Rust, Java, Swift, and Ruby,
+  covering Promise continuation/channel/callback, executor,
+  timer/microtask/cancellation, channel/select/goroutine/defer, asyncio,
+  Future-drive, Future/Executor/Stream, task/try/continuation, and
+  thread/fiber/yield/exception boundaries while keeping exact admission
+  unchanged.
 - Added Swift structured-concurrency reporting for `Task.sleep`, `Task.yield`,
   and task-group calls. These now map to shared timer, task-yield, aggregate,
   cancellation/liveness, result-channel, and exception-channel obligations

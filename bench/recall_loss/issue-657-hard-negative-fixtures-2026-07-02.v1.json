@@ -1,0 +1,190 @@
+{
+  "report_kind": "issue-657-hard-negative-fixtures",
+  "schema_version": 1,
+  "issue": 657,
+  "parent_issue": 663,
+  "broader_context_issue": 653,
+  "generated_on": "2026-07-02",
+  "scope": "executable async/scheduling/lifecycle/error-channel hard-negative fixture expansion; no product behavior or exact admission changes",
+  "source_artifacts": [
+    "bench/recall_loss/issue-655-hard-negative-matrix-2026-07-02.v1.json"
+  ],
+  "source_fixture_files": [
+    "crates/nose-cli/tests/equivalence/async_scheduling_hard_negatives.rs",
+    "crates/nose-cli/tests/equivalence.rs"
+  ],
+  "baseline_from_issue_655": {
+    "positive_fixture_groups_before": 18,
+    "hard_negative_fixture_groups_before": 27,
+    "reporting_artifact_evidence_groups_before": 25,
+    "missing_hard_negative_classes_before": 48,
+    "expected_exact_admission_delta": 0
+  },
+  "added_executable_coverage": {
+    "hard_negative_fixture_groups_added": 1,
+    "test_symbols_added": 8,
+    "assertions_added": 42,
+    "languages_with_new_assertions": 7,
+    "fixture_group": "crates/nose-cli/tests/equivalence/async_scheduling_hard_negatives.rs"
+  },
+  "after_summary": {
+    "positive_fixture_groups_after": 18,
+    "hard_negative_fixture_groups_after": 28,
+    "reporting_artifact_evidence_groups_after": 26,
+    "direct_new_executable_assertions": 42,
+    "matrix_missing_classes_before": 48,
+    "matrix_classes_addressed_by_direct_new_assertions_or_existing_complementary_coverage_after": 48,
+    "remaining_unmapped_matrix_classes_after": 0,
+    "note": "Not every matrix class receives a brand-new assertion in this issue. Classes not directly asserted here are mapped to existing executable fixtures or checked reporting artifacts, and this issue adds a single local suite for the highest-risk cross-language regression boundaries."
+  },
+  "new_assertions_by_language": {
+    "javascript-typescript": {
+      "test_symbols": 2,
+      "assertions": 10,
+      "covered_boundaries": [
+        "Promise.then arbitrary receiver versus proven PromiseLike receiver",
+        "fulfilled versus rejected Promise channels",
+        "throwing callback obligations",
+        "Promise.catch recovery while preserving Promise boundary",
+        "new Promise multi-settlement ordering",
+        "setTimeout versus setImmediate one-shot task scheduling",
+        "queueMicrotask versus Promise continuation scheduling",
+        "clearTimeout versus cancelAnimationFrame lifecycle",
+        "requestAnimationFrame versus microtask scheduling",
+        "AbortSignal cancellation/liveness versus Promise rejection"
+      ]
+    },
+    "go": {
+      "test_symbols": 1,
+      "assertions": 5,
+      "covered_boundaries": [
+        "receive value versus receive status",
+        "channel send versus assignment",
+        "goroutine scheduling versus direct call",
+        "defer callback timing versus direct order",
+        "select readiness/default versus direct receive"
+      ]
+    },
+    "python": {
+      "test_symbols": 1,
+      "assertions": 8,
+      "covered_boundaries": [
+        "asyncio.gather ordering versus asyncio.wait first-completed behavior",
+        "asyncio.sleep timer scheduling versus direct None",
+        "async for lifecycle versus ordinary for",
+        "asyncio.wait_for timeout versus asyncio.shield cancellation propagation",
+        "asyncio.create_task versus ensure_future lifecycle",
+        "run_coroutine_threadsafe versus to_thread scheduling",
+        "asyncio.run future drive versus returning an undriven coroutine",
+        "generator yield lifecycle versus eager materialization"
+      ]
+    },
+    "rust": {
+      "test_symbols": 1,
+      "assertions": 3,
+      "covered_boundaries": [
+        "spawn handle lifecycle versus direct await",
+        "join all-settled behavior versus select first-ready behavior",
+        "block_on future drive versus returning an undriven future"
+      ]
+    },
+    "java": {
+      "test_symbols": 1,
+      "assertions": 7,
+      "covered_boundaries": [
+        "CompletionStage callback timing versus sync direct call",
+        "Future.get versus cancellation",
+        "Future timeout wait versus status check",
+        "CompletionStage handle versus whenComplete",
+        "CompletableFuture.allOf versus anyOf",
+        "ScheduledExecutor one-shot delay versus interval lifecycle",
+        "stream versus parallelStream lifecycle"
+      ]
+    },
+    "swift": {
+      "test_symbols": 1,
+      "assertions": 5,
+      "covered_boundaries": [
+        "Task scheduling versus direct await",
+        "async let child task lifecycle versus local await",
+        "async sequence iteration versus ordinary sequence iteration",
+        "try await exception channel versus plain await",
+        "throwing versus non-throwing continuation settlement channels"
+      ]
+    },
+    "ruby": {
+      "test_symbols": 1,
+      "assertions": 4,
+      "covered_boundaries": [
+        "Thread scheduling versus direct method call",
+        "Fiber yield/resume lifecycle versus block yield callback demand",
+        "raise exception channel versus return success channel",
+        "ensure cleanup ordering versus ordinary sequential cleanup"
+      ]
+    }
+  },
+  "existing_complementary_coverage": [
+    {
+      "file": "crates/nose-cli/tests/equivalence/promise_aggregates.rs",
+      "covers": "literal versus dynamic Promise aggregates, all-fulfilled versus first-settled/all-settled channels, Promise.any all-rejected boundary, and aggregate Promise-boundary preservation"
+    },
+    {
+      "file": "crates/nose-cli/tests/equivalence/promise_finally.rs",
+      "covers": "Promise.finally safe settlement passthrough, rejection override, unsafe handler, possible-thenable, and parameterized-callback boundaries"
+    },
+    {
+      "file": "crates/nose-cli/tests/equivalence/promise_liveness.rs",
+      "covers": "setInterval repeated liveness, clearInterval versus clearTimeout, scheduler.yield, scheduler.wait, requestAnimationFrame, and queueMicrotask/direct-callback boundaries"
+    },
+    {
+      "file": "crates/nose-cli/tests/cli/semantic_boundaries.rs",
+      "covers": "query-level async/sync unit-boundary rejections for JS/TS, Python, Go channel/concurrency, and broad Promise protocol families"
+    },
+    {
+      "file": "crates/nose-cli/tests/cli/semantic_boundaries/python_async_protocol.rs",
+      "covers": "query-level Python async for, async with, and async comprehension lifecycle boundaries"
+    },
+    {
+      "file": "crates/nose-cli/tests/cli/semantic_boundaries/ruby_yield_protocol.rs",
+      "covers": "query-level Ruby yield versus return and direct block-call callback boundaries"
+    },
+    {
+      "artifact": "bench/recall_loss/rust-async-closure-source-protocol-2026-07-01.v1.json",
+      "covers": "Rust async closure versus synchronous closure and async block reporting hard negatives"
+    },
+    {
+      "artifact": "bench/recall_loss/swift-async-task-source-protocol-2026-07-01.v1.json",
+      "covers": "Swift async closure and async-let source-protocol reporting boundaries"
+    }
+  ],
+  "hard_gate": {
+    "semantic_admission_delta": 0,
+    "false_merges": 0,
+    "canon_preservation_violations": 0,
+    "performance_regression_assessment": "not_applicable_tests_docs_artifact_only_no_product_code_changed"
+  },
+  "local_crates_verification": {
+    "command": "cargo run -q -p nose-cli -- verify crates --max-violations 0 --recall-loss-report target/recall-loss.issue-657.crates.json",
+    "total_units": 7006,
+    "interpretable_units": 971,
+    "excluded_units": 6035,
+    "fingerprint_groups": 38,
+    "false_merges": 0,
+    "canon_preservation_violations": 0,
+    "gate_passed": true
+  },
+  "validation_commands": [
+    "cargo test -p nose-cli --test equivalence async_scheduling_hard_negatives -- --nocapture",
+    "jq empty bench/recall_loss/issue-657-hard-negative-fixtures-2026-07-02.v1.json",
+    "jq -e '.hard_gate.semantic_admission_delta == 0 and .baseline_from_issue_655.expected_exact_admission_delta == 0 and .added_executable_coverage.assertions_added == 42 and .after_summary.hard_negative_fixture_groups_after == 28' bench/recall_loss/issue-657-hard-negative-fixtures-2026-07-02.v1.json",
+    "jq -e '([.new_assertions_by_language[].assertions] | add) == .added_executable_coverage.assertions_added' bench/recall_loss/issue-657-hard-negative-fixtures-2026-07-02.v1.json",
+    "scripts/check-docs.sh",
+    "python3 scripts/check-file-lengths.py --ratchet-base origin/main",
+    "git diff --check"
+  ],
+  "notes": [
+    "This issue intentionally records executable fail-closed behavior instead of opening exact admission.",
+    "The new suite uses value-fingerprint hard negatives for runtime/protocol distinctions that the helper observes directly; unit-wrapper async/sync boundaries remain covered at query level because they are represented outside the value-fingerprint payload.",
+    "The first narrow run initially exposed that Python and Swift async-function wrappers are not visible to value_fingerprint alone; those assertions were kept out of the new equivalence suite and left to existing query-level fixtures."
+  ]
+}

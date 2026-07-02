@@ -1144,6 +1144,17 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   hard-negative classes for #657.
   This hand-curated inventory records its source-audit regenerate and validation
   commands, and keeps `semantic_admission_delta = 0`.
+- [issue-657-hard-negative-fixtures-2026-07-02.v1.json](issue-657-hard-negative-fixtures-2026-07-02.v1.json)
+  records the #653/#657 executable hard-negative fixture expansion. It adds one
+  cross-language fixture group with `8` test symbols and `42` fail-closed
+  assertions across JS/TS, Go, Python, Rust, Java, Swift, and Ruby. The suite
+  pins Promise continuation/channel, executor, timer/microtask/cancellation,
+  Go channel/select/goroutine/defer, Python asyncio/protocol, Rust Future-drive,
+  Java Future/Executor/Stream, Swift task/async/try/continuation, and Ruby
+  thread/fiber/yield/exception boundaries without opening exact admission.
+  The checked artifact maps the remaining #655 matrix classes to existing
+  executable fixtures or checked reporting artifacts and keeps
+  `semantic_admission_delta = 0`.
 - [scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json)
   records the Python/Rust async runtime scope-shadowing hardening. It keeps
   exact admission closed while making unrelated local shadows in other
