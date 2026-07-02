@@ -132,6 +132,12 @@ set -euo pipefail
 # (`f024fac478e2d042` -> `43b5cd8c20a4d96c` lower_for, `74f4785230de4bbe` -> `1576a0aa2ff8861b`
 # lower_stmt mirror, `39cd784119cf4060` -> `8d0fccc68d6bdc9e` declarator loop) without changing
 # members or budget. See docs/dogfooding.md.
+# 55 -> 55 (C# async boundaries): the await-foreach/await-using/async-function arms shift
+# csharp/control.rs spans again, moving the same three reviewed representatives
+# (`43b5cd8c20a4d96c` -> `198f6d647112384c` lower_for, `1576a0aa2ff8861b` -> `dfad1ea3a38e934b`
+# lower_stmt mirror, `8d0fccc68d6bdc9e` -> `41a9fd3da798c93e` declarator loop); the draft's two
+# avoidable test families were deduped (shared `raw_names` test helper, thin protocol-expectation
+# wrappers) instead of accepted. Members and budget unchanged. See docs/dogfooding.md.
 BIN="${NOSE_BIN:-./target/release/nose}"
 BASELINE="${NOSE_DUP_BASELINE:-scripts/duplication-baseline.json}"
 

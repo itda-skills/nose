@@ -748,9 +748,21 @@ representative IDs — of these same three reviewed families:
 → `8d0fccc68d6bdc9e` (the declarator loop). Members, judgment, and budget are
 unchanged; the table below carries the current IDs.
 
+The C# async-boundary tranche (`await foreach`/`await using`/`async`
+methods and lambdas as protocol boundaries, plus the `Task.*` obligation
+mapping) shifted the same three representatives again:
+`43b5cd8c20a4d96c` → `198f6d647112384c` (`lower_for`), `1576a0aa2ff8861b` →
+`dfad1ea3a38e934b` (the `lower_stmt` dispatch mirror), and
+`8d0fccc68d6bdc9e` → `41a9fd3da798c93e` (the declarator loop). Members,
+judgment, and budget are unchanged. The draft's two avoidable test families
+(a copied `raw_names` helper and the repeated protocol-expectation body) were
+deduped instead of accepted: `raw_names` moved to `crate::test_helpers`
+(shared with the Swift tests) and the C# protocol tests collapsed onto the
+Python-style `expect_csharp_protocol_boundary` thin wrappers.
+
 | family | scope | judgment | action |
 |---|---|---|---|
-| `43b5cd8c20a4d96c` | production | `lower_for` in C/C#/Java is a thin per-grammar wrapper delegating to the shared `c_style_for` with language-specific field names and lowering callbacks. | Accepted per-grammar frontend parallelism; the shared logic already lives in `crate::lower`. |
-| `1576a0aa2ff8861b` | production | the C# `lower_stmt` dispatch mirrors Java's by design (C# is lowered as "Java + α"); the match arms differ per grammar kind strings. | Accepted design mirror — the documented frontend-template discipline, not extractable duplication. |
-| `8d0fccc68d6bdc9e` | production | C# `lower_variable_declaration` and JS/TS `lower_var_decl` share the declarator-loop shape but walk different CST field layouts. | Accepted per-grammar parallelism; a shared declarator walker would couple unrelated grammars. |
+| `198f6d647112384c` | production | `lower_for` in C/C#/Java is a thin per-grammar wrapper delegating to the shared `c_style_for` with language-specific field names and lowering callbacks. | Accepted per-grammar frontend parallelism; the shared logic already lives in `crate::lower`. |
+| `dfad1ea3a38e934b` | production | the C# `lower_stmt` dispatch mirrors Java's by design (C# is lowered as "Java + α"); the match arms differ per grammar kind strings. | Accepted design mirror — the documented frontend-template discipline, not extractable duplication. |
+| `41a9fd3da798c93e` | production | C# `lower_variable_declaration` and JS/TS `lower_var_decl` share the declarator-loop shape but walk different CST field layouts. | Accepted per-grammar parallelism; a shared declarator walker would couple unrelated grammars. |
 | `9e4c338c1c530b18` | production | the four exhaustive per-`Lang` provenance matches in `language_profile.rs` are mutually similar tables; the C# arms pushed the family over the value line. | Accepted exhaustive wiring; a table-driven rewrite is a candidate when the profile is next reshaped. |

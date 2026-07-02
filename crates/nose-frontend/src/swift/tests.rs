@@ -13,20 +13,7 @@ fn il(src: &str) -> Il {
     il_with_interner(src).0
 }
 
-fn raw_names(il: &Il, interner: &Interner) -> Vec<String> {
-    il.nodes
-        .iter()
-        .filter_map(|node| {
-            if node.kind != NodeKind::Raw {
-                return None;
-            }
-            let Payload::Name(name) = node.payload else {
-                return None;
-            };
-            Some(interner.resolve(name).to_string())
-        })
-        .collect()
-}
+use crate::test_helpers::raw_names;
 
 fn seq_names(il: &Il, interner: &Interner) -> Vec<String> {
     il.nodes

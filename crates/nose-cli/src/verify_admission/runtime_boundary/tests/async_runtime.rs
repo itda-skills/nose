@@ -7,6 +7,7 @@ use nose_il::{FileId, Interner, Lang, NodeId, NodeKind};
 
 use super::super::runtime_boundary_missing_evidence_with_context;
 
+mod csharp;
 mod imported_bindings;
 mod java;
 mod java_completable_future_receiver;

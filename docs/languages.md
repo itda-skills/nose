@@ -49,7 +49,18 @@ Event `add`/`remove` accessors lower like property accessors, auto-property
 initializers bind like field initializers, `checked`/`unchecked`/`ref` wrappers
 unwrap to their value, `global::` aliases erase, `goto` lowers as `Break` with
 its label dropped (the C discipline), and a record `with` expression keeps a
-tagged shape of its own so it cannot merge with a tuple. The remaining C# gap
+tagged shape of its own so it cannot merge with a tuple.
+C# async surfaces are source-backed protocol boundaries on the shared
+scheduling-obligation vocabulary: `async` methods/local functions/lambdas keep
+the async-function boundary (the JS/Python/Swift discipline), `await foreach`
+the async-iteration boundary (Swift `for await`), `await using` the
+async-context boundary (Python `async with`), and `await`/`yield return` report
+the shared `async-await-scheduling`/`generator-yield` contracts. Named
+`System.Threading.Tasks` calls map to the same vocabulary (`Task.Run`/
+`Task.Factory.StartNew` spawn, `Task.Delay` timer, `Task.Yield` re-schedule,
+`Task.WhenAll`/`WhenAny` all/first aggregates; attribution is dropped whenever
+a scanned C# file defines its own `Task`). All of this is reporting-only —
+a runtime boundary is still a strict-exact rejection, never an admission. The remaining C# gap
 is dominated by tree-sitter parse `ERROR`s (`#if` around C#8 default interface
 members) that lowering cannot fix; grammar advances are re-measured against the
 pinned corpus before any pin bump — the standing watch is

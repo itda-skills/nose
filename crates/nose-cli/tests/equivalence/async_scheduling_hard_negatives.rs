@@ -432,3 +432,54 @@ fn ruby_thread_fiber_yield_and_exception_boundaries_stay_split() {
         "Ruby callback results consumed by map must not merge with ignored each callbacks"
     );
 }
+
+// The value channel sees through `await` to the settled value by design (all
+// languages: `return await f()` fingerprints as `return f()`), and an async
+// method body is one Raw boundary around the same values as its sync twin —
+// those pairs are guarded by the strict-exact admission layer instead
+// (`NodeKind::Raw` is never exact-safe), pinned by the C# runtime-boundary
+// reporting tests. The pairs below must stay split at the fingerprint level.
+#[test]
+fn csharp_task_async_and_iterator_boundaries_stay_split() {
+    let i = Interner::new();
+    let async_lambda = "class C {\n  void M() { Run(async () => Work()); }\n}\n";
+    let sync_lambda = "class C {\n  void M() { Run(() => Work()); }\n}\n";
+    let async_iteration =
+        "class C {\n  async Task M(IAsyncEnumerable<int> xs) { await foreach (var x in xs) { Use(x); } }\n}\n";
+    let sync_iteration =
+        "class C {\n  async Task M(IAsyncEnumerable<int> xs) { foreach (var x in xs) { Use(x); } }\n}\n";
+    let async_disposal = "class C {\n  async Task M() { await using (var r = Open()) { Use(r); } }\n}\n";
+    let sync_disposal = "class C {\n  async Task M() { using (var r = Open()) { Use(r); } }\n}\n";
+    let iterator_yield = "class C {\n  IEnumerable<int> M() { yield return Compute(); }\n}\n";
+    let plain_return = "class C {\n  int M() { return Compute(); }\n}\n";
+    let task_spawn = "class C {\n  void M() { Task.Run(() => Work()); }\n}\n";
+    let direct_call = "class C {\n  void M() { Work(); }\n}\n";
+
+    assert_ne!(
+        value_fp(&i, async_lambda, Lang::CSharp),
+        value_fp(&i, sync_lambda, Lang::CSharp),
+        "a C# async lambda must not merge with its synchronous twin"
+    );
+    assert_ne!(
+        value_fp(&i, async_iteration, Lang::CSharp),
+        value_fp(&i, sync_iteration, Lang::CSharp),
+        "C# await foreach pulls through the async-iteration protocol, not a plain loop"
+    );
+    assert_ne!(
+        value_fp(&i, async_disposal, Lang::CSharp),
+        value_fp(&i, sync_disposal, Lang::CSharp),
+        "C# await using disposes asynchronously, not as an ordinary using scope"
+    );
+    assert_ne!(
+        value_fp(&i, iterator_yield, Lang::CSharp),
+        value_fp(&i, plain_return, Lang::CSharp),
+        "a C# iterator yield must not merge with an ordinary return"
+    );
+    assert_ne!(
+        value_fp(&i, task_spawn, Lang::CSharp),
+        value_fp(&i, direct_call, Lang::CSharp),
+        "C# Task.Run scheduling is not a direct call"
+    );
+}
+
+

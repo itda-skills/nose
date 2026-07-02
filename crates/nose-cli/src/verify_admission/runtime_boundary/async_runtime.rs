@@ -5,6 +5,7 @@ use nose_il::{
     NodeId, NodeKind, SymbolEvidenceKind,
 };
 
+mod csharp;
 mod java;
 mod ruby;
 mod rust;
@@ -61,6 +62,14 @@ pub(super) fn push_async_runtime_call_missing_evidence(
                 return false;
             };
             ruby::push_ruby_thread_fiber_runtime_call_missing_evidence(il, interner, &path, labels)
+        }
+        nose_il::Lang::CSharp => {
+            let Some(path) = path else {
+                return false;
+            };
+            csharp::push_csharp_async_runtime_call_missing_evidence(
+                il, interner, callee, &path, context, labels,
+            )
         }
         _ => false,
     }

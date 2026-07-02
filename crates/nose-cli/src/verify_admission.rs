@@ -17,6 +17,7 @@ pub(crate) struct AdmissionContext {
     rust_local_runtime_roots_by_file: HashMap<String, HashSet<String>>,
     java_top_level_types_by_package: HashMap<String, HashSet<String>>,
     swift_visible_names: HashSet<String>,
+    csharp_visible_names: HashSet<String>,
 }
 
 #[derive(Clone)]
@@ -43,6 +44,9 @@ impl AdmissionContext {
                 }
                 nose_il::Lang::Swift => {
                     context.collect_swift_visible_names(il, &corpus.interner);
+                }
+                nose_il::Lang::CSharp => {
+                    context.collect_csharp_visible_names(il, &corpus.interner);
                 }
                 _ => {}
             }
@@ -77,6 +81,10 @@ impl AdmissionContext {
 
     pub(crate) fn swift_name_is_visible(&self, name: &str) -> bool {
         self.swift_visible_names.contains(name)
+    }
+
+    pub(crate) fn csharp_name_is_visible(&self, name: &str) -> bool {
+        self.csharp_visible_names.contains(name)
     }
 
     fn collect_rust_runtime_root_definitions(&mut self, il: &nose_il::Il, interner: &Interner) {
@@ -115,6 +123,11 @@ impl AdmissionContext {
 
     fn collect_swift_visible_names(&mut self, il: &nose_il::Il, interner: &Interner) {
         self.swift_visible_names
+            .extend(names_defined_in_il(il, interner));
+    }
+
+    fn collect_csharp_visible_names(&mut self, il: &nose_il::Il, interner: &Interner) {
+        self.csharp_visible_names
             .extend(names_defined_in_il(il, interner));
     }
 }

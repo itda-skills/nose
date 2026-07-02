@@ -32,6 +32,8 @@ mod items;
 mod linq;
 mod objects;
 mod patterns;
+#[cfg(test)]
+mod tests;
 
 use self::{control::*, expressions::*, items::*, linq::*, objects::*, patterns::*};
 

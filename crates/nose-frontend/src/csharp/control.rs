@@ -68,8 +68,24 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
             }
         }
         "try_statement" => Some(lower_try(lo, node)),
-        "using_statement" | "lock_statement" | "fixed_statement" | "checked_statement"
-        | "unsafe_statement" => Some(lower_guarded_block(lo, node)),
+        // `await using` acquires/disposes the resource asynchronously — the same
+        // source-backed context boundary as Python's `async with`.
+        "using_statement" => {
+            let block = lower_guarded_block(lo, node);
+            Some(if crate::lower::has_direct_token(node, "await") {
+                lo.protocol_boundary(
+                    span,
+                    nose_il::SourceProtocolKind::AsyncContext,
+                    "async_with",
+                    &[block],
+                )
+            } else {
+                block
+            })
+        }
+        "lock_statement" | "fixed_statement" | "checked_statement" | "unsafe_statement" => {
+            Some(lower_guarded_block(lo, node))
+        }
         "preproc_if" | "preproc_elif" | "preproc_else" => Some(lower_preproc(lo, node, lower_stmt)),
         "empty_statement" | "line_comment" | "block_comment" | "comment" | ";" => None,
         k if is_preproc_directive(k) => None,
@@ -147,7 +163,9 @@ pub(super) fn lower_for(lo: &mut Lowering, node: TsNode) -> NodeId {
 }
 
 /// `foreach (var x in xs) …` → a canonical `ForEach` loop `[pattern, iterable,
-/// body]`, converging with Java's enhanced-`for`.
+/// body]`, converging with Java's enhanced-`for`. `await foreach` additionally
+/// keeps the async-iteration protocol boundary (the Swift `for await` / Python
+/// `async for` discipline), so it can never merge with a synchronous loop.
 pub(super) fn lower_foreach(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let pat = node
@@ -168,12 +186,22 @@ pub(super) fn lower_foreach(lo: &mut Lowering, node: TsNode) -> NodeId {
         .child_by_field_name("body")
         .map(|b| stmt_as_block(lo, b))
         .unwrap_or_else(|| lo.empty_block(span));
-    lo.add(
+    let loop_node = lo.add(
         NodeKind::Loop,
         Payload::Loop(LoopKind::ForEach),
         span,
         &[pat, iter, body],
-    )
+    );
+    if crate::lower::has_direct_token(node, "await") {
+        lo.protocol_boundary(
+            span,
+            nose_il::SourceProtocolKind::AsyncIteration,
+            "async_for",
+            &[loop_node],
+        )
+    } else {
+        loop_node
+    }
 }
 
 pub(super) fn lower_while(lo: &mut Lowering, node: TsNode) -> NodeId {

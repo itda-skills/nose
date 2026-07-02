@@ -38,6 +38,22 @@ pub(crate) mod test_helpers {
     use nose_il::{Il, Interner, NodeId, NodeKind, Payload, SourceProtocolKind};
     use nose_semantics::source_protocol_at_node;
 
+    /// The surface tags of every `Raw` node in the IL, in node order.
+    pub(crate) fn raw_names(il: &Il, interner: &Interner) -> Vec<String> {
+        il.nodes
+            .iter()
+            .filter_map(|node| {
+                if node.kind != NodeKind::Raw {
+                    return None;
+                }
+                let Payload::Name(name) = node.payload else {
+                    return None;
+                };
+                Some(interner.resolve(name).to_string())
+            })
+            .collect()
+    }
+
     pub(crate) fn expect_raw_protocol_boundary(
         il: &Il,
         interner: &Interner,

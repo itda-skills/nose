@@ -534,7 +534,18 @@ fn lower_lambda(lo: &mut Lowering, node: TsNode) -> NodeId {
             }
         })
         .unwrap_or_else(|| lo.empty_block(span));
-    kids.push(body);
+    // An `async` lambda body keeps the async-function scheduling boundary (the
+    // JS/TS async-arrow discipline).
+    if has_async_modifier(lo, node) {
+        kids.push(lo.protocol_boundary(
+            span,
+            nose_il::SourceProtocolKind::AsyncFunction,
+            "async_function",
+            &[body],
+        ));
+    } else {
+        kids.push(body);
+    }
     lo.add(NodeKind::Lambda, Payload::None, span, &kids)
 }
 

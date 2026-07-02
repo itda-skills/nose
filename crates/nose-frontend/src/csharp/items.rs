@@ -165,10 +165,36 @@ fn csharp_type_origin(node: TsNode) -> UnitOrigin {
 }
 
 /// `method`/`constructor`/`local function` → a `Func` unit via the shared skeleton
-/// (extract `name`/`parameters`/`body`, push the unit).
+/// (extract `name`/`parameters`/`body`, push the unit). An `async` body keeps the
+/// async-function scheduling boundary (the JS/Python/Swift discipline), so an
+/// async method can never merge with its synchronous twin.
 pub(super) fn lower_method(lo: &mut Lowering, node: TsNode) -> NodeId {
     let is_local_fn = node.kind() == "local_function_statement";
-    crate::lower::function_unit(lo, node, !is_local_fn, csharp_params, csharp_body)
+    let is_async = has_async_modifier(lo, node);
+    let span = lo.span(node);
+    crate::lower::function_unit(lo, node, !is_local_fn, csharp_params, |lo, b| {
+        let body = csharp_body(lo, b);
+        if is_async {
+            lo.protocol_boundary(
+                span,
+                nose_il::SourceProtocolKind::AsyncFunction,
+                "async_function",
+                &[body],
+            )
+        } else {
+            body
+        }
+    })
+}
+
+/// Does this declaration carry the `async` modifier? (The C# grammar wraps each
+/// keyword modifier in its own `modifier` node.)
+pub(super) fn has_async_modifier(lo: &Lowering, node: TsNode) -> bool {
+    let mut cur = node.walk();
+    let found = node
+        .children(&mut cur)
+        .any(|c| c.kind() == "modifier" && lo.text(c) == "async");
+    found
 }
 
 fn csharp_params(lo: &mut Lowering, params: TsNode, kids: &mut Vec<NodeId>) {

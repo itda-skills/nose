@@ -38,6 +38,23 @@ break.
   lowering gap drops from 0.116% to 0.081% of IL nodes (the remainder is
   tree-sitter parse errors and their fallout); all 15 pinned C# repos still
   report zero false merges under `nose verify --max-violations 0`.
+- Put the C# async surfaces on the shared scheduling-obligation vocabulary
+  (reporting-only, following the #594/#602 vocabulary merged from upstream):
+  `async` methods, local functions, and lambdas now keep the async-function
+  protocol boundary (the JS/Python/Swift discipline), `await foreach` keeps the
+  async-iteration boundary (Swift `for await`), and `await using` keeps the
+  async-context boundary (Python `async with`) — previously all three lowered
+  indistinguishably from their synchronous twins. Named
+  `System.Threading.Tasks` calls map to the shared obligation labels
+  (`Task.Run`/`Task.Factory.StartNew` → task-spawn, `Task.Delay` → timer +
+  cancellation-liveness, `Task.Yield` → task-yield, `Task.WhenAll`/`WhenAny` →
+  all/first aggregates), with attribution dropped whenever any scanned C# file
+  defines its own `Task` (fail-closed, the Swift shadow discipline). Exact
+  admission is unchanged (`semantic_admission_delta = 0`): a runtime boundary
+  is still a strict-exact rejection. Covered by C# frontend protocol tests, a
+  C# async/scheduling hard-negative case in the equivalence suite, and C#
+  runtime-boundary reporting tests; all 15 pinned C# corpus repositories still
+  report zero false merges under `nose verify --max-violations 0`.
 - Completed the C# LINQ transparent-identifier translation: `let`, `join`
   (including `join … into` group joins), a second `from`, and `into`
   continuations now desugar per the spec, threading bindings through the same
