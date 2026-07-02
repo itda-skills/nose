@@ -129,6 +129,45 @@ fn await_protocol_missing_evidence_is_language_neutral() {
 }
 
 #[test]
+fn yield_protocol_missing_evidence_is_language_specific() {
+    let ruby = missing_evidence_for_protocol(
+        "yield.rb",
+        "def render(value)\n  yield value\nend\n",
+        Lang::Ruby,
+        nose_il::SourceProtocolKind::BlockYield,
+    );
+    assert!(ruby.contains(&"ruby-yield-callback-demand-effect-contract"));
+    assert!(!ruby.contains(&"generator-yield-lifecycle-contract"));
+    assert!(!ruby.contains(&"generator-yield-protocol-contract"));
+
+    let python = missing_evidence_for_protocol(
+        "yield.py",
+        "def values(x):\n    yield x\n",
+        Lang::Python,
+        nose_il::SourceProtocolKind::Yield,
+    );
+    assert!(python.contains(&"generator-yield-lifecycle-contract"));
+    assert!(python.contains(&"generator-yield-protocol-contract"));
+    assert!(!python.contains(&"ruby-yield-callback-demand-effect-contract"));
+}
+
+#[test]
+fn ruby_raise_reports_exception_channel_boundary() {
+    let (il, interner) = lowered_source(
+        "raise.rb",
+        "def fail_fast(error)\n  raise error\nend\n",
+        Lang::Ruby,
+    );
+    let node = (0..il.nodes.len())
+        .map(|idx| NodeId(idx as u32))
+        .find(|&node| il.kind(node) == NodeKind::Throw)
+        .expect("expected Ruby raise to lower to Throw");
+    let labels = runtime_boundary_missing_evidence(&il, &interner, node)
+        .expect("expected exception-channel runtime boundary evidence");
+    assert!(labels.contains(&"exception-channel-contract"));
+}
+
+#[test]
 fn go_channel_protocol_boundaries_report_specific_obligations() {
     let send = missing_evidence_for_raw_tag(
         "channel.go",

@@ -117,6 +117,11 @@ set -euo pipefail
 # 52 -> 52 (Java Future/Executor local/this-field receivers): exact Java receiver-domain evidence
 # moves two reviewed frontend-lowering representatives (`7b134f23e922f405` -> `596f602568ace201`,
 # `6e37683225332c86` -> `a54e8f6b173a160a`) without changing members or budget.
+# 52 -> 52 (Java CompletableFuture constructor/package-shadow reporting): extracting the shared
+# Java construct-call lowering helper removes the avoidable constructor-helper near family. The
+# remaining delta is representative churn for the same reviewed frontend-lowering families:
+# `596f602568ace201` -> `ac31c3c9bc390d55`, and `a54e8f6b173a160a` -> `ebf5e40476ceff32`.
+# No new budget is accepted.
 # 52 -> 55 (C# frontend): the new C# lowering joins three per-grammar parallelism families
 # (`lower_for` wrappers, the Java-mirroring `lower_stmt` dispatch, the declarator loop) and lifts
 # the exhaustive language_profile provenance matches over the value line; the draft C# `fold_or`

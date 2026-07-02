@@ -13,11 +13,13 @@ pub(super) fn completion_stage_receiver_proven(
     il: &nose_il::Il,
     interner: &Interner,
     callee: NodeId,
+    context: &crate::verify_admission::AdmissionContext,
 ) -> bool {
     receiver_type_proven(
         il,
         interner,
         callee,
+        context,
         |domain| domain == DomainEvidence::FutureLike,
         java_completion_stage_type_import_dependency,
     )
@@ -27,13 +29,31 @@ pub(super) fn future_handle_receiver_proven(
     il: &nose_il::Il,
     interner: &Interner,
     callee: NodeId,
+    context: &crate::verify_admission::AdmissionContext,
 ) -> bool {
     receiver_type_proven(
         il,
         interner,
         callee,
+        context,
         |domain| domain == DomainEvidence::FutureLike,
         java_future_handle_type_import_dependency,
+    )
+}
+
+pub(super) fn completable_future_receiver_proven(
+    il: &nose_il::Il,
+    interner: &Interner,
+    callee: NodeId,
+    context: &crate::verify_admission::AdmissionContext,
+) -> bool {
+    receiver_type_proven(
+        il,
+        interner,
+        callee,
+        context,
+        |domain| domain == DomainEvidence::FutureLike,
+        java_completable_future_type_import_dependency,
     )
 }
 
@@ -41,6 +61,7 @@ pub(super) fn executor_receiver_kind_proven(
     il: &nose_il::Il,
     interner: &Interner,
     callee: NodeId,
+    context: &crate::verify_admission::AdmissionContext,
 ) -> Option<JavaExecutorKind> {
     let receiver = super::super::super::method_receiver(il, callee)?;
     let DomainEvidence::Nominal { type_hash } =
@@ -67,6 +88,8 @@ pub(super) fn executor_receiver_kind_proven(
                         interner,
                         record.anchor.span(),
                         imported_type,
+                        context,
+                        dependency,
                     )
                 },
             )
@@ -78,6 +101,7 @@ fn receiver_type_proven(
     il: &nose_il::Il,
     interner: &Interner,
     callee: NodeId,
+    context: &crate::verify_admission::AdmissionContext,
     accepts: impl Fn(DomainEvidence) -> bool,
     import_dependency: impl Fn(&nose_il::Il, EvidenceId) -> Option<&'static str>,
 ) -> bool {
@@ -95,6 +119,8 @@ fn receiver_type_proven(
                     interner,
                     record.anchor.span(),
                     imported_type,
+                    context,
+                    dependency,
                 )
             })
         })
@@ -106,9 +132,16 @@ fn java_concurrent_import_usable_at_span(
     interner: &Interner,
     span: Span,
     type_name: &str,
+    context: &crate::verify_admission::AdmissionContext,
+    import_dependency: EvidenceId,
 ) -> bool {
+    let Some(import_record) = il.evidence.get(import_dependency.0 as usize) else {
+        return false;
+    };
     !java_type_name_shadowed_at_span(il, interner, span, type_name)
         && !import_conflicts::type_import_conflicted_at_span(il, span, type_name)
+        && (!super::java_imported_binding_is_wildcard_backed(il, import_record)
+            || !context.java_package_local_type_is_visible_in_file(il, interner, type_name))
 }
 
 fn receiver_domain_record<'a>(
@@ -283,6 +316,13 @@ fn java_future_handle_type_import_dependency(
         dependency,
         &[COMPLETABLE_FUTURE_TYPE, FUTURE_TYPE, SCHEDULED_FUTURE_TYPE],
     )
+}
+
+fn java_completable_future_type_import_dependency(
+    il: &nose_il::Il,
+    dependency: EvidenceId,
+) -> Option<&'static str> {
+    java_concurrent_type_import_dependency(il, dependency, &[COMPLETABLE_FUTURE_TYPE])
 }
 
 fn java_executor_type_import_dependency(

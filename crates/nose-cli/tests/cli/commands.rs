@@ -14,6 +14,8 @@ mod proposal_query;
 mod query_reinvented;
 #[path = "commands/recall_loss_report.rs"]
 mod recall_loss_report;
+#[path = "commands/recall_loss_report/java_completable_future.rs"]
+mod recall_loss_report_java_completable_future;
 #[path = "commands/recall_loss_report/oracle_exclusions.rs"]
 mod recall_loss_report_oracle_exclusions;
 #[path = "commands/recall_loss_report/promise_continuations.rs"]

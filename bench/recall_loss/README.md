@@ -6,6 +6,18 @@ the checked-in files record the command, selected surface, hard gate, reason
 rollups, and representative fixtures needed to reproduce or review a semantic
 kernel PR.
 
+Scheduling lifecycle audit artifacts use a separate source-prevalence status
+vocabulary:
+
+- `closed-boundary` marks residual source surfaces that remain exact-closed.
+- `reporting-supported-closed-boundary` marks exact-closed surfaces whose
+  diagnostics can already name the missing obligation.
+- `exact-supported-boundary` marks source surfaces already covered by existing
+  proof-backed exact capability; they are accounted for but not implementation
+  candidates.
+- `superseded-overlap-boundary` marks broad historical buckets retained for
+  continuity after concrete operation rows replace them as actionable work.
+
 ## Regenerate
 
 ```sh
@@ -212,6 +224,32 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --include-zero-surface swift.error.throwing_closure
 ```
 
+Build the Swift try-expression reporting audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.swift-try-expression-reporting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.swift-try-expression-reporting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.swift-try-expression-reporting.json \
+  --generated-on 2026-07-02
+```
+
+Build the Swift exception residual-accounting audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.swift-exception-residual-accounting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.swift-exception-residual-accounting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.swift-exception-residual-accounting.json \
+  --generated-on 2026-07-02
+```
+
 Build the Rust async closure source-protocol audit with:
 
 ```sh
@@ -239,6 +277,53 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-07-01
 ```
 
+Build the Ruby yield source-protocol audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.ruby-yield-source-protocol.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.ruby-yield-source-protocol.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.ruby-yield-source-protocol.json \
+  --generated-on 2026-07-01
+
+python3 scripts/query-regression-harness.py \
+  --baseline-binary /tmp/nose-ruby-yield-main-target/release/nose \
+  --current-binary target/release/nose \
+  --baseline-source-ref origin/main \
+  --current-source-ref ruby-yield-source-protocol \
+  --iterations 15 \
+  --repo rubocop --repo rspec-core --repo sidekiq \
+  --repo rack --repo fastlane --repo sinatra \
+  --output target/ruby-yield-source-protocol-query-regression.json
+```
+
+Build the Ruby exception-channel reporting audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.ruby-exception-reporting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.ruby-exception-reporting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.ruby-exception-reporting.json \
+  --generated-on 2026-07-02
+
+python3 scripts/query-regression-harness.py \
+  --baseline-binary /tmp/nose-ruby-exception-main/target/release/nose \
+  --current-binary target/release/nose \
+  --baseline-source-ref origin/main \
+  --current-source-ref ruby-exception-reporting-alignment \
+  --current-source-sha 8bb0ed37d13d98bbb94f29fc23cc19163d8d52e3 \
+  --iterations 15 \
+  --repo rubocop --repo rspec-core --repo sidekiq \
+  --repo rack --repo fastlane --repo sinatra \
+  --output target/ruby-exception-reporting-query-regression.json
+```
+
 Build the Java `CompletableFuture`/FutureLike obligation audit with:
 
 ```sh
@@ -250,6 +335,29 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --output target/scheduling-lifecycle-boundary-audit.java-completablefuture.json \
   --generated-on 2026-06-30 \
   --recall-loss-report target/recall-loss.java-completablefuture.crates.json
+```
+
+Build the Java `CompletableFuture` constructor reporting audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.java-completablefuture-constructor.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --generated-on 2026-07-02 \
+  --recall-loss-report target/recall-loss.java-completablefuture-constructor.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.java-completablefuture-constructor.json
+
+python3 scripts/query-regression-harness.py \
+  --baseline-binary /tmp/nose-java-cf-main-worktree/target/release/nose \
+  --current-binary target/release/nose \
+  --baseline-source-ref origin/main \
+  --current-source-ref java-completablefuture-constructor-reporting \
+  --iterations 9 \
+  --repo netty --repo rxjava --repo retrofit \
+  --repo junit5 --repo jedis --repo h2database \
+  --output target/java-completablefuture-constructor-query-regression.json
 ```
 
 Build the Java `Executor`/`Future` receiver-method obligation audit with:
@@ -292,6 +400,19 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --generated-on 2026-07-01
 ```
 
+Build the Java Future/Executor residual-accounting audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.java-future-residual-accounting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.java-future-residual-accounting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.java-future-residual-accounting.json \
+  --generated-on 2026-07-02
+```
+
 Build the Go channel/goroutine/defer obligation audit with:
 
 ```sh
@@ -303,6 +424,106 @@ python3 scripts/scheduling-lifecycle-boundary-audit.py \
   --recall-loss-report target/recall-loss.go-channel-protocol.crates.json \
   --output target/scheduling-lifecycle-boundary-audit.go-channel-protocol.json \
   --generated-on 2026-06-30
+```
+
+Build the Go protocol reporting-support audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.go-protocol-reporting-support.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.go-protocol-reporting-support.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.go-protocol-reporting-support.json \
+  --generated-on 2026-07-01
+
+python3 scripts/query-regression-harness.py \
+  --baseline-binary /tmp/nose-go-protocol-main-target/release/nose \
+  --current-binary target/release/nose \
+  --baseline-source-ref origin/main \
+  --current-source-ref go-protocol-reporting-support \
+  --repo nats-server --repo etcd --repo minio \
+  --repo prometheus --repo badger --repo delve \
+  --output target/go-protocol-reporting-support-query-regression.json
+```
+
+Build the non-JS task-spawn reporting alignment audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.non-js-task-spawn-reporting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.non-js-task-spawn-reporting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.non-js-task-spawn-reporting.json \
+  --generated-on 2026-07-01
+```
+
+Build the non-JS async aggregate reporting alignment audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.non-js-async-aggregate-reporting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.non-js-async-aggregate-reporting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.non-js-async-aggregate-reporting.json \
+  --generated-on 2026-07-01
+```
+
+Build the non-JS source-protocol reporting alignment audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.non-js-source-protocol-alignment.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.non-js-source-protocol-alignment.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.non-js-source-protocol-alignment.json \
+  --generated-on 2026-07-02
+```
+
+Build the Python generator-yield reporting alignment audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.python-generator-yield-reporting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.python-generator-yield-reporting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.python-generator-yield-reporting.json \
+  --generated-on 2026-07-02
+```
+
+Build the Python `asyncio.sleep` reporting alignment audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.python-asyncio-sleep-reporting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.python-asyncio-sleep-reporting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.python-asyncio-sleep-reporting.json \
+  --generated-on 2026-07-02
+```
+
+Build the Swift await and Java settled-factory reporting alignment audit with:
+
+```sh
+cargo run -q -p nose-cli -- verify crates \
+  --max-violations 0 \
+  --recall-loss-report target/recall-loss.swift-await-java-factory-reporting.crates.json
+
+python3 scripts/scheduling-lifecycle-boundary-audit.py \
+  --recall-loss-report target/recall-loss.swift-await-java-factory-reporting.crates.json \
+  --output target/scheduling-lifecycle-boundary-audit.swift-await-java-factory-reporting.json \
+  --generated-on 2026-07-02
 ```
 
 Build the first #602 `Promise.all` exact aggregate slice audit with:
@@ -659,6 +880,52 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   source prevalence from `143,178` to `143,188` while splitting `40` lexical
   Java future reporting candidates out of the broad
   `CompletableFuture` bucket and leaving `276` broad mentions closed.
+- [scheduling-lifecycle-boundary-audit-java-completablefuture-constructor-reporting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-java-completablefuture-constructor-reporting-2026-07-02.v1.json)
+  records the Java `CompletableFuture` constructor reporting split. It marks
+  fully qualified or exact-/wildcard-import-backed `new CompletableFuture`
+  calls reporting-supported, newly aligning `46` occurrences across `5` repos
+  and reducing the residual broad `CompletableFuture` bucket from `276` to
+  `230`.
+- [java-completablefuture-constructor-reporting-2026-07-02.v1.json](java-completablefuture-constructor-reporting-2026-07-02.v1.json)
+  records the compact closeout for the same slice, including the checked
+  `crates` recall-loss gate (`0` false merges, `0` canon preservation
+  violations) and Java reporting-supported totals after the split.
+- [java-completablefuture-constructor-query-regression-2026-07-02.v1.json](java-completablefuture-constructor-query-regression-2026-07-02.v1.json)
+  records the Java-heavy product query regression for the constructor slice.
+  The 6-repo alternating r9 run kept product output hashes identical on every
+  measured repo and measured aggregate median runtime at
+  `7023.49ms -> 6991.92ms` (`-0.45%`).
+- [scheduling-lifecycle-boundary-audit-non-js-source-protocol-alignment-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-non-js-source-protocol-alignment-2026-07-02.v1.json)
+  records the non-JS async source-protocol reporting alignment. It marks the
+  already runtime-boundary-backed Python `await`/`async def`, Rust
+  `.await`/`async fn`/`async block`, and Swift `async` function rows
+  reporting-supported while keeping exact admission closed.
+- [non-js-source-protocol-reporting-alignment-2026-07-02.v1.json](non-js-source-protocol-reporting-alignment-2026-07-02.v1.json)
+  records the compact closeout for the same slice. It newly aligns `19,144`
+  source-prevalence occurrences, brings all reporting-supported
+  closed-boundary rows to `70,491` occurrences across `57` rows, and keeps the
+  checked `crates` gate at `0` false merges and `0` canon preservation
+  violations.
+- [scheduling-lifecycle-boundary-audit-python-generator-yield-reporting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-python-generator-yield-reporting-2026-07-02.v1.json)
+  records the Python generator-yield reporting alignment. It marks
+  source-backed `yield` and `yield from` lifecycle/protocol boundaries
+  reporting-supported while keeping exact admission closed.
+- [python-generator-yield-reporting-2026-07-02.v1.json](python-generator-yield-reporting-2026-07-02.v1.json)
+  records the compact closeout for the same slice. It newly aligns `2,404`
+  Python generator-yield occurrences across `21` repos, bringing all
+  reporting-supported closed-boundary rows to `90,875` occurrences across
+  `60` rows while the checked `crates` gate remains at `0` false merges and
+  `0` canon preservation violations.
+- [scheduling-lifecycle-boundary-audit-python-asyncio-sleep-reporting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-python-asyncio-sleep-reporting-2026-07-02.v1.json)
+  records the direct Python `asyncio.sleep` reporting alignment. It marks the
+  already runtime-boundary-backed timer row reporting-supported while keeping
+  exact admission closed.
+- [python-asyncio-sleep-reporting-2026-07-02.v1.json](python-asyncio-sleep-reporting-2026-07-02.v1.json)
+  records the compact closeout for the same slice. It newly aligns `104`
+  `asyncio.sleep` occurrences across `6` repos, bringing all
+  reporting-supported closed-boundary rows to `90,979` occurrences across
+  `61` rows and leaving no Python closed-boundary rows in the scheduling
+  lifecycle audit.
 - [scheduling-lifecycle-boundary-audit-java-wildcard-executor-future-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-java-wildcard-executor-future-2026-07-01.v1.json)
   records the Java `java.util.concurrent.*` receiver-domain follow-up. It keeps
   exact admission closed while allowing wildcard-derived import evidence to
@@ -666,6 +933,17 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   local type or explicit same-name import conflicts. On the current
   `origin/main` baseline, Java reporting-supported receiver-method candidates
   rise from `858` to `1,093` (`+235`) across the pinned 120-repo corpus.
+- [scheduling-lifecycle-boundary-audit-java-future-residual-accounting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-java-future-residual-accounting-2026-07-02.v1.json)
+  records the Java Future/Executor residual-accounting alignment. It marks
+  existing product-backed `FutureLike.handle/whenComplete` settlement
+  continuations reporting-supported at `10` occurrences across `2` repos, and
+  keeps the historical `Executor/Future` type-name bucket visible at `3,297`
+  occurrences while marking it as a superseded overlap row.
+- [java-future-residual-accounting-2026-07-02.v1.json](java-future-residual-accounting-2026-07-02.v1.json)
+  records the compact closeout for the same correction. Reporting-supported
+  totals move to `88,471` occurrences across `59` rows, and the largest
+  actionable Java closed boundary becomes `stream/parallelStream` at `1,996`
+  occurrences across `15` repos.
 - [scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json)
   records the Go channel/goroutine/defer reporting-only refinement. It keeps
   exact admission closed while splitting Go protocol-node pricing into `4,294`
@@ -673,6 +951,51 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   parents, `3,590` select cases, `546` select defaults, `1,949` goroutines,
   and `17,521` defers. Select parents and arms are counted separately because
   they are distinct source-backed protocol boundaries in lowering.
+- [scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json)
+  records the Go protocol reporting-support follow-up. It keeps exact
+  admission closed while marking the already source-backed Go channel,
+  select, goroutine, and defer protocol rows reporting-supported. Go
+  `go`/`defer` now also have scheduled/deferred callback demand/effect
+  profiles in the shared kernel.
+- [go-protocol-reporting-support-2026-07-01.v1.json](go-protocol-reporting-support-2026-07-01.v1.json)
+  records the compact Go protocol closeout. It prices `31,500` Go protocol
+  occurrences, keeps the checked `crates` gate at `0` false merges, and records
+  a Go-heavy r9 query regression of `3560.13ms -> 3563.06ms` (`+0.08%`) with
+  identical product hashes on all six measured repos.
+- [scheduling-lifecycle-boundary-audit-non-js-task-spawn-reporting-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-non-js-task-spawn-reporting-2026-07-01.v1.json)
+  records the non-JS task-spawn reporting alignment. It marks the already
+  runtime-boundary-backed Rust `tokio`/`async-std` spawn, Swift
+  `Task`/`Task.detached`, Python `asyncio.create_task`/`ensure_future`, and
+  Java `CompletableFuture.supplyAsync`/`runAsync` rows reporting-supported
+  while keeping exact admission closed.
+- [non-js-task-spawn-reporting-alignment-2026-07-01.v1.json](non-js-task-spawn-reporting-alignment-2026-07-01.v1.json)
+  records the compact closeout for the same slice. It newly aligns `590`
+  source-prevalence occurrences, brings currently backed task-spawn
+  reporting-supported rows to `1,123` occurrences, and keeps the checked
+  `crates` gate at `0` false merges and `0` canon preservation violations.
+- [scheduling-lifecycle-boundary-audit-non-js-async-aggregate-reporting-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-aggregate-reporting-2026-07-01.v1.json)
+  records the non-JS async aggregate reporting alignment. It marks the already
+  runtime-boundary-backed Rust `tokio`/`futures`/`futures_util`
+  `join!`/`try_join!`/`select!`, Python `asyncio.gather`/`wait`, and Java
+  `CompletableFuture.allOf`/`anyOf` rows reporting-supported while keeping
+  exact admission closed.
+- [non-js-async-aggregate-reporting-alignment-2026-07-01.v1.json](non-js-async-aggregate-reporting-alignment-2026-07-01.v1.json)
+  records the compact closeout for the same slice. It newly aligns `98`
+  source-prevalence occurrences, brings currently backed async-aggregate
+  reporting-supported rows to `286` occurrences, and keeps the checked `crates`
+  gate at `0` false merges and `0` canon preservation violations.
+- [scheduling-lifecycle-boundary-audit-swift-await-java-factory-reporting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-swift-await-java-factory-reporting-2026-07-02.v1.json)
+  records the Swift await and Java settled-factory reporting alignment. It marks
+  already source-protocol-backed Swift `await` and static-runtime-backed Java
+  `CompletableFuture.completedFuture`/`failedFuture` rows reporting-supported
+  while keeping exact admission closed. The broad Java `CompletableFuture`
+  bucket and looser FutureLike settlement receiver bucket remain deferred.
+- [swift-await-java-factory-reporting-alignment-2026-07-02.v1.json](swift-await-java-factory-reporting-alignment-2026-07-02.v1.json)
+  records the compact closeout for the same slice. It newly aligns `8,703`
+  source-prevalence occurrences, brings all reporting-supported
+  closed-boundary rows to `51,301` occurrences across `50` rows, and keeps the
+  checked `crates` gate at `0` false merges and `0` canon preservation
+  violations.
 - [scheduling-lifecycle-boundary-audit-python-async-lifecycle-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-python-async-lifecycle-2026-07-01.v1.json)
   records the Python async protocol lifecycle reporting slice. It keeps exact
   admission closed while splitting `async for` statements/comprehensions and
@@ -712,6 +1035,26 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   investigation triggers but no output drift; the paired alternating r15 run
   measured `898.66ms -> 890.29ms` aggregate wall-clock medians (`-0.93%`) with
   identical product JSON hashes for every repo.
+- [scheduling-lifecycle-boundary-audit-swift-try-expression-reporting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-swift-try-expression-reporting-2026-07-02.v1.json)
+  records the Swift try-expression reporting alignment. It marks source-backed
+  `try`, `try?`, `try!`, and `for try await` propagation boundaries
+  reporting-supported while keeping exact admission closed.
+- [swift-try-expression-reporting-2026-07-02.v1.json](swift-try-expression-reporting-2026-07-02.v1.json)
+  records the compact closeout for the same slice. It newly aligns `17,970`
+  Swift try-expression occurrences across `18` repos, bringing all
+  reporting-supported closed-boundary rows to `88,461` occurrences across
+  `58` rows while the checked `crates` gate remains at `0` false merges and
+  `0` canon preservation violations.
+- [scheduling-lifecycle-boundary-audit-swift-exception-residual-accounting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-swift-exception-residual-accounting-2026-07-02.v1.json)
+  records the Swift exception residual-accounting correction. The historical
+  `throws/try` lexical bucket remains visible at `26,608` occurrences across
+  `18` repos but is marked as a superseded overlap bucket rather than an
+  actionable closed-boundary.
+- [swift-exception-residual-accounting-2026-07-02.v1.json](swift-exception-residual-accounting-2026-07-02.v1.json)
+  records the compact closeout for the same correction. Reporting-supported
+  totals remain `88,461` occurrences across `58` rows; the measured change is
+  that Ruby `raise/rescue` at `4,010` occurrences becomes the largest non-JS
+  actionable closed exception-channel bucket.
 - [rust-async-closure-source-protocol-2026-07-01.v1.json](rust-async-closure-source-protocol-2026-07-01.v1.json)
   records the Rust async closure source-protocol parity slice. It reuses
   `AsyncFunction` for `async |...|` and `async move |...|` closures without
@@ -729,6 +1072,78 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   records the matching 120-repo source-prevalence pricing. It raises total
   source prevalence from `146,987` to `146,988`, marks the Ruby Thread/Fiber row
   reporting-supported, and prices `74` occurrences across `11` repos.
+- [ruby-yield-source-protocol-reporting-2026-07-01.v1.json](ruby-yield-source-protocol-reporting-2026-07-01.v1.json)
+  records the Ruby block-yield reporting-only expansion. Ruby `yield` now
+  preserves a source-backed `BlockYield` protocol boundary and reports callback
+  demand/effect obligations without opening exact admission or widening
+  generator-yield semantics.
+- [scheduling-lifecycle-boundary-audit-ruby-yield-source-protocol-2026-07-01.v1.json](scheduling-lifecycle-boundary-audit-ruby-yield-source-protocol-2026-07-01.v1.json)
+  records the matching 120-repo pricing: `801` Ruby yield occurrences across
+  `17` repos are reporting-supported closed boundaries.
+- [ruby-yield-source-protocol-query-regression-2026-07-01.v1.json](ruby-yield-source-protocol-query-regression-2026-07-01.v1.json)
+  records the Ruby-heavy product query regression. The 6-repo alternating r15
+  aggregate median was `2504.55ms -> 2574.79ms` (`+2.80%`). `rspec-core`
+  changed one same-location 3-member HTML family's representative label from
+  `pre` to `code` while keeping the family count stable.
+- [scheduling-lifecycle-boundary-audit-ruby-exception-reporting-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-ruby-exception-reporting-2026-07-02.v1.json)
+  records the Ruby exception-channel reporting audit. It prices `2,065`
+  source-backed unqualified `raise` occurrences and `1,933` source-backed
+  `rescue` occurrences as reporting-supported closed-boundaries, while the
+  broad `4,010`-occurrence `raise/rescue` overlap bucket remains visible as
+  superseded. The 12 broad-only occurrences are receiver-qualified `.raise`
+  overlaps that stay outside the concrete reporting-supported rows.
+- [ruby-exception-reporting-2026-07-02.v1.json](ruby-exception-reporting-2026-07-02.v1.json)
+  records the compact closeout for the same slice. Reporting-supported
+  closed-boundary rows rise to `94,977` occurrences across `63` rows, exact
+  admission remains closed, and Java Stream lifecycle becomes the largest
+  non-JS actionable closed boundary at `1,996` occurrences.
+- [ruby-exception-reporting-query-regression-2026-07-02.v1.json](ruby-exception-reporting-query-regression-2026-07-02.v1.json)
+  records the Ruby-heavy product query regression. The 6-repo alternating r15
+  aggregate median was `3295.78ms -> 3330.24ms` (`+1.05%`). Family counts stay
+  stable across all 6 repos. Output hashes stay identical on `fastlane`,
+  `rack`, `sidekiq`, and `sinatra`; `rubocop` changes only
+  `value_nodes`/`mean_sem` metadata on one Ruby helper family, and `rspec-core`
+  changes one stable-count HTML hidden family's representative from `code` to
+  `pre` with `static-attrs-only` origin evidence.
+- [scheduling-lifecycle-boundary-audit-java-stream-lifecycle-split-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-java-stream-lifecycle-split-2026-07-02.v1.json)
+  records the Java stream lifecycle audit split. It separates existing
+  proof-backed `receiver.stream()` adapter occurrences (`372` across `10`
+  repos) and `Arrays.stream(xs)` adapter occurrences (`128` across `12` repos)
+  from the broad stream lifecycle bucket. The residual
+  `stream/parallelStream` closed-boundary row falls from `1,996` to `1,496`
+  occurrences across `14` repos.
+- [java-stream-lifecycle-split-2026-07-02.v1.json](java-stream-lifecycle-split-2026-07-02.v1.json)
+  records the compact closeout for the same accounting split. No product
+  admission code changed; the artifact documents existing exact-supported
+  iterator identity/static collection adapter capability and keeps untyped
+  stream plus `parallelStream` lifecycle semantics closed for later proof.
+- [scheduling-lifecycle-boundary-audit-java-completablefuture-receiver-split-2026-07-02.v1.json](scheduling-lifecycle-boundary-audit-java-completablefuture-receiver-split-2026-07-02.v1.json)
+  records the Java `CompletableFuture` receiver split. It moves
+  scope-proven `complete`/`completeExceptionally` receiver settlement methods
+  (`45` across `2` repos) and `join`/`getNow`/`isCompletedExceptionally`
+  observation methods (`45` across `1` repo) to reporting-supported
+  closed-boundary rows, while the remaining `230` broad type/reference mentions
+  become a superseded overlap row instead of an actionable residual. Same-name
+  receivers in other scopes, custom imports, lambda parameters, and unsupported
+  arities remain closed.
+- [java-completablefuture-receiver-split-2026-07-02.v1.json](java-completablefuture-receiver-split-2026-07-02.v1.json)
+  records the compact closeout for the same slice, and
+  [java-completablefuture-receiver-split-query-regression-2026-07-02.v1.json](java-completablefuture-receiver-split-query-regression-2026-07-02.v1.json)
+  records the Java-heavy r9 product query regression. All six measured repos
+  kept identical output hashes and family counts; aggregate median runtime was
+  `8118.22ms -> 8151.13ms` (`+0.41%`).
+- [issue-655-hard-negative-matrix-2026-07-02.v1.json](issue-655-hard-negative-matrix-2026-07-02.v1.json)
+  records the #653/#655 async/scheduling hard-negative matrix before fixture
+  expansion. It audits `82` scoped surface rows across JS/TS, Go, Swift, Rust,
+  Java, Python, and Ruby, including `65` reporting-supported closed-boundary
+  rows, plus `11` supplemental JS/TS Promise continuation/rejection reporting
+  and timer/scheduler priced surfaces; prices `177,789` scoped
+  source-prevalence occurrences including those supplemental rows; maps `18`
+  positive fixture groups, `27` hard-negative fixture groups, and `25`
+  reporting artifact evidence groups; and enumerates `48` missing
+  hard-negative classes for #657.
+  This hand-curated inventory records its source-audit regenerate and validation
+  commands, and keeps `semantic_admission_delta = 0`.
 - [scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json)
   records the Python/Rust async runtime scope-shadowing hardening. It keeps
   exact admission closed while making unrelated local shadows in other

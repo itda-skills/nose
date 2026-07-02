@@ -530,15 +530,36 @@ fn strict_exact_object_keys_key_view_uses_object_argument_proof() {
 }
 
 fn lowered_ts_function_exact_safe(source: &str) -> bool {
+    lowered_function_exact_safe("object_keys.ts", source, Lang::TypeScript)
+}
+
+#[test]
+fn strict_exact_keeps_java_completable_future_constructors_closed() {
+    for (name, source) in [
+        (
+            "exact imported CompletableFuture constructor",
+            "import java.util.concurrent.CompletableFuture;\nclass Runtime { boolean run() { return new CompletableFuture<String>() == null; } }\n",
+        ),
+        (
+            "wildcard imported CompletableFuture constructor",
+            "import java.util.concurrent.*;\nclass Runtime { boolean run() { return new CompletableFuture<String>() == null; } }\n",
+        ),
+        (
+            "qualified CompletableFuture constructor",
+            "class Runtime { boolean run() { return new java.util.concurrent.CompletableFuture<String>() == null; } }\n",
+        ),
+    ] {
+        assert!(
+            !lowered_function_exact_safe("Runtime.java", source, Lang::Java),
+            "{name} must stay closed in strict exact until future constructor settlement semantics are proven"
+        );
+    }
+}
+
+fn lowered_function_exact_safe(path: &str, source: &str, lang: Lang) -> bool {
     let interner = Interner::new();
-    let raw = nose_frontend::lower_source(
-        FileId(0),
-        "object_keys.ts",
-        source.as_bytes(),
-        Lang::TypeScript,
-        &interner,
-    )
-    .expect("lower TypeScript");
+    let raw = nose_frontend::lower_source(FileId(0), path, source.as_bytes(), lang, &interner)
+        .unwrap_or_else(|err| panic!("lower {path}: {err}"));
     let il = nose_normalize::normalize(
         &raw,
         &interner,
@@ -548,7 +569,24 @@ fn lowered_ts_function_exact_safe(source: &str) -> bool {
     let function = il
         .units
         .iter()
-        .find(|unit| unit.kind == UnitKind::Function)
-        .expect("function unit");
+        .find(|unit| matches!(unit.kind, UnitKind::Function | UnitKind::Method))
+        .expect("callable unit");
     strict_exact_safe_tree(&il, &interner, &facts, function.root)
+}
+
+#[test]
+fn strict_exact_closes_ruby_exception_boundaries() {
+    for (name, source) in [
+        ("raise", "def f(error)\n  raise error\nend\n"),
+        (
+            "guarded raise",
+            "def f(error, bad)\n  raise error if bad\n  1\nend\n",
+        ),
+        ("rescue", "def f\n  work\nrescue Error\n  recover\nend\n"),
+    ] {
+        assert!(
+            !lowered_function_exact_safe("exception.rb", source, Lang::Ruby),
+            "{name} must stay closed in strict exact until Ruby exception-channel semantics are proven"
+        );
+    }
 }

@@ -1129,7 +1129,10 @@ repeated registry walks on hot paths. Binary size changed 20,181,712 ->
   `.contains(...)`, which had no first-party JS membership contract.
 - Java stream source adapters are now proof-gated: receiver `.stream()` requires
   exact iterable evidence, and static `Arrays.stream(xs)` requires the
-  `java.util.Arrays` import binding with no local `Arrays` type shadow.
+  `java.util.Arrays` import binding with no local `Arrays` type shadow. The
+  2026-07-02 audit split records `372` receiver-backed and `128`
+  `Arrays.stream` occurrences as existing exact-supported capability, leaving
+  `1,496` broad `stream/parallelStream` lifecycle occurrences closed.
 - Cross-file immutable import replacement now copies the provider's closed
   evidence subgraph required by the exported literal expression, preserving
   provider-side stdlib proofs such as `java.util.Map` for Java static imports
@@ -1259,7 +1262,8 @@ repeated registry walks on hot paths. Binary size changed 20,181,712 ->
   nullish defaulting, per-element callback demand for
   map/flat-map/filter-map/filter/reduce, pull-lazy Python generator expressions,
   eager JS-like/Ruby library HOFs, pull-lazy Rust iterator/Java Stream HOFs,
-  async continuation boundaries, generator suspension, channel boundaries, and
+  async continuation boundaries, generator suspension, source-order callback
+  invocation, scheduled/deferred callback invocation, channel boundaries, and
   non-channel protocol boundaries. The oracle consumes those profiles for
   admitted builtins instead of matching local demand enums; value-graph HOF
   callback exception timing, HOF materialization gates, strict-exact HOF gates,
@@ -1628,13 +1632,15 @@ repeated registry walks on hot paths. Binary size changed 20,181,712 ->
   until an explicit async/sync protocol evidence path exists.
 - JS/TS, Python, Rust, and Swift `await` expressions now preserve a raw async protocol
   boundary and emit `Source::Protocol(Await)` evidence instead of lowering
-  directly to the operand. JS/TS and Python `yield` expressions preserve raw
-  generator protocol boundaries with `Source::Protocol(Yield)`. Rust `async {}`
+  directly to the operand. JS/TS and Python generator `yield` expressions
+  preserve raw protocol boundaries with `Source::Protocol(Yield)`, while Ruby
+  block `yield` expressions preserve callback protocol boundaries with
+  `Source::Protocol(BlockYield)`. Rust `async {}`
   and `?` also preserve raw protocol boundaries with
   `Source::Protocol(AsyncBlock)` and
   `Source::Protocol(TryPropagation)`, and Rust async closures reuse
   `Source::Protocol(AsyncFunction)`. This closes the old exact async/sync and
-  error-propagation convergence paths, plus generator/body erasure, until
+  error-propagation convergence paths, plus generator/body and block-callback erasure, until
   language/runtime-specific protocol contracts can prove receiver, demand,
   scheduling, suspension, exception, and effect obligations.
 - Go concurrency/channel surfaces now preserve source-backed protocol
@@ -2139,10 +2145,18 @@ different APIs.
   kernel feature; local type declarations and explicit same-name imports still
   close reporting. The latest pricing artifact moves Java reporting-supported
   receiver-method candidates from `858` to `1,093` (`+235`) while leaving the
-  broad `3,297`-occurrence `Executor/Future` lexical bucket closed until
-  wrapper aliases, project-specific executors, scheduling, cancellation,
-  lifecycle, result-channel, exception, and callback/effect contracts are
-  dependency-closed.
+  broad `3,297`-occurrence `Executor/Future` lexical bucket visible as a
+  superseded overlap row. The residual-accounting follow-up also marks
+  product-backed `FutureLike.handle/whenComplete` settlement continuations
+  reporting-supported at `10` occurrences, so concrete static call,
+  constructor, and receiver-method rows drive Java Future/Executor residual
+  planning. The `CompletableFuture` receiver-method follow-up extends the same
+  FutureLike evidence path to `complete`/`completeExceptionally`,
+  `join`/`getNow`/`isCompletedExceptionally`, and timeout methods without adding
+  a Java-only kernel API. The scope-aware 120-repo audit moves `45` settlement
+  and `45` observation occurrences to reporting-supported rows, keeps same-name
+  receivers outside the proven scope closed, and reclassifies the remaining
+  `230` broad `CompletableFuture` type/reference mentions as superseded overlap.
 - The Go channel/goroutine/defer follow-up applies the same capability
   vocabulary to source-backed Go protocol boundaries. It does not add a Go-only
   admission feature: sends, receives, comma-ok receives, select
@@ -2333,6 +2347,9 @@ The [interval-scheduler-lifecycle-boundary-audit-2026-06-30.v1.json](../bench/re
 2026-06-30 #602 closeout note:
 The [issue-602-closeout-2026-06-30.v1.json](../bench/recall_loss/issue-602-closeout-2026-06-30.v1.json) artifact closes #602 as a broad scheduling, aggregate, cancellation, and lifecycle boundary milestone. The exact admissions opened under this epic are limited to checked literal Promise aggregate slices; executor timing, cancellation/liveness, scheduler/timer/microtask/interval behavior, and cross-language lifecycle protocols remain named closed obligations. The current local `crates` gate records `false_merges = 0`, `canon_preservation_violations = 0`, and no Promise/scheduling/aggregate/cancellation/lifecycle unsupported-runtime rollup rows. Further exact lifecycle work should start as a new priced epic, not as API-by-API continuation of #602.
 
+2026-07-02 #653 soundness hardening successor note:
+The [#655 async/scheduling hard-negative matrix](../bench/recall_loss/issue-655-hard-negative-matrix-2026-07-02.v1.json) starts #653 as that successor guardrail epic, not as a behavior-changing exact-admission slice. It maps the currently reporting-supported and still-closed async/scheduling/lifecycle/error-channel families across JS/TS, Go, Swift, Rust, Java, Python, and Ruby before #657 adds executable fixture suites. The matrix audits `82` scoped lifecycle rows, including `65` reporting-supported closed-boundary rows, plus `11` supplemental JS/TS Promise continuation/rejection reporting and timer/scheduler priced surfaces; it names `48` missing hard-negative classes while keeping runnable fixture counts separate from reporting artifact evidence and preserving `semantic_admission_delta = 0`.
+
 2026-06-30 Go channel protocol obligation note:
 The [scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-channel-protocol-2026-06-30.v1.json)
 artifact keeps exact admission closed while refining Go protocol-boundary
@@ -2405,6 +2422,84 @@ Rust async closure occurrences, so this is a parity and hard-negative slice;
 the same audit now prices `1,342` Rust async blocks across `4` repos without
 letting closure syntax inflate the block row. The checked `crates` gate remains
 at `0` false merges and `0` canon preservation violations.
+
+2026-07-01 Ruby block-yield source-protocol note:
+The [ruby-yield-source-protocol-reporting-2026-07-01.v1.json](../bench/recall_loss/ruby-yield-source-protocol-reporting-2026-07-01.v1.json)
+artifact extends source protocol reporting without widening generator-yield
+semantics. Ruby block `yield` now uses the separate `BlockYield` source
+protocol and maps to a source-order callback invocation demand/effect profile.
+Exact admission remains closed until block identity, callback argument/result
+roles, effect visibility, non-local control, and exception behavior are proven.
+The 120-repo audit prices `801` Ruby yield occurrences across `17` repos, and
+the checked `crates` gate remains at `0` false merges.
+
+2026-07-02 Python generator-yield reporting note:
+The [python-generator-yield-reporting-2026-07-02.v1.json](../bench/recall_loss/python-generator-yield-reporting-2026-07-02.v1.json)
+artifact aligns Python generator `yield` audit accounting with the existing
+`Source::Protocol(Yield)` runtime-boundary reporting path. Python `yield` and
+`yield from` now count as reporting-supported generator lifecycle/protocol
+closed-boundaries in the 120-repo audit, newly aligning `2,404` occurrences
+across `21` repos. Exact admission remains closed until generator suspension,
+send/throw/close behavior, and materialization equivalence are proven.
+
+2026-07-02 Python asyncio sleep reporting note:
+The [python-asyncio-sleep-reporting-2026-07-02.v1.json](../bench/recall_loss/python-asyncio-sleep-reporting-2026-07-02.v1.json)
+artifact aligns direct `asyncio.sleep` audit accounting with the existing
+runtime-boundary timer reporting path. Direct calls now count as
+reporting-supported timer scheduling closed-boundaries in the 120-repo audit,
+newly aligning `104` occurrences across `6` repos and leaving no Python
+closed-boundary rows in the scheduling lifecycle audit. Exact admission remains
+closed until timer suspension, cancellation, and event-loop timing semantics are
+proven.
+
+2026-07-02 Ruby exception-channel reporting note:
+The [ruby-exception-reporting-2026-07-02.v1.json](../bench/recall_loss/ruby-exception-reporting-2026-07-02.v1.json)
+artifact aligns Ruby exception flow with existing runtime-boundary capabilities.
+Unqualified `raise` calls now lower to `NodeKind::Throw`, while `rescue`
+continues to lower to `NodeKind::Try`; both report `exception-channel-contract`
+without adding a Ruby-only kernel API. The 120-repo audit prices `2,065`
+`raise` and `1,933` `rescue` occurrences as reporting-supported, reclassifies
+the `4,010` broad `raise/rescue` bucket as superseded overlap, and leaves the
+12 receiver-qualified broad-only `.raise` overlaps outside the concrete rows.
+Exact admission remains closed until Ruby exception
+propagation, rescue matching, ensure ordering, and non-local control semantics
+are proven.
+
+2026-07-02 Java CompletableFuture receiver split note:
+The [java-completablefuture-receiver-split-2026-07-02.v1.json](../bench/recall_loss/java-completablefuture-receiver-split-2026-07-02.v1.json)
+artifact records the next Java Future accounting and reporting slice. Existing
+import-backed FutureLike receiver proof now reports
+`complete`/`completeExceptionally`, `join`/`getNow`/`isCompletedExceptionally`,
+and timeout receiver methods under the shared settled-value, exception,
+lifecycle, cancellation/liveness, and timer obligations. The 120-repo audit
+adds `45` settlement and `45` observation reporting-supported occurrences after
+rejecting same-name receiver bleed-through across scopes, while the old
+`230`-occurrence broad `CompletableFuture` type/reference row becomes superseded
+overlap. The Java-heavy query regression kept all six product output hashes
+identical and measured `8118.22ms -> 8151.13ms` (`+0.41%`).
+
+2026-07-02 Java stream lifecycle audit split note:
+The [java-stream-lifecycle-split-2026-07-02.v1.json](../bench/recall_loss/java-stream-lifecycle-split-2026-07-02.v1.json)
+artifact accounts for existing proof-backed stream adapter capability instead
+of treating every Java stream mention as one missing boundary. Typed
+`receiver.stream()` contributes `372` exact-supported occurrences and
+exact-import or fully qualified `Arrays.stream(xs)` contributes `128`; the
+residual `stream/parallelStream` closed-boundary row falls from `1,996` to
+`1,496`. This is an audit/accounting split only: no product admission code
+changed, and untyped receivers, factory-result cases not conservatively priced
+by the audit, arity/range overloads, shadowed bindings, terminal materialization,
+and `parallelStream` scheduling remain closed until proof exists.
+
+2026-07-01 Go protocol reporting-support note:
+The [scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json)
+artifact aligns the existing Go source protocol support with the shared
+demand/effect vocabulary. `go` statements now profile as runtime-scheduled
+callbacks and `defer` statements as scope-exit deferred callbacks. Channel
+send/receive, receive-status, select, select-case, select-default, goroutine,
+and defer rows are reporting-supported closed-boundaries in the 120-repo audit.
+Exact channel/goroutine/defer admission remains closed until scheduling,
+blocking, close/status, readiness, callback effect, panic/defer ordering, and
+liveness contracts are proven.
 
 ## See also
 

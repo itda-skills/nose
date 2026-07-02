@@ -86,7 +86,7 @@ They do not change exact admission.
 
 | obligation family | typical subreason | meaning |
 |---|---|---|
-| `callback-demand-effect` | `callback-member-call-effect-proof-missing`, `callback-rust-macro-call-effect-proof-missing`, `callback-direct-function-call-effect-contract-missing`, `callback-imported-function-call-effect-contract-missing`, `callback-assignment-effect-proof-missing`, `callback-runtime-boundary-proof-missing`, `callback-identity-or-shape-proof-missing`, `promise-then-callback-demand-effect-contract-missing`, `future-callback-demand-effect-contract-missing`, `goroutine-callback-effect-contract-missing`, `defer-callback-effect-contract-missing`, `mapping-callback-demand-effect-profile-missing`, `predicate-callback-demand-effect-profile-missing`, `flattening-callback-demand-effect-profile-missing`, `optional-callback-demand-effect-profile-missing`, or `reduction-callback-demand-effect-profile-missing` | A HOF/callback surface lacks timing, callback identity, effect visibility, result role, call-shape proof, or materialization proof. |
+| `callback-demand-effect` | `callback-member-call-effect-proof-missing`, `callback-rust-macro-call-effect-proof-missing`, `callback-direct-function-call-effect-contract-missing`, `callback-imported-function-call-effect-contract-missing`, `callback-assignment-effect-proof-missing`, `callback-runtime-boundary-proof-missing`, `callback-identity-or-shape-proof-missing`, `promise-then-callback-demand-effect-contract-missing`, `future-callback-demand-effect-contract-missing`, `ruby-yield-callback-demand-effect-contract-missing`, `goroutine-callback-effect-contract-missing`, `defer-callback-effect-contract-missing`, `mapping-callback-demand-effect-profile-missing`, `predicate-callback-demand-effect-profile-missing`, `flattening-callback-demand-effect-profile-missing`, `optional-callback-demand-effect-profile-missing`, or `reduction-callback-demand-effect-profile-missing` | A HOF/callback surface lacks timing, callback identity, effect visibility, result role, call-shape proof, or materialization proof. |
 | `executor-callback` | `promise-executor-timing-contract-missing`, `promise-executor-resolve-reject-callback-contract-missing`, `promise-executor-throw-to-rejection-contract-missing`, or `promise-executor-callback-effect-contract-missing` | A Promise/Future-like constructor callback needs executor timing, resolve/reject callback identity, thrown-to-rejected outcome, and callback-effect proof before exact use. |
 | `receiver-mutation` | `effect-preserving-contract-missing` | A mutation/place/effect boundary blocks exact admission. |
 | `rejection-channel` | `promise-reject-rejected-value-channel-contract-missing`, `promise-catch-rejection-continuation-contract-missing`, `promise-finally-settlement-continuation-contract-missing`, `promise-then-rejection-continuation-contract-missing`, legacy `promise-rejection-channel-contract-missing`/`promise-rejection-continuation-contract-missing`, or `exception-channel-contract-missing` | Rejection, catch/finally settlement, throw, rescue, or non-local error flow must remain distinct from ordinary return values. |
@@ -95,7 +95,7 @@ They do not change exact admission.
 | `scheduling-boundary` | `async-await-scheduling-contract-missing`, `async-function-scheduling-contract-missing`, `async-block-scheduling-contract-missing`, legacy `promise-await-scheduling-contract-missing`, `promise-async-function-scheduling-contract-missing`, `future-async-block-scheduling-contract-missing`, `promise-non-construct-call-boundary-contract-missing`, `scheduler-wait-timing-contract-missing`, `scheduler-yield-microtask-order-contract-missing`, `timer-scheduling-contract-missing`, `task-spawn-scheduling-contract-missing`, `task-yield-scheduling-contract-missing`, `future-drive-scheduling-contract-missing`, `goroutine-scheduling-contract-missing`, or `runtime-protocol-boundary-contract-missing` | A lowered runtime/protocol construct needs scheduling or protocol semantics before exact use. |
 | `channel-boundary` | `channel-send-synchronization-contract-missing`, `channel-receive-value-channel-contract-missing`, `channel-receive-status-contract-missing`, `channel-select-readiness-contract-missing`, `channel-select-case-selection-contract-missing`, `channel-select-default-liveness-contract-missing`, legacy `channel-send-receive-protocol-contract-missing`, `channel-select-protocol-contract-missing`, or `channel-protocol-contract-missing` | Channel send/receive/select semantics need blocking, synchronization, close/status, readiness, and liveness evidence before exact use. |
 | `exception-channel` | `exception-channel-contract-missing` or `future-exception-continuation-contract-missing` | Try/throw/error propagation and exceptional future continuations are explicit channel boundaries, not scheduling boundaries. |
-| `lifecycle-materialization-boundary` | `async-iteration-lifecycle-contract-missing`, `async-context-lifecycle-contract-missing`, `async-context-cleanup-contract-missing`, `interval-async-iteration-lifecycle-contract-missing`, `task-handle-lifecycle-contract-missing`, `defer-lifecycle-ordering-contract-missing`, `generator-yield-lifecycle-contract-missing`, or `generator-yield-protocol-contract-missing` | Async iteration/context setup and cleanup, repeated emission, deferred execution, suspension, task handles, one-shot views, reusable collections, and materialization require explicit lifecycle proof. |
+| `lifecycle-materialization-boundary` | `async-iteration-lifecycle-contract-missing`, `async-context-lifecycle-contract-missing`, `async-context-cleanup-contract-missing`, `interval-async-iteration-lifecycle-contract-missing`, `task-handle-lifecycle-contract-missing`, `defer-lifecycle-ordering-contract-missing`, `generator-yield-lifecycle-contract-missing`, `generator-yield-protocol-contract-missing`, or `java-stream-lifecycle-contract-missing` | Async iteration/context setup and cleanup, repeated emission, deferred execution, suspension, task handles, one-shot views, reusable collections, stream adapters, and materialization require explicit lifecycle proof. |
 | `ambiguous-selector-boundary` | `receiver-domain-proof-missing`, `promise-then-promise-like-receiver-proof-missing`, `library-api-occurrence-evidence-missing`, or a call-target proof label | Selector, receiver, library API, or callee identity proof is missing. |
 | `source-protocol-boundary` | `source-surface-contract-missing`, `rust-macro-expansion-contract-missing` | A source/protocol syntax distinction is required but not proven. |
 | `non-degenerate-fingerprint-floor` | `non-degenerate-value-fingerprint` | The unit is otherwise exact-safe but too small for a non-degenerate exact claim. |
@@ -103,6 +103,12 @@ They do not change exact admission.
 
 The checked-in baseline summaries and the five-cycle recovery log are described
 in [recall-loss-recovery-loop](recall-loss-recovery-loop.md).
+The scheduling lifecycle audit uses source-prevalence statuses outside the
+recall-loss report schema: `closed-boundary` is residual exact-closed work,
+`reporting-supported-closed-boundary` is exact-closed but already attributed to a
+specific obligation, `exact-supported-boundary` is existing proof-backed exact
+capability accounted separately, and `superseded-overlap-boundary` is a broad
+historical bucket replaced by concrete operation rows.
 The #572 cycle also records a diagnostics-only refinement: expression-statement
 calls that need an effect contract stay in the effect boundary bucket, and
 unmodeled Rust macros such as `format!` stay in the source-surface bucket until
@@ -190,7 +196,71 @@ receiver continuations:
 `future-exception-continuation-contract`, and
 `future-callback-demand-effect-contract`. It keeps exact admission closed while
 pricing `40` lexical Java future reporting candidates in the pinned corpus and
-leaving `276` broad `CompletableFuture` mentions closed. The
+leaving `276` broad `CompletableFuture` mentions closed.
+The follow-up [Java CompletableFuture constructor reporting artifact](../bench/recall_loss/java-completablefuture-constructor-reporting-2026-07-02.v1.json)
+adds proof-backed `new CompletableFuture` constructor reporting for fully
+qualified or exact-/wildcard-import-backed stdlib type identity. Constructors
+now report `future-settled-value-channel-contract`,
+`exception-channel-contract`, `task-handle-lifecycle-contract`, and
+`task-cancellation-liveness-contract` without opening exact admission. The
+120-repo audit moves `46` constructor occurrences to
+reporting-supported closed-boundary status and leaves `230` broad
+`CompletableFuture` mentions closed for later splitting. The Java-heavy query
+regression kept product output hashes identical across `netty`, `rxjava`,
+`retrofit`, `junit5`, `jedis`, and `h2database`, with aggregate median runtime
+`7023.49ms -> 6991.92ms` (`-0.45%`). The
+follow-up [Java Future residual-accounting artifact](../bench/recall_loss/java-future-residual-accounting-2026-07-02.v1.json)
+aligns existing receiver-domain reporting with the audit by marking
+`FutureLike.handle/whenComplete` settlement continuations reporting-supported at
+`10` occurrences across `2` repos. It also marks the historical Java
+`Executor/Future` type-name bucket as a superseded overlap row at `3,297`
+occurrences, so Java residual work is ranked from concrete operation rows
+rather than broad type mentions. The
+follow-up [Java CompletableFuture receiver split artifact](../bench/recall_loss/java-completablefuture-receiver-split-2026-07-02.v1.json)
+extends the same FutureLike receiver-domain reporting to
+`complete`/`completeExceptionally`, `join`/`getNow`/`isCompletedExceptionally`,
+and timeout methods. The 120-repo audit moves `45` scope-proven receiver
+settlement and `45` receiver observation occurrences to reporting-supported
+rows, reclassifies the remaining `230` broad `CompletableFuture` type/reference
+mentions as a superseded overlap bucket, and keeps exact admission closed.
+Same-name receivers outside the proven scope, custom imports, lambda parameters,
+and unsupported arities remain closed. The
+follow-up [Java stream lifecycle split artifact](../bench/recall_loss/java-stream-lifecycle-split-2026-07-02.v1.json)
+accounts for existing proof-backed stream adapter capability in the same audit:
+typed `receiver.stream()` contributes `372` exact-supported occurrences and
+exact-import or fully qualified `Arrays.stream(xs)` contributes `128`. The
+broad `stream/parallelStream` lifecycle residual falls from `1,996` to `1,496`
+occurrences; untyped stream receivers and `parallelStream` remain closed for
+later lifecycle/scheduling proof. The
+follow-up [non-JS source-protocol reporting alignment artifact](../bench/recall_loss/non-js-source-protocol-reporting-alignment-2026-07-02.v1.json)
+brings the scheduling lifecycle audit in line with the existing
+`Source::Protocol(Await)`, `Source::Protocol(AsyncFunction)`, and
+`Source::Protocol(AsyncBlock)` runtime-boundary reporting. Python
+`await`/`async def`, Rust `.await`/`async fn`/`async block`, and Swift `async`
+function rows now count as reporting-supported closed-boundaries, newly
+accounting for `19,144` source-prevalence occurrences while exact admission
+remains closed. The
+follow-up [Python generator-yield reporting artifact](../bench/recall_loss/python-generator-yield-reporting-2026-07-02.v1.json)
+adds the matching `Source::Protocol(Yield)` audit row for Python `yield` and
+`yield from` generator boundaries. It newly accounts for `2,404`
+source-prevalence occurrences across `21` repos while keeping exact admission
+closed. The
+follow-up [Python asyncio sleep reporting artifact](../bench/recall_loss/python-asyncio-sleep-reporting-2026-07-02.v1.json)
+then aligns direct `asyncio.sleep` with the existing runtime-boundary timer
+reporting path. It newly accounts for `104` occurrences across `6` repos,
+raises reporting-supported closed-boundaries to `90,979` occurrences across
+`61` rows, and leaves no Python closed-boundary rows in the scheduling
+lifecycle audit while exact admission remains closed. The
+follow-up [Swift try-expression reporting alignment artifact](../bench/recall_loss/swift-try-expression-reporting-2026-07-02.v1.json)
+adds the matching `Source::Protocol(TryPropagation)` audit row for Swift
+`try`, `try?`, `try!`, and `for try await` propagation boundaries. It newly
+accounts for `17,970` source-prevalence occurrences across `18` repos while
+keeping exact admission closed. The
+follow-up [Swift exception residual-accounting artifact](../bench/recall_loss/swift-exception-residual-accounting-2026-07-02.v1.json)
+marks the historical `swift.error.throws` lexical bucket as a superseded overlap
+row once source-backed `try`, throwing function, and throwing closure rows are
+tracked separately. The broad row remains visible at `26,608` occurrences, but
+it no longer drives actionable residual ordering. The
 follow-up [Rust block_on future-drive artifact](../bench/recall_loss/rust-block-on-future-drive-obligation-reporting-2026-07-01.v1.json)
 keeps exact admission closed and maps qualified/import-backed Rust
 `tokio_test::block_on` calls plus proof-backed tokio runtime receiver chains to
@@ -291,6 +361,52 @@ remain closed. The matching
 [120-repo pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-ruby-thread-fiber-runtime-2026-07-01.v1.json) marks the Ruby Thread/Fiber row
 reporting-supported, prices `74` occurrences across `11` repos, and raises
 total source prevalence from `146,987` to `146,988`.
+The follow-up [Ruby yield source-protocol artifact](../bench/recall_loss/ruby-yield-source-protocol-reporting-2026-07-01.v1.json)
+keeps exact admission closed while preserving Ruby block `yield` as a
+source-backed `BlockYield` callback demand/effect protocol boundary. The
+matching [120-repo
+pricing artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-ruby-yield-source-protocol-2026-07-01.v1.json)
+marks `ruby.block.yield` reporting-supported, prices `801` occurrences
+across `17` repos, and the checked `crates` gate reports `0` false merges.
+The follow-up [Ruby exception-channel reporting artifact](../bench/recall_loss/ruby-exception-reporting-2026-07-02.v1.json)
+keeps exact admission closed while lowering unqualified Ruby `raise` to the
+existing `Throw` boundary and retaining `rescue` on the existing `Try`
+boundary. Its 120-repo audit prices `2,065` unqualified `raise` and `1,933`
+`rescue` occurrences as reporting-supported, then marks the old
+`4,010`-occurrence broad row as superseded overlap; the 12 broad-only
+occurrences are receiver-qualified `.raise` overlaps. The Ruby-heavy query
+regression records a `+1.05%` aggregate median change, stable family counts
+across all 6 repos, and metadata/hash drift only in `rubocop` and `rspec-core`.
+The follow-up [Go protocol reporting-support artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-go-protocol-reporting-support-2026-07-01.v1.json)
+marks Go channel/send/receive/select, goroutine, and defer source-protocol rows
+reporting-supported while keeping exact admission closed.
+The follow-up [non-JS task-spawn reporting alignment artifact](../bench/recall_loss/non-js-task-spawn-reporting-alignment-2026-07-01.v1.json)
+then aligns already-backed Rust `tokio`/`async-std` spawn, Swift
+`Task`/`Task.detached`, Python `asyncio.create_task`/`ensure_future`, and Java
+`CompletableFuture.supplyAsync`/`runAsync` audit rows as reporting-supported
+closed-boundaries. It newly accounts for `590` source-prevalence occurrences,
+raises currently backed task-spawn reporting-supported rows to `1,123`
+occurrences, and keeps exact admission closed.
+The follow-up [non-JS async aggregate reporting alignment artifact](../bench/recall_loss/non-js-async-aggregate-reporting-alignment-2026-07-01.v1.json)
+does the same for already-backed aggregate rows: Rust
+`tokio`/`futures`/`futures_util` `join!`/`try_join!`/`select!`, Python
+`asyncio.gather`/`wait`, and Java `CompletableFuture.allOf`/`anyOf`. It newly
+accounts for `98` source-prevalence occurrences, raises currently backed
+async-aggregate reporting-supported rows to `286` occurrences, and keeps exact
+admission closed.
+The follow-up [Swift await and Java settled-factory reporting alignment artifact](../bench/recall_loss/swift-await-java-factory-reporting-alignment-2026-07-02.v1.json)
+aligns two more already-backed rows: Swift `await` via
+`Source::Protocol(Await)` and Java `CompletableFuture.completedFuture` /
+`failedFuture` via static runtime-boundary reporting. It newly accounts for
+`8,703` source-prevalence occurrences and keeps broad Java
+`CompletableFuture` mentions plus looser FutureLike receiver settlement rows
+closed until their audit counters match product proof.
+The follow-up [Java CompletableFuture constructor reporting artifact](../bench/recall_loss/java-completablefuture-constructor-reporting-2026-07-02.v1.json)
+splits the first product-backed part of that broad Java bucket: fully qualified
+or exact-/wildcard-import-backed `new CompletableFuture` calls now report
+manual settlement future-channel obligations. It newly accounts for `46`
+source-prevalence occurrences, lowers the broad Java `CompletableFuture` bucket
+to `230`, and keeps exact admission closed.
 The
 checked [promise-protocol diagnostics](../bench/recall_loss/promise-protocol-diagnostics-2026-06-28.v1.json)
 connect the JS/TS source-prevalence group (`29,094` Promise/async occurrences)

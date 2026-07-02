@@ -1,6 +1,6 @@
 # Semantic kernel snapshot
 
-Snapshot date: 2026-07-01. The current implementation has an internal
+Snapshot date: 2026-07-02. The current implementation has an internal
 semantic-kernel facade, evidence-gated field state, sequence-surface contracts,
 proof-backed append fragment evidence, operator-law contracts, typed import
 facts, source-fact gates for construct/macro/literal/operator provenance,
@@ -28,9 +28,10 @@ boundaries while the graded-witness build keeps an explicit protocol wrapper, so
 async/sync twins can surface as `async-mirror` transformation leads without
 opening exact admission.
 JS/TS and Python `yield` expressions are preserved as generator protocol
-boundaries with `Source::Protocol(Yield)`. Rust `async {}` and `?` are likewise
-preserved as protocol boundaries with `Source::Protocol(AsyncBlock)` and
-`Source::Protocol(TryPropagation)`. Go
+boundaries with `Source::Protocol(Yield)`, while Ruby block `yield` uses the
+separate callback protocol boundary `Source::Protocol(BlockYield)`. Rust
+`async {}` and `?` are likewise preserved as protocol boundaries with
+`Source::Protocol(AsyncBlock)` and `Source::Protocol(TryPropagation)`. Go
 goroutine spawn, deferred calls, channel send/receive, receive-status
 projections, and `select` boundaries are also preserved as raw source-backed
 protocol anchors rather than ordinary calls, values, or sequence tags. Their
@@ -38,13 +39,51 @@ runtime-boundary reporting now splits channel send synchronization, receive
 value channels, comma-ok receive status, select readiness/case/default,
 goroutine callback effects, and defer callback effects while keeping exact
 admission closed. Python
+generator-yield audit accounting now treats `Source::Protocol(Yield)` rows as
+reporting-supported generator lifecycle/protocol boundaries without treating
+generator suspension as exact-equivalent to ordinary returns. Python
 `asyncio` task/timer/aggregate calls, including import-backed namespace aliases,
 Rust `tokio`/`async-std` spawn and `join!`/`select!` macros, including
 imported runtime bindings, and Swift `Task` creation now report shared
-runtime-boundary obligations without becoming exact recovery evidence. Java
+runtime-boundary obligations without becoming exact recovery evidence. The
+non-JS task-spawn alignment audit marks the already-backed Rust spawn, Swift
+Task, Python asyncio task creation, and Java CompletableFuture async-factory
+rows reporting-supported while keeping exact admission closed. The companion
+async-aggregate alignment marks already-backed Rust join/select macros, Python
+asyncio gather/wait, and Java CompletableFuture aggregate rows
+reporting-supported under the same closed-boundary policy. The Swift
+await / Java settled-factory alignment likewise marks already-backed Swift
+`await` protocol rows and Java `CompletableFuture.completedFuture` /
+`failedFuture` static rows reporting-supported, while broad Java future buckets
+remain closed until their counters match product proof. Java
 `CompletableFuture` static calls and exact-import-backed CompletionStage-style
 receiver continuations likewise report reusable future/channel/callback
 obligations when static import identity or receiver-domain evidence is proven.
+Java `new CompletableFuture<...>()` constructors now preserve a construct-call
+callee only when the stdlib type identity is fully qualified or exact-/
+wildcard-import-backed and unshadowed. Those constructors report future-settled,
+exception-channel, task-handle lifecycle, and cancellation/liveness obligations
+without opening exact admission. Scope-proven import-backed
+`CompletableFuture` receivers now also report manual settlement
+(`complete`/`completeExceptionally`), observation
+(`join`/`getNow`/`isCompletedExceptionally`), and timeout obligations through
+the same FutureLike evidence path. The old broad `CompletableFuture` type-name
+bucket is now a superseded overlap row, so actionable Java Future tracking uses
+concrete constructor, static, and receiver-operation rows.
+Java Future/Executor audit accounting now treats proof-backed
+`CompletionStage.handle`/`whenComplete` settlement continuations as
+reporting-supported receiver-domain surfaces. The older broad `Executor/Future`
+type-name bucket remains visible only as a superseded overlap row; actionable
+Java Future/Executor tracking now uses concrete static call, constructor, and
+receiver-method rows.
+Swift `try`, `try?`, `try!`, and `for try await` propagation boundaries now have
+their own reporting-supported audit row backed by
+`Source::Protocol(TryPropagation)`. This exposes the exception channel in
+reports without treating throwing control flow as exact-equivalent to ordinary
+returns.
+The older broad Swift `throws/try` lexical audit row remains visible only as a
+superseded overlap bucket; actionable Swift exception-channel tracking now uses
+the source-backed `try`, throwing function, and throwing closure rows.
 Python
 comprehension lowering now records whether a
 HOF came from a list comprehension, set comprehension, dict comprehension, or
@@ -53,7 +92,8 @@ applying materialization or demand-sensitive laws. Admitted builtin and HOF
 operations now also have internal `DemandEffectProfile` contracts for the
 currently supported eager, short-circuit, append, nullish-default, reduction,
 per-element callback, pull-lazy generator, async-continuation, generator
-suspension, channel-boundary, and protocol-boundary shapes; these profiles
+suspension, source-order callback invocation, scheduled/deferred callback
+invocation, channel-boundary, and protocol-boundary shapes; these profiles
 describe how an already-admitted operation is consumed, not which source API is
 admitted. HOF callback timing comes from an explicit source or API demand source,
 not from the raw HOF kind alone. The node-level HOF resolver distinguishes
@@ -151,6 +191,27 @@ uses the same capability boundary for Python `from asyncio import ...`
 bindings and Rust brace-use `ImportedBinding` evidence, adding `2` newly priced
 Python imported `asyncio.sleep` occurrences while keeping exact admission
 closed and preserving the release `verify crates` gate at `0` false merges.
+The follow-up [Python asyncio sleep reporting artifact](../bench/recall_loss/python-asyncio-sleep-reporting-2026-07-02.v1.json)
+aligns the direct `asyncio.sleep` audit row with that existing timer
+runtime-boundary reporting. Direct calls add `104` reporting-supported
+closed-boundary occurrences across `6` repos, and the scheduling lifecycle
+audit now has no remaining Python closed-boundary rows.
+The follow-up [Ruby exception-channel reporting artifact](../bench/recall_loss/ruby-exception-reporting-2026-07-02.v1.json)
+uses the same capability-first rule for Ruby exception flow: unqualified
+`raise` calls lower to the existing `Throw` boundary, `rescue` remains on the
+existing `Try` boundary, and no Ruby-specific kernel API is added. The audit
+prices `2,065` `raise` and `1,933` `rescue` occurrences as
+reporting-supported closed-boundaries while retaining the broad `4,010`
+`raise/rescue` row as superseded overlap; exact admission remains closed.
+The follow-up [Java stream lifecycle split artifact](../bench/recall_loss/java-stream-lifecycle-split-2026-07-02.v1.json)
+does not add a new kernel API. It accounts for the already existing iterator
+identity/static collection adapter capability in the scheduling lifecycle audit:
+typed `receiver.stream()` covers `372` occurrences and exact-import or fully
+qualified `Arrays.stream(xs)` covers `128`. The remaining
+`stream/parallelStream` lifecycle residual is now `1,496` occurrences, keeping
+untyped receiver, factory-result, arity/range overload, shadowed binding,
+terminal materialization, and parallel stream scheduling semantics closed for
+later proof.
 The follow-up [Swift structured-concurrency artifact](../bench/recall_loss/swift-structured-concurrency-obligation-reporting-2026-06-30.v1.json)
 keeps exact admission closed while mapping `Task.sleep`, `Task.yield`, and
 task-group calls onto the existing timer, task-yield, aggregate,
@@ -680,8 +741,8 @@ migrated.
   strict/loose inequality, and `instanceof` facts. Python emits async `await`,
   async function and generator `yield` boundaries, list/set/dict/generator
   comprehension surfaces, value equality/inequality, and identity
-  equality/inequality facts. Swift emits async function, async `await`, and
-  `try` boundaries. Go emits
+  equality/inequality facts. Ruby emits block `yield` callback protocol
+  boundaries. Swift emits async function, async `await`, and `try` boundaries. Go emits
   protocol facts for `go`, `defer`, channel send/receive, receive-status
   projection, `select`, and select cases/defaults. C emits source-cast facts
   for explicit unsigned 32-bit byte-lane casts, with alias-based casts depending
@@ -692,8 +753,8 @@ migrated.
   `EvidenceRecord::Source`; there is no source-fact side-table fallback.
   Normalize and detect consume source facts only where a semantic contract
   requires that exact source surface. Current JS/TS/Python/Rust/Swift async
-  function/closure and `await` nodes, JS/TS/Python `yield` nodes, Rust `async`/`?` nodes,
-  Swift `try` nodes, and Go concurrency/channel
+  function/closure and `await` nodes, JS/TS/Python generator `yield` nodes,
+  Ruby block `yield` nodes, Rust `async`/`?` nodes, Swift `try` nodes, and Go concurrency/channel
   nodes remain raw exact-closed protocol anchors until such a contract exists.
   Python returned generator/set comprehensions and unsupported cardinality
   surfaces stay exact-closed; supported list/generator terminal reductions can
@@ -1168,7 +1229,10 @@ migrated.
 - Java stream source adapters are split by proof through library API contracts:
   `receiver.stream()` requires an exact iterable receiver, while
   `Arrays.stream(xs)` requires the `java.util.Arrays` import binding and no local
-  `Arrays` type shadow.
+  `Arrays` type shadow. The 2026-07-02 audit split records `372`
+  receiver-backed and `128` `Arrays.stream` source-prevalence occurrences as
+  exact-supported rows, leaving `1,496` broad `stream/parallelStream`
+  lifecycle occurrences closed.
 - Cross-file immutable import replacement now copies the provider's closed
   evidence subgraph for the exported literal expression, so a Java static import
   of `LOOKUP = Map.of(...)` carries the provider's `java.util.Map` proof into
@@ -1447,8 +1511,9 @@ Semantic knowledge still appears in several forms outside the facade:
   as `aread` no longer rewrite to sync names without an explicit protocol/API
   evidence path, JS/TS/Python/Rust/Swift async function/closure and `await` expressions
   no longer erase to their body or operand without async protocol proof,
-  JS/TS/Python `yield` no longer erases to its yielded expression without
-  generator protocol proof, and Rust `async {}`/`?` no longer erase to their body
+  JS/TS/Python generator `yield` and Ruby block `yield` no longer erase to
+  their yielded expression or callback arguments without protocol proof, and
+  Rust `async {}`/`?` no longer erase to their body
   or operand without async/error protocol proof. Swift `try` similarly keeps the
   error channel explicit. Go `go`/`defer`/channel receive no longer erase to ordinary
   calls or operands, Go channel send no longer relies on an untyped
@@ -1559,9 +1624,12 @@ this worktree because the required evidence is not yet modeled:
   and explicit `this.<field>` receivers now reuse the same capability
   vocabulary for handle lifecycle, cancellation/liveness, executor scheduling,
   timer/interval lifecycle, aggregate, callback/effect, settled-value, and
-  exception obligations. Exact Future/CompletionStage/Executor recovery remains
-  closed: implicit fields, non-`this` fields, wrapper aliases,
-  project-specific executors, callback
+  exception obligations. Import-backed `CompletableFuture` receivers additionally
+  report manual settlement, observation, and timeout-specific obligations; the
+  broad `CompletableFuture` type-reference row is superseded by concrete
+  constructor/static/receiver operation rows. Exact Future/CompletionStage/
+  Executor recovery remains closed: implicit fields, non-`this` fields, wrapper
+  aliases, project-specific executors, callback
   identity/effects, cancellation/liveness, exceptional completion, result
   channels, and constructor semantics still need dependency-closed contracts
   before Java future calls can converge with synchronous values or each other.

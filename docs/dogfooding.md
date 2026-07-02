@@ -711,6 +711,16 @@ becomes `a54e8f6b173a160a` for the Java/C expression-dispatch family. Both are
 the same language-frontend parallelism recorded above; no new budget is
 accepted.
 
+The Java `CompletableFuture` constructor/package-shadow reporting slice keeps
+the count at 52. The first duplication-gate run surfaced a real, avoidable
+near-family between the Java collection constructor lowerer and the new
+`CompletableFuture` constructor lowerer; extracting the shared construct-call
+builder removed it. The remaining delta is representative churn for the same
+reviewed frontend-lowering families: `596f602568ace201` becomes
+`ac31c3c9bc390d55` for the per-frontend call/constructor/enum-constant lowering
+family, and `a54e8f6b173a160a` becomes `ebf5e40476ceff32` for the Java/C
+expression-dispatch family. No new budget is accepted.
+
 ## Budget 52 → 55 and the C# frontend
 
 Adding the C# frontend (classes/patterns/preprocessor lowering, the

@@ -81,6 +81,30 @@ class Pattern:
     status: str = "closed-boundary"
 
 
+RUBY_EXCEPTION_RAISE = Pattern(
+    "ruby",
+    "ruby.exception.raise",
+    "raise",
+    "exception-channel",
+    "ruby-exception-channel-contract-missing",
+    "raise exception channel",
+    "Ruby raise calls expose source-backed Throw exception-channel boundaries",
+    re.compile(r"(?<!\.)\braise\b"),
+    "reporting-supported-closed-boundary",
+)
+RUBY_EXCEPTION_RESCUE = Pattern(
+    "ruby",
+    "ruby.exception.rescue",
+    "rescue",
+    "exception-channel",
+    "ruby-exception-channel-contract-missing",
+    "rescue exception channel",
+    "Ruby rescue clauses lower to Try exception-channel boundaries",
+    re.compile(r"\brescue\b"),
+    "reporting-supported-closed-boundary",
+)
+
+
 PATTERNS: tuple[Pattern, ...] = (
     Pattern("javascript-typescript", "js-ts.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "await is scheduling and thenable assimilation, not sync value equivalence", re.compile(r"\bawait\b")),
     Pattern("javascript-typescript", "js-ts.async.function", "async function", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async functions have scheduling and rejection boundaries even without explicit await", re.compile(r"\basync\s+(?:function\b|[A-Za-z_$]|\([^)]*\)\s*=>)")),
@@ -93,44 +117,44 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("javascript-typescript", "js-ts.promise.scheduler", "scheduler.yield", "scheduling-boundary", "scheduler-yield-microtask-order-contract-missing", "scheduler yield", "scheduler.yield needs microtask/order proof", re.compile(r"\bscheduler\s*\.\s*yield\s*\(")),
     Pattern("javascript-typescript", "js-ts.promise.interval", "setInterval", "lifecycle-materialization-boundary", "interval-async-iteration-lifecycle-contract-missing", "interval lifecycle", "setInterval and timers interval streams have repeated emission, cancellation, and liveness semantics", re.compile(r"(?<![A-Za-z0-9_$])setInterval\s*\(")),
     Pattern("javascript-typescript", "js-ts.cancellation.abort", "AbortController/AbortSignal", "cancellation-liveness-boundary", "abort-signal-cancellation-contract-missing", "cancellation signal", "AbortSignal/AbortController can change scheduling and rejection outcomes", re.compile(r"\b(?:AbortController|AbortSignal)\b")),
-    Pattern("python", "python.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Python await has coroutine scheduling and exception channel semantics", re.compile(r"\bawait\b")),
-    Pattern("python", "python.async.function", "async def", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async def creates coroutine protocol boundaries", re.compile(r"\basync\s+def\b")),
+    Pattern("python", "python.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Python await has coroutine scheduling and exception channel semantics", re.compile(r"\bawait\b"), "reporting-supported-closed-boundary"),
+    Pattern("python", "python.async.function", "async def", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async def creates coroutine protocol boundaries", re.compile(r"\basync\s+def\b"), "reporting-supported-closed-boundary"),
     Pattern("python", "python.async.iteration", "async for", "lifecycle-materialization-boundary", "async-iteration-lifecycle-contract-missing", "async iteration lifecycle", "async for statements and comprehensions need async iterator lifecycle, value-channel, and scheduling proof", re.compile(r"\basync\s+for\b"), "reporting-supported-closed-boundary"),
     Pattern("python", "python.async.context", "async with", "lifecycle-materialization-boundary", "async-context-lifecycle-contract-missing", "async context lifecycle", "async with needs async enter/exit cleanup, exception-channel, and scheduling proof", re.compile(r"\basync\s+with\b"), "reporting-supported-closed-boundary"),
-    Pattern("python", "python.asyncio.task", "asyncio.create_task/ensure_future", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "asyncio task spawn", "asyncio task APIs create scheduler, cancellation, and handle lifecycle boundaries", re.compile(r"\basyncio\s*\.\s*(?:create_task|ensure_future)\s*\(")),
-    Pattern("python", "python.asyncio.sleep", "asyncio.sleep", "scheduling-boundary", "timer-scheduling-contract-missing", "asyncio timer", "asyncio sleep creates a timer-backed scheduling boundary", re.compile(r"\basyncio\s*\.\s*sleep\s*\(")),
-    Pattern("python", "python.asyncio.gather", "asyncio.gather", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "asyncio all-completion aggregate", "asyncio gather needs all-completion, result-channel, cancellation, and exception semantics", re.compile(r"\basyncio\s*\.\s*gather\s*\(")),
-    Pattern("python", "python.asyncio.wait", "asyncio.wait", "success-error-result-channel", "async-aggregate-completion-contract-missing", "asyncio completion aggregate", "asyncio wait needs completion-selection, result-channel, cancellation, and exception semantics", re.compile(r"\basyncio\s*\.\s*wait\s*\(")),
+    Pattern("python", "python.asyncio.task", "asyncio.create_task/ensure_future", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "asyncio task spawn", "asyncio task APIs create scheduler, cancellation, and handle lifecycle boundaries", re.compile(r"\basyncio\s*\.\s*(?:create_task|ensure_future)\s*\("), "reporting-supported-closed-boundary"),
+    Pattern("python", "python.asyncio.sleep", "asyncio.sleep", "scheduling-boundary", "timer-scheduling-contract-missing", "asyncio timer", "asyncio sleep creates a timer-backed scheduling boundary", re.compile(r"\basyncio\s*\.\s*sleep\s*\("), "reporting-supported-closed-boundary"),
+    Pattern("python", "python.asyncio.gather", "asyncio.gather", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "asyncio all-completion aggregate", "asyncio gather needs all-completion, result-channel, cancellation, and exception semantics", re.compile(r"\basyncio\s*\.\s*gather\s*\("), "reporting-supported-closed-boundary"),
+    Pattern("python", "python.asyncio.wait", "asyncio.wait", "success-error-result-channel", "async-aggregate-completion-contract-missing", "asyncio completion aggregate", "asyncio wait needs completion-selection, result-channel, cancellation, and exception semantics", re.compile(r"\basyncio\s*\.\s*wait\s*\("), "reporting-supported-closed-boundary"),
     Pattern("python", "python.asyncio.run", "asyncio.run", "scheduling-boundary", "future-drive-scheduling-contract-missing", "asyncio future drive", "asyncio.run drives a coroutine to completion with scheduling, result-channel, and exception boundaries", re.compile(r"\basyncio\s*\.\s*run\s*\("), "reporting-supported-closed-boundary"),
     Pattern("python", "python.asyncio.wait_for", "asyncio.wait_for", "scheduling-boundary", "timer-scheduling-contract-missing", "asyncio timeout wait", "asyncio.wait_for adds timer and cancellation/liveness boundaries around an awaitable result channel", re.compile(r"\basyncio\s*\.\s*wait_for\s*\("), "reporting-supported-closed-boundary"),
     Pattern("python", "python.asyncio.shield", "asyncio.shield", "cancellation-liveness-boundary", "task-cancellation-liveness-contract-missing", "asyncio cancellation shield", "asyncio.shield changes cancellation propagation while preserving an awaitable result channel", re.compile(r"\basyncio\s*\.\s*shield\s*\("), "reporting-supported-closed-boundary"),
     Pattern("python", "python.asyncio.run_coroutine_threadsafe", "asyncio.run_coroutine_threadsafe", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "asyncio thread-safe task submission", "asyncio.run_coroutine_threadsafe schedules a coroutine onto another loop and returns a future handle", re.compile(r"\basyncio\s*\.\s*run_coroutine_threadsafe\s*\("), "reporting-supported-closed-boundary"),
     Pattern("python", "python.asyncio.to_thread", "asyncio.to_thread", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "asyncio thread offload", "asyncio.to_thread schedules a callback on a worker thread and returns an awaitable result channel", re.compile(r"\basyncio\s*\.\s*to_thread\s*\("), "reporting-supported-closed-boundary"),
-    Pattern("python", "python.generator.yield", "yield", "lifecycle-materialization-boundary", "generator-yield-lifecycle-contract-missing", "generator lifecycle", "yield has suspension and iterator lifecycle semantics", re.compile(r"\byield(?:\s+from)?\b")),
-    Pattern("rust", "rust.async.await", ".await", "scheduling-boundary", "async-await-scheduling-contract-missing", "future await", "Rust .await polls a Future and must keep wake/scheduling effects explicit", re.compile(r"\.\s*await\b")),
-    Pattern("rust", "rust.async.function", "async fn", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async fn creates a suspended async function boundary", re.compile(r"\basync\s+fn\b")),
+    Pattern("python", "python.generator.yield", "yield", "lifecycle-materialization-boundary", "generator-yield-lifecycle-contract-missing", "generator lifecycle", "Python yield expressions expose source-backed generator lifecycle and protocol boundaries", re.compile(r"\byield(?:\s+from)?\b"), "reporting-supported-closed-boundary"),
+    Pattern("rust", "rust.async.await", ".await", "scheduling-boundary", "async-await-scheduling-contract-missing", "future await", "Rust .await polls a Future and must keep wake/scheduling effects explicit", re.compile(r"\.\s*await\b"), "reporting-supported-closed-boundary"),
+    Pattern("rust", "rust.async.function", "async fn", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "async fn creates a suspended async function boundary", re.compile(r"\basync\s+fn\b"), "reporting-supported-closed-boundary"),
     Pattern("rust", "rust.async.closure", "async closure", "scheduling-boundary", "async-function-scheduling-contract-missing", "async closure scheduling", "Rust async closures create suspended async callable protocol boundaries even when the surrounding function is synchronous", re.compile(r"\basync\s+(?:move\s+)?\|"), "reporting-supported-closed-boundary"),
-    Pattern("rust", "rust.async.block", "async block", "scheduling-boundary", "async-block-scheduling-contract-missing", "async block construction", "async blocks create suspended async boundaries", re.compile(r"\basync\s+(?:move\s*)?\{")),
-    Pattern("rust", "rust.async.spawn", "tokio/async-std spawn", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "task spawn", "async spawn APIs introduce scheduler, cancellation, and join-handle boundaries", re.compile(r"\b(?:tokio(?:::task)?|async_std::task)\s*::\s*spawn(?:_blocking)?\s*\(")),
-    Pattern("rust", "rust.async.join", "tokio/futures/futures_util join/try_join", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "future all-completion aggregate", "qualified runtime join style macros need all-completion result-channel proof", re.compile(r"\b(?:tokio|futures|futures_util)::(?:join|try_join)!\s*\(")),
-    Pattern("rust", "rust.async.select", "tokio/futures/futures_util select", "cancellation-liveness-boundary", "async-aggregate-first-completion-contract-missing", "future first-completion aggregate", "qualified runtime select style macros need first-completion, cancellation, and result-channel proof", re.compile(r"\b(?:tokio|futures|futures_util)::select!\s*\(")),
-    Pattern("go", "go.concurrent.goroutine", "go statement", "scheduling-boundary", "goroutine-scheduling-contract-missing", "goroutine scheduling", "go statements spawn concurrent execution", re.compile(r"\bgo\s+[A-Za-z_{(]")),
-    Pattern("go", "go.concurrent.defer", "defer statement", "lifecycle-materialization-boundary", "defer-lifecycle-ordering-contract-missing", "defer lifecycle", "defer has scope-exit ordering and panic interaction semantics", re.compile(r"\bdefer\s+")),
+    Pattern("rust", "rust.async.block", "async block", "scheduling-boundary", "async-block-scheduling-contract-missing", "async block construction", "async blocks create suspended async boundaries", re.compile(r"\basync\s+(?:move\s*)?\{"), "reporting-supported-closed-boundary"),
+    Pattern("rust", "rust.async.spawn", "tokio/async-std spawn", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "task spawn", "async spawn APIs introduce scheduler, cancellation, and join-handle boundaries", re.compile(r"\b(?:tokio(?:::task)?|async_std::task)\s*::\s*spawn(?:_blocking)?\s*\("), "reporting-supported-closed-boundary"),
+    Pattern("rust", "rust.async.join", "tokio/futures/futures_util join/try_join", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "future all-completion aggregate", "qualified runtime join style macros need all-completion result-channel proof", re.compile(r"\b(?:tokio|futures|futures_util)::(?:join|try_join)!\s*\("), "reporting-supported-closed-boundary"),
+    Pattern("rust", "rust.async.select", "tokio/futures/futures_util select", "cancellation-liveness-boundary", "async-aggregate-first-completion-contract-missing", "future first-completion aggregate", "qualified runtime select style macros need first-completion, cancellation, and result-channel proof", re.compile(r"\b(?:tokio|futures|futures_util)::select!\s*\("), "reporting-supported-closed-boundary"),
+    Pattern("go", "go.concurrent.goroutine", "go statement", "scheduling-boundary", "goroutine-scheduling-contract-missing", "goroutine scheduling", "go statements spawn concurrent execution", re.compile(r"\bgo\s+[A-Za-z_{(]"), "reporting-supported-closed-boundary"),
+    Pattern("go", "go.concurrent.defer", "defer statement", "lifecycle-materialization-boundary", "defer-lifecycle-ordering-contract-missing", "defer lifecycle", "defer has scope-exit ordering and panic interaction semantics", re.compile(r"\bdefer\s+"), "reporting-supported-closed-boundary"),
     Pattern("go", "go.channel.send_receive", "channel send/receive", "channel-boundary", "channel-send-receive-protocol-contract-missing", "channel protocol", "channel send/receive has blocking and synchronization semantics", re.compile(r"<-")),
-    Pattern("go", "go.channel.select", "select", "channel-boundary", "channel-select-readiness-contract-missing", "channel select", "select has readiness, default, and scheduling semantics", re.compile(r"\bselect\s*\{")),
+    Pattern("go", "go.channel.select", "select", "channel-boundary", "channel-select-readiness-contract-missing", "channel select", "select has readiness, default, and scheduling semantics", re.compile(r"\bselect\s*\{"), "reporting-supported-closed-boundary"),
     Pattern("java", "java.future.completable", "CompletableFuture", "success-error-result-channel", "future-settled-value-channel-contract-missing", "future channel", "CompletableFuture needs success/error channel and scheduling proof", re.compile(r"\bCompletableFuture\b(?!\s*\.\s*(?:supplyAsync|runAsync|completedFuture|completedStage|failedFuture|failedStage|allOf|anyOf)\s*\()")),
-    Pattern("java", "java.future.completable.spawn", "CompletableFuture.supplyAsync/runAsync", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "future task spawn", "CompletableFuture async factories schedule executor callbacks and return future handles", re.compile(r"\bCompletableFuture\s*\.\s*(?:supplyAsync|runAsync)\s*\("), "reporting-candidate-closed-boundary"),
-    Pattern("java", "java.future.completable.factory", "CompletableFuture.completedFuture/failedFuture", "success-error-result-channel", "future-settled-value-channel-contract-missing", "future settled value", "CompletableFuture settled factories create fulfilled or exceptional future channels", re.compile(r"\bCompletableFuture\s*\.\s*(?:completedFuture|completedStage|failedFuture|failedStage)\s*\("), "reporting-candidate-closed-boundary"),
-    Pattern("java", "java.future.completable.all", "CompletableFuture.allOf", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "future all-completion aggregate", "CompletableFuture.allOf needs all-completion and exceptional completion proof", re.compile(r"\bCompletableFuture\s*\.\s*allOf\s*\("), "reporting-candidate-closed-boundary"),
-    Pattern("java", "java.future.completable.any", "CompletableFuture.anyOf", "cancellation-liveness-boundary", "async-aggregate-first-completion-contract-missing", "future first-completion aggregate", "CompletableFuture.anyOf needs first-completion and result-channel proof", re.compile(r"\bCompletableFuture\s*\.\s*anyOf\s*\("), "reporting-candidate-closed-boundary"),
-    Pattern("java", "java.future.executor", "Executor/Future", "scheduling-boundary", "java-executor-scheduling-contract-missing", "executor scheduling", "Executor/Future APIs introduce scheduler and lifecycle boundaries", re.compile(r"\b(?:ExecutorService|Executor|Future|ScheduledFuture)\b")),
+    Pattern("java", "java.future.completable.spawn", "CompletableFuture.supplyAsync/runAsync", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "future task spawn", "CompletableFuture async factories schedule executor callbacks and return future handles", re.compile(r"\bCompletableFuture\s*\.\s*(?:supplyAsync|runAsync)\s*\("), "reporting-supported-closed-boundary"),
+    Pattern("java", "java.future.completable.factory", "CompletableFuture.completedFuture/failedFuture", "success-error-result-channel", "future-settled-value-channel-contract-missing", "future settled value", "CompletableFuture settled factories create fulfilled or exceptional future channels", re.compile(r"\bCompletableFuture\s*\.\s*(?:completedFuture|completedStage|failedFuture|failedStage)\s*\("), "reporting-supported-closed-boundary"),
+    Pattern("java", "java.future.completable.all", "CompletableFuture.allOf", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "future all-completion aggregate", "CompletableFuture.allOf needs all-completion and exceptional completion proof", re.compile(r"\bCompletableFuture\s*\.\s*allOf\s*\("), "reporting-supported-closed-boundary"),
+    Pattern("java", "java.future.completable.any", "CompletableFuture.anyOf", "cancellation-liveness-boundary", "async-aggregate-first-completion-contract-missing", "future first-completion aggregate", "CompletableFuture.anyOf needs first-completion and result-channel proof", re.compile(r"\bCompletableFuture\s*\.\s*anyOf\s*\("), "reporting-supported-closed-boundary"),
+    Pattern("java", "java.future.executor", "Executor/Future", "scheduling-boundary", "java-executor-scheduling-contract-missing", "executor scheduling", "Historical lexical type-name bucket; use proof-backed Java Future, CompletionStage, Executor, and ScheduledExecutor receiver-method rows as actionable surfaces", re.compile(r"\b(?:ExecutorService|Executor|Future|ScheduledFuture)\b"), "superseded-overlap-boundary"),
     Pattern("java", "java.stream.lifecycle", "stream/parallelStream", "lifecycle-materialization-boundary", "java-stream-lifecycle-contract-missing", "stream lifecycle", "Java streams need lazy/eager lifecycle and terminal materialization proof", re.compile(r"\.\s*(?:stream|parallelStream)\s*\(")),
-    Pattern("swift", "swift.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Swift await has task scheduling and actor/lifetime boundaries", re.compile(r"\bawait\b")),
-    Pattern("swift", "swift.async.function", "async", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "Swift async surfaces create task/future-like protocol boundaries", re.compile(r"\basync\b")),
+    Pattern("swift", "swift.async.await", "await", "scheduling-boundary", "async-await-scheduling-contract-missing", "await scheduling", "Swift await has task scheduling and actor/lifetime boundaries", re.compile(r"\bawait\b"), "reporting-supported-closed-boundary"),
+    Pattern("swift", "swift.async.function", "async", "scheduling-boundary", "async-function-scheduling-contract-missing", "async function scheduling", "Swift async surfaces create task/future-like protocol boundaries", re.compile(r"\basync\b"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.async.closure", "async closure", "scheduling-boundary", "async-function-scheduling-contract-missing", "async closure scheduling", "Swift async closures create async callable protocol boundaries even when the surrounding function is synchronous", re.compile(r"(?!x)x"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.async.iteration", "for await/for try await", "lifecycle-materialization-boundary", "async-iteration-lifecycle-contract-missing", "async iteration lifecycle", "Swift async sequence loops need async iterator lifecycle, value-channel, scheduling, and throwing-channel proof", re.compile(r"\bfor\s+(?:try[!?]?\s+)?await\b"), "reporting-supported-closed-boundary"),
-    Pattern("swift", "swift.error.throws", "throws/try", "exception-channel", "swift-throws-exception-channel-contract-missing", "throws channel", "Swift throws/try is an explicit error channel", re.compile(r"\b(?:throws|try)\b")),
-    Pattern("swift", "swift.task.spawn", "Task/Task.detached", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "task scheduling", "Task APIs introduce scheduler, cancellation, and handle lifecycle boundaries", re.compile(r"\bTask(?:\s*\.\s*detached\s*(?:\{|\()|\s*\{)")),
+    Pattern("swift", "swift.error.throws", "throws/try", "exception-channel", "swift-throws-exception-channel-contract-missing", "throws channel", "Historical lexical overlap bucket; use source-backed Swift try and throwing-callable rows as actionable exception-channel surfaces", re.compile(r"\b(?:throws|try)\b"), "superseded-overlap-boundary"),
+    Pattern("swift", "swift.task.spawn", "Task/Task.detached", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "task scheduling", "Task APIs introduce scheduler, cancellation, and handle lifecycle boundaries", re.compile(r"\bTask(?:\s*\.\s*detached\s*(?:\{|\()|\s*\{)"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.task.sleep", "Task.sleep", "scheduling-boundary", "timer-scheduling-contract-missing", "task sleep timer", "Swift Task.sleep creates a timer-backed scheduling boundary and cancellation/liveness boundary", re.compile(r"\bTask\s*\.\s*sleep\s*\("), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.task.yield", "Task.yield", "scheduling-boundary", "task-yield-scheduling-contract-missing", "task yield", "Swift Task.yield yields to the task scheduler and must not collapse into sync value equivalence", re.compile(r"\bTask\s*\.\s*yield\s*\("), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.task.group", "withTaskGroup/withThrowingTaskGroup/withDiscardingTaskGroup/withThrowingDiscardingTaskGroup", "success-error-result-channel", "async-aggregate-all-completion-contract-missing", "task-group aggregate", "Swift task groups need all-completion, result-channel, cancellation/liveness, and throwing error-channel proof", re.compile(r"\bwith(?:Throwing)?(?:Discarding)?TaskGroup\s*\("), "reporting-supported-closed-boundary"),
@@ -138,8 +162,10 @@ PATTERNS: tuple[Pattern, ...] = (
     Pattern("swift", "swift.continuation.checked", "withCheckedContinuation/withUnsafeContinuation", "success-error-result-channel", "future-settled-value-channel-contract-missing", "Swift continuation bridge", "Swift continuation bridges suspend and resume through a callback-settled future-like result channel", re.compile(r"\bwith(?:Checked|Unsafe)Continuation\s*(?:\(|\{)"), "reporting-supported-closed-boundary"),
     Pattern("swift", "swift.continuation.throwing", "withCheckedThrowingContinuation/withUnsafeThrowingContinuation", "success-error-result-channel", "future-settled-value-channel-contract-missing", "Swift throwing continuation bridge", "Swift throwing continuation bridges add exception-channel behavior to callback-settled future-like result channels", re.compile(r"\bwith(?:Checked|Unsafe)ThrowingContinuation\s*(?:\(|\{)"), "reporting-supported-closed-boundary"),
     Pattern("ruby", "ruby.thread.fiber", "Thread/Fiber", "scheduling-boundary", "task-spawn-scheduling-contract-missing", "thread/fiber scheduling", "Thread/Fiber APIs create scheduler and lifecycle boundaries", re.compile(r"\b(?:Thread\s*\.\s*(?:new|start|fork)|Fiber\s*\.\s*(?:new|schedule))\b"), "reporting-supported-closed-boundary"),
-    Pattern("ruby", "ruby.exception", "raise/rescue", "exception-channel", "ruby-exception-channel-contract-missing", "exception channel", "raise/rescue changes error channels and non-local control", re.compile(r"\b(?:raise|rescue)\b")),
-    Pattern("ruby", "ruby.generator.yield", "yield", "callback-demand-effect", "ruby-yield-callback-demand-effect-contract-missing", "block callback", "Ruby yield invokes a block with demand/effect obligations", re.compile(r"\byield\b")),
+    RUBY_EXCEPTION_RAISE,
+    RUBY_EXCEPTION_RESCUE,
+    Pattern("ruby", "ruby.exception", "raise/rescue", "exception-channel", "ruby-exception-channel-contract-missing", "exception channel", "Historical lexical overlap bucket; use source-backed Ruby raise and rescue rows as actionable exception-channel surfaces", re.compile(r"\b(?:raise|rescue)\b"), "superseded-overlap-boundary"),
+    Pattern("ruby", "ruby.block.yield", "yield", "callback-demand-effect", "ruby-yield-callback-demand-effect-contract-missing", "block callback", "Ruby yield invokes a block with demand/effect obligations", re.compile(r"\byield\b"), "reporting-supported-closed-boundary"),
     Pattern("c", "c.thread.pthread", "pthread_create", "scheduling-boundary", "c-pthread-scheduling-contract-missing", "thread scheduling", "pthread_create introduces thread scheduling and lifetime boundaries", re.compile(r"\bpthread_create\s*\(")),
     Pattern("c", "c.nonlocal_jump", "setjmp/longjmp", "exception-channel", "c-nonlocal-jump-contract-missing", "non-local jump", "setjmp/longjmp is non-local control flow, not ordinary return", re.compile(r"\b(?:setjmp|longjmp)\s*\(")),
 )
@@ -385,7 +411,7 @@ JAVA_FUTURE_FULFILLMENT_CONTINUATION = Pattern(
     "future fulfillment continuation",
     "Future-like receivers need fulfillment continuation and callback demand/effect proof",
     re.compile(r"(?!x)x"),
-    "reporting-candidate-closed-boundary",
+    "reporting-supported-closed-boundary",
 )
 JAVA_FUTURE_EXCEPTION_CONTINUATION = Pattern(
     "java",
@@ -396,7 +422,7 @@ JAVA_FUTURE_EXCEPTION_CONTINUATION = Pattern(
     "future exception continuation",
     "Future-like receivers need exceptional completion continuation and callback demand/effect proof",
     re.compile(r"(?!x)x"),
-    "reporting-candidate-closed-boundary",
+    "reporting-supported-closed-boundary",
 )
 JAVA_FUTURE_SETTLEMENT_CONTINUATION = Pattern(
     "java",
@@ -407,7 +433,7 @@ JAVA_FUTURE_SETTLEMENT_CONTINUATION = Pattern(
     "future settlement continuation",
     "Future-like receivers need settlement continuation and callback demand/effect proof",
     re.compile(r"(?!x)x"),
-    "reporting-candidate-closed-boundary",
+    "reporting-supported-closed-boundary",
 )
 JAVA_FUTURE_ALL_COMPLETION_CONTINUATION = Pattern(
     "java",
@@ -418,7 +444,7 @@ JAVA_FUTURE_ALL_COMPLETION_CONTINUATION = Pattern(
     "future all-completion continuation",
     "Future-like pair continuations need all-completion and callback demand/effect proof",
     re.compile(r"(?!x)x"),
-    "reporting-candidate-closed-boundary",
+    "reporting-supported-closed-boundary",
 )
 JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION = Pattern(
     "java",
@@ -429,7 +455,72 @@ JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION = Pattern(
     "future first-completion continuation",
     "Future-like either continuations need first-completion and callback demand/effect proof",
     re.compile(r"(?!x)x"),
-    "reporting-candidate-closed-boundary",
+    "reporting-supported-closed-boundary",
+)
+JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR = Pattern(
+    "java",
+    "java.future.completable.constructor",
+    "new CompletableFuture",
+    "success-error-result-channel",
+    "future-settled-value-channel-contract-missing",
+    "future constructor channel",
+    "Import- or qualified-name-backed Java CompletableFuture constructors create manual settlement future channels",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR_UNPROVEN = Pattern(
+    "java",
+    "java.future.completable.constructor_unproven",
+    "new CompletableFuture without stdlib proof",
+    "success-error-result-channel",
+    "future-settled-value-channel-contract-missing",
+    "future constructor channel",
+    "Unqualified or shadowed CompletableFuture constructors remain closed until stdlib type identity is proven",
+    re.compile(r"(?!x)x"),
+)
+JAVA_COMPLETABLE_FUTURE_TYPE_REFERENCE = Pattern(
+    "java",
+    "java.future.completable.type_reference",
+    "CompletableFuture type reference",
+    "lifecycle-materialization-boundary",
+    "task-handle-lifecycle-contract-missing",
+    "future type/reference shape",
+    "CompletableFuture type references are evidence or wrapper/type-shape mentions; concrete constructor/static/receiver operation rows drive actionable future work",
+    re.compile(r"(?!x)x"),
+    "superseded-overlap-boundary",
+)
+JAVA_COMPLETABLE_FUTURE_RECEIVER_SETTLEMENT = Pattern(
+    "java",
+    "java.future.completable.receiver.settlement",
+    "CompletableFuture.complete/completeExceptionally",
+    "success-error-result-channel",
+    "future-settled-value-channel-contract-missing",
+    "future receiver settlement",
+    "Import-backed CompletableFuture receivers expose manual fulfilled or exceptional settlement channels",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+JAVA_COMPLETABLE_FUTURE_RECEIVER_OBSERVE = Pattern(
+    "java",
+    "java.future.completable.receiver.observe",
+    "CompletableFuture.join/getNow/isCompletedExceptionally",
+    "success-error-result-channel",
+    "future-settled-value-channel-contract-missing",
+    "future receiver observation",
+    "Import-backed CompletableFuture receivers expose settled-value, exceptional, lifecycle, and cancellation observation boundaries",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+JAVA_COMPLETABLE_FUTURE_RECEIVER_TIMEOUT = Pattern(
+    "java",
+    "java.future.completable.receiver.timeout",
+    "CompletableFuture.orTimeout/completeOnTimeout",
+    "scheduling-boundary",
+    "timer-scheduling-contract-missing",
+    "future timeout settlement",
+    "Import-backed CompletableFuture timeout receivers add timer-backed settlement and liveness boundaries",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
 )
 JAVA_FUTURE_HANDLE_GET = Pattern(
     "java",
@@ -463,6 +554,28 @@ JAVA_FUTURE_HANDLE_STATUS = Pattern(
     "Import-backed Java Future receivers expose task-handle lifecycle status",
     re.compile(r"(?!x)x"),
     "reporting-supported-closed-boundary",
+)
+JAVA_STREAM_RECEIVER_ADAPTER = Pattern(
+    "java",
+    "java.stream.receiver_adapter",
+    "receiver.stream",
+    "lifecycle-materialization-boundary",
+    "java-stream-lifecycle-contract-missing",
+    "stream lifecycle",
+    "Typed collection/set receiver.stream() calls are already admitted through iterator identity adapter occurrence proof",
+    re.compile(r"(?!x)x"),
+    "exact-supported-boundary",
+)
+JAVA_STREAM_STATIC_ARRAYS_ADAPTER = Pattern(
+    "java",
+    "java.stream.arrays_adapter",
+    "Arrays.stream",
+    "lifecycle-materialization-boundary",
+    "java-stream-lifecycle-contract-missing",
+    "stream lifecycle",
+    "Exact-import or fully qualified Arrays.stream(xs) calls are already admitted through static collection adapter occurrence proof",
+    re.compile(r"(?!x)x"),
+    "exact-supported-boundary",
 )
 JAVA_EXECUTOR_EXECUTE = Pattern(
     "java",
@@ -539,6 +652,7 @@ GO_CHANNEL_SEND = Pattern(
     "channel send synchronization",
     "Go channel sends have blocking and synchronization semantics",
     re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
 )
 GO_CHANNEL_RECEIVE = Pattern(
     "go",
@@ -549,6 +663,7 @@ GO_CHANNEL_RECEIVE = Pattern(
     "channel receive value",
     "Go channel receives have blocking, synchronization, and close/zero-value channel semantics",
     re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
 )
 GO_CHANNEL_RECEIVE_STATUS = Pattern(
     "go",
@@ -559,6 +674,7 @@ GO_CHANNEL_RECEIVE_STATUS = Pattern(
     "channel receive status",
     "Go comma-ok receives expose the channel close status as an additional protocol result",
     re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
 )
 GO_CHANNEL_SELECT_CASE = Pattern(
     "go",
@@ -569,6 +685,7 @@ GO_CHANNEL_SELECT_CASE = Pattern(
     "select case selection",
     "Go select cases require readiness, case-selection, and send/receive side-effect proof",
     re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
 )
 GO_CHANNEL_SELECT_DEFAULT = Pattern(
     "go",
@@ -579,6 +696,7 @@ GO_CHANNEL_SELECT_DEFAULT = Pattern(
     "select default liveness",
     "Go select defaults change blocking and liveness behavior",
     re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
 )
 SWIFT_THROWING_FUNCTION = Pattern(
     "swift",
@@ -599,6 +717,17 @@ SWIFT_THROWING_CLOSURE = Pattern(
     "exception-channel-contract-missing",
     "throwing closure error channel",
     "Swift throwing closures expose the same error-channel obligation as throwing functions and async throwing closures",
+    re.compile(r"(?!x)x"),
+    "reporting-supported-closed-boundary",
+)
+SWIFT_TRY_EXPRESSION = Pattern(
+    "swift",
+    "swift.error.try_expression",
+    "try/try?/try!",
+    "exception-channel",
+    "exception-channel-contract-missing",
+    "try propagation error channel",
+    "Swift try expressions and for-try-await loops expose source-backed TryPropagation boundaries",
     re.compile(r"(?!x)x"),
     "reporting-supported-closed-boundary",
 )
@@ -632,9 +761,17 @@ def all_known_patterns() -> tuple[Pattern, ...]:
         JAVA_FUTURE_SETTLEMENT_CONTINUATION,
         JAVA_FUTURE_ALL_COMPLETION_CONTINUATION,
         JAVA_FUTURE_FIRST_COMPLETION_CONTINUATION,
+        JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR,
+        JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR_UNPROVEN,
+        JAVA_COMPLETABLE_FUTURE_TYPE_REFERENCE,
+        JAVA_COMPLETABLE_FUTURE_RECEIVER_SETTLEMENT,
+        JAVA_COMPLETABLE_FUTURE_RECEIVER_OBSERVE,
+        JAVA_COMPLETABLE_FUTURE_RECEIVER_TIMEOUT,
         JAVA_FUTURE_HANDLE_GET,
         JAVA_FUTURE_HANDLE_CANCEL,
         JAVA_FUTURE_HANDLE_STATUS,
+        JAVA_STREAM_RECEIVER_ADAPTER,
+        JAVA_STREAM_STATIC_ARRAYS_ADAPTER,
         JAVA_EXECUTOR_EXECUTE,
         JAVA_EXECUTOR_SUBMIT,
         JAVA_EXECUTOR_INVOKE_ALL,
@@ -648,6 +785,7 @@ def all_known_patterns() -> tuple[Pattern, ...]:
         GO_CHANNEL_SELECT_DEFAULT,
         SWIFT_THROWING_FUNCTION,
         SWIFT_THROWING_CLOSURE,
+        SWIFT_TRY_EXPRESSION,
     )
 
 
@@ -683,6 +821,11 @@ def self_test() -> None:
     )
     assert wildcard_submit.get(JAVA_EXECUTOR_SUBMIT) == 1
 
+    java_future_executor_overlap = next(
+        item for item in PATTERNS if item.surface == "java.future.executor"
+    )
+    assert java_future_executor_overlap.status == "superseded-overlap-boundary"
+
     exact_conflict = count_file(
         "import java.util.concurrent.Future;\n"
         "import example.Future;\n"
@@ -715,6 +858,249 @@ def self_test() -> None:
     )
     assert JAVA_FUTURE_HANDLE_GET not in wildcard_shadow
 
+    java_completable_broad = next(
+        item for item in PATTERNS if item.surface == "java.future.completable"
+    )
+    exact_completable_constructor = count_file(
+        "import java.util.concurrent.CompletableFuture;\n"
+        "class T { Object run() { return new CompletableFuture<String>(); } }\n",
+        "java",
+    )
+    assert exact_completable_constructor.get(JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR) == 1
+    assert exact_completable_constructor.get(JAVA_COMPLETABLE_FUTURE_TYPE_REFERENCE) == 1
+    assert java_completable_broad not in exact_completable_constructor
+
+    wildcard_completable_constructor = count_file(
+        "import java.util.concurrent.*;\n"
+        "class T { Object run() { return new CompletableFuture<String>(); } }\n",
+        "java",
+    )
+    assert wildcard_completable_constructor.get(JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR) == 1
+
+    wildcard_package_shadow_completable_constructor = count_file(
+        "import java.util.concurrent.*;\n"
+        "class T { Object run() { return new CompletableFuture<String>(); } }\n",
+        "java",
+        {"CompletableFuture"},
+    )
+    assert (
+        JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR
+        not in wildcard_package_shadow_completable_constructor
+    )
+    assert (
+        wildcard_package_shadow_completable_constructor.get(
+            JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR_UNPROVEN
+        )
+        == 1
+    )
+    assert java_completable_broad not in wildcard_package_shadow_completable_constructor
+
+    qualified_completable_constructor = count_file(
+        "class T { Object run() { return new java.util.concurrent.CompletableFuture<String>(); } }\n",
+        "java",
+    )
+    assert qualified_completable_constructor.get(JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR) == 1
+
+    unimported_completable_constructor = count_file(
+        "class T { Object run() { return new CompletableFuture<String>(); } }\n",
+        "java",
+    )
+    assert JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR not in unimported_completable_constructor
+    assert (
+        unimported_completable_constructor.get(JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR_UNPROVEN) == 1
+    )
+    assert java_completable_broad not in unimported_completable_constructor
+
+    imported_completable_type_reference = count_file(
+        "import java.util.concurrent.CompletableFuture;\n"
+        "class T { Object run(CompletableFuture<String> future) { return CompletableFuture.class; } }\n",
+        "java",
+    )
+    assert imported_completable_type_reference.get(JAVA_COMPLETABLE_FUTURE_TYPE_REFERENCE) == 3
+    assert java_completable_broad not in imported_completable_type_reference
+
+    completable_receiver_methods = count_file(
+        "import java.util.concurrent.CompletableFuture;\n"
+        "import java.util.concurrent.TimeUnit;\n"
+        "class T { Object run(CompletableFuture<String> future, Throwable error) {\n"
+        "  future.complete(\"ok\");\n"
+        "  future.completeExceptionally(error);\n"
+        "  future.join();\n"
+        "  future.getNow(\"fallback\");\n"
+        "  future.isCompletedExceptionally();\n"
+        "  future.orTimeout(1, TimeUnit.SECONDS);\n"
+        "  return future.completeOnTimeout(\"fallback\", 1, TimeUnit.SECONDS);\n"
+        "} }\n",
+        "java",
+    )
+    assert completable_receiver_methods.get(JAVA_COMPLETABLE_FUTURE_RECEIVER_SETTLEMENT) == 2
+    assert completable_receiver_methods.get(JAVA_COMPLETABLE_FUTURE_RECEIVER_OBSERVE) == 3
+    assert completable_receiver_methods.get(JAVA_COMPLETABLE_FUTURE_RECEIVER_TIMEOUT) == 2
+
+    custom_completable_receiver_method = count_file(
+        "import example.CompletableFuture;\n"
+        "class T { Object run(CompletableFuture<String> future) { return future.join(); } }\n",
+        "java",
+    )
+    assert JAVA_COMPLETABLE_FUTURE_RECEIVER_OBSERVE not in custom_completable_receiver_method
+
+    same_name_other_scope_completable_receiver = count_file(
+        "import java.util.concurrent.CompletableFuture;\n"
+        "class CustomFuture { Object join() { return null; } }\n"
+        "class T {\n"
+        "  Object first(CompletableFuture<String> future) { return future; }\n"
+        "  Object second(CustomFuture future) { return future.join(); }\n"
+        "}\n",
+        "java",
+    )
+    assert (
+        JAVA_COMPLETABLE_FUTURE_RECEIVER_OBSERVE
+        not in same_name_other_scope_completable_receiver
+    )
+
+    wrong_arity_completable_receiver_method = count_file(
+        "import java.util.concurrent.CompletableFuture;\n"
+        "class T { Object run(CompletableFuture<String> future) { return future.join(\"bad\"); } }\n",
+        "java",
+    )
+    assert (
+        JAVA_COMPLETABLE_FUTURE_RECEIVER_OBSERVE
+        not in wrong_arity_completable_receiver_method
+    )
+
+    lambda_shadowed_completable_receiver = count_file(
+        "import java.util.concurrent.CompletableFuture;\n"
+        "class T { Object run(CompletableFuture<String> future, java.util.List<Object> values) {\n"
+        "  return values.stream().map(future -> future.join());\n"
+        "} }\n",
+        "java",
+    )
+    assert JAVA_COMPLETABLE_FUTURE_RECEIVER_OBSERVE not in lambda_shadowed_completable_receiver
+
+    java_stream_broad = next(
+        item for item in PATTERNS if item.surface == "java.stream.lifecycle"
+    )
+    typed_stream = count_file(
+        "class T { Object run(java.util.List<String> values) { return values.stream(); } }\n",
+        "java",
+    )
+    assert typed_stream.get(JAVA_STREAM_RECEIVER_ADAPTER) == 1
+    assert java_stream_broad not in typed_stream
+
+    parallel_stream = count_file(
+        "class T { Object run(java.util.List<String> values) { return values.parallelStream(); } }\n",
+        "java",
+    )
+    assert JAVA_STREAM_RECEIVER_ADAPTER not in parallel_stream
+    assert parallel_stream.get(java_stream_broad) == 1
+
+    untyped_stream = count_file(
+        "class T { Object run(Object values) { return values.stream(); } }\n",
+        "java",
+    )
+    assert JAVA_STREAM_RECEIVER_ADAPTER not in untyped_stream
+    assert untyped_stream.get(java_stream_broad) == 1
+
+    same_name_other_scope_stream = count_file(
+        "class T {\n"
+        "  Object first(java.util.List<String> values) { return values; }\n"
+        "  Object second(Object values) { return values.stream(); }\n"
+        "}\n",
+        "java",
+    )
+    assert JAVA_STREAM_RECEIVER_ADAPTER not in same_name_other_scope_stream
+    assert same_name_other_scope_stream.get(java_stream_broad) == 1
+
+    imported_arrays_stream = count_file(
+        "import java.util.Arrays;\n"
+        "class T { Object run(String[] values) { return Arrays.stream(values); } }\n",
+        "java",
+    )
+    assert imported_arrays_stream.get(JAVA_STREAM_STATIC_ARRAYS_ADAPTER) == 1
+    assert java_stream_broad not in imported_arrays_stream
+
+    qualified_arrays_stream = count_file(
+        "class T { Object run(String[] values) { return java.util.Arrays.stream(values); } }\n",
+        "java",
+    )
+    assert qualified_arrays_stream.get(JAVA_STREAM_STATIC_ARRAYS_ADAPTER) == 1
+    assert java_stream_broad not in qualified_arrays_stream
+
+    shadowed_arrays_stream = count_file(
+        "import java.util.Arrays;\n"
+        "class Arrays { static Object stream(Object value) { return value; } }\n"
+        "class T { Object run(String[] values) { return Arrays.stream(values); } }\n",
+        "java",
+    )
+    assert JAVA_STREAM_STATIC_ARRAYS_ADAPTER not in shadowed_arrays_stream
+    assert shadowed_arrays_stream.get(java_stream_broad) == 1
+
+    value_shadowed_arrays_stream = count_file(
+        "import java.util.Arrays;\n"
+        "class FakeArrays { Object stream(Object value) { return value; } }\n"
+        "class T { Object run(FakeArrays Arrays, String[] values) { return Arrays.stream(values); } }\n",
+        "java",
+    )
+    assert JAVA_STREAM_STATIC_ARRAYS_ADAPTER not in value_shadowed_arrays_stream
+    assert value_shadowed_arrays_stream.get(java_stream_broad) == 1
+
+    lambda_shadowed_arrays_stream = count_file(
+        "import java.util.Arrays;\n"
+        "import java.util.function.Function;\n"
+        "class FakeArrays { Object stream(Object value) { return value; } }\n"
+        "class T { Object run(String[] values) { Function<FakeArrays, Object> f = Arrays -> Arrays.stream(values); return f; } }\n",
+        "java",
+    )
+    assert JAVA_STREAM_STATIC_ARRAYS_ADAPTER not in lambda_shadowed_arrays_stream
+    assert lambda_shadowed_arrays_stream.get(java_stream_broad) == 1
+
+    ranged_arrays_stream = count_file(
+        "import java.util.Arrays;\n"
+        "class T { Object run(String[] values) { return Arrays.stream(values, 0, 1); } }\n",
+        "java",
+    )
+    assert JAVA_STREAM_STATIC_ARRAYS_ADAPTER not in ranged_arrays_stream
+    assert ranged_arrays_stream.get(java_stream_broad) == 1
+
+    conflict_completable_constructor = count_file(
+        "import java.util.concurrent.*;\n"
+        "import example.CompletableFuture;\n"
+        "class T { Object run() { return new CompletableFuture<String>(); } }\n",
+        "java",
+    )
+    assert JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR not in conflict_completable_constructor
+    assert conflict_completable_constructor.get(JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR_UNPROVEN) == 1
+
+    shadow_completable_constructor = count_file(
+        "import java.util.concurrent.CompletableFuture;\n"
+        "class CompletableFuture<T> {}\n"
+        "class T { Object run() { return new CompletableFuture<String>(); } }\n",
+        "java",
+    )
+    assert JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR not in shadow_completable_constructor
+    assert shadow_completable_constructor.get(JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR_UNPROVEN) == 1
+
+    wildcard_package_shadow_future_receiver = count_file(
+        "import java.util.concurrent.*;\n"
+        "class T { Object run(Future<String> future) throws Exception { return future.get(); } }\n",
+        "java",
+        {"Future"},
+    )
+    assert JAVA_FUTURE_HANDLE_GET not in wildcard_package_shadow_future_receiver
+
+    top_level_types = java_top_level_type_names(
+        "class Top { class Nested {} void f() { class Local {} } }\n"
+        "record Other(int value) {}\n"
+    )
+    assert top_level_types == {"Top", "Other"}
+    assert (
+        java_package_key(
+            Path("src2/p/Runtime.java"),
+            "package p;\nimport java.util.concurrent.*;\nclass Runtime {}\n",
+        )
+        == "package:p"
+    )
+
     swift_throwing = count_file(
         "func f() throws -> Int { 1 }\n"
         "init(value: Int) rethrows { try setup(value) }\n"
@@ -725,6 +1111,7 @@ def self_test() -> None:
     )
     assert swift_throwing.get(SWIFT_THROWING_FUNCTION) == 3
     assert swift_throwing.get(SWIFT_THROWING_CLOSURE) == 2
+    assert swift_throwing.get(SWIFT_TRY_EXPRESSION) == 3
 
     swift_type_only = count_file(
         "let factory: (@escaping () async throws -> Void) -> Void = { closure in closure }\n"
@@ -734,6 +1121,134 @@ def self_test() -> None:
     )
     assert SWIFT_THROWING_FUNCTION not in swift_type_only
     assert SWIFT_THROWING_CLOSURE not in swift_type_only
+    assert SWIFT_TRY_EXPRESSION not in swift_type_only
+
+    swift_try_expressions = count_file(
+        "func run(_ stream: AsyncThrowingStream<Int, Error>) async throws {\n"
+        "  let value = try load()\n"
+        "  let optional = try? maybe()\n"
+        "  let forced = try! definitely()\n"
+        "  for try await item in stream { print(item) }\n"
+        "}\n"
+        "let tryawait = 1\n",
+        "swift",
+    )
+    assert swift_try_expressions.get(SWIFT_TRY_EXPRESSION) == 4
+
+    swift_async_function_pattern = next(
+        item for item in PATTERNS if item.surface == "swift.async.function"
+    )
+    swift_async_functions = count_file(
+        "func f() async -> Int { 1 }\n"
+        "func g() async throws -> Int { try await work() }\n"
+        "init(value: Int) async { self.init() }\n"
+        "func accepts(_ body: () async -> Int) -> Int { 1 }\n"
+        "func returns() -> () async -> Int { { 1 } }\n",
+        "swift",
+    )
+    assert swift_async_functions.get(swift_async_function_pattern) == 3
+    swift_async_type_only = count_file(
+        "let factory: (@escaping () async throws -> Void) -> Void = { closure in closure }\n"
+        "func accepts(_ body: () async -> Int) -> Int { 1 }\n"
+        "func returns() -> () async -> Int { { 1 } }\n",
+        "swift",
+    )
+    assert swift_async_function_pattern not in swift_async_type_only
+
+    ruby_yield = count_file(
+        "def render(value)\n"
+        "  yield value\n"
+        "end\n"
+        "text = 'yield ignored in strings'\n",
+        "ruby",
+    )
+    ruby_yield_pattern = next(item for item in PATTERNS if item.surface == "ruby.block.yield")
+    assert ruby_yield.get(ruby_yield_pattern) == 1
+    assert ruby_yield_pattern.status == "reporting-supported-closed-boundary"
+
+    ruby_exception = count_file(
+        "def f(error)\n"
+        "  raise error\n"
+        "rescue Error\n"
+        "  recover\n"
+        "end\n"
+        "raise_error(:not_a_raise)\n",
+        "ruby",
+    )
+    ruby_exception_overlap = next(item for item in PATTERNS if item.surface == "ruby.exception")
+    assert ruby_exception.get(RUBY_EXCEPTION_RAISE) == 1
+    assert ruby_exception.get(RUBY_EXCEPTION_RESCUE) == 1
+    assert ruby_exception.get(ruby_exception_overlap) == 2
+    assert RUBY_EXCEPTION_RAISE.status == "reporting-supported-closed-boundary"
+    assert RUBY_EXCEPTION_RESCUE.status == "reporting-supported-closed-boundary"
+    assert ruby_exception_overlap.status == "superseded-overlap-boundary"
+
+    task_spawn_reporting_surfaces = {
+        "python.asyncio.task",
+        "rust.async.spawn",
+        "swift.task.spawn",
+        "java.future.completable.spawn",
+    }
+    for surface in task_spawn_reporting_surfaces:
+        pattern = next(item for item in PATTERNS if item.surface == surface)
+        assert pattern.status == "reporting-supported-closed-boundary", surface
+
+    async_aggregate_reporting_surfaces = {
+        "python.asyncio.gather",
+        "python.asyncio.wait",
+        "rust.async.join",
+        "rust.async.select",
+        "java.future.completable.all",
+        "java.future.completable.any",
+    }
+    for surface in async_aggregate_reporting_surfaces:
+        pattern = next(item for item in PATTERNS if item.surface == surface)
+        assert pattern.status == "reporting-supported-closed-boundary", surface
+
+    settled_future_and_await_reporting_surfaces = {
+        "java.future.completable.factory",
+        "python.asyncio.sleep",
+        "swift.async.await",
+    }
+    for surface in settled_future_and_await_reporting_surfaces:
+        pattern = next(item for item in PATTERNS if item.surface == surface)
+        assert pattern.status == "reporting-supported-closed-boundary", surface
+
+    java_future_continuation_reporting_surfaces = {
+        "java.future.completion_stage.fulfillment",
+        "java.future.completion_stage.exception",
+        "java.future.completion_stage.settlement",
+        "java.future.completion_stage.all",
+        "java.future.completion_stage.first",
+    }
+    for surface in java_future_continuation_reporting_surfaces:
+        pattern = next(item for item in all_known_patterns() if item.surface == surface)
+        assert pattern.status == "reporting-supported-closed-boundary", surface
+
+    source_protocol_reporting_surfaces = {
+        "python.async.await",
+        "python.async.function",
+        "python.generator.yield",
+        "rust.async.await",
+        "rust.async.function",
+        "rust.async.block",
+        "swift.async.function",
+    }
+    for surface in source_protocol_reporting_surfaces:
+        pattern = next(item for item in PATTERNS if item.surface == surface)
+        assert pattern.status == "reporting-supported-closed-boundary", surface
+    assert SWIFT_TRY_EXPRESSION.status == "reporting-supported-closed-boundary"
+    swift_error_overlap = next(
+        item for item in PATTERNS if item.surface == "swift.error.throws"
+    )
+    assert swift_error_overlap.status == "superseded-overlap-boundary"
+
+    future_channel_reason = recommended_reason(
+        {
+            "obligation_subreason": "future-settled-value-channel-contract-missing",
+        }
+    )
+    assert "Go channel" not in future_channel_reason
 
 
 def load_repos(manifest: Path) -> list[dict[str, Any]]:
@@ -807,13 +1322,18 @@ def mask_comments_and_strings(text: str) -> str:
     return "".join(chars)
 
 
-def count_file(text: str, language: str) -> dict[Pattern, int]:
+def count_file(
+    text: str,
+    language: str,
+    java_package_local_types: set[str] | None = None,
+) -> dict[Pattern, int]:
     masked = mask_comments_and_strings(text)
     counts: dict[Pattern, int] = {}
     for pattern in PATTERNS:
         if pattern.language != language:
             continue
         if pattern.surface in {
+            "swift.async.function",
             "swift.async.closure",
             "swift.error.throwing_function",
             "swift.error.throwing_closure",
@@ -835,11 +1355,382 @@ def count_file(text: str, language: str) -> dict[Pattern, int]:
         }
         counts.update(go_channel_protocol_counts(masked))
     elif language == "java":
-        counts.update(java_future_receiver_counts(masked))
+        java_completable_pattern = next(
+            item for item in PATTERNS if item.surface == "java.future.completable"
+        )
+        java_stream_pattern = next(
+            item for item in PATTERNS if item.surface == "java.stream.lifecycle"
+        )
+        counts.pop(java_completable_pattern, None)
+        counts.pop(java_stream_pattern, None)
+        counts.update(
+            java_completable_future_counts(
+                masked, java_completable_pattern, java_package_local_types
+            )
+        )
+        counts.update(java_future_receiver_counts(masked, java_package_local_types))
+        counts.update(
+            java_stream_lifecycle_counts(
+                masked, java_stream_pattern, java_package_local_types
+            )
+        )
     elif language == "swift":
+        counts.update(swift_async_function_counts(masked))
         counts.update(swift_async_closure_counts(masked))
         counts.update(swift_throwing_callable_counts(masked))
+        counts.update(swift_try_expression_counts(masked))
     return counts
+
+
+def java_completable_future_counts(
+    text: str,
+    _broad_pattern: Pattern,
+    package_local_types: set[str] | None = None,
+) -> dict[Pattern, int]:
+    constructor_candidate_starts = java_completable_future_constructor_candidate_name_starts(text)
+    accepted_constructor_starts = java_completable_future_constructor_name_starts(
+        text, package_local_types
+    )
+    unproven_constructor_starts = constructor_candidate_starts - accepted_constructor_starts
+    type_reference_count = 0
+    for match in re.finditer(
+        r"\bCompletableFuture\b"
+        r"(?!\s*\.\s*(?:supplyAsync|runAsync|completedFuture|completedStage|failedFuture|failedStage|allOf|anyOf)\s*\()",
+        text,
+    ):
+        if match.start() in accepted_constructor_starts:
+            continue
+        if match.start() in unproven_constructor_starts:
+            continue
+        type_reference_count += 1
+
+    counts: dict[Pattern, int] = {}
+    if accepted_constructor_starts:
+        counts[JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR] = len(accepted_constructor_starts)
+    if unproven_constructor_starts:
+        counts[JAVA_COMPLETABLE_FUTURE_CONSTRUCTOR_UNPROVEN] = len(
+            unproven_constructor_starts
+        )
+    if type_reference_count:
+        counts[JAVA_COMPLETABLE_FUTURE_TYPE_REFERENCE] = type_reference_count
+    return counts
+
+
+def java_completable_future_constructor_candidate_name_starts(text: str) -> set[int]:
+    starts: set[int] = set()
+    qualified = re.compile(
+        r"\bnew\s+java\s*\.\s*util\s*\.\s*concurrent\s*\.\s*"
+        r"(CompletableFuture)\b(?:\s*<[^;(){}]*>)?\s*\("
+    )
+    starts.update(match.start(1) for match in qualified.finditer(text))
+    simple = re.compile(r"\bnew\s+(CompletableFuture)\b(?:\s*<[^;(){}]*>)?\s*\(")
+    starts.update(match.start(1) for match in simple.finditer(text))
+    return starts
+
+
+def java_completable_future_constructor_name_starts(
+    text: str,
+    package_local_types: set[str] | None = None,
+) -> set[int]:
+    starts: set[int] = set()
+    qualified = re.compile(
+        r"\bnew\s+java\s*\.\s*util\s*\.\s*concurrent\s*\.\s*"
+        r"(CompletableFuture)\b(?:\s*<[^;(){}]*>)?\s*\("
+    )
+    starts.update(match.start(1) for match in qualified.finditer(text))
+
+    if "CompletableFuture" not in java_imported_concurrent_types(
+        text, {"CompletableFuture"}, package_local_types
+    ):
+        return starts
+    simple = re.compile(r"\bnew\s+(CompletableFuture)\b(?:\s*<[^;(){}]*>)?\s*\(")
+    starts.update(match.start(1) for match in simple.finditer(text))
+    return starts
+
+
+def java_stream_lifecycle_counts(
+    text: str,
+    broad_pattern: Pattern,
+    package_local_types: set[str] | None = None,
+) -> dict[Pattern, int]:
+    broad_dot_starts = {
+        match.start()
+        for match in re.finditer(r"\.\s*(?:stream|parallelStream)\s*\(", text)
+    }
+    receiver_dot_starts = java_stream_receiver_adapter_dot_starts(text)
+    static_dot_starts = java_static_arrays_stream_adapter_dot_starts(
+        text, package_local_types
+    )
+    proof_backed_dot_starts = receiver_dot_starts | static_dot_starts
+    residual_count = sum(1 for start in broad_dot_starts if start not in proof_backed_dot_starts)
+
+    counts: dict[Pattern, int] = {}
+    if residual_count:
+        counts[broad_pattern] = residual_count
+    if receiver_dot_starts:
+        counts[JAVA_STREAM_RECEIVER_ADAPTER] = len(receiver_dot_starts)
+    if static_dot_starts:
+        counts[JAVA_STREAM_STATIC_ARRAYS_ADAPTER] = len(static_dot_starts)
+    return counts
+
+
+JAVA_IDENTIFIER_RE = r"[A-Za-z_$][A-Za-z0-9_$]*"
+JAVA_COLLECTION_OR_SET_TYPES = {
+    "Collection",
+    "List",
+    "ArrayList",
+    "LinkedList",
+    "Deque",
+    "Queue",
+    "Set",
+    "HashSet",
+    "LinkedHashSet",
+    "TreeSet",
+}
+JAVA_VALUE_BINDING_TYPE_KEYWORDS = {
+    "assert",
+    "case",
+    "default",
+    "else",
+    "for",
+    "if",
+    "new",
+    "return",
+    "switch",
+    "throw",
+    "try",
+    "while",
+}
+JAVA_VALUE_BINDING_PATTERN = re.compile(
+    rf"(?:@[A-Za-z_$][A-Za-z0-9_$]*(?:\s*\([^)]*\))?\s+)*"
+    rf"(?:(?:final|volatile|transient)\s+)*"
+    rf"(?P<type>(?:{JAVA_IDENTIFIER_RE}\s*\.\s*)*{JAVA_IDENTIFIER_RE})"
+    rf"(?:\s*<[^;()={{}}]*>)?(?:\s*\[\s*\])?\s+"
+    rf"(?P<name>{JAVA_IDENTIFIER_RE})\b"
+)
+
+
+def java_stream_receiver_adapter_dot_starts(text: str) -> set[int]:
+    starts: set[int] = set()
+    pattern = re.compile(
+        rf"\b(?P<receiver>{JAVA_IDENTIFIER_RE})\s*(?P<dot>\.)\s*stream\s*\("
+    )
+    for match in pattern.finditer(text):
+        if java_call_arity(text, match.end() - 1) != 0:
+            continue
+        receiver = match.group("receiver")
+        binding = java_latest_value_binding_supported_collection(
+            text, match.start("dot"), receiver
+        )
+        if binding is True:
+            starts.add(match.start("dot"))
+    return starts
+
+
+def java_latest_value_binding_supported_collection(
+    text: str,
+    before: int,
+    name: str,
+) -> bool | None:
+    region = java_enclosing_method_like_region(text, before)
+    if region is None:
+        return None
+    latest: tuple[int, bool] | None = None
+    for match in JAVA_VALUE_BINDING_PATTERN.finditer(text, region[0], before):
+        if match.group("name") != name:
+            continue
+        if match.group("name") in {"class", "interface", "enum", "record"}:
+            continue
+        if java_binding_type_is_keyword(match.group("type")):
+            continue
+        if java_binding_is_callable_declaration(text, match.end("name")):
+            continue
+        supported = java_collection_or_set_type_name(match.group("type")) is not None
+        latest = (match.start("name"), supported)
+    return latest[1] if latest is not None else None
+
+
+def java_static_arrays_stream_adapter_dot_starts(
+    text: str,
+    package_local_types: set[str] | None = None,
+) -> set[int]:
+    starts: set[int] = set()
+    for match in re.finditer(
+        r"\bjava\s*\.\s*util\s*\.\s*Arrays\s*(?P<dot>\.)\s*stream\s*\(",
+        text,
+    ):
+        if java_call_arity(text, match.end() - 1) == 1:
+            starts.add(match.start("dot"))
+
+    if java_exact_arrays_import_available(text, package_local_types):
+        for match in re.finditer(r"\bArrays\s*(?P<dot>\.)\s*stream\s*\(", text):
+            dot_start = match.start("dot")
+            if java_call_arity(text, match.end() - 1) != 1:
+                continue
+            if java_value_binding_visible_before(text, dot_start, "Arrays"):
+                continue
+            if java_lambda_parameter_visible_before(text, dot_start, "Arrays"):
+                continue
+            starts.add(dot_start)
+    return starts
+
+
+def java_exact_arrays_import_available(
+    text: str,
+    package_local_types: set[str] | None = None,
+) -> bool:
+    if "Arrays" in java_local_type_names(text) or "Arrays" in (package_local_types or set()):
+        return False
+    if re.search(
+        r"\bimport\s+(?!static\b)(?!java\s*\.\s*util\s*\.\s*Arrays\s*;)"
+        r"[A-Za-z_$][A-Za-z0-9_$]*(?:\s*\.\s*[A-Za-z_$][A-Za-z0-9_$]*)*"
+        r"\s*\.\s*Arrays\s*;",
+        text,
+    ):
+        return False
+    return re.search(r"\bimport\s+java\s*\.\s*util\s*\.\s*Arrays\s*;", text) is not None
+
+
+def java_call_arity(text: str, open_paren: int) -> int | None:
+    if open_paren >= len(text) or text[open_paren] != "(":
+        return None
+    paren_depth = 0
+    bracket_depth = 0
+    brace_depth = 0
+    saw_argument = False
+    comma_count = 0
+    idx = open_paren + 1
+    while idx < len(text):
+        current = text[idx]
+        if current == "(":
+            paren_depth += 1
+        elif current == ")":
+            if paren_depth == 0:
+                return comma_count + 1 if saw_argument else 0
+            paren_depth -= 1
+        elif current == "[":
+            bracket_depth += 1
+        elif current == "]":
+            bracket_depth = max(0, bracket_depth - 1)
+        elif current == "{":
+            brace_depth += 1
+        elif current == "}":
+            brace_depth = max(0, brace_depth - 1)
+        elif (
+            current == ","
+            and paren_depth == 0
+            and bracket_depth == 0
+            and brace_depth == 0
+        ):
+            comma_count += 1
+        elif not current.isspace():
+            saw_argument = True
+        idx += 1
+    return None
+
+
+def java_value_binding_visible_before(text: str, before: int, name: str) -> bool:
+    region = java_enclosing_method_like_region(text, before)
+    if region is None:
+        return False
+    for match in JAVA_VALUE_BINDING_PATTERN.finditer(text, region[0], before):
+        if match.group("name") != name:
+            continue
+        if java_binding_type_is_keyword(match.group("type")):
+            continue
+        if java_binding_is_callable_declaration(text, match.end("name")):
+            continue
+        return True
+    return False
+
+
+def java_lambda_parameter_visible_before(text: str, before: int, name: str) -> bool:
+    region = java_enclosing_method_like_region(text, before)
+    if region is None:
+        return False
+    segment = text[region[0] : before]
+    if re.search(rf"\b{re.escape(name)}\s*->", segment):
+        return True
+    for match in re.finditer(r"\(([^()]*)\)\s*->", segment):
+        if java_lambda_parameter_header_contains(match.group(1), name):
+            return True
+    return False
+
+
+def java_lambda_parameter_header_contains(header: str, name: str) -> bool:
+    for parameter in header.split(","):
+        names = re.findall(JAVA_IDENTIFIER_RE, parameter)
+        if names and names[-1] == name:
+            return True
+    return False
+
+
+def java_binding_is_callable_declaration(text: str, name_end: int) -> bool:
+    idx = name_end
+    while idx < len(text) and text[idx].isspace():
+        idx += 1
+    return idx < len(text) and text[idx] == "("
+
+
+def java_binding_type_is_keyword(type_text: str) -> bool:
+    return re.sub(r"\s+", "", type_text) in JAVA_VALUE_BINDING_TYPE_KEYWORDS
+
+
+def java_collection_or_set_type_name(type_text: str) -> str | None:
+    normalized = re.sub(r"\s+", "", type_text)
+    if normalized.startswith("java.util."):
+        normalized = normalized[len("java.util.") :]
+    return normalized if normalized in JAVA_COLLECTION_OR_SET_TYPES else None
+
+
+def java_enclosing_method_like_region(text: str, index: int) -> tuple[int, int] | None:
+    stack: list[int] = []
+    for match in re.finditer(r"[{}]", text[:index]):
+        if match.group(0) == "{":
+            stack.append(match.start())
+        elif stack:
+            stack.pop()
+    for open_brace in reversed(stack):
+        header_start = java_header_start_before_brace(text, open_brace)
+        header = text[header_start:open_brace].strip()
+        if java_header_looks_like_method_body(header):
+            return (header_start, open_brace + 1)
+    return None
+
+
+def java_header_start_before_brace(text: str, open_brace: int) -> int:
+    idx = open_brace - 1
+    while idx >= 0 and text[idx] not in ";{}":
+        idx -= 1
+    return idx + 1
+
+
+def java_header_looks_like_method_body(header: str) -> bool:
+    if not header or "(" not in header or ")" not in header or "->" in header:
+        return False
+    stripped = header.strip()
+    first = re.match(
+        r"(?:@\w+(?:\([^)]*\))?\s+)*"
+        r"(?:public|private|protected|static|final|native|"
+        r"synchronized|abstract|default|strictfp|\s)*"
+        r"([A-Za-z_$][A-Za-z0-9_$]*)",
+        stripped,
+    )
+    if first and first.group(1) in {
+        "if",
+        "for",
+        "while",
+        "switch",
+        "catch",
+        "synchronized",
+        "try",
+        "else",
+        "do",
+        "finally",
+        "new",
+    }:
+        return False
+    return True
 
 
 def swift_async_closure_counts(text: str) -> dict[Pattern, int]:
@@ -848,6 +1739,16 @@ def swift_async_closure_counts(text: str) -> dict[Pattern, int]:
     for header in iter_swift_closure_headers(text):
         if swift_closure_header_has_top_level_async_modifier(header):
             count += 1
+    return {pattern: count} if count else {}
+
+
+def swift_async_function_counts(text: str) -> dict[Pattern, int]:
+    pattern = next(item for item in PATTERNS if item.surface == "swift.async.function")
+    count = sum(
+        1
+        for signature in iter_swift_body_bearing_callable_signatures(text)
+        if swift_callable_signature_has_top_level_async_modifier(signature)
+    )
     return {pattern: count} if count else {}
 
 
@@ -868,6 +1769,11 @@ def swift_throwing_callable_counts(text: str) -> dict[Pattern, int]:
     if closure_count:
         counts[SWIFT_THROWING_CLOSURE] = closure_count
     return counts
+
+
+def swift_try_expression_counts(text: str) -> dict[Pattern, int]:
+    count = sum(1 for _ in re.finditer(r"\btry\b[!?]?", text))
+    return {SWIFT_TRY_EXPRESSION: count} if count else {}
 
 
 def iter_swift_body_bearing_callable_signatures(text: str):
@@ -901,6 +1807,15 @@ def iter_swift_body_bearing_callable_signatures(text: str):
             idx += 1
 
 
+def swift_callable_signature_has_top_level_async_modifier(signature: str) -> bool:
+    for idx, _ in iter_top_level_word_offsets(signature, "async"):
+        before = signature[:idx].rstrip()
+        after = signature[idx + len("async") :].lstrip()
+        if swift_callable_async_prefix_is_valid(before) and swift_callable_async_tail_is_valid(after):
+            return True
+    return False
+
+
 def swift_callable_signature_has_top_level_throwing_modifier(signature: str) -> bool:
     for keyword in ("throws", "rethrows"):
         for idx, _ in iter_top_level_word_offsets(signature, keyword):
@@ -908,6 +1823,20 @@ def swift_callable_signature_has_top_level_throwing_modifier(signature: str) -> 
             after = signature[idx + len(keyword) :].lstrip()
             if swift_callable_throwing_prefix_is_valid(before) and swift_callable_throwing_tail_is_valid(after):
                 return True
+    return False
+
+
+def swift_callable_async_prefix_is_valid(before: str) -> bool:
+    return not swift_has_top_level_return_arrow(before)
+
+
+def swift_callable_async_tail_is_valid(after: str) -> bool:
+    if not after or after.startswith("->") or is_word_at(after, 0, "where"):
+        return True
+    for keyword in ("throws", "rethrows"):
+        if is_word_at(after, 0, keyword):
+            rest = swift_consume_typed_throws_tail(after[len(keyword) :]).lstrip()
+            return not rest or rest.startswith("->") or is_word_at(rest, 0, "where")
     return False
 
 
@@ -1596,7 +2525,10 @@ def rust_runtime_import_target(module: str, exported: str) -> bool:
     }
 
 
-def java_future_receiver_counts(text: str) -> dict[Pattern, int]:
+def java_future_receiver_counts(
+    text: str,
+    package_local_types: set[str] | None = None,
+) -> dict[Pattern, int]:
     receivers = java_future_like_receiver_names(text)
     counts: dict[Pattern, int] = {}
     if receivers:
@@ -1668,9 +2600,147 @@ def java_future_receiver_counts(text: str) -> dict[Pattern, int]:
             ),
             ".",
         )
-    java_future_handle_counts(counts, text)
-    java_executor_receiver_counts(counts, text)
+    java_completable_future_receiver_method_counts(counts, text, package_local_types)
+    java_future_handle_counts(counts, text, package_local_types)
+    java_executor_receiver_counts(counts, text, package_local_types)
     return counts
+
+
+JAVA_COMPLETABLE_FUTURE_RECEIVER_METHODS = {
+    "complete": (JAVA_COMPLETABLE_FUTURE_RECEIVER_SETTLEMENT, {1}),
+    "completeExceptionally": (JAVA_COMPLETABLE_FUTURE_RECEIVER_SETTLEMENT, {1}),
+    "join": (JAVA_COMPLETABLE_FUTURE_RECEIVER_OBSERVE, {0}),
+    "getNow": (JAVA_COMPLETABLE_FUTURE_RECEIVER_OBSERVE, {1}),
+    "isCompletedExceptionally": (JAVA_COMPLETABLE_FUTURE_RECEIVER_OBSERVE, {0}),
+    "orTimeout": (JAVA_COMPLETABLE_FUTURE_RECEIVER_TIMEOUT, {2}),
+    "completeOnTimeout": (JAVA_COMPLETABLE_FUTURE_RECEIVER_TIMEOUT, {3}),
+}
+
+
+def java_completable_future_receiver_method_counts(
+    counts: dict[Pattern, int],
+    text: str,
+    package_local_types: set[str] | None = None,
+) -> None:
+    methods = "|".join(
+        re.escape(method)
+        for method in sorted(JAVA_COMPLETABLE_FUTURE_RECEIVER_METHODS, key=len, reverse=True)
+    )
+    pattern = re.compile(
+        rf"\b(?P<receiver>{JAVA_IDENTIFIER_RE})\s*(?P<dot>\.)\s*"
+        rf"(?P<method>{methods})\s*\("
+    )
+    for match in pattern.finditer(text):
+        row, arities = JAVA_COMPLETABLE_FUTURE_RECEIVER_METHODS[match.group("method")]
+        if not java_call_arity_matches_masked_literals(text, match.end() - 1, arities):
+            continue
+        receiver = match.group("receiver")
+        if (
+            java_latest_value_binding_import_backed_concurrent_type(
+                text,
+                match.start("dot"),
+                receiver,
+                {"CompletableFuture"},
+                package_local_types,
+            )
+            is True
+        ):
+            counts[row] = counts.get(row, 0) + 1
+
+
+def java_call_arity_matches_masked_literals(
+    text: str,
+    open_paren: int,
+    allowed: set[int],
+) -> bool:
+    arity = java_call_arity(text, open_paren)
+    if arity is None:
+        return False
+    width = java_call_argument_span_width(text, open_paren)
+    if arity == 0 and width is not None and width > 0:
+        return 1 in allowed
+    return arity in allowed
+
+
+def java_call_argument_span_width(text: str, open_paren: int) -> int | None:
+    if open_paren >= len(text) or text[open_paren] != "(":
+        return None
+    paren_depth = 0
+    bracket_depth = 0
+    brace_depth = 0
+    idx = open_paren + 1
+    while idx < len(text):
+        current = text[idx]
+        if current == "(":
+            paren_depth += 1
+        elif current == ")":
+            if paren_depth == 0 and bracket_depth == 0 and brace_depth == 0:
+                return idx - open_paren - 1
+            if paren_depth > 0:
+                paren_depth -= 1
+        elif current == "[":
+            bracket_depth += 1
+        elif current == "]":
+            bracket_depth = max(0, bracket_depth - 1)
+        elif current == "{":
+            brace_depth += 1
+        elif current == "}":
+            brace_depth = max(0, brace_depth - 1)
+        idx += 1
+    return None
+
+
+def java_latest_value_binding_import_backed_concurrent_type(
+    text: str,
+    before: int,
+    name: str,
+    type_names: set[str],
+    package_local_types: set[str] | None = None,
+) -> bool | None:
+    region = java_enclosing_method_like_region(text, before)
+    if region is None:
+        return None
+    if java_lambda_parameter_visible_before(text, before, name):
+        return False
+    latest: tuple[int, bool] | None = None
+    for match in JAVA_VALUE_BINDING_PATTERN.finditer(text, region[0], before):
+        if match.group("name") != name:
+            continue
+        if match.group("name") in {"class", "interface", "enum", "record"}:
+            continue
+        if java_binding_type_is_keyword(match.group("type")):
+            continue
+        if java_binding_is_callable_declaration(text, match.end("name")):
+            continue
+        latest = (
+            match.start("name"),
+            java_concurrent_type_binding_supported(
+                text,
+                match.group("type"),
+                type_names,
+                package_local_types,
+            ),
+        )
+    return latest[1] if latest is not None else None
+
+
+def java_concurrent_type_binding_supported(
+    text: str,
+    type_text: str,
+    type_names: set[str],
+    package_local_types: set[str] | None = None,
+) -> bool:
+    normalized = re.sub(r"\s+", "", type_text)
+    concurrent_prefix = "java.util.concurrent."
+    if normalized.startswith(concurrent_prefix):
+        return normalized[len(concurrent_prefix) :] in type_names
+    if "." in normalized:
+        return False
+    return normalized in java_imported_concurrent_types(
+        text,
+        type_names,
+        package_local_types,
+    )
 
 
 def java_future_like_receiver_names(text: str) -> set[str]:
@@ -1689,10 +2759,15 @@ def java_future_like_receiver_names(text: str) -> set[str]:
     }
 
 
-def java_future_handle_counts(counts: dict[Pattern, int], text: str) -> None:
+def java_future_handle_counts(
+    counts: dict[Pattern, int],
+    text: str,
+    package_local_types: set[str] | None = None,
+) -> None:
     future_receivers = java_import_backed_receiver_names(
         text,
         {"CompletableFuture", "Future", "ScheduledFuture"},
+        package_local_types,
     )
     if not future_receivers:
         return
@@ -1715,15 +2790,23 @@ def java_future_handle_counts(counts: dict[Pattern, int], text: str) -> None:
     )
 
 
-def java_executor_receiver_counts(counts: dict[Pattern, int], text: str) -> None:
-    executor_receivers = java_import_backed_receiver_names(text, {"Executor"})
+def java_executor_receiver_counts(
+    counts: dict[Pattern, int],
+    text: str,
+    package_local_types: set[str] | None = None,
+) -> None:
+    executor_receivers = java_import_backed_receiver_names(
+        text, {"Executor"}, package_local_types
+    )
     executor_service_receivers = java_import_backed_receiver_names(
         text,
         {"ExecutorService", "ScheduledExecutorService"},
+        package_local_types,
     )
     scheduled_receivers = java_import_backed_receiver_names(
         text,
         {"ScheduledExecutorService"},
+        package_local_types,
     )
     if executor_receivers or executor_service_receivers:
         count_by_methods(
@@ -1789,8 +2872,12 @@ JAVA_CONCURRENT_RECEIVER_TYPE_NAMES = {
 }
 
 
-def java_import_backed_receiver_names(text: str, type_names: set[str]) -> set[str]:
-    imported = java_imported_concurrent_types(text, type_names)
+def java_import_backed_receiver_names(
+    text: str,
+    type_names: set[str],
+    package_local_types: set[str] | None = None,
+) -> set[str]:
+    imported = java_imported_concurrent_types(text, type_names, package_local_types)
     if not imported:
         return set()
     type_pattern = "|".join(re.escape(type_name) for type_name in sorted(imported))
@@ -1805,11 +2892,15 @@ def java_import_backed_receiver_names(text: str, type_names: set[str]) -> set[st
     }
 
 
-def java_imported_concurrent_types(text: str, type_names: set[str]) -> set[str]:
+def java_imported_concurrent_types(
+    text: str,
+    type_names: set[str],
+    package_local_types: set[str] | None = None,
+) -> set[str]:
     blocked = java_local_type_names(text) | java_conflicting_exact_imported_type_names(text)
     imported = (java_exact_imported_concurrent_types(text) & type_names) - blocked
     if java_has_concurrent_wildcard_import(text):
-        imported |= type_names - blocked
+        imported |= type_names - blocked - (package_local_types or set())
     return imported
 
 
@@ -1855,6 +2946,55 @@ def java_local_type_names(text: str) -> set[str]:
     }
 
 
+def java_top_level_type_names(text: str) -> set[str]:
+    names: set[str] = set()
+    depth = 0
+    tokens = re.finditer(
+        r"[{}]|\b(?:class|interface|enum|record)\s+([A-Za-z_$][A-Za-z0-9_$]*)\b",
+        text,
+    )
+    for token in tokens:
+        if token.group(0) == "{":
+            depth += 1
+        elif token.group(0) == "}":
+            depth = max(0, depth - 1)
+        elif depth == 0 and token.group(1):
+            names.add(token.group(1))
+    return names
+
+
+def java_package_local_types_by_package(root: Path) -> dict[str, set[str]]:
+    by_package: dict[str, set[str]] = defaultdict(set)
+    for path in source_files(root):
+        if language_for_path(path) != "java":
+            continue
+        try:
+            text = mask_comments_and_strings(path.read_text(errors="ignore"))
+        except OSError:
+            continue
+        names = java_top_level_type_names(text)
+        if names:
+            by_package[java_package_key(path, text)].update(names)
+    return by_package
+
+
+def java_package_key(path: Path, text: str) -> str:
+    declared = java_declared_package_name(text)
+    if declared:
+        return f"package:{declared}"
+    return f"dir:{path.parent}"
+
+
+def java_declared_package_name(text: str) -> str | None:
+    match = re.search(
+        r"\bpackage\s+([A-Za-z_$][A-Za-z0-9_$]*(?:\s*\.\s*[A-Za-z_$][A-Za-z0-9_$]*)*)\s*;",
+        text,
+    )
+    if not match:
+        return None
+    return re.sub(r"\s+", "", match.group(1))
+
+
 def summarize(args: argparse.Namespace) -> dict[str, Any]:
     repos = load_repos(Path(args.manifest))
     include_zero_surfaces = set(args.include_zero_surface)
@@ -1873,6 +3013,7 @@ def summarize(args: argparse.Namespace) -> dict[str, Any]:
     for repo in repos:
         repo_id = repo["id"]
         root = Path(args.repos_root) / repo_id
+        java_package_types = java_package_local_types_by_package(root)
         for path in source_files(root):
             language = language_for_path(path)
             if language is None:
@@ -1882,7 +3023,13 @@ def summarize(args: argparse.Namespace) -> dict[str, Any]:
             except OSError:
                 continue
             rel = str(path.relative_to(root))
-            for pattern, count in count_file(text, language).items():
+            for pattern, count in count_file(
+                text,
+                language,
+                java_package_types.get(java_package_key(path, mask_comments_and_strings(text)))
+                if language == "java"
+                else None,
+            ).items():
                 by_pattern[pattern][repo_id] += count
                 file_counts[pattern][f"{repo_id}/{rel}"] += count
                 language_counts[language] += count
@@ -1997,7 +3144,7 @@ def recommended_order(surfaces: list[dict[str, Any]]) -> list[dict[str, Any]]:
     candidates = [
         item
         for item in surfaces
-        if not item["status"].startswith("reporting-")
+        if not item["status"].startswith(("reporting-", "superseded-", "exact-"))
         and (
             item["obligation_subreason"] in priority
             or item["surface"] in surface_priority
@@ -2043,7 +3190,7 @@ def recommended_reason(item: dict[str, Any]) -> str:
         return "Cancellation appears across JS/TS scheduling APIs and must stay separate from fulfillment/rejection recovery."
     if "interval" in subreason:
         return "Repeated emission/liveness needs lifecycle proof before interval streams can be compared exactly."
-    if "channel" in subreason:
+    if subreason.startswith("channel-"):
         return "Go channel protocol boundaries now split blocking, synchronization, close-status, and select readiness obligations."
     return "High-prevalence boundary surface with reusable obligation vocabulary."
 
@@ -2101,6 +3248,11 @@ def hard_negative_inventory() -> list[dict[str, Any]]:
             "status": "expanded-this-slice",
         },
         {
+            "class": "Ruby block yield callback demand/effect versus ordinary value return or direct call",
+            "evidence": "crates/nose-frontend/src/ruby/tests.rs::yield_preserves_source_backed_protocol_boundary, crates/nose-cli/src/verify_admission/runtime_boundary/tests.rs::yield_protocol_missing_evidence_is_language_specific, and crates/nose-cli/tests/cli/semantic_boundaries/ruby_yield_protocol.rs::query_mode_semantic_rejects_unproven_ruby_yield_callback_convergence",
+            "status": "expanded-this-slice",
+        },
+        {
             "class": "Rust brace/direct-imported runtime bindings shadowed by parameters, lets, local macros, block scopes, other modules, or project-local runtime roots",
             "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/imported_bindings.rs::non_js_async_runtime_imported_bindings_reject_rust_shadows_and_scopes and ::non_js_async_runtime_context_rejects_project_local_imported_bindings",
             "status": "mapped-existing",
@@ -2122,7 +3274,7 @@ def hard_negative_inventory() -> list[dict[str, Any]]:
         },
         {
             "class": "Java CompletableFuture static calls without exact stdlib type identity, or with local/conflicting type names",
-            "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/java.rs::java_completable_future_static_attribution_requires_type_identity",
+            "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/java_static_wildcard.rs::java_completable_future_static_attribution_requires_type_identity",
             "status": "expanded-this-slice",
         },
         {
@@ -2138,6 +3290,11 @@ def hard_negative_inventory() -> list[dict[str, Any]]:
         {
             "class": "Java Future field receivers that are implicit, non-this, member-shadowed, duplicate, or conflicting, plus conflicting Executor field receivers",
             "evidence": "crates/nose-cli/src/verify_admission/runtime_boundary/tests/async_runtime/java.rs::java_local_and_this_field_receivers_require_exact_type_identity",
+            "status": "expanded-this-slice",
+        },
+        {
+            "class": "Java stream source adapters split into proof-backed receiver.stream/Arrays.stream rows versus residual untyped stream and parallelStream lifecycle boundaries",
+            "evidence": "crates/nose-semantics/src/tests/library_api_evidence/admission_resolvers/iterator_adapter.rs::admitted_java_stream_identity_adapter_uses_same_protocol_pack and crates/nose-semantics/src/tests/library_api_evidence/admission_resolvers/pack_resolvers_5.rs::admitted_static_collection_adapter_resolver_requires_import_backed_api_occurrence_evidence",
             "status": "expanded-this-slice",
         },
     ]

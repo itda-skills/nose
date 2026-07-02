@@ -110,6 +110,12 @@ break.
   executor timing, cancellation/liveness, scheduler/timer/microtask/interval
   behavior, and cross-language lifecycle protocols stay named closed
   obligations for future priced epics.
+- Added the #653/#655 async/scheduling hard-negative matrix artifact. It audits
+  `82` scoped lifecycle rows plus `11` supplemental JS/TS Promise and
+  timer/scheduler priced surfaces, separates `18` positive fixture groups, `27`
+  hard-negative fixture groups, and `25` reporting artifact evidence groups,
+  and names `48` fixture classes for #657 while keeping exact admission
+  unchanged.
 - Added Swift structured-concurrency reporting for `Task.sleep`, `Task.yield`,
   and task-group calls. These now map to shared timer, task-yield, aggregate,
   cancellation/liveness, result-channel, and exception-channel obligations
@@ -123,6 +129,76 @@ break.
   obligations without opening exact admission; the 120-repo lexical audit prices
   `40` Java future reporting candidates while leaving `276` broad
   `CompletableFuture` mentions closed.
+- Added Java `CompletableFuture` constructor reporting for fully qualified or
+  exact-/wildcard-import-backed `new CompletableFuture<...>()` calls. These now
+  report future-settled, exception-channel, task-handle lifecycle, and
+  cancellation/liveness obligations without opening exact admission. The
+  120-repo audit splits `46` proof-backed constructor occurrences out of the
+  broad Java `CompletableFuture` bucket, reducing the broad closed bucket from
+  `276` to `230`; the Java-heavy query regression kept product output hashes
+  identical on all six measured repos and measured `7023.49ms -> 6991.92ms`
+  (`-0.45%`).
+- Added Java `CompletableFuture` receiver settlement and observation reporting
+  for import-backed `complete`/`completeExceptionally`,
+  `join`/`getNow`/`isCompletedExceptionally`, and timeout methods. The 120-repo
+  audit adds `45` settlement and `45` observation occurrences as
+  reporting-supported closed-boundaries after rejecting same-name receiver
+  bleed-through across scopes, reclassifies the remaining `230` broad
+  `CompletableFuture` type mentions as a superseded overlap row, and keeps
+  exact admission closed. The Java-heavy query regression kept product output
+  hashes identical on all six measured repos and measured `8118.22ms ->
+  8151.13ms` (`+0.41%`).
+- Aligned already source-protocol-backed Python `await`/`async def`, Rust
+  `.await`/`async fn`/`async block`, and Swift `async` function audit rows with
+  runtime-boundary reporting. This moves `19,144` non-JS async source-protocol
+  occurrences to reporting-supported closed-boundaries while exact admission
+  remains closed.
+- Added Swift `try` expression reporting alignment for source-backed
+  `TryPropagation` boundaries, including `try`, `try?`, `try!`, and
+  `for try await`. The 120-repo audit moves `17,970` Swift try-expression
+  occurrences to reporting-supported closed-boundaries while exact admission
+  remains closed.
+- Reclassified the historical Swift `throws/try` lexical audit bucket as a
+  superseded overlap row now that source-backed Swift `try`, throwing function,
+  and throwing closure rows are tracked separately. This keeps the
+  `26,608`-occurrence broad bucket from being treated as an actionable residual
+  gap and makes Ruby `raise/rescue` the largest non-JS actionable closed
+  exception-channel bucket at `4,010` occurrences.
+- Aligned Java `CompletionStage` settlement continuation accounting with the
+  existing receiver-domain reporting path. `FutureLike.handle/whenComplete`
+  moves `10` occurrences across `2` repos to reporting-supported
+  closed-boundaries, raising the total to `88,471` occurrences across `59`
+  rows. The historical broad Java `Executor/Future` type-name bucket remains
+  visible at `3,297` occurrences but is now a superseded overlap row rather than
+  an actionable residual implementation target.
+- Aligned Python generator `yield` audit accounting with existing
+  `Source::Protocol(Yield)` runtime-boundary reporting. The 120-repo audit moves
+  `2,404` Python generator-yield occurrences across `21` repos to
+  reporting-supported closed-boundaries, raising the total to `90,875`
+  occurrences across `60` rows while exact admission remains closed.
+- Aligned direct Python `asyncio.sleep` audit accounting with existing
+  runtime-boundary timer reporting. The 120-repo audit moves `104`
+  occurrences across `6` repos to reporting-supported closed-boundaries,
+  raising the total to `90,979` occurrences across `61` rows and leaving no
+  Python closed-boundary rows in the scheduling/lifecycle audit; exact
+  admission remains closed.
+- Added Ruby exception-channel reporting for unqualified `raise` calls by
+  lowering them to the existing `Throw` boundary, while keeping `rescue` on the
+  existing `Try` boundary. The 120-repo audit prices `2,065` source-backed
+  `raise` and `1,933` `rescue` occurrences as reporting-supported
+  closed-boundaries, reclassifies the old `4,010`-occurrence broad
+  `raise/rescue` bucket as a superseded overlap row, and leaves the 12
+  receiver-qualified broad-only overlaps outside the concrete rows.
+  The Ruby-heavy query regression measured `3295.78ms -> 3330.24ms` (`+1.05%`);
+  family counts stayed stable across all 6 repos, with metadata/hash drift only
+  in `rubocop` and `rspec-core`.
+- Split Java stream lifecycle audit accounting into existing proof-backed
+  `receiver.stream()` and `Arrays.stream(xs)` rows versus residual untyped or
+  parallel stream lifecycle boundaries. The 120-repo audit now accounts for
+  `372` receiver stream adapters and `128` `Arrays.stream` adapters as
+  exact-supported existing capability, reducing the actionable broad
+  `stream/parallelStream` residual from `1,996` to `1,496` without changing
+  product admission or query runtime.
 - Added Java `Executor`/`Future` receiver-method reporting for
   exact- or wildcard-import-backed `CompletableFuture`, `Future`,
   `ScheduledFuture`, `Executor`, `ExecutorService`, and
@@ -223,6 +299,50 @@ break.
   obligations when the runtime root is not defined in the same file. Exact
   admission remains closed; the 120-repo audit marks `74` Ruby Thread/Fiber
   occurrences across `11` repos as reporting-supported closed boundaries.
+- Added Ruby yield source-protocol reporting. Block `yield` now preserves a
+  source-backed `BlockYield` callback demand/effect boundary instead of erasing
+  into an ordinary `Seq` or sharing generator-yield semantics, so `yield a, b`
+  stays distinct from `return a, b` and direct `block.call(a, b)` without
+  opening exact admission. The 120-repo audit prices `801` occurrences across
+  `17` repos, the checked `crates` recall-loss gate stays at `0` false merges,
+  and the Ruby-heavy query regression measured `2504.55ms -> 2574.79ms`
+  (`+2.80%`) with one stable-count `rspec-core` representative-label drift.
+- Added Go protocol reporting-support alignment. `go` statements now carry a
+  runtime-scheduled callback demand/effect profile and `defer` statements carry
+  a scope-exit deferred callback profile, while channel/select protocol rows
+  are marked reporting-supported closed-boundaries in the 120-repo audit.
+  Exact admission remains closed; the Go protocol slice covers `31,500`
+  occurrences across the pinned corpus and keeps the checked `crates`
+  recall-loss gate at `0` false merges. The Go-heavy query regression measured
+  `3560.13ms -> 3563.06ms` (`+0.08%`) with identical product hashes on all six
+  measured repos.
+- Added non-JS task-spawn reporting alignment. Rust `tokio`/`async-std` spawn,
+  Swift `Task`/`Task.detached`, Python `asyncio.create_task`/`ensure_future`,
+  and Java `CompletableFuture.supplyAsync`/`runAsync` now align with existing
+  runtime-boundary reporting in the scheduling lifecycle audit. Exact admission
+  remains closed; the slice newly marks `590` source-prevalence occurrences
+  reporting-supported, brings currently backed task-spawn reporting-supported
+  rows to `1,123` occurrences, and keeps the checked `crates` gate at `0` false
+  merges and `0` canon preservation violations.
+- Added non-JS async aggregate reporting alignment. Rust
+  `tokio`/`futures`/`futures_util` `join!`/`try_join!`/`select!`, Python
+  `asyncio.gather`/`wait`, and Java `CompletableFuture.allOf`/`anyOf` now align
+  with existing runtime-boundary reporting in the scheduling lifecycle audit.
+  Exact admission remains closed; the slice newly marks `98`
+  source-prevalence occurrences reporting-supported, brings currently backed
+  async-aggregate reporting-supported rows to `286` occurrences, and keeps the
+  checked `crates` gate at `0` false merges and `0` canon preservation
+  violations.
+- Added Swift await and Java settled-factory reporting alignment. Swift
+  `await` and Java `CompletableFuture.completedFuture`/`failedFuture` now align
+  with existing source-protocol/static-runtime reporting in the scheduling
+  lifecycle audit. Exact admission remains closed; the slice newly marks
+  `8,703` source-prevalence occurrences reporting-supported, brings all
+  reporting-supported closed-boundary rows to `51,301` occurrences across `50`
+  rows, and keeps the checked `crates` gate at `0` false merges and `0` canon
+  preservation violations. The broad Java `CompletableFuture` and looser
+  receiver-settlement buckets remain deferred until the audit counters are split
+  to match product proof.
 - Added non-JS async protocol near-channel mirror support. The dual-view async
   protocol capability now covers `await`, async-function boundaries, and Rust
   async blocks in near/witness builds, so Rust `async fn`/`.await` and Swift

@@ -1,5 +1,9 @@
 use super::*;
 
+const JAVA_CONCURRENT_MODULE: &str = "java.util.concurrent";
+const COMPLETABLE_FUTURE_TYPE: &str = "CompletableFuture";
+const COMPLETABLE_FUTURE_QUALIFIED: &str = "java.util.concurrent.CompletableFuture";
+
 pub(super) fn lower_empty_java_collection_constructor(
     lo: &mut Lowering,
     node: TsNode,
@@ -33,22 +37,83 @@ pub(super) fn lower_empty_java_collection_constructor(
         }
     }
     match contract.result {
-        LibraryCollectionFactoryResult::EmptySequence => {
-            let callee = lo.add(
-                NodeKind::Var,
-                Payload::Name(lo.sym(&type_name)),
-                type_span,
-                &[],
-            );
-            let mut kids = Vec::with_capacity(args.len() + 1);
-            kids.push(callee);
-            kids.extend_from_slice(args);
-            lo.record_source_fact(span, SourceFactKind::Call(SourceCallKind::Construct));
-            Some(lo.add(NodeKind::Call, Payload::None, span, &kids))
-        }
+        LibraryCollectionFactoryResult::EmptySequence => Some(lower_java_construct_call(
+            lo, &type_name, type_span, args, span,
+        )),
         _ => None,
     }
 }
+
+pub(super) fn lower_java_completable_future_constructor(
+    lo: &mut Lowering,
+    node: TsNode,
+    args: &[NodeId],
+    span: Span,
+) -> Option<NodeId> {
+    let ty = node.child_by_field_name("type")?;
+    let type_span = lo.span(ty);
+    let type_name = java_constructor_type_name(lo.text(ty));
+    match type_name.as_str() {
+        COMPLETABLE_FUTURE_QUALIFIED => {}
+        COMPLETABLE_FUTURE_TYPE => {
+            let root = java_root(node);
+            let mut saw_wildcard = false;
+            let mut saw_exact = false;
+            let mut saw_conflict = false;
+            java_tree_import_resolution(
+                lo,
+                root,
+                JAVA_CONCURRENT_MODULE,
+                COMPLETABLE_FUTURE_TYPE,
+                &mut saw_wildcard,
+                &mut saw_exact,
+                &mut saw_conflict,
+            );
+            if saw_conflict
+                || !(saw_exact || saw_wildcard)
+                || java_tree_declares_type(lo, root, COMPLETABLE_FUTURE_TYPE)
+            {
+                return None;
+            }
+            if saw_exact {
+                lo.record_evidence(
+                    EvidenceAnchor::binding(type_span, stable_symbol_hash(COMPLETABLE_FUTURE_TYPE)),
+                    EvidenceKind::Symbol(SymbolEvidenceKind::ImportedBinding {
+                        module_hash: stable_symbol_hash(JAVA_CONCURRENT_MODULE),
+                        exported_hash: stable_symbol_hash(COMPLETABLE_FUTURE_TYPE),
+                    }),
+                    "java_completable_future_constructor_import",
+                );
+            }
+        }
+        _ => return None,
+    }
+
+    Some(lower_java_construct_call(
+        lo, &type_name, type_span, args, span,
+    ))
+}
+
+fn lower_java_construct_call(
+    lo: &mut Lowering,
+    type_name: &str,
+    type_span: Span,
+    args: &[NodeId],
+    span: Span,
+) -> NodeId {
+    let callee = lo.add(
+        NodeKind::Var,
+        Payload::Name(lo.sym(type_name)),
+        type_span,
+        &[],
+    );
+    let mut kids = Vec::with_capacity(args.len() + 1);
+    kids.push(callee);
+    kids.extend_from_slice(args);
+    lo.record_source_fact(span, SourceFactKind::Call(SourceCallKind::Construct));
+    lo.add(NodeKind::Call, Payload::None, span, &kids)
+}
+
 pub(super) fn java_constructor_type_name(text: &str) -> String {
     text.split('<')
         .next()

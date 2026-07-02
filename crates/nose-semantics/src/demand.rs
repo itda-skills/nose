@@ -17,6 +17,7 @@ pub enum DemandOperation {
     PullLazyHof,
     CallByNeedThunk,
     AsyncContinuation,
+    CallbackInvocation,
     GeneratorSuspension,
     ChannelOperation,
     ProtocolBoundary,
@@ -28,6 +29,7 @@ pub enum EvaluationOrder {
     ShortCircuit,
     PerElementSourceOrder,
     DeferredUntilObserved,
+    DeferredUntilScopeExit,
     RuntimeScheduled,
     ProtocolDefined,
 }
@@ -253,6 +255,9 @@ pub enum CallbackInvocationDemand {
     PerElementPull,
     LeftFoldStep,
     AsyncContinuation,
+    SourceOrderCallback,
+    ScheduledCallback,
+    DeferredCallback,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -260,6 +265,7 @@ pub enum CallbackArgumentDemand {
     Element,
     AccumulatorAndElement,
     SettledValue,
+    PassedArguments,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -270,6 +276,8 @@ pub enum CallbackResultDemand {
     Predicate,
     Accumulator,
     ContinuationValue,
+    CallbackReturnValue,
+    Ignored,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -301,6 +309,30 @@ impl CallbackDemandProfile {
             invocation: CallbackInvocationDemand::AsyncContinuation,
             arguments: CallbackArgumentDemand::SettledValue,
             result: CallbackResultDemand::ContinuationValue,
+        }
+    }
+
+    pub const fn source_callback() -> Self {
+        Self {
+            invocation: CallbackInvocationDemand::SourceOrderCallback,
+            arguments: CallbackArgumentDemand::PassedArguments,
+            result: CallbackResultDemand::CallbackReturnValue,
+        }
+    }
+
+    pub const fn scheduled_callback() -> Self {
+        Self {
+            invocation: CallbackInvocationDemand::ScheduledCallback,
+            arguments: CallbackArgumentDemand::PassedArguments,
+            result: CallbackResultDemand::Ignored,
+        }
+    }
+
+    pub const fn deferred_callback() -> Self {
+        Self {
+            invocation: CallbackInvocationDemand::DeferredCallback,
+            arguments: CallbackArgumentDemand::PassedArguments,
+            result: CallbackResultDemand::Ignored,
         }
     }
 }
@@ -495,6 +527,13 @@ pub fn source_protocol_demand_effect_profile(protocol: SourceProtocolKind) -> De
             callback: None,
             effect_visibility: EffectVisibility::YieldBoundary,
         },
+        SourceProtocolKind::BlockYield => DemandEffectProfile {
+            operation: DemandOperation::CallbackInvocation,
+            order: EvaluationOrder::SourceOrder,
+            child_demand: ChildDemand::Always,
+            callback: Some(CallbackDemandProfile::source_callback()),
+            effect_visibility: EffectVisibility::Immediate,
+        },
         SourceProtocolKind::ChannelReceive
         | SourceProtocolKind::ChannelSelect
         | SourceProtocolKind::ChannelSelectCase
@@ -506,9 +545,21 @@ pub fn source_protocol_demand_effect_profile(protocol: SourceProtocolKind) -> De
             callback: None,
             effect_visibility: EffectVisibility::ChannelBoundary,
         },
-        SourceProtocolKind::Defer
-        | SourceProtocolKind::GoRoutine
-        | SourceProtocolKind::TaskSpawn => DemandEffectProfile {
+        SourceProtocolKind::Defer => DemandEffectProfile {
+            operation: DemandOperation::CallbackInvocation,
+            order: EvaluationOrder::DeferredUntilScopeExit,
+            child_demand: ChildDemand::ProtocolBoundary,
+            callback: Some(CallbackDemandProfile::deferred_callback()),
+            effect_visibility: EffectVisibility::ProtocolBoundary,
+        },
+        SourceProtocolKind::GoRoutine => DemandEffectProfile {
+            operation: DemandOperation::CallbackInvocation,
+            order: EvaluationOrder::RuntimeScheduled,
+            child_demand: ChildDemand::ProtocolBoundary,
+            callback: Some(CallbackDemandProfile::scheduled_callback()),
+            effect_visibility: EffectVisibility::ProtocolBoundary,
+        },
+        SourceProtocolKind::TaskSpawn => DemandEffectProfile {
             operation: DemandOperation::ProtocolBoundary,
             order: EvaluationOrder::ProtocolDefined,
             child_demand: ChildDemand::ProtocolBoundary,

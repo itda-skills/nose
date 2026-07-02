@@ -105,6 +105,67 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
 - [Java CompletableFuture obligation reporting](../bench/recall_loss/java-completablefuture-obligation-reporting-2026-06-30.v1.json) records the Java Future follow-up: proof-backed `CompletableFuture` static calls and exact-import-backed CompletionStage-style receiver continuations now report reusable future, task, aggregate, callback, and exception obligations. Exact admission remains closed, while the 120-repo lexical audit splits `40` Java future reporting candidates out of the broad `CompletableFuture` bucket and leaves `276` broad mentions closed.
 - [Java Executor/Future receiver-method reporting](../bench/recall_loss/scheduling-lifecycle-boundary-audit-java-local-this-field-executor-future-2026-07-01.v1.json) extends that Java Future track to exact-import-backed `CompletableFuture`, `Future`, `ScheduledFuture`, `Executor`, `ExecutorService`, and `ScheduledExecutorService` parameter, local variable, and explicit `this.<field>` receivers. Exact admission remains closed, while the 120-repo audit keeps `858` reporting-supported receiver-method candidates and the broad `Executor/Future` lexical bucket closed at `3,297` occurrences; the previous [parameter-only artifact](../bench/recall_loss/scheduling-lifecycle-boundary-audit-java-executor-future-2026-07-01.v1.json) is retained for comparison.
 - [Java wildcard Executor/Future receiver-method reporting](../bench/recall_loss/scheduling-lifecycle-boundary-audit-java-wildcard-executor-future-2026-07-01.v1.json) extends the same receiver-domain capability to unambiguous `import java.util.concurrent.*` declarations. Wildcard-derived import evidence now raises Java reporting-supported receiver-method candidates from `858` to `1,093` (`+235`) while local type declarations and explicit same-name imports still close reporting; exact admission remains closed and the broad `Executor/Future` lexical bucket stays at `3,297` occurrences.
+- [Java Future residual accounting](../bench/recall_loss/java-future-residual-accounting-2026-07-02.v1.json) records the follow-up audit alignment for existing product-backed receiver-domain reporting. `FutureLike.handle/whenComplete` settlement continuations move `10` occurrences across `2` repos to reporting-supported status, and the broad `Executor/Future` type-name bucket becomes a superseded overlap row rather than an actionable residual gap.
+- [Java stream lifecycle split](../bench/recall_loss/java-stream-lifecycle-split-2026-07-02.v1.json) records the follow-up audit alignment for existing stream adapter capability. The audit now separates `372` typed `receiver.stream()` and `128` exact-import/qualified `Arrays.stream(xs)` occurrences as exact-supported rows, reducing the broad `stream/parallelStream` residual from `1,996` to `1,496` while leaving untyped, shadowed, arity/range overload, and parallel stream lifecycle semantics closed.
+- [Non-JS task-spawn reporting alignment](../bench/recall_loss/non-js-task-spawn-reporting-alignment-2026-07-01.v1.json) records the cross-language closeout for already-backed task-spawn rows. Rust `tokio`/`async-std` spawn, Swift `Task`/`Task.detached`, Python `asyncio.create_task`/`ensure_future`, and Java `CompletableFuture.supplyAsync`/`runAsync` move from closed/candidate audit rows to reporting-supported closed-boundaries, newly aligning `590` occurrences while keeping exact admission closed and the checked `crates` gate at `0` false merges.
+- [Non-JS async aggregate reporting alignment](../bench/recall_loss/non-js-async-aggregate-reporting-alignment-2026-07-01.v1.json) records the companion closeout for already-backed aggregate rows. Rust `tokio`/`futures`/`futures_util` `join!`/`try_join!`/`select!`, Python `asyncio.gather`/`wait`, and Java `CompletableFuture.allOf`/`anyOf` move to reporting-supported closed-boundaries, newly aligning `98` occurrences while keeping exact admission closed and the checked `crates` gate at `0` false merges.
+- [Swift await and Java settled-factory reporting alignment](../bench/recall_loss/swift-await-java-factory-reporting-alignment-2026-07-02.v1.json) records the next closeout for already-backed protocol/static-runtime rows. Swift `await` and Java `CompletableFuture.completedFuture`/`failedFuture` move to reporting-supported closed-boundaries, newly aligning `8,703` occurrences while keeping exact admission closed and the checked `crates` gate at `0` false merges. At that checkpoint, broad Java `CompletableFuture` mentions and looser FutureLike settlement receiver counts remained closed/deferred.
+- The [Java CompletableFuture constructor reporting](../bench/recall_loss/java-completablefuture-constructor-reporting-2026-07-02.v1.json)
+  artifact records the proof-backed constructor split from the broad Java Future
+  bucket. Fully qualified or exact-/wildcard-import-backed constructor calls now
+  report future-settled, exception-channel, task-handle lifecycle, and
+  cancellation/liveness obligations, newly aligning `46` occurrences while exact
+  admission remains closed. The residual broad Java `CompletableFuture` bucket
+  falls from `276` to `230`; the Java-heavy query regression kept all product
+  output hashes identical and measured `7023.49ms -> 6991.92ms` (`-0.45%`).
+- The [Java CompletableFuture receiver split](../bench/recall_loss/java-completablefuture-receiver-split-2026-07-02.v1.json)
+  records the receiver-method follow-up. Import-backed `CompletableFuture`
+  receivers now report settlement, observation, timeout, exception, lifecycle,
+  and cancellation/liveness obligations without opening exact admission. The
+  scope-aware audit moves `45` settlement and `45` observation occurrences to
+  reporting-supported rows, keeps same-name receivers outside the proven scope
+  closed, reclassifies the remaining `230` broad `CompletableFuture`
+  type/reference mentions as superseded overlap, and the Java-heavy query
+  regression measured `8118.22ms -> 8151.13ms` (`+0.41%`) with identical product
+  hashes on all six measured repos.
+- The [#655 async/scheduling hard-negative matrix](../bench/recall_loss/issue-655-hard-negative-matrix-2026-07-02.v1.json)
+  records the #653 fixture-readiness baseline. It audits `82` scoped surface
+  rows across seven languages, including `65` reporting-supported
+  closed-boundary rows, plus `11` supplemental JS/TS Promise
+  continuation/rejection reporting and timer/scheduler priced surfaces. Exact
+  admission stays unchanged, and the next #657 fixture work is grouped into
+  `48` named hard-negative classes with runnable fixture counts separated from
+  reporting artifact evidence.
+- [Non-JS source-protocol reporting alignment](../bench/recall_loss/non-js-source-protocol-reporting-alignment-2026-07-02.v1.json) records the audit closeout for already-backed async source-protocol rows.
+  Python `await`/`async def`, Rust `.await`/`async fn`/`async block`, and Swift
+  `async` function rows now move to reporting-supported closed-boundaries,
+  newly aligning `19,144` source-prevalence occurrences while keeping exact
+  admission closed and the checked `crates` gate at `0` false merges.
+- [Python generator-yield reporting alignment](../bench/recall_loss/python-generator-yield-reporting-2026-07-02.v1.json) records the audit closeout for source-backed generator `yield` boundaries.
+  Python `yield` and `yield from` now move to reporting-supported
+  closed-boundaries, newly aligning `2,404` source-prevalence occurrences
+  across `21` repos while exact admission remains closed.
+- [Python asyncio sleep reporting alignment](../bench/recall_loss/python-asyncio-sleep-reporting-2026-07-02.v1.json) records the audit closeout for direct runtime-backed timer boundaries.
+  Python `asyncio.sleep` now moves to reporting-supported closed-boundary
+  status, newly aligning `104` source-prevalence occurrences across `6` repos
+  and leaving no Python closed-boundary rows in the scheduling lifecycle audit
+  while exact admission remains closed.
+- [Ruby exception-channel reporting](../bench/recall_loss/ruby-exception-reporting-2026-07-02.v1.json) records the audit closeout for source-backed Ruby exception boundaries.
+  Unqualified `raise` calls now lower to `Throw`, `rescue` remains on `Try`,
+  and the audit newly aligns `3,998` concrete Ruby exception-channel
+  occurrences while reclassifying the broad `4,010`-occurrence `raise/rescue`
+  row as superseded overlap. The 12 broad-only occurrences are
+  receiver-qualified `.raise` overlaps. The Ruby-heavy query regression records
+  `3295.78ms -> 3330.24ms` (`+1.05%`) with stable family counts across all 6
+  repos and metadata/hash drift limited to `rubocop` and `rspec-core`.
+- [Swift try-expression reporting alignment](../bench/recall_loss/swift-try-expression-reporting-2026-07-02.v1.json) records the source-backed `TryPropagation` audit closeout for `try`, `try?`,
+  `try!`, and `for try await`. It newly aligns `17,970` source-prevalence
+  occurrences across `18` repos while keeping exact admission closed and the
+  checked `crates` gate at `0` false merges.
+- [Swift exception residual accounting](../bench/recall_loss/swift-exception-residual-accounting-2026-07-02.v1.json) records the follow-up tracking correction for the historical `throws/try`
+  lexical bucket. The broad `26,608`-occurrence row is now a superseded overlap
+  row, so the loop treats source-backed Swift `try`, throwing functions, and
+  throwing closures as the actionable exception-channel surfaces.
 - [Rust block_on future-drive obligation reporting](../bench/recall_loss/rust-block-on-future-drive-obligation-reporting-2026-07-01.v1.json) records the Rust Future bridge follow-up: qualified/import-backed `tokio_test::block_on` plus proof-backed `Handle::current().block_on` and inline `Runtime`/`Builder` receiver chains now report `future-drive-scheduling-contract` plus `future-settled-value-channel-contract`. Exact admission remains closed.
 - [Rust local runtime provenance](../bench/recall_loss/rust-block-on-local-runtime-provenance-2026-07-01.v1.json) extends that reporting to local variables whose last visible assignment is proof-backed `Handle::current()`, `Runtime::new().unwrap()/expect/?`, or `Builder::new_*().build().unwrap()/expect/?`; selector-only receivers, parameters, fields, wrappers, and `map_err(...)?` construction remained closed in that slice.
 - [Rust parameter runtime provenance](../bench/recall_loss/rust-block-on-parameter-runtime-provenance-2026-07-01.v1.json) extends the same reporting to nominal `tokio::runtime::Runtime` and `tokio::runtime::Handle` parameter receivers when the type is fully qualified or backed by scope-visible exact imported-binding evidence. Exact admission remains closed; in that slice, struct fields, nested brace-import parameter types, child-module parameters with only parent-module imports, type aliases, wrappers, and `map_err(...)?` construction remained closed.
@@ -735,9 +796,14 @@ slice keeps exact admission closed but splits that Java bucket into reusable
 Future capabilities: `14` settled factories, `12` async factories, `10`
 settlement continuations, and `4` `allOf` calls are now lexical reporting
 candidates, while the runtime reporter only emits obligations for proof-backed
-static calls and exact-import-backed CompletionStage-style receivers. `276`
-broad `CompletableFuture` mentions remain closed behind executor timing,
-callback/effect, exceptional completion, and result-channel contracts.
+static calls and exact-import-backed CompletionStage-style receivers.
+The follow-up [Java CompletableFuture constructor reporting](../bench/recall_loss/java-completablefuture-constructor-reporting-2026-07-02.v1.json)
+splits out `46` fully qualified or exact-/wildcard-import-backed
+`new CompletableFuture` calls as reporting-supported manual settlement future
+channels. `230` broad `CompletableFuture` mentions remain closed because they
+still mix imports, declarations, adapter class names, receiver types, and other
+non-operation mentions behind executor timing, callback/effect, exceptional
+completion, and result-channel contracts.
 The first exact follow-up is [Promise.all literal aggregate recovery](../bench/recall_loss/promise-all-literal-aggregate-recovery-2026-06-29.v1.json).
 It opens only the fulfilled literal-array subset, with `397` broad
 `Promise.all` occurrences, `201` literal-array boundary occurrences, and `0`

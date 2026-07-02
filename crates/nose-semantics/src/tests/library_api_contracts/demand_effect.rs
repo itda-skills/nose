@@ -254,8 +254,14 @@ fn promise_and_protocol_demand_profiles_keep_async_boundaries() {
         EffectVisibility::ChannelBoundary
     );
     assert_eq!(
-        source_protocol_demand_effect_profile(SourceProtocolKind::GoRoutine).operation,
-        DemandOperation::ProtocolBoundary
+        source_protocol_demand_effect_profile(SourceProtocolKind::GoRoutine),
+        DemandEffectProfile {
+            operation: DemandOperation::CallbackInvocation,
+            order: EvaluationOrder::RuntimeScheduled,
+            child_demand: ChildDemand::ProtocolBoundary,
+            callback: Some(CallbackDemandProfile::scheduled_callback()),
+            effect_visibility: EffectVisibility::ProtocolBoundary,
+        }
     );
     assert_eq!(
         source_protocol_demand_effect_profile(SourceProtocolKind::TaskSpawn).effect_visibility,
@@ -270,8 +276,28 @@ fn promise_and_protocol_demand_profiles_keep_async_boundaries() {
         ChildDemand::ProtocolBoundary
     );
     assert_eq!(
-        source_protocol_demand_effect_profile(SourceProtocolKind::Defer).effect_visibility,
-        EffectVisibility::ProtocolBoundary
+        source_protocol_demand_effect_profile(SourceProtocolKind::Defer),
+        DemandEffectProfile {
+            operation: DemandOperation::CallbackInvocation,
+            order: EvaluationOrder::DeferredUntilScopeExit,
+            child_demand: ChildDemand::ProtocolBoundary,
+            callback: Some(CallbackDemandProfile::deferred_callback()),
+            effect_visibility: EffectVisibility::ProtocolBoundary,
+        }
+    );
+    assert_eq!(
+        source_protocol_demand_effect_profile(SourceProtocolKind::Yield).operation,
+        DemandOperation::GeneratorSuspension
+    );
+    assert_eq!(
+        source_protocol_demand_effect_profile(SourceProtocolKind::BlockYield),
+        DemandEffectProfile {
+            operation: DemandOperation::CallbackInvocation,
+            order: EvaluationOrder::SourceOrder,
+            child_demand: ChildDemand::Always,
+            callback: Some(CallbackDemandProfile::source_callback()),
+            effect_visibility: EffectVisibility::Immediate,
+        }
     );
 }
 
