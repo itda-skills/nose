@@ -138,6 +138,35 @@ break.
   hard-negative fixture groups, and `25` reporting artifact evidence groups,
   and names `48` fixture classes for #657 while keeping exact admission
   unchanged.
+- Added the #653/#657 executable async/scheduling hard-negative suite. The new
+  cross-language equivalence fixture adds `8` test symbols and `54`
+  fail-closed assertions across JS/TS, Go, Python, Rust, Java, Swift, and Ruby,
+  covering Promise continuation/channel/callback, executor,
+  timer/microtask/cancellation, channel/select/goroutine/defer, asyncio,
+  Future-drive, Future/Executor/Stream, task/try/continuation, and
+  thread/fiber/yield/exception boundaries. The checked artifact maps all `48`
+  #655 classes to evidence status, flags `14` for more granular future
+  executable follow-up, and keeps exact admission unchanged.
+- Added the #653/#654 semantic-kernel capability vocabulary audit. It checks
+  `15` reusable capability groups, `12` evidence kinds, `9` source fact kinds,
+  `16` source protocol kinds, and `98` runtime-boundary obligation rules;
+  preserves `4` legacy aliases for historical artifact readability; and sends
+  `6` duplicate/merge candidates plus `8` feature-shaped Promise diagnostics to
+  #656 cleanup without changing public APIs or exact admission.
+- Added the #656 obligation-label cleanup artifact and docs pass. New docs now
+  prefer shared `async-*` scheduling labels for protocol boundaries, preserve
+  `4` compatibility aliases for old artifacts, and document Promise-shaped
+  producer/continuation labels as missing-proof diagnostics rather than feature
+  admissions; historical artifacts remain untouched and exact admission is
+  unchanged.
+- Added the #658 oracle-exclusion classification layer to recall-loss reports.
+  `oracle_exclusions` now includes `by_classification`, so broad excluded units
+  are split into semantic-boundary attribution, missing oracle support, path
+  exploration budget, oracle cost budget, empty fingerprint, and core-span
+  failures. The current local `crates` report classifies all `6037` excluded
+  units, including `583`
+  semantic-boundary-attributed and `5447` residual missing-oracle-support rows,
+  while keeping exact admission unchanged and the hard gate at `0` false merges.
 - Added Swift structured-concurrency reporting for `Task.sleep`, `Task.yield`,
   and task-group calls. These now map to shared timer, task-yield, aggregate,
   cancellation/liveness, result-channel, and exception-channel obligations

@@ -44,7 +44,7 @@ The current schema is `recall_loss_report.v1.json`:
 | `soundness_gate` | Fingerprint groups, false merges, advisory disagreements, canon-preservation violations, `--max-violations`, and gate result. |
 | `completeness` | Behavior groups, behavior-equal pairs, fingerprint-equal pairs, completeness percentage, and under-merged groups. |
 | `oracle_under_merges` | Behavior-equal but fingerprint-split pairs, sorted by value-Jaccard nearness. This is the structured form of the `--leads` signal. |
-| `oracle_exclusions` | Fail-closed oracle exclusions by reason, optional obligation attribution, and unit location. |
+| `oracle_exclusions` | Fail-closed oracle exclusions by reason, classification, optional obligation attribution, and unit location. |
 | `import_snapshot_census` | Corpus-level imported immutable snapshot diagnostics: successful snapshot record counts, unresolved binding-import miss counts by reason/language, and stable hash/location rows for follow-up fixtures. |
 | `admission_rejections` | Interpretable units whose exact semantic claim is closed, with structured reason, gate, capability, missing evidence, #594 obligation family/subreason, oracle status, and stable location. |
 | `by_reason` | Rollups for admission rejections by reason/gate/capability. |
@@ -63,6 +63,24 @@ boundary. Excluded-unit attribution reuses the same `reason`,
 `missing_evidence`, `obligation_family`, and `obligation_subreason` vocabulary
 as admission rejections, but carries `oracle_status: "excluded"` and does not
 open exact admission.
+
+`oracle_exclusions.by_classification` is the #658 reportability layer for all
+excluded units. It keeps the older coarse `counts` rows stable, but splits each
+unit into an action-oriented class:
+
+| classification | meaning |
+|---|---|
+| `semantic-boundary-attributed` | The oracle could not interpret the unit, but diagnostics found a reusable semantic boundary or missing-proof obligation. Work should start from `by_obligation`, not from broad oracle support. |
+| `missing-oracle-support` | The unit is `uninterpretable` and lacks a semantic-boundary attribution. This is the residual broad oracle-support backlog. |
+| `path-exploration-budget` | The unit exceeded the symbolic branch exploration cap and remains fail-closed. |
+| `oracle-cost-budget` | The unit exceeded the oracle battery cost budget and remains fail-closed. |
+| `empty-value-fingerprint` | The unit has no value fingerprint to compare on the exact semantic channel. |
+| `core-span-missing` | The normalized unit could not be span-matched back to core IL for oracle interpretation. |
+
+Use `by_classification` for aggregate planning, and use `units[].attribution`
+when a specific excluded location needs its missing-proof details. Per-unit
+rows deliberately avoid repeating the classification string to keep large local
+reports cheap to write.
 
 | reason | meaning |
 |---|---|
@@ -109,6 +127,42 @@ recall-loss report schema: `closed-boundary` is residual exact-closed work,
 specific obligation, `exact-supported-boundary` is existing proof-backed exact
 capability accounted separately, and `superseded-overlap-boundary` is a broad
 historical bucket replaced by concrete operation rows.
+
+## Label Compatibility
+
+New reports should prefer the shared scheduling/protocol labels recorded by the [#656 obligation-label cleanup artifact](../bench/recall_loss/issue-656-obligation-label-docs-cleanup-2026-07-02.v1.json).
+Historical checked artifacts remain readable; do not rewrite them in place.
+
+| current label | historical label | policy |
+|---|---|---|
+| `async-await-scheduling-contract` | `promise-await-scheduling-contract` | Await is a shared `Source::Protocol(Await)` scheduling boundary across JS/TS, Python, Rust, and Swift. Promise-specific await wording is compatibility text only. |
+| `async-function-scheduling-contract` | `promise-async-function-scheduling-contract` | Async function body scheduling is shared protocol evidence. JS/TS Promise producer-return proof remains a separate missing-proof diagnostic. |
+| `async-block-scheduling-contract` | `future-async-block-scheduling-contract` | Rust async block scheduling uses the shared async-block label; Future wording remains historical artifact vocabulary. |
+
+Promise-shaped subreasons such as
+`promise-call-return-direct-function-return-domain-proof`,
+`promise-call-return-imported-function-settled-value-contract`, and
+`promise-then-promise-like-receiver-proof` are still valid diagnostics when they
+name the missing proof precisely. Read them as capability blockers under
+call-target producer proof, imported settled-value channel proof, receiver
+proof, continuation channel proof, or callback demand/effect proof. They are not
+evidence that the semantic kernel has opened selector-only Promise feature
+support.
+
+The #656 cleanup keeps these feature-shaped diagnostics grouped under their
+capability blockers:
+
+| diagnostic | capability blocker |
+|---|---|
+| `promise-constructor-receiver-producer-proof` | Promise producer/channel proof |
+| `promise-async-function-return-producer-proof` | JS/TS Promise producer proof, separate from shared async-function scheduling |
+| `promise-call-return-direct-function-return-domain-proof` | direct-function call-return producer proof |
+| `promise-call-return-direct-method-return-domain-proof` | direct-method call-return producer proof |
+| `promise-call-return-imported-function-settled-value-contract` | imported settled-value channel proof |
+| `promise-call-return-imported-member-settled-value-contract` | imported member settled-value channel proof |
+| `promise-then-promise-like-receiver-proof` | FutureLike continuation receiver proof |
+| `promise-factory-settled-value-contract` | producer settled-value channel proof |
+
 The #572 cycle also records a diagnostics-only refinement: expression-statement
 calls that need an effect contract stay in the effect boundary bucket, and
 unmodeled Rust macros such as `format!` stay in the source-surface bucket until

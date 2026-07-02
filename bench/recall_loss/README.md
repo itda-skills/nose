@@ -1144,6 +1144,41 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   hard-negative classes for #657.
   This hand-curated inventory records its source-audit regenerate and validation
   commands, and keeps `semantic_admission_delta = 0`.
+- [issue-657-hard-negative-fixtures-2026-07-02.v1.json](issue-657-hard-negative-fixtures-2026-07-02.v1.json)
+  records the #653/#657 executable hard-negative fixture expansion. It adds one
+  cross-language fixture group with `8` test symbols and `54` fail-closed
+  assertions across JS/TS, Go, Python, Rust, Java, Swift, and Ruby. The suite
+  pins Promise continuation/channel, executor, timer/microtask/cancellation,
+  Go channel/select/goroutine/defer, Python asyncio/protocol, Rust Future-drive,
+  Java Future/Executor/Stream, Swift task/async/try/continuation, and Ruby
+  thread/fiber/yield/exception boundaries without opening exact admission.
+  The checked artifact maps all `48` #655 matrix classes to explicit evidence
+  status: `40` now have direct evidence in this new executable suite, `8` rely
+  only on existing executable/reporting evidence, and, across those mapped
+  statuses, `14` remain flagged for more granular future executable follow-up
+  before broader exact admission. It keeps `semantic_admission_delta = 0`.
+- [issue-654-semantic-kernel-capability-audit-2026-07-02.v1.json](issue-654-semantic-kernel-capability-audit-2026-07-02.v1.json)
+  records the #653/#654 semantic-kernel capability vocabulary audit. It checks
+  `15` capability groups, `12` evidence kinds, `9` source fact kinds, `16`
+  source protocol kinds, and `98` runtime-boundary obligation rules. The audit
+  accepts the current capability groups, preserves `4` legacy aliases for old
+  artifact readability, identifies `6` duplicate/merge candidates and `8`
+  feature-shaped Promise diagnostics for #656 follow-up, and keeps
+  `public_api_expansion = 0` and `semantic_admission_delta = 0`.
+- [issue-656-obligation-label-docs-cleanup-2026-07-02.v1.json](issue-656-obligation-label-docs-cleanup-2026-07-02.v1.json)
+  records the #656 non-behavioral label/docs cleanup from the #654 audit. It
+  documents `3` shared scheduling labels as the canonical wording for new docs
+  and reports, preserves `4` compatibility aliases for old artifacts, groups
+  `8` feature-shaped Promise diagnostics under their reusable capability
+  blockers, documents `6` duplicate/grouping decisions, and keeps
+  historical artifacts untouched with `semantic_admission_delta = 0`.
+- [issue-658-oracle-exclusion-classification-2026-07-02.v1.json](issue-658-oracle-exclusion-classification-2026-07-02.v1.json)
+  records the #658 report-shape refinement. `oracle_exclusions` now includes
+  `by_classification`, splitting the local `crates` excluded surface into
+  `5447` `missing-oracle-support`, `583`
+  `semantic-boundary-attributed`, `5` `path-exploration-budget`, `1`
+  `oracle-cost-budget`, and `1` `empty-value-fingerprint` unit while preserving
+  the legacy reason counts and exact admission behavior.
 - [scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json)
   records the Python/Rust async runtime scope-shadowing hardening. It keeps
   exact admission closed while making unrelated local shadows in other
