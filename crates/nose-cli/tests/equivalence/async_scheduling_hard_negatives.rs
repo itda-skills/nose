@@ -40,13 +40,17 @@ fn js_ts_executor_timer_microtask_and_cancellation_lifecycles_stay_split() {
         "function f() {\n  return new Promise((resolve, reject) => { reject(1); resolve(2); });\n}\n";
     let resolve_then_reject =
         "function f() {\n  return new Promise((resolve, reject) => { resolve(2); reject(1); });\n}\n";
-    let timeout = "function f(cb) {\n  return setTimeout(cb, 0);\n}\n";
-    let immediate = "function f(cb) {\n  return setImmediate(cb);\n}\n";
-    let microtask = "function f(cb) {\n  return queueMicrotask(cb);\n}\n";
-    let promise_continuation = "function f(cb) {\n  return Promise.resolve().then(cb);\n}\n";
+    let executor_throw =
+        "function f() {\n  return new Promise((resolve, reject) => { throw 1; });\n}\n";
+    let explicit_reject = "function f() {\n  return Promise.reject(1);\n}\n";
+    let timeout = "function f(cb) {\n  setTimeout(cb, 0);\n  return 0;\n}\n";
+    let immediate = "function f(cb) {\n  setImmediate(cb);\n  return 0;\n}\n";
+    let direct_callback = "function f(cb) {\n  cb();\n  return 0;\n}\n";
+    let microtask = "function f(cb) {\n  queueMicrotask(cb);\n  return 0;\n}\n";
+    let promise_continuation = "function f(cb) {\n  Promise.resolve().then(cb);\n  return 0;\n}\n";
     let cancel_timeout = "function f(handle) {\n  return clearTimeout(handle);\n}\n";
     let cancel_frame = "function f(handle) {\n  return cancelAnimationFrame(handle);\n}\n";
-    let frame = "function f(cb) {\n  return requestAnimationFrame(cb);\n}\n";
+    let frame = "function f(cb) {\n  requestAnimationFrame(cb);\n  return 0;\n}\n";
     let abort_reject = "function f(reason) {\n  return AbortSignal.abort(reason);\n}\n";
     let promise_reject = "function f(reason) {\n  return Promise.reject(reason);\n}\n";
 
@@ -56,9 +60,19 @@ fn js_ts_executor_timer_microtask_and_cancellation_lifecycles_stay_split() {
         "new Promise multi-settlement ordering is observable and must stay closed"
     );
     assert_ne!(
+        value_fp(&i, executor_throw, Lang::TypeScript),
+        value_fp(&i, explicit_reject, Lang::TypeScript),
+        "executor throw-to-rejection needs explicit executor timing proof before recovery"
+    );
+    assert_ne!(
         value_fp(&i, timeout, Lang::TypeScript),
         value_fp(&i, immediate, Lang::TypeScript),
         "setTimeout and setImmediate have different task scheduling contracts"
+    );
+    assert_ne!(
+        value_fp(&i, timeout, Lang::TypeScript),
+        value_fp(&i, direct_callback, Lang::TypeScript),
+        "timer scheduling must not collapse into synchronous callback invocation"
     );
     assert_ne!(
         value_fp(&i, microtask, Lang::TypeScript),
@@ -96,6 +110,8 @@ fn go_channel_select_goroutine_and_defer_protocols_stay_split() {
     let select_default =
         "package p\nfunc f(ch <-chan int) int { select { case v := <-ch: return v; default: return 0 } }\n";
     let direct_receive = "package p\nfunc f(ch <-chan int) int { v := <-ch; return v }\n";
+    let nil_channel = "package p\nfunc f() int { var ch chan int; return <-ch }\n";
+    let zero_value = "package p\nfunc f() int { return 0 }\n";
 
     assert_ne!(
         value_fp(&i, receive_value, Lang::Go),
@@ -122,6 +138,11 @@ fn go_channel_select_goroutine_and_defer_protocols_stay_split() {
         value_fp(&i, direct_receive, Lang::Go),
         "Go select readiness/default semantics differ from a direct receive"
     );
+    assert_ne!(
+        value_fp(&i, nil_channel, Lang::Go),
+        value_fp(&i, zero_value, Lang::Go),
+        "Go nil-channel blocking must not collapse into an ordinary zero value"
+    );
 }
 
 #[test]
@@ -130,9 +151,12 @@ fn python_asyncio_and_async_protocol_lifecycles_stay_split() {
     let gather = "import asyncio\nasync def f(a, b):\n    return await asyncio.gather(a, b)\n";
     let wait_first = "import asyncio\nasync def f(a, b):\n    done, pending = await asyncio.wait([a, b], return_when=asyncio.FIRST_COMPLETED)\n    return done\n";
     let sleep = "import asyncio\nasync def f():\n    return await asyncio.sleep(1)\n";
+    let imported_sleep = "from asyncio import sleep\nasync def f():\n    return await sleep(1)\n";
     let direct_none = "async def f():\n    return None\n";
     let async_for = "async def f(xs):\n    async for x in xs:\n        return x\n    return None\n";
     let sync_for = "async def f(xs):\n    for x in xs:\n        return x\n    return None\n";
+    let async_with = "async def f(cm):\n    async with cm:\n        return 1\n";
+    let sync_with = "async def f(cm):\n    with cm:\n        return 1\n";
     let wait_for =
         "import asyncio\nasync def f(task):\n    return await asyncio.wait_for(task, 1)\n";
     let shield = "import asyncio\nasync def f(task):\n    return await asyncio.shield(task)\n";
@@ -158,9 +182,19 @@ fn python_asyncio_and_async_protocol_lifecycles_stay_split() {
         "asyncio.sleep timer scheduling must not merge with direct None"
     );
     assert_ne!(
+        value_fp(&i, imported_sleep, Lang::Python),
+        value_fp(&i, direct_none, Lang::Python),
+        "imported asyncio.sleep bindings keep the same timer boundary as asyncio.sleep"
+    );
+    assert_ne!(
         value_fp(&i, async_for, Lang::Python),
         value_fp(&i, sync_for, Lang::Python),
         "async iteration lifecycle must remain separate from ordinary iteration"
+    );
+    assert_ne!(
+        value_fp(&i, async_with, Lang::Python),
+        value_fp(&i, sync_with, Lang::Python),
+        "async context-manager cleanup and exception channels differ from ordinary with"
     );
     assert_ne!(
         value_fp(&i, wait_for, Lang::Python),
@@ -194,8 +228,11 @@ fn rust_future_drive_spawn_join_and_select_boundaries_stay_split() {
     let i = Interner::new();
     let spawn = "async fn f(x: i32) { tokio::spawn(async move { work(x).await; }); }\n";
     let direct = "async fn f(x: i32) { work(x).await; }\n";
-    let join = "async fn f(a: A, b: B) { tokio::join!(a, b); }\n";
-    let select = "async fn f(a: A, b: B) { tokio::select! { _ = a => {}, _ = b => {} } }\n";
+    let join =
+        "async fn f(a: Fut, b: Fut) -> (Result<i32, E>, Result<i32, E>) { tokio::join!(a, b) }\n";
+    let try_join =
+        "async fn f(a: Fut, b: Fut) -> Result<(i32, i32), E> { tokio::try_join!(a, b) }\n";
+    let select = "async fn f(a: Fut, b: Fut) -> Result<i32, E> { tokio::select! { v = a => v, v = b => v } }\n";
     let block_on = "fn f(rt: tokio::runtime::Runtime, fut: F) { rt.block_on(fut); }\n";
     let return_future = "fn f(rt: tokio::runtime::Runtime, fut: F) -> F { fut }\n";
 
@@ -210,6 +247,11 @@ fn rust_future_drive_spawn_join_and_select_boundaries_stay_split() {
         "Rust join all-settled behavior differs from select first-ready behavior"
     );
     assert_ne!(
+        value_fp(&i, join, Lang::Rust),
+        value_fp(&i, try_join, Lang::Rust),
+        "Rust join and try_join keep ordinary and short-circuit error channels split"
+    );
+    assert_ne!(
         value_fp(&i, block_on, Lang::Rust),
         value_fp(&i, return_future, Lang::Rust),
         "block_on drives a Future; returning the Future leaves it undriven"
@@ -219,8 +261,13 @@ fn rust_future_drive_spawn_join_and_select_boundaries_stay_split() {
 #[test]
 fn java_future_executor_and_stream_lifecycles_stay_split() {
     let i = Interner::new();
-    let future_callback = "import java.util.concurrent.*;\nclass C { static CompletableFuture<Integer> f(CompletableFuture<Integer> p) { return p.thenApply(x -> x + 1); } }\n";
-    let sync_call = "class C { static int f(int x) { return x + 1; } }\n";
+    let future_callback = "import java.util.concurrent.*;\nclass C { static CompletableFuture<Integer> f(Integer x) { return CompletableFuture.completedFuture(x).thenApply(v -> v + 1); } }\n";
+    let direct_function =
+        "import java.util.function.*;\nclass C { static Integer f(Integer x) { Function<Integer, Integer> fn = v -> v + 1; return fn.apply(x); } }\n";
+    let sync_callback =
+        "import java.util.concurrent.*;\nclass C { static void f(Runnable r) { r.run(); } }\n";
+    let executor_execute =
+        "import java.util.concurrent.*;\nclass C { static void f(Executor e, Runnable r) { e.execute(r); } }\n";
     let future_get = "import java.util.concurrent.*;\nclass C { static Object f(Future<Object> f) throws Exception { return f.get(); } }\n";
     let future_cancel =
         "import java.util.concurrent.*;\nclass C { static boolean f(Future<Object> f) { return f.cancel(true); } }\n";
@@ -238,9 +285,19 @@ fn java_future_executor_and_stream_lifecycles_stay_split() {
         "import java.util.*;\nclass C { static Object f(List<Integer> xs) { return xs.parallelStream().map(x -> x + 1); } }\n";
 
     assert_ne!(
+        value_fp(&i, executor_execute, Lang::Java),
+        value_fp(&i, sync_callback, Lang::Java),
+        "Executor callback scheduling must not merge with direct Runnable.run invocation"
+    );
+    assert_ne!(
         value_fp(&i, future_callback, Lang::Java),
-        value_fp(&i, sync_call, Lang::Java),
-        "CompletionStage callbacks have future scheduling and channel obligations"
+        value_fp(&i, direct_function, Lang::Java),
+        "CompletionStage continuations must not collapse into synchronous Function.apply callbacks"
+    );
+    assert_ne!(
+        value_fp(&i, future_callback, Lang::Java),
+        value_fp(&i, executor_execute, Lang::Java),
+        "CompletionStage value continuations and Executor callback scheduling expose different future obligations"
     );
     assert_ne!(
         value_fp(&i, future_get, Lang::Java),
@@ -278,6 +335,7 @@ fn java_future_executor_and_stream_lifecycles_stay_split() {
 fn swift_task_async_try_and_continuation_boundaries_stay_split() {
     let i = Interner::new();
     let task_spawn = "func f() async { Task { await work() } }\n";
+    let detached_task = "func f() async { Task.detached { await work() } }\n";
     let direct_await = "func f() async { await work() }\n";
     let async_let = "func f() async { async let x = work(); _ = await x }\n";
     let local_await = "func f() async { let x = await work(); _ = x }\n";
@@ -294,6 +352,16 @@ fn swift_task_async_try_and_continuation_boundaries_stay_split() {
         value_fp(&i, task_spawn, Lang::Swift),
         value_fp(&i, direct_await, Lang::Swift),
         "Swift Task scheduling is not a direct await"
+    );
+    assert_ne!(
+        value_fp(&i, task_spawn, Lang::Swift),
+        value_fp(&i, detached_task, Lang::Swift),
+        "Swift Task and Task.detached have distinct scheduling/inheritance obligations"
+    );
+    assert_ne!(
+        value_fp(&i, detached_task, Lang::Swift),
+        value_fp(&i, direct_await, Lang::Swift),
+        "Swift detached tasks also remain separate from direct await"
     );
     assert_ne!(
         value_fp(&i, async_let, Lang::Swift),
@@ -326,8 +394,12 @@ fn ruby_thread_fiber_yield_and_exception_boundaries_stay_split() {
     let block_yield = "def f(x, &block)\n  yield x\nend\n";
     let raise_value = "def f(x)\n  raise x\nend\n";
     let return_value = "def f(x)\n  return x\nend\n";
+    let rescue_value = "def f(x)\n  begin\n    work(x)\n  rescue\n    recover(x)\n  end\nend\n";
+    let direct_rescue_body = "def f(x)\n  work(x)\n  recover(x)\nend\n";
     let ensure_cleanup = "def f(x)\n  begin\n    work(x)\n  ensure\n    cleanup(x)\n  end\nend\n";
     let direct_cleanup = "def f(x)\n  work(x)\n  cleanup(x)\nend\n";
+    let callback_consumed = "def f(xs)\n  xs.map { |x| work(x) }\nend\n";
+    let callback_ignored = "def f(xs)\n  xs.each { |x| work(x) }\nend\n";
 
     assert_ne!(
         value_fp(&i, thread, Lang::Ruby),
@@ -345,8 +417,18 @@ fn ruby_thread_fiber_yield_and_exception_boundaries_stay_split() {
         "Ruby raise and return use different exception/success channels"
     );
     assert_ne!(
+        value_fp(&i, rescue_value, Lang::Ruby),
+        value_fp(&i, direct_rescue_body, Lang::Ruby),
+        "Ruby rescue observes exception-channel ordering rather than ordinary sequencing"
+    );
+    assert_ne!(
         value_fp(&i, ensure_cleanup, Lang::Ruby),
         value_fp(&i, direct_cleanup, Lang::Ruby),
         "Ruby ensure cleanup ordering is not ordinary sequential cleanup"
+    );
+    assert_ne!(
+        value_fp(&i, callback_consumed, Lang::Ruby),
+        value_fp(&i, callback_ignored, Lang::Ruby),
+        "Ruby callback results consumed by map must not merge with ignored each callbacks"
     );
 }

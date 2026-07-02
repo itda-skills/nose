@@ -657,11 +657,13 @@ kept separate from reporting artifact evidence.
 The [#657 hard-negative fixture expansion](../bench/recall_loss/issue-657-hard-negative-fixtures-2026-07-02.v1.json)
 adds the first executable guardrail suite for that inventory:
 `crates/nose-cli/tests/equivalence/async_scheduling_hard_negatives.rs`.
-It contributes `8` test symbols and `42` fail-closed assertions across JS/TS,
-Go, Python, Rust, Java, Swift, and Ruby. Future async/scheduling exact slices
-should add their behavior-changing positive coverage alongside adjacent
-hard negatives in this suite or one of the existing Promise/query-level
-boundary files linked by the artifact.
+It contributes `8` test symbols and `54` fail-closed assertions across JS/TS,
+Go, Python, Rust, Java, Swift, and Ruby. The artifact maps all `48` matrix
+classes to explicit evidence status, including `14` classes that still need
+more granular future executable follow-up before broader exact admission.
+Future async/scheduling exact slices should add their behavior-changing
+positive coverage alongside adjacent hard negatives in this suite or one of the
+existing Promise/query-level boundary files linked by the artifact.
 
 The post-#602 [cross-language await obligation reporting](../bench/recall_loss/cross-language-await-obligation-reporting-2026-06-30.v1.json)
 artifact records that async/await reporting uses the language-neutral

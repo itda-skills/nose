@@ -137,11 +137,14 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
   `48` named hard-negative classes with runnable fixture counts separated from
   reporting artifact evidence.
 - The [#657 async/scheduling hard-negative fixtures](../bench/recall_loss/issue-657-hard-negative-fixtures-2026-07-02.v1.json)
-  turn the #655 matrix into executable regression coverage. The new
+  add the first executable guardrail suite from the #655 matrix. The new
   `async_scheduling_hard_negatives` equivalence suite adds `8` test symbols and
-  `42` fail-closed assertions across JS/TS, Go, Python, Rust, Java, Swift, and
-  Ruby, while mapping remaining matrix classes to existing executable fixtures
-  or checked reporting artifacts. This is a guardrail slice only:
+  `54` fail-closed assertions across JS/TS, Go, Python, Rust, Java, Swift, and
+  Ruby. The checked artifact maps all `48` matrix classes to evidence status:
+  `40` have direct new executable evidence, `8` rely only on existing
+  executable/reporting evidence, and, across those mapped statuses, `14` still
+  require more granular future executable follow-up before broader exact
+  admission. This is a guardrail slice only:
   `semantic_admission_delta = 0`, and no product query/runtime performance
   comparison is required because only tests, docs, and checked artifacts change.
 - [Non-JS source-protocol reporting alignment](../bench/recall_loss/non-js-source-protocol-reporting-alignment-2026-07-02.v1.json) records the audit closeout for already-backed async source-protocol rows.
