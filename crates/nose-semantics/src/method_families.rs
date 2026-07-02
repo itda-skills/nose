@@ -34,6 +34,10 @@ pub fn method_hof_contract(lang: Lang, name: &str) -> Option<HoFKind> {
         | (Lang::Rust, "map")
         | (Lang::Java, "map")
         | (Lang::Swift, "map")
+        // LINQ `Select`/`Where` are the deferred sequence adapters, exactly
+        // like Java's `Stream.map`/`filter` (`SelectMany` is NOT mapped: its
+        // two-lambda overload carries a result selector plain FlatMap does not).
+        | (Lang::CSharp, "Select")
         | (Lang::Ruby, "map" | "collect") => HoFKind::Map,
         (
             Lang::JavaScript | Lang::TypeScript | Lang::Vue | Lang::Svelte | Lang::Html,
@@ -47,6 +51,7 @@ pub fn method_hof_contract(lang: Lang, name: &str) -> Option<HoFKind> {
         | (Lang::Rust, "filter")
         | (Lang::Java, "filter")
         | (Lang::Swift, "filter")
+        | (Lang::CSharp, "Where")
         | (Lang::Ruby, "filter" | "select") => HoFKind::Filter,
         (Lang::Ruby, "reject") => HoFKind::Reject,
         _ => return None,

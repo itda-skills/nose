@@ -13,15 +13,16 @@
 //! in place (both branches are real code). `await` and `yield` stay source-backed
 //! protocol boundaries. Type annotations, generics, and attributes carry no
 //! behavior and are erased. LINQ query syntax desugars to the spec's
-//! method-syntax chain (`from`/`where`/`orderby`/`select`/`group by`); queries
-//! with transparent identifiers (`let`/`join`/a second `from`) or an `into`
-//! continuation stay honest `Raw` gaps.
+//! method-syntax chain (`from`/`where`/`orderby`/`select`/`group by`), including
+//! the transparent-identifier translation for `let`/`join`/a second `from` and
+//! `into` continuations; query shapes the translation cannot prove stay honest
+//! `Raw` gaps.
 
 use crate::lower::{common_bin_op, Lowering};
 use nose_il::{
     Builtin, FileId, Il, Interner, Lang, LitClass, LoopKind, NodeId, NodeKind, Op, Payload,
-    RegionKind, SourceCallKind, SourceFactKind, SourceGranularity, Span, UnitBodyKind, UnitDomain,
-    UnitDomains, UnitEvidenceFlag, UnitKind, UnitOrigin, UnitSubkind,
+    RegionKind, SourceCallKind, SourceFactKind, SourceGranularity, Span, Symbol, UnitBodyKind,
+    UnitDomain, UnitDomains, UnitEvidenceFlag, UnitKind, UnitOrigin, UnitSubkind,
 };
 use tree_sitter::Node as TsNode;
 
@@ -29,9 +30,10 @@ mod control;
 mod expressions;
 mod items;
 mod linq;
+mod objects;
 mod patterns;
 
-use self::{control::*, expressions::*, items::*, linq::*, patterns::*};
+use self::{control::*, expressions::*, items::*, linq::*, objects::*, patterns::*};
 
 pub(crate) fn lower(
     file: FileId,

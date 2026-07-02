@@ -98,11 +98,11 @@ fn lower_expr_tail(lo: &mut Lowering, node: TsNode, span: Span) -> NodeId {
             .child_by_field_name("name")
             .map(|n| lo.var(lo.text(n), span))
             .unwrap_or_else(|| lo.empty_block(span)),
+        "anonymous_object_creation_expression" => lower_anonymous_object(lo, node),
         "tuple_expression"
         | "tuple_pattern"
         | "collection_expression"
         | "initializer_expression"
-        | "anonymous_object_creation_expression"
         | "argument_list" => {
             let kids: Vec<NodeId> = Lowering::named_children(node)
                 .into_iter()
@@ -148,8 +148,10 @@ fn lower_expr_tail(lo: &mut Lowering, node: TsNode, span: Span) -> NodeId {
         },
         "with_expression" | "with_initializer" => lower_with(lo, node),
         "interpolated_string_expression" => lo.str_lit(lo.text(node), span),
-        // LINQ query syntax desugars to the method-syntax chain; queries with
-        // `let`/`join`/`into` stay fail-closed Raw (the default arm below).
+        // LINQ query syntax desugars to the method-syntax chain, including the
+        // transparent-identifier translation for `let`/`join`/a second `from`
+        // and `into` continuations; shapes the translation cannot prove stay
+        // fail-closed Raw.
         "query_expression" => match lower_query(lo, node) {
             Some(id) => id,
             None => {

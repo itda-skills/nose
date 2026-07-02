@@ -351,7 +351,7 @@ pub(super) fn assert_group(json: &serde_json::Value) {
     assert_eq!(sequence_hof_adapter["license"], "MIT");
     assert_eq!(
         json_array_strings(sequence_hof_adapter, "supported_languages"),
-        vec!["rust", "swift", "ruby"]
+        vec!["rust", "swift", "ruby", "csharp"]
     );
     assert_eq!(sequence_hof_adapter["counts"]["evidence_producers"], 1);
     assert_eq!(sequence_hof_adapter["counts"]["contracts"], 1);

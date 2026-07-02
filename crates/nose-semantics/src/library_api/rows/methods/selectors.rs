@@ -11,6 +11,8 @@ pub(crate) fn library_method_selector_name(name: &str) -> Option<&'static str> {
         "Print" => "Print",
         "Printf" => "Printf",
         "Println" => "Println",
+        "Select" => "Select",
+        "Where" => "Where",
         "abs" => "abs",
         "add" => "add",
         "all" => "all",

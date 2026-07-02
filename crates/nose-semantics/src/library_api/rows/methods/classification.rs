@@ -56,6 +56,21 @@ pub(in crate::library_api) fn swift_sequence_hof_method_call(
         )
 }
 
+pub(in crate::library_api) fn csharp_sequence_hof_method_call(
+    lang: Lang,
+    contract: MethodCallContract,
+) -> bool {
+    lang == Lang::CSharp
+        && matches!(
+            (contract.semantic, contract.receiver, contract.args),
+            (
+                MethodSemanticContract::HoF(HoFKind::Map | HoFKind::Filter),
+                MethodReceiverContract::ExactArrayOrCollection,
+                MethodBuiltinArgs::Hof,
+            )
+        )
+}
+
 pub(in crate::library_api) fn ruby_sequence_hof_method_call(
     lang: Lang,
     contract: MethodCallContract,

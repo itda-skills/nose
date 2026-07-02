@@ -258,12 +258,7 @@ pub(super) fn lower_property(lo: &mut Lowering, node: TsNode) -> NodeId {
     }
 }
 
-fn push_accessor_unit(
-    lo: &mut Lowering,
-    span: Span,
-    body: NodeId,
-    name: Option<nose_il::Symbol>,
-) -> NodeId {
+fn push_accessor_unit(lo: &mut Lowering, span: Span, body: NodeId, name: Option<Symbol>) -> NodeId {
     let func = lo.add(NodeKind::Func, Payload::None, span, &[body]);
     lo.push_unit_with_origin(
         func,

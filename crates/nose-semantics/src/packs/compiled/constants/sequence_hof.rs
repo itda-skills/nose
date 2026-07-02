@@ -1,9 +1,13 @@
 use super::*;
 
 pub(in crate::packs::compiled) const SEQUENCE_HOF_ADAPTER_PROTOCOL_LANGUAGES: &[&str] =
-    &["rust", "swift", "ruby"];
-pub(in crate::packs::compiled) const SEQUENCE_HOF_ADAPTER_PROTOCOL_PACKAGES: &[&str] =
-    &["core::iter", "Swift.Collection", "Enumerable"];
+    &["rust", "swift", "ruby", "csharp"];
+pub(in crate::packs::compiled) const SEQUENCE_HOF_ADAPTER_PROTOCOL_PACKAGES: &[&str] = &[
+    "core::iter",
+    "Swift.Collection",
+    "Enumerable",
+    "System.Linq",
+];
 pub(in crate::packs::compiled) const SEQUENCE_HOF_ADAPTER_PROTOCOL_PRODUCER_IDS: &[&str] =
     &[SEQUENCE_HOF_ADAPTER_PROTOCOL_PRODUCER_ID];
 pub(in crate::packs::compiled) const SEQUENCE_HOF_ADAPTER_PROTOCOL_CONTRACT_IDS: &[&str] =

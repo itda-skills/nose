@@ -459,7 +459,11 @@ pub fn library_hof_demand_timing(lang: Lang, kind: HoFKind) -> Option<HofDemandT
         }
         (Lang::Python, HoFKind::Map | HoFKind::Filter)
         | (Lang::Rust, HoFKind::Map | HoFKind::FlatMap | HoFKind::FilterMap | HoFKind::Filter)
-        | (Lang::Java, HoFKind::Map | HoFKind::FlatMap | HoFKind::Filter) => {
+        | (Lang::Java, HoFKind::Map | HoFKind::FlatMap | HoFKind::Filter)
+        // LINQ `Select`/`Where` defer execution and pull per element on
+        // enumeration — the Java `Stream.map`/`filter` timing, not the eager
+        // JS/Swift array adapters.
+        | (Lang::CSharp, HoFKind::Map | HoFKind::Filter) => {
             HofDemandTiming::PullLazy
         }
         _ => return None,

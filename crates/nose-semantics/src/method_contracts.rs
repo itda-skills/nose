@@ -220,6 +220,12 @@ pub(super) fn method_call_contract_shapes(
             Lang::Swift,
             Some(HoFKind::Map | HoFKind::Filter | HoFKind::FlatMap)
         ) | (
+            // LINQ adapters apply to arrays and collections directly (any
+            // `IEnumerable<T>`), like Swift's — not only to a proven
+            // stream/iterator protocol value as Java's `Stream` adapters do.
+            Lang::CSharp,
+            Some(HoFKind::Map | HoFKind::Filter)
+        ) | (
             Lang::Ruby,
             Some(HoFKind::Map | HoFKind::Filter | HoFKind::Reject)
         )
@@ -231,7 +237,7 @@ pub(super) fn method_call_contract_shapes(
             args: Args::Hof,
         }];
     } else if !js_like_lang(lang)
-        && !matches!(lang, Lang::Swift | Lang::Ruby)
+        && !matches!(lang, Lang::Swift | Lang::Ruby | Lang::CSharp)
         && method_hof_contract(lang, name).is_some()
         && arg_count > 0
     {

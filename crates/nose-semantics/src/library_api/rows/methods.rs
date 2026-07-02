@@ -388,6 +388,7 @@ fn method_call_contract_provenance(
     if rust_sequence_hof_method_call(lang, contract)
         || swift_sequence_hof_method_call(lang, contract)
         || ruby_sequence_hof_method_call(lang, contract)
+        || csharp_sequence_hof_method_call(lang, contract)
     {
         (
             SEQUENCE_HOF_ADAPTER_PROTOCOL_PACK_ID,
@@ -536,6 +537,7 @@ mod classification;
 mod promise;
 mod receiver;
 mod selectors;
+pub(in crate::library_api) use classification::csharp_sequence_hof_method_call;
 pub(in crate::library_api) use classification::js_like_array_hof_method_call;
 pub(in crate::library_api) use classification::ruby_sequence_hof_method_call;
 use classification::rust_sequence_hof_method_call;

@@ -516,6 +516,8 @@ fn method_call_contract_callees_for_semantic(
         "collect",
         "filter",
         "select",
+        "Select",
+        "Where",
         "flatMap",
         "flat_map",
         "filter_map",

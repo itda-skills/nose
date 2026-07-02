@@ -38,12 +38,34 @@ break.
   lowering gap drops from 0.116% to 0.081% of IL nodes (the remainder is
   tree-sitter parse errors and their fallout); all 15 pinned C# repos still
   report zero false merges under `nose verify --max-violations 0`.
+- Completed the C# LINQ transparent-identifier translation: `let`, `join`
+  (including `join … into` group joins), a second `from`, and `into`
+  continuations now desugar per the spec, threading bindings through the same
+  anonymous-object pairs the compiler synthesizes — later clause bodies rewrite
+  each visible range variable to its member projection, and any shape the
+  rewrite cannot prove (a shadowing lambda parameter, an assignment to a range
+  variable, a join source or `equals` right key mentioning an outer range
+  variable) keeps the whole query fail-closed `Raw`. C# anonymous objects
+  (`new { a, b = e }`) now lower to the `object`/`pair` tagged shape shared
+  with JS/TS object literals (member order preserved — it is observable through
+  `ToString` and anonymous-type identity; unrecognized declarators stay `Raw`),
+  so a record literal converges cross-language and a query converges with its
+  hand-written chain. LINQ `Select`/`Where` joined the sequence-HOF adapter
+  protocol pack as deferred pull-per-element adapters (the Java
+  `Stream.map`/`filter` timing), so chained LINQ models as Map/Filter and
+  enters the exact channel; a `let` query, its transparent-identifier chain,
+  and alpha-renamed copies now share one exact fingerprint. serilog's raw
+  share drops 0.710% → 0.628% (the recovered nodes are exactly the old LINQ
+  bucket); all 15 pinned C# corpus repositories and a cross-language spot
+  check (Swift/Ruby/Rust/Java) still report zero false merges under
+  `nose verify --max-violations 0`.
 - Desugared C# LINQ query syntax to the spec's method-syntax chain
   (`from`/`where`/`orderby`/`select`/`group by` → `.Where()`/`.OrderBy()`/
   `.Select()`/`.GroupBy()`), so the two spellings converge; queries with
   transparent identifiers (`let`/`join`/a second `from`) or `into` continuations
-  stay fail-closed `Raw`. Bare lambda parameters (`x => e`) now lower with their
-  parameter, converging with the parenthesized typed form.
+  stayed fail-closed `Raw` until the transparent-identifier translation above.
+  Bare lambda parameters (`x => e`) now lower with their parameter, converging
+  with the parenthesized typed form.
 - Added a semantic-kernel recall-loss loop around `nose verify --recall-loss-report`,
   including obligation rollups, deterministic report diff tooling, checked
   `crates`/corpus artifacts, and corpus-priority census workflows for deciding

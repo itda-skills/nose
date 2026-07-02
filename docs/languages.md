@@ -36,8 +36,15 @@ converge cross-language): patterns (`switch`, `is`) lower as predicates, `??`
 lowers to the same builtin as Swift's `??`, `typeof(T)` matches Java's `T.class`,
 and `#if`-guarded members lower in place (both branches are real code). LINQ query
 syntax desugars to the spec's method-syntax chain, so `from x in xs where p select e`
-converges with `xs.Where(x => p).Select(x => e)`; queries using `let`/`join`/`into`
-stay honest `Raw` gaps — check the per-construct breakdown with `nose stats`.
+converges with `xs.Where(x => p).Select(x => e)` — including the transparent-identifier
+translation: `let`, `join`, a second `from`, and `into` continuations thread their
+bindings through the same anonymous-object pairs the compiler uses, so a `let` query
+converges with its hand-written `Select`/`Where` chain. Anonymous objects
+(`new { a, b = e }`) lower to the `object`/`pair` shape shared with JS/TS object
+literals (member order preserved — it is observable), and `Select`/`Where` carry the
+sequence-HOF adapter contract (deferred, pull-per-element — Java `Stream` timing), so
+chained LINQ models as Map/Filter in the exact channel. Query shapes the translation
+cannot prove stay honest `Raw` gaps — check the breakdown with `nose stats`.
 Event `add`/`remove` accessors lower like property accessors, auto-property
 initializers bind like field initializers, `checked`/`unchecked`/`ref` wrappers
 unwrap to their value, `global::` aliases erase, `goto` lowers as `Break` with
