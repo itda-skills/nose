@@ -21,8 +21,14 @@ break.
   `.cs` clones converge cross-language with Java (exact) on the value graph. The
   builtin C# language pack (`nose.lang.csharp`) is registered alongside the other
   language packs. On real-world corpora the lowering gap is ≲0.7% of IL nodes
-  (dominated by tree-sitter parse errors on `#if` inside interface bodies); LINQ
-  query syntax and richer stdlib semantics remain honest `Raw` gaps for follow-up.
+  (dominated by tree-sitter parse errors on `#if` inside interface bodies); richer
+  stdlib semantics remain honest `Raw` gaps for follow-up.
+- Desugared C# LINQ query syntax to the spec's method-syntax chain
+  (`from`/`where`/`orderby`/`select`/`group by` → `.Where()`/`.OrderBy()`/
+  `.Select()`/`.GroupBy()`), so the two spellings converge; queries with
+  transparent identifiers (`let`/`join`/a second `from`) or `into` continuations
+  stay fail-closed `Raw`. Bare lambda parameters (`x => e`) now lower with their
+  parameter, converging with the parenthesized typed form.
 - Added a semantic-kernel recall-loss loop around `nose verify --recall-loss-report`,
   including obligation rollups, deterministic report diff tooling, checked
   `crates`/corpus artifacts, and corpus-priority census workflows for deciding

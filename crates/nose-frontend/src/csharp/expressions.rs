@@ -133,6 +133,18 @@ fn lower_expr_tail(lo: &mut Lowering, node: TsNode, span: Span) -> NodeId {
         "generic_name" => lo.var(ident_text(lo, node), span),
         "qualified_name" => lo.var(lo.text(node), span),
         "interpolated_string_expression" => lo.str_lit(lo.text(node), span),
+        // LINQ query syntax desugars to the method-syntax chain; queries with
+        // `let`/`join`/`into` stay fail-closed Raw (the default arm below).
+        "query_expression" => match lower_query(lo, node) {
+            Some(id) => id,
+            None => {
+                let kids: Vec<NodeId> = Lowering::named_children(node)
+                    .into_iter()
+                    .map(|c| lower_expr(lo, c))
+                    .collect();
+                lo.raw(node.kind(), span, &kids)
+            }
+        },
         // `#if` spanning an expression: lower the guarded children (statement
         // discipline falls back to expressions), skipping the condition.
         "preproc_if" | "preproc_elif" | "preproc_else" => lower_preproc(lo, node, lower_stmt),
@@ -456,6 +468,13 @@ fn lower_lambda(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
     let mut kids = Vec::new();
     if let Some(params) = node.child_by_field_name("parameters") {
+        // A bare `x => …` parameter is a single `implicit_parameter` node (no
+        // children), so it must count as one Param — keeping `x => x` and
+        // `(int x) => x` on one shape.
+        if params.kind() == "implicit_parameter" {
+            let sym = lo.sym(lo.text(params));
+            kids.push(lo.add(NodeKind::Param, Payload::Name(sym), lo.span(params), &[]));
+        }
         for p in Lowering::named_children(params) {
             let sym = if p.kind() == "identifier" {
                 Some(lo.sym(lo.text(p)))

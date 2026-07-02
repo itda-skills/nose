@@ -221,3 +221,83 @@ fn csharp_different_patterns_do_not_merge() {
         "`case > 5:` must not merge with `case < 5:` (soundness control)",
     );
 }
+
+#[test]
+fn csharp_linq_query_converges_with_method_syntax() {
+    // The spec's translation: `from x in xs where p select e` is
+    // `xs.Where(x => p).Select(x => e)`.
+    let i = Interner::new();
+    let query = "public class C { public object F(int[] xs) { return from x in xs where x > 0 select x * 2; } }";
+    let method =
+        "public class C { public object F(int[] xs) { return xs.Where(x => x > 0).Select(x => x * 2); } }";
+    assert_eq!(
+        unit_hash(&i, query, Lang::CSharp),
+        unit_hash(&i, method, Lang::CSharp),
+        "LINQ query syntax must converge with the equivalent method chain",
+    );
+}
+
+#[test]
+fn csharp_linq_orderby_descending_converges_with_method_syntax() {
+    let i = Interner::new();
+    let query = "public class C { public object F(int[] xs) { return from x in xs orderby x descending select x; } }";
+    let method =
+        "public class C { public object F(int[] xs) { return xs.OrderByDescending(x => x); } }";
+    assert_eq!(
+        unit_hash(&i, query, Lang::CSharp),
+        unit_hash(&i, method, Lang::CSharp),
+        "`orderby x descending` with an identity select elides into OrderByDescending",
+    );
+}
+
+#[test]
+fn csharp_linq_group_by_converges_with_method_syntax() {
+    let i = Interner::new();
+    let query =
+        "public class C { public object F(int[] xs) { return from x in xs group x by x % 2; } }";
+    let method = "public class C { public object F(int[] xs) { return xs.GroupBy(x => x % 2); } }";
+    assert_eq!(
+        unit_hash(&i, query, Lang::CSharp),
+        unit_hash(&i, method, Lang::CSharp),
+        "`group x by k` (identity element) converges with GroupBy(x => k)",
+    );
+}
+
+#[test]
+fn csharp_linq_degenerate_select_converges_with_method_syntax() {
+    let i = Interner::new();
+    let query = "public class C { public object F(int[] xs) { return from x in xs select x; } }";
+    let method = "public class C { public object F(int[] xs) { return xs.Select(x => x); } }";
+    assert_eq!(
+        unit_hash(&i, query, Lang::CSharp),
+        unit_hash(&i, method, Lang::CSharp),
+        "a degenerate `from x in xs select x` keeps its Select(x => x)",
+    );
+}
+
+#[test]
+fn csharp_linq_different_predicates_do_not_merge() {
+    let i = Interner::new();
+    let gt = "public class C { public object F(int[] xs) { return from x in xs where x > 0 select x; } }";
+    let lt = "public class C { public object F(int[] xs) { return from x in xs where x < 0 select x; } }";
+    assert_ne!(
+        unit_hash(&i, gt, Lang::CSharp),
+        unit_hash(&i, lt, Lang::CSharp),
+        "different query predicates must not merge (soundness control)",
+    );
+}
+
+#[test]
+fn csharp_implicit_lambda_parameter_converges_with_explicit() {
+    // `x => x` carries its bare parameter as a single `implicit_parameter`
+    // node; it must lower to the same shape as `(int x) => x`.
+    let i = Interner::new();
+    let implicit = "public class C { public object F(int[] xs) { return xs.Select(x => x + 1); } }";
+    let explicit =
+        "public class C { public object F(int[] xs) { return xs.Select((int x) => x + 1); } }";
+    assert_eq!(
+        unit_hash(&i, implicit, Lang::CSharp),
+        unit_hash(&i, explicit, Lang::CSharp),
+        "a bare lambda parameter converges with the parenthesized typed form",
+    );
+}

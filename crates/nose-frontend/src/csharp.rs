@@ -12,7 +12,10 @@
 //! }` so they converge with block bodies; `#if`-guarded members/statements lower
 //! in place (both branches are real code). `await` and `yield` stay source-backed
 //! protocol boundaries. Type annotations, generics, and attributes carry no
-//! behavior and are erased. (LINQ query syntax is the remaining honest `Raw` gap.)
+//! behavior and are erased. LINQ query syntax desugars to the spec's
+//! method-syntax chain (`from`/`where`/`orderby`/`select`/`group by`); queries
+//! with transparent identifiers (`let`/`join`/a second `from`) or an `into`
+//! continuation stay honest `Raw` gaps.
 
 use crate::lower::{common_bin_op, Lowering};
 use nose_il::{
@@ -25,9 +28,10 @@ use tree_sitter::Node as TsNode;
 mod control;
 mod expressions;
 mod items;
+mod linq;
 mod patterns;
 
-use self::{control::*, expressions::*, items::*, patterns::*};
+use self::{control::*, expressions::*, items::*, linq::*, patterns::*};
 
 pub(crate) fn lower(
     file: FileId,

@@ -35,8 +35,9 @@ C# is lowered as a statically-typed C-family language, like Java (so `.cs` clone
 converge cross-language): patterns (`switch`, `is`) lower as predicates, `??`
 lowers to the same builtin as Swift's `??`, `typeof(T)` matches Java's `T.class`,
 and `#if`-guarded members lower in place (both branches are real code). LINQ query
-syntax is the remaining honest `Raw` gap — check the per-construct breakdown with
-`nose stats`.
+syntax desugars to the spec's method-syntax chain, so `from x in xs where p select e`
+converges with `xs.Where(x => p).Select(x => e)`; queries using `let`/`join`/`into`
+stay honest `Raw` gaps — check the per-construct breakdown with `nose stats`.
 
 `.h` files are treated as C headers unless their source strongly indicates unsupported C++
 (`namespace`, `template`, `class`, `std::`, or access specifiers after comments/strings are
