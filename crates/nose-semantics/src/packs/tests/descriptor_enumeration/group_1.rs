@@ -447,11 +447,11 @@ pub(super) fn assert_group() {
     assert_eq!(sequence_hof_adapter.kind, SemanticPackKind::ProtocolPack);
     assert_eq!(
         sequence_hof_adapter.supported_languages,
-        &["rust", "swift", "ruby"]
+        &["rust", "swift", "ruby", "csharp"]
     );
     assert_eq!(
         sequence_hof_adapter.supported_packages,
-        &["core::iter", "Swift.Collection", "Enumerable"]
+        &["core::iter", "Swift.Collection", "Enumerable", "System.Linq"]
     );
     assert_eq!(
         sequence_hof_adapter.evidence_producer_ids,
