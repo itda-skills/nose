@@ -73,6 +73,12 @@ break.
   executor timing, cancellation/liveness, scheduler/timer/microtask/interval
   behavior, and cross-language lifecycle protocols stay named closed
   obligations for future priced epics.
+- Added the #653/#655 async/scheduling hard-negative matrix artifact. It audits
+  `82` scoped lifecycle rows plus `11` supplemental JS/TS Promise and
+  timer/scheduler priced surfaces, separates `18` positive fixture groups, `27`
+  hard-negative fixture groups, and `25` reporting artifact evidence groups,
+  and names `48` fixture classes for #657 while keeping exact admission
+  unchanged.
 - Added Swift structured-concurrency reporting for `Task.sleep`, `Task.yield`,
   and task-group calls. These now map to shared timer, task-yield, aggregate,
   cancellation/liveness, result-channel, and exception-channel obligations

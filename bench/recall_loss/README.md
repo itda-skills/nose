@@ -1132,6 +1132,18 @@ python3 scripts/interval-scheduler-lifecycle-slice-audit.py \
   records the Java-heavy r9 product query regression. All six measured repos
   kept identical output hashes and family counts; aggregate median runtime was
   `8118.22ms -> 8151.13ms` (`+0.41%`).
+- [issue-655-hard-negative-matrix-2026-07-02.v1.json](issue-655-hard-negative-matrix-2026-07-02.v1.json)
+  records the #653/#655 async/scheduling hard-negative matrix before fixture
+  expansion. It audits `82` scoped surface rows across JS/TS, Go, Swift, Rust,
+  Java, Python, and Ruby, including `65` reporting-supported closed-boundary
+  rows, plus `11` supplemental JS/TS Promise continuation/rejection reporting
+  and timer/scheduler priced surfaces; prices `177,789` scoped
+  source-prevalence occurrences including those supplemental rows; maps `18`
+  positive fixture groups, `27` hard-negative fixture groups, and `25`
+  reporting artifact evidence groups; and enumerates `48` missing
+  hard-negative classes for #657.
+  This hand-curated inventory records its source-audit regenerate and validation
+  commands, and keeps `semantic_admission_delta = 0`.
 - [scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json](scheduling-lifecycle-boundary-audit-non-js-async-runtime-scope-shadowing-2026-06-30.v1.json)
   records the Python/Rust async runtime scope-shadowing hardening. It keeps
   exact admission closed while making unrelated local shadows in other
