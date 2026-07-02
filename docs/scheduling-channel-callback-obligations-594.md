@@ -644,6 +644,16 @@ under #602; executor, cancellation, scheduler, timer, interval, and
 cross-language lifecycle surfaces remain named closed obligations for future
 epics.
 
+The [#655 async/scheduling hard-negative matrix](../bench/recall_loss/issue-655-hard-negative-matrix-2026-07-02.v1.json)
+is the #653 successor inventory for this policy. It audits the current
+reporting-supported and still-closed scheduling/lifecycle surfaces across
+JS/TS, Go, Swift, Rust, Java, Python, and Ruby, including the already visible
+JS/TS Promise continuation/rejection report rows and the separately priced
+timer/scheduler surfaces from the interval lifecycle audit. It then names the
+missing hard-negative fixture classes that #657 must add before any later
+behavior-changing exact-admission work under #653, with runnable fixture counts
+kept separate from reporting artifact evidence.
+
 The post-#602 [cross-language await obligation reporting](../bench/recall_loss/cross-language-await-obligation-reporting-2026-06-30.v1.json)
 artifact records that async/await reporting uses the language-neutral
 `async-await-scheduling-contract` label for `Source::Protocol(Await)` across

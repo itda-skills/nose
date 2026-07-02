@@ -128,6 +128,14 @@ Checked-in summaries live under [bench/recall_loss](../bench/recall_loss/):
   type/reference mentions as superseded overlap, and the Java-heavy query
   regression measured `8118.22ms -> 8151.13ms` (`+0.41%`) with identical product
   hashes on all six measured repos.
+- The [#655 async/scheduling hard-negative matrix](../bench/recall_loss/issue-655-hard-negative-matrix-2026-07-02.v1.json)
+  records the #653 fixture-readiness baseline. It audits `82` scoped surface
+  rows across seven languages, including `65` reporting-supported
+  closed-boundary rows, plus `11` supplemental JS/TS Promise
+  continuation/rejection reporting and timer/scheduler priced surfaces. Exact
+  admission stays unchanged, and the next #657 fixture work is grouped into
+  `48` named hard-negative classes with runnable fixture counts separated from
+  reporting artifact evidence.
 - [Non-JS source-protocol reporting alignment](../bench/recall_loss/non-js-source-protocol-reporting-alignment-2026-07-02.v1.json) records the audit closeout for already-backed async source-protocol rows.
   Python `await`/`async def`, Rust `.await`/`async fn`/`async block`, and Swift
   `async` function rows now move to reporting-supported closed-boundaries,
