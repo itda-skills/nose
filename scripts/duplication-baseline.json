@@ -49,12 +49,12 @@
     "f4bd533cf627ba92",
     "f57a5ee0ebbdf114",
     "f88aeebdec4f2c68",
-    "39cd784119cf4060",
-    "74f4785230de4bbe",
+    "8d0fccc68d6bdc9e",
+    "1576a0aa2ff8861b",
     "8c3ac745a1c1101c",
     "9e4c338c1c530b18",
     "b6264a9ded7d0f1e",
-    "f024fac478e2d042"
+    "43b5cd8c20a4d96c"
   ],
   "budget": 55,
   "generated_by": "target/release/nose query crates all top=0 --mode near --min-value 40 --format json",

@@ -75,6 +75,13 @@ pub(super) fn lower_expr(lo: &mut Lowering, node: TsNode) -> NodeId {
 /// frontend, to keep each match within the complexity budget).
 fn lower_expr_tail(lo: &mut Lowering, node: TsNode, span: Span) -> NodeId {
     match node.kind() {
+        // `checked(e)`/`unchecked(e)` set overflow policy and `ref e` borrows a
+        // location — both are wrappers whose value is the inner expression
+        // (unwrap, as with a cast).
+        "checked_expression" | "ref_expression" => node
+            .named_child(0)
+            .map(|c| lower_expr(lo, c))
+            .unwrap_or_else(|| lo.empty_block(span)),
         // `= <expr>` initializer wrapper and call `argument`: unwrap to the value.
         "equals_value_clause" | "argument" => node
             .named_child(node.named_child_count().saturating_sub(1))
@@ -132,6 +139,14 @@ fn lower_expr_tail(lo: &mut Lowering, node: TsNode, span: Span) -> NodeId {
         "range_expression" => lower_range(lo, node),
         "generic_name" => lo.var(ident_text(lo, node), span),
         "qualified_name" => lo.var(lo.text(node), span),
+        // `global::X` resolves `X` from the root namespace — the alias is
+        // resolution plumbing, not behavior; erase it so the read converges
+        // with the unaliased `X`.
+        "alias_qualified_name" => match node.child_by_field_name("name") {
+            Some(n) => lo.var(ident_text(lo, n), span),
+            None => lo.var(lo.text(node), span),
+        },
+        "with_expression" | "with_initializer" => lower_with(lo, node),
         "interpolated_string_expression" => lo.str_lit(lo.text(node), span),
         // LINQ query syntax desugars to the method-syntax chain; queries with
         // `let`/`join`/`into` stay fail-closed Raw (the default arm below).
@@ -169,6 +184,24 @@ fn lower_expr_tail(lo: &mut Lowering, node: TsNode, span: Span) -> NodeId {
                 .collect();
             lo.raw(node.kind(), span, &kids)
         }
+    }
+}
+
+/// A record `with` expression copies the receiver, replacing the listed fields.
+/// No other lowering emits this shape, so tag the `Seq` (the Rust
+/// struct-expression discipline) to keep it from merging with tuples; each
+/// `X = 1` initializer inside it is an assignment to the copy's field.
+fn lower_with(lo: &mut Lowering, node: TsNode) -> NodeId {
+    let span = lo.span(node);
+    let kids: Vec<NodeId> = Lowering::named_children(node)
+        .into_iter()
+        .map(|c| lower_expr(lo, c))
+        .collect();
+    if node.kind() == "with_initializer" {
+        lo.add(NodeKind::Assign, Payload::None, span, &kids)
+    } else {
+        let tag = lo.sym("csharp_with_expression");
+        lo.add(NodeKind::Seq, Payload::Name(tag), span, &kids)
     }
 }
 

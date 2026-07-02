@@ -38,6 +38,11 @@ and `#if`-guarded members lower in place (both branches are real code). LINQ que
 syntax desugars to the spec's method-syntax chain, so `from x in xs where p select e`
 converges with `xs.Where(x => p).Select(x => e)`; queries using `let`/`join`/`into`
 stay honest `Raw` gaps — check the per-construct breakdown with `nose stats`.
+Event `add`/`remove` accessors lower like property accessors, auto-property
+initializers bind like field initializers, `checked`/`unchecked`/`ref` wrappers
+unwrap to their value, `global::` aliases erase, `goto` lowers as `Break` with
+its label dropped (the C discipline), and a record `with` expression keeps a
+tagged shape of its own so it cannot merge with a tuple.
 
 `.h` files are treated as C headers unless their source strongly indicates unsupported C++
 (`namespace`, `template`, `class`, `std::`, or access specifiers after comments/strings are

@@ -288,6 +288,136 @@ fn csharp_linq_different_predicates_do_not_merge() {
 }
 
 #[test]
+fn csharp_event_accessor_converges_with_property_setter() {
+    // An `event` accessor shares the property CST shape; its `add` body must
+    // register a Method unit exactly as a `set` accessor with the same body does.
+    let i = Interner::new();
+    let event = "public class C { private System.Action h; public event System.Action E { add { Register(value); } remove { Register(value); } } }";
+    let property =
+        "public class C { private System.Action h; public System.Action E { set { Register(value); } } }";
+    assert_eq!(
+        unit_hash(&i, event, Lang::CSharp),
+        unit_hash(&i, property, Lang::CSharp),
+        "an event `add` accessor lowers like a property `set` accessor",
+    );
+}
+
+#[test]
+fn csharp_checked_expression_converges_with_plain() {
+    // Overflow-check policy is type-level; the value is the inner expression.
+    let i = Interner::new();
+    let checked = "public class C { public int F(int a, int b) { return checked(a + b); } }";
+    let unchecked = "public class C { public int F(int a, int b) { return unchecked(a + b); } }";
+    let plain = "public class C { public int F(int a, int b) { return a + b; } }";
+    assert_eq!(
+        unit_hash(&i, checked, Lang::CSharp),
+        unit_hash(&i, plain, Lang::CSharp),
+        "`checked(a + b)` unwraps to `a + b`",
+    );
+    assert_eq!(
+        unit_hash(&i, unchecked, Lang::CSharp),
+        unit_hash(&i, plain, Lang::CSharp),
+        "`unchecked(a + b)` unwraps to `a + b`",
+    );
+}
+
+#[test]
+fn csharp_ref_expression_converges_with_plain_read() {
+    let i = Interner::new();
+    let by_ref = "public class C { public int F(int x) { ref int r = ref x; return r; } }";
+    let by_value = "public class C { public int F(int x) { int r = x; return r; } }";
+    assert_eq!(
+        unit_hash(&i, by_ref, Lang::CSharp),
+        unit_hash(&i, by_value, Lang::CSharp),
+        "`ref x` unwraps to the location's value",
+    );
+}
+
+#[test]
+fn csharp_goto_converges_with_break() {
+    // `goto` is a jump lowered as `Break` (label erased, the C discipline); the
+    // labeled target statement lowers as itself.
+    let i = Interner::new();
+    let with_goto = "public class C { public int F(int x) { while (true) { if (x > 0) goto done; x++; } done: return x; } }";
+    let with_break = "public class C { public int F(int x) { while (true) { if (x > 0) break; x++; } return x; } }";
+    assert_eq!(
+        unit_hash(&i, with_goto, Lang::CSharp),
+        unit_hash(&i, with_break, Lang::CSharp),
+        "`goto label` lowers like `break`, and the label erases",
+    );
+}
+
+#[test]
+fn csharp_alias_qualified_name_converges_with_unaliased() {
+    let i = Interner::new();
+    let aliased =
+        "public class C { public void F(int x) { global::System.Console.WriteLine(x); } }";
+    let plain = "public class C { public void F(int x) { System.Console.WriteLine(x); } }";
+    assert_eq!(
+        unit_hash(&i, aliased, Lang::CSharp),
+        unit_hash(&i, plain, Lang::CSharp),
+        "`global::System` erases the alias and converges with `System`",
+    );
+}
+
+#[test]
+fn csharp_with_expression_different_field_sets_do_not_merge() {
+    let i = Interner::new();
+    let one = "public record P(int X, int Y); public class C { public P F(P p, int a, int b) { return p with { X = a }; } }";
+    let two = "public record P(int X, int Y); public class C { public P F(P p, int a, int b) { return p with { X = a, Y = b }; } }";
+    assert_ne!(
+        unit_hash(&i, one, Lang::CSharp),
+        unit_hash(&i, two, Lang::CSharp),
+        "`with` copies replacing different field sets must not merge (soundness control)",
+    );
+}
+
+#[test]
+fn csharp_with_expression_does_not_merge_with_tuple() {
+    // The `with` Seq is tagged, so a copy-with-replacement can't collide with a
+    // plain tuple that happens to evaluate the same expressions.
+    let i = Interner::new();
+    let with_expr =
+        "public record P(int X); public class C { public object F(P p, int x) { return p with { X = 1 }; } }";
+    let tuple =
+        "public record P(int X); public class C { public object F(P p, int x) { return (p, x = 1); } }";
+    assert_ne!(
+        unit_hash(&i, with_expr, Lang::CSharp),
+        unit_hash(&i, tuple, Lang::CSharp),
+        "`p with {{ X = 1 }}` must not merge with the tuple `(p, x = 1)` (soundness control)",
+    );
+}
+
+#[test]
+fn csharp_auto_property_initializer_converges_with_field_initializer() {
+    // `{ get; set; } = init;` reuses the property's `value` CST field, but it is
+    // a field-like binding, not an accessor body.
+    let i = Interner::new();
+    let property = "public class C { public int B { get; set; } = 42; }";
+    let field = "public class C { public int B = 42; }";
+    assert_eq!(
+        class_value_fp(&i, property, Lang::CSharp, "C"),
+        class_value_fp(&i, field, Lang::CSharp, "C"),
+        "an auto-property initializer binds like a field initializer",
+    );
+}
+
+#[test]
+fn csharp_auto_property_initializer_forms_no_accessor_unit() {
+    // A lambda-valued initializer must lower as a value (its parameter included),
+    // not get misread as an accessor body that fabricates a Method unit.
+    let i = Interner::new();
+    let src = "public class C { public System.Func<int, bool> P { get; set; } = v => v > 0; }";
+    let il = nose_frontend::lower_source(FileId(0), "t", src.as_bytes(), Lang::CSharp, &i).unwrap();
+    assert!(
+        il.units
+            .iter()
+            .all(|u| !matches!(u.kind, UnitKind::Function | UnitKind::Method)),
+        "an auto-property initializer must not fabricate an accessor unit",
+    );
+}
+
+#[test]
 fn csharp_implicit_lambda_parameter_converges_with_explicit() {
     // `x => x` carries its bare parameter as a single `implicit_parameter`
     // node; it must lower to the same shape as `(int x) => x`.

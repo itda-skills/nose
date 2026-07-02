@@ -122,6 +122,11 @@ set -euo pipefail
 # the exhaustive language_profile provenance matches over the value line; the draft C# `fold_or`
 # copy was deduped into `crate::lower::fold_or` (also removing the Python/Rust/Swift copies).
 # Two reviewed families changed IDs from C# span shifts. See docs/dogfooding.md.
+# 55 -> 55 (C# long-tail tranche): new `goto`/labeled/`with`/event-accessor arms shift
+# csharp/control.rs spans, moving the three reviewed per-grammar parallelism representatives
+# (`f024fac478e2d042` -> `43b5cd8c20a4d96c` lower_for, `74f4785230de4bbe` -> `1576a0aa2ff8861b`
+# lower_stmt mirror, `39cd784119cf4060` -> `8d0fccc68d6bdc9e` declarator loop) without changing
+# members or budget. See docs/dogfooding.md.
 BIN="${NOSE_BIN:-./target/release/nose}"
 BASELINE="${NOSE_DUP_BASELINE:-scripts/duplication-baseline.json}"
 

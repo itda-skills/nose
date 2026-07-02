@@ -18,7 +18,11 @@ pub(super) fn lower_item(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
         | "operator_declaration"
         | "conversion_operator_declaration"
         | "local_function_statement" => Some(lower_method(lo, node)),
-        "property_declaration" | "indexer_declaration" => Some(lower_property(lo, node)),
+        // An `event` with `add`/`remove` accessors shares the property CST shape
+        // (`accessors` field of `accessor_declaration`s), so it lowers the same way.
+        "property_declaration" | "indexer_declaration" | "event_declaration" => {
+            Some(lower_property(lo, node))
+        }
         "field_declaration" | "event_field_declaration" => Some(lower_field(lo, node)),
         "namespace_declaration" | "file_scoped_namespace_declaration" => {
             Some(lower_namespace(lo, node))
@@ -209,14 +213,17 @@ pub(super) fn csharp_body(lo: &mut Lowering, node: TsNode) -> NodeId {
     }
 }
 
-/// A property/indexer lowers each accessor that has a body — or the `=> expr`
-/// getter — into a method-like unit; auto-accessors (`{ get; set; }`) carry no
-/// body and form no unit.
+/// A property/indexer/event lowers each accessor that has a body — or the
+/// `=> expr` getter — into a method-like unit; auto-accessors (`{ get; set; }`)
+/// carry no body and form no unit.
 pub(super) fn lower_property(lo: &mut Lowering, node: TsNode) -> NodeId {
     let span = lo.span(node);
-    let name = node.child_by_field_name("name").map(|n| lo.sym(lo.text(n)));
-    if let Some(value) = node.child_by_field_name("value") {
-        let body = csharp_body(lo, value);
+    let name_node = node.child_by_field_name("name");
+    let name = name_node.map(|n| lo.sym(lo.text(n)));
+    let value = node.child_by_field_name("value");
+    // `int A => expr;` — an expression-bodied getter.
+    if let Some(v) = value.filter(|v| v.kind() == "arrow_expression_clause") {
+        let body = csharp_body(lo, v);
         return push_accessor_unit(lo, span, body, name);
     }
     let mut kids = Vec::new();
@@ -232,7 +239,23 @@ pub(super) fn lower_property(lo: &mut Lowering, node: TsNode) -> NodeId {
             kids.push(push_accessor_unit(lo, lo.span(acc), body, name));
         }
     }
-    lo.add(NodeKind::Block, Payload::None, span, &kids)
+    // `{ get; set; } = init;` — the same `value` field holds the auto-property
+    // initializer, a field-like binding to the property name (the `lower_field`
+    // discipline), not an accessor body.
+    if let Some(v) = value {
+        let vspan = lo.span(v);
+        let lhs = match name_node {
+            Some(n) => lo.var(lo.text(n), lo.span(n)),
+            None => lo.empty_block(vspan),
+        };
+        let rhs = lower_expr(lo, v);
+        kids.push(lo.add(NodeKind::Assign, Payload::None, vspan, &[lhs, rhs]));
+    }
+    if kids.len() == 1 {
+        kids.pop().unwrap()
+    } else {
+        lo.add(NodeKind::Block, Payload::None, span, &kids)
+    }
 }
 
 fn push_accessor_unit(

@@ -729,9 +729,18 @@ insertions shifting spans: `52cb1ae313158c0c` → `b6264a9ded7d0f1e` for the
 `csharp_type_domain` moved `type_domain.rs`). Members, value, and scope are
 unchanged. `9510e3368e161f45` is no longer reported.
 
+The C# long-tail tranche (event accessors, `goto`/labeled statements,
+`checked`/`ref`, `global::`, `with`, and the property-initializer fix) added
+match arms to `csharp/control.rs`, shifting the spans — and therefore the
+representative IDs — of these same three reviewed families:
+`f024fac478e2d042` → `43b5cd8c20a4d96c` (`lower_for`), `74f4785230de4bbe` →
+`1576a0aa2ff8861b` (the `lower_stmt` dispatch mirror), and `39cd784119cf4060`
+→ `8d0fccc68d6bdc9e` (the declarator loop). Members, judgment, and budget are
+unchanged; the table below carries the current IDs.
+
 | family | scope | judgment | action |
 |---|---|---|---|
-| `f024fac478e2d042` | production | `lower_for` in C/C#/Java is a thin per-grammar wrapper delegating to the shared `c_style_for` with language-specific field names and lowering callbacks. | Accepted per-grammar frontend parallelism; the shared logic already lives in `crate::lower`. |
-| `74f4785230de4bbe` | production | the C# `lower_stmt` dispatch mirrors Java's by design (C# is lowered as "Java + α"); the match arms differ per grammar kind strings. | Accepted design mirror — the documented frontend-template discipline, not extractable duplication. |
-| `39cd784119cf4060` | production | C# `lower_variable_declaration` and JS/TS `lower_var_decl` share the declarator-loop shape but walk different CST field layouts. | Accepted per-grammar parallelism; a shared declarator walker would couple unrelated grammars. |
+| `43b5cd8c20a4d96c` | production | `lower_for` in C/C#/Java is a thin per-grammar wrapper delegating to the shared `c_style_for` with language-specific field names and lowering callbacks. | Accepted per-grammar frontend parallelism; the shared logic already lives in `crate::lower`. |
+| `1576a0aa2ff8861b` | production | the C# `lower_stmt` dispatch mirrors Java's by design (C# is lowered as "Java + α"); the match arms differ per grammar kind strings. | Accepted design mirror — the documented frontend-template discipline, not extractable duplication. |
+| `8d0fccc68d6bdc9e` | production | C# `lower_variable_declaration` and JS/TS `lower_var_decl` share the declarator-loop shape but walk different CST field layouts. | Accepted per-grammar parallelism; a shared declarator walker would couple unrelated grammars. |
 | `9e4c338c1c530b18` | production | the four exhaustive per-`Lang` provenance matches in `language_profile.rs` are mutually similar tables; the C# arms pushed the family over the value line. | Accepted exhaustive wiring; a table-driven rewrite is a candidate when the profile is next reshaped. |

@@ -28,6 +28,16 @@ break.
   corpus pruner that `.cs` is a source suffix. The `nose verify` soundness oracle
   interprets C# units as-is (the interpreter is IL-level): all 15 pinned repos
   report zero false merges under `--max-violations 0`.
+- Closed the corpus-wide C# lowering long tail: `event` `add`/`remove` accessors
+  lower like property accessors, auto-property initializers
+  (`{ get; set; } = init`) bind like field initializers instead of being misread
+  as accessor bodies, `checked`/`unchecked`/`ref` expressions unwrap to their
+  value, `goto` and labeled statements mirror the C lowering (`Break`, label
+  erased), `global::` alias qualifiers erase, and record `with` expressions
+  lower to a tagged shape that cannot merge with tuples. The corpus-wide C#
+  lowering gap drops from 0.116% to 0.081% of IL nodes (the remainder is
+  tree-sitter parse errors and their fallout); all 15 pinned C# repos still
+  report zero false merges under `nose verify --max-violations 0`.
 - Desugared C# LINQ query syntax to the spec's method-syntax chain
   (`from`/`where`/`orderby`/`select`/`group by` → `.Where()`/`.OrderBy()`/
   `.Select()`/`.GroupBy()`), so the two spellings converge; queries with

@@ -41,6 +41,15 @@ pub(super) fn lower_stmt(lo: &mut Lowering, node: TsNode) -> Option<NodeId> {
         }
         "break_statement" => Some(lo.add(NodeKind::Break, Payload::None, span, &[])),
         "continue_statement" => Some(lo.add(NodeKind::Continue, Payload::None, span, &[])),
+        // `label: stmt` (goto target) — lower the inner statement, drop the label
+        // (the C frontend discipline).
+        "labeled_statement" => Lowering::named_children(node)
+            .into_iter()
+            .next_back()
+            .and_then(|s| lower_stmt(lo, s)),
+        // `goto label` / `goto case v` / `goto default` — a jump; model as Break
+        // (drop the target so the label doesn't leak).
+        "goto_statement" => Some(lo.add(NodeKind::Break, Payload::None, span, &[])),
         "throw_statement" => {
             let mut kids = Vec::new();
             if let Some(v) = node.named_child(0) {
