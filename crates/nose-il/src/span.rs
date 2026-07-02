@@ -90,6 +90,9 @@ pub enum Lang {
     C,
     Ruby,
     Swift,
+    /// C# (.NET) — lowered as a statically-typed C-family imperative language,
+    /// like Java. `async`/`await` and `yield` stay source-backed protocol boundaries.
+    CSharp,
     /// CSS stylesheet — rules are lowered to a declarative IL and matched by
     /// computed-style equivalence (its own canonicalization + oracle), not the
     /// imperative value graph. Also the analysis language of `<style>` blocks
@@ -117,6 +120,7 @@ impl Lang {
             Lang::C => "c",
             Lang::Ruby => "ruby",
             Lang::Swift => "swift",
+            Lang::CSharp => "csharp",
             Lang::Css => "css",
             Lang::Vue => "vue",
             Lang::Svelte => "svelte",
@@ -136,6 +140,7 @@ impl Lang {
             "c" | "h" => Lang::C,
             "rb" => Lang::Ruby,
             "swift" => Lang::Swift,
+            "cs" => Lang::CSharp,
             "css" => Lang::Css,
             "vue" => Lang::Vue,
             "svelte" => Lang::Svelte,

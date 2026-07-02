@@ -10,6 +10,7 @@ pub const RUST_LANGUAGE_PACK_ID: &str = "nose.lang.rust";
 pub const JAVA_LANGUAGE_PACK_ID: &str = "nose.lang.java";
 pub const RUBY_LANGUAGE_PACK_ID: &str = "nose.lang.ruby";
 pub const SWIFT_LANGUAGE_PACK_ID: &str = "nose.lang.swift";
+pub const CSHARP_LANGUAGE_PACK_ID: &str = "nose.lang.csharp";
 pub const CSS_LANGUAGE_PACK_ID: &str = "nose.lang.css";
 pub const HTML_EMBEDDED_LANGUAGE_PACK_ID: &str = "nose.lang.html";
 pub const PYTHON_SOURCE_FACT_PRODUCER_ID: &str = "python.source.fact";
@@ -20,6 +21,7 @@ pub const JAVA_SOURCE_FACT_PRODUCER_ID: &str = "java.source.fact";
 pub const C_SOURCE_FACT_PRODUCER_ID: &str = "c.source.fact";
 pub const RUBY_SOURCE_FACT_PRODUCER_ID: &str = "ruby.source.fact";
 pub const SWIFT_SOURCE_FACT_PRODUCER_ID: &str = "swift.source.fact";
+pub const CSHARP_SOURCE_FACT_PRODUCER_ID: &str = "csharp.source.fact";
 pub const CSS_SOURCE_FACT_PRODUCER_ID: &str = "css.source.fact";
 pub const HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID: &str = "html-embedded.source.fact";
 pub const C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID: &str = "c.source.cast.unsigned32";
@@ -31,6 +33,7 @@ pub const JAVA_LANGUAGE_CORE_PRODUCER_ID: &str = "java.language.core";
 pub const C_LANGUAGE_CORE_PRODUCER_ID: &str = "c.language.core";
 pub const RUBY_LANGUAGE_CORE_PRODUCER_ID: &str = "ruby.language.core";
 pub const SWIFT_LANGUAGE_CORE_PRODUCER_ID: &str = "swift.language.core";
+pub const CSHARP_LANGUAGE_CORE_PRODUCER_ID: &str = "csharp.language.core";
 pub const CSS_LANGUAGE_CORE_PRODUCER_ID: &str = "css.language.core";
 pub const HTML_EMBEDDED_LANGUAGE_CORE_PRODUCER_ID: &str = "html-embedded.language.core";
 
@@ -56,6 +59,7 @@ pub fn language_source_fact_provenance(lang: Lang) -> (&'static str, &'static st
         Lang::C => (pack_id, C_SOURCE_FACT_PRODUCER_ID),
         Lang::Ruby => (pack_id, RUBY_SOURCE_FACT_PRODUCER_ID),
         Lang::Swift => (pack_id, SWIFT_SOURCE_FACT_PRODUCER_ID),
+        Lang::CSharp => (pack_id, CSHARP_SOURCE_FACT_PRODUCER_ID),
         Lang::Css => (pack_id, CSS_SOURCE_FACT_PRODUCER_ID),
         Lang::Vue | Lang::Svelte | Lang::Html => (pack_id, HTML_EMBEDDED_SOURCE_FACT_PRODUCER_ID),
     }
@@ -72,6 +76,7 @@ pub fn language_core_evidence_provenance(lang: Lang) -> (&'static str, &'static 
         Lang::C => (pack_id, C_LANGUAGE_CORE_PRODUCER_ID),
         Lang::Ruby => (pack_id, RUBY_LANGUAGE_CORE_PRODUCER_ID),
         Lang::Swift => (pack_id, SWIFT_LANGUAGE_CORE_PRODUCER_ID),
+        Lang::CSharp => (pack_id, CSHARP_LANGUAGE_CORE_PRODUCER_ID),
         Lang::Css => (pack_id, CSS_LANGUAGE_CORE_PRODUCER_ID),
         Lang::Vue | Lang::Svelte | Lang::Html => (pack_id, HTML_EMBEDDED_LANGUAGE_CORE_PRODUCER_ID),
     }
@@ -111,6 +116,10 @@ pub(crate) fn language_core_evidence_provenance_hashes(lang: Lang) -> (u64, u64)
             stable_symbol_hash(SWIFT_LANGUAGE_PACK_ID),
             stable_symbol_hash(SWIFT_LANGUAGE_CORE_PRODUCER_ID),
         ),
+        Lang::CSharp => (
+            stable_symbol_hash(CSHARP_LANGUAGE_PACK_ID),
+            stable_symbol_hash(CSHARP_LANGUAGE_CORE_PRODUCER_ID),
+        ),
         Lang::Css => (
             stable_symbol_hash(CSS_LANGUAGE_PACK_ID),
             stable_symbol_hash(CSS_LANGUAGE_CORE_PRODUCER_ID),
@@ -132,6 +141,7 @@ pub fn builtin_language_pack_id(lang: Lang) -> &'static str {
         Lang::C => C_LANGUAGE_PACK_ID,
         Lang::Ruby => RUBY_LANGUAGE_PACK_ID,
         Lang::Swift => SWIFT_LANGUAGE_PACK_ID,
+        Lang::CSharp => CSHARP_LANGUAGE_PACK_ID,
         Lang::Css => CSS_LANGUAGE_PACK_ID,
         Lang::Vue | Lang::Svelte | Lang::Html => HTML_EMBEDDED_LANGUAGE_PACK_ID,
     }
@@ -146,6 +156,7 @@ pub fn is_builtin_language_pack_hash(pack_hash: u64) -> bool {
         || pack_hash == stable_symbol_hash(C_LANGUAGE_PACK_ID)
         || pack_hash == stable_symbol_hash(RUBY_LANGUAGE_PACK_ID)
         || pack_hash == stable_symbol_hash(SWIFT_LANGUAGE_PACK_ID)
+        || pack_hash == stable_symbol_hash(CSHARP_LANGUAGE_PACK_ID)
         || pack_hash == stable_symbol_hash(CSS_LANGUAGE_PACK_ID)
         || pack_hash == stable_symbol_hash(HTML_EMBEDDED_LANGUAGE_PACK_ID)
 }

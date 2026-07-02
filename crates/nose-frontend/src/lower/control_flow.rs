@@ -132,6 +132,17 @@ fn is_switch_body_child(kind: &str) -> bool {
     )
 }
 
+/// Or-fold a list of already-lowered conditions (`a || b || c`), as a `match`/
+/// `switch` section with several labels tests. `None` when the list is empty.
+pub(crate) fn fold_or(lo: &mut Lowering, span: Span, conditions: Vec<NodeId>) -> Option<NodeId> {
+    let mut it = conditions.into_iter();
+    let mut acc = it.next()?;
+    for cond in it {
+        acc = lo.add(NodeKind::BinOp, Payload::Op(Op::Or), span, &[acc, cond]);
+    }
+    Some(acc)
+}
+
 /// Lower a `condition`/`body`-shaped CST node into a canonical `While` [`Loop`].
 /// Every C-family `while` lowers identically apart from *how* its condition and
 /// body sub-nodes are lowered, so each frontend supplies those two as closures

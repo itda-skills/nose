@@ -48,6 +48,7 @@ pub(crate) mod grammar {
     pub(crate) const CSS: u16 = 9;
     pub(crate) const HTML: u16 = 10;
     pub(crate) const SWIFT: u16 = 11;
+    pub(crate) const CSHARP: u16 = 12;
 }
 
 /// Comment / trivia node kinds across the supported grammars.

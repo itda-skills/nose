@@ -105,6 +105,16 @@ pub(super) fn assert_group() {
         SWIFT_SOURCE_FACT_PRODUCER_ID,
     );
     assert_source_fact_language_descriptor(
+        CSHARP_LANGUAGE_PACK_ID,
+        &["csharp"],
+        &[nose_il::Lang::CSharp],
+        &["cs"],
+        "tree-sitter-c-sharp",
+        "nose_frontend::csharp::lower",
+        CSHARP_LANGUAGE_CORE_PRODUCER_ID,
+        CSHARP_SOURCE_FACT_PRODUCER_ID,
+    );
+    assert_source_fact_language_descriptor(
         CSS_LANGUAGE_PACK_ID,
         &["css"],
         &[nose_il::Lang::Css],

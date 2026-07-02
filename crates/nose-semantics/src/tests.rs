@@ -27,6 +27,7 @@ const ALL_LANGS: &[Lang] = &[
     Lang::C,
     Lang::Ruby,
     Lang::Swift,
+    Lang::CSharp,
     Lang::Vue,
     Lang::Svelte,
     Lang::Html,

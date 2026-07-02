@@ -199,7 +199,7 @@ fn manifest_with_value_law_executable_gate(id: &str) -> String {
 #[test]
 fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
     let descriptors = builtin_pack_descriptors();
-    assert_eq!(descriptors.len(), 49);
+    assert_eq!(descriptors.len(), 50);
     let ids = descriptors
         .iter()
         .map(|descriptor| descriptor.id)
@@ -216,6 +216,7 @@ fn builtin_pack_descriptor_registry_names_current_compiled_packs() {
             C_LANGUAGE_PACK_ID,
             RUBY_LANGUAGE_PACK_ID,
             SWIFT_LANGUAGE_PACK_ID,
+            CSHARP_LANGUAGE_PACK_ID,
             CSS_LANGUAGE_PACK_ID,
             HTML_EMBEDDED_LANGUAGE_PACK_ID,
             PYTHON_BUILTIN_COLLECTION_FACTORY_PACK_ID,

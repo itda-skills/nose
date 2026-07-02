@@ -710,3 +710,28 @@ call/constructor/enum-constant lowering family, and `6e37683225332c86`
 becomes `a54e8f6b173a160a` for the Java/C expression-dispatch family. Both are
 the same language-frontend parallelism recorded above; no new budget is
 accepted.
+
+## Budget 52 → 55 and the C# frontend
+
+Adding the C# frontend (classes/patterns/preprocessor lowering, the
+`nose.lang.csharp` builtin pack, and its convergence tests) moves the reviewed
+default surface from 52 to 55. Seven families first appeared; one was genuinely
+avoidable and was deduped instead of accepted: the per-frontend `fold_or`
+Or-fold helper (C#'s draft copy joined Python/Rust/Swift's) is now the shared
+`crate::lower::fold_or`, removing that family and one copy per frontend.
+
+Two of the remaining IDs are churn for already-reviewed families, moved by C#
+insertions shifting spans: `52cb1ae313158c0c` → `b6264a9ded7d0f1e` for the
+`evidence_with_dependencies`/`evidence` test-fixture builders (the C# row in
+`ALL_LANGS` moved `nose-semantics/src/tests.rs`), and `1e76918c4878bab0` →
+`8c3ac745a1c1101c` for the small predicate/helper family
+(`css::is_selector_kind` / `python::is_op_tok` / `type_domain::rust_integer_type`;
+`csharp_type_domain` moved `type_domain.rs`). Members, value, and scope are
+unchanged. `9510e3368e161f45` is no longer reported.
+
+| family | scope | judgment | action |
+|---|---|---|---|
+| `f024fac478e2d042` | production | `lower_for` in C/C#/Java is a thin per-grammar wrapper delegating to the shared `c_style_for` with language-specific field names and lowering callbacks. | Accepted per-grammar frontend parallelism; the shared logic already lives in `crate::lower`. |
+| `74f4785230de4bbe` | production | the C# `lower_stmt` dispatch mirrors Java's by design (C# is lowered as "Java + α"); the match arms differ per grammar kind strings. | Accepted design mirror — the documented frontend-template discipline, not extractable duplication. |
+| `39cd784119cf4060` | production | C# `lower_variable_declaration` and JS/TS `lower_var_decl` share the declarator-loop shape but walk different CST field layouts. | Accepted per-grammar parallelism; a shared declarator walker would couple unrelated grammars. |
+| `9e4c338c1c530b18` | production | the four exhaustive per-`Lang` provenance matches in `language_profile.rs` are mutually similar tables; the C# arms pushed the family over the value line. | Accepted exhaustive wiring; a table-driven rewrite is a candidate when the profile is next reshaped. |

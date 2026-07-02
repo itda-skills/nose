@@ -105,6 +105,11 @@ fn language_core_evidence_provenance_covers_each_language() {
             SWIFT_LANGUAGE_CORE_PRODUCER_ID,
         ),
         (
+            Lang::CSharp,
+            CSHARP_LANGUAGE_PACK_ID,
+            CSHARP_LANGUAGE_CORE_PRODUCER_ID,
+        ),
+        (
             Lang::Css,
             CSS_LANGUAGE_PACK_ID,
             CSS_LANGUAGE_CORE_PRODUCER_ID,
@@ -172,6 +177,11 @@ fn language_source_fact_provenance_covers_each_language() {
             Lang::Swift,
             SWIFT_LANGUAGE_PACK_ID,
             SWIFT_SOURCE_FACT_PRODUCER_ID,
+        ),
+        (
+            Lang::CSharp,
+            CSHARP_LANGUAGE_PACK_ID,
+            CSHARP_SOURCE_FACT_PRODUCER_ID,
         ),
         (Lang::Css, CSS_LANGUAGE_PACK_ID, CSS_SOURCE_FACT_PRODUCER_ID),
         (

@@ -32,6 +32,11 @@ tree-sitter-java = "0.23"
 tree-sitter-c = "0.24"
 tree-sitter-ruby = "0.23"
 tree-sitter-swift = "0.7.3"
+# C# grammar (crates.io, MIT; ABI accepted by core 0.25 — verified by the 0.23.5
+# line's `tree-sitter 0.25` dev-dep). C# is lowered as a statically-typed C-family
+# imperative language, like Java (see csharp.rs). VALIDATE any bump on a
+# `cargo clean` release build — incremental builds reuse stale grammar objects (#403).
+tree-sitter-c-sharp = "0.23"
 # CSS grammar (ABI-15, matches core 0.25). CSS rules are lowered to a DECLARATIVE
 # IL and matched by computed-style equivalence (its own canonicalization + oracle),
 # not the imperative value graph. See css.rs. VALIDATE on a `cargo clean` release

@@ -17,6 +17,7 @@ pub fn type_domain_from_source_text(lang: Lang, text: &str) -> Option<DomainEvid
         Lang::Go => go_type_domain(text),
         Lang::C => c_type_domain(text),
         Lang::Swift => swift_type_domain(text),
+        Lang::CSharp => csharp_type_domain(text),
         // CSS is declarative — no type annotations.
         Lang::Css | Lang::JavaScript | Lang::Ruby | Lang::Vue | Lang::Svelte | Lang::Html => None,
     }
@@ -183,6 +184,55 @@ fn java_type_domain(text: &str) -> Option<DomainEvidence> {
         "string" => Some(DomainEvidence::String),
         "byte" | "short" | "int" | "integer" | "long" => Some(DomainEvidence::Integer),
         "float" | "double" => Some(DomainEvidence::Float),
+        _ => None,
+    }
+}
+
+/// C# built-in and BCL container types. Statically typed like Java: proving a
+/// parameter is `int`/`double`/… lets the numeric canonicalizations fire (so a C#
+/// `a + b` converges with the equivalent Java one), while unknown types stay `None`
+/// (conservative — never a false merge). `decimal`/`char` are intentionally left
+/// `None`.
+fn csharp_type_domain(text: &str) -> Option<DomainEvidence> {
+    let t = text.trim().trim_end_matches('?'); // nullable value type `T?`
+    if t.ends_with("[]") {
+        return Some(DomainEvidence::Array);
+    }
+    let lower = t.to_ascii_lowercase();
+    let head = lower.split('<').next().unwrap_or(&lower);
+    let head = head.rsplit('.').next().unwrap_or(head).trim(); // strip namespace
+    if lower.contains('<') {
+        match head {
+            "list"
+            | "ilist"
+            | "ireadonlylist"
+            | "collection"
+            | "icollection"
+            | "ireadonlycollection"
+            | "ienumerable"
+            | "queue"
+            | "stack"
+            | "linkedlist" => return Some(DomainEvidence::Collection),
+            "dictionary"
+            | "idictionary"
+            | "ireadonlydictionary"
+            | "sorteddictionary"
+            | "concurrentdictionary" => return Some(DomainEvidence::Map),
+            "hashset" | "iset" | "sortedset" => return Some(DomainEvidence::Set),
+            "ienumerator" => return Some(DomainEvidence::Iterator),
+            "task" | "valuetask" => return Some(DomainEvidence::FutureLike),
+            "nullable" => return Some(DomainEvidence::Option),
+            _ => {}
+        }
+    }
+    match head {
+        "int" | "long" | "short" | "byte" | "sbyte" | "uint" | "ulong" | "ushort" | "nint"
+        | "nuint" | "int16" | "int32" | "int64" | "uint16" | "uint32" | "uint64" => {
+            Some(DomainEvidence::Integer)
+        }
+        "float" | "double" | "single" => Some(DomainEvidence::Float),
+        "bool" | "boolean" => Some(DomainEvidence::Boolean),
+        "string" => Some(DomainEvidence::String),
         _ => None,
     }
 }

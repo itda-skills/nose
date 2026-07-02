@@ -15,7 +15,7 @@ semantic matching fail-closed unless the required facts and contracts are presen
 
 ## Supported languages
 
-Nine **imperative** base languages, each with its own CST→IL lowering module tree
+Ten **imperative** base languages, each with its own CST→IL lowering module tree
 (JavaScript and TypeScript share one path):
 
 | language | extensions |
@@ -29,6 +29,14 @@ Nine **imperative** base languages, each with its own CST→IL lowering module t
 | C | `.c`, `.h` |
 | Ruby | `.rb` |
 | Swift | `.swift` |
+| C# | `.cs` |
+
+C# is lowered as a statically-typed C-family language, like Java (so `.cs` clones
+converge cross-language): patterns (`switch`, `is`) lower as predicates, `??`
+lowers to the same builtin as Swift's `??`, `typeof(T)` matches Java's `T.class`,
+and `#if`-guarded members lower in place (both branches are real code). LINQ query
+syntax is the remaining honest `Raw` gap — check the per-construct breakdown with
+`nose stats`.
 
 `.h` files are treated as C headers unless their source strongly indicates unsupported C++
 (`namespace`, `template`, `class`, `std::`, or access specifiers after comments/strings are

@@ -102,7 +102,7 @@ pub(super) fn lower_match_pattern_condition(
             let cond = lower_match_pattern_condition(lo, scrutinee, child, span)?;
             conditions.push(cond);
         }
-        return fold_or(lo, span, conditions);
+        return crate::lower::fold_or(lo, span, conditions);
     }
     if pattern.kind() == "range_pattern" {
         return lower_range_pattern_condition(lo, scrutinee, pattern, span);
@@ -275,14 +275,6 @@ pub(super) fn lower_range_pattern_condition(
         (Some(cond), None) | (None, Some(cond)) => Some(cond),
         (None, None) => None,
     }
-}
-pub(super) fn fold_or(lo: &mut Lowering, span: Span, conditions: Vec<NodeId>) -> Option<NodeId> {
-    let mut it = conditions.into_iter();
-    let mut acc = it.next()?;
-    for cond in it {
-        acc = lo.add(NodeKind::BinOp, Payload::Op(Op::Or), span, &[acc, cond]);
-    }
-    Some(acc)
 }
 pub(super) fn combine_match_conditions(
     lo: &mut Lowering,

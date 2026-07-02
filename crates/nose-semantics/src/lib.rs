@@ -65,7 +65,8 @@ pub use guard_evidence::*;
 pub use import_facts::*;
 pub use language_profile::{
     builtin_language_pack_id, is_builtin_language_pack_hash, language_core_evidence_provenance,
-    language_source_fact_provenance, semantics, LanguageProfile, CSS_LANGUAGE_CORE_PRODUCER_ID,
+    language_source_fact_provenance, semantics, LanguageProfile, CSHARP_LANGUAGE_CORE_PRODUCER_ID,
+    CSHARP_LANGUAGE_PACK_ID, CSHARP_SOURCE_FACT_PRODUCER_ID, CSS_LANGUAGE_CORE_PRODUCER_ID,
     CSS_LANGUAGE_PACK_ID, CSS_SOURCE_FACT_PRODUCER_ID, C_LANGUAGE_CORE_PRODUCER_ID,
     C_LANGUAGE_PACK_ID, C_SOURCE_FACT_PRODUCER_ID, C_UNSIGNED_32_CAST_SOURCE_PRODUCER_ID,
     GO_LANGUAGE_CORE_PRODUCER_ID, GO_LANGUAGE_PACK_ID, GO_SOURCE_FACT_PRODUCER_ID,

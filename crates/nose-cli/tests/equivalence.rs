@@ -50,6 +50,8 @@ mod collection_membership;
 mod collection_streams;
 #[path = "equivalence/convergence_probes.rs"]
 mod convergence_probes;
+#[path = "equivalence/csharp_surfaces.rs"]
+mod csharp_surfaces;
 #[path = "equivalence/css_surfaces.rs"]
 mod css_surfaces;
 #[path = "equivalence/imported_collection_membership.rs"]

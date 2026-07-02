@@ -4,6 +4,7 @@
 
 mod c;
 mod coverage;
+mod csharp;
 mod css;
 mod declaration_facts;
 mod embedded;
@@ -87,6 +88,7 @@ pub fn lower_source(
         Lang::C => c::lower(file, path, src, interner),
         Lang::Ruby => ruby::lower(file, path, src, interner),
         Lang::Swift => swift::lower(file, path, src, interner),
+        Lang::CSharp => csharp::lower(file, path, src, interner),
         Lang::Css => css::lower(file, path, src, interner),
         Lang::Vue | Lang::Svelte | Lang::Html => embedded::lower(file, path, src, lang, interner),
     }

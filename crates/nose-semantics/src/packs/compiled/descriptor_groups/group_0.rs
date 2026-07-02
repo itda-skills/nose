@@ -1,6 +1,6 @@
 use super::*;
 
-pub(super) const DESCRIPTORS: [BuiltinPackDescriptor; 22] = [
+pub(super) const DESCRIPTORS: [BuiltinPackDescriptor; 23] = [
     BuiltinPackDescriptor {
         id: BUILTIN_COMPAT_PACK_ID,
         kind: SemanticPackKind::LanguagePack,
@@ -204,6 +204,30 @@ pub(super) const DESCRIPTORS: [BuiltinPackDescriptor; 22] = [
         }),
         evidence_producer_ids: SWIFT_LANGUAGE_PRODUCER_IDS,
         source_fact_producer_ids: SWIFT_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
+        contract_ids: NO_IDS,
+        static_value_law_ids: NO_IDS,
+        type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,
+        dynamic_value_law_ids: None,
+        static_conformance_refs: NO_IDS,
+        dynamic_conformance_refs: None,
+        counts: language_core_and_source_fact_counts,
+    },
+    BuiltinPackDescriptor {
+        id: CSHARP_LANGUAGE_PACK_ID,
+        kind: SemanticPackKind::LanguagePack,
+        display_name: "nose C# language pack",
+        trust: PackTrust::BuiltinDefault,
+        enabled_by_default: true,
+        supported_languages: CSHARP_LANGUAGE,
+        supported_packages: NO_PACKAGES,
+        language: Some(BuiltinLanguageBinding {
+            langs: CSHARP_BINDING_LANGS,
+            file_extensions: CSHARP_LANGUAGE_FILE_EXTENSIONS,
+            parser: "tree-sitter-c-sharp",
+            lowering_entrypoint: "nose_frontend::csharp::lower",
+        }),
+        evidence_producer_ids: CSHARP_LANGUAGE_PRODUCER_IDS,
+        source_fact_producer_ids: CSHARP_LANGUAGE_SOURCE_FACT_PRODUCER_IDS,
         contract_ids: NO_IDS,
         static_value_law_ids: NO_IDS,
         type_domain_alias_contracts: NO_TYPE_DOMAIN_ALIAS_CONTRACTS,

@@ -4,11 +4,13 @@ use crate::{
     JS_LIKE_BUILTIN_PROMISE_REJECT_CONTRACT_ID,
 };
 
+mod csharp;
 mod rust;
 mod sequence_hof;
 mod string_affix;
 mod swift;
 mod type_domains;
+pub(super) use csharp::*;
 pub(super) use rust::*;
 pub(super) use sequence_hof::*;
 pub(super) use string_affix::*;
@@ -24,7 +26,6 @@ pub(super) const RUST_BINDING_LANGS: &[Lang] = &[Lang::Rust];
 pub(super) const JAVA_BINDING_LANGS: &[Lang] = &[Lang::Java];
 pub(super) const C_BINDING_LANGS: &[Lang] = &[Lang::C];
 pub(super) const RUBY_BINDING_LANGS: &[Lang] = &[Lang::Ruby];
-pub(super) const SWIFT_BINDING_LANGS: &[Lang] = &[Lang::Swift];
 pub(super) const CSS_BINDING_LANGS: &[Lang] = &[Lang::Css];
 pub(super) const HTML_EMBEDDED_BINDING_LANGS: &[Lang] = &[Lang::Html, Lang::Vue, Lang::Svelte];
 pub(super) const PYTHON_LANGUAGE_PRODUCER_IDS: &[&str] = &[
@@ -60,12 +61,6 @@ pub(super) const C_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[
 pub(super) const RUBY_LANGUAGE_PRODUCER_IDS: &[&str] =
     &[RUBY_LANGUAGE_CORE_PRODUCER_ID, RUBY_SOURCE_FACT_PRODUCER_ID];
 pub(super) const RUBY_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[RUBY_SOURCE_FACT_PRODUCER_ID];
-pub(super) const SWIFT_LANGUAGE_PRODUCER_IDS: &[&str] = &[
-    SWIFT_LANGUAGE_CORE_PRODUCER_ID,
-    SWIFT_SOURCE_FACT_PRODUCER_ID,
-];
-pub(super) const SWIFT_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] =
-    &[SWIFT_SOURCE_FACT_PRODUCER_ID];
 pub(super) const CSS_LANGUAGE_PRODUCER_IDS: &[&str] =
     &[CSS_LANGUAGE_CORE_PRODUCER_ID, CSS_SOURCE_FACT_PRODUCER_ID];
 pub(super) const CSS_LANGUAGE_SOURCE_FACT_PRODUCER_IDS: &[&str] = &[CSS_SOURCE_FACT_PRODUCER_ID];
@@ -90,8 +85,6 @@ pub(super) const GO_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["go"];
 pub(super) const RUST_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["rs"];
 pub(super) const JAVA_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["java"];
 pub(super) const RUBY_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["rb"];
-pub(super) const SWIFT_LANGUAGE: &[&str] = &["swift"];
-pub(super) const SWIFT_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["swift"];
 pub(super) const CSS_LANGUAGE: &[&str] = &["css"];
 pub(super) const CSS_LANGUAGE_FILE_EXTENSIONS: &[&str] = &["css"];
 pub(super) const HTML_EMBEDDED_LANGUAGES: &[&str] = &["html", "vue", "svelte"];

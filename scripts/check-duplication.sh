@@ -117,6 +117,11 @@ set -euo pipefail
 # 52 -> 52 (Java Future/Executor local/this-field receivers): exact Java receiver-domain evidence
 # moves two reviewed frontend-lowering representatives (`7b134f23e922f405` -> `596f602568ace201`,
 # `6e37683225332c86` -> `a54e8f6b173a160a`) without changing members or budget.
+# 52 -> 55 (C# frontend): the new C# lowering joins three per-grammar parallelism families
+# (`lower_for` wrappers, the Java-mirroring `lower_stmt` dispatch, the declarator loop) and lifts
+# the exhaustive language_profile provenance matches over the value line; the draft C# `fold_or`
+# copy was deduped into `crate::lower::fold_or` (also removing the Python/Rust/Swift copies).
+# Two reviewed families changed IDs from C# span shifts. See docs/dogfooding.md.
 BIN="${NOSE_BIN:-./target/release/nose}"
 BASELINE="${NOSE_DUP_BASELINE:-scripts/duplication-baseline.json}"
 

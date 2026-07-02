@@ -7,6 +7,22 @@ break.
 ## [Unreleased]
 
 ### Added
+- Added C# (.NET) language support (`.cs`): a `nose-frontend` C# frontend lowers
+  classes/structs/records/enums, methods and property accessors,
+  `if`/`for`/`foreach`/`while`/`do`, `switch` statements and expressions with
+  patterns lowered as predicates (constant/relational/`or`/`and`/`not`/property
+  patterns; type tests erased like Java's `instanceof`), `is` expressions,
+  preprocessor `#if` regions (both branches lower in place), C#12 collection
+  expressions, null-conditional access (`a?.B`), `??`/`??=` to the
+  `ValueOrDefault` builtin (converging with Swift's `??`), `typeof(T)` to Java's
+  `T.class` shape, compound-assignment and `++`/`--` desugaring,
+  expression-bodied members, tuple deconstruction, and `await`/`yield` protocol
+  boundaries — into the shared IL, with per-parameter type-domain evidence so
+  `.cs` clones converge cross-language with Java (exact) on the value graph. The
+  builtin C# language pack (`nose.lang.csharp`) is registered alongside the other
+  language packs. On real-world corpora the lowering gap is ≲0.7% of IL nodes
+  (dominated by tree-sitter parse errors on `#if` inside interface bodies); LINQ
+  query syntax and richer stdlib semantics remain honest `Raw` gaps for follow-up.
 - Added a semantic-kernel recall-loss loop around `nose verify --recall-loss-report`,
   including obligation rollups, deterministic report diff tooling, checked
   `crates`/corpus artifacts, and corpus-priority census workflows for deciding
