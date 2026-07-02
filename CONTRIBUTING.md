@@ -91,6 +91,19 @@ curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh
 rustup toolchain install 1.85
 ```
 
+### Building on Windows
+
+nose has no platform-specific code; the only native piece is the tree-sitter
+grammars' C sources, which MSVC compiles. With rustup and the Visual Studio
+Build Tools (C++ workload) installed, build and smoke-test a native binary
+with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\build-windows.ps1
+```
+
+Release binaries are not published for Windows; this is a local build path.
+
 ### Git hooks
 
 Versioned hooks live in `.githooks`. Enable them once per clone:
